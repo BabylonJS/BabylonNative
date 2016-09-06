@@ -10,6 +10,121 @@ target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
 set_target_properties( shaderc PROPERTIES FOLDER "bgfx/tools" )
 target_link_libraries( shaderc bx bgfx fcpp glsl-optimizer )
 
+function( add_shader ARG_FILE )
+	# Parse arguments
+	cmake_parse_arguments( ARG "FRAGMENT;VERTEX" "OUTPUT;GLSL_VERSION;DX9_MODEL;DX11_MODEL" "PLATFORMS" ${ARGN} )
+
+	# Get filename
+	get_filename_component( FILENAME "${ARG_FILE}" NAME_WE )
+
+	# Determine if fragment or vertex
+	if( ARG_FRAGMENT AND ARG_VERTEX )
+		message( SEND_ERROR "add_shader cannot be called with both FRAGMENT and VERTEX." )
+	elseif( ARG_FRAGMENT )
+		set( TYPE "FRAGMENT" )
+		set( D3D_PREFIX "ps" )
+	elseif( ARG_VERTEX )
+		set( TYPE "VERTEX" )
+		set( D3D_PREFIX "vs" )
+	else()
+		message( SEND_ERROR "add_shader must be called with either FRAGMENT or VERTEX." )
+	endif()
+
+	# Determine compatible platforms
+	if( ARG_PLATFORMS )
+		set( PLATFORMS ${ARG_PLATFORMS} )
+	else()
+		if( MSVC )
+			set( PLATFORMS dx9 dx11 glsl gles )
+		elseif( APPLE )
+			set( PLATFORMS metal glsl gles )
+		else()
+			set( PLATFORMS glsl gles )
+		endif()
+	endif()
+
+	# Build options
+	set( BASE_OPTIONS
+		FILE ${ARG_FILE}
+		${TYPE}
+		INCLUDES ${BGFX_DIR}/src
+	)
+
+	# Parse profiles
+	set( DX9_PROFILE PROFILE ${D3D_PREFIX}_3_0 )
+	if( ARG_DX9_MODEL )
+		set( DX9_PROFILE PROFILE ${D3D_PREFIX}_${ARG_DX9_MODEL} )
+	endif()
+	set( DX11_PROFILE PROFILE ${D3D_PREFIX}_4_0 )
+	if( ARG_DX11_MODEL )
+		set( DX11_PROFILE PROFILE ${D3D_PREFIX}_${ARG_DX11_MODEL} )
+	endif()
+	set( GLSL_PROFILE PROFILE 120 )
+	if( ARG_GLSL )
+		set( GLSL_PROFILE PROFILE ${ARG_GLSL} )
+	endif()
+
+	# Add commands
+	set( OUTPUTS "" )
+	set( COMMANDS "" )
+	foreach( PLATFORM ${PLATFORMS} )
+		set( OPTIONS ${BASE_OPTIONS} )
+		set( OUTPUT "${ARG_OUTPUT}/${PLATFORM}/${FILENAME}.bin" )
+		get_filename_component( OUTPUT "${OUTPUT}" ABSOLUTE )
+		if( "${PLATFORM}" STREQUAL "dx9" )
+			list( APPEND OPTIONS
+				WINDOWS
+				${DX9_PROFILE}
+				OUTPUT ${OUTPUT}
+			)
+		elseif( "${PLATFORM}" STREQUAL "dx11" )
+			list( APPEND OPTIONS
+				WINDOWS
+				${DX11_PROFILE}
+				OUTPUT ${OUTPUT}
+			)
+		elseif( "${PLATFORM}" STREQUAL "metal" )
+			list( APPEND OPTIONS
+				WINDOWS
+				${HLSL_PROFILE}
+				OUTPUT ${OUTPUT}
+			)
+		elseif( "${PLATFORM}" STREQUAL "glsl" )
+			list( APPEND OPTIONS
+				LINUX
+				${GLSL_PROFILE}
+				OUTPUT ${OUTPUT}
+			)
+		elseif( "${PLATFORM}" STREQUAL "gles" )
+			list( APPEND OPTIONS
+				ANDROID
+				OUTPUT ${OUTPUT}
+			)
+		else()
+			message( SEND_ERROR "add_shader given bad platform: ${PLATFORM}" )
+			return()
+		endif()
+		list( APPEND OUTPUTS ${OUTPUT} )
+		shaderc_parse( CMD ${OPTIONS} )
+		list( APPEND COMMANDS COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT}/${PLATFORM}" )
+		list( APPEND COMMANDS COMMAND "$<TARGET_FILE:shaderc>" ${CMD} )
+	endforeach()
+
+	# Add command
+	add_custom_command(
+		MAIN_DEPENDENCY
+		${ARG_FILE}
+		OUTPUT
+		${OUTPUTS}
+		${COMMANDS}
+		COMMENT "Compiling shader ${ARG_FILE}"
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+
+	# Add to custom filter
+	source_group( "Shader Files" FILES ${ARG_FILE} )
+endfunction()
+
 # shaderc( FILE file OUTPUT file ... )
 # See shaderc_parse() below for inputs
 function( shaderc )
