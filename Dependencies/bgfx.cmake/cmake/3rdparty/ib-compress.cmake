@@ -4,4 +4,4 @@ file( GLOB IB_COMPRESS_SOURCES ${BGFX_DIR}/3rdparty/ib-compress/*.cpp ${BGFX_DIR
 
 add_library( ib-compress STATIC ${IB_COMPRESS_SOURCES} )
 target_include_directories( ib-compress PUBLIC ${BGFX_DIR}/3rdparty )
-set_target_properties( ib-compress PROPERTIES FOLDER "3rdparty" )
+set_target_properties( ib-compress PROPERTIES FOLDER "bgfx/3rdparty" )

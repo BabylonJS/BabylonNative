@@ -8,7 +8,16 @@ if( APPLE )
 	set( CMAKE_CXX_FLAGS "-ObjC++" )
 endif()
 
+option( BGFX_BUILD_TOOLS    "Build bgfx tools."    ON )
+option( BGFX_BUILD_EXAMPLES "Build bgfx examples." ON )
+
 include( cmake/bx.cmake )
 include( cmake/bgfx.cmake )
-include( cmake/tools.cmake )
-include( cmake/examples.cmake )
+
+if( BGFX_BUILD_TOOLS )
+	include( cmake/tools.cmake )
+endif()
+
+if( BGFX_BUILD_EXAMPLES )
+	include( cmake/examples.cmake )
+endif()

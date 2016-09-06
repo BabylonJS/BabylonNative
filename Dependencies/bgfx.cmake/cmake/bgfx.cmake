@@ -1,6 +1,13 @@
 # Copyright (c) 2016 Joshua Brookover
 
-set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" )
+if( NOT BGFX_DIR )
+	set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" CACHE STRING "Location of bgfx." )
+endif()
+
+if( NOT IS_DIRECTORY ${BGFX_DIR} )
+	message( SEND_ERROR "Could not load bgfx, directory does not exist. ${BGFX_DIR}" )
+	return()
+endif()
 
 file( GLOB BGFX_SOURCES ${BGFX_DIR}/src/*.cpp ${BGFX_DIR}/src/*.mm ${BGFX_DIR}/src/*.h )
 
@@ -36,3 +43,4 @@ if( NOT APPLE )
 	set_source_files_properties( ${BGFX_DIR}/src/glcontext_nsgl.mm PROPERTIES HEADER_FILE_ONLY ON )
 	set_source_files_properties( ${BGFX_DIR}/src/renderer_mtl.mm PROPERTIES HEADER_FILE_ONLY ON )
 endif()
+set_target_properties( bgfx PROPERTIES FOLDER "bgfx" )

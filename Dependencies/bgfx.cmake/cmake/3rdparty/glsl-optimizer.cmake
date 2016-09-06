@@ -15,7 +15,7 @@ target_include_directories( glcpp PUBLIC ${GLSL-OPTIMIZER_INCLUDES} )
 if( MSVC )
 	set_target_properties( glcpp PROPERTIES COMPILE_FLAGS "/W0" )
 endif()
-set_target_properties( glcpp PROPERTIES FOLDER "3rdparty" )
+set_target_properties( glcpp PROPERTIES FOLDER "bgfx/3rdparty" )
 
 # mesa
 file( GLOB MESA_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/mesa/program/*.c ${BGFX_DIR}/3rdparty/glsl-optimizer/src/mesa/main/*.c )
@@ -24,7 +24,7 @@ target_include_directories( mesa PUBLIC ${GLSL-OPTIMIZER_INCLUDES} )
 if( MSVC )
 	set_target_properties( mesa PROPERTIES COMPILE_FLAGS "/W0" )
 endif()
-set_target_properties( mesa PROPERTIES FOLDER "3rdparty" )
+set_target_properties( mesa PROPERTIES FOLDER "bgfx/3rdparty" )
 
 # glsl_optimizer
 file( GLOB GLSL-OPTIMIZER_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/*.cpp ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/*.c )
@@ -35,4 +35,4 @@ target_link_libraries( glsl-optimizer glcpp mesa )
 if( MSVC )
 	set_target_properties( glsl-optimizer PROPERTIES COMPILE_FLAGS "/W0" )
 endif()
-set_target_properties( glsl-optimizer PROPERTIES FOLDER "3rdparty" )
+set_target_properties( glsl-optimizer PROPERTIES FOLDER "bgfx/3rdparty" )

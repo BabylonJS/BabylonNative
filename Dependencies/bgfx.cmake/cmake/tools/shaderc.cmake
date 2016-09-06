@@ -7,7 +7,7 @@ include( cmake/3rdparty/glsl-optimizer.cmake )
 
 add_executable( shaderc bgfx/tools/shaderc/shaderc.cpp bgfx/tools/shaderc/shaderc.h bgfx/tools/shaderc/shaderc_glsl.cpp bgfx/tools/shaderc/shaderc_hlsl.cpp )
 target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
-set_target_properties( shaderc PROPERTIES FOLDER "tools" )
+set_target_properties( shaderc PROPERTIES FOLDER "bgfx/tools" )
 target_link_libraries( shaderc bx bgfx fcpp glsl-optimizer )
 
 # shaderc( FILE file OUTPUT file ... )
@@ -15,7 +15,7 @@ target_link_libraries( shaderc bx bgfx fcpp glsl-optimizer )
 function( shaderc )
 	cmake_parse_arguments( ARG "" "FILE;OUTPUT" "" ${ARGN} )
 	shaderc_parse( CLI ${ARGN} )
-	add_custom_command( OUTPUT ${ARG_OUTPUT} COMMAND "$<TARGET_FILE:shaderc>" ${CLI} MAIN_DEPENDENCY ${ARG_FILE} COMMENT "Compiling shader ${ARG_FILE}" )
+	add_custom_command( OUTPUT ${ARG_OUTPUT} COMMAND "$<TARGET_FILE:shaderc>" ${CLI} MAIN_DEPENDENCY ${ARG_FILE} COMMENT "Compiling shader ${ARG_FILE}" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 endfunction()
 
 # shaderc_parse(

@@ -1,6 +1,13 @@
 # Copyright (c) 2016 Joshua Brookover
 
-set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" )
+if( NOT BX_DIR )
+	set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bgfx." )
+endif()
+
+if( NOT IS_DIRECTORY ${BX_DIR} )
+	message( SEND_ERROR "Could not load bx, directory does not exist. ${BX_DIR}" )
+	return()
+endif()
 
 add_library( bx INTERFACE )
 
