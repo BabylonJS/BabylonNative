@@ -1,15 +1,17 @@
 bgfx.cmake
 ===================
 
-This repo contains a bunch of cmake files that can be used to build bgfx with CMake. To get started, pull down the repo and run these commands from within the root directory of the repo:
+This repo contains a bunch of cmake files that can be used to build bgfx with CMake. To get started, clone the repo and run these commands from within the root directory of the repo:
 
 ```
-git clone git@github.com:bkaradzic/bx.git
-git clone git@github.com:bkaradzic/bgfx.git
+git submodule init
+git submodule update
 mkdir build
 cd build
 cmake ..
 ```
+
+If downloading via zip, instead of using git submodule manually download bx and bgfx and copy them into the root directory, or locate them via BX_DIR and BGFX_DIR CMake variables.
 
 Features
 -------------
