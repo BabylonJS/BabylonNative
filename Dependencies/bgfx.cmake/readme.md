@@ -14,9 +14,9 @@ cmake ..
 Features
 -------------
 * No outside dependencies besides bx, bgfx, and CMake.
-* Only tested in Visual Studio 2015 so far.
+* Tested on Visual Studio 2015 and Xcode.
 * Compiles bgfx, tools & examples.
-* Detects shader modifications and automatically rebuilds them (DirectX11 shaders only for now).
+* Detects shader modifications and automatically rebuilds them.
 * Uses CMake interface libraries (linking against bgfx is one line of cmake code via target_link_libraries).
 
 License

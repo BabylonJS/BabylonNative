@@ -21,14 +21,53 @@ function( add_bgfx_shader FILE FOLDER )
 	endif()
 	if( NOT "${TYPE}" STREQUAL "" )
 		set( COMMON FILE ${FILE} ${TYPE} INCLUDES ${BGFX_DIR}/src )
+		set( OUTPUTS "" )
+		set( OUTPUTS_PRETTY "" )
 		if( WIN32 )
-			shaderc( ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_4_0 OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin )
-		elseif( APPLE )
-			#shaderc( ${COMMON} OSX OUTPUT ${BGFX_DIR}/examples/runtime/shaders/metal/${FILENAME}.bin )
-			shaderc( ${COMMON} LINUX PROFILE 120 OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin )
-		else()
-			shaderc( ${COMMON} LINUX PROFILE 120 OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin )
+			# dx9
+			set( DX9_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx9/${FILENAME}.bin )
+			shaderc_parse( DX9 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_3_0 OUTPUT ${DX9_OUTPUT} )
+			list( APPEND OUTPUTS "DX9" )
+			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX9, " )
+
+			# dx11
+			set( DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin )
+			shaderc_parse( DX11 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_4_0 OUTPUT ${DX11_OUTPUT} )
+			list( APPEND OUTPUTS "DX11" )
+			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, " )
 		endif()
+		if( APPLE )
+			# metal
+			set( METAL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/metal/${FILENAME}.bin )
+			shaderc_parse( METAL ${COMMON} OSX OUTPUT ${METAL_OUTPUT} )
+			list( APPEND OUTPUTS "METAL" )
+			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, " )
+		endif()
+		# gles
+		set( GLES_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/gles/${FILENAME}.bin )
+		shaderc_parse( GLES ${COMMON} ANDROID OUTPUT ${GLES_OUTPUT} )
+		list( APPEND OUTPUTS "GLES" )
+		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLES, " )
+		# glsl
+		set( GLSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin )
+		shaderc_parse( GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT} )
+		list( APPEND OUTPUTS "GLSL" )
+		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL" )
+		set( OUTPUT_FILES "" )
+		set( COMMANDS "" )
+		foreach( OUT ${OUTPUTS} )
+			list( APPEND OUTPUT_FILES ${${OUT}_OUTPUT} )
+			list( APPEND COMMANDS COMMAND "$<TARGET_FILE:shaderc>" ${${OUT}} )
+		endforeach()
+		file( RELATIVE_PATH PRINT_NAME ${BGFX_DIR}/examples ${FILE} )
+		add_custom_command(
+			MAIN_DEPENDENCY
+			${FILE}
+			OUTPUT
+			${OUTPUT_FILES}
+			${COMMANDS}
+			COMMENT "Compiling shader ${PRINT_NAME} for ${OUTPUTS_PRETTY}"
+		)
 	endif()
 endfunction()
 

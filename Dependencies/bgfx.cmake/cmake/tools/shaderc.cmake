@@ -15,7 +15,6 @@ target_link_libraries( shaderc bx bgfx fcpp glsl-optimizer )
 function( shaderc )
 	cmake_parse_arguments( ARG "" "FILE;OUTPUT" "" ${ARGN} )
 	shaderc_parse( CLI ${ARGN} )
-#add_custom_command( OUTPUT ${ARG_OUTPUT} COMMAND "C:/Users/Josh/Downloads/bgfx-examples/shaderc" ${CLI} MAIN_DEPENDENCY ${ARG_FILE} )
 	add_custom_command( OUTPUT ${ARG_OUTPUT} COMMAND "$<TARGET_FILE:shaderc>" ${CLI} MAIN_DEPENDENCY ${ARG_FILE} COMMENT "Compiling shader ${ARG_FILE}" )
 endfunction()
 
