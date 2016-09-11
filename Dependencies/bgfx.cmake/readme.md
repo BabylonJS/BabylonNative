@@ -20,7 +20,3 @@ Features
 * Compiles bgfx, tools & examples.
 * Detects shader modifications and automatically rebuilds them.
 * Uses CMake interface libraries (linking against bgfx is one line of cmake code via target_link_libraries).
-
-License
--------------
-The license is BSD with no clauses meaning you can use this software however you want but I cannot be held liable for damages.
