@@ -8,6 +8,10 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
+if( TARGET fcpp )
+	return()
+endif()
+
 file( GLOB FCPP_SOURCES ${BGFX_DIR}/3rdparty/fcpp/*.c ${BGFX_DIR}/3rdparty/fcpp/*.h )
 
 add_library( fcpp STATIC ${FCPP_SOURCES} )

@@ -16,7 +16,7 @@ include( cmake/3rdparty/glsl-optimizer.cmake )
 add_executable( shaderc bgfx/tools/shaderc/shaderc.cpp bgfx/tools/shaderc/shaderc.h bgfx/tools/shaderc/shaderc_glsl.cpp bgfx/tools/shaderc/shaderc_hlsl.cpp )
 target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
 set_target_properties( shaderc PROPERTIES FOLDER "bgfx/tools" )
-target_link_libraries( shaderc bx bgfx fcpp glsl-optimizer )
+target_link_libraries( shaderc bx bgfx-vertexdecl fcpp glsl-optimizer )
 
 function( add_shader ARG_FILE )
 	# Parse arguments

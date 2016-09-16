@@ -19,6 +19,7 @@ endif()
 option( BGFX_BUILD_TOOLS    "Build bgfx tools."    ON )
 option( BGFX_BUILD_EXAMPLES "Build bgfx examples." ON )
 
+include( cmake/shared.cmake )
 include( cmake/bx.cmake )
 include( cmake/bgfx.cmake )
 

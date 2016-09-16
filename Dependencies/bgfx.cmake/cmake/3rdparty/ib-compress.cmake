@@ -8,6 +8,10 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
+if( TARGET ib-compress )
+	return()
+endif()
+
 file( GLOB IB_COMPRESS_SOURCES ${BGFX_DIR}/3rdparty/ib-compress/*.cpp ${BGFX_DIR}/3rdparty/ib-compress/*.h )
 
 add_library( ib-compress STATIC ${IB_COMPRESS_SOURCES} )

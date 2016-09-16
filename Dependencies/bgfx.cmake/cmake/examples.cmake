@@ -123,7 +123,7 @@ function( add_example ARG_NAME )
 	endif()
 
 	# Directory name
-	set_target_properties( example-${ARG_NAME} PROPERTIES FOLDER "examples" )
+	set_target_properties( example-${ARG_NAME} PROPERTIES FOLDER "bgfx/examples" )
 endfunction()
 
 # Add common library for examples
