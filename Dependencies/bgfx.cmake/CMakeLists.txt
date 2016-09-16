@@ -19,6 +19,12 @@ endif()
 option( BGFX_BUILD_TOOLS    "Build bgfx tools."    ON )
 option( BGFX_BUILD_EXAMPLES "Build bgfx examples." ON )
 
+option( BGFX_USE_OVR "Build with OVR support." OFF )
+
+if( BGFX_USE_OVR )
+	include( cmake/ovr.cmake )
+endif()
+
 include( cmake/shared.cmake )
 include( cmake/bx.cmake )
 include( cmake/bgfx.cmake )

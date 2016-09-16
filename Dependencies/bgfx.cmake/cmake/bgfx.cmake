@@ -40,6 +40,11 @@ target_include_directories( bgfx PUBLIC ${BGFX_DIR}/include )
 # bgfx depends on bx
 target_link_libraries( bgfx PUBLIC bx )
 
+# ovr support
+if( BGFX_USE_OVR )
+	target_link_libraries( bgfx PUBLIC ovr )
+endif()
+
 # Link against psapi in Visual Studio
 if( MSVC )
 	target_link_libraries( bgfx PUBLIC psapi )
@@ -61,7 +66,6 @@ endif()
 # Excluded files from compilation
 set_source_files_properties( ${BGFX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON )
-set_source_files_properties( ${BGFX_DIR}/src/hmd_ovr.cpp PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/glcontext_ppapi.cpp PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/glcontext_glx.cpp PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/glcontext_egl.cpp PROPERTIES HEADER_FILE_ONLY ON )
