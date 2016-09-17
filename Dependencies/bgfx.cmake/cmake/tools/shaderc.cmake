@@ -13,7 +13,7 @@ include( CMakeParseArguments )
 include( cmake/3rdparty/fcpp.cmake )
 include( cmake/3rdparty/glsl-optimizer.cmake )
 
-add_executable( shaderc bgfx/tools/shaderc/shaderc.cpp bgfx/tools/shaderc/shaderc.h bgfx/tools/shaderc/shaderc_glsl.cpp bgfx/tools/shaderc/shaderc_hlsl.cpp )
+add_executable( shaderc ${BGFX_DIR}/tools/shaderc/shaderc.cpp ${BGFX_DIR}/tools/shaderc/shaderc.h ${BGFX_DIR}/tools/shaderc/shaderc_glsl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_hlsl.cpp )
 target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
 set_target_properties( shaderc PROPERTIES FOLDER "bgfx/tools" )
 target_link_libraries( shaderc bx bgfx-vertexdecl fcpp glsl-optimizer )
