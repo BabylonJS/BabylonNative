@@ -20,7 +20,7 @@ if( NOT IS_DIRECTORY ${BGFX_DIR} )
 endif()
 
 # Grab the bgfx source files
-file( GLOB BGFX_SOURCES ${BGFX_DIR}/src/*.cpp ${BGFX_DIR}/src/*.mm ${BGFX_DIR}/src/*.h )
+file( GLOB BGFX_SOURCES ${BGFX_DIR}/src/*.cpp ${BGFX_DIR}/src/*.mm ${BGFX_DIR}/src/*.h ${BGFX_DIR}/include/bgfx/*.h ${BGFX_DIR}/include/bgfx/c99/*.h )
 
 # Create the bgfx target
 add_library( bgfx STATIC ${BGFX_SOURCES} )
