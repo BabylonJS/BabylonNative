@@ -32,3 +32,4 @@ Todo
 * Support Windows Phone.
 * Build texturec and texturev.
 * More configuration.
+* Add varying.def.sc files as shader dependencies.
