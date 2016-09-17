@@ -19,6 +19,8 @@ endif()
 option( BGFX_BUILD_TOOLS    "Build bgfx tools."    ON )
 option( BGFX_BUILD_EXAMPLES "Build bgfx examples." ON )
 
+option( BGFX_INSTALL "Create installation target." ON )
+
 option( BGFX_USE_OVR "Build with OVR support." OFF )
 
 if( BGFX_USE_OVR )
@@ -35,4 +37,19 @@ endif()
 
 if( BGFX_BUILD_EXAMPLES )
 	include( cmake/examples.cmake )
+endif()
+
+if( BGFX_INSTALL )
+	# install bx
+	install( DIRECTORY ${BX_DIR}/include DESTINATION . )
+
+	# install bgfx
+	install( TARGETS bgfx DESTINATION lib )
+	install( DIRECTORY ${BGFX_DIR}/include DESTINATION . )
+
+	# install tools
+	if( BGFX_BUILD_TOOLS )
+		install( TARGETS shaderc DESTINATION bin )
+		install( TARGETS geometryc DESTINATION bin )
+	endif()
 endif()

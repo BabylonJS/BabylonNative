@@ -79,3 +79,6 @@ endif()
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties( bgfx PROPERTIES FOLDER "bgfx" )
+
+# Export debug build as "bgfxd"
+set_target_properties( bgfx PROPERTIES OUTPUT_NAME_DEBUG "bgfxd" )
