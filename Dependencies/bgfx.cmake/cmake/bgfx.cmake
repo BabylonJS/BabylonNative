@@ -8,11 +8,6 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-# The bgfx location is customizable via cache variable BGFX_DIR
-if( NOT BGFX_DIR )
-	set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" CACHE STRING "Location of bgfx." )
-endif()
-
 # Ensure the directory exists
 if( NOT IS_DIRECTORY ${BGFX_DIR} )
 	message( SEND_ERROR "Could not load bgfx, directory does not exist. ${BGFX_DIR}" )
@@ -52,15 +47,13 @@ endif()
 
 # Frameworks required on OS X
 if( APPLE )
-	find_library( CARBON_LIBRARY Carbon )
 	find_library( COCOA_LIBRARY Cocoa )
 	find_library( METAL_LIBRARY Metal )
 	find_library( QUARTZCORE_LIBRARY QuartzCore )
-	mark_as_advanced( CARBON_LIBRARY )
 	mark_as_advanced( COCOA_LIBRARY )
 	mark_as_advanced( METAL_LIBRARY )
 	mark_as_advanced( QUARTZCORE_LIBRARY )
-	target_link_libraries( bgfx PUBLIC ${CARBON_LIBRARY} ${COCOA_LIBRARY} ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} )
+	target_link_libraries( bgfx PUBLIC ${COCOA_LIBRARY} ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} )
 endif()
 
 # Excluded files from compilation

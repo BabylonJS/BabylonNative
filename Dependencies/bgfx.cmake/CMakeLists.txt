@@ -16,12 +16,17 @@ if( APPLE )
 	set( CMAKE_CXX_FLAGS "-ObjC++" )
 endif()
 
-option( BGFX_BUILD_TOOLS    "Build bgfx tools."    ON )
-option( BGFX_BUILD_EXAMPLES "Build bgfx examples." ON )
+option( BGFX_BUILD_TOOLS    "Build bgfx tools."           ON  )
+option( BGFX_BUILD_EXAMPLES "Build bgfx examples."        ON  )
+option( BGFX_INSTALL        "Create installation target." ON  )
+option( BGFX_USE_OVR        "Build with OVR support."     OFF )
 
-option( BGFX_INSTALL "Create installation target." ON )
-
-option( BGFX_USE_OVR "Build with OVR support." OFF )
+if( NOT BX_DIR )
+	set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bgfx." )
+endif()
+if( NOT BGFX_DIR )
+	set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" CACHE STRING "Location of bgfx." )
+endif()
 
 if( BGFX_USE_OVR )
 	include( cmake/ovr.cmake )
