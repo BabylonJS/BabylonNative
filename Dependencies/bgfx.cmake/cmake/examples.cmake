@@ -112,6 +112,7 @@ function( add_example ARG_NAME )
 		if( MSVC )
 			set_target_properties( example-${ARG_NAME} PROPERTIES LINK_FLAGS "/ENTRY:\"mainCRTStartup\"" )
 		endif()
+		add_dependencies( examples example-${ARG_NAME} )
 	endif()
 
 	# Configure shaders
@@ -125,6 +126,9 @@ function( add_example ARG_NAME )
 	# Directory name
 	set_target_properties( example-${ARG_NAME} PROPERTIES FOLDER "bgfx/examples" )
 endfunction()
+
+# Build all examples target
+add_custom_target( examples )
 
 # Add common library for examples
 add_example(
