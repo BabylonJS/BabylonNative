@@ -13,6 +13,10 @@ cmake .. -DCMAKE_INSTALL_PREFIX=./install
 
 If downloading via zip (instead of using git submodules) manually download bx and bgfx and copy them into the root directory, or locate them via BX_DIR and BGFX_DIR CMake variables.
 
+Note
+-------------
+I try to maintain this repo when I can, but I have a full time job which makes it a bit difficult. I will gladly accept any pull requests updating to the latest bgfx, fixing bugs, improving support, etc.
+
 How To Use
 -------------
 This project is setup to be included a few different ways. To include bgfx source code in your project simply use add_subdirectory to include this project. To build bgfx binaries build the INSTALL target (or "make install"). The installed files will be in the directory specified by CMAKE_INSTALL_PREFIX which I recommend you set to "./install" so it will export to your build directory. Note you may want to build install on both Release and Debug configurations.

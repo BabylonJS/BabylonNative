@@ -12,6 +12,10 @@ add_library( bgfx-vertexdecl INTERFACE )
 target_sources( bgfx-vertexdecl INTERFACE ${BGFX_DIR}/src/vertexdecl.cpp )
 target_include_directories( bgfx-vertexdecl INTERFACE ${BGFX_DIR}/include )
 
+add_library( bgfx-shader-spirv INTERFACE )
+target_sources( bgfx-shader-spirv INTERFACE ${BGFX_DIR}/src/shader_spirv.cpp )
+target_include_directories( bgfx-shader-spirv INTERFACE ${BGFX_DIR}/include )
+
 add_library( bgfx-bounds INTERFACE )
 target_sources( bgfx-bounds INTERFACE ${BGFX_DIR}/examples/common/bounds.cpp )
 target_include_directories( bgfx-bounds INTERFACE ${BGFX_DIR}/include )

@@ -40,11 +40,6 @@ if( BGFX_USE_OVR )
 	target_link_libraries( bgfx PUBLIC ovr )
 endif()
 
-# Link against psapi in Visual Studio
-if( MSVC )
-	target_link_libraries( bgfx PUBLIC psapi )
-endif()
-
 # Frameworks required on OS X
 if( APPLE )
 	find_library( COCOA_LIBRARY Cocoa )

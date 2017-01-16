@@ -14,18 +14,29 @@ if( NOT IS_DIRECTORY ${BX_DIR} )
 	return()
 endif()
 
+# Grab the bx source files
+file( GLOB BX_SOURCES ${BX_DIR}/src/*.cpp )
+
 # Create the bx target
-add_library( bx INTERFACE )
+add_library( bx STATIC ${BX_SOURCES} )
+
+# Link against psapi in Visual Studio
+if( MSVC )
+	target_link_libraries( bx PUBLIC psapi )
+endif()
 
 # Add include directory of bx
-target_include_directories( bx INTERFACE ${BX_DIR}/include )
+target_include_directories( bx PUBLIC ${BX_DIR}/include )
 
 # Build system specific configurations
 if( MSVC )
-	target_include_directories( bx INTERFACE ${BX_DIR}/include/compat/msvc )
-	target_compile_definitions( bx INTERFACE "__STDC_FORMAT_MACROS" )
+	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/msvc )
+	target_compile_definitions( bx PUBLIC "__STDC_FORMAT_MACROS" )
 elseif( MINGW )
-	target_include_directories( bx INTERFACE ${BX_DIR}/include/compat/mingw )
+	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/mingw )
 elseif( APPLE )
-	target_include_directories( bx INTERFACE ${BX_DIR}/include/compat/osx )
+	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/osx )
 endif()
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties( bx PROPERTIES FOLDER "bgfx" )
