@@ -1,5 +1,5 @@
 # ConfigureDebugging.cmake
-# Written in 2016 by Joshua Brookover <josh@jalb.me>
+# Written in 2017 by Joshua Brookover <joshua.al.brookover@gmail.com>
 
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related and neighboring rights to this software to the public domain
