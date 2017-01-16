@@ -14,6 +14,7 @@ project( bgfx )
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 if( APPLE )
 	set( CMAKE_CXX_FLAGS "-ObjC++" )
+	set( CMAKE_CXX_FLAGS "--std=c++11" )
 endif()
 
 option( BGFX_BUILD_TOOLS    "Build bgfx tools."           ON  )
