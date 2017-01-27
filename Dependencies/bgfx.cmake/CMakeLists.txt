@@ -14,6 +14,9 @@ project( bgfx )
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 if( APPLE )
 	set( CMAKE_CXX_FLAGS "-ObjC++ --std=c++11" )
+elseif(UNIX)
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
 option( BGFX_BUILD_TOOLS    "Build bgfx tools."           ON  )
@@ -54,7 +57,7 @@ if( BGFX_INSTALL )
 
 	# install tools
 	if( BGFX_BUILD_TOOLS )
-		install( TARGETS shaderc DESTINATION bin )
+        install( TARGETS shaderc DESTINATION bin )
 		install( TARGETS geometryc DESTINATION bin )
 	endif()
 endif()
