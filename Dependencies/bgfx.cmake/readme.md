@@ -24,13 +24,12 @@ This project is setup to be included a few different ways. To include bgfx sourc
 Features
 -------------
 * No outside dependencies besides bx, bgfx, and CMake.
-* Tested on Visual Studio 2015 and Xcode.
+* Tested on Visual Studio 2015, Xcode, gcc 5.4, clang 3.8.
 * Compiles bgfx, tools & examples.
 * Detects shader modifications and automatically rebuilds them for all examples.
 
 Todo
 -------------
-* Support Linux.
 * Support Android.
 * Support Native Client.
 * Support Windows Phone.
