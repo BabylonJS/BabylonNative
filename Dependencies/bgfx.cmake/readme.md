@@ -1,5 +1,6 @@
 bgfx.cmake
 ===================
+[![Build Status](https://travis-ci.org/JoshuaBrookover/bgfx.cmake.svg?branch=master)](https://travis-ci.org/JoshuaBrookover/bgfx.cmake)
 
 This repo contains a bunch of cmake files that can be used to build bgfx with CMake. To get started, clone the repo and run these commands from within the root directory of the repo:
 
