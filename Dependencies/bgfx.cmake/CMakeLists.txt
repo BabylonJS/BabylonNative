@@ -49,6 +49,7 @@ endif()
 
 if( BGFX_INSTALL )
 	# install bx
+	install( TARGETS bx DESTINATION lib )
 	install( DIRECTORY ${BX_DIR}/include DESTINATION . )
 
 	# install bgfx
