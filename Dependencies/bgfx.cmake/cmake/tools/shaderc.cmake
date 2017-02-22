@@ -14,13 +14,10 @@ include( cmake/3rdparty/fcpp.cmake )
 include( cmake/3rdparty/glsl-optimizer.cmake )
 include( cmake/3rdparty/glslang.cmake )
 
-find_package(Threads)
-
 add_executable( shaderc ${BGFX_DIR}/tools/shaderc/shaderc.cpp ${BGFX_DIR}/tools/shaderc/shaderc.h ${BGFX_DIR}/tools/shaderc/shaderc_glsl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_hlsl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_pssl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_spirv.cpp )
 target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
 set_target_properties( shaderc PROPERTIES FOLDER "bgfx/tools" )
 target_link_libraries( shaderc bx bgfx-vertexdecl bgfx-shader-spirv fcpp glsl-optimizer glslang )
-target_link_libraries( shaderc ${CMAKE_THREAD_LIBS_INIT})
 add_dependencies( tools shaderc )
 
 function( add_shader ARG_FILE )

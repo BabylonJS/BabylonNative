@@ -38,5 +38,11 @@ elseif( APPLE )
 	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/osx )
 endif()
 
+# Threads
+if( UNIX )
+	find_package( Threads )
+	target_link_libraries( bx ${CMAKE_THREAD_LIBS_INIT} dl )
+endif()
+
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties( bx PROPERTIES FOLDER "bgfx" )
