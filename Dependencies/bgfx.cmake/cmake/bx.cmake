@@ -39,7 +39,7 @@ elseif( APPLE )
 endif()
 
 # Threads
-if( UNIX )
+if( UNIX AND NOT APPLE )
 	find_package( Threads )
 	target_link_libraries( bx ${CMAKE_THREAD_LIBS_INIT} dl )
 endif()

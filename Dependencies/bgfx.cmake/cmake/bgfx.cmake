@@ -51,7 +51,7 @@ if( APPLE )
 	target_link_libraries( bgfx PUBLIC ${COCOA_LIBRARY} ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} )
 endif()
 
-if( UNIX )
+if( UNIX AND NOT APPLE )
 	target_link_libraries( bgfx PUBLIC GL )
 endif()
 
@@ -69,7 +69,7 @@ if( NOT APPLE )
 endif()
 
 # Exclude glx context on non-unix
-if( NOT UNIX )
+if( NOT UNIX OR APPLE )
 	set_source_files_properties( ${BGFX_DIR}/src/glcontext_glx.cpp PROPERTIES HEADER_FILE_ONLY ON )
 endif()
 
