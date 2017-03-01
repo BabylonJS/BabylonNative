@@ -31,12 +31,16 @@ target_include_directories( bx PUBLIC ${BX_DIR}/include )
 # Build system specific configurations
 if( MSVC )
 	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/msvc )
-	target_compile_definitions( bx PUBLIC "__STDC_FORMAT_MACROS" )
 elseif( MINGW )
 	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/mingw )
 elseif( APPLE )
 	target_include_directories( bx PUBLIC ${BX_DIR}/include/compat/osx )
 endif()
+
+# All configurations
+target_compile_definitions( bx PUBLIC "__STDC_LIMIT_MACROS" )
+target_compile_definitions( bx PUBLIC "__STDC_FORMAT_MACROS" )
+target_compile_definitions( bx PUBLIC "__STDC_CONSTANT_MACROS" )
 
 # Threads
 if( UNIX AND NOT APPLE )
