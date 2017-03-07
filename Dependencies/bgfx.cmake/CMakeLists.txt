@@ -23,6 +23,7 @@ option( BGFX_BUILD_TOOLS    "Build bgfx tools."           ON  )
 option( BGFX_BUILD_EXAMPLES "Build bgfx examples."        ON  )
 option( BGFX_INSTALL        "Create installation target." ON  )
 option( BGFX_USE_OVR        "Build with OVR support."     OFF )
+option( BX_AMALGAMATED      "Amalgamate bx source files for faster compilation" ON )
 
 if( NOT BX_DIR )
 	set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bgfx." )
