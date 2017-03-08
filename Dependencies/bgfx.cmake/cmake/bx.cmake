@@ -15,11 +15,15 @@ if( NOT IS_DIRECTORY ${BX_DIR} )
 endif()
 
 # Grab the bx source files
+file( GLOB BX_SOURCES ${BX_DIR}/src/*.cpp )
 if(BX_AMALGAMATED)
-	set(BX_SOURCES ${BX_DIR}/src/amalgamated.cpp)
+	set(BX_NOBUILD ${BX_SOURCES})
+	list(REMOVE_ITEM BX_NOBUILD ${BX_DIR}/src/amalgamated.cpp)
+	foreach(BX_SRC ${BX_NOBUILD})
+		set_source_files_properties( ${BX_SRC} PROPERTIES HEADER_FILE_ONLY ON )
+	endforeach()
 else()
-	file( GLOB BX_SOURCES ${BX_DIR}/src/*.cpp )
-	list(REMOVE_ITEM ${BX_DIR}/src/amalgamated.cpp)
+	set_source_files_properties( ${BX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
 endif()
 
 # Create the bx target
