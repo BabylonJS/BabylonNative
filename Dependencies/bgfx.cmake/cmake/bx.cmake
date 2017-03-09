@@ -16,6 +16,15 @@ endif()
 
 # Grab the bx source files
 file( GLOB BX_SOURCES ${BX_DIR}/src/*.cpp )
+if(BX_AMALGAMATED)
+	set(BX_NOBUILD ${BX_SOURCES})
+	list(REMOVE_ITEM BX_NOBUILD ${BX_DIR}/src/amalgamated.cpp)
+	foreach(BX_SRC ${BX_NOBUILD})
+		set_source_files_properties( ${BX_SRC} PROPERTIES HEADER_FILE_ONLY ON )
+	endforeach()
+else()
+	set_source_files_properties( ${BX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
+endif()
 
 # Create the bx target
 add_library( bx STATIC ${BX_SOURCES} )
@@ -42,10 +51,14 @@ target_compile_definitions( bx PUBLIC "__STDC_LIMIT_MACROS" )
 target_compile_definitions( bx PUBLIC "__STDC_FORMAT_MACROS" )
 target_compile_definitions( bx PUBLIC "__STDC_CONSTANT_MACROS" )
 
-# Threads
+# Additional dependencies on Unix
 if( UNIX AND NOT APPLE )
+	# Threads
 	find_package( Threads )
 	target_link_libraries( bx ${CMAKE_THREAD_LIBS_INIT} dl )
+
+	# Real time (for clock_gettime)
+	target_link_libraries( bx rt )
 endif()
 
 # Put in a "bgfx" folder in Visual Studio
