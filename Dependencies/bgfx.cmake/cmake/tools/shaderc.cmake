@@ -142,7 +142,15 @@ endfunction()
 function( shaderc )
 	cmake_parse_arguments( ARG "" "FILE;OUTPUT" "" ${ARGN} )
 	shaderc_parse( CLI ${ARGN} )
-	add_custom_command( OUTPUT ${ARG_OUTPUT} COMMAND "$<TARGET_FILE:shaderc>" ${CLI} MAIN_DEPENDENCY ${ARG_FILE} COMMENT "Compiling shader ${ARG_FILE}" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+	get_filename_component( OUTDIR "${ARG_OUTPUT}" ABSOLUTE )
+	get_filename_component( OUTDIR "${OUTDIR}" DIRECTORY )
+	add_custom_command( OUTPUT ${ARG_OUTPUT}
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTDIR}"
+		COMMAND "$<TARGET_FILE:shaderc>" ${CLI}
+		MAIN_DEPENDENCY ${ARG_FILE}
+		COMMENT "Compiling shader ${ARG_FILE}"
+		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+	)
 endfunction()
 
 # shaderc_parse(
