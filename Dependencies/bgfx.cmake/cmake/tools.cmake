@@ -8,7 +8,9 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-add_custom_target( tools )
+if( BGFX_CUSTOM_TARGETS )
+	add_custom_target( tools )
+endif()
 
 include( cmake/tools/geometryc.cmake )
 include( cmake/tools/shaderc.cmake )

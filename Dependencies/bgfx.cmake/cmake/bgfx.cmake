@@ -16,6 +16,15 @@ endif()
 
 # Grab the bgfx source files
 file( GLOB BGFX_SOURCES ${BGFX_DIR}/src/*.cpp ${BGFX_DIR}/src/*.mm ${BGFX_DIR}/src/*.h ${BGFX_DIR}/include/bgfx/*.h ${BGFX_DIR}/include/bgfx/c99/*.h )
+if(BGFX_AMALGAMATED)
+	set(BGFX_NOBUILD ${BGFX_SOURCES})
+	list(REMOVE_ITEM BGFX_NOBUILD ${BGFX_DIR}/src/amalgamated.cpp)
+	foreach(BGFX_SRC ${BGFX_NOBUILD})
+		set_source_files_properties( ${BGFX_SRC} PROPERTIES HEADER_FILE_ONLY ON )
+	endforeach()
+else()
+	set_source_files_properties( ${BGFX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
+endif()
 
 # Create the bgfx target
 add_library( bgfx STATIC ${BGFX_SOURCES} )
@@ -56,7 +65,6 @@ if( UNIX AND NOT APPLE )
 endif()
 
 # Excluded files from compilation
-set_source_files_properties( ${BGFX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/glcontext_ppapi.cpp PROPERTIES HEADER_FILE_ONLY ON )
 set_source_files_properties( ${BGFX_DIR}/src/glcontext_egl.cpp PROPERTIES HEADER_FILE_ONLY ON )

@@ -18,7 +18,9 @@ add_executable( shaderc ${BGFX_DIR}/tools/shaderc/shaderc.cpp ${BGFX_DIR}/tools/
 target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
 set_target_properties( shaderc PROPERTIES FOLDER "bgfx/tools" )
 target_link_libraries( shaderc bx bgfx-vertexdecl bgfx-shader-spirv fcpp glsl-optimizer glslang )
-add_dependencies( tools shaderc )
+if( BGFX_CUSTOM_TARGETS )
+	add_dependencies( tools shaderc )
+endif()
 
 function( add_shader ARG_FILE )
 	# Parse arguments
