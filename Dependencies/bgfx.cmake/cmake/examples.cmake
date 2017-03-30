@@ -145,6 +145,7 @@ add_example(
 	${BGFX_DIR}/examples/common/font
 	${BGFX_DIR}/examples/common/imgui
 	${BGFX_DIR}/examples/common/nanovg
+	${BGFX_DIR}/examples/common/ps
 )
 
 # Add examples
@@ -180,3 +181,4 @@ add_example( 28-wireframe )
 add_example( 29-debugdraw )
 add_example( 30-picking )
 add_example( 31-rsm )
+add_example( 32-particles )
