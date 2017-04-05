@@ -30,6 +30,9 @@ option( BX_AMALGAMATED      "Amalgamated bx build for faster compilation"   OFF 
 if( NOT BX_DIR )
 	set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bx." )
 endif()
+if( NOT BIMG_DIR )
+	set( BIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bimg" CACHE STRING "Location of bimg." )
+endif()
 if( NOT BGFX_DIR )
 	set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" CACHE STRING "Location of bgfx." )
 endif()
@@ -40,6 +43,7 @@ endif()
 
 include( cmake/shared.cmake )
 include( cmake/bx.cmake )
+include( cmake/bimg.cmake )
 include( cmake/bgfx.cmake )
 
 if( BGFX_BUILD_TOOLS )
@@ -54,6 +58,10 @@ if( BGFX_INSTALL )
 	# install bx
 	install( TARGETS bx DESTINATION lib )
 	install( DIRECTORY ${BX_DIR}/include DESTINATION . )
+
+	# install bimg
+	install( TARGETS bimg DESTINATION lib )
+	install( DIRECTORY ${BIMG_DIR}/include DESTINATION . )
 
 	# install bgfx
 	install( TARGETS bgfx DESTINATION lib )

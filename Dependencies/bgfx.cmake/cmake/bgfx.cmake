@@ -41,8 +41,8 @@ endif()
 target_include_directories( bgfx PRIVATE ${BGFX_DIR}/3rdparty ${BGFX_DIR}/3rdparty/dxsdk/include ${BGFX_DIR}/3rdparty/khronos )
 target_include_directories( bgfx PUBLIC ${BGFX_DIR}/include )
 
-# bgfx depends on bx
-target_link_libraries( bgfx PUBLIC bx )
+# bgfx depends on bx and bimg
+target_link_libraries( bgfx PUBLIC bx bimg )
 
 # ovr support
 if( BGFX_USE_OVR )
