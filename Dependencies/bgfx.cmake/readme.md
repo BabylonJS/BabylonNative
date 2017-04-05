@@ -2,17 +2,22 @@ bgfx.cmake
 ===================
 [![Build Status](https://travis-ci.org/JoshuaBrookover/bgfx.cmake.svg?branch=master)](https://travis-ci.org/JoshuaBrookover/bgfx.cmake)
 
-This repo contains a bunch of cmake files that can be used to build bgfx with CMake. To get started, clone the repo and run these commands from within the root directory of the repo:
+This repo contains a bunch of cmake files that can be used to build bgfx with CMake.
+
+Building
+-------------
 
 ```
+git clone https://github.com/JoshuaBrookover/bgfx.cmake.git
+cd bgfx.cmake
 git submodule init
 git submodule update
 mkdir build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=./install
+cmake ..
 ```
 
-If downloading via zip (instead of using git submodules) manually download bx and bgfx and copy them into the root directory, or locate them via BX_DIR and BGFX_DIR CMake variables.
+If downloading via zip (instead of using git submodules) manually download bx, bimg and bgfx and copy them into the root directory, or locate them via BX_DIR, BIMG_DIR and BGFX_DIR CMake variables.
 
 Note
 -------------
@@ -24,7 +29,7 @@ This project is setup to be included a few different ways. To include bgfx sourc
 
 Features
 -------------
-* No outside dependencies besides bx, bgfx, and CMake.
+* No outside dependencies besides bx, bimg, bgfx, and CMake.
 * Tested on Visual Studio 2015, Xcode, gcc 5.4, clang 3.8.
 * Compiles bgfx, tools & examples.
 * Detects shader modifications and automatically rebuilds them for all examples.
