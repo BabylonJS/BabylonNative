@@ -186,4 +186,4 @@ add_example( 29-debugdraw )
 add_example( 30-picking )
 add_example( 31-rsm )
 add_example( 32-particles )
-#add_example( 33-pom ) # not currently working in Direct3D
+add_example( 33-pom ) # not currently working in Direct3D
