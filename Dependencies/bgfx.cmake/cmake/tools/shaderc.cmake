@@ -140,15 +140,19 @@ endfunction()
 # shaderc( FILE file OUTPUT file ... )
 # See shaderc_parse() below for inputs
 function( shaderc )
-	cmake_parse_arguments( ARG "" "FILE;OUTPUT" "" ${ARGN} )
-	shaderc_parse( CLI ${ARGN} )
+	cmake_parse_arguments( ARG "" "FILE;OUTPUT;LABEL" "" ${ARGN} )
+	set( LABEL "" )
+	if( ARG_LABEL )
+		set( LABEL " (${ARG_LABEL})" )
+	endif()
+	shaderc_parse( CLI FILE ${ARG_FILE} OUTPUT ${ARG_OUTPUT} ${ARG_UNPARSED_ARGUMENTS} )
 	get_filename_component( OUTDIR "${ARG_OUTPUT}" ABSOLUTE )
 	get_filename_component( OUTDIR "${OUTDIR}" DIRECTORY )
 	add_custom_command( OUTPUT ${ARG_OUTPUT}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTDIR}"
 		COMMAND "$<TARGET_FILE:shaderc>" ${CLI}
 		MAIN_DEPENDENCY ${ARG_FILE}
-		COMMENT "Compiling shader ${ARG_FILE}"
+		COMMENT "Compiling shader ${ARG_FILE}${LABEL}"
 		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 	)
 endfunction()
