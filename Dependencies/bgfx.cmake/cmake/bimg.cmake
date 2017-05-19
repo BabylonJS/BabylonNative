@@ -37,3 +37,6 @@ target_link_libraries( bimg bx edtaa3 etc1 etc2 iqa squish nvtt pvrtc )
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties( bimg PROPERTIES FOLDER "bgfx" )
+
+# Export debug build as "bimgd"
+set_target_properties( bimg PROPERTIES OUTPUT_NAME_DEBUG "bimgd" )
