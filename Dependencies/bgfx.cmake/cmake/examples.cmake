@@ -137,6 +137,7 @@ endfunction()
 # Build all examples target
 if( BGFX_CUSTOM_TARGETS )
 	add_custom_target( examples )
+	set_target_properties( examples PROPERTIES FOLDER "bgfx/examples" )
 endif()
 
 # Add common library for examples
