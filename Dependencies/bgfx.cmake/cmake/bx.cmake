@@ -29,8 +29,8 @@ endif()
 # Create the bx target
 add_library( bx STATIC ${BX_SOURCES} )
 
-# Link against psapi in Visual Studio
-if( MSVC )
+# Link against psapi on Windows
+if( WIN32 )
 	target_link_libraries( bx PUBLIC psapi )
 endif()
 
