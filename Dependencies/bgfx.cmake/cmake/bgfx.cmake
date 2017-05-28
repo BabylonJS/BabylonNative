@@ -66,8 +66,6 @@ endif()
 
 # Excluded files from compilation
 set_source_files_properties( ${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON )
-set_source_files_properties( ${BGFX_DIR}/src/glcontext_ppapi.cpp PROPERTIES HEADER_FILE_ONLY ON )
-set_source_files_properties( ${BGFX_DIR}/src/glcontext_egl.cpp PROPERTIES HEADER_FILE_ONLY ON )
 
 # Exclude mm files if not on OS X
 if( NOT APPLE )
