@@ -15,3 +15,5 @@ endif()
 
 include( cmake/tools/geometryc.cmake )
 include( cmake/tools/shaderc.cmake )
+include( cmake/tools/texturec.cmake )
+include( cmake/tools/texturev.cmake )
