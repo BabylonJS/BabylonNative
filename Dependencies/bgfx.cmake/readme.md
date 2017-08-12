@@ -39,5 +39,6 @@ Todo
 * Support Android.
 * Support Native Client.
 * Support Windows Phone.
-* More configuration.
+* More configuration. [#12](https://github.com/JoshuaBrookover/bgfx.cmake/issues/12)
 * Add varying.def.sc files as shader dependencies.
+* Combined examples.
