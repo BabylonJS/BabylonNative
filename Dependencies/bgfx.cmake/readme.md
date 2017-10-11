@@ -34,6 +34,10 @@ Features
 * Compiles bgfx, tools & examples.
 * Detects shader modifications and automatically rebuilds them for all examples.
 
+Does this work with latest bx/bgfx/bimg?
+-------------
+Probably! This project needs to be updated if a dependency is added or the bgfx build system changes. The bgfx repository is very active but these types of changes are rare. New examples have to be added manually as well, but not doing so will merely result in that example not showing up and won't break anything else. If pulling latest causes issues, be sure to manually reconfigure CMake as the glob patterns may need to be refreshed (the use of glob patterns in CMake is generally discouraged but in this project it helps to ensure upwards compatibilty with newer bgfx updates).
+
 Todo
 -------------
 * Support Android.

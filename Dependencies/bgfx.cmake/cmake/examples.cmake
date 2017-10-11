@@ -193,6 +193,9 @@ set(
 	31-rsm
 	32-particles
 	33-pom
+	34-mvs
+	35-dynamic
+	36-sky
 )
 
 foreach( EXAMPLE ${BGFX_EXAMPLES} )
