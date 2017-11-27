@@ -156,48 +156,51 @@ add_example(
 	${BGFX_DIR}/examples/common/ps
 )
 
-# Add examples
-set(
-	BGFX_EXAMPLES
-	00-helloworld
-	01-cubes
-	02-metaballs
-	03-raymarch
-	04-mesh
-	05-instancing
-	06-bump
-	07-callback
-	08-update
-	09-hdr
-	10-font
-	11-fontsdf
-	12-lod
-	13-stencil
-	14-shadowvolumes
-	15-shadowmaps-simple
-	16-shadowmaps
-	17-drawstress
-	18-ibl
-	19-oit
-	20-nanovg
-	21-deferred
-	22-windows
-	23-vectordisplay
-	24-nbody
-	25-c99
-	26-occlusion
-	27-terrain
-	28-wireframe
-	29-debugdraw
-	30-picking
-	31-rsm
-	32-particles
-	33-pom
-	34-mvs
-	35-dynamic
-	36-sky
-)
+# Only add examples if set, otherwise we still need exmaples common for tools
+if( BGFX_BUILD_EXAMPLES )
+    # Add examples
+    set(
+        BGFX_EXAMPLES
+        00-helloworld
+        01-cubes
+        02-metaballs
+        03-raymarch
+        04-mesh
+        05-instancing
+        06-bump
+        07-callback
+        08-update
+        09-hdr
+        10-font
+        11-fontsdf
+        12-lod
+        13-stencil
+        14-shadowvolumes
+        15-shadowmaps-simple
+        16-shadowmaps
+        17-drawstress
+        18-ibl
+        19-oit
+        20-nanovg
+        21-deferred
+        22-windows
+        23-vectordisplay
+        24-nbody
+        25-c99
+        26-occlusion
+        27-terrain
+        28-wireframe
+        29-debugdraw
+        30-picking
+        31-rsm
+        32-particles
+        33-pom
+        34-mvs
+        35-dynamic
+        36-sky
+    )
 
-foreach( EXAMPLE ${BGFX_EXAMPLES} )
-	add_example( ${EXAMPLE} )
-endforeach()
+    foreach( EXAMPLE ${BGFX_EXAMPLES} )
+        add_example( ${EXAMPLE} )
+    endforeach()
+endif()
