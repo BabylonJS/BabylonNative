@@ -16,6 +16,7 @@ endif()
 
 # Grab the bx source files
 file( GLOB BX_SOURCES ${BX_DIR}/src/*.cpp )
+
 if(BX_AMALGAMATED)
 	set(BX_NOBUILD ${BX_SOURCES})
 	list(REMOVE_ITEM BX_NOBUILD ${BX_DIR}/src/amalgamated.cpp)
@@ -50,6 +51,11 @@ endif()
 target_compile_definitions( bx PUBLIC "__STDC_LIMIT_MACROS" )
 target_compile_definitions( bx PUBLIC "__STDC_FORMAT_MACROS" )
 target_compile_definitions( bx PUBLIC "__STDC_CONSTANT_MACROS" )
+
+target_compile_definitions( bx PRIVATE "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>" )
+if(BGFX_CONFIG_DEBUG)
+	target_compile_definitions( bx PRIVATE BX_CONFIG_DEBUG=1)
+endif()
 
 # Additional dependencies on Unix
 if( UNIX AND NOT APPLE )

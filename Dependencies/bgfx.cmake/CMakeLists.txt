@@ -27,6 +27,7 @@ option( BGFX_CUSTOM_TARGETS   "Include convenience custom targets."           ON
 option( BGFX_USE_OVR          "Build with OVR support."                       OFF )
 option( BGFX_AMALGAMATED      "Amalgamated bgfx build for faster compilation" OFF )
 option( BX_AMALGAMATED        "Amalgamated bx build for faster compilation"   OFF )
+option( BGFX_CONFIG_DEBUG   	  "Enables debug configuration on all builds" OFF)
 
 if( NOT BX_DIR )
 	set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bx." )
