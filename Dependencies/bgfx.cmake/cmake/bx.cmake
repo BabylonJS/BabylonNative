@@ -65,6 +65,10 @@ if( UNIX AND NOT APPLE )
 
 	# Real time (for clock_gettime)
 	target_link_libraries( bx rt )
+elseif(APPLE)
+	find_library( FOUNDATION_LIBRARY Foundation)
+	mark_as_advanced( FOUNDATION_LIBRARY )
+	target_link_libraries( bx PUBLIC ${FOUNDATION_LIBRARY} )
 endif()
 
 # Put in a "bgfx" folder in Visual Studio

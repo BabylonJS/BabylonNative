@@ -14,24 +14,28 @@ if( NOT IS_DIRECTORY ${BGFX_DIR} )
 	return()
 endif()
 
+if(NOT APPLE)
+	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
+else()
+	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.mm)
+endif()
+
 # Grab the bgfx source files
 file( GLOB BGFX_SOURCES ${BGFX_DIR}/src/*.cpp ${BGFX_DIR}/src/*.mm ${BGFX_DIR}/src/*.h ${BGFX_DIR}/include/bgfx/*.h ${BGFX_DIR}/include/bgfx/c99/*.h )
 if(BGFX_AMALGAMATED)
 	set(BGFX_NOBUILD ${BGFX_SOURCES})
-	list(REMOVE_ITEM BGFX_NOBUILD ${BGFX_DIR}/src/amalgamated.cpp)
+	list(REMOVE_ITEM BGFX_NOBUILD ${BGFX_AMALGAMATED_SOURCE})
 	foreach(BGFX_SRC ${BGFX_NOBUILD})
 		set_source_files_properties( ${BGFX_SRC} PROPERTIES HEADER_FILE_ONLY ON )
 	endforeach()
 else()
-	if(APPLE)
-		set_source_files_properties( ${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON )
-	else()
-		set_source_files_properties( ${BGFX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
-	endif()
+	# Do not build using amalgamated sources
+	set_source_files_properties( ${BGFX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON )
+	set_source_files_properties( ${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON )
 endif()
 
 # Create the bgfx target
-add_library( bgfx STATIC ${BGFX_SOURCES} )
+add_library( bgfx ${BGFX_SOURCES} )
 
 # Enable BGFX_CONFIG_DEBUG in Debug configuration
 target_compile_definitions( bgfx PRIVATE "$<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>" )
@@ -68,11 +72,14 @@ if( APPLE )
 endif()
 
 if( UNIX AND NOT APPLE )
-	target_link_libraries( bgfx PUBLIC GL )
+	find_package(X11 REQUIRED)
+	find_package(OpenGL REQUIRED)
+	#The following commented libraries are linked by bx
+	#find_package(Threads REQUIRED)
+	#find_library(LIBRT_LIBRARIES rt)
+	#find_library(LIBDL_LIBRARIES dl)
+	target_link_libraries( bgfx PUBLIC ${X11_LIBRARIES} ${OPENGL_LIBRARIES})
 endif()
-
-# Excluded files from compilation
-set_source_files_properties( ${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON )
 
 # Exclude mm files if not on OS X
 if( NOT APPLE )
