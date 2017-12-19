@@ -2,10 +2,18 @@ sudo: required
 dist: precise
 language: cpp
 
+os:
+  - osx
+
+env:
+  - AMALGAMATED=ON
+  - AMALGAMATED=OFF
+
 matrix:
   include:
-    - compiler: gcc
-      addons:
+    - os: linux
+      compiler: gcc
+      addons: &gcc-addons
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -14,27 +22,30 @@ matrix:
             - g++-5
             - cmake
             - cmake-data
-      env: COMPILER=g++-5
-    - compiler: clang
-      addons:
+      env: COMPILER=g++-5 AMALGAMATED=ON
+    - os: linux
+      compiler: clang
+      addons: &clang-addons
         apt:
           sources:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-precise-3.8
-            - george-edison55-precise-backports 
+            - george-edison55-precise-backports
           packages:
             - clang-3.8
             - cmake
             - cmake-data
-      env: COMPILER=clang++-3.8
-
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y libglew-dev
+      env: COMPILER=clang++-3.8 AMALGAMATED=ON
+    - os: linux
+      compiler: gcc
+      addons: *gcc-addons
+      env: COMPILER=g++-5 AMALGAMATED=OFF
+    - os: linux
+      compiler: clang
+      addons: *clang-addons
+      env: COMPILER=clang++-3.8 AMALGAMATED=OFF
 
 script:
-  - git submodule init
-  - git submodule update
-  - mkdir build
-  - cd build
-  - cmake -DCMAKE_INSTALL_PREFIX=./install -DCMAKE_CXX_COMPILER=$COMPILER .. && make
+  - mkdir build && cd build
+  - cmake -DCMAKE_CXX_COMPILER=$COMPILER -DBGFX_INSTALL_EXAMPLES=ON -DBGFX_AMALGAMATED=$AMALGAMATED -DBX_AMALGAMATED=$AMALGAMATED ..
+  - cmake --build .
