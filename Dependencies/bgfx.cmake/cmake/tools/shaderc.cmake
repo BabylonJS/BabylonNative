@@ -72,8 +72,8 @@ function( add_shader ARG_FILE )
 		set( DX11_PROFILE PROFILE ${D3D_PREFIX}_${ARG_DX11_MODEL} )
 	endif()
 	set( GLSL_PROFILE PROFILE 120 )
-	if( ARG_GLSL )
-		set( GLSL_PROFILE PROFILE ${ARG_GLSL} )
+	if( ARG_GLSL_VERSION )
+		set( GLSL_PROFILE PROFILE ${ARG_GLSL_VERSION} )
 	endif()
 
 	# Add commands
@@ -97,8 +97,8 @@ function( add_shader ARG_FILE )
 			)
 		elseif( "${PLATFORM}" STREQUAL "metal" )
 			list( APPEND OPTIONS
-				WINDOWS
-				${HLSL_PROFILE}
+				OSX
+				PROFILE metal
 				OUTPUT ${OUTPUT}
 			)
 		elseif( "${PLATFORM}" STREQUAL "glsl" )
