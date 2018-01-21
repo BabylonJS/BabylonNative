@@ -20,6 +20,11 @@ set( GLSL-OPTIMIZER_INCLUDES
 	${BGFX_DIR}/3rdparty/glsl-optimizer/src
 )
 
+# glsl-optimizer makes UBSan segfault for whatever reason
+# We already know that it's full of UB anyway... so just don't build it with UBSan
+string(REPLACE "-fsanitize=undefined" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" )
+string(REPLACE "-fsanitize=undefined" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
+
 # glcpp
 file( GLOB GLCPP_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/glcpp/*.c ${BGFX_DIR}/3rdparty/glsl-optimizer/src/util/*.c )
 add_library( glcpp ${GLCPP_SOURCES} )
