@@ -1,5 +1,5 @@
 sudo: required
-dist: precise
+dist: trusty
 language: cpp
 
 os:
@@ -17,7 +17,6 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - george-edison55-precise-backports
           packages:
             - g++-5
             - cmake
@@ -29,8 +28,8 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.8
-            - george-edison55-precise-backports
+            - llvm-toolchain-trusty-3.8
+            - george-edison55-trusty-backports
           packages:
             - clang-3.8
             - cmake
