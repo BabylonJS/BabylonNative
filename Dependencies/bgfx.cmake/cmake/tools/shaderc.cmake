@@ -47,11 +47,11 @@ function( add_shader ARG_FILE )
 		set( PLATFORMS ${ARG_PLATFORMS} )
 	else()
 		if( MSVC )
-			set( PLATFORMS dx9 dx11 glsl gles )
+			set( PLATFORMS dx9 dx11 glsl gles asm.js )
 		elseif( APPLE )
-			set( PLATFORMS metal glsl gles )
+			set( PLATFORMS metal glsl gles asm.js )
 		else()
-			set( PLATFORMS glsl gles )
+			set( PLATFORMS glsl gles asm.js )
 		endif()
 	endif()
 
@@ -110,6 +110,11 @@ function( add_shader ARG_FILE )
 		elseif( "${PLATFORM}" STREQUAL "gles" )
 			list( APPEND OPTIONS
 				ANDROID
+				OUTPUT ${OUTPUT}
+			)
+		elseif( "${PLATFORM}" STREQUAL "asm.js" )
+			list( APPEND OPTIONS
+				ASM_JS
 				OUTPUT ${OUTPUT}
 			)
 		else()
