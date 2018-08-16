@@ -75,4 +75,6 @@ endif()
 set_target_properties( bx PROPERTIES FOLDER "bgfx" )
 
 # Export debug build as "bxd"
-set_target_properties( bx PROPERTIES OUTPUT_NAME_DEBUG "bxd" )
+if( BGFX_USE_DEBUG_SUFFIX )
+	set_target_properties( bx PROPERTIES OUTPUT_NAME_DEBUG "bxd" )
+endif()
