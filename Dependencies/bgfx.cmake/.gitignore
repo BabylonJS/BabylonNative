@@ -1,2 +1,14 @@
 build/
 *.swp
+CMakeCache.txt
+CMakeFiles/
+Debug/
+Release/
+*.vcxproj
+*.vcxproj.filters
+*.dir/
+*.sln
+install/
+install_manifest.txt
+generated/
+cmake_install.cmake
