@@ -51,11 +51,11 @@ function( add_bgfx_shader FILE FOLDER )
 			list( APPEND OUTPUTS "METAL" )
 			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, " )
 		endif()
-		# gles
-		set( GLES_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/gles/${FILENAME}.bin )
-		shaderc_parse( GLES ${COMMON} ANDROID OUTPUT ${GLES_OUTPUT} )
-		list( APPEND OUTPUTS "GLES" )
-		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLES, " )
+		# essl
+		set( ESSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/essl/${FILENAME}.bin )
+		shaderc_parse( ESSL ${COMMON} ANDROID OUTPUT ${ESSL_OUTPUT} )
+		list( APPEND OUTPUTS "ESSL" )
+		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, " )
 		# glsl
 		set( GLSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin )
 		shaderc_parse( GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT} )

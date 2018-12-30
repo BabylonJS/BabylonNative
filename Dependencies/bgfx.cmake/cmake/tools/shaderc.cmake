@@ -47,11 +47,11 @@ function( add_shader ARG_FILE )
 		set( PLATFORMS ${ARG_PLATFORMS} )
 	else()
 		if( MSVC )
-			set( PLATFORMS dx9 dx11 glsl gles asm.js )
+			set( PLATFORMS dx9 dx11 glsl essl asm.js )
 		elseif( APPLE )
-			set( PLATFORMS metal glsl gles asm.js )
+			set( PLATFORMS metal glsl essl asm.js )
 		else()
-			set( PLATFORMS glsl gles asm.js )
+			set( PLATFORMS glsl essl asm.js )
 		endif()
 	endif()
 
@@ -107,7 +107,7 @@ function( add_shader ARG_FILE )
 				${GLSL_PROFILE}
 				OUTPUT ${OUTPUT}
 			)
-		elseif( "${PLATFORM}" STREQUAL "gles" )
+		elseif( "${PLATFORM}" STREQUAL "essl" )
 			list( APPEND OPTIONS
 				ANDROID
 				OUTPUT ${OUTPUT}
