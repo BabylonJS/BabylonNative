@@ -47,11 +47,11 @@ function( add_shader ARG_FILE )
 		set( PLATFORMS ${ARG_PLATFORMS} )
 	else()
 		if( MSVC )
-			set( PLATFORMS dx9 dx11 glsl essl asm.js )
+			set( PLATFORMS dx9 dx11 glsl essl asm.js spirv )
 		elseif( APPLE )
-			set( PLATFORMS metal glsl essl asm.js )
+			set( PLATFORMS metal glsl essl asm.js spirv )
 		else()
-			set( PLATFORMS glsl essl asm.js )
+			set( PLATFORMS glsl essl asm.js spirv )
 		endif()
 	endif()
 
@@ -75,6 +75,7 @@ function( add_shader ARG_FILE )
 	if( ARG_GLSL_VERSION )
 		set( GLSL_PROFILE PROFILE ${ARG_GLSL_VERSION} )
 	endif()
+	set( SPIRV_PROFILE PROFILE spirv )
 
 	# Add commands
 	set( OUTPUTS "" )
@@ -115,6 +116,12 @@ function( add_shader ARG_FILE )
 		elseif( "${PLATFORM}" STREQUAL "asm.js" )
 			list( APPEND OPTIONS
 				ASM_JS
+				OUTPUT ${OUTPUT}
+			)
+		elseif( "${PLATFORM}" STREQUAL "spirv" )
+			list( APPEND OPTIONS
+				LINUX
+				${SPIRV_PROFILE}
 				OUTPUT ${OUTPUT}
 			)
 		else()
