@@ -12,7 +12,7 @@ cmake_minimum_required( VERSION 3.0 )
 project( bgfx )
 
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
-if( APPLE )
+if( APPLE AND NOT IOS )
 	set( CMAKE_CXX_FLAGS "-ObjC++ --std=c++14" )
 elseif(UNIX)
     set(CMAKE_CXX_STANDARD 14)

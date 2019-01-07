@@ -20,3 +20,8 @@ target_link_libraries( geometryc bx bgfx-bounds bgfx-vertexdecl forsyth-too ib-c
 if( BGFX_CUSTOM_TARGETS )
 	add_dependencies( tools geometryc )
 endif()
+
+if (IOS)
+	set_target_properties(geometryc PROPERTIES MACOSX_BUNDLE ON
+											   MACOSX_BUNDLE_GUI_IDENTIFIER example-${ARG_NAME})
+endif()

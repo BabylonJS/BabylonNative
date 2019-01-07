@@ -22,6 +22,11 @@ if( BGFX_CUSTOM_TARGETS )
 	add_dependencies( tools shaderc )
 endif()
 
+if (IOS)
+	set_target_properties(shaderc PROPERTIES MACOSX_BUNDLE ON
+											 MACOSX_BUNDLE_GUI_IDENTIFIER shaderc)
+endif()
+
 function( add_shader ARG_FILE )
 	# Parse arguments
 	cmake_parse_arguments( ARG "FRAGMENT;VERTEX" "OUTPUT;GLSL_VERSION;DX9_MODEL;DX11_MODEL" "PLATFORMS" ${ARGN} )

@@ -60,8 +60,10 @@ if( BGFX_USE_OVR )
 	target_link_libraries( bgfx PUBLIC ovr )
 endif()
 
-# Frameworks required on OS X
-if( APPLE )
+# Frameworks required on iOS and macOS
+if( IOS )
+	target_link_libraries (bgfx PUBLIC "-framework OpenGLES  -framework Metal -framework UIKit -framework CoreGraphics -framework QuartzCore")
+elseif( APPLE )
 	find_library( COCOA_LIBRARY Cocoa )
 	find_library( METAL_LIBRARY Metal )
 	find_library( QUARTZCORE_LIBRARY QuartzCore )

@@ -135,6 +135,10 @@ function( add_example ARG_NAME )
 		if( BGFX_CUSTOM_TARGETS )
 			add_dependencies( examples example-${ARG_NAME} )
 		endif()
+		if( IOS )
+			set_target_properties(example-${ARG_NAME} PROPERTIES MACOSX_BUNDLE ON
+													  MACOSX_BUNDLE_GUI_IDENTIFIER example-${ARG_NAME})
+		endif()
 	endif()
 	target_compile_definitions( example-${ARG_NAME} PRIVATE "-D_CRT_SECURE_NO_WARNINGS" "-D__STDC_FORMAT_MACROS" "-DENTRY_CONFIG_IMPLEMENT_MAIN=1" )
 
