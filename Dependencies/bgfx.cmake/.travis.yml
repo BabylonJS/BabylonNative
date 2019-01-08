@@ -1,50 +1,73 @@
-sudo: required
-dist: trusty
 language: cpp
-
-os:
-  - osx
-
-env:
-  - AMALGAMATED=ON
-  - AMALGAMATED=OFF
 
 matrix:
   include:
-    - os: linux
-      compiler: gcc
-      addons: &gcc-addons
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
-            - cmake
-            - cmake-data
-      env: COMPILER=g++-5 AMALGAMATED=ON
-    - os: linux
-      compiler: clang
-      addons: &clang-addons
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-3.8
-            - george-edison55-trusty-backports
-          packages:
-            - clang-3.8
-            - cmake
-            - cmake-data
-      env: COMPILER=clang++-3.8 AMALGAMATED=ON
-    - os: linux
-      compiler: gcc
-      addons: *gcc-addons
-      env: COMPILER=g++-5 AMALGAMATED=OFF
-    - os: linux
-      compiler: clang
-      addons: *clang-addons
-      env: COMPILER=clang++-3.8 AMALGAMATED=OFF
+
+  - name: "Linux gcc"
+    os: linux
+    dist: xenial
+    compiler: gcc
+    env:
+      - AMALGAMATED=OFF
+  
+  - name: "Linux gcc Amalgamated"
+    os: linux
+    dist: xenial
+    compiler: gcc
+    env:
+      - AMALGAMATED=ON
+
+  - name: "Linux clang"
+    os: linux
+    dist: xenial
+    compiler: clang
+    env:
+      - AMALGAMATED=OFF
+
+  - name: "Linux clang Amalgamated"
+    os: linux
+    dist: xenial
+    compiler: clang
+    env:
+      - AMALGAMATED=ON
+
+  - name: "macOS Xcode 10"
+    os: osx
+    osx_image: xcode10
+    env:
+      - AMALGAMATED=OFF
+
+  - name: "macOS Xcode 10 Amalgamated"
+    os: osx
+    osx_image: xcode10
+    env:
+      - AMALGAMATED=ON
+
+  - name: "iOS Xcode 10"
+    os: osx
+    osx_image: xcode10
+    env:
+     - CMAKE_FLAGS="-GXcode -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/iOS.toolchain.cmake"
+
+  - name: "iOS Xcode 10 Amalgamated"
+    os: osx
+    osx_image: xcode10
+    env:
+     - CMAKE_FLAGS="-GXcode -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/iOS.toolchain.cmake"
+     - AMALGAMATED=ON
+
+  - name: "Visual studio 15 2017"
+    os: windows
+    env:
+      - AMALGAMATED=ON
+    
+
+  - name: "Visual studio 15 2017 Amalgamated"
+    os: windows
+    env:
+      - AMALGAMATED=ON
 
 script:
   - mkdir build && cd build
-  - cmake -DCMAKE_CXX_COMPILER=$COMPILER -DBGFX_INSTALL_EXAMPLES=ON -DBGFX_AMALGAMATED=$AMALGAMATED -DBX_AMALGAMATED=$AMALGAMATED ..
+  - cmake $CMAKE_FLAGS -DBGFX_INSTALL_EXAMPLES=ON -DBGFX_AMALGAMATED=$AMALGAMATED -DBX_AMALGAMATED=$AMALGAMATED ..
   - cmake --build .
