@@ -215,6 +215,10 @@ if( BGFX_BUILD_EXAMPLES )
         34-mvs
         35-dynamic
         36-sky
+        37-gpudrivenrendering
+        38-bloom
+        39-assao
+        40-svt
     )
 
     foreach( EXAMPLE ${BGFX_EXAMPLES} )
