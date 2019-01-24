@@ -51,13 +51,13 @@ matrix:
     os: osx
     osx_image: xcode10
     env:
-     - CMAKE_FLAGS="-GXcode -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/iOS.toolchain.cmake"
+     - CMAKE_FLAGS="-GXcode -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/iOS.toolchain.cmake -DBGFX_BUILD_TOOLS=OFF -DBGFX_BUILD_EXAMPLES=OFF"
 
   - name: "iOS Xcode 10 Amalgamated"
     os: osx
     osx_image: xcode10
     env:
-     - CMAKE_FLAGS="-GXcode -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/iOS.toolchain.cmake"
+     - CMAKE_FLAGS="-GXcode -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/iOS.toolchain.cmake -DBGFX_BUILD_TOOLS=OFF -DBGFX_BUILD_EXAMPLES=OFF"
      - AMALGAMATED=ON
 
   - name: "Visual studio 15 2017"
