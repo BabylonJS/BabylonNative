@@ -143,11 +143,18 @@ function( add_example ARG_NAME )
 	target_compile_definitions( example-${ARG_NAME} PRIVATE "-D_CRT_SECURE_NO_WARNINGS" "-D__STDC_FORMAT_MACROS" "-DENTRY_CONFIG_IMPLEMENT_MAIN=1" )
 
 	# Configure shaders
-	if( NOT ARG_COMMON )
+	if( NOT ARG_COMMON AND NOT IOS AND NOT EMSCRIPTEN)
 		foreach( SHADER ${SHADERS} )
 			add_bgfx_shader( ${SHADER} ${ARG_NAME} )
 		endforeach()
 		source_group( "Shader Files" FILES ${SHADERS})
+	endif()
+
+	if (NOT ARG_COMMON AND EMSCRIPTEN)
+		target_link_libraries(example-${ARG_NAME}
+			"-s PRECISE_F32=1"
+			"-s TOTAL_MEMORY=268435456"
+			"--memory-init-file 1")
 	endif()
 
 	# Directory name
