@@ -12,12 +12,10 @@ cmake_minimum_required( VERSION 3.0 )
 project( bgfx )
 
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
-if( APPLE AND NOT IOS )
-	set( CMAKE_CXX_FLAGS "-ObjC++ --std=c++14" )
-elseif(UNIX)
-    set(CMAKE_CXX_STANDARD 14)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif()
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 
 option( BGFX_BUILD_TOOLS      "Build bgfx tools."                             ON  )
 option( BGFX_BUILD_EXAMPLES   "Build bgfx examples."                          ON  )
