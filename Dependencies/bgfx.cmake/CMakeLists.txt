@@ -16,6 +16,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if( APPLE and NOT IOS )
+	set( CMAKE_CXX_FLAGS "-ObjC++" )
+endif()
 
 option( BGFX_BUILD_TOOLS      "Build bgfx tools."                             ON  )
 option( BGFX_BUILD_EXAMPLES   "Build bgfx examples."                          ON  )
