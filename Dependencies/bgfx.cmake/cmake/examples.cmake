@@ -206,7 +206,7 @@ if( BGFX_BUILD_EXAMPLES )
         18-ibl
         19-oit
         20-nanovg
-        21-deferred
+#        21-deferred
         22-windows
         23-vectordisplay
         24-nbody
