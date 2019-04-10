@@ -24,26 +24,38 @@ function( add_bgfx_shader FILE FOLDER )
 	elseif( "${TYPE}" STREQUAL "vs" )
 		set( TYPE "VERTEX" )
 		set( D3D_PREFIX "vs" )
+	elseif( "${TYPE}" STREQUAL "cs" )
+		set( TYPE "COMPUTE" )
+ 		set( D3D_PREFIX "cs" )
 	else()
 		set( TYPE "" )
 	endif()
+
 	if( NOT "${TYPE}" STREQUAL "" )
 		set( COMMON FILE ${FILE} ${TYPE} INCLUDES ${BGFX_DIR}/src )
 		set( OUTPUTS "" )
 		set( OUTPUTS_PRETTY "" )
+
 		if( WIN32 )
 			# dx9
-			set( DX9_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx9/${FILENAME}.bin )
-			shaderc_parse( DX9 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_3_0 OUTPUT ${DX9_OUTPUT} )
-			list( APPEND OUTPUTS "DX9" )
-			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX9, " )
+			if( NOT "${TYPE}" STREQUAL "COMPUTE" })
+				set( DX9_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx9/${FILENAME}.bin )
+				shaderc_parse( DX9 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_3_0 O 3 OUTPUT ${DX9_OUTPUT} )
+				list( APPEND OUTPUTS "DX9" )
+				set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX9, " )
+			endif()
 
 			# dx11
 			set( DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin )
-			shaderc_parse( DX11 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_4_0 OUTPUT ${DX11_OUTPUT} )
+			if( NOT "${TYPE}" STREQUAL "COMPUTE" })
+				shaderc_parse( DX11 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_5_0 O 3 OUTPUT ${DX11_OUTPUT} )
+			else()
+				shaderc_parse( DX11 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_5_0 O 1 OUTPUT ${DX11_OUTPUT} )
+			endif()
 			list( APPEND OUTPUTS "DX11" )
 			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, " )
 		endif()
+
 		if( APPLE )
 			# metal
 			set( METAL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/metal/${FILENAME}.bin )
@@ -51,16 +63,23 @@ function( add_bgfx_shader FILE FOLDER )
 			list( APPEND OUTPUTS "METAL" )
 			set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, " )
 		endif()
+
 		# essl
 		set( ESSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/essl/${FILENAME}.bin )
 		shaderc_parse( ESSL ${COMMON} ANDROID OUTPUT ${ESSL_OUTPUT} )
 		list( APPEND OUTPUTS "ESSL" )
 		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, " )
+
 		# glsl
 		set( GLSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin )
-		shaderc_parse( GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT} )
+		if( NOT "${TYPE}" STREQUAL "COMPUTE" )
+			shaderc_parse( GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT} )
+		else()
+			shaderc_parse( GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT} )
+		endif()
 		list( APPEND OUTPUTS "GLSL" )
 		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL, " )
+
 		# spirv
 		set( SPIRV_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/spirv/${FILENAME}.bin )
 		shaderc_parse( SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT} )
@@ -68,12 +87,14 @@ function( add_bgfx_shader FILE FOLDER )
 		set( OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV" )
 		set( OUTPUT_FILES "" )
 		set( COMMANDS "" )
+
 		foreach( OUT ${OUTPUTS} )
 			list( APPEND OUTPUT_FILES ${${OUT}_OUTPUT} )
 			list( APPEND COMMANDS COMMAND "$<TARGET_FILE:shaderc>" ${${OUT}} )
 			get_filename_component( OUT_DIR ${${OUT}_OUTPUT} DIRECTORY )
 			file( MAKE_DIRECTORY ${OUT_DIR} )
 		endforeach()
+
 		file( RELATIVE_PATH PRINT_NAME ${BGFX_DIR}/examples ${FILE} )
 		add_custom_command(
 			MAIN_DEPENDENCY
@@ -182,53 +203,53 @@ add_example(
 
 # Only add examples if set, otherwise we still need exmaples common for tools
 if( BGFX_BUILD_EXAMPLES )
-    # Add examples
-    set(
-        BGFX_EXAMPLES
-        00-helloworld
-        01-cubes
-        02-metaballs
-        03-raymarch
-        04-mesh
-        05-instancing
-        06-bump
-        07-callback
-        08-update
-        09-hdr
-        10-font
-        11-fontsdf
-        12-lod
-        13-stencil
-        14-shadowvolumes
-        15-shadowmaps-simple
-        16-shadowmaps
-        17-drawstress
-        18-ibl
-        19-oit
-        20-nanovg
-#        21-deferred
-        22-windows
-        23-vectordisplay
-        24-nbody
-        25-c99
-        26-occlusion
-        27-terrain
-        28-wireframe
-        29-debugdraw
-        30-picking
-        31-rsm
-        32-particles
-        33-pom
-        34-mvs
-        35-dynamic
-        36-sky
-#        37-gpudrivenrendering
-        38-bloom
-        39-assao
-#        40-svt
-    )
+	# Add examples
+	set(
+		BGFX_EXAMPLES
+		00-helloworld
+		01-cubes
+		02-metaballs
+		03-raymarch
+		04-mesh
+		05-instancing
+		06-bump
+		07-callback
+		08-update
+		09-hdr
+		10-font
+		11-fontsdf
+		12-lod
+		13-stencil
+		14-shadowvolumes
+		15-shadowmaps-simple
+		16-shadowmaps
+		17-drawstress
+		18-ibl
+		19-oit
+		20-nanovg
+#		21-deferred
+		22-windows
+		23-vectordisplay
+		24-nbody
+		25-c99
+		26-occlusion
+		27-terrain
+		28-wireframe
+		29-debugdraw
+		30-picking
+		31-rsm
+		32-particles
+		33-pom
+		34-mvs
+		35-dynamic
+		36-sky
+#		37-gpudrivenrendering
+		38-bloom
+		39-assao
+#		40-svt
+	)
 
-    foreach( EXAMPLE ${BGFX_EXAMPLES} )
-        add_example( ${EXAMPLE} )
-    endforeach()
+	foreach( EXAMPLE ${BGFX_EXAMPLES} )
+		add_example( ${EXAMPLE} )
+	endforeach()
 endif()
