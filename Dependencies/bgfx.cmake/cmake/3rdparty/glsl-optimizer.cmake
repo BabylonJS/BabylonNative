@@ -69,6 +69,7 @@ endif()
 if( MSVC )
 	set_target_properties( glsl-optimizer PROPERTIES COMPILE_FLAGS "/W0" )
 	target_compile_definitions( glsl-optimizer
+		PRIVATE
 		__STDC__
 		__STDC_VERSION__=199901L
 		strdup=_strdup

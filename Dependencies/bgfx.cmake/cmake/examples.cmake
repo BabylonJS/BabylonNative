@@ -38,7 +38,7 @@ function( add_bgfx_shader FILE FOLDER )
 
 		if( WIN32 )
 			# dx9
-			if( NOT "${TYPE}" STREQUAL "COMPUTE" })
+			if( NOT "${TYPE}" STREQUAL "COMPUTE" )
 				set( DX9_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx9/${FILENAME}.bin )
 				shaderc_parse( DX9 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_3_0 O 3 OUTPUT ${DX9_OUTPUT} )
 				list( APPEND OUTPUTS "DX9" )
@@ -47,7 +47,7 @@ function( add_bgfx_shader FILE FOLDER )
 
 			# dx11
 			set( DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin )
-			if( NOT "${TYPE}" STREQUAL "COMPUTE" })
+			if( NOT "${TYPE}" STREQUAL "COMPUTE" )
 				shaderc_parse( DX11 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_5_0 O 3 OUTPUT ${DX11_OUTPUT} )
 			else()
 				shaderc_parse( DX11 ${COMMON} WINDOWS PROFILE ${D3D_PREFIX}_5_0 O 1 OUTPUT ${DX11_OUTPUT} )
