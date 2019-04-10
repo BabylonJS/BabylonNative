@@ -30,7 +30,7 @@ file( GLOB GLCPP_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/glcpp/*.c 
 add_library( glcpp ${GLCPP_SOURCES} )
 target_include_directories( glcpp PUBLIC ${GLSL-OPTIMIZER_INCLUDES} )
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
-target_compile_options( glcpp PRIVATE "-fno-strict-aliasing")
+	target_compile_options( glcpp PRIVATE "-fno-strict-aliasing")
 endif()
 if( MSVC )
 	set_target_properties( glcpp PROPERTIES COMPILE_FLAGS "/W0" )
@@ -42,7 +42,7 @@ file( GLOB MESA_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/mesa/program/*.c
 add_library( mesa ${MESA_SOURCES} )
 target_include_directories( mesa PUBLIC ${GLSL-OPTIMIZER_INCLUDES} )
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
-target_compile_options( mesa PRIVATE "-fno-strict-aliasing")
+	target_compile_options( mesa PRIVATE "-fno-strict-aliasing")
 endif()
 if( MSVC )
 	set_target_properties( mesa PROPERTIES COMPILE_FLAGS "/W0" )
@@ -56,9 +56,29 @@ list( REMOVE_ITEM GLSL-OPTIMIZER_SOURCES ${GLSL-OPTIMIZER_SOURCES_REMOVE} )
 add_library( glsl-optimizer ${GLSL-OPTIMIZER_SOURCES} )
 target_link_libraries( glsl-optimizer glcpp mesa )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-target_compile_options( glsl-optimizer PRIVATE "-fno-strict-aliasing")
+	target_compile_options( glsl-optimizer
+		PRIVATE
+		-fno-strict-aliasing
+		-Wno-implicit-fallthrough
+		-Wno-parentheses
+		-Wno-sign-compare
+		-Wno-unused-function
+		-Wno-unused-parameter
+	)
 endif()
 if( MSVC )
 	set_target_properties( glsl-optimizer PROPERTIES COMPILE_FLAGS "/W0" )
+	target_compile_definitions( glsl-optimizer
+		__STDC__
+		__STDC_VERSION__=199901L
+		strdup=_strdup
+		alloca=_alloca
+		isascii=__isascii
+	)
+elseif(APPLE)
+	target_compile_options( glsl-optimizer
+		PRIVATE
+		-Wno-deprecated-register
+	)
 endif()
 set_target_properties( glsl-optimizer PROPERTIES FOLDER "bgfx/3rdparty" )

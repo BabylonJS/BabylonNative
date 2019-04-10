@@ -41,28 +41,36 @@ set_target_properties( glslang PROPERTIES FOLDER "bgfx/3rdparty" )
 if( MSVC )
 	target_compile_options( glslang PRIVATE
 		"/wd4005"
+		"/wd4065"
 		"/wd4100"
 		"/wd4127"
+		"/wd4189"
 		"/wd4244"
+		"/wd4310"
+		"/wd4389"
 		"/wd4456"
 		"/wd4457"
 		"/wd4458"
 		"/wd4702"
+		"/wd4715"
+		"/wd4838"
 	)
 else()
 	target_compile_options( glslang PRIVATE
-		"-Wno-deprecated-register"
 		"-Wno-ignored-qualifiers"
-		"-Wno-inconsistent-missing-override"
+		"-Wno-implicit-fallthrough"
 		"-Wno-missing-field-initializers"
 		"-Wno-reorder"
 		"-Wno-return-type"
 		"-Wno-shadow"
 		"-Wno-sign-compare"
+		"-Wno-switch"
 		"-Wno-undef"
 		"-Wno-unknown-pragmas"
+		"-Wno-unused-function"
 		"-Wno-unused-parameter"
 		"-Wno-unused-variable"
+		"-fno-strict-aliasing"
 	)
 endif()
 
@@ -70,6 +78,7 @@ if( APPLE )
 	target_compile_options( glslang PRIVATE
 		"-Wno-c++11-extensions"
 		"-Wno-unused-const-variable"
+		"-Wno-deprecated-register"
 	)
 endif()
 
@@ -80,6 +89,6 @@ if( UNIX AND NOT APPLE )
 endif()
 
 target_compile_definitions( glslang PRIVATE
-	"ENABLE_OPT=1"
-	"ENABLE_HLSL=1"
+	ENABLE_OPT=1
+	ENABLE_HLSL=1
 )
