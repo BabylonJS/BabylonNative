@@ -12,7 +12,7 @@ if( TARGET meshoptimizer )
 	return()
 endif()
 
-file( GLOB MESHOPTIMIZER_SOURCES ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp )
+file( GLOB MESHOPTIMIZER_SOURCES ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.h )
 
 add_library( meshoptimizer STATIC ${MESHOPTIMIZER_SOURCES} )
 target_include_directories( meshoptimizer PUBLIC ${BGFX_DIR}/3rdparty )
