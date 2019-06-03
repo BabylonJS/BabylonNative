@@ -8,12 +8,12 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if( TARGET forsyth-too )
+if( TARGET meshoptimizer )
 	return()
 endif()
 
-file( GLOB FORSYTH-TOO_SOURCES ${BGFX_DIR}/3rdparty/forsyth-too/*.cpp ${BGFX_DIR}/3rdparty/forsyth-too/*.h )
+file( GLOB MESHOPTIMIZER_SOURCES ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp )
 
-add_library( forsyth-too STATIC ${FORSYTH-TOO_SOURCES} )
-target_include_directories( forsyth-too PUBLIC ${BGFX_DIR}/3rdparty )
-set_target_properties( forsyth-too PROPERTIES FOLDER "bgfx/3rdparty" )
+add_library( meshoptimizer STATIC ${MESHOPTIMIZER_SOURCES} )
+target_include_directories( meshoptimizer PUBLIC ${BGFX_DIR}/3rdparty )
+set_target_properties( meshoptimizer PROPERTIES FOLDER "bgfx/3rdparty" )

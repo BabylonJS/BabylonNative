@@ -12,8 +12,8 @@ include( CMakeParseArguments )
 
 include( cmake/util/ConfigureDebugging.cmake )
 
-include( cmake/3rdparty/ib-compress.cmake )
 include( cmake/3rdparty/dear-imgui.cmake )
+include( cmake/3rdparty/meshoptimizer.cmake )
 
 function( add_bgfx_shader FILE FOLDER )
 	get_filename_component( FILENAME "${FILE}" NAME_WE )
@@ -134,7 +134,7 @@ function( add_example ARG_NAME )
 	if( ARG_COMMON )
 		add_library( example-${ARG_NAME} STATIC EXCLUDE_FROM_ALL ${SOURCES} )
 		target_include_directories( example-${ARG_NAME} PUBLIC ${BGFX_DIR}/examples/common )
-		target_link_libraries( example-${ARG_NAME} PUBLIC bgfx ib-compress dear-imgui )
+		target_link_libraries( example-${ARG_NAME} PUBLIC bgfx dear-imgui meshoptimizer )
 		if( BGFX_WITH_GLFW )
 			find_package( glfw3 REQUIRED )
 			target_link_libraries( example-${ARG_NAME} PUBLIC glfw )
