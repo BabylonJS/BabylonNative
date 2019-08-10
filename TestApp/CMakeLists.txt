@@ -33,6 +33,11 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_compile_definitions(TestApp PRIVATE UNICODE)
 target_compile_definitions(TestApp PRIVATE _UNICODE)
 
+if(WINDOWS_STORE)
+    target_compile_options(TestApp PRIVATE /ZW)
+    target_compile_options(TestApp PRIVATE /await)
+endif()
+
 target_include_directories(TestApp PRIVATE "Source")
 
 target_link_libraries(TestApp PRIVATE Library)

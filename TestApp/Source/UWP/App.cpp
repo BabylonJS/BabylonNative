@@ -1,7 +1,5 @@
 ﻿#include "App.h"
 
-#include <Runtime/CommonUWP.h>
-
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
 
@@ -154,7 +152,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
 
     if (m_fileActivatedArgs == nullptr)
     {
-        m_runtime->RunScript("Scripts\\experience.js");
+        m_runtime->LoadScript("Scripts\\experience.js");
     }
     else
     {
@@ -163,10 +161,10 @@ concurrency::task<void> App::RestartRuntimeAsync()
             auto file = static_cast<Windows::Storage::IStorageFile^>(m_fileActivatedArgs->Files->GetAt(idx));
             const auto path = winrt::to_string(file->Path->Data());
             auto text = co_await Windows::Storage::FileIO::ReadTextAsync(file);
-            m_runtime->RunScript(winrt::to_string(text->Data()), path);
+            m_runtime->Eval(winrt::to_string(text->Data()), path);
         }
 
-        m_runtime->RunScript("Scripts\\playground_runner.js");
+        m_runtime->LoadScript("Scripts\\playground_runner.js");
     }
 }
 

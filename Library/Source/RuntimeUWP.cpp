@@ -20,4 +20,9 @@ namespace babylon
         : Runtime{ std::make_unique<RuntimeImpl>(from_abi<winrt::Windows::UI::Xaml::Controls::SwapChainPanel>(panel), rootUrl) }
     {
     }*/
+
+    void RuntimeImpl::ThreadProcedure()
+    {
+        // TODO: Do stuff!;
+    }
 }
