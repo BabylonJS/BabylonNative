@@ -87,6 +87,10 @@ target_include_directories(Library PRIVATE "Dependencies/curl/include")
 target_include_directories(Library PRIVATE "Dependencies/glslang")
 target_include_directories(Library PRIVATE "Dependencies/SPIRV-Cross")
 
+if(WINDOWS_STORE)
+    target_include_directories(Library PRIVATE "Dependencies/arcana.cpp/Source/UWP")
+endif()
+
 target_link_libraries(Library
     PRIVATE bx
     PRIVATE bimg
