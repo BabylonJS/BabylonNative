@@ -1,3 +1,6 @@
+add_subdirectory(Dependencies/arcana.cpp EXCLUDE_FROM_ALL)
+set_property(TARGET arcana PROPERTY FOLDER Dependencies/arcana)
+
 set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
 add_subdirectory(Dependencies/napi EXCLUDE_FROM_ALL)
 set_property(TARGET napi PROPERTY FOLDER Dependencies/napi)
@@ -99,6 +102,10 @@ target_link_libraries(Library
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl)
+
+if(WINDOWS_STORE)
+target_link_libraries(Library PRIVATE arcana)
+endif()
 
 target_link_libraries(Library
     PRIVATE "crypt32.lib"
