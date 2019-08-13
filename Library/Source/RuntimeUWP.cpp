@@ -23,6 +23,6 @@ namespace babylon
 
     void RuntimeImpl::ThreadProcedure()
     {
-        // TODO: Do stuff!;
+        RuntimeImpl::BaseThreadProcedure();
     }
 }

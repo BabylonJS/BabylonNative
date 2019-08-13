@@ -27,6 +27,7 @@ endif()
 
 set(WIN32_EXECUTABLE TRUE)
 add_executable(TestApp WIN32 ${SOURCES})
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT TestApp)
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 
@@ -42,13 +43,18 @@ target_include_directories(TestApp PRIVATE "Source")
 
 target_link_libraries(TestApp PRIVATE Library)
 
-foreach(script ${SCRIPTS})
-    add_custom_command(
-        OUTPUT "${script}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/${script}"
-        COMMENT "Copying ${script}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
-endforeach()
+if(WINDOWS_STORE)
+    set_property(SOURCE ${SCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+else()
+    foreach(script ${SCRIPTS})
+        add_custom_command(
+            OUTPUT "${script}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/${script}"
+            COMMENT "Copying ${script}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
+    endforeach()
+endif()
 
 foreach(dependency ${BABYLON_NATIVE_DEPENDENCIES})
     add_custom_command(TARGET TestApp POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different ${dependency} $<TARGET_FILE_DIR:TestApp>)

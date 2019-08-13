@@ -150,9 +150,12 @@ concurrency::task<void> App::RestartRuntimeAsync()
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
     InputManager::Initialize(*m_runtime, *m_inputBuffer);
 
+    m_runtime->LoadScript("Scripts/babylon.max.js");
+    m_runtime->LoadScript("Scripts/babylon.glTF2FileLoader.js");
+
     if (m_fileActivatedArgs == nullptr)
     {
-        m_runtime->LoadScript("Scripts\\experience.js");
+        m_runtime->LoadScript("Scripts/experience.js");
     }
     else
     {
@@ -164,7 +167,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
             m_runtime->Eval(winrt::to_string(text->Data()), path);
         }
 
-        m_runtime->LoadScript("Scripts\\playground_runner.js");
+        m_runtime->LoadScript("Scripts/playground_runner.js");
     }
 }
 

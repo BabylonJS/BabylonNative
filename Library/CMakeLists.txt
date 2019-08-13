@@ -104,7 +104,7 @@ target_link_libraries(Library
     PRIVATE spirv-cross-hlsl)
 
 if(WINDOWS_STORE)
-target_link_libraries(Library PRIVATE arcana)
+    target_link_libraries(Library PRIVATE arcana)
 endif()
 
 target_link_libraries(Library
@@ -120,6 +120,10 @@ target_link_libraries(Library
     PRIVATE "shlwapi.lib"
     PRIVATE "ws2_32.lib"
     PRIVATE "wldap32.lib")
+
+if(WINDOWS_STORE)
+    target_link_libraries(Library PRIVATE "kernel32.lib")
+endif()
 
 target_include_directories(Library PUBLIC "Include")
 target_link_libraries(Library PUBLIC napi)
