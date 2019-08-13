@@ -125,6 +125,9 @@ void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^
     }
 
     RestartRuntimeAsync();
+
+    const auto& bounds = applicationView->CoreWindow->Bounds;
+    m_runtime->UpdateSize(bounds.Width, bounds.Height);
 }
 
 concurrency::task<void> App::RestartRuntimeAsync()
