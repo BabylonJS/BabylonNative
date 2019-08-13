@@ -19,8 +19,24 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
         "Source/Win32/small.ico"
         "Source/Win32/targetver.h")
 elseif(BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
+    set(APPX_FILES "Source/UWP/Package.appxmanifest" "Source/UWP/TemporaryKey.pfx")
+    set_property(SOURCE ${APPX_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+
+    set(APPX_ASSETS
+        "Source/UWP/Assets/LockScreenLogo.scale-200.png"
+        "Source/UWP/Assets/SplashScreen.scale-200.png"
+        "Source/UWP/Assets/Square44x44Logo.scale-200.png"
+        "Source/UWP/Assets/Square44x44Logo.targetsize-24_altform-unplated.png"
+        "Source/UWP/Assets/Square150x150Logo.scale-200.png"
+        "Source/UWP/Assets/StoreLogo.png"
+        "Source/UWP/Assets/Wide310x150Logo.scale-200.png")
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
+
     set(SOURCES
         ${SOURCES}
+        ${APPX_FILES}
+        ${APPX_ASSETS}
         "Source/UWP/App.cpp"
         "Source/UWP/App.h")
 endif()
