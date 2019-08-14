@@ -44,7 +44,13 @@ set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
 add_subdirectory(Dependencies/curl EXCLUDE_FROM_ALL)
 set_property(TARGET libcurl PROPERTY FOLDER Dependencies/curl)
-target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
+
+# TODO: Certain parts of cURL's functionality are gated behind WINAPI checks
+# that cause the functionality to become unavailable in UWP. Find a better way 
+# to ensure that functionality is enabled, then remove the following workaround.
+if(WINDOWS_STORE)
+    target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
+endif()
 
 set(SOURCES
     "Include/Babylon/Runtime.h"

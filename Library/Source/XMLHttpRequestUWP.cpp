@@ -1,12 +1,14 @@
-#include <unknwn.h> // TODO: Write comment explaining why this has to be first.
 #include "XMLHttpRequest.h"
 
 #include "Common.h"
 #include "RuntimeImpl.h"
 
-#include <arcana/threading/task_conversions.h>
 #include <robuffer.h>
 #include <winrt/Windows.Storage.Streams.h>
+
+// Included after the WinRT headers because they enable non-WinRT interfaces. If this were included before
+// the WinRT headers, we'd have to explicitly include unknwn.h, or build would fail with C2338.
+#include <arcana/threading/task_conversions.h>
 
 namespace babylon
 {
