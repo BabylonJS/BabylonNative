@@ -61,7 +61,7 @@ namespace babylon
                 }).then(m_runtimeImpl.Dispatcher(), m_runtimeImpl.Cancellation(), [this, url = std::move(url)]
                 {
                     m_responseURL = url;
-                    m_status = winrt::Windows::Web::Http::HttpStatusCode::Ok;
+                    m_status = HTTPStatusCode::Ok;
 
                     SetReadyState(ReadyState::Done);
                 });
