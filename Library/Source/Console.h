@@ -16,6 +16,10 @@ namespace babylon
         static void RegisterWarnOutput(MessageLogger output);
         static void RegisterErrorOutput(MessageLogger output);
 
+        static void Log(const char* message);
+        static void Warn(const char* message);
+        static void Error(const char* message);
+
     private:
         void Log(const Napi::CallbackInfo& info);
         void Warn(const Napi::CallbackInfo& info);
@@ -26,5 +30,6 @@ namespace babylon
         static std::vector<MessageLogger> m_errorOutputs;
 
         void SendToOutputs(const Napi::CallbackInfo& info, std::vector<MessageLogger>& outputs);
+        static void SendToOutputs(const char* message, std::vector<MessageLogger>& outputs);
     };
 }

@@ -13,7 +13,7 @@ namespace babylon
     class RuntimeImpl
     {
     public:
-        RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
+        RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, uint32_t width, uint32_t height);
         virtual ~RuntimeImpl();
 
         void UpdateSize(float width, float height);

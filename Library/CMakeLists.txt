@@ -22,6 +22,12 @@ add_compile_definitions(BGFX_CONFIG_DEBUG_UNIFORM=0)
 add_compile_definitions(BGFX_CONFIG_MULTITHREADED=0)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=32)
 add_compile_definitions(BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
+add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=30)
+elseif()
+add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=31)
+endif()
+
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Build the BGFX examples.")
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "Build the BGFX tools.")
 add_subdirectory(Dependencies/bgfx.cmake EXCLUDE_FROM_ALL)
@@ -67,7 +73,9 @@ set(SOURCES
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(SOURCES ${SOURCES}
-        "Source/ShaderCompilerD3D.cpp")
+        "Source/ShaderCompilerOpenGL.cpp"
+        #"Source/ShaderCompilerD3D.cpp"
+        )
 endif()
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Android")

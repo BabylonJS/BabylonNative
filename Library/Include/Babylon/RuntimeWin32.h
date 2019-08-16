@@ -9,7 +9,7 @@ namespace babylon
     {
     public:
         explicit RuntimeWin32(HWND hWnd);
-        explicit RuntimeWin32(HWND hWnd, const std::string& rootUrl);
+        explicit RuntimeWin32(HWND hWnd, const std::string& rootUrl, uint32_t width, uint32_t height);
         RuntimeWin32(const RuntimeWin32&) = delete;
     };
 }

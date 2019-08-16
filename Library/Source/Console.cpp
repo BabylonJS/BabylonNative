@@ -48,6 +48,15 @@ namespace babylon
         }
     }
 
+    void Console::SendToOutputs(const char* message, std::vector<MessageLogger>& outputs)
+    {
+        for (size_t i = 0; i < outputs.size(); i++)
+        {
+            auto& output = outputs[i];
+            output(message);
+        }
+    }
+
     void Console::Log(const Napi::CallbackInfo& info)
     {
         // TODO: Log output to ETW/telemetry rather than debugger output.
@@ -78,6 +87,21 @@ namespace babylon
     void Console::RegisterErrorOutput(MessageLogger output)
     {
         m_errorOutputs.push_back(output);
+    }
+    
+    void Console::Log(const char* message)
+    {
+        SendToOutputs(message, m_logOutputs);
+    }
+
+    void Console::Warn(const char* message)
+    {
+        SendToOutputs(message, m_warnOutputs);
+    }
+    
+    void Console::Error(const char* message)
+    {
+        SendToOutputs(message, m_errorOutputs);
     }
 
 }

@@ -9,7 +9,7 @@ namespace babylon
     class NativeEngine final
     {
     public:
-        NativeEngine(void* nativeWindowPtr, RuntimeImpl&);
+        NativeEngine(void* nativeWindowPtr, RuntimeImpl&, uint32_t width, uint32_t height);
         ~NativeEngine();
 
         void Initialize(Napi::Env& env);

@@ -3,6 +3,7 @@
 #include "RuntimeImpl.h"
 #include "NapiBridge.h"
 #include "ShaderCompiler.h"
+#include "Console.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -34,6 +35,82 @@ namespace babylon
 
     namespace
     {
+        struct bgfxCallback : public bgfx::CallbackI
+        {
+            virtual ~bgfxCallback() {}
+
+
+            virtual void fatal(
+                const char* _filePath
+                , uint16_t _line
+                , bgfx::Fatal::Enum _code
+                , const char* _str
+            ) 
+            {
+                Console::Error(_str);
+            }
+            virtual void traceVargs(
+                const char* _filePath
+                , uint16_t _line
+                , const char* _format
+                , va_list _argList
+            ) 
+            {
+                char temp[8192];
+		        char* out = temp;
+		        int32_t len = bx::vsnprintf(out, sizeof(temp), _format, _argList);
+		        if ( (int32_t)sizeof(temp) < len)
+		        {
+			        out = (char*)alloca(len+1);
+			        len = bx::vsnprintf(out, len, _format, _argList);
+		        }
+		        out[len] = '\0';
+	            
+                Console::Log(out);
+            }
+            virtual void profilerBegin(
+                const char* _name
+                , uint32_t _abgr
+                , const char* _filePath
+                , uint16_t _line
+            ) {}
+            virtual void profilerBeginLiteral(
+                const char* _name
+                , uint32_t _abgr
+                , const char* _filePath
+                , uint16_t _line
+            ) {}
+            virtual void profilerEnd() {}
+            virtual uint32_t cacheReadSize(uint64_t _id) { return 0; }
+            virtual bool cacheRead(uint64_t _id, void* _data, uint32_t _size) { return false; }
+            virtual void cacheWrite(uint64_t _id, const void* _data, uint32_t _size) {}
+            virtual void screenShot(
+                const char* _filePath
+                , uint32_t _width
+                , uint32_t _height
+                , uint32_t _pitch
+                , const void* _data
+                , uint32_t _size
+                , bool _yflip
+            ) 
+            {
+            }
+
+            virtual void captureBegin(
+                uint32_t _width
+                , uint32_t _height
+                , uint32_t _pitch
+                , bgfx::TextureFormat::Enum _format
+                , bool _yflip
+            ) 
+            {}
+            virtual void captureEnd() 
+            {}
+            virtual void captureFrame(const void* _data, uint32_t _size)
+            {}
+        };
+        static bgfxCallback _bgfxCallback;
+    
         struct UniformInfo final
         {
             uint8_t Stage{};
@@ -227,14 +304,17 @@ namespace babylon
     class NativeEngine::Impl final
     {
     public:
-        Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
+        Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl, uint32_t width, uint32_t height);
 
         void Initialize(Napi::Env& env);
+        
         void UpdateSize(float width, float height);
         void UpdateRenderTarget();
         void Suspend();
 
     private:
+        void InitializeRendering();
+
         using EngineDefiner = NativeEngineDefiner<NativeEngine::Impl>;
         friend EngineDefiner;
 
@@ -377,33 +457,76 @@ namespace babylon
 
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
-
+        void *m_nativeWindow{};
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch;
     };
 
-    NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
+    NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl, uint32_t width, uint32_t height)
         : m_runtimeImpl{ runtimeImpl }
         , m_currentProgram{ nullptr }
-        , m_size{ 1024, 768 }
+        , m_size{ width, height }
         , m_engineState{ BGFX_STATE_DEFAULT }
+        , m_nativeWindow(nativeWindowPtr)
+    {
+        
+    }
+
+    void NativeEngine::Impl::InitializeRendering()
     {
         bgfx::Init init{};
-        init.platformData.nwh = nativeWindowPtr;
+        init.platformData.nwh = m_nativeWindow;
         bgfx::setPlatformData(init.platformData);
 
-        init.type = bgfx::RendererType::Direct3D11;
+        init.type = bgfx::RendererType::OpenGL;//:Direct3D11;//:Direct3D11;
         init.resolution.width = m_size.Width;
         init.resolution.height = m_size.Height;
         init.resolution.reset = BGFX_RESET_VSYNC;
+        init.callback = &_bgfxCallback;
         bgfx::init(init);
 
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
+        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x403355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
+
+        bgfx::frame();
+        //bgfx::touch(0);
+        std::string bgfxInitInfo = "bgfx init ";
+        switch (bgfx::getCaps()->rendererType)
+        {
+        case bgfx::RendererType::Direct3D9:    //!< Direct3D 9.0
+            bgfxInitInfo += " - Direct3D 9";
+            break;
+        case bgfx::RendererType::Direct3D11:   //!< Direct3D 11.0
+            bgfxInitInfo += " - Direct3D 11";
+            break;
+        case bgfx::RendererType::Direct3D12:   //!< Direct3D 12.0
+            bgfxInitInfo += " - Direct3D 12";
+            break;
+        case bgfx::RendererType::Gnm:          //!< GNM
+            bgfxInitInfo += " - GNM";
+            break;
+        case bgfx::RendererType::Metal:        //!< Metal
+            bgfxInitInfo += " - Metal";
+            break;
+        case bgfx::RendererType::Nvn:          //!< NVN
+            bgfxInitInfo += " - NVM";
+            break;
+        case bgfx::RendererType::OpenGLES:     //!< OpenGL ES 2.0+
+            bgfxInitInfo += " - OpenGL ES";
+            break;
+        case bgfx::RendererType::OpenGL:       //!< OpenGL 2.1+
+            bgfxInitInfo += " - OpenGL";
+            break;
+        case bgfx::RendererType::Vulkan:       //!< Vulkan
+            bgfxInitInfo += " - Vulkan";
+            break;
+        }
+        Console::Log(bgfxInitInfo.c_str());
     }
 
     void NativeEngine::Impl::Initialize(Napi::Env& env)
     {
+        InitializeRendering();
         EngineDefiner::Define(env, this);
     }
 
@@ -684,7 +807,7 @@ namespace babylon
     void NativeEngine::Impl::SetState(const Napi::CallbackInfo& info)
     {
         const auto culling = info[0].As<Napi::Boolean>().Value();
-        const auto reverseSide = info[2].As<Napi::Boolean>().Value();
+        const auto reverseSide = !info[2].As<Napi::Boolean>().Value();
 
         m_engineState &= ~BGFX_STATE_CULL_MASK;
         if (reverseSide)
@@ -1094,7 +1217,6 @@ namespace babylon
             const ProgramData::UniformValue& value = it.second;
             bgfx::setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
-
         bgfx::submit(0, m_currentProgram->Program, 0, true);
     }
 
@@ -1152,8 +1274,8 @@ namespace babylon
 
     // NativeEngine exterior definitions.
 
-    NativeEngine::NativeEngine(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
-        : m_impl{ std::make_unique<NativeEngine::Impl>(nativeWindowPtr, runtimeImpl) }
+    NativeEngine::NativeEngine(void* nativeWindowPtr, RuntimeImpl& runtimeImpl, uint32_t width, uint32_t height)
+        : m_impl{ std::make_unique<NativeEngine::Impl>(nativeWindowPtr, runtimeImpl, width, height) }
     {
     }
 
