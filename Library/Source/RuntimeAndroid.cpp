@@ -1,6 +1,7 @@
 ﻿#include <Babylon/RuntimeAndroid.h>
 #include "RuntimeImpl.h"
-//#include <filesystem>
+#include <bgfx/bgfx.h>
+#include <bgfx/platform.h>
 
 namespace babylon
 {
@@ -14,6 +15,18 @@ namespace babylon
         : Runtime{ std::make_unique<RuntimeImpl>(nativeWindowPtr, rootUrl, width, height) }
     {
         // android stub
+    }
+
+    void RuntimeAndroid::SetWindow(ANativeWindow* nativeWindowPtr)
+    {
+        bgfx::PlatformData pd;
+		pd.ndt          = NULL;
+		pd.nwh          = nativeWindowPtr;
+		pd.context      = NULL;
+		pd.backBuffer   = NULL;
+		pd.backBufferDS = NULL;
+		bgfx::setPlatformData(pd);
+        bgfx::reset(128,128);
     }
 
     void RuntimeImpl::ThreadProcedure()
