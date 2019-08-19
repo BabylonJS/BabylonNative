@@ -21,8 +21,6 @@ cmake_minimum_required(VERSION 3.6)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(OPENGL_LIB GLESv3)
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(ANDROID_STL "c++_shared")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -latomic")
@@ -71,6 +69,12 @@ target_link_libraries(BabylonNativeJNI
         ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/bgfx.cmake/libastc-codec.a
         ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/SPIRV-Cross/libspirv-cross-core.a
         ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/SPIRV-Cross/libspirv-cross-glsl.a
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/SPIRV-Cross/libspirv-cross-hlsl.a
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/glslang/glslang/libglslang.a
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/glslang/glslang/OSDependent/Unix/libOSDependent.a
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/glslang/OGLCompilersDLL/libOGLCompiler.a
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/glslang/hlsl/libHLSL.a
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/glslang/SPIRV/libSPIRV.a
         ${CMAKE_CURRENT_LIST_DIR}/../../../../build/Library/Dependencies/curl/lib/libcurl.a
         ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.cr.so
         ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8_libplatform.cr.so
