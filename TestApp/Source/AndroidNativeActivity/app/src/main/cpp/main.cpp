@@ -99,14 +99,12 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
             if (engine->m_window != app->window) {
-
                 engine->m_window = app->window;
-                // register console outputs
-                AndroidErrorMessage("Got new window\n");
                 int32_t width  = ANativeWindow_getWidth(engine->m_window);
                 int32_t height = ANativeWindow_getHeight(engine->m_window);
 
                 if (!runtime) {
+                    // register console outputs
                     babylon::Runtime::RegisterLogOutput(AndroidLogMessage);
                     babylon::Runtime::RegisterWarnOutput(AndroidWarnMessage);
                     babylon::Runtime::RegisterErrorOutput(AndroidErrorMessage);
