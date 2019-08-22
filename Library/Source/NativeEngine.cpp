@@ -478,7 +478,7 @@ namespace babylon
         init.platformData.nwh = m_nativeWindow;
         bgfx::setPlatformData(init.platformData);
 
-        init.type = bgfx::RendererType::OpenGL;//:Direct3D11;//:Direct3D11;
+        init.type = bgfx::RendererType::Direct3D11;//:OpenGL;//:Direct3D11;
         init.resolution.width = m_size.Width;
         init.resolution.height = m_size.Height;
         init.resolution.reset = BGFX_RESET_VSYNC;
@@ -697,7 +697,23 @@ namespace babylon
                 {
                     const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                     AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-                    attributeLocations[stageInput.name] = location;
+                    // name attribute has been preprocessed to make link between bgfx and the shader (position -> a_position)
+                    // but bjs doesn't know the attribute names. So the make the reverse here
+                    std::string attributeName = stageInput.name;
+                    if (attributeName == "a_position")
+                        attributeName = "position";
+                    else if (attributeName == "a_normal")
+                        attributeName = "normal";
+                    else if (attributeName == "a_tangent")
+                        attributeName = "tangent";
+                    else if (attributeName == "a_color")
+                        attributeName = "color";
+                    else if (attributeName == "a_index")
+                        attributeName = "matricesIndices";
+                    else if (attributeName == "a_weight")
+                        attributeName = "matricesWeights";
+
+                    attributeLocations[attributeName] = location;
                 }
 
                 AppendBytes(vertexBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(uniformBuffer.base_type_id))));
