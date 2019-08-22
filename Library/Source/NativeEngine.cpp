@@ -478,7 +478,7 @@ namespace babylon
         init.platformData.nwh = m_nativeWindow;
         bgfx::setPlatformData(init.platformData);
 
-        init.type = bgfx::RendererType::Direct3D11;//:OpenGL;//:Direct3D11;
+        init.type = bgfx::RendererType::Count;
         init.resolution.width = m_size.Width;
         init.resolution.height = m_size.Height;
         init.resolution.reset = BGFX_RESET_VSYNC;
