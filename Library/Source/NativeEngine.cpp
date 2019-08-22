@@ -57,15 +57,15 @@ namespace babylon
             ) 
             {
                 char temp[8192];
-		        char* out = temp;
-		        int32_t len = bx::vsnprintf(out, sizeof(temp), _format, _argList);
-		        if ( (int32_t)sizeof(temp) < len)
-		        {
-			        out = (char*)alloca(len+1);
-			        len = bx::vsnprintf(out, len, _format, _argList);
-		        }
-		        out[len] = '\0';
-	            
+                char* out = temp;
+                int32_t len = bx::vsnprintf(out, sizeof(temp), _format, _argList);
+                if ( (int32_t)sizeof(temp) < len)
+                {
+                    out = (char*)alloca(len+1);
+                    len = bx::vsnprintf(out, len, _format, _argList);
+                }
+                out[len] = '\0';
+                
                 Console::Log(out);
             }
             virtual void profilerBegin(
@@ -485,7 +485,7 @@ namespace babylon
         init.callback = &_bgfxCallback;
         bgfx::init(init);
 
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x403355FF, 1.0f, 0);
+        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
 
         bgfx::frame();

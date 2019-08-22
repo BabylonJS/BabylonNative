@@ -73,7 +73,6 @@ set(SOURCES
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(SOURCES ${SOURCES}
-        #"Source/ShaderCompilerOpenGL.cpp"
         "Source/ShaderCompilerD3D.cpp"
         )
 endif()
