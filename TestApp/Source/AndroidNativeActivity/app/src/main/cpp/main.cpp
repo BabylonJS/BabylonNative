@@ -23,6 +23,7 @@
 #include <jni.h>
 #include <errno.h>
 #include <cassert>
+#include <dlfcn.h>
 
 #include <EGL/egl.h>
 #include <GLES/gl.h>
@@ -34,10 +35,6 @@
 #include <android/window.h>
 #include <android/native_window.h>
 #include <InputManager.h>
-
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
-#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
-
 
 std::unique_ptr<babylon::RuntimeAndroid> runtime{};
 std::string androidPackagePath;
@@ -159,7 +156,6 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
  *    Workaround ASensorManager_getInstance() deprecation false alarm
  *    for Android-N and before, when compiling with NDK-r15
  */
-#include <dlfcn.h>
 ASensorManager* AcquireASensorManagerInstance(android_app* app) {
 
   if(!app)
