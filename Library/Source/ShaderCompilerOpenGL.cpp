@@ -21,7 +21,6 @@ namespace babylon
             shader.setEnvClient(glslang::EShClientOpenGL, glslang::EShTargetOpenGL_450);
             shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
 
-            // TODO: Do this to avoid the work around for dFdy?
             if (!shader.parse(&DefaultTBuiltInResource, 430, false, EShMsgDefault))
             {
                 Console::Error(shader.getInfoDebugLog());

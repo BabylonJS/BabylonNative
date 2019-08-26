@@ -20,12 +20,12 @@ namespace babylon
     void RuntimeAndroid::SetWindow(ANativeWindow* nativeWindowPtr)
     {
         bgfx::PlatformData pd;
-		pd.ndt          = NULL;
-		pd.nwh          = nativeWindowPtr;
-		pd.context      = NULL;
-		pd.backBuffer   = NULL;
-		pd.backBufferDS = NULL;
-		bgfx::setPlatformData(pd);
+        pd.ndt          = NULL;
+        pd.nwh          = nativeWindowPtr;
+        pd.context      = NULL;
+        pd.backBuffer   = NULL;
+        pd.backBufferDS = NULL;
+        bgfx::setPlatformData(pd);
         bgfx::reset(128,128);
     }
 

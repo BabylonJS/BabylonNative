@@ -4,6 +4,7 @@
 #include "NapiBridge.h"
 #include "ShaderCompiler.h"
 #include "Console.h"
+#include "BgfxCallback.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -32,85 +33,10 @@ namespace bgfx
 
 namespace babylon
 {
+    static BgfxCallback bgfxCallback;
 
     namespace
     {
-        struct bgfxCallback : public bgfx::CallbackI
-        {
-            virtual ~bgfxCallback() {}
-
-
-            virtual void fatal(
-                const char* _filePath
-                , uint16_t _line
-                , bgfx::Fatal::Enum _code
-                , const char* _str
-            ) 
-            {
-                Console::Error(_str);
-            }
-            virtual void traceVargs(
-                const char* _filePath
-                , uint16_t _line
-                , const char* _format
-                , va_list _argList
-            ) 
-            {
-                char temp[8192];
-                char* out = temp;
-                int32_t len = bx::vsnprintf(out, sizeof(temp), _format, _argList);
-                if ( (int32_t)sizeof(temp) < len)
-                {
-                    out = (char*)alloca(len+1);
-                    len = bx::vsnprintf(out, len, _format, _argList);
-                }
-                out[len] = '\0';
-                
-                Console::Log(out);
-            }
-            virtual void profilerBegin(
-                const char* _name
-                , uint32_t _abgr
-                , const char* _filePath
-                , uint16_t _line
-            ) {}
-            virtual void profilerBeginLiteral(
-                const char* _name
-                , uint32_t _abgr
-                , const char* _filePath
-                , uint16_t _line
-            ) {}
-            virtual void profilerEnd() {}
-            virtual uint32_t cacheReadSize(uint64_t _id) { return 0; }
-            virtual bool cacheRead(uint64_t _id, void* _data, uint32_t _size) { return false; }
-            virtual void cacheWrite(uint64_t _id, const void* _data, uint32_t _size) {}
-            virtual void screenShot(
-                const char* _filePath
-                , uint32_t _width
-                , uint32_t _height
-                , uint32_t _pitch
-                , const void* _data
-                , uint32_t _size
-                , bool _yflip
-            ) 
-            {
-            }
-
-            virtual void captureBegin(
-                uint32_t _width
-                , uint32_t _height
-                , uint32_t _pitch
-                , bgfx::TextureFormat::Enum _format
-                , bool _yflip
-            ) 
-            {}
-            virtual void captureEnd() 
-            {}
-            virtual void captureFrame(const void* _data, uint32_t _size)
-            {}
-        };
-        static bgfxCallback _bgfxCallback;
-    
         struct UniformInfo final
         {
             uint8_t Stage{};
@@ -467,7 +393,7 @@ namespace babylon
         , m_currentProgram{ nullptr }
         , m_size{ width, height }
         , m_engineState{ BGFX_STATE_DEFAULT }
-        , m_nativeWindow(nativeWindowPtr)
+        , m_nativeWindow{ nativeWindowPtr }
     {
         
     }
@@ -478,11 +404,11 @@ namespace babylon
         init.platformData.nwh = m_nativeWindow;
         bgfx::setPlatformData(init.platformData);
 
-        init.type = bgfx::RendererType::Count;
+        init.type = bgfx::RendererType::Direct3D11;
         init.resolution.width = m_size.Width;
         init.resolution.height = m_size.Height;
         init.resolution.reset = BGFX_RESET_VSYNC;
-        init.callback = &_bgfxCallback;
+        init.callback = &bgfxCallback;
         bgfx::init(init);
 
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
@@ -526,6 +452,9 @@ namespace babylon
 
     void NativeEngine::Impl::Initialize(Napi::Env& env)
     {
+        // Rendering is initialized here because for OpenGL(ES) initialization must happen in the same thread for rendering
+        // OpenGL context is associated with 1 thread only at a time. To Associate it with another thread, MakeCurrentContext must be used
+        // but bgfx doesn't expose it.
         InitializeRendering();
         EngineDefiner::Define(env, this);
     }
