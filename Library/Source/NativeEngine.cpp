@@ -8,10 +8,7 @@
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#ifndef WIN32
-#include <alloca.h>
-#define alloca(size)   __builtin_alloca(size)
-#endif
+
 // TODO: this needs to be fixed in bgfx
 namespace bgfx
 {

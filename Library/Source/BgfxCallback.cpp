@@ -12,7 +12,8 @@ namespace babylon
 
     void BgfxCallback::traceVargs(const char* filePath, uint16_t line, const char* format, va_list argList)
     {
-        char temp[8192];
+        #define TRACE_MESSAGE_MAX_LENGTH 8192
+        char temp[TRACE_MESSAGE_MAX_LENGTH];
         char* out = temp;
         int32_t len = bx::vsnprintf(out, sizeof(temp), format, argList);
         if ( (int32_t)sizeof(temp) < len)
