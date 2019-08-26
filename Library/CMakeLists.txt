@@ -23,9 +23,9 @@ add_compile_definitions(BGFX_CONFIG_MULTITHREADED=0)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=32)
 add_compile_definitions(BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
-add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=30)
+    add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=30)
 elseif()
-add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=31)
+    add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=31)
 endif()
 
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Build the BGFX examples.")
@@ -73,8 +73,7 @@ set(SOURCES
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(SOURCES ${SOURCES}
-        "Source/ShaderCompilerD3D.cpp"
-        )
+        "Source/ShaderCompilerD3D.cpp")
 endif()
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
@@ -120,19 +119,21 @@ target_link_libraries(Library
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl)
 
-target_link_libraries(Library
-    PRIVATE "crypt32.lib"
-    PRIVATE "d2d1.lib"
-    PRIVATE "d3d11.lib"
-    PRIVATE "d3d9.lib"
-    PRIVATE "d3dcompiler.lib"
-    PRIVATE "dxgi.lib"
-    PRIVATE "dxguid.lib"
-    PRIVATE "normaliz.lib"
-    PRIVATE "psapi.lib"
-    PRIVATE "shlwapi.lib"
-    PRIVATE "ws2_32.lib"
-    PRIVATE "wldap32.lib")
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
+    target_link_libraries(Library
+        PRIVATE "crypt32.lib"
+        PRIVATE "d2d1.lib"
+        PRIVATE "d3d11.lib"
+        PRIVATE "d3d9.lib"
+        PRIVATE "d3dcompiler.lib"
+        PRIVATE "dxgi.lib"
+        PRIVATE "dxguid.lib"
+        PRIVATE "normaliz.lib"
+        PRIVATE "psapi.lib"
+        PRIVATE "shlwapi.lib"
+        PRIVATE "ws2_32.lib"
+        PRIVATE "wldap32.lib")
+endif()
 
 target_include_directories(Library PUBLIC "Include")
 target_link_libraries(Library PUBLIC napi)
