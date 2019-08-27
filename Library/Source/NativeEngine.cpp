@@ -412,39 +412,6 @@ namespace babylon
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
 
         bgfx::frame();
-        //bgfx::touch(0);
-        std::string bgfxInitInfo = "bgfx init ";
-        switch (bgfx::getCaps()->rendererType)
-        {
-        case bgfx::RendererType::Direct3D9:    //!< Direct3D 9.0
-            bgfxInitInfo += " - Direct3D 9";
-            break;
-        case bgfx::RendererType::Direct3D11:   //!< Direct3D 11.0
-            bgfxInitInfo += " - Direct3D 11";
-            break;
-        case bgfx::RendererType::Direct3D12:   //!< Direct3D 12.0
-            bgfxInitInfo += " - Direct3D 12";
-            break;
-        case bgfx::RendererType::Gnm:          //!< GNM
-            bgfxInitInfo += " - GNM";
-            break;
-        case bgfx::RendererType::Metal:        //!< Metal
-            bgfxInitInfo += " - Metal";
-            break;
-        case bgfx::RendererType::Nvn:          //!< NVN
-            bgfxInitInfo += " - NVM";
-            break;
-        case bgfx::RendererType::OpenGLES:     //!< OpenGL ES 2.0+
-            bgfxInitInfo += " - OpenGL ES";
-            break;
-        case bgfx::RendererType::OpenGL:       //!< OpenGL 2.1+
-            bgfxInitInfo += " - OpenGL";
-            break;
-        case bgfx::RendererType::Vulkan:       //!< Vulkan
-            bgfxInitInfo += " - Vulkan";
-            break;
-        }
-        Console::Log(bgfxInitInfo.c_str());
     }
 
     void NativeEngine::Impl::Initialize(Napi::Env& env)
