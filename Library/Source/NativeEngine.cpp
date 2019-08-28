@@ -222,6 +222,11 @@ namespace babylon
             // ALPHA_SCREENMODE: SRC + (1 - SRC) * DEST, SRC ALPHA + (1 - SRC ALPHA) * DEST ALPHA
             BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
         };
+
+        constexpr std::array<bgfx::TextureFormat::Enum, 1> TEXTURE_FORMAT
+        {
+            bgfx::TextureFormat::RGBA32F
+        };
     }
 
     class NativeEngine::Impl final
@@ -275,6 +280,36 @@ namespace babylon
 
             std::vector<bimg::ImageContainer*> Images{};
             bgfx::TextureHandle Texture{ bgfx::kInvalidHandle };
+        };
+
+        struct FrameBufferData final
+        {
+            FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t width, uint16_t height)
+                : FrameBuffer{ frameBuffer }
+                , Width{ width }
+                , Height{ height }
+                , ViewId{ NextViewId++ }
+            {}
+
+            ~FrameBufferData()
+            {
+                bgfx::destroy(FrameBuffer);
+            }
+
+            void SetUpView()
+            {
+                bgfx::setViewFrameBuffer(ViewId, FrameBuffer);
+                bgfx::setViewClear(ViewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
+                bgfx::setViewRect(ViewId, 0, 0, Width, Height);
+            }
+
+            bgfx::FrameBufferHandle FrameBuffer{ bgfx::kInvalidHandle };
+            uint16_t Width{};
+            uint16_t Height{};
+            bgfx::ViewId ViewId{};
+
+        private:
+            static bgfx::ViewId NextViewId;
         };
 
         struct ProgramData final
@@ -355,6 +390,9 @@ namespace babylon
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
         void SetTexture(const Napi::CallbackInfo& info);
         void DeleteTexture(const Napi::CallbackInfo& info);
+        Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
+        void BindFrameBuffer(const Napi::CallbackInfo& info);
+        void UnbindFrameBuffer(const Napi::CallbackInfo& info);
         void DrawIndexed(const Napi::CallbackInfo& info);
         void Draw(const Napi::CallbackInfo& info);
         void Clear(const Napi::CallbackInfo& info);
@@ -378,9 +416,13 @@ namespace babylon
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
 
+        FrameBufferData* m_boundFrameBuffer{ nullptr };
+
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch;
     };
+
+    bgfx::ViewId NativeEngine::Impl::FrameBufferData::NextViewId{ 1 };
 
     NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
         : m_runtimeImpl{ runtimeImpl }
@@ -1081,6 +1123,37 @@ namespace babylon
         delete textureData;
     }
 
+    Napi::Value NativeEngine::Impl::CreateFrameBuffer(const Napi::CallbackInfo& info)
+    {
+        const auto textureData = info[0].As<Napi::External<TextureData>>().Data();
+        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
+
+        auto frameBufferHandle = bgfx::createFrameBuffer(width, height, TEXTURE_FORMAT[format]);
+        textureData->Texture = bgfx::getTexture(frameBufferHandle);
+
+        return Napi::External<FrameBufferData>::New(info.Env(), new FrameBufferData(frameBufferHandle, width, height));
+    }
+
+    void NativeEngine::Impl::BindFrameBuffer(const Napi::CallbackInfo& info)
+    {
+        const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
+        m_boundFrameBuffer = frameBufferData;
+
+        // TODO: Consider doing this only on bgfx::reset(); the effects of this call don't survive reset, but as
+        // long as there's no reset this doesn't technically need to be called every time the frame buffer is bound.
+        m_boundFrameBuffer->SetUpView();
+
+        // bgfx::setTexture()? Why?
+        // TODO: View order?
+    }
+
+    void NativeEngine::Impl::UnbindFrameBuffer(const Napi::CallbackInfo& info)
+    {
+        m_boundFrameBuffer = nullptr;
+    }
+
     void NativeEngine::Impl::DrawIndexed(const Napi::CallbackInfo& info)
     {
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
@@ -1095,7 +1168,7 @@ namespace babylon
             bgfx::setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
 
-        bgfx::submit(0, m_currentProgram->Program, 0, true);
+        bgfx::submit(m_boundFrameBuffer == nullptr ? 0 : m_boundFrameBuffer->ViewId, m_currentProgram->Program, 0, true);
     }
 
     void NativeEngine::Impl::Draw(const Napi::CallbackInfo& info)
