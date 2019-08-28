@@ -1204,19 +1204,41 @@ namespace babylon
         uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
+        int samplingMode = info[4].As<Napi::Number>().Uint32Value();
+        bool generateStencilBuffer = info[5].As<Napi::Boolean>();
+        bool generateDepth = info[6].As<Napi::Boolean>();
+        bool generateMipMaps = info[7].As<Napi::Boolean>();
 
-        std::array<bgfx::TextureHandle, 3> textures
+        bgfx::FrameBufferHandle frameBufferHandle{};
+        if (generateStencilBuffer && !generateDepth)
         {
-            bgfx::createTexture2D(width, height, false, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
-            bgfx::createTexture2D(width, height, false, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
-            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)
-        };
-        std::array<bgfx::Attachment, 3> attachments{};
-        for (int idx = 0; idx < attachments.size(); ++idx)
-        {
-            attachments[idx].init(textures[idx]);
+            throw std::exception{ /* Does this case even make any sense? */ };
         }
-        auto frameBufferHandle = bgfx::createFrameBuffer(attachments.size(), attachments.data(), true);
+        else if (!generateStencilBuffer && !generateDepth)
+        {
+            frameBufferHandle = bgfx::createFrameBuffer(width, height, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT);
+        }
+        else
+        {
+            auto depthStencilFormat = bgfx::TextureFormat::D32;
+            if (generateStencilBuffer)
+            {
+                depthStencilFormat = bgfx::TextureFormat::D24S8;
+            }
+
+            std::array<bgfx::TextureHandle, 3> textures
+            {
+                bgfx::createTexture2D(width, height, generateMipMaps, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(width, height, generateMipMaps, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(width, height, generateMipMaps, 1, depthStencilFormat, BGFX_TEXTURE_RT)
+            };
+            std::array<bgfx::Attachment, 3> attachments{};
+            for (int idx = 0; idx < attachments.size(); ++idx)
+            {
+                attachments[idx].init(textures[idx]);
+            }
+            frameBufferHandle = bgfx::createFrameBuffer(attachments.size(), attachments.data(), true);
+        }
 
         textureData->Texture = bgfx::getTexture(frameBufferHandle);
 
