@@ -282,14 +282,86 @@ namespace babylon
             bgfx::TextureHandle Texture{ bgfx::kInvalidHandle };
         };
 
+        class ViewClearState
+        {
+        public:
+            ViewClearState(uint16_t viewId)
+                : m_viewId{ viewId }
+            {}
+
+            bool Update(const Napi::CallbackInfo& info)
+            {
+                auto r = info[0].As<Napi::Number>().FloatValue();
+                auto g = info[1].As<Napi::Number>().FloatValue();
+                auto b = info[2].As<Napi::Number>().FloatValue();
+                auto a = info[3].IsUndefined() ? 1.f : info[3].As<Napi::Number>().FloatValue();
+                auto backBuffer = info[4].IsUndefined() ? true : info[4].As<Napi::Boolean>().Value();
+                auto depth = info[5].IsUndefined() ? true : info[5].As<Napi::Boolean>().Value();
+                auto stencil = info[6].IsUndefined() ? true : info[6].As<Napi::Boolean>().Value();
+
+                bool needToUpdate = r != m_red
+                    || g != m_green
+                    || b != m_blue
+                    || a != m_alpha
+                    || backBuffer != m_backBuffer
+                    || depth != m_depth
+                    || stencil != m_stencil;
+                if (needToUpdate)
+                {
+                    m_red = r;
+                    m_green = g;
+                    m_blue = b;
+                    m_alpha = a;
+                    m_backBuffer = backBuffer;
+                    m_depth = depth;
+                    m_stencil = stencil;
+
+                    Update();
+                }
+
+                return needToUpdate;
+            }
+
+            void Update() const
+            {
+                // TODO: Backbuffer, depth, and stencil.
+                bgfx::setViewClear(m_viewId, BGFX_CLEAR_COLOR | (m_depth ? BGFX_CLEAR_DEPTH : 0x0), Color());
+            }
+
+        private:
+            const uint16_t m_viewId{};
+            float m_red{ 68.f / 255.f };
+            float m_green{ 51.f / 255.f };
+            float m_blue{ 85.f / 255.f };
+            float m_alpha{ 1.f };
+            bool m_backBuffer{ true };
+            bool m_depth{ true };
+            bool m_stencil{ true };
+
+            uint32_t Color() const
+            {
+                uint32_t color = 0x0;
+                color += static_cast<uint8_t>(m_red * std::numeric_limits<uint8_t>::max());
+                color = color << 8;
+                color += static_cast<uint8_t>(m_green * std::numeric_limits<uint8_t>::max());
+                color = color << 8;
+                color += static_cast<uint8_t>(m_blue * std::numeric_limits<uint8_t>::max());
+                color = color << 8;
+                color += static_cast<uint8_t>(m_alpha * std::numeric_limits<uint8_t>::max());
+                return color;
+            }
+        };
+
         struct FrameBufferData final
         {
             FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t width, uint16_t height)
                 : FrameBuffer{ frameBuffer }
+                , ViewId{ NextViewId++ }
+                , ViewClearState{ ViewId }
                 , Width{ width }
                 , Height{ height }
-                , ViewId{ NextViewId++ }
             {}
+            FrameBufferData(FrameBufferData&) = delete;
 
             ~FrameBufferData()
             {
@@ -299,14 +371,15 @@ namespace babylon
             void SetUpView()
             {
                 bgfx::setViewFrameBuffer(ViewId, FrameBuffer);
-                bgfx::setViewClear(ViewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
+                ViewClearState.Update();
                 bgfx::setViewRect(ViewId, 0, 0, Width, Height);
             }
 
             bgfx::FrameBufferHandle FrameBuffer{ bgfx::kInvalidHandle };
+            bgfx::ViewId ViewId{};
+            ViewClearState ViewClearState;
             uint16_t Width{};
             uint16_t Height{};
-            bgfx::ViewId ViewId{};
 
         private:
             static bgfx::ViewId NextViewId;
@@ -415,6 +488,7 @@ namespace babylon
 
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
+        ViewClearState m_viewClearState;
 
         FrameBufferData* m_boundFrameBuffer{ nullptr };
 
@@ -429,6 +503,7 @@ namespace babylon
         , m_currentProgram{ nullptr }
         , m_size{ 1024, 768 }
         , m_engineState{ BGFX_STATE_DEFAULT }
+        , m_viewClearState{ 0 }
     {
         bgfx::Init init{};
         init.platformData.nwh = nativeWindowPtr;
@@ -1184,16 +1259,14 @@ namespace babylon
 
     void NativeEngine::Impl::Clear(const Napi::CallbackInfo& info)
     {
-        auto r = info[0].As<Napi::Number>().FloatValue();
-        auto g = info[1].As<Napi::Number>().FloatValue();
-        auto b = info[2].As<Napi::Number>().FloatValue();
-        auto a = info[3].IsUndefined() ? 1.f : info[3].As<Napi::Number>().FloatValue();
-        auto backBuffer = info[4].IsUndefined() ? true : info[4].As<Napi::Boolean>().Value();
-        auto depth = info[5].IsUndefined() ? true : info[5].As<Napi::Boolean>().Value();
-        auto stencil = info[6].IsUndefined() ? true : info[6].As<Napi::Boolean>().Value();
-
-        // TODO CHECK: Does this have meaning for BGFX?  BGFX seems to call clear()
-        // on its own, depending on the settings.
+        if (m_boundFrameBuffer != nullptr)
+        {
+            m_boundFrameBuffer->ViewClearState.Update(info);
+        }
+        else
+        {
+            m_viewClearState.Update(info);
+        }
     }
 
     Napi::Value NativeEngine::Impl::GetRenderWidth(const Napi::CallbackInfo& info)
