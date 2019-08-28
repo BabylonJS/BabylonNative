@@ -48,7 +48,7 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function () {
+//CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -56,7 +56,7 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Sponza/glTF/Sponza.gltf").then(function () {
-//BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BrainStem/glTF/BrainStem.gltf").then(function () {
+BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BrainStem/glTF/BrainStem.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF/BoxAnimated.gltf").then(function () {
@@ -90,15 +90,23 @@ CreateBoxAsync().then(function () {
     }
 
     if (rtt) {
-        var rttTexture = new BABYLON.RenderTargetTexture("rtt", 256, scene);
-        rttTexture.renderList.push(scene.meshes[scene.meshes.length - 1]);
+        var rttTexture = new BABYLON.RenderTargetTexture("rtt", 1024, scene);
+        scene.meshes.forEach(mesh => {
+            rttTexture.renderList.push(mesh);
+        });
         rttTexture.activeCamera = scene.activeCamera;
+        // rttTexture.vScale = -1;
 
         scene.customRenderTargets.push(rttTexture);
 
         var rttMaterial = new BABYLON.StandardMaterial("rttMaterial", scene);
         rttMaterial.diffuseTexture = rttTexture;
-        scene.meshes[0].material = rttMaterial;
+
+        var plane = BABYLON.MeshBuilder.CreatePlane("rttPlane", { width: 4, height: 4 }, scene);
+        plane.position.y = 1;
+        plane.position.z = -5;
+        plane.rotation.y = Math.PI;
+        plane.material = rttMaterial;
     }
 
     if (turntable) {

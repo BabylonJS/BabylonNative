@@ -1205,7 +1205,19 @@ namespace babylon
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
 
-        auto frameBufferHandle = bgfx::createFrameBuffer(width, height, TEXTURE_FORMAT[format]);
+        std::array<bgfx::TextureHandle, 3> textures
+        {
+            bgfx::createTexture2D(width, height, false, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
+            bgfx::createTexture2D(width, height, false, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
+            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)
+        };
+        std::array<bgfx::Attachment, 3> attachments{};
+        for (int idx = 0; idx < attachments.size(); ++idx)
+        {
+            attachments[idx].init(textures[idx]);
+        }
+        auto frameBufferHandle = bgfx::createFrameBuffer(attachments.size(), attachments.data(), true);
+
         textureData->Texture = bgfx::getTexture(frameBufferHandle);
 
         return Napi::External<FrameBufferData>::New(info.Env(), new FrameBufferData(frameBufferHandle, width, height));
