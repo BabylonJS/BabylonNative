@@ -95,7 +95,7 @@ CreateBoxAsync().then(function () {
             rttTexture.renderList.push(mesh);
         });
         rttTexture.activeCamera = scene.activeCamera;
-        // rttTexture.vScale = -1;
+        rttTexture.vScale = -1;
 
         scene.customRenderTargets.push(rttTexture);
 
