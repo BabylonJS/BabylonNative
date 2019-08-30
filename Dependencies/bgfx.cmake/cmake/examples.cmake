@@ -162,7 +162,10 @@ function( add_example ARG_NAME )
 		endif()
 		if( IOS )
 			set_target_properties(example-${ARG_NAME} PROPERTIES MACOSX_BUNDLE ON
-													  MACOSX_BUNDLE_GUI_IDENTIFIER example-${ARG_NAME})
+													  MACOSX_BUNDLE_GUI_IDENTIFIER example-${ARG_NAME}
+													  MACOSX_BUNDLE_BUNDLE_VERSION 0
+													  MACOSX_BUNDLE_SHORT_VERSION_STRING 0
+													  XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer")
 		endif()
 	endif()
 	target_compile_definitions( example-${ARG_NAME} PRIVATE "-D_CRT_SECURE_NO_WARNINGS" "-D__STDC_FORMAT_MACROS" "-DENTRY_CONFIG_IMPLEMENT_MAIN=1" )
@@ -184,6 +187,21 @@ function( add_example ARG_NAME )
 
 	# Directory name
 	set_target_properties( example-${ARG_NAME} PROPERTIES FOLDER "bgfx/examples" )
+
+	if (IOS OR WIN32)
+		# on iOS we need to build a bundle so have to copy the data rather than symlink
+		# and on windows we can't create symlinks
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E copy_directory ${BGFX_DIR}/examples/runtime/ $<TARGET_FILE_DIR:example-${ARG_NAME}>)
+	else()
+		# For everything else symlink some folders into our output directory
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink ${BGFX_DIR}/examples/runtime/font $<TARGET_FILE_DIR:example-${ARG_NAME}>/font)
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink ${BGFX_DIR}/examples/runtime/images $<TARGET_FILE_DIR:example-${ARG_NAME}>/images)
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink ${BGFX_DIR}/examples/runtime/meshes $<TARGET_FILE_DIR:example-${ARG_NAME}>/meshes)
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink ${BGFX_DIR}/examples/runtime/shaders $<TARGET_FILE_DIR:example-${ARG_NAME}>/shaders)
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink ${BGFX_DIR}/examples/runtime/text $<TARGET_FILE_DIR:example-${ARG_NAME}>/text)
+		add_custom_command( TARGET example-${ARG_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink ${BGFX_DIR}/examples/runtime/textures $<TARGET_FILE_DIR:example-${ARG_NAME}>/textures)
+	endif()
+
 endfunction()
 
 # Build all examples target
