@@ -1,4 +1,4 @@
-build/
+[Bb]uild/
 *.swp
 CMakeCache.txt
 CMakeFiles/
