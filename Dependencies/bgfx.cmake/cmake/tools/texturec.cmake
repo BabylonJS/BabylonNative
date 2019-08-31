@@ -17,7 +17,9 @@ if( BGFX_CUSTOM_TARGETS )
 	add_dependencies( tools texturec )
 endif()
 
-if (IOS)
+if (ANDROID)
+	target_link_libraries( texturec log )
+elseif (IOS)
 	set_target_properties(texturec PROPERTIES MACOSX_BUNDLE ON
 											  MACOSX_BUNDLE_GUI_IDENTIFIER texturec)
 endif()

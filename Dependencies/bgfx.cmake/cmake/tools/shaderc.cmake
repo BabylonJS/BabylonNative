@@ -25,7 +25,9 @@ if( BGFX_CUSTOM_TARGETS )
 	add_dependencies( tools shaderc )
 endif()
 
-if (IOS)
+if (ANDROID)
+	target_link_libraries( shaderc log )
+elseif (IOS)
 	set_target_properties(shaderc PROPERTIES MACOSX_BUNDLE ON
 											 MACOSX_BUNDLE_GUI_IDENTIFIER shaderc)
 endif()

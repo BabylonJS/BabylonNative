@@ -58,7 +58,7 @@ if(BGFX_CONFIG_DEBUG)
 endif()
 
 # Additional dependencies on Unix
-if( UNIX AND NOT APPLE )
+if( UNIX AND NOT APPLE AND NOT ANDROID )
 	# Threads
 	find_package( Threads )
 	target_link_libraries( bx ${CMAKE_THREAD_LIBS_INIT} dl )
