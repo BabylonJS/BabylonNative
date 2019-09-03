@@ -26,6 +26,7 @@ namespace bgfx
 #include <bx/math.h>
 #include <bx/readerwriter.h>
 
+#include <queue>
 #include <regex>
 #include <sstream>
 
@@ -34,6 +35,42 @@ namespace babylon
 
     namespace
     {
+        template<typename T>
+        class RecycleSet
+        {
+        public:
+            RecycleSet(T firstId)
+                : m_nextId{ firstId }
+            {}
+
+            RecycleSet() : RecycleSet({ 0 })
+            {}
+
+            T Get()
+            {
+                if (m_queue.empty())
+                {
+                    return m_nextId++;
+                }
+                else
+                {
+                    T next = m_queue.back();
+                    m_queue.pop();
+                    return next;
+                }
+            }
+
+            void Recycle(T id)
+            {
+                assert(id < m_nextId);
+                m_queue.push(id);
+            }
+
+        private:
+            T m_nextId{};
+            std::queue<bgfx::ViewId> m_queue{};
+        };
+
         struct UniformInfo final
         {
             uint8_t Stage{};
@@ -354,18 +391,23 @@ namespace babylon
 
         struct FrameBufferData final
         {
-            FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t width, uint16_t height)
+            FrameBufferData(bgfx::FrameBufferHandle frameBuffer, RecycleSet<bgfx::ViewId>& viewIdSet, uint16_t width, uint16_t height)
                 : FrameBuffer{ frameBuffer }
-                , ViewId{ NextViewId++ }
+                , ViewId{ viewIdSet.Get() }
                 , ViewClearState{ ViewId }
                 , Width{ width }
                 , Height{ height }
-            {}
+                , m_idSet{ viewIdSet }
+            {
+                assert(ViewId < bgfx::getCaps()->limits.maxViews);
+            }
+
             FrameBufferData(FrameBufferData&) = delete;
 
             ~FrameBufferData()
             {
                 bgfx::destroy(FrameBuffer);
+                m_idSet.Recycle(ViewId);
             }
 
             void SetUpView()
@@ -382,7 +424,48 @@ namespace babylon
             uint16_t Height{};
 
         private:
-            static bgfx::ViewId NextViewId;
+            RecycleSet<bgfx::ViewId>& m_idSet;
+        };
+
+        struct FrameBufferManager final
+        {
+            FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height)
+            {
+                return new FrameBufferData(frameBufferHandle, m_idSet, width, height);
+            }
+
+            void Bind(FrameBufferData* data)
+            {
+                assert(m_boundFrameBuffer == nullptr);
+                m_boundFrameBuffer = data;
+
+                // TODO: Consider doing this only on bgfx::reset(); the effects of this call don't survive reset, but as
+                // long as there's no reset this doesn't technically need to be called every time the frame buffer is bound.
+                m_boundFrameBuffer->SetUpView();
+
+                // bgfx::setTexture()? Why?
+                // TODO: View order?
+            }
+
+            bool IsFrameBufferBound() const
+            {
+                return m_boundFrameBuffer != nullptr;
+            }
+
+            FrameBufferData& GetBound() const
+            {
+                return *m_boundFrameBuffer;
+            }
+
+            void Unbind(FrameBufferData* data)
+            {
+                assert(m_boundFrameBuffer == data);
+                m_boundFrameBuffer = nullptr;
+            }
+
+        private:
+            RecycleSet<bgfx::ViewId> m_idSet{ 1 };
+            FrameBufferData* m_boundFrameBuffer{ nullptr };
         };
 
         struct ProgramData final
@@ -490,13 +573,11 @@ namespace babylon
         uint64_t m_engineState;
         ViewClearState m_viewClearState;
 
-        FrameBufferData* m_boundFrameBuffer{ nullptr };
+        FrameBufferManager m_frameBufferManager{};
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch;
     };
-
-    bgfx::ViewId NativeEngine::Impl::FrameBufferData::NextViewId{ 1 };
 
     NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
         : m_runtimeImpl{ runtimeImpl }
@@ -1226,41 +1307,37 @@ namespace babylon
                 depthStencilFormat = bgfx::TextureFormat::D24S8;
             }
 
-            std::array<bgfx::TextureHandle, 3> textures
+            assert(bgfx::isTextureValid(0, false, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT));
+            assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
+
+            std::array<bgfx::TextureHandle, 2> textures
             {
-                bgfx::createTexture2D(width, height, generateMipMaps, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
                 bgfx::createTexture2D(width, height, generateMipMaps, 1, TEXTURE_FORMAT[format], BGFX_TEXTURE_RT),
                 bgfx::createTexture2D(width, height, generateMipMaps, 1, depthStencilFormat, BGFX_TEXTURE_RT)
             };
-            std::array<bgfx::Attachment, 3> attachments{};
+            std::array<bgfx::Attachment, textures.size()> attachments{};
             for (int idx = 0; idx < attachments.size(); ++idx)
             {
                 attachments[idx].init(textures[idx]);
             }
-            frameBufferHandle = bgfx::createFrameBuffer(attachments.size(), attachments.data(), true);
+            frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
         }
 
         textureData->Texture = bgfx::getTexture(frameBufferHandle);
 
-        return Napi::External<FrameBufferData>::New(info.Env(), new FrameBufferData(frameBufferHandle, width, height));
+        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::Impl::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        m_boundFrameBuffer = frameBufferData;
-
-        // TODO: Consider doing this only on bgfx::reset(); the effects of this call don't survive reset, but as
-        // long as there's no reset this doesn't technically need to be called every time the frame buffer is bound.
-        m_boundFrameBuffer->SetUpView();
-
-        // bgfx::setTexture()? Why?
-        // TODO: View order?
+        m_frameBufferManager.Bind(frameBufferData);
     }
 
     void NativeEngine::Impl::UnbindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        m_boundFrameBuffer = nullptr;
+        const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
+        m_frameBufferManager.Unbind(frameBufferData);
     }
 
     void NativeEngine::Impl::DrawIndexed(const Napi::CallbackInfo& info)
@@ -1277,7 +1354,7 @@ namespace babylon
             bgfx::setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
 
-        bgfx::submit(m_boundFrameBuffer == nullptr ? 0 : m_boundFrameBuffer->ViewId, m_currentProgram->Program, 0, true);
+        bgfx::submit(m_frameBufferManager.IsFrameBufferBound() ? m_frameBufferManager.GetBound().ViewId : 0, m_currentProgram->Program, 0, true);
     }
 
     void NativeEngine::Impl::Draw(const Napi::CallbackInfo& info)
@@ -1293,9 +1370,9 @@ namespace babylon
 
     void NativeEngine::Impl::Clear(const Napi::CallbackInfo& info)
     {
-        if (m_boundFrameBuffer != nullptr)
+        if (m_frameBufferManager.IsFrameBufferBound())
         {
-            m_boundFrameBuffer->ViewClearState.Update(info);
+            m_frameBufferManager.GetBound().ViewClearState.Update(info);
         }
         else
         {
