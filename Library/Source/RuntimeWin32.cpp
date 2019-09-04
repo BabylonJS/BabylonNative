@@ -5,7 +5,7 @@
 namespace babylon
 {
     RuntimeWin32::RuntimeWin32(HWND hWnd)
-        : RuntimeWin32{ hWnd, GetUrlFromPath(GetModulePath().parent_path()), 0, 0 }
+        : RuntimeWin32{ hWnd, GetUrlFromPath(GetModulePath().parent_path()), 16, 16 }
     {
     }
 

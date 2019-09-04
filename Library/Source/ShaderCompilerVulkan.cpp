@@ -32,7 +32,6 @@ namespace babylon
 
         std::unique_ptr<spirv_cross::Compiler> CompileShader(glslang::TProgram& program, EShLanguage stage, std::vector<uint32_t>& spirv)
         {
-            //std::vector<uint32_t> spirv;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 
 
@@ -40,25 +39,6 @@ namespace babylon
             parser.parse();
 
             auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser.get_parsed_ir());
-            /*
-            // remove "uniform Frame { .... }" . Keep the uniforms
-            const std::string frame = "uniform Frame {";
-            const std::string frameEnd = "};";
-            size_t pos = glsl.find(frame);
-            if (pos != std::string::npos)
-            {
-                glsl.replace(pos, frame.size(), "");
-                pos = glsl.find(frameEnd, pos);
-                if (pos != std::string::npos)
-                {
-                    glsl.replace(pos, frameEnd.size(), "");
-                }
-            }
-
-#ifndef ANDROID
-            glsl = std::string("#version 430\n") + glsl;
-#endif
-            */
             return std::move(compiler);
         }
     }
@@ -89,11 +69,9 @@ namespace babylon
             throw std::exception();
         }
 
-        //std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         std::vector<uint32_t> spirvVS;
         auto vertexCompiler = CompileShader(program, EShLangVertex, spirvVS);
 
-        //std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
         std::vector<uint32_t> spirvFS;
         auto fragmentCompiler = CompileShader(program, EShLangFragment, spirvFS);
 

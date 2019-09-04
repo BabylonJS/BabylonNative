@@ -4,7 +4,6 @@
 #include "NapiBridge.h"
 #include "ShaderCompiler.h"
 #include "Console.h"
-#include "BgfxCallback.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -30,8 +29,6 @@ namespace bgfx
 
 namespace babylon
 {
-    static BgfxCallback bgfxCallback;
-
     namespace
     {
         struct UniformInfo final
@@ -405,7 +402,6 @@ namespace babylon
         init.resolution.width = m_size.Width;
         init.resolution.height = m_size.Height;
         init.resolution.reset = BGFX_RESET_VSYNC;
-        init.callback = &bgfxCallback;
         bgfx::init(init);
 
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
@@ -716,7 +712,7 @@ namespace babylon
     void NativeEngine::Impl::SetState(const Napi::CallbackInfo& info)
     {
         const auto culling = info[0].As<Napi::Boolean>().Value();
-        const auto reverseSide = !info[2].As<Napi::Boolean>().Value();
+        const auto reverseSide = info[2].As<Napi::Boolean>().Value();
 
         m_engineState &= ~BGFX_STATE_CULL_MASK;
         if (reverseSide)
