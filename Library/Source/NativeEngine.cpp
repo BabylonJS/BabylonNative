@@ -260,8 +260,9 @@ namespace babylon
             BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
         };
 
-        constexpr std::array<bgfx::TextureFormat::Enum, 1> TEXTURE_FORMAT
+        constexpr std::array<bgfx::TextureFormat::Enum, 2> TEXTURE_FORMAT
         {
+            bgfx::TextureFormat::RGBA8,
             bgfx::TextureFormat::RGBA32F
         };
     }
