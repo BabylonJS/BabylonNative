@@ -52,6 +52,11 @@ if(WINDOWS_STORE)
     target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
 endif()
 
+add_subdirectory(Dependencies/OpenXR-SDK)
+set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/OpenXR)
+set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/OpenXR/Generated)
+set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/OpenXR/Generated)
+
 set(SOURCES
     "Include/Babylon/Runtime.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
@@ -85,15 +90,12 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
         "Source/ShaderCompilerOpenGL.cpp")
 endif()
 
-
-
 add_library(Library ${SOURCES})
 
 set_target_properties(Library PROPERTIES
          ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${BABYLON_NATIVE_PLATFORM}_${ARCH}")
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
-
 
 target_compile_definitions(Library PRIVATE V8_DEPRECATION_WARNINGS=1)
 target_compile_definitions(Library PRIVATE NODE_USE_V8_PLATFORM=1)
@@ -113,6 +115,7 @@ target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bx/include/c
 target_include_directories(Library PRIVATE "Dependencies/curl/include")
 target_include_directories(Library PRIVATE "Dependencies/glslang")
 target_include_directories(Library PRIVATE "Dependencies/SPIRV-Cross")
+target_include_directories(Library PRIVATE "Dependencies/OpenXR-SDK/include")
 
 if(WINDOWS_STORE)
     target_include_directories(Library PRIVATE "Dependencies/arcana.cpp/Source/UWP")
@@ -125,7 +128,8 @@ target_link_libraries(Library
     PRIVATE libcurl
     PRIVATE glslang
     PRIVATE SPIRV
-    PRIVATE spirv-cross-hlsl)
+    PRIVATE spirv-cross-hlsl
+    PRIVATE openxr_loader)
 
 if(WINDOWS_STORE)
     target_link_libraries(Library PRIVATE arcana)
