@@ -141,8 +141,25 @@ namespace
         createInfo.systemId = systemId;
         XR_DO(xrCreateSession(instance, &createInfo, &session));
 
-        // CreateSpaces();
-        // CreateSwapchains();
+        return XrResult::XR_SUCCESS;
+    }
+
+    XrResult CreateSwapChains(XrInstance& instance, XrSession& session, XrSwapchain& swapchain)
+    {
+        XrSwapchainCreateInfo createInfo{ XR_TYPE_SWAPCHAIN_CREATE_INFO };
+        createInfo.arraySize = 2;
+        createInfo.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        createInfo.width = 512;
+        createInfo.height = 512;
+        createInfo.mipCount = 1;
+        createInfo.faceCount = 1;
+        createInfo.sampleCount = 1;
+        createInfo.createFlags = 0;
+        createInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+
+        XR_DO(xrCreateSwapchain(session, &createInfo, &swapchain));
+
+        return XrResult::XR_SUCCESS;
     }
 
     void DoXrStuff(ID3D11Device* device)
@@ -165,11 +182,50 @@ namespace
             throw std::exception{ "Failed to initialize session!" };
         }
 
+        XrSwapchain swapchain{};
+        if (CreateSwapChains(instance, session, swapchain) != XrResult::XR_SUCCESS)
+        {
+            throw std::exception{ "Failed to create swapchains!" };
+        }
+
+        uint32_t swapchainLength{};
+        xrEnumerateSwapchainImages(swapchain, 0, &swapchainLength, nullptr);
+        std::vector<XrSwapchainImageD3D11KHR> images{};
+        images.resize(swapchainLength, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
+        xrEnumerateSwapchainImages(swapchain, static_cast<uint32_t>(images.size()), &swapchainLength, reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data()));
+
+        // CreateSpaces();
+        // CreateSwapchains();
+
         Sleep(1000);
 
         XrSessionBeginInfo beginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
         beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
         xrBeginSession(session, &beginInfo);
+
+        XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
+        xrBeginFrame(session, &frameBeginInfo);
+
+        for (int viewId = 1; viewId <= 3; ++viewId)
+        {
+            auto frameBuffer = bgfx::createFrameBuffer(512, 512, bgfx::TextureFormat::RGBA8U, BGFX_TEXTURE_RT);
+            auto texture = bgfx::getTexture(frameBuffer);
+            bgfx::overrideInternal(texture, reinterpret_cast<uintptr_t>(images[viewId - 1].texture));
+
+            bgfx::setViewFrameBuffer(viewId, frameBuffer);
+            bgfx::setViewClear(viewId, BGFX_CLEAR_COLOR, 0x00FF00FF);
+            bgfx::setViewRect(viewId, 0, 0, 512, 512);
+            bgfx::touch(viewId);
+        }
+        bgfx::frame();
+
+        XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+        layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+
+        XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
+        frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+        frameEndInfo.layerCount = 0;
+        xrEndFrame(session, &frameEndInfo);
     }
 }
 
@@ -544,7 +600,7 @@ namespace babylon
         init.type = bgfx::RendererType::Direct3D11;
         init.resolution.width = m_size.Width;
         init.resolution.height = m_size.Height;
-        init.resolution.reset = BGFX_RESET_VSYNC;
+        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4;
         bgfx::init(init);
 
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
