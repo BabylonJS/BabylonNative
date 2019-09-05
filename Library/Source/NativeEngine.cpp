@@ -4,6 +4,12 @@
 #include "NapiBridge.h"
 #include "ShaderCompiler.h"
 
+#define XR_USE_GRAPHICS_API_D3D11
+#define XR_DO(OPERATION) do { XrResult result = OPERATION; if (result != XrResult::XR_SUCCESS) return result; } while (false)
+#include <d3d11.h>
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #ifndef WIN32
@@ -29,9 +35,146 @@ namespace bgfx
 #include <regex>
 #include <sstream>
 
+namespace
+{
+    XrResult CreateInstance(XrInstance& instance)
+    {
+        uint32_t extensionCount;
+        XR_DO(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
+        std::vector<XrExtensionProperties> extensionProperties(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
+        XR_DO(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()));
+
+        std::vector<const char*> enabledExtensions;
+
+        // Add a specific extension to the list of extensions to be enabled, if it is supported.
+        auto EnableExtentionIfSupported = [&](const char* extensionName)
+        {
+            for (uint32_t i = 0; i < extensionCount; i++)
+            {
+                if (strcmp(extensionProperties[i].extensionName, extensionName) == 0)
+                {
+                    enabledExtensions.push_back(extensionName);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // D3D11 extension is required for this sample, so check if it's supported.
+        bool d3d11Supported = EnableExtentionIfSupported(XR_KHR_D3D11_ENABLE_EXTENSION_NAME); // CHECK
+
+        // Additional optional extensions for enhanced functionality. Track whether enabled in m_optionalExtensions.
+        bool depthExtensionSupported = EnableExtentionIfSupported(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+        bool unboundedRefSpaceSupported = EnableExtentionIfSupported(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME);
+        bool spatialAnchorSupported = EnableExtentionIfSupported(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
+
+        // Create the instance with desired extensions.
+        XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
+        createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
+        createInfo.enabledExtensionNames = enabledExtensions.data();
+
+        createInfo.applicationInfo = { "", 0, "Babylon Native", 410, XR_CURRENT_API_VERSION };
+        strcpy_s(createInfo.applicationInfo.applicationName, "asdfadfaf");
+        XR_DO(xrCreateInstance(&createInfo, &instance));
+
+        return XrResult::XR_SUCCESS;
+    }
+
+    XrResult InitializeSystem(XrInstance& instance, XrSystemId& systemId)
+    {
+        XrSystemGetInfo systemInfo{ XR_TYPE_SYSTEM_GET_INFO };
+        systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+
+        while (true)
+        {
+            XrResult result = xrGetSystem(instance, &systemInfo, &systemId);
+            if (SUCCEEDED(result))
+            {
+                break;
+            }
+            else if (result == XR_ERROR_FORM_FACTOR_UNAVAILABLE)
+            {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(1s);
+            }
+            else
+            {
+                throw std::exception{ "Failed to initialize system." };
+            }
+        };
+
+        // Choose an environment blend mode.
+        XrEnvironmentBlendMode environmentBlendMode;
+        {
+            // Query the list of supported environment blend modes for the current system
+            uint32_t count;
+            XR_DO(xrEnumerateEnvironmentBlendModes(instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &count, nullptr));
+            assert(count > 0); // A system must support at least one environment blend mode.
+
+            std::vector<XrEnvironmentBlendMode> environmentBlendModes(count);
+            XR_DO(xrEnumerateEnvironmentBlendModes(instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, count, &count, environmentBlendModes.data()));
+
+            // This sample supports all modes, pick the system's preferred one.
+            environmentBlendMode = environmentBlendModes[0];
+        }
+
+        // Choose a reasonable depth range can help improve hologram visual quality.
+        // Use reversed Z (near > far) for more uniformed Z resolution.
+        // m_nearFar = { 20.f, 0.1f };
+        float nearDist = 20.f;
+        float farDist = 0.1f;
+        
+        return XrResult::XR_SUCCESS;
+    }
+
+    XrResult InitializeSession(XrInstance& instance, XrSystemId& systemId, ID3D11Device* device, XrSession& session)
+    {
+        // Create the D3D11 device for the adapter associated with the system.
+        XrGraphicsRequirementsD3D11KHR graphicsRequirements{ XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
+        XR_DO(xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
+
+        XrGraphicsBindingD3D11KHR graphicsBinding{ XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
+        graphicsBinding.device = device;
+
+        XrSessionCreateInfo createInfo{ XR_TYPE_SESSION_CREATE_INFO };
+        createInfo.next = &graphicsBinding;
+        createInfo.systemId = systemId;
+        XR_DO(xrCreateSession(instance, &createInfo, &session));
+
+        // CreateSpaces();
+        // CreateSwapchains();
+    }
+
+    void DoXrStuff(ID3D11Device* device)
+    {
+        XrInstance instance{};
+        if (CreateInstance(instance) != XrResult::XR_SUCCESS)
+        {
+            throw std::exception{ "Failed to create XR instance!" };
+        }
+
+        XrSystemId systemId{};
+        if (InitializeSystem(instance, systemId) != XrResult::XR_SUCCESS)
+        {
+            throw std::exception{ "Failed to initialize XR instance!" };
+        }
+
+        XrSession session{};
+        if (InitializeSession(instance, systemId, device, session) != XrResult::XR_SUCCESS)
+        {
+            throw std::exception{ "Failed to initialize session!" };
+        }
+
+        Sleep(1000);
+
+        XrSessionBeginInfo beginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
+        beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+        xrBeginSession(session, &beginInfo);
+    }
+}
+
 namespace babylon
 {
-
     namespace
     {
         struct UniformInfo final
@@ -378,6 +521,8 @@ namespace babylon
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
 
+        void* m_nativeWindowPtr{};
+
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch;
     };
@@ -387,9 +532,13 @@ namespace babylon
         , m_currentProgram{ nullptr }
         , m_size{ 1024, 768 }
         , m_engineState{ BGFX_STATE_DEFAULT }
+        , m_nativeWindowPtr{ nativeWindowPtr }
+    {}
+
+    void NativeEngine::Impl::Initialize(Napi::Env& env)
     {
         bgfx::Init init{};
-        init.platformData.nwh = nativeWindowPtr;
+        init.platformData.nwh = m_nativeWindowPtr;
         bgfx::setPlatformData(init.platformData);
 
         init.type = bgfx::RendererType::Direct3D11;
@@ -400,11 +549,10 @@ namespace babylon
 
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
-    }
 
-    void NativeEngine::Impl::Initialize(Napi::Env& env)
-    {
         EngineDefiner::Define(env, this);
+
+        DoXrStuff(reinterpret_cast<ID3D11Device*>(bgfx::getInternalData()->context));
     }
 
     void NativeEngine::Impl::UpdateSize(float width, float height)
