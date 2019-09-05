@@ -364,6 +364,7 @@ namespace babylon
             {
                 // TODO: Backbuffer, depth, and stencil.
                 bgfx::setViewClear(m_viewId, BGFX_CLEAR_COLOR | (m_depth ? BGFX_CLEAR_DEPTH : 0x0), Color());
+                bgfx::touch(m_viewId);
             }
 
         private:
