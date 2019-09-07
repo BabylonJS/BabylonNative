@@ -283,7 +283,6 @@ namespace babylon
                     view.recommendedSwapchainSampleCount,
                     0,
                     XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT);
-
             Resources->DepthSwapchain =
                 CreateSwapchain(Session,
                     depthSwapchainFormat,
@@ -369,10 +368,81 @@ namespace babylon
             colorFormat = static_cast<SwapchainFormat>(*colorFormatPtr);
             depthFormat = static_cast<SwapchainFormat>(*depthFormatPtr);
         }
+
+        bool TryReadNextEvent(XrEventDataBuffer& buffer) const
+        {
+            // Reset buffer header for every xrPollEvent function call.
+            buffer = { XR_TYPE_EVENT_DATA_BUFFER };
+            const XrResult xr = xrPollEvent(HmdImpl.Instance, &buffer);
+            if (xr == XR_EVENT_UNAVAILABLE)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        void ProcessEvents(bool* exitRenderLoop, bool* requestRestart)
+        {
+            *exitRenderLoop = *requestRestart = false;
+
+            XrEventDataBuffer buffer{ XR_TYPE_EVENT_DATA_BUFFER };
+            XrEventDataBaseHeader* header = reinterpret_cast<XrEventDataBaseHeader*>(&buffer);
+
+            // Process all pending messages.
+            while (TryReadNextEvent(buffer))
+            {
+                switch (header->type)
+                {
+                case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
+                    *exitRenderLoop = true;
+                    *requestRestart = false;
+                    return;
+                case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
+                    const auto stateEvent = *reinterpret_cast<const XrEventDataSessionStateChanged*>(header);
+                    assert(Session != XR_NULL_HANDLE && Session == stateEvent.session);
+                    SessionState = stateEvent.state;
+                    switch (SessionState)
+                    {
+                    case XR_SESSION_STATE_READY:
+                    {
+                        assert(Session != XR_NULL_HANDLE);
+                        XrSessionBeginInfo sessionBeginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
+                        sessionBeginInfo.primaryViewConfigurationType = HmdImpl.VIEW_CONFIGURATION_TYPE;
+                        XR_CHECK(xrBeginSession(Session, &sessionBeginInfo));
+                        SessionRunning = true;
+                        break;
+                    }
+                    case XR_SESSION_STATE_STOPPING:
+                        SessionRunning = false;
+                        XR_CHECK(xrEndSession(Session));
+                        break;
+                    case XR_SESSION_STATE_EXITING:
+                        // Do not attempt to restart because user closed this session.
+                        *exitRenderLoop = true;
+                        *requestRestart = false;
+                        break;
+                    case XR_SESSION_STATE_LOSS_PENDING:
+                        // Poll for a new systemId
+                        *exitRenderLoop = true;
+                        *requestRestart = true;
+                        break;
+                    }
+                    break;
+                case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
+                case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
+                default:
+                    // DEBUG_PRINT("Ignoring event type %d", header->type);
+                    break;
+                }
+            }
+        }
     };
 
     // Choppied and copied out of the OpenXR VS SDK
-    /*struct OpenXR
+    struct OpenXR
     {
         // ------------------------------ Start CreateInstance ----------------------------
         std::vector<const char*> SelectExtensions() {
@@ -772,5 +842,5 @@ namespace babylon
 
         bool m_sessionRunning{ false };
         XrSessionState m_sessionState{ XR_SESSION_STATE_UNKNOWN };
-    };*/
+    };
 }
