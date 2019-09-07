@@ -78,7 +78,9 @@ set(SOURCES
     "Source/Window.h"
     "Source/XMLHttpRequest.cpp"
     "Source/XMLHttpRequest.h"
-    "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp")
+    "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp"
+    "Source/XR.cpp"
+    "Source/XR.h")
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(SOURCES ${SOURCES}
