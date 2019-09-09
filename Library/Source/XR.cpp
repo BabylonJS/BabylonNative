@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-// XR platform-specific header stuff.
+// XR platform-specific header stuff. Move to header ASAP.
 namespace
 {
     auto CreateGraphicsBinding(XrInstance instance, XrSystemId systemId, void* graphicsDevice)
@@ -441,406 +441,134 @@ namespace babylon
         }
     };
 
-    // Choppied and copied out of the OpenXR VS SDK
-    struct OpenXR
+    HeadMountedDisplay::Session::XrFrame::XrFrame(Session::Impl& sessionImpl)
+        : m_sessionImpl{ sessionImpl }
     {
-        // ------------------------------ Start CreateInstance ----------------------------
-        std::vector<const char*> SelectExtensions() {
-            // Fetch the list of extensions supported by the runtime.
-            uint32_t extensionCount;
-            XR_CHECK(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
-            std::vector<XrExtensionProperties> extensionProperties(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
-            XR_CHECK(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()));
+        auto session = m_sessionImpl.Session;
 
-            std::vector<const char*> enabledExtensions;
+        XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
+        XrFrameState frameState{ XR_TYPE_FRAME_STATE };
+        XR_CHECK(xrWaitFrame(session, &frameWaitInfo, &frameState));
+        m_shouldRender = frameState.shouldRender;
+        m_displayTime = frameState.predictedDisplayTime;
 
-            // Add a specific extension to the list of extensions to be enabled, if it is supported.
-            auto EnableExtentionIfSupported = [&](const char* extensionName) {
-                for (uint32_t i = 0; i < extensionCount; i++) {
-                    if (strcmp(extensionProperties[i].extensionName, extensionName) == 0) {
-                        enabledExtensions.push_back(extensionName);
-                        return true;
-                    }
-                }
-                return false;
-            };
+        XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
+        XR_CHECK(xrBeginFrame(session, &frameBeginInfo));
 
-            // D3D11 extension is required for this sample, so check if it's supported.
-            assert(EnableExtentionIfSupported(XR_KHR_D3D11_ENABLE_EXTENSION_NAME));
+        auto& renderResources = m_sessionImpl.Resources;
+        const auto& colorSwapchain = renderResources->ColorSwapchain;
+        const auto& depthSwapchain = renderResources->DepthSwapchain;
 
-            // Additional optional extensions for enhanced functionality. Track whether enabled in m_optionalExtensions.
-            m_optionalExtensions.DepthExtensionSupported = EnableExtentionIfSupported(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
-            m_optionalExtensions.UnboundedRefSpaceSupported = EnableExtentionIfSupported(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME);
-            m_optionalExtensions.SpatialAnchorSupported = EnableExtentionIfSupported(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
-
-            return enabledExtensions;
-        }
-
-        void CreateInstance()
+        // Only render when session is visible. otherwise submit zero layers
+        if (m_shouldRender)
         {
-            assert(m_instance == XR_NULL_HANDLE);
+            uint32_t viewCapacityInput = (uint32_t)renderResources->Views.size();
+            uint32_t viewCountOutput;
 
-            // Build out the extensions to enable. Some extensions are required and some are optional.
-            const std::vector<const char*> enabledExtensions = SelectExtensions();
+            XrViewState viewState{ XR_TYPE_VIEW_STATE };
+            XrViewLocateInfo viewLocateInfo{ XR_TYPE_VIEW_LOCATE_INFO };
+            viewLocateInfo.viewConfigurationType = HeadMountedDisplay::Impl::VIEW_CONFIGURATION_TYPE;
+            viewLocateInfo.displayTime = m_displayTime;
+            viewLocateInfo.space = m_sessionImpl.SceneSpace;
+            XR_CHECK(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, renderResources->Views.data()));
+            assert(viewCountOutput == viewCapacityInput);
+            assert(viewCountOutput == renderResources->ConfigViews.size());
+            assert(viewCountOutput == renderResources->ColorSwapchain.ArraySize);
+            assert(viewCountOutput == renderResources->DepthSwapchain.ArraySize);
 
-            // Create the instance with desired extensions.
-            XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
-            createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
-            createInfo.enabledExtensionNames = enabledExtensions.data();
-
-            createInfo.applicationInfo = { "", 1, "OpenXR Sample", 1, XR_CURRENT_API_VERSION };
-            strcpy_s(createInfo.applicationInfo.applicationName, m_applicationName.c_str());
-            XR_CHECK(xrCreateInstance(&createInfo, &m_instance));
-        }
-        // ------------------------------ End CreateInstance ----------------------------
-        // ------------------------------ Start InitializeSystem ------------------------------
-        void InitializeSystem() {
-            assert(m_instance != XR_NULL_HANDLE);
-            assert(m_systemId == XR_NULL_SYSTEM_ID);
-
-            XrSystemGetInfo systemInfo{ XR_TYPE_SYSTEM_GET_INFO };
-            systemInfo.formFactor = FORM_FACTOR;
-            while (true) {
-                XrResult result = xrGetSystem(m_instance, &systemInfo, &m_systemId);
-                if (XR_SUCCEEDED(result)) {
-                    break;
-                }
-                else if (result == XR_ERROR_FORM_FACTOR_UNAVAILABLE) {
-                    // DEBUG_PRINT("No headset detected.  Trying again in one second...");
-                    using namespace std::chrono_literals;
-                    std::this_thread::sleep_for(1s);
-                }
-                else {
-                    // CHECK_XRRESULT(result, "xrGetSystem");
-                    throw std::exception{}; // TODO
-                }
-            };
-
-            // Choose an environment blend mode.
+            renderResources->ProjectionLayerViews.resize(viewCountOutput);
+            if (m_sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
             {
-                // Query the list of supported environment blend modes for the current system
-                uint32_t count;
-                XR_CHECK(xrEnumerateEnvironmentBlendModes(m_instance, m_systemId, VIEW_CONFIGURATION_TYPE, 0, &count, nullptr));
-                assert(count > 0); // A system must support at least one environment blend mode.
-
-                std::vector<XrEnvironmentBlendMode> environmentBlendModes(count);
-                XR_CHECK(xrEnumerateEnvironmentBlendModes(
-                    m_instance, m_systemId, VIEW_CONFIGURATION_TYPE, count, &count, environmentBlendModes.data()));
-
-                // This sample supports all modes, pick the system's preferred one.
-                m_environmentBlendMode = environmentBlendModes[0];
+                renderResources->DepthInfoViews.resize(viewCountOutput);
             }
 
-            // Choose a reasonable depth range can help improve hologram visual quality.
-            // Use reversed Z (near > far) for more uniformed Z resolution.
-            m_near = 20.f;
-            m_far = 0.1f;
-        }
-        // ------------------------------ End InitializeSystem ------------------------------
+            // Use the full range of recommended image size to achieve optimum resolution
+            const XrRect2Di imageRect = { {0, 0}, {colorSwapchain.Width, colorSwapchain.Height} };
+            assert(colorSwapchain.Width == depthSwapchain.Width);
+            assert(colorSwapchain.Height == depthSwapchain.Height);
 
-        // *************************** EVERYTHING ABOVE HERE IS IN AN OBJECT NOW ***************************
-
-        void InitializeSession() {
-            assert(m_instance != XR_NULL_HANDLE);
-            assert(m_systemId != XR_NULL_SYSTEM_ID);
-            assert(m_session == XR_NULL_HANDLE);
-
-            // Create the D3D11 device for the adapter associated with the system.
-            XrGraphicsRequirementsD3D11KHR graphicsRequirements{ XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
-            XR_CHECK(xrGetD3D11GraphicsRequirementsKHR(m_instance, m_systemId, &graphicsRequirements));
-
-            // Create a list of feature levels which are both supported by the OpenXR runtime and this application.
-            std::vector<D3D_FEATURE_LEVEL> featureLevels = { D3D_FEATURE_LEVEL_12_1,
-                                                            D3D_FEATURE_LEVEL_12_0,
-                                                            D3D_FEATURE_LEVEL_11_1,
-                                                            D3D_FEATURE_LEVEL_11_0,
-                                                            D3D_FEATURE_LEVEL_10_1,
-                                                            D3D_FEATURE_LEVEL_10_0 };
-            featureLevels.erase(std::remove_if(featureLevels.begin(),
-                featureLevels.end(),
-                [&](D3D_FEATURE_LEVEL fl) { return fl < graphicsRequirements.minFeatureLevel; }),
-                featureLevels.end());
-            assert(featureLevels.size() != 0); // "Unsupported minimum feature level!"
-
-            ID3D11Device* device = nullptr;//TODO m_graphicsPlugin->InitializeDevice(graphicsRequirements.adapterLuid, featureLevels);
-
-            XrGraphicsBindingD3D11KHR graphicsBinding{ XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
-            graphicsBinding.device = device;
-
-            XrSessionCreateInfo createInfo{ XR_TYPE_SESSION_CREATE_INFO };
-            createInfo.next = &graphicsBinding;
-            createInfo.systemId = m_systemId;
-            XR_CHECK(xrCreateSession(m_instance, &createInfo, &m_session));
-
-            CreateSpaces();
-            CreateSwapchains();
-        }
-
-        void CreateSpaces() {
-            assert(m_session != XR_NULL_HANDLE);
-
-            // Create a space to place a cube in the world.
+            auto AquireAndWaitForSwapchainImage = [](XrSwapchain handle)
             {
-                if (m_optionalExtensions.UnboundedRefSpaceSupported) {
-                    // Unbounded reference space provides the best scene space for world-scale experiences.
-                    m_sceneSpaceType = XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT;
-                }
-                else {
-                    // If running on a platform that does not support world-scale experiences, fall back to local space.
-                    m_sceneSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-                }
+                uint32_t swapchainImageIndex;
+                XrSwapchainImageAcquireInfo acquireInfo{ XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
+                XR_CHECK(xrAcquireSwapchainImage(handle, &acquireInfo, &swapchainImageIndex));
 
-                XrReferenceSpaceCreateInfo spaceCreateInfo{ XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
-                spaceCreateInfo.referenceSpaceType = m_sceneSpaceType;
-                // spaceCreateInfo.poseInReferenceSpace = xr::math::Pose::Identity();
-                XR_CHECK(xrCreateReferenceSpace(m_session, &spaceCreateInfo, &m_sceneSpace));
-            }
-        }
+                XrSwapchainImageWaitInfo waitInfo{ XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
+                waitInfo.timeout = XR_INFINITE_DURATION;
+                XR_CHECK(xrWaitSwapchainImage(handle, &waitInfo));
 
-        std::tuple<DXGI_FORMAT, DXGI_FORMAT> SelectSwapchainPixelFormats()
-        {
-            assert(m_session != XR_NULL_HANDLE);
-
-            // Query runtime preferred swapchain formats.
-            uint32_t swapchainFormatCount;
-            XR_CHECK(xrEnumerateSwapchainFormats(m_session, 0, &swapchainFormatCount, nullptr));
-
-            std::vector<int64_t> swapchainFormats(swapchainFormatCount);
-            XR_CHECK(xrEnumerateSwapchainFormats(
-                m_session, (uint32_t)swapchainFormats.size(), &swapchainFormatCount, swapchainFormats.data()));
-
-            // Choose the first runtime preferred format that this app supports.
-            auto SelectPixelFormat = [](const std::vector<int64_t>& runtimePreferredFormats,
-                const std::vector<DXGI_FORMAT>& applicationSupportedFormats) {
-                auto found = std::find_first_of(std::begin(runtimePreferredFormats),
-                    std::end(runtimePreferredFormats),
-                    std::begin(applicationSupportedFormats),
-                    std::end(applicationSupportedFormats));
-                if (found == std::end(runtimePreferredFormats)) {
-                    throw std::exception{ "No runtime swapchain format is supported." };
-                }
-                return (DXGI_FORMAT)* found;
+                return swapchainImageIndex;
             };
 
-            // DXGI_FORMAT colorSwapchainFormat = SelectPixelFormat(swapchainFormats, m_graphicsPlugin->SupportedColorFormats());
-            // DXGI_FORMAT depthSwapchainFormat = SelectPixelFormat(swapchainFormats, m_graphicsPlugin->SupportedDepthFormats());
+            const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Swapchain);
+            const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
 
-            // return { colorSwapchainFormat, depthSwapchainFormat };
+            // Prepare rendering parameters of each view for swapchain texture arrays
+            for (uint32_t i = 0; i < viewCountOutput; i++)
+            {
+                // TODO: Actually fill out the views with real stuff.
+                Views.emplace_back(/*{ m_renderResources->Views[i].pose, m_renderResources->Views[i].fov, m_nearFar }*/);
+
+                renderResources->ProjectionLayerViews[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+                renderResources->ProjectionLayerViews[i].pose = renderResources->Views[i].pose;
+                renderResources->ProjectionLayerViews[i].fov = renderResources->Views[i].fov;
+                renderResources->ProjectionLayerViews[i].subImage.swapchain = colorSwapchain.Swapchain;
+                renderResources->ProjectionLayerViews[i].subImage.imageRect = imageRect;
+                renderResources->ProjectionLayerViews[i].subImage.imageArrayIndex = i;
+
+                if (sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
+                {
+                    renderResources->DepthInfoViews[i] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
+                    renderResources->DepthInfoViews[i].minDepth = 0;
+                    renderResources->DepthInfoViews[i].maxDepth = 1;
+                    renderResources->DepthInfoViews[i].nearZ = sessionImpl.HmdImpl.Near;
+                    renderResources->DepthInfoViews[i].farZ = sessionImpl.HmdImpl.Far;
+                    renderResources->DepthInfoViews[i].subImage.swapchain = depthSwapchain.Swapchain;
+                    renderResources->DepthInfoViews[i].subImage.imageRect = imageRect;
+                    renderResources->DepthInfoViews[i].subImage.imageArrayIndex = i;
+
+                    // Chain depth info struct to the corresponding projection layer views's next
+                    renderResources->ProjectionLayerViews[i].next = &renderResources->DepthInfoViews[i];
+                }
+            }
         }
+    }
 
-        void CreateSwapchains()
+    HeadMountedDisplay::Session::XrFrame::~XrFrame()
+    {
+
+        // EndFrame can submit mutiple layers
+        std::vector<XrCompositionLayerBaseHeader*> layers{};
+
+        // The projection layer consists of projection layer views.
+        XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+
+        if (m_shouldRender)
         {
-            assert(m_session != XR_NULL_HANDLE);
-            assert(m_renderResources == nullptr);
+            auto& renderResources = m_sessionImpl.Resources;
 
-            m_renderResources = std::make_unique<RenderResources>();
+            XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
+            /*XR_CHECK(*/xrReleaseSwapchainImage(renderResources->ColorSwapchain.Swapchain, &releaseInfo)/*)*/;
+            /*XR_CHECK(*/xrReleaseSwapchainImage(renderResources->DepthSwapchain.Swapchain, &releaseInfo)/*)*/;
 
-            // Read graphics properties for preferred swapchain length and logging.
-            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
-            XR_CHECK(xrGetSystemProperties(m_instance, m_systemId, &systemProperties));
+            // Inform the runtime to consider alpha channel during composition
+            // The primary display on Hololens has additive environment blend mode. It will ignore alpha channel.
+            // But mixed reality capture has alpha blend mode display and use alpha channel to blend content to environment.
+            layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 
-            // Select color and depth swapchain pixel formats
-            const auto [colorSwapchainFormat, depthSwapchainFormat] = SelectSwapchainPixelFormats();
+            layer.space = m_sessionImpl.SceneSpace;
+            layer.viewCount = (uint32_t)renderResources->ProjectionLayerViews.size();
+            layer.views = renderResources->ProjectionLayerViews.data();
 
-            // Query and cache view configuration views.
-            uint32_t viewCount;
-            XR_CHECK(xrEnumerateViewConfigurationViews(m_instance, m_systemId, VIEW_CONFIGURATION_TYPE, 0, &viewCount, nullptr));
-            assert(viewCount == STEREO_VIEW_COUNT);
-
-            m_renderResources->ConfigViews.resize(viewCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
-            XR_CHECK(xrEnumerateViewConfigurationViews(
-                m_instance, m_systemId, VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, m_renderResources->ConfigViews.data()));
-
-            // Using texture array for better performance, but requiring left/right views have identical sizes.
-            const XrViewConfigurationView& view = m_renderResources->ConfigViews[0];
-            assert(m_renderResources->ConfigViews[0].recommendedImageRectWidth ==
-                m_renderResources->ConfigViews[1].recommendedImageRectWidth);
-            assert(m_renderResources->ConfigViews[0].recommendedImageRectHeight ==
-                m_renderResources->ConfigViews[1].recommendedImageRectHeight);
-            assert(m_renderResources->ConfigViews[0].recommendedSwapchainSampleCount ==
-                m_renderResources->ConfigViews[1].recommendedSwapchainSampleCount);
-
-            // Create swapchains with texture array for color and depth images.
-            // The texture array has the size of viewCount, and they are rendered in a single pass using VPRT.
-            const uint32_t textureArraySize = viewCount;
-            m_renderResources->ColorSwapchain =
-                CreateSwapchainD3D11(m_session,
-                    colorSwapchainFormat,
-                    view.recommendedImageRectWidth,
-                    view.recommendedImageRectHeight,
-                    textureArraySize,
-                    view.recommendedSwapchainSampleCount,
-                    0,
-                    XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT);
-
-            m_renderResources->DepthSwapchain =
-                CreateSwapchainD3D11(m_session,
-                    depthSwapchainFormat,
-                    view.recommendedImageRectWidth,
-                    view.recommendedImageRectHeight,
-                    textureArraySize,
-                    view.recommendedSwapchainSampleCount,
-                    0,
-                    XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-            // Preallocate view buffers for xrLocateViews later inside frame loop.
-            m_renderResources->Views.resize(viewCount, { XR_TYPE_VIEW });
+            layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer));
         }
 
-        struct SwapchainD3D11;
-        SwapchainD3D11 CreateSwapchainD3D11(XrSession session,
-            DXGI_FORMAT format,
-            int32_t width,
-            int32_t height,
-            uint32_t arraySize,
-            uint32_t sampleCount,
-            XrSwapchainCreateFlags createFlags,
-            XrSwapchainUsageFlags usageFlags) {
-            SwapchainD3D11 swapchain;
-            swapchain.Format = format;
-            swapchain.Width = width;
-            swapchain.Height = height;
-            swapchain.ArraySize = arraySize;
-
-            XrSwapchainCreateInfo swapchainCreateInfo{ XR_TYPE_SWAPCHAIN_CREATE_INFO };
-            swapchainCreateInfo.arraySize = arraySize;
-            swapchainCreateInfo.format = format;
-            swapchainCreateInfo.width = width;
-            swapchainCreateInfo.height = height;
-            swapchainCreateInfo.mipCount = 1;
-            swapchainCreateInfo.faceCount = 1;
-            swapchainCreateInfo.sampleCount = sampleCount;
-            swapchainCreateInfo.createFlags = createFlags;
-            swapchainCreateInfo.usageFlags = usageFlags;
-
-            XR_CHECK(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Swapchain));
-
-            uint32_t chainLength;
-            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Swapchain, 0, &chainLength, nullptr));
-            swapchain.Images.resize(chainLength, { SWAPCHAIN_IMAGE_TYPE_ENUM });
-            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Swapchain, static_cast<uint32_t>(swapchain.Images.size()), &chainLength,
-                reinterpret_cast<XrSwapchainImageBaseHeader*>(swapchain.Images.data())));
-
-            return swapchain;
-        }
-
-        // Return true if an event is available, otherwise return false.
-        bool TryReadNextEvent(XrEventDataBuffer* buffer) const {
-            // Reset buffer header for every xrPollEvent function call.
-            *buffer = { XR_TYPE_EVENT_DATA_BUFFER };
-            const XrResult xr = xrPollEvent(m_instance, buffer);
-            if (xr == XR_EVENT_UNAVAILABLE) {
-                return false;
-            }
-            else {
-                return true;
-            }
-        }
-
-        void ProcessEvents(bool* exitRenderLoop, bool* requestRestart) {
-            *exitRenderLoop = *requestRestart = false;
-
-            XrEventDataBuffer buffer{ XR_TYPE_EVENT_DATA_BUFFER };
-            XrEventDataBaseHeader* header = reinterpret_cast<XrEventDataBaseHeader*>(&buffer);
-
-            // Process all pending messages.
-            while (TryReadNextEvent(&buffer)) {
-                switch (header->type) {
-                case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
-                    *exitRenderLoop = true;
-                    *requestRestart = false;
-                    return;
-                }
-                case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
-                    const auto stateEvent = *reinterpret_cast<const XrEventDataSessionStateChanged*>(header);
-                    assert(m_session != XR_NULL_HANDLE && m_session == stateEvent.session);
-                    m_sessionState = stateEvent.state;
-                    switch (m_sessionState) {
-                    case XR_SESSION_STATE_READY: {
-                        assert(m_session != XR_NULL_HANDLE);
-                        XrSessionBeginInfo sessionBeginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
-                        sessionBeginInfo.primaryViewConfigurationType = VIEW_CONFIGURATION_TYPE;
-                        XR_CHECK(xrBeginSession(m_session, &sessionBeginInfo));
-                        m_sessionRunning = true;
-                        break;
-                    }
-                    case XR_SESSION_STATE_STOPPING: {
-                        m_sessionRunning = false;
-                        XR_CHECK(xrEndSession(m_session));
-                        break;
-                    }
-                    case XR_SESSION_STATE_EXITING: {
-                        // Do not attempt to restart because user closed this session.
-                        *exitRenderLoop = true;
-                        *requestRestart = false;
-                        break;
-                    }
-                    case XR_SESSION_STATE_LOSS_PENDING: {
-                        // Poll for a new systemId
-                        *exitRenderLoop = true;
-                        *requestRestart = true;
-                        break;
-                    }
-                    }
-                    break;
-                }
-                case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
-                case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-                default: {
-                    // DEBUG_PRINT("Ignoring event type %d", header->type);
-                    break;
-                }
-                }
-            }
-        }
-        // ------------------- VARIABLES ----------------------
-        constexpr static XrFormFactor FORM_FACTOR{ XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY };
-        constexpr static XrViewConfigurationType VIEW_CONFIGURATION_TYPE{ XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO };
-        constexpr static uint32_t STEREO_VIEW_COUNT{ 2 }; // PRIMARY_STEREO view configuration always has 2 views
-
-        const std::string m_applicationName;
-
-        XrInstance m_instance;
-        XrSystemId m_systemId{ XR_NULL_SYSTEM_ID };
-        XrSession m_session;
-
-        struct {
-            bool DepthExtensionSupported{ false };
-            bool UnboundedRefSpaceSupported{ false };
-            bool SpatialAnchorSupported{ false };
-        } m_optionalExtensions;
-
-        XrSpace m_sceneSpace;
-        XrReferenceSpaceType m_sceneSpaceType{};
-
-        constexpr static uint32_t LeftSide = 0;
-        constexpr static uint32_t RightSide = 1;
-
-        XrEnvironmentBlendMode m_environmentBlendMode{};
-        float m_near{};
-        float m_far{};
-
-        struct SwapchainD3D11 {
-            XrSwapchain Swapchain;
-            DXGI_FORMAT Format{ DXGI_FORMAT_UNKNOWN };
-            int32_t Width{ 0 };
-            int32_t Height{ 0 };
-            uint32_t ArraySize{ 0 };
-            std::vector<XrSwapchainImageD3D11KHR> Images;
-        };
-
-        struct RenderResources {
-            std::vector<XrView> Views;
-            std::vector<XrViewConfigurationView> ConfigViews;
-            SwapchainD3D11 ColorSwapchain;
-            SwapchainD3D11 DepthSwapchain;
-            std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews;
-            std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews;
-        };
-
-        std::unique_ptr<RenderResources> m_renderResources{};
-
-        bool m_sessionRunning{ false };
-        XrSessionState m_sessionState{ XR_SESSION_STATE_UNKNOWN };
-    };
+        // Submit the composition layers for the predicted display time.
+        XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
+        frameEndInfo.displayTime = m_displayTime;
+        frameEndInfo.environmentBlendMode = m_sessionImpl.HmdImpl.EnvironmentBlendMode;
+        frameEndInfo.layerCount = (uint32_t)layers.size();
+        frameEndInfo.layers = layers.data();
+        /*XR_CHECK(*/xrEndFrame(m_sessionImpl.Session, &frameEndInfo)/*)*/;
+    }
 }
