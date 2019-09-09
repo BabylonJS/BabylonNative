@@ -64,22 +64,46 @@ endif()
 include( cmake/examples.cmake )
 
 if( BGFX_INSTALL )
+	include(GNUInstallDirs)
+
 	# install bx
-	install( TARGETS bx DESTINATION lib )
+	install( TARGETS bx
+		EXPORT bgfx-config
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 	install( DIRECTORY ${BX_DIR}/include DESTINATION . )
 
 	# install bimg
-	install( TARGETS bimg DESTINATION lib )
+	install( TARGETS bimg
+		EXPORT bgfx-config
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 	install( DIRECTORY ${BIMG_DIR}/include DESTINATION . )
 
 	# install bgfx
-	install( TARGETS bgfx DESTINATION lib )
+	install( TARGETS bgfx
+		EXPORT bgfx-config
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 	install( DIRECTORY ${BGFX_DIR}/include DESTINATION . )
+
+	# install export
+	install(
+		EXPORT bgfx-config
+		NAMESPACE bgfx::
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bgfx)
 
 	# install tools
 	if( BGFX_BUILD_TOOLS )
-        install( TARGETS shaderc DESTINATION bin )
-		install( TARGETS geometryc DESTINATION bin )
+		install( TARGETS shaderc
+			EXPORT bgfx-config
+			DESTINATION bin )
+		install( TARGETS geometryc
+			EXPORT bgfx-config
+			DESTINATION bin )
+		install( TARGETS texturec
+			EXPORT bgfx-config
+			DESTINATION bin )
+		install( TARGETS texturev
+			EXPORT bgfx-config
+			DESTINATION bin )
 	endif()
 
 	# install examples
