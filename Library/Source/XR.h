@@ -11,10 +11,10 @@ namespace babylon
     // Attempts to store the instance, system, and related non-session state for an HMD.
     class HeadMountedDisplay
     {
-        struct Session
+    public:
+        class Session
         {
-        private:
-            friend struct XrFrame;
+            friend class HeadMountedDisplay;
             struct Impl;
 
         public:
@@ -67,9 +67,22 @@ namespace babylon
                 int64_t m_displayTime{};
             };
 
+            ~Session();
+
+            std::unique_ptr<XrFrame> GetNextFrame();
+
         private:
             std::unique_ptr<Impl> m_impl{};
+
+            Session(HeadMountedDisplay& headMountedDisplay, void* graphicsDevice);
         };
+
+        HeadMountedDisplay();
+        ~HeadMountedDisplay();
+
+        bool TryInitialize();
+
+        std::unique_ptr<Session> CreateSession(void* graphicsDevice);
 
     private:
         struct Impl;

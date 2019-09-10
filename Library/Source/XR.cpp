@@ -130,16 +130,14 @@ namespace babylon
 
             if (Instance == XR_NULL_HANDLE)
             {
-                InitializeXrInstance();
                 Extensions = std::make_unique<SupportedExtensions>();
+                InitializeXrInstance();
             }
 
             assert(Extensions != nullptr);
+            assert(SystemId == XR_NULL_SYSTEM_ID);
 
-            if (SystemId == XR_NULL_SYSTEM_ID)
-            {
-                return TryInitializeXrSystemIdAndBlendMode();
-            }
+            return TryInitializeXrSystemIdAndBlendMode();
         }
 
     private:
@@ -181,6 +179,8 @@ namespace babylon
             // For now, just choose the system's preferred blend mode.
             assert(environmentBlendModes.size() > 0);
             EnvironmentBlendMode = environmentBlendModes[0];
+
+            return true;
         }
     };
 
@@ -295,6 +295,16 @@ namespace babylon
 
             // Preallocate view buffers for xrLocateViews later inside frame loop.
             Resources->Views.resize(viewCount, { XR_TYPE_VIEW });
+        }
+
+        std::unique_ptr<HeadMountedDisplay::Session::XrFrame> GetNextFrame()
+        {
+            // TODO: Separate this?
+            bool foo;
+            bool bar;
+            ProcessEvents(&foo, &bar);
+
+            return std::make_unique<XrFrame>(*this);
         }
 
     private:
@@ -570,5 +580,34 @@ namespace babylon
         frameEndInfo.layerCount = (uint32_t)layers.size();
         frameEndInfo.layers = layers.data();
         /*XR_CHECK(*/xrEndFrame(m_sessionImpl.Session, &frameEndInfo)/*)*/;
+    }
+
+    HeadMountedDisplay::HeadMountedDisplay()
+        : m_impl{ std::make_unique<HeadMountedDisplay::Impl>("APP NAME HERE") }
+    {}
+
+    HeadMountedDisplay::~HeadMountedDisplay() {}
+
+    bool HeadMountedDisplay::TryInitialize()
+    {
+        return m_impl->TryInitialize();
+    }
+
+    std::unique_ptr<HeadMountedDisplay::Session> HeadMountedDisplay::CreateSession(void* graphicsDevice)
+    {
+        //return std::make_unique<Session>(*this);
+        return std::unique_ptr<Session>{ new Session(*this, graphicsDevice) };
+    }
+
+    HeadMountedDisplay::Session::Session(HeadMountedDisplay& headMountedDisplay, void* graphicsDevice)
+        : m_impl{ std::make_unique<HeadMountedDisplay::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
+    {}
+
+    HeadMountedDisplay::Session::~Session()
+    {}
+
+    std::unique_ptr<HeadMountedDisplay::Session::XrFrame> HeadMountedDisplay::Session::GetNextFrame()
+    {
+        return m_impl->GetNextFrame();
     }
 }
