@@ -69,6 +69,9 @@ namespace babylon
 
             ~Session();
 
+            Session(Session&) = delete;
+            Session& operator=(Session&&) = delete;
+
             std::unique_ptr<XrFrame> GetNextFrame();
 
         private:
@@ -79,6 +82,9 @@ namespace babylon
 
         HeadMountedDisplay();
         ~HeadMountedDisplay();
+
+        HeadMountedDisplay(HeadMountedDisplay&) = delete;
+        HeadMountedDisplay& operator=(HeadMountedDisplay&&) = delete;
 
         bool TryInitialize();
 

@@ -474,7 +474,7 @@ namespace babylon
         {
             uint32_t viewCapacityInput = (uint32_t)renderResources->Views.size();
             uint32_t viewCountOutput;
-
+        
             XrViewState viewState{ XR_TYPE_VIEW_STATE };
             XrViewLocateInfo viewLocateInfo{ XR_TYPE_VIEW_LOCATE_INFO };
             viewLocateInfo.viewConfigurationType = HeadMountedDisplay::Impl::VIEW_CONFIGURATION_TYPE;
@@ -485,47 +485,47 @@ namespace babylon
             assert(viewCountOutput == renderResources->ConfigViews.size());
             assert(viewCountOutput == renderResources->ColorSwapchain.ArraySize);
             assert(viewCountOutput == renderResources->DepthSwapchain.ArraySize);
-
+        
             renderResources->ProjectionLayerViews.resize(viewCountOutput);
             if (m_sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
             {
                 renderResources->DepthInfoViews.resize(viewCountOutput);
             }
-
+        
             // Use the full range of recommended image size to achieve optimum resolution
             const XrRect2Di imageRect = { {0, 0}, {colorSwapchain.Width, colorSwapchain.Height} };
             assert(colorSwapchain.Width == depthSwapchain.Width);
             assert(colorSwapchain.Height == depthSwapchain.Height);
-
+        
             auto AquireAndWaitForSwapchainImage = [](XrSwapchain handle)
             {
                 uint32_t swapchainImageIndex;
                 XrSwapchainImageAcquireInfo acquireInfo{ XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
                 XR_CHECK(xrAcquireSwapchainImage(handle, &acquireInfo, &swapchainImageIndex));
-
+        
                 XrSwapchainImageWaitInfo waitInfo{ XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
                 waitInfo.timeout = XR_INFINITE_DURATION;
                 XR_CHECK(xrWaitSwapchainImage(handle, &waitInfo));
-
+        
                 return swapchainImageIndex;
             };
-
+        
             const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Swapchain);
             const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
-
+        
             // Prepare rendering parameters of each view for swapchain texture arrays
             for (uint32_t i = 0; i < viewCountOutput; i++)
             {
                 // TODO: Actually fill out the views with real stuff.
                 Views.emplace_back(/*{ m_renderResources->Views[i].pose, m_renderResources->Views[i].fov, m_nearFar }*/);
-
+        
                 renderResources->ProjectionLayerViews[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                 renderResources->ProjectionLayerViews[i].pose = renderResources->Views[i].pose;
                 renderResources->ProjectionLayerViews[i].fov = renderResources->Views[i].fov;
                 renderResources->ProjectionLayerViews[i].subImage.swapchain = colorSwapchain.Swapchain;
                 renderResources->ProjectionLayerViews[i].subImage.imageRect = imageRect;
                 renderResources->ProjectionLayerViews[i].subImage.imageArrayIndex = i;
-
+        
                 if (sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
                 {
                     renderResources->DepthInfoViews[i] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
@@ -536,7 +536,7 @@ namespace babylon
                     renderResources->DepthInfoViews[i].subImage.swapchain = depthSwapchain.Swapchain;
                     renderResources->DepthInfoViews[i].subImage.imageRect = imageRect;
                     renderResources->DepthInfoViews[i].subImage.imageArrayIndex = i;
-
+        
                     // Chain depth info struct to the corresponding projection layer views's next
                     renderResources->ProjectionLayerViews[i].next = &renderResources->DepthInfoViews[i];
                 }
@@ -556,20 +556,20 @@ namespace babylon
         if (m_shouldRender)
         {
             auto& renderResources = m_sessionImpl.Resources;
-
+        
             XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
             /*XR_CHECK(*/xrReleaseSwapchainImage(renderResources->ColorSwapchain.Swapchain, &releaseInfo)/*)*/;
             /*XR_CHECK(*/xrReleaseSwapchainImage(renderResources->DepthSwapchain.Swapchain, &releaseInfo)/*)*/;
-
+        
             // Inform the runtime to consider alpha channel during composition
             // The primary display on Hololens has additive environment blend mode. It will ignore alpha channel.
             // But mixed reality capture has alpha blend mode display and use alpha channel to blend content to environment.
             layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-
+        
             layer.space = m_sessionImpl.SceneSpace;
             layer.viewCount = (uint32_t)renderResources->ProjectionLayerViews.size();
             layer.views = renderResources->ProjectionLayerViews.data();
-
+        
             layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer));
         }
 
@@ -579,7 +579,8 @@ namespace babylon
         frameEndInfo.environmentBlendMode = m_sessionImpl.HmdImpl.EnvironmentBlendMode;
         frameEndInfo.layerCount = (uint32_t)layers.size();
         frameEndInfo.layers = layers.data();
-        /*XR_CHECK(*/xrEndFrame(m_sessionImpl.Session, &frameEndInfo)/*)*/;
+        auto result = /*XR_CHECK(*/xrEndFrame(m_sessionImpl.Session, &frameEndInfo)/*)*/;
+        assert(!XR_FAILED(result));
     }
 
     HeadMountedDisplay::HeadMountedDisplay()
@@ -603,8 +604,7 @@ namespace babylon
         : m_impl{ std::make_unique<HeadMountedDisplay::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}
 
-    HeadMountedDisplay::Session::~Session()
-    {}
+    HeadMountedDisplay::Session::~Session() {}
 
     std::unique_ptr<HeadMountedDisplay::Session::XrFrame> HeadMountedDisplay::Session::GetNextFrame()
     {

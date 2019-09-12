@@ -40,202 +40,6 @@ namespace bgfx
 #include <regex>
 #include <sstream>
 
-/*
-namespace
-{
-    XrResult CreateInstance(XrInstance& instance)
-    {
-        uint32_t extensionCount;
-        XR_DO(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
-        std::vector<XrExtensionProperties> extensionProperties(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
-        XR_DO(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()));
-
-        std::vector<const char*> enabledExtensions;
-
-        // Add a specific extension to the list of extensions to be enabled, if it is supported.
-        auto EnableExtentionIfSupported = [&](const char* extensionName)
-        {
-            for (uint32_t i = 0; i < extensionCount; i++)
-            {
-                if (strcmp(extensionProperties[i].extensionName, extensionName) == 0)
-                {
-                    enabledExtensions.push_back(extensionName);
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        // D3D11 extension is required for this sample, so check if it's supported.
-        bool d3d11Supported = EnableExtentionIfSupported(XR_KHR_D3D11_ENABLE_EXTENSION_NAME); // CHECK
-
-        // Additional optional extensions for enhanced functionality. Track whether enabled in m_optionalExtensions.
-        bool depthExtensionSupported = EnableExtentionIfSupported(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
-        bool unboundedRefSpaceSupported = EnableExtentionIfSupported(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME);
-        bool spatialAnchorSupported = EnableExtentionIfSupported(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
-
-        // Create the instance with desired extensions.
-        XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
-        createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
-        createInfo.enabledExtensionNames = enabledExtensions.data();
-
-        createInfo.applicationInfo = { "", 0, "Babylon Native", 410, XR_CURRENT_API_VERSION };
-        strcpy_s(createInfo.applicationInfo.applicationName, "asdfadfaf");
-        XR_DO(xrCreateInstance(&createInfo, &instance));
-
-        return XrResult::XR_SUCCESS;
-    }
-
-    XrResult InitializeSystem(XrInstance& instance, XrSystemId& systemId)
-    {
-        XrSystemGetInfo systemInfo{ XR_TYPE_SYSTEM_GET_INFO };
-        systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-
-        while (true)
-        {
-            XrResult result = xrGetSystem(instance, &systemInfo, &systemId);
-            if (SUCCEEDED(result))
-            {
-                break;
-            }
-            else if (result == XR_ERROR_FORM_FACTOR_UNAVAILABLE)
-            {
-                using namespace std::chrono_literals;
-                std::this_thread::sleep_for(1s);
-            }
-            else
-            {
-                throw std::exception{ "Failed to initialize system." };
-            }
-        };
-
-        // Choose an environment blend mode.
-        XrEnvironmentBlendMode environmentBlendMode;
-        {
-            // Query the list of supported environment blend modes for the current system
-            uint32_t count;
-            XR_DO(xrEnumerateEnvironmentBlendModes(instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &count, nullptr));
-            assert(count > 0); // A system must support at least one environment blend mode.
-
-            std::vector<XrEnvironmentBlendMode> environmentBlendModes(count);
-            XR_DO(xrEnumerateEnvironmentBlendModes(instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, count, &count, environmentBlendModes.data()));
-
-            // This sample supports all modes, pick the system's preferred one.
-            environmentBlendMode = environmentBlendModes[0];
-        }
-
-        // Choose a reasonable depth range can help improve hologram visual quality.
-        // Use reversed Z (near > far) for more uniformed Z resolution.
-        // m_nearFar = { 20.f, 0.1f };
-        float nearDist = 20.f;
-        float farDist = 0.1f;
-        
-        return XrResult::XR_SUCCESS;
-    }
-
-    XrResult InitializeSession(XrInstance& instance, XrSystemId& systemId, ID3D11Device* device, XrSession& session)
-    {
-        // Create the D3D11 device for the adapter associated with the system.
-        XrGraphicsRequirementsD3D11KHR graphicsRequirements{ XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
-        XR_DO(xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
-
-        XrGraphicsBindingD3D11KHR graphicsBinding{ XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
-        graphicsBinding.device = device;
-
-        XrSessionCreateInfo createInfo{ XR_TYPE_SESSION_CREATE_INFO };
-        createInfo.next = &graphicsBinding;
-        createInfo.systemId = systemId;
-        XR_DO(xrCreateSession(instance, &createInfo, &session));
-
-        return XrResult::XR_SUCCESS;
-    }
-
-    XrResult CreateSwapChains(XrInstance& instance, XrSession& session, XrSwapchain& swapchain)
-    {
-        XrSwapchainCreateInfo createInfo{ XR_TYPE_SWAPCHAIN_CREATE_INFO };
-        createInfo.arraySize = 2;
-        createInfo.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        createInfo.width = 512;
-        createInfo.height = 512;
-        createInfo.mipCount = 1;
-        createInfo.faceCount = 1;
-        createInfo.sampleCount = 1;
-        createInfo.createFlags = 0;
-        createInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-
-        XR_DO(xrCreateSwapchain(session, &createInfo, &swapchain));
-
-        return XrResult::XR_SUCCESS;
-    }
-
-    void DoXrStuff(ID3D11Device* device)
-    {
-        XrInstance instance{};
-        if (CreateInstance(instance) != XrResult::XR_SUCCESS)
-        {
-            throw std::exception{ "Failed to create XR instance!" };
-        }
-
-        XrSystemId systemId{};
-        if (InitializeSystem(instance, systemId) != XrResult::XR_SUCCESS)
-        {
-            throw std::exception{ "Failed to initialize XR instance!" };
-        }
-
-        XrSession session{};
-        if (InitializeSession(instance, systemId, device, session) != XrResult::XR_SUCCESS)
-        {
-            throw std::exception{ "Failed to initialize session!" };
-        }
-
-        XrSwapchain swapchain{};
-        if (CreateSwapChains(instance, session, swapchain) != XrResult::XR_SUCCESS)
-        {
-            throw std::exception{ "Failed to create swapchains!" };
-        }
-
-        uint32_t swapchainLength{};
-        xrEnumerateSwapchainImages(swapchain, 0, &swapchainLength, nullptr);
-        std::vector<XrSwapchainImageD3D11KHR> images{};
-        images.resize(swapchainLength, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
-        xrEnumerateSwapchainImages(swapchain, static_cast<uint32_t>(images.size()), &swapchainLength, reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data()));
-
-        // CreateSpaces();
-        // CreateSwapchains();
-
-        Sleep(1000);
-
-        XrSessionBeginInfo beginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
-        beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-        xrBeginSession(session, &beginInfo);
-
-        XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
-        xrBeginFrame(session, &frameBeginInfo);
-
-        for (int viewId = 1; viewId <= 3; ++viewId)
-        {
-            auto frameBuffer = bgfx::createFrameBuffer(512, 512, bgfx::TextureFormat::RGBA8U, BGFX_TEXTURE_RT);
-            auto texture = bgfx::getTexture(frameBuffer);
-            bgfx::overrideInternal(texture, reinterpret_cast<uintptr_t>(images[viewId - 1].texture));
-
-            bgfx::setViewFrameBuffer(viewId, frameBuffer);
-            bgfx::setViewClear(viewId, BGFX_CLEAR_COLOR, 0x00FF00FF);
-            bgfx::setViewRect(viewId, 0, 0, 512, 512);
-            bgfx::touch(viewId);
-        }
-        bgfx::frame();
-
-        XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-        layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-
-        XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
-        frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-        frameEndInfo.layerCount = 0;
-        xrEndFrame(session, &frameEndInfo);
-    }
-}
-*/
-
 namespace babylon
 {
     namespace
@@ -785,7 +589,10 @@ namespace babylon
         void* m_nativeWindowPtr{};
 
         // Scratch vector used for data alignment.
-        std::vector<float> m_scratch;
+        std::vector<float> m_scratch{};
+
+        HeadMountedDisplay m_hmd{};
+        std::unique_ptr<HeadMountedDisplay::Session> m_session{};
     };
 
     NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
@@ -814,13 +621,8 @@ namespace babylon
 
         EngineDefiner::Define(env, this);
 
-        // DoXrStuff(reinterpret_cast<ID3D11Device*>(bgfx::getInternalData()->context));
-
-        HeadMountedDisplay hmd{};
-        while (!hmd.TryInitialize());
-        auto session = hmd.CreateSession(bgfx::getInternalData()->context);
-
-        session->GetNextFrame();
+        while (!m_hmd.TryInitialize());
+        m_session = m_hmd.CreateSession(bgfx::getInternalData()->context);
     }
 
     void NativeEngine::Impl::UpdateSize(float width, float height)
@@ -1614,7 +1416,10 @@ namespace babylon
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
 
+            auto frame = m_session->GetNextFrame();
             callbackPtr->Call({});
+            frame.reset();
+
             bgfx::frame();
         });
     }
