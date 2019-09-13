@@ -13,6 +13,7 @@
 #include <openxr/openxr_platform.h>
 */
 #include "XR.h"
+#include <d3d11.h> // TODO: DEBUG
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -1417,6 +1418,33 @@ namespace babylon
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
 
             auto frame = m_session->GetNextFrame();
+            for (const auto& view : frame->Views)
+            {
+                auto* tex = reinterpret_cast<ID3D11Texture2D*>(frame->Views[0].ColorTexturePointer);
+                auto* device = reinterpret_cast<ID3D11Device*>(bgfx::getInternalData()->context);
+                ID3D11RenderTargetView* rtv;
+                const CD3D11_RENDER_TARGET_VIEW_DESC rtvDesc(D3D11_RTV_DIMENSION_TEXTURE2DARRAY, DXGI_FORMAT_R8G8B8A8_UNORM);
+                device->CreateRenderTargetView(tex, &rtvDesc, &rtv);
+                ID3D11DeviceContext* context;
+                device->GetImmediateContext(&context);
+                constexpr std::array<float, 4> color = { 0.f, 1.f, 0.f, 1.f };
+                context->ClearRenderTargetView(rtv, color.data());
+                rtv->Release();
+
+                // D3D11_TEXTURE2D_DESC desc{};
+                // tex->GetDesc(&desc);
+
+                // TODO: Clear the render texture to a color.
+                /*auto fb = bgfx::createFrameBuffer(1280, 1280, bgfx::TextureFormat::RGBA8U, BGFX_TEXTURE_RT);
+                auto tex = bgfx::getTexture(fb);
+                bgfx::frame();
+                bgfx::overrideInternal(tex, reinterpret_cast<uintptr_t>(frame->Views[0].ColorTexturePointer));
+                bgfx::setViewFrameBuffer(1, fb);
+                bgfx::setViewRect(1, 0, 0, 1280, 1280);
+                bgfx::setViewClear(1, BGFX_CLEAR_COLOR, 0x00FF00FF);
+                bgfx::touch(1);
+                bgfx::destroy(fb);*/
+            }
             callbackPtr->Call({});
             frame.reset();
 

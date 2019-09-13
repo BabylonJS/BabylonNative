@@ -517,7 +517,13 @@ namespace babylon
             for (uint32_t i = 0; i < viewCountOutput; i++)
             {
                 // TODO: Actually fill out the views with real stuff.
-                Views.emplace_back(/*{ m_renderResources->Views[i].pose, m_renderResources->Views[i].fov, m_nearFar }*/);
+                //Views.emplace_back(/*{ m_renderResources->Views[i].pose, m_renderResources->Views[i].fov, m_nearFar }*/);
+                Views.emplace_back();
+                auto& view = Views.back();
+                view.ColorTextureFormat = static_cast<uint64_t>(colorSwapchain.Format);
+                view.ColorTexturePointer = renderResources->ColorSwapchain.Images[colorSwapchainImageIndex].texture;
+                view.DepthTextureFormat = static_cast<uint64_t>(depthSwapchain.Format);
+                view.DepthTexturePointer = renderResources->DepthSwapchain.Images[depthSwapchainImageIndex].texture;
         
                 renderResources->ProjectionLayerViews[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                 renderResources->ProjectionLayerViews[i].pose = renderResources->Views[i].pose;
@@ -546,7 +552,6 @@ namespace babylon
 
     HeadMountedDisplay::Session::XrFrame::~XrFrame()
     {
-
         // EndFrame can submit mutiple layers
         std::vector<XrCompositionLayerBaseHeader*> layers{};
 
