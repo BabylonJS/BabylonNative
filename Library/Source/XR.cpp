@@ -195,7 +195,8 @@ namespace babylon
         constexpr static uint32_t LeftSide = 0;
         constexpr static uint32_t RightSide = 1;
 
-        struct SwapchainT {
+        struct SwapchainT
+        {
             XrSwapchain Swapchain;
             SwapchainFormat Format{};
             int32_t Width{ 0 };
@@ -204,15 +205,15 @@ namespace babylon
             std::vector<SwapchainImage> Images;
         };
 
-        struct RenderResources {
+        struct RenderResources
+        {
             std::vector<XrView> Views;
             std::vector<XrViewConfigurationView> ConfigViews;
-            SwapchainT ColorSwapchain;
-            SwapchainT DepthSwapchain;
+            std::vector<SwapchainT> ColorSwapchains;
+            std::vector<SwapchainT> DepthSwapchains;
             std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews;
             std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews;
         };
-
         std::unique_ptr<RenderResources> Resources{};
 
         bool SessionRunning{ false };
@@ -272,28 +273,31 @@ namespace babylon
             assert(Resources->ConfigViews[0].recommendedSwapchainSampleCount == Resources->ConfigViews[1].recommendedSwapchainSampleCount);
 
             // Create swapchains with texture array for color and depth images.
-            // The texture array has the size of viewCount, and they are rendered in a single pass using VPRT.
-            const uint32_t textureArraySize = viewCount;
-            Resources->ColorSwapchain =
-                CreateSwapchain(Session,
-                    colorSwapchainFormat,
-                    view.recommendedImageRectWidth,
-                    view.recommendedImageRectHeight,
-                    textureArraySize,
-                    view.recommendedSwapchainSampleCount,
-                    0,
-                    XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT);
-            Resources->DepthSwapchain =
-                CreateSwapchain(Session,
-                    depthSwapchainFormat,
-                    view.recommendedImageRectWidth,
-                    view.recommendedImageRectHeight,
-                    textureArraySize,
-                    view.recommendedSwapchainSampleCount,
-                    0,
-                    XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-            // Preallocate view buffers for xrLocateViews later inside frame loop.
+            // Create all the swapchains.
+            for (uint32_t idx = 0; idx < viewCount; ++idx)
+            {
+                Resources->ColorSwapchains.push_back(
+                    CreateSwapchain(Session,
+                        colorSwapchainFormat,
+                        view.recommendedImageRectWidth,
+                        view.recommendedImageRectHeight,
+                        1,
+                        view.recommendedSwapchainSampleCount,
+                        0,
+                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT));
+                Resources->DepthSwapchains.push_back(
+                    CreateSwapchain(Session,
+                        depthSwapchainFormat,
+                        view.recommendedImageRectWidth,
+                        view.recommendedImageRectHeight,
+                        1,
+                        view.recommendedSwapchainSampleCount,
+                        0,
+                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+            }
+
+            // Pre-allocate the views, since we know how many there will be.
             Resources->Views.resize(viewCount, { XR_TYPE_VIEW });
         }
 
@@ -466,8 +470,6 @@ namespace babylon
         XR_CHECK(xrBeginFrame(session, &frameBeginInfo));
 
         auto& renderResources = m_sessionImpl.Resources;
-        const auto& colorSwapchain = renderResources->ColorSwapchain;
-        const auto& depthSwapchain = renderResources->DepthSwapchain;
 
         // Only render when session is visible. otherwise submit zero layers
         if (m_shouldRender)
@@ -483,19 +485,14 @@ namespace babylon
             XR_CHECK(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, renderResources->Views.data()));
             assert(viewCountOutput == viewCapacityInput);
             assert(viewCountOutput == renderResources->ConfigViews.size());
-            assert(viewCountOutput == renderResources->ColorSwapchain.ArraySize);
-            assert(viewCountOutput == renderResources->DepthSwapchain.ArraySize);
+            assert(viewCountOutput == renderResources->ColorSwapchains.size());
+            assert(viewCountOutput == renderResources->DepthSwapchains.size());
         
             renderResources->ProjectionLayerViews.resize(viewCountOutput);
             if (m_sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
             {
                 renderResources->DepthInfoViews.resize(viewCountOutput);
             }
-        
-            // Use the full range of recommended image size to achieve optimum resolution
-            const XrRect2Di imageRect = { {0, 0}, {colorSwapchain.Width, colorSwapchain.Height} };
-            assert(colorSwapchain.Width == depthSwapchain.Width);
-            assert(colorSwapchain.Height == depthSwapchain.Height);
         
             auto AquireAndWaitForSwapchainImage = [](XrSwapchain handle)
             {
@@ -510,27 +507,35 @@ namespace babylon
                 return swapchainImageIndex;
             };
         
-            const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Swapchain);
-            const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
-        
             // Prepare rendering parameters of each view for swapchain texture arrays
             for (uint32_t i = 0; i < viewCountOutput; i++)
             {
+                const auto& colorSwapchain = renderResources->ColorSwapchains[i];
+                const auto& depthSwapchain = renderResources->DepthSwapchains[i];
+
+                // Use the full range of recommended image size to achieve optimum resolution
+                const XrRect2Di imageRect = { {0, 0}, {colorSwapchain.Width, colorSwapchain.Height} };
+                assert(colorSwapchain.Width == depthSwapchain.Width);
+                assert(colorSwapchain.Height == depthSwapchain.Height);
+
+                const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Swapchain);
+                const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
+
                 // TODO: Actually fill out the views with real stuff.
                 //Views.emplace_back(/*{ m_renderResources->Views[i].pose, m_renderResources->Views[i].fov, m_nearFar }*/);
                 Views.emplace_back();
                 auto& view = Views.back();
                 view.ColorTextureFormat = static_cast<uint64_t>(colorSwapchain.Format);
-                view.ColorTexturePointer = renderResources->ColorSwapchain.Images[colorSwapchainImageIndex].texture;
+                view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
                 view.DepthTextureFormat = static_cast<uint64_t>(depthSwapchain.Format);
-                view.DepthTexturePointer = renderResources->DepthSwapchain.Images[depthSwapchainImageIndex].texture;
+                view.DepthTexturePointer = depthSwapchain.Images[depthSwapchainImageIndex].texture;
         
                 renderResources->ProjectionLayerViews[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                 renderResources->ProjectionLayerViews[i].pose = renderResources->Views[i].pose;
                 renderResources->ProjectionLayerViews[i].fov = renderResources->Views[i].fov;
                 renderResources->ProjectionLayerViews[i].subImage.swapchain = colorSwapchain.Swapchain;
                 renderResources->ProjectionLayerViews[i].subImage.imageRect = imageRect;
-                renderResources->ProjectionLayerViews[i].subImage.imageArrayIndex = i;
+                renderResources->ProjectionLayerViews[i].subImage.imageArrayIndex = 0;
         
                 if (sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
                 {
@@ -541,7 +546,7 @@ namespace babylon
                     renderResources->DepthInfoViews[i].farZ = sessionImpl.HmdImpl.Far;
                     renderResources->DepthInfoViews[i].subImage.swapchain = depthSwapchain.Swapchain;
                     renderResources->DepthInfoViews[i].subImage.imageRect = imageRect;
-                    renderResources->DepthInfoViews[i].subImage.imageArrayIndex = i;
+                    renderResources->DepthInfoViews[i].subImage.imageArrayIndex = 0;
         
                     // Chain depth info struct to the corresponding projection layer views's next
                     renderResources->ProjectionLayerViews[i].next = &renderResources->DepthInfoViews[i];
@@ -556,6 +561,8 @@ namespace babylon
         std::vector<XrCompositionLayerBaseHeader*> layers{};
 
         // The projection layer consists of projection layer views.
+        // This must be declared out here because layers is a vector of pointer, so the layer struct
+        // must not go out of scope before xrEndFrame() is called.
         XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 
         if (m_shouldRender)
@@ -563,8 +570,16 @@ namespace babylon
             auto& renderResources = m_sessionImpl.Resources;
         
             XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
-            /*XR_CHECK(*/xrReleaseSwapchainImage(renderResources->ColorSwapchain.Swapchain, &releaseInfo)/*)*/;
-            /*XR_CHECK(*/xrReleaseSwapchainImage(renderResources->DepthSwapchain.Swapchain, &releaseInfo)/*)*/;
+
+            for (auto& swapchain : renderResources->ColorSwapchains)
+            {
+                /*XR_CHECK(*/xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo)/*)*/;
+            }
+
+            for (auto& swapchain : renderResources->DepthSwapchains)
+            {
+                /*XR_CHECK(*/xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo)/*)*/;
+            }
         
             // Inform the runtime to consider alpha channel during composition
             // The primary display on Hololens has additive environment blend mode. It will ignore alpha channel.

@@ -4,14 +4,6 @@
 #include "NapiBridge.h"
 #include "ShaderCompiler.h"
 
-/*
-#define XR_USE_GRAPHICS_API_D3D11
-#define XR_DO(OPERATION) do { XrResult result = OPERATION; if (result != XrResult::XR_SUCCESS) return result; } while (false)
-#define XR_CHECK(OPERATION) do { XrResult result = OPERATION; if (XR_FAILED(result)) throw std::exception{}; } while (false)
-#include <d3d11.h>
-#include <openxr/openxr.h>
-#include <openxr/openxr_platform.h>
-*/
 #include "XR.h"
 #include <d3d11.h> // TODO: DEBUG
 
@@ -1435,15 +1427,18 @@ namespace babylon
                 // tex->GetDesc(&desc);
 
                 // TODO: Clear the render texture to a color.
-                /*auto fb = bgfx::createFrameBuffer(1280, 1280, bgfx::TextureFormat::RGBA8U, BGFX_TEXTURE_RT);
-                auto tex = bgfx::getTexture(fb);
+                /*auto tex = bgfx::createTexture2D(1, 1, false, 2, bgfx::TextureFormat::RGBA8U, BGFX_TEXTURE_RT);
                 bgfx::frame();
                 bgfx::overrideInternal(tex, reinterpret_cast<uintptr_t>(frame->Views[0].ColorTexturePointer));
+                auto fb = bgfx::createFrameBuffer(1, &tex, false);
                 bgfx::setViewFrameBuffer(1, fb);
                 bgfx::setViewRect(1, 0, 0, 1280, 1280);
                 bgfx::setViewClear(1, BGFX_CLEAR_COLOR, 0x00FF00FF);
                 bgfx::touch(1);
-                bgfx::destroy(fb);*/
+                bgfx::frame();
+                bgfx::destroy(fb);
+                destroy(tex);
+                break;*/
             }
             callbackPtr->Call({});
             frame.reset();
