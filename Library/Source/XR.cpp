@@ -506,15 +506,17 @@ namespace babylon
         
                 return swapchainImageIndex;
             };
+
+            Views.resize(viewCountOutput);
         
             // Prepare rendering parameters of each view for swapchain texture arrays
-            for (uint32_t i = 0; i < viewCountOutput; i++)
+            for (uint32_t idx = 0; idx < viewCountOutput; ++idx)
             {
-                const auto& colorSwapchain = renderResources->ColorSwapchains[i];
-                const auto& depthSwapchain = renderResources->DepthSwapchains[i];
+                const auto& colorSwapchain = renderResources->ColorSwapchains[idx];
+                const auto& depthSwapchain = renderResources->DepthSwapchains[idx];
 
                 // Use the full range of recommended image size to achieve optimum resolution
-                const XrRect2Di imageRect = { {0, 0}, {colorSwapchain.Width, colorSwapchain.Height} };
+                const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
                 assert(colorSwapchain.Width == depthSwapchain.Width);
                 assert(colorSwapchain.Height == depthSwapchain.Height);
 
@@ -522,34 +524,32 @@ namespace babylon
                 const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
 
                 // TODO: Actually fill out the views with real stuff.
-                //Views.emplace_back(/*{ m_renderResources->Views[i].pose, m_renderResources->Views[i].fov, m_nearFar }*/);
-                Views.emplace_back();
-                auto& view = Views.back();
+                auto& view = Views[idx];
                 view.ColorTextureFormat = static_cast<uint64_t>(colorSwapchain.Format);
                 view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
                 view.DepthTextureFormat = static_cast<uint64_t>(depthSwapchain.Format);
                 view.DepthTexturePointer = depthSwapchain.Images[depthSwapchainImageIndex].texture;
         
-                renderResources->ProjectionLayerViews[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-                renderResources->ProjectionLayerViews[i].pose = renderResources->Views[i].pose;
-                renderResources->ProjectionLayerViews[i].fov = renderResources->Views[i].fov;
-                renderResources->ProjectionLayerViews[i].subImage.swapchain = colorSwapchain.Swapchain;
-                renderResources->ProjectionLayerViews[i].subImage.imageRect = imageRect;
-                renderResources->ProjectionLayerViews[i].subImage.imageArrayIndex = 0;
+                renderResources->ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+                renderResources->ProjectionLayerViews[idx].pose = renderResources->Views[idx].pose;
+                renderResources->ProjectionLayerViews[idx].fov = renderResources->Views[idx].fov;
+                renderResources->ProjectionLayerViews[idx].subImage.swapchain = colorSwapchain.Swapchain;
+                renderResources->ProjectionLayerViews[idx].subImage.imageRect = imageRect;
+                renderResources->ProjectionLayerViews[idx].subImage.imageArrayIndex = 0;
         
                 if (sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
                 {
-                    renderResources->DepthInfoViews[i] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
-                    renderResources->DepthInfoViews[i].minDepth = 0;
-                    renderResources->DepthInfoViews[i].maxDepth = 1;
-                    renderResources->DepthInfoViews[i].nearZ = sessionImpl.HmdImpl.Near;
-                    renderResources->DepthInfoViews[i].farZ = sessionImpl.HmdImpl.Far;
-                    renderResources->DepthInfoViews[i].subImage.swapchain = depthSwapchain.Swapchain;
-                    renderResources->DepthInfoViews[i].subImage.imageRect = imageRect;
-                    renderResources->DepthInfoViews[i].subImage.imageArrayIndex = 0;
+                    renderResources->DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
+                    renderResources->DepthInfoViews[idx].minDepth = 0;
+                    renderResources->DepthInfoViews[idx].maxDepth = 1;
+                    renderResources->DepthInfoViews[idx].nearZ = sessionImpl.HmdImpl.Near;
+                    renderResources->DepthInfoViews[idx].farZ = sessionImpl.HmdImpl.Far;
+                    renderResources->DepthInfoViews[idx].subImage.swapchain = depthSwapchain.Swapchain;
+                    renderResources->DepthInfoViews[idx].subImage.imageRect = imageRect;
+                    renderResources->DepthInfoViews[idx].subImage.imageArrayIndex = 0;
         
                     // Chain depth info struct to the corresponding projection layer views's next
-                    renderResources->ProjectionLayerViews[i].next = &renderResources->DepthInfoViews[i];
+                    renderResources->ProjectionLayerViews[idx].next = &renderResources->DepthInfoViews[idx];
                 }
             }
         }
