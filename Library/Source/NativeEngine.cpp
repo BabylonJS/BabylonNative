@@ -472,6 +472,74 @@ namespace babylon
             FrameBufferData* m_boundFrameBuffer{ nullptr };
         };
 
+        struct Xr
+        {
+            // TODO: Get this info from XR instead of hard-coding it.
+            static constexpr uint16_t WIDTH = 1280;
+            static constexpr uint16_t HEIGHT = 1280;
+            static constexpr auto FORMAT = bgfx::TextureFormat::RGBA8;
+
+            std::vector<FrameBufferData*> ActiveFrameBuffers{};
+
+            Xr(FrameBufferManager& frameBufferManager)
+                : m_frameBufferManager{ frameBufferManager }
+            {}
+
+            void InitializeSynchronously()
+            {
+                while (!m_hmd.TryInitialize());
+                m_session = m_hmd.CreateSession(bgfx::getInternalData()->context);
+            }
+
+            void BeginFrame()
+            {
+                m_frame = m_session->GetNextFrame();
+
+                ActiveFrameBuffers.reserve(m_frame->Views.size());
+                for (const auto& view : m_frame->Views)
+                {
+                    auto texturePtr = reinterpret_cast<uintptr_t>(view.ColorTexturePointer);
+
+                    auto it = m_texturesToFrameBuffers.find(texturePtr);
+                    if (it == m_texturesToFrameBuffers.end())
+                    {
+                        auto tex = bgfx::createTexture2D(1, 1, false, 1, FORMAT, BGFX_TEXTURE_RT);
+                        bgfx::frame();
+                        bgfx::overrideInternal(tex, texturePtr);
+
+                        auto frameBuffer = bgfx::createFrameBuffer(1, &tex, false);
+
+                        auto fbPtr = m_frameBufferManager.CreateNew(frameBuffer, WIDTH, HEIGHT);
+                        m_texturesToFrameBuffers[texturePtr] = std::unique_ptr<FrameBufferData>{ fbPtr };
+
+                        ActiveFrameBuffers.push_back(fbPtr);
+                    }
+                    else
+                    {
+                        ActiveFrameBuffers.push_back(it->second.get());
+                    }
+
+                    m_frameBufferManager.Bind(ActiveFrameBuffers.back());
+                    m_frameBufferManager.Unbind(ActiveFrameBuffers.back());
+                }
+            }
+
+            void EndFrame()
+            {
+                ActiveFrameBuffers.clear();
+
+                m_frame.reset();
+            }
+
+        private:
+            HeadMountedDisplay m_hmd{};
+            std::unique_ptr<HeadMountedDisplay::Session> m_session{};
+            std::unique_ptr<HeadMountedDisplay::Session::XrFrame> m_frame{};
+            FrameBufferManager& m_frameBufferManager;
+
+            std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
+        };
+
         struct ProgramData final
         {
             ~ProgramData()
@@ -584,8 +652,7 @@ namespace babylon
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
 
-        HeadMountedDisplay m_hmd{};
-        std::unique_ptr<HeadMountedDisplay::Session> m_session{};
+        Xr m_xr;
     };
 
     NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
@@ -595,6 +662,7 @@ namespace babylon
         , m_engineState{ BGFX_STATE_DEFAULT }
         , m_viewClearState{ 0 }
         , m_nativeWindowPtr{ nativeWindowPtr }
+        , m_xr{ m_frameBufferManager }
     {}
 
     void NativeEngine::Impl::Initialize(Napi::Env& env)
@@ -614,8 +682,7 @@ namespace babylon
 
         EngineDefiner::Define(env, this);
 
-        while (!m_hmd.TryInitialize());
-        m_session = m_hmd.CreateSession(bgfx::getInternalData()->context);
+        m_xr.InitializeSynchronously();
     }
 
     void NativeEngine::Impl::UpdateSize(float width, float height)
@@ -1409,24 +1476,17 @@ namespace babylon
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
 
-            auto frame = m_session->GetNextFrame();
-            for (const auto& view : frame->Views)
+            m_xr.BeginFrame();
+            if (m_xr.ActiveFrameBuffers.size() > 0)
             {
-                // TODO: Clear the render texture to a color.
-                auto tex = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-                bgfx::frame();
-                bgfx::overrideInternal(tex, reinterpret_cast<uintptr_t>(frame->Views[0].ColorTexturePointer));
-                auto fb = bgfx::createFrameBuffer(1, &tex, false);
-                bgfx::setViewFrameBuffer(1, fb);
-                bgfx::setViewRect(1, 0, 0, 1280, 1280);
-                bgfx::setViewClear(1, BGFX_CLEAR_COLOR, 0xF0FF00FF);
-                bgfx::touch(1);
-                bgfx::frame();
-                bgfx::destroy(fb);
-                bgfx::destroy(tex);
+                m_frameBufferManager.Bind(m_xr.ActiveFrameBuffers.front());
             }
             callbackPtr->Call({});
-            frame.reset();
+            if (m_xr.ActiveFrameBuffers.size() > 0)
+            {
+                m_frameBufferManager.Unbind(m_xr.ActiveFrameBuffers.front());
+            }
+            m_xr.EndFrame();
 
             bgfx::frame();
         });
