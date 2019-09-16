@@ -5,7 +5,6 @@
 #include "ShaderCompiler.h"
 
 #include "XR.h"
-//#include <d3d11.h> // TODO: DEBUG
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -267,6 +266,19 @@ namespace babylon
             bgfx::TextureFormat::RGBA8,
             bgfx::TextureFormat::RGBA32F
         };
+
+        bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(HeadMountedDisplay::Session::XrFrame::View::TextureFormat format)
+        {
+            switch (format)
+            {
+            case HeadMountedDisplay::Session::XrFrame::View::TextureFormat::RGBA8:
+                return bgfx::TextureFormat::RGBA8;
+            case HeadMountedDisplay::Session::XrFrame::View::TextureFormat::D24S8:
+                return bgfx::TextureFormat::D24S8;
+            default:
+                throw std::exception{ /* Unsupported texture format */ };
+            }
+        }
     }
 
     class NativeEngine::Impl final
@@ -474,11 +486,6 @@ namespace babylon
 
         struct Xr
         {
-            // TODO: Get this info from XR instead of hard-coding it.
-            static constexpr uint16_t WIDTH = 1280;
-            static constexpr uint16_t HEIGHT = 1280;
-            static constexpr auto FORMAT = bgfx::TextureFormat::RGBA8;
-
             std::vector<FrameBufferData*> ActiveFrameBuffers{};
 
             Xr(FrameBufferManager& frameBufferManager)
@@ -498,19 +505,39 @@ namespace babylon
                 ActiveFrameBuffers.reserve(m_frame->Views.size());
                 for (const auto& view : m_frame->Views)
                 {
-                    auto texturePtr = reinterpret_cast<uintptr_t>(view.ColorTexturePointer);
+                    auto colorTexPtr = reinterpret_cast<uintptr_t>(view.ColorTexturePointer);
 
-                    auto it = m_texturesToFrameBuffers.find(texturePtr);
+                    auto it = m_texturesToFrameBuffers.find(colorTexPtr);
                     if (it == m_texturesToFrameBuffers.end())
                     {
-                        auto tex = bgfx::createTexture2D(1, 1, false, 1, FORMAT, BGFX_TEXTURE_RT);
+                        assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
+                        assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
+
+                        auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
+                        auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
+
+                        assert(bgfx::isTextureValid(0, false, 1, colorTextureFormat, BGFX_TEXTURE_RT));
+                        assert(bgfx::isTextureValid(0, false, 1, depthTextureFormat, BGFX_TEXTURE_RT));
+
+                        auto colorTex = bgfx::createTexture2D(1, 1, false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
+                        auto depthTex = bgfx::createTexture2D(1, 1, false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
+
+                        // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
                         bgfx::frame();
-                        bgfx::overrideInternal(tex, texturePtr);
 
-                        auto frameBuffer = bgfx::createFrameBuffer(1, &tex, false);
+                        bgfx::overrideInternal(colorTex, colorTexPtr);
+                        bgfx::overrideInternal(depthTex, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
 
-                        auto fbPtr = m_frameBufferManager.CreateNew(frameBuffer, WIDTH, HEIGHT);
-                        m_texturesToFrameBuffers[texturePtr] = std::unique_ptr<FrameBufferData>{ fbPtr };
+                        std::array<bgfx::Attachment, 2> attachments{};
+                        attachments[0].init(colorTex);
+                        attachments[1].init(depthTex);
+                        auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+
+                        auto fbPtr = m_frameBufferManager.CreateNew(
+                            frameBuffer, 
+                            static_cast<uint16_t>(view.ColorTextureSize.Width), 
+                            static_cast<uint16_t>(view.ColorTextureSize.Height));
+                        m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{ fbPtr };
 
                         ActiveFrameBuffers.push_back(fbPtr);
                     }

@@ -47,6 +47,19 @@ namespace
         DXGI_FORMAT_D24_UNORM_S8_UINT
     };
 
+    babylon::HeadMountedDisplay::Session::XrFrame::View::TextureFormat SwapchainFormatToTextureFormat(SwapchainFormat format)
+    {
+        switch (format)
+        {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+            return babylon::HeadMountedDisplay::Session::XrFrame::View::TextureFormat::RGBA8;
+        case DXGI_FORMAT_D24_UNORM_S8_UINT:
+            return babylon::HeadMountedDisplay::Session::XrFrame::View::TextureFormat::D24S8;
+        default:
+            throw std::exception{ /* Unsupported texture format */ };
+        }
+    }
+
     constexpr auto SWAPCHAIN_IMAGE_TYPE_ENUM{ XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR };
 }
 
@@ -266,15 +279,8 @@ namespace babylon
             Resources->ConfigViews.resize(viewCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
             XR_CHECK(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, Resources->ConfigViews.data()));
 
-            // Using texture array for better performance, but requiring left/right views have identical sizes.
-            const XrViewConfigurationView& view = Resources->ConfigViews[0];
-            assert(Resources->ConfigViews[0].recommendedImageRectWidth == Resources->ConfigViews[1].recommendedImageRectWidth);
-            assert(Resources->ConfigViews[0].recommendedImageRectHeight == Resources->ConfigViews[1].recommendedImageRectHeight);
-            assert(Resources->ConfigViews[0].recommendedSwapchainSampleCount == Resources->ConfigViews[1].recommendedSwapchainSampleCount);
-
-            // Create swapchains with texture array for color and depth images.
-
             // Create all the swapchains.
+            const XrViewConfigurationView& view = Resources->ConfigViews[0];
             for (uint32_t idx = 0; idx < viewCount; ++idx)
             {
                 Resources->ColorSwapchains.push_back(
@@ -523,12 +529,27 @@ namespace babylon
                 const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Swapchain);
                 const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
 
-                // TODO: Actually fill out the views with real stuff.
+                // Populate the struct that consuming code will use for rendering.
                 auto& view = Views[idx];
-                view.ColorTextureFormat = static_cast<uint64_t>(colorSwapchain.Format);
+                view.Position.X = renderResources->Views[idx].pose.position.x;
+                view.Position.Y = renderResources->Views[idx].pose.position.y;
+                view.Position.Z = renderResources->Views[idx].pose.position.z;
+                view.Orientation.X = renderResources->Views[idx].pose.orientation.x;
+                view.Orientation.Y = renderResources->Views[idx].pose.orientation.y;
+                view.Orientation.Z = renderResources->Views[idx].pose.orientation.z;
+                view.Orientation.W = renderResources->Views[idx].pose.orientation.w;
+                view.FieldOfView.AngleUp = renderResources->Views[idx].fov.angleUp;
+                view.FieldOfView.AngleDown = renderResources->Views[idx].fov.angleDown;
+                view.FieldOfView.AngleLeft = renderResources->Views[idx].fov.angleLeft;
+                view.FieldOfView.AngleRight = renderResources->Views[idx].fov.angleRight;
+                view.ColorTextureFormat = SwapchainFormatToTextureFormat(colorSwapchain.Format);
                 view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
-                view.DepthTextureFormat = static_cast<uint64_t>(depthSwapchain.Format);
+                view.ColorTextureSize.Width = colorSwapchain.Width;
+                view.ColorTextureSize.Height = colorSwapchain.Height;
+                view.DepthTextureFormat = SwapchainFormatToTextureFormat(depthSwapchain.Format);
                 view.DepthTexturePointer = depthSwapchain.Images[depthSwapchainImageIndex].texture;
+                view.DepthTextureSize.Width = depthSwapchain.Width;
+                view.DepthTextureSize.Height = depthSwapchain.Height;
         
                 renderResources->ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                 renderResources->ProjectionLayerViews[idx].pose = renderResources->Views[idx].pose;

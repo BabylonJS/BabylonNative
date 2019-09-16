@@ -20,40 +20,52 @@ namespace babylon
         public:
             struct XrFrame
             {
-                struct Position
-                {
-                    float X{};
-                    float Y{};
-                    float Z{};
-                };
-
-                struct Orientation
-                {
-                    float X{};
-                    float Y{};
-                    float Z{};
-                    float W{};
-                };
-
-                struct FieldOfView
-                {
-                    float AngleLeft{};
-                    float AngleRight{};
-                    float AngleUp{};
-                    float AngleDown{};
-                };
-
                 struct View
                 {
-                    std::vector<Position> Positions{};
-                    std::vector<Orientation> Orientations{};
-                    std::vector<FieldOfView> FieldsOfView{};
+                    enum TextureFormat
+                    {
+                        RGBA8,
+                        D24S8
+                    };
 
-                    uint64_t ColorTextureFormat{};
+                    struct
+                    {
+                        float X{};
+                        float Y{};
+                        float Z{};
+                    } Position;
+
+                    struct
+                    {
+                        float X{};
+                        float Y{};
+                        float Z{};
+                        float W{};
+                    } Orientation;
+
+                    struct
+                    {
+                        float AngleLeft{};
+                        float AngleRight{};
+                        float AngleUp{};
+                        float AngleDown{};
+                    } FieldOfView;
+
+                    TextureFormat ColorTextureFormat{};
                     void* ColorTexturePointer{};
+                    struct
+                    {
+                        size_t Width{};
+                        size_t Height{};
+                    } ColorTextureSize;
 
-                    uint64_t DepthTextureFormat{};
+                    TextureFormat DepthTextureFormat{};
                     void* DepthTexturePointer{};
+                    struct
+                    {
+                        size_t Width{};
+                        size_t Height{};
+                    } DepthTextureSize;
                 };
 
                 XrFrame(HeadMountedDisplay::Session::Impl&);
