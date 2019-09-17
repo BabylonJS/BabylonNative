@@ -492,14 +492,55 @@ namespace babylon
                 : m_frameBufferManager{ frameBufferManager }
             {}
 
-            void InitializeSynchronously()
+            ~Xr()
             {
-                while (!m_hmd.TryInitialize());
+                if (IsSessionActive())
+                {
+                    if (m_frame != nullptr)
+                    {
+                        EndFrame();
+                    }
+
+                    EndSession();
+                }
+            }
+
+            // TODO: Make this asynchronous.
+            void BeginSession()
+            {
+                assert(!IsSessionActive());
+                assert(m_frame == nullptr);
+
+                if (!m_hmd.IsInitialized())
+                {
+                    while (!m_hmd.TryInitialize());
+                }
+
                 m_session = m_hmd.CreateSession(bgfx::getInternalData()->context);
+            }
+
+            // TODO: Make this asynchronous.
+            void EndSession()
+            {
+                assert(IsSessionActive());
+                assert(m_frame == nullptr);
+
+                m_session->RequestEndSession();
+
+                while (m_session->GetNextFrame() != nullptr);
+                m_session.reset();
+            }
+
+            bool IsSessionActive() const
+            {
+                return m_session != nullptr;
             }
 
             void BeginFrame()
             {
+                assert(IsSessionActive());
+                assert(m_frame == nullptr);
+
                 m_frame = m_session->GetNextFrame();
 
                 ActiveFrameBuffers.reserve(m_frame->Views.size());
@@ -545,14 +586,14 @@ namespace babylon
                     {
                         ActiveFrameBuffers.push_back(it->second.get());
                     }
-
-                    m_frameBufferManager.Bind(ActiveFrameBuffers.back());
-                    m_frameBufferManager.Unbind(ActiveFrameBuffers.back());
                 }
             }
 
             void EndFrame()
             {
+                assert(IsSessionActive());
+                assert(m_frame != nullptr);
+
                 ActiveFrameBuffers.clear();
 
                 m_frame.reset();
@@ -708,8 +749,6 @@ namespace babylon
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
 
         EngineDefiner::Define(env, this);
-
-        m_xr.InitializeSynchronously();
     }
 
     void NativeEngine::Impl::UpdateSize(float width, float height)
@@ -1493,6 +1532,9 @@ namespace babylon
         return Napi::Value::From(info.Env(), m_size.Height);
     }
 
+    // TODO: DEBUG
+    int frameCount = 0;
+
     void NativeEngine::Impl::DispatchAnimationFrameAsync(Napi::FunctionReference callback)
     {
         // The purpose of encapsulating the callbackPtr in a std::shared_ptr is because, under the hood, the lambda is
@@ -1503,18 +1545,43 @@ namespace babylon
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
 
-            m_xr.BeginFrame();
-            if (m_xr.ActiveFrameBuffers.size() > 0)
+            if (frameCount > 1500)
             {
-                m_frameBufferManager.Bind(m_xr.ActiveFrameBuffers.front());
+                if (m_xr.IsSessionActive())
+                {
+                    m_xr.EndSession();
+                }
             }
-            callbackPtr->Call({});
-            if (m_xr.ActiveFrameBuffers.size() > 0)
+            else if (frameCount > 600)
             {
-                m_frameBufferManager.Unbind(m_xr.ActiveFrameBuffers.front());
-            }
-            m_xr.EndFrame();
+                if (!m_xr.IsSessionActive())
+                {
+                    m_xr.BeginSession();
+                }
 
+                m_xr.BeginFrame();
+                if (m_xr.ActiveFrameBuffers.size() > 0)
+                {
+                    m_frameBufferManager.Bind(m_xr.ActiveFrameBuffers.front());
+                }
+            }
+
+            callbackPtr->Call({});
+
+            if (frameCount > 1500)
+            {
+                frameCount = 0;
+            }
+            else if (frameCount > 600)
+            {
+                if (m_xr.ActiveFrameBuffers.size() > 0)
+                {
+                    m_frameBufferManager.Unbind(m_xr.ActiveFrameBuffers.front());
+                }
+                m_xr.EndFrame();
+            }
+            ++frameCount;
+            
             bgfx::frame();
         });
     }

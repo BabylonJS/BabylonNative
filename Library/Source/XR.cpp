@@ -309,12 +309,24 @@ namespace babylon
 
         std::unique_ptr<HeadMountedDisplay::Session::XrFrame> GetNextFrame()
         {
-            // TODO: Separate this?
-            bool foo;
-            bool bar;
-            ProcessEvents(&foo, &bar);
+            bool exitRenderLoop;
+            bool requestRestart;
+            ProcessEvents(&exitRenderLoop, &requestRestart);
 
-            return std::make_unique<XrFrame>(*this);
+            // TODO: Treat these cases differently.
+            if (exitRenderLoop || requestRestart)
+            {
+                return nullptr;
+            }
+            else
+            {
+                return std::make_unique<XrFrame>(*this);
+            }
+        }
+
+        void RequestEndSession()
+        {
+            xrRequestExitSession(Session);
         }
 
     private:
@@ -630,6 +642,11 @@ namespace babylon
 
     HeadMountedDisplay::~HeadMountedDisplay() {}
 
+    bool HeadMountedDisplay::IsInitialized() const
+    {
+        return m_impl->IsInitialized();
+    }
+
     bool HeadMountedDisplay::TryInitialize()
     {
         return m_impl->TryInitialize();
@@ -650,5 +667,10 @@ namespace babylon
     std::unique_ptr<HeadMountedDisplay::Session::XrFrame> HeadMountedDisplay::Session::GetNextFrame()
     {
         return m_impl->GetNextFrame();
+    }
+
+    void HeadMountedDisplay::Session::RequestEndSession()
+    {
+        m_impl->RequestEndSession();
     }
 }

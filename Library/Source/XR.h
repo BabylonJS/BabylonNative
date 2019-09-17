@@ -68,10 +68,10 @@ namespace babylon
                     } DepthTextureSize;
                 };
 
+                std::vector<View> Views{};
+
                 XrFrame(HeadMountedDisplay::Session::Impl&);
                 ~XrFrame();
-
-                std::vector<View> Views{};
 
             private:
                 Session::Impl& m_sessionImpl;
@@ -85,6 +85,7 @@ namespace babylon
             Session& operator=(Session&&) = delete;
 
             std::unique_ptr<XrFrame> GetNextFrame();
+            void RequestEndSession();
 
         private:
             std::unique_ptr<Impl> m_impl{};
@@ -98,6 +99,7 @@ namespace babylon
         HeadMountedDisplay(HeadMountedDisplay&) = delete;
         HeadMountedDisplay& operator=(HeadMountedDisplay&&) = delete;
 
+        bool IsInitialized() const;
         bool TryInitialize();
 
         std::unique_ptr<Session> CreateSession(void* graphicsDevice);
