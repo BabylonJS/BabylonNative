@@ -25,6 +25,10 @@ add_compile_definitions(BGFX_CONFIG_DEBUG_UNIFORM=0)
 add_compile_definitions(BGFX_CONFIG_MULTITHREADED=0)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=32)
 add_compile_definitions(BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+    # no Vulkan on Apple
+    add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
+endif()
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Build the BGFX examples.")
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "Build the BGFX tools.")
 add_subdirectory(Dependencies/bgfx.cmake EXCLUDE_FROM_ALL)
@@ -41,7 +45,13 @@ set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 
-set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+    set(CURL_CA_BUNDLE "none" CACHE FILEPATH "Path to SSL CA Certificate Bundle")
+    set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
+    set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
+else()
+    set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
+endif()
 add_subdirectory(Dependencies/curl EXCLUDE_FROM_ALL)
 set_property(TARGET libcurl PROPERTY FOLDER Dependencies/curl)
 
@@ -92,6 +102,11 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
         "Source/ShaderCompilerOpenGL.cpp")
 endif()
 
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+    set(SOURCES ${SOURCES}
+        "Source/ShaderCompilerMetal.cpp")
+endif()
+
 add_library(Library ${SOURCES})
 
 set_target_properties(Library PROPERTIES
@@ -113,7 +128,13 @@ target_include_directories(Library PRIVATE "Dependencies/base-n/include")
 target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bgfx/include")
 target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bimg/include")
 target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bx/include")
-target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bx/include/compat/msvc")
+if(MSVC)
+    target_include_directories( bx PRIVATE "Dependencies/bgfx.cmake/bx/include/compat/msvc")
+elseif(MINGW)
+    target_include_directories( bx PRIVATE "Dependencies/bgfx.cmake/bx/include/compat/msvc/mingw")
+elseif(APPLE)
+    target_include_directories( bx PRIVATE "Dependencies/bgfx.cmake/bx/include/compat/msvc/osx")
+endif()
 target_include_directories(Library PRIVATE "Dependencies/curl/include")
 target_include_directories(Library PRIVATE "Dependencies/glslang")
 target_include_directories(Library PRIVATE "Dependencies/SPIRV-Cross")
@@ -137,6 +158,7 @@ if(WINDOWS_STORE)
     target_link_libraries(Library PRIVATE arcana)
 endif()
 
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
 target_link_libraries(Library
     PRIVATE "crypt32.lib"
     PRIVATE "d2d1.lib"
@@ -150,6 +172,7 @@ target_link_libraries(Library
     PRIVATE "shlwapi.lib"
     PRIVATE "ws2_32.lib"
     PRIVATE "wldap32.lib")
+endif()
 
 if(WINDOWS_STORE)
     target_link_libraries(Library PRIVATE "kernel32.lib")
