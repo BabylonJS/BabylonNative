@@ -8,8 +8,8 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
-#define XR_DO(OPERATION) do { XrResult result = OPERATION; if (result != XrResult::XR_SUCCESS) return result; } while (false)
 #define XR_CHECK(OPERATION) do { XrResult result = OPERATION; if (XR_FAILED(result)) throw std::exception{}; } while (false)
+#define XR_ASSERT(OPERATION) do { XrResult result = OPERATION; assert(!XR_FAILED(result)); } while (false)
 
 #include <gsl/span>
 
@@ -617,12 +617,12 @@ namespace babylon
 
             for (auto& swapchain : renderResources->ColorSwapchains)
             {
-                /*XR_CHECK(*/xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo)/*)*/;
+                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo));
             }
 
             for (auto& swapchain : renderResources->DepthSwapchains)
             {
-                /*XR_CHECK(*/xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo)/*)*/;
+                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo));
             }
         
             // Inform the runtime to consider alpha channel during composition
@@ -643,8 +643,7 @@ namespace babylon
         frameEndInfo.environmentBlendMode = m_sessionImpl.HmdImpl.EnvironmentBlendMode;
         frameEndInfo.layerCount = (uint32_t)layers.size();
         frameEndInfo.layers = layers.data();
-        auto result = /*XR_CHECK(*/xrEndFrame(m_sessionImpl.Session, &frameEndInfo)/*)*/;
-        assert(!XR_FAILED(result));
+        XR_ASSERT(xrEndFrame(m_sessionImpl.Session, &frameEndInfo));
     }
 
     HeadMountedDisplay::HeadMountedDisplay()
@@ -665,7 +664,6 @@ namespace babylon
 
     std::unique_ptr<HeadMountedDisplay::Session> HeadMountedDisplay::CreateSession(void* graphicsDevice)
     {
-        //return std::make_unique<Session>(*this);
         return std::unique_ptr<Session>{ new Session(*this, graphicsDevice) };
     }
 
