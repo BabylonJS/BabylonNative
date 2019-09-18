@@ -61,6 +61,11 @@ namespace
     }
 
     constexpr auto SWAPCHAIN_IMAGE_TYPE_ENUM{ XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR };
+
+    constexpr std::array<const char*, 1> REQUIRED_EXTENSIONS
+    {
+        XR_KHR_D3D11_ENABLE_EXTENSION_NAME
+    };
 }
 
 namespace
@@ -76,7 +81,13 @@ namespace
             XR_CHECK(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()));
 
             // D3D11 extension is required for this sample, so check if it's supported.
-            assert(TryEnableExtension(XR_KHR_D3D11_ENABLE_EXTENSION_NAME, extensionProperties));
+            for (const char* extensionName : REQUIRED_EXTENSIONS)
+            {
+                if (!TryEnableExtension(XR_KHR_D3D11_ENABLE_EXTENSION_NAME, extensionProperties))
+                {
+                    throw std::exception{ /* Required extension not supported */ };
+                }
+            }
 
             // Additional optional extensions for enhanced functionality. Track whether enabled in m_optionalExtensions.
             DepthExtensionSupported = TryEnableExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME, extensionProperties);
