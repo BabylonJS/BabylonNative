@@ -16,6 +16,3 @@
 [submodule "bgfx.cmake"]
 	path = Library/Dependencies/bgfx.cmake
 	url = https://github.com/BabylonJS/bgfx.cmake
-[submodule "Library/Dependencies/OpenXR-SDK"]
-	path = Library/Dependencies/OpenXR-SDK
-	url = https://github.com/KhronosGroup/OpenXR-SDK
