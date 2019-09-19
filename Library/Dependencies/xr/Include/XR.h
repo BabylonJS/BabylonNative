@@ -1,33 +1,29 @@
 #pragma once
 
-#include <gsl/gsl>
-
-#include <functional>
 #include <memory>
 #include <vector>
 
-namespace babylon
+namespace xr
 {
-    // Attempts to store the instance, system, and related non-session state for an HMD.
-    class HeadMountedDisplay
+    enum TextureFormat
+    {
+        RGBA8,
+        D24S8
+    };
+
+    class System
     {
     public:
         class Session
         {
-            friend class HeadMountedDisplay;
+            friend class System;
             struct Impl;
 
         public:
-            struct XrFrame
+            struct Frame
             {
                 struct View
                 {
-                    enum TextureFormat
-                    {
-                        RGBA8,
-                        D24S8
-                    };
-
                     struct
                     {
                         float X{};
@@ -70,8 +66,8 @@ namespace babylon
 
                 std::vector<View> Views{};
 
-                XrFrame(HeadMountedDisplay::Session::Impl&);
-                ~XrFrame();
+                Frame(System::Session::Impl&);
+                ~Frame();
 
             private:
                 Session::Impl& m_sessionImpl;
@@ -84,20 +80,20 @@ namespace babylon
             Session(Session&) = delete;
             Session& operator=(Session&&) = delete;
 
-            std::unique_ptr<XrFrame> GetNextFrame();
+            std::unique_ptr<Frame> GetNextFrame();
             void RequestEndSession();
 
         private:
             std::unique_ptr<Impl> m_impl{};
 
-            Session(HeadMountedDisplay& headMountedDisplay, void* graphicsDevice);
+            Session(System& headMountedDisplay, void* graphicsDevice);
         };
 
-        HeadMountedDisplay();
-        ~HeadMountedDisplay();
+        System();
+        ~System();
 
-        HeadMountedDisplay(HeadMountedDisplay&) = delete;
-        HeadMountedDisplay& operator=(HeadMountedDisplay&&) = delete;
+        System(System&) = delete;
+        System& operator=(System&&) = delete;
 
         bool IsInitialized() const;
         bool TryInitialize();

@@ -62,10 +62,11 @@ if(WINDOWS_STORE)
     target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
 endif()
 
-add_subdirectory(Dependencies/OpenXR-SDK)
-set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/OpenXR)
-set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/OpenXR/Generated)
-set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/OpenXR/Generated)
+add_subdirectory(Dependencies/xr)
+set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
+set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
+set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
 
 set(SOURCES
     "Include/Babylon/Runtime.h"
@@ -88,9 +89,7 @@ set(SOURCES
     "Source/Window.h"
     "Source/XMLHttpRequest.cpp"
     "Source/XMLHttpRequest.h"
-    "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp"
-    "Source/XR.cpp"
-    "Source/XR.h")
+    "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp")
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(SOURCES ${SOURCES}
@@ -138,7 +137,6 @@ endif()
 target_include_directories(Library PRIVATE "Dependencies/curl/include")
 target_include_directories(Library PRIVATE "Dependencies/glslang")
 target_include_directories(Library PRIVATE "Dependencies/SPIRV-Cross")
-target_include_directories(Library PRIVATE "Dependencies/OpenXR-SDK/include")
 
 if(WINDOWS_STORE)
     target_include_directories(Library PRIVATE "Dependencies/arcana.cpp/Source/UWP")
@@ -152,26 +150,26 @@ target_link_libraries(Library
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE openxr_loader)
+    PRIVATE xr)
 
 if(WINDOWS_STORE)
     target_link_libraries(Library PRIVATE arcana)
 endif()
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
-target_link_libraries(Library
-    PRIVATE "crypt32.lib"
-    PRIVATE "d2d1.lib"
-    PRIVATE "d3d11.lib"
-    PRIVATE "d3d9.lib"
-    PRIVATE "d3dcompiler.lib"
-    PRIVATE "dxgi.lib"
-    PRIVATE "dxguid.lib"
-    PRIVATE "normaliz.lib"
-    PRIVATE "psapi.lib"
-    PRIVATE "shlwapi.lib"
-    PRIVATE "ws2_32.lib"
-    PRIVATE "wldap32.lib")
+    target_link_libraries(Library
+        PRIVATE "crypt32.lib"
+        PRIVATE "d2d1.lib"
+        PRIVATE "d3d11.lib"
+        PRIVATE "d3d9.lib"
+        PRIVATE "d3dcompiler.lib"
+        PRIVATE "dxgi.lib"
+        PRIVATE "dxguid.lib"
+        PRIVATE "normaliz.lib"
+        PRIVATE "psapi.lib"
+        PRIVATE "shlwapi.lib"
+        PRIVATE "ws2_32.lib"
+        PRIVATE "wldap32.lib")
 endif()
 
 if(WINDOWS_STORE)

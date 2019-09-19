@@ -267,13 +267,13 @@ namespace babylon
             bgfx::TextureFormat::RGBA32F
         };
 
-        bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(HeadMountedDisplay::Session::XrFrame::View::TextureFormat format)
+        bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
         {
             switch (format)
             {
-            case HeadMountedDisplay::Session::XrFrame::View::TextureFormat::RGBA8:
+            case xr::TextureFormat::RGBA8:
                 return bgfx::TextureFormat::RGBA8;
-            case HeadMountedDisplay::Session::XrFrame::View::TextureFormat::D24S8:
+            case xr::TextureFormat::D24S8:
                 return bgfx::TextureFormat::D24S8;
             default:
                 throw std::exception{ /* Unsupported texture format */ };
@@ -600,9 +600,9 @@ namespace babylon
             }
 
         private:
-            HeadMountedDisplay m_hmd{};
-            std::unique_ptr<HeadMountedDisplay::Session> m_session{};
-            std::unique_ptr<HeadMountedDisplay::Session::XrFrame> m_frame{};
+            xr::System m_hmd{};
+            std::unique_ptr<xr::System::Session> m_session{};
+            std::unique_ptr<xr::System::Session::Frame> m_frame{};
             FrameBufferManager& m_frameBufferManager;
 
             std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};

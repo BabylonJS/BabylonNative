@@ -1,72 +1,7 @@
-#include "XR.h"
+#include <XrPlatform.h>
+#include <XR.h>
 
-#ifdef WIN32
-#include <d3d11.h>
-#define XR_USE_GRAPHICS_API_D3D11
-#endif
-
-#include <openxr/openxr.h>
-#include <openxr/openxr_platform.h>
-
-#define XR_CHECK(OPERATION) do { XrResult result = OPERATION; if (XR_FAILED(result)) throw std::exception{}; } while (false)
-#define XR_ASSERT(OPERATION) do { XrResult result = OPERATION; assert(!XR_FAILED(result)); } while (false)
-
-#include <gsl/span>
-
-#include <algorithm>
-#include <array>
 #include <assert.h>
-#include <thread>
-#include <string>
-#include <vector>
-
-// XR platform-specific header stuff. Move to header ASAP.
-namespace
-{
-    auto CreateGraphicsBinding(XrInstance instance, XrSystemId systemId, void* graphicsDevice)
-    {
-        // Create the D3D11 device for the adapter associated with the system.
-        XrGraphicsRequirementsD3D11KHR graphicsRequirements{ XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
-        XR_CHECK(xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
-
-        XrGraphicsBindingD3D11KHR graphicsBinding{ XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
-        graphicsBinding.device = reinterpret_cast<ID3D11Device*>(graphicsDevice);
-        return graphicsBinding;
-    }
-
-    using SwapchainFormat = DXGI_FORMAT;
-    using SwapchainImage = XrSwapchainImageD3D11KHR;
-
-    constexpr std::array<SwapchainFormat, 1> SUPPORTED_COLOR_FORMATS
-    {
-        DXGI_FORMAT_R8G8B8A8_UNORM
-    };
-
-    constexpr std::array<SwapchainFormat, 1> SUPPORTED_DEPTH_FORMATS
-    {
-        DXGI_FORMAT_D24_UNORM_S8_UINT
-    };
-
-    babylon::HeadMountedDisplay::Session::XrFrame::View::TextureFormat SwapchainFormatToTextureFormat(SwapchainFormat format)
-    {
-        switch (format)
-        {
-        case DXGI_FORMAT_R8G8B8A8_UNORM:
-            return babylon::HeadMountedDisplay::Session::XrFrame::View::TextureFormat::RGBA8;
-        case DXGI_FORMAT_D24_UNORM_S8_UINT:
-            return babylon::HeadMountedDisplay::Session::XrFrame::View::TextureFormat::D24S8;
-        default:
-            throw std::exception{ /* Unsupported texture format */ };
-        }
-    }
-
-    constexpr auto SWAPCHAIN_IMAGE_TYPE_ENUM{ XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR };
-
-    constexpr std::array<const char*, 1> REQUIRED_EXTENSIONS
-    {
-        XR_KHR_D3D11_ENABLE_EXTENSION_NAME
-    };
-}
 
 namespace
 {
@@ -118,9 +53,9 @@ namespace
     };
 }
 
-namespace babylon
+namespace xr
 {
-    struct HeadMountedDisplay::Impl
+    struct System::Impl
     {
         constexpr static XrFormFactor FORM_FACTOR{ XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY };
         constexpr static XrViewConfigurationType VIEW_CONFIGURATION_TYPE{ XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO };
@@ -208,9 +143,9 @@ namespace babylon
         }
     };
 
-    struct HeadMountedDisplay::Session::Impl
+    struct System::Session::Impl
     {
-        const HeadMountedDisplay::Impl& HmdImpl;
+        const System::Impl& HmdImpl;
         XrSession Session{ XR_NULL_HANDLE };
 
         XrSpace SceneSpace{ XR_NULL_HANDLE };
@@ -219,9 +154,9 @@ namespace babylon
         constexpr static uint32_t LeftSide = 0;
         constexpr static uint32_t RightSide = 1;
 
-        struct SwapchainT
+        struct Swapchain
         {
-            XrSwapchain Swapchain;
+            XrSwapchain Handle;
             SwapchainFormat Format{};
             int32_t Width{ 0 };
             int32_t Height{ 0 };
@@ -233,8 +168,8 @@ namespace babylon
         {
             std::vector<XrView> Views;
             std::vector<XrViewConfigurationView> ConfigViews;
-            std::vector<SwapchainT> ColorSwapchains;
-            std::vector<SwapchainT> DepthSwapchains;
+            std::vector<Swapchain> ColorSwapchains;
+            std::vector<Swapchain> DepthSwapchains;
             std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews;
             std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews;
         };
@@ -243,7 +178,7 @@ namespace babylon
         bool SessionRunning{ false };
         XrSessionState SessionState{ XR_SESSION_STATE_UNKNOWN };
 
-        Impl(HeadMountedDisplay::Impl& hmdImpl, void* graphicsContext)
+        Impl(System::Impl& hmdImpl, void* graphicsContext)
             : HmdImpl{ hmdImpl }
         {
             assert(HmdImpl.IsInitialized());
@@ -318,7 +253,7 @@ namespace babylon
             Resources->Views.resize(viewCount, { XR_TYPE_VIEW });
         }
 
-        std::unique_ptr<HeadMountedDisplay::Session::XrFrame> GetNextFrame()
+        std::unique_ptr<System::Session::Frame> GetNextFrame()
         {
             bool exitRenderLoop;
             bool requestRestart;
@@ -331,7 +266,7 @@ namespace babylon
             }
             else
             {
-                return std::make_unique<XrFrame>(*this);
+                return std::make_unique<Frame>(*this);
             }
         }
 
@@ -343,7 +278,7 @@ namespace babylon
     private:
         static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
 
-        SwapchainT CreateSwapchain(XrSession session,
+        Swapchain CreateSwapchain(XrSession session,
             SwapchainFormat format,
             int32_t width,
             int32_t height,
@@ -352,7 +287,7 @@ namespace babylon
             XrSwapchainCreateFlags createFlags,
             XrSwapchainUsageFlags usageFlags)
         {
-            SwapchainT swapchain;
+            Swapchain swapchain;
             swapchain.Format = format;
             swapchain.Width = width;
             swapchain.Height = height;
@@ -369,12 +304,12 @@ namespace babylon
             swapchainCreateInfo.createFlags = createFlags;
             swapchainCreateInfo.usageFlags = usageFlags;
 
-            XR_CHECK(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Swapchain));
+            XR_CHECK(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Handle));
 
             uint32_t chainLength;
-            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Swapchain, 0, &chainLength, nullptr));
+            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Handle, 0, &chainLength, nullptr));
             swapchain.Images.resize(chainLength, { SWAPCHAIN_IMAGE_TYPE_ENUM });
-            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Swapchain, (uint32_t)swapchain.Images.size(), &chainLength,
+            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Handle, (uint32_t)swapchain.Images.size(), &chainLength,
                 reinterpret_cast<XrSwapchainImageBaseHeader*>(swapchain.Images.data())));
 
             return swapchain;
@@ -484,7 +419,7 @@ namespace babylon
         }
     };
 
-    HeadMountedDisplay::Session::XrFrame::XrFrame(Session::Impl& sessionImpl)
+    System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : m_sessionImpl{ sessionImpl }
     {
         auto session = m_sessionImpl.Session;
@@ -508,7 +443,7 @@ namespace babylon
         
             XrViewState viewState{ XR_TYPE_VIEW_STATE };
             XrViewLocateInfo viewLocateInfo{ XR_TYPE_VIEW_LOCATE_INFO };
-            viewLocateInfo.viewConfigurationType = HeadMountedDisplay::Impl::VIEW_CONFIGURATION_TYPE;
+            viewLocateInfo.viewConfigurationType = System::Impl::VIEW_CONFIGURATION_TYPE;
             viewLocateInfo.displayTime = m_displayTime;
             viewLocateInfo.space = m_sessionImpl.SceneSpace;
             XR_CHECK(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, renderResources->Views.data()));
@@ -549,8 +484,8 @@ namespace babylon
                 assert(colorSwapchain.Width == depthSwapchain.Width);
                 assert(colorSwapchain.Height == depthSwapchain.Height);
 
-                const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Swapchain);
-                const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Swapchain);
+                const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
+                const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
 
                 // Populate the struct that consuming code will use for rendering.
                 auto& view = Views[idx];
@@ -577,7 +512,7 @@ namespace babylon
                 renderResources->ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                 renderResources->ProjectionLayerViews[idx].pose = renderResources->Views[idx].pose;
                 renderResources->ProjectionLayerViews[idx].fov = renderResources->Views[idx].fov;
-                renderResources->ProjectionLayerViews[idx].subImage.swapchain = colorSwapchain.Swapchain;
+                renderResources->ProjectionLayerViews[idx].subImage.swapchain = colorSwapchain.Handle;
                 renderResources->ProjectionLayerViews[idx].subImage.imageRect = imageRect;
                 renderResources->ProjectionLayerViews[idx].subImage.imageArrayIndex = 0;
         
@@ -588,7 +523,7 @@ namespace babylon
                     renderResources->DepthInfoViews[idx].maxDepth = 1;
                     renderResources->DepthInfoViews[idx].nearZ = sessionImpl.HmdImpl.Near;
                     renderResources->DepthInfoViews[idx].farZ = sessionImpl.HmdImpl.Far;
-                    renderResources->DepthInfoViews[idx].subImage.swapchain = depthSwapchain.Swapchain;
+                    renderResources->DepthInfoViews[idx].subImage.swapchain = depthSwapchain.Handle;
                     renderResources->DepthInfoViews[idx].subImage.imageRect = imageRect;
                     renderResources->DepthInfoViews[idx].subImage.imageArrayIndex = 0;
         
@@ -599,7 +534,7 @@ namespace babylon
         }
     }
 
-    HeadMountedDisplay::Session::XrFrame::~XrFrame()
+    System::Session::Frame::~Frame()
     {
         // EndFrame can submit mutiple layers
         std::vector<XrCompositionLayerBaseHeader*> layers{};
@@ -617,12 +552,12 @@ namespace babylon
 
             for (auto& swapchain : renderResources->ColorSwapchains)
             {
-                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo));
+                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
             }
 
             for (auto& swapchain : renderResources->DepthSwapchains)
             {
-                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Swapchain, &releaseInfo));
+                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
             }
         
             // Inform the runtime to consider alpha channel during composition
@@ -646,39 +581,39 @@ namespace babylon
         XR_ASSERT(xrEndFrame(m_sessionImpl.Session, &frameEndInfo));
     }
 
-    HeadMountedDisplay::HeadMountedDisplay()
-        : m_impl{ std::make_unique<HeadMountedDisplay::Impl>("APP NAME HERE") }
+    System::System()
+        : m_impl{ std::make_unique<System::Impl>("APP NAME HERE") }
     {}
 
-    HeadMountedDisplay::~HeadMountedDisplay() {}
+    System::~System() {}
 
-    bool HeadMountedDisplay::IsInitialized() const
+    bool System::IsInitialized() const
     {
         return m_impl->IsInitialized();
     }
 
-    bool HeadMountedDisplay::TryInitialize()
+    bool System::TryInitialize()
     {
         return m_impl->TryInitialize();
     }
 
-    std::unique_ptr<HeadMountedDisplay::Session> HeadMountedDisplay::CreateSession(void* graphicsDevice)
+    std::unique_ptr<System::Session> System::CreateSession(void* graphicsDevice)
     {
         return std::unique_ptr<Session>{ new Session(*this, graphicsDevice) };
     }
 
-    HeadMountedDisplay::Session::Session(HeadMountedDisplay& headMountedDisplay, void* graphicsDevice)
-        : m_impl{ std::make_unique<HeadMountedDisplay::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
+    System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
+        : m_impl{ std::make_unique<System::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}
 
-    HeadMountedDisplay::Session::~Session() {}
+    System::Session::~Session() {}
 
-    std::unique_ptr<HeadMountedDisplay::Session::XrFrame> HeadMountedDisplay::Session::GetNextFrame()
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame()
     {
         return m_impl->GetNextFrame();
     }
 
-    void HeadMountedDisplay::Session::RequestEndSession()
+    void System::Session::RequestEndSession()
     {
         m_impl->RequestEndSession();
     }
