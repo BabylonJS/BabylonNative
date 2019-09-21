@@ -33,7 +33,6 @@ namespace babylon
     private:
         static Napi::FunctionReference constructor;
 
-        void SetEngine(const Napi::CallbackInfo& info);
         void BeginSession(const Napi::CallbackInfo&); // TODO: Make this asynchronous.
         void EndSession(const Napi::CallbackInfo&); // TODO: Make this asynchronous.
         void EndSession();
@@ -46,7 +45,7 @@ namespace babylon
         xr::System m_hmd{};
         std::unique_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
-        FrameBufferManager* m_frameBufferManagerPtr{};
+        FrameBufferManager& m_frameBufferManager;
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
 
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
@@ -62,7 +61,6 @@ namespace babylon
             env,
             "XrPlugin",
             {
-                InstanceMethod("setEngine", &XrPlugin::SetEngine),
                 InstanceMethod("beginSession", &XrPlugin::BeginSession),
                 InstanceMethod("endSession", &XrPlugin::EndSession),
                 InstanceMethod("beginFrame", &XrPlugin::BeginFrame),
@@ -79,6 +77,7 @@ namespace babylon
 
     XrPlugin::XrPlugin(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<XrPlugin>{ info }
+        , m_frameBufferManager{ info[0].As<Napi::External<NativeEngine::Impl>>().Data()->GetFrameBufferManager() }
     {}
 
     XrPlugin::~XrPlugin()
@@ -92,11 +91,6 @@ namespace babylon
 
             EndSession();
         }
-    }
-
-    void XrPlugin::SetEngine(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManagerPtr = &(info[0].As<Napi::External<NativeEngine::Impl>>().Data()->GetFrameBufferManager());
     }
 
     // TODO: Make this asynchronous.
@@ -173,7 +167,7 @@ namespace babylon
                 attachments[1].init(depthTex);
                 auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                auto fbPtr = m_frameBufferManagerPtr->CreateNew(
+                auto fbPtr = m_frameBufferManager.CreateNew(
                     frameBuffer,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
                     static_cast<uint16_t>(view.ColorTextureSize.Height));

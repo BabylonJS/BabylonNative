@@ -124,8 +124,7 @@ CreateBoxAsync().then(function () {
         window.setTimeout(logFpsLoop, 3000);
     }
 
-    var xrPlugin = new XrPlugin();
-    xrPlugin.setEngine(nativeEngine.getEngine());
+    var xrPlugin = new XrPlugin(nativeEngine.getEngine());
     xrPlugin.beginSession();
 
     engine.runRenderLoop(function () {
