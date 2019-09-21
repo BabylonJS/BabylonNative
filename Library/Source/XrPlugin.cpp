@@ -25,7 +25,6 @@ namespace babylon
     class XrPlugin : public Napi::ObjectWrap<XrPlugin>
     {
     public:
-
         static void Initialize(Napi::Env&);
 
         XrPlugin::XrPlugin(const Napi::CallbackInfo& info);
@@ -68,7 +67,7 @@ namespace babylon
                 InstanceMethod("endSession", &XrPlugin::EndSession),
                 InstanceMethod("beginFrame", &XrPlugin::BeginFrame),
                 InstanceMethod("endFrame", &XrPlugin::EndFrame),
-                InstanceAccessor("getActiveFrameBuffers", &XrPlugin::GetActiveFrameBuffers, nullptr)
+                InstanceMethod("getActiveFrameBuffers", &XrPlugin::GetActiveFrameBuffers)
             },
             nullptr);
 
@@ -97,7 +96,7 @@ namespace babylon
 
     void XrPlugin::SetEngine(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManagerPtr = &(info[0].As<Napi::External<NativeEngine>>().Data()->m_impl->GetFrameBufferManager());
+        m_frameBufferManagerPtr = &(info[0].As<Napi::External<NativeEngine::Impl>>().Data()->GetFrameBufferManager());
     }
 
     // TODO: Make this asynchronous.
@@ -207,11 +206,16 @@ namespace babylon
     Napi::Value XrPlugin::GetActiveFrameBuffers(const Napi::CallbackInfo& info)
     {
         auto activeFrameBuffers = Napi::Array::New(info.Env(), m_activeFrameBuffers.size());
-        for (size_t idx = 0; idx < m_activeFrameBuffers.size(); ++idx)
+        for (uint32_t idx = 0; idx < m_activeFrameBuffers.size(); ++idx)
         {
             activeFrameBuffers[idx] = Napi::External<FrameBufferData>::New(info.Env(), m_activeFrameBuffers[idx]);
         }
 
         return activeFrameBuffers;
+    }
+
+    void InitializeXrPlugin(babylon::Env& env)
+    {
+        XrPlugin::Initialize(env);
     }
 }

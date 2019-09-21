@@ -82,6 +82,7 @@ namespace babylon
         {
             Napi::HandleScope scope{ env };
             auto func = NapiBridge<NativeEngineT>::Define("NativeEngine", env, impl)
+                .template AddMethod<&NativeEngineT::GetEngine>("getEngine")
                 .template AddMethod<&NativeEngineT::RequestAnimationFrame>("requestAnimationFrame")
                 .template AddMethod<&NativeEngineT::CreateVertexArray>("createVertexArray")
                 .template AddMethod<&NativeEngineT::DeleteVertexArray>("deleteVertexArray")

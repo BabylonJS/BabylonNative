@@ -124,8 +124,23 @@ CreateBoxAsync().then(function () {
         window.setTimeout(logFpsLoop, 3000);
     }
 
+    var xrPlugin = new XrPlugin();
+    xrPlugin.setEngine(nativeEngine.getEngine());
+    xrPlugin.beginSession();
+
     engine.runRenderLoop(function () {
+        xrPlugin.beginFrame();
+        var activeFrameBuffers = xrPlugin.getActiveFrameBuffers();
+        if (activeFrameBuffers.length > 0) {
+            nativeEngine.bindFrameBuffer(activeFrameBuffers[0]);
+        }
+
         scene.render();
+
+        if (activeFrameBuffers.length > 0) {
+            nativeEngine.unbindFrameBuffer(activeFrameBuffers[0]);
+        }
+        xrPlugin.endFrame();
     });
 }, function (ex) {
     console.log(ex.message, ex.stack);

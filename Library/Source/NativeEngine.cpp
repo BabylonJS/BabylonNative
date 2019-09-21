@@ -264,7 +264,17 @@ namespace babylon
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
     }
 
+    FrameBufferManager& NativeEngine::Impl::GetFrameBufferManager()
+    {
+        return m_frameBufferManager;
+    }
+
     // NativeEngine definitions
+    Napi::Value NativeEngine::Impl::GetEngine(const Napi::CallbackInfo& info)
+    {
+        return Napi::External<NativeEngine::Impl>::New(info.Env(), this);
+    }
+
     void NativeEngine::Impl::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         DispatchAnimationFrameAsync(Napi::Persistent(info[0].As<Napi::Function>()));
