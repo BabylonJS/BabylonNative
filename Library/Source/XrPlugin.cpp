@@ -120,7 +120,7 @@ namespace babylon
 
         m_session->RequestEndSession();
 
-        while (m_session->GetNextFrame() != nullptr);
+        while (!m_session->GetNextFrame()->ShouldEndSession);
         m_session.reset();
     }
 
