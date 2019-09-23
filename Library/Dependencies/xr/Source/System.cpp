@@ -18,7 +18,7 @@ namespace
             // D3D11 extension is required for this sample, so check if it's supported.
             for (const char* extensionName : REQUIRED_EXTENSIONS)
             {
-                if (!TryEnableExtension(XR_KHR_D3D11_ENABLE_EXTENSION_NAME, extensionProperties))
+                if (!TryEnableExtension(extensionName, extensionProperties))
                 {
                     throw std::exception{ /* Required extension not supported */ };
                 }
@@ -61,21 +61,22 @@ namespace xr
         constexpr static XrViewConfigurationType VIEW_CONFIGURATION_TYPE{ XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO };
         constexpr static uint32_t STEREO_VIEW_COUNT{ 2 }; // PRIMARY_STEREO view configuration always has 2 views
 
+        // These values are taken from Microsoft's OpenXR sample and are used in conjunction with the depth extension. Values are reversed, as in example.
+        // https://github.com/microsoft/OpenXR-SDK-VisualStudio/blob/42172676a9388f02ce5a776c89a62cecf95429bd/samples/BasicXrApp/OpenXrProgram.cpp#L226
+        constexpr static float DEPTH_NEAR_Z{ 20.f };
+        constexpr static float DEPTH_FAR_Z{ 1.f };
+
         XrInstance Instance{ XR_NULL_HANDLE };
         XrSystemId SystemId{ XR_NULL_SYSTEM_ID };
 
         std::unique_ptr<SupportedExtensions> Extensions{};
 
         XrEnvironmentBlendMode EnvironmentBlendMode{};
-        float Near{};
-        float Far{};
 
         std::string ApplicationName{};
 
         Impl(const std::string& applicationName)
-            : Near{ 20.f } // Number taken from sample. Seems weird, learn more.
-            , Far{ 1.f }   // Number taken from sample. Seems weird, learn more.
-            , ApplicationName{ applicationName }
+            : ApplicationName{ applicationName }
         {}
 
         bool IsInitialized() const
@@ -259,15 +260,7 @@ namespace xr
             bool requestRestart;
             ProcessEvents(&exitRenderLoop, &requestRestart);
 
-            // TODO: Treat these cases differently.
-            if (exitRenderLoop || requestRestart)
-            {
-                return nullptr;
-            }
-            else
-            {
-                return std::make_unique<Frame>(*this);
-            }
+            return std::make_unique<Frame>(*this, exitRenderLoop, requestRestart);
         }
 
         void RequestEndSession()
@@ -419,9 +412,17 @@ namespace xr
         }
     };
 
-    System::Session::Frame::Frame(Session::Impl& sessionImpl)
+    System::Session::Frame::Frame(Session::Impl& sessionImpl, bool shouldEndSession, bool shouldRestartSession)
         : m_sessionImpl{ sessionImpl }
+        , ShouldEndSession{ shouldEndSession }
+        , ShouldRestartSession{ shouldRestartSession }
     {
+        // If the session is supposed to be ending, early out without attempting to acquire views.
+        if (ShouldEndSession)
+        {
+            return;
+        }
+
         auto session = m_sessionImpl.Session;
 
         XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
@@ -521,8 +522,8 @@ namespace xr
                     renderResources->DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
                     renderResources->DepthInfoViews[idx].minDepth = 0;
                     renderResources->DepthInfoViews[idx].maxDepth = 1;
-                    renderResources->DepthInfoViews[idx].nearZ = sessionImpl.HmdImpl.Near;
-                    renderResources->DepthInfoViews[idx].farZ = sessionImpl.HmdImpl.Far;
+                    renderResources->DepthInfoViews[idx].nearZ = System::Impl::DEPTH_NEAR_Z;
+                    renderResources->DepthInfoViews[idx].farZ = System::Impl::DEPTH_FAR_Z;
                     renderResources->DepthInfoViews[idx].subImage.swapchain = depthSwapchain.Handle;
                     renderResources->DepthInfoViews[idx].subImage.imageRect = imageRect;
                     renderResources->DepthInfoViews[idx].subImage.imageArrayIndex = 0;

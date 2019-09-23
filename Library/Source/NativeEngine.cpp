@@ -1037,9 +1037,6 @@ namespace babylon
         return Napi::Value::From(info.Env(), m_size.Height);
     }
 
-    // TODO: DEBUG
-    int frameCount = 0;
-
     void NativeEngine::Impl::DispatchAnimationFrameAsync(Napi::FunctionReference callback)
     {
         // The purpose of encapsulating the callbackPtr in a std::shared_ptr is because, under the hood, the lambda is
@@ -1049,44 +1046,7 @@ namespace babylon
         m_runtimeImpl.Execute([this, callbackPtr = std::make_shared<Napi::FunctionReference>(std::move(callback))](auto&)
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
-
-            /*if (frameCount > 1500)
-            {
-                if (m_xr.IsSessionActive())
-                {
-                    m_xr.EndSession();
-                }
-            }
-            else if (frameCount > 600)
-            {
-                if (!m_xr.IsSessionActive())
-                {
-                    m_xr.BeginSession();
-                }
-
-                m_xr.BeginFrame();
-                if (m_xr.ActiveFrameBuffers.size() > 0)
-                {
-                    m_frameBufferManager.Bind(m_xr.ActiveFrameBuffers.front());
-                }
-            }*/
-
             callbackPtr->Call({});
-
-            /*if (frameCount > 1500)
-            {
-                frameCount = 0;
-            }
-            else if (frameCount > 600)
-            {
-                if (m_xr.ActiveFrameBuffers.size() > 0)
-                {
-                    m_frameBufferManager.Unbind(m_xr.ActiveFrameBuffers.front());
-                }
-                m_xr.EndFrame();
-            }
-            ++frameCount;*/
-            
             bgfx::frame();
         });
     }

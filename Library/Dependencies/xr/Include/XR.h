@@ -65,8 +65,10 @@ namespace xr
                 };
 
                 std::vector<View> Views{};
+                bool ShouldEndSession{};
+                bool ShouldRestartSession{};
 
-                Frame(System::Session::Impl&);
+                Frame(System::Session::Impl&, bool, bool);
                 ~Frame();
 
             private:
