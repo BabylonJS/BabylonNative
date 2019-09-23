@@ -1046,6 +1046,7 @@ namespace babylon
         m_runtimeImpl.Execute([this, callbackPtr = std::make_shared<Napi::FunctionReference>(std::move(callback))](auto&)
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
+
             callbackPtr->Call({});
             bgfx::frame();
         });
