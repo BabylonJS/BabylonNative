@@ -10,5 +10,6 @@ Release/
 *.sln
 install/
 install_manifest.txt
-generated/
+generated/*
+!generated/*.in
 cmake_install.cmake
