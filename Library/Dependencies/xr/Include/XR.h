@@ -76,11 +76,9 @@ namespace xr
                     } DepthTextureSize;
                 };
 
-                std::vector<View> Views{};
-                bool ShouldEndSession{};
-                bool ShouldRestartSession{};
+                std::vector<View>& Views;
 
-                Frame(System::Session::Impl&, bool, bool);
+                Frame(System::Session::Impl&);
                 ~Frame();
 
             private:
@@ -95,7 +93,7 @@ namespace xr
             Session(Session&) = delete;
             Session& operator=(Session&&) = delete;
 
-            std::unique_ptr<Frame> GetNextFrame();
+            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession);
             void RequestEndSession();
 
         private:

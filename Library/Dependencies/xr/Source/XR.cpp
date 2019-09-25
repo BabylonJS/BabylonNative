@@ -15,9 +15,9 @@ namespace xr
                 : Names{}
             {
                 uint32_t extensionCount{};
-                XR_CHECK(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
+                XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
                 std::vector<XrExtensionProperties> extensionProperties(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
-                XR_CHECK(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()));
+                XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()));
 
                 // D3D11 extension is required for this sample, so check if it's supported.
                 for (const char* extensionName : REQUIRED_EXTENSIONS)
@@ -60,11 +60,11 @@ namespace xr
         {
             uint32_t swapchainImageIndex;
             XrSwapchainImageAcquireInfo acquireInfo{ XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
-            XR_CHECK(xrAcquireSwapchainImage(handle, &acquireInfo, &swapchainImageIndex));
+            XrCheck(xrAcquireSwapchainImage(handle, &acquireInfo, &swapchainImageIndex));
 
             XrSwapchainImageWaitInfo waitInfo{ XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
             waitInfo.timeout = XR_INFINITE_DURATION;
-            XR_CHECK(xrWaitSwapchainImage(handle, &waitInfo));
+            XrCheck(xrWaitSwapchainImage(handle, &waitInfo));
 
             return swapchainImageIndex;
         };
@@ -134,7 +134,7 @@ namespace xr
             createInfo.enabledExtensionNames = Extensions->Names.data();
             createInfo.applicationInfo = { "", 1, "OpenXR Sample", 1, XR_CURRENT_API_VERSION };
             strcpy_s(createInfo.applicationInfo.applicationName, ApplicationName.c_str());
-            XR_CHECK(xrCreateInstance(&createInfo, &Instance));
+            XrCheck(xrCreateInstance(&createInfo, &Instance));
         }
 
         // Phase two of initialization. Can fail and be retried without crashing.
@@ -156,9 +156,9 @@ namespace xr
 
             // Find the available environment blend modes.
             uint32_t count;
-            XR_CHECK(xrEnumerateEnvironmentBlendModes(Instance, SystemId, VIEW_CONFIGURATION_TYPE, 0, &count, nullptr));
+            XrCheck(xrEnumerateEnvironmentBlendModes(Instance, SystemId, VIEW_CONFIGURATION_TYPE, 0, &count, nullptr));
             std::vector<XrEnvironmentBlendMode> environmentBlendModes(count);
-            XR_CHECK(xrEnumerateEnvironmentBlendModes(Instance, SystemId, VIEW_CONFIGURATION_TYPE, count, &count, environmentBlendModes.data()));
+            XrCheck(xrEnumerateEnvironmentBlendModes(Instance, SystemId, VIEW_CONFIGURATION_TYPE, count, &count, environmentBlendModes.data()));
 
             // Automatically choose the system's preferred blend mode, since specifying the app's 
             // preferred blend mode is currently not supported.
@@ -193,12 +193,13 @@ namespace xr
 
         struct RenderResources
         {
-            std::vector<XrView> Views;
-            std::vector<XrViewConfigurationView> ConfigViews;
-            std::vector<Swapchain> ColorSwapchains;
-            std::vector<Swapchain> DepthSwapchains;
-            std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews;
-            std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews;
+            std::vector<XrView> Views{};
+            std::vector<XrViewConfigurationView> ConfigViews{};
+            std::vector<Swapchain> ColorSwapchains{};
+            std::vector<Swapchain> DepthSwapchains{};
+            std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews{};
+            std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews{};
+            std::vector<Frame::View> ActiveFrameViews{};
         };
         RenderResources Resources{};
 
@@ -216,7 +217,7 @@ namespace xr
             XrSessionCreateInfo createInfo{ XR_TYPE_SESSION_CREATE_INFO };
             createInfo.next = &graphicsBinding;
             createInfo.systemId = systemId;
-            XR_CHECK(xrCreateSession(instance, &createInfo, &Session));
+            XrCheck(xrCreateSession(instance, &createInfo, &Session));
 
             // Initialize scene space
             if (HmdImpl.Extensions->UnboundedRefSpaceSupported)
@@ -230,11 +231,11 @@ namespace xr
             XrReferenceSpaceCreateInfo spaceCreateInfo{ XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
             spaceCreateInfo.referenceSpaceType = SceneSpaceType;
             spaceCreateInfo.poseInReferenceSpace = IDENTITY_TRANSFORM;
-            XR_CHECK(xrCreateReferenceSpace(Session, &spaceCreateInfo, &SceneSpace));
+            XrCheck(xrCreateReferenceSpace(Session, &spaceCreateInfo, &SceneSpace));
 
             // Read graphics properties for preferred swapchain length and logging.
             XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
-            XR_CHECK(xrGetSystemProperties(instance, systemId, &systemProperties));
+            XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
             // Select color and depth swapchain pixel formats
             SwapchainFormat colorSwapchainFormat;
@@ -243,10 +244,10 @@ namespace xr
 
             // Query and cache view configuration views. Two-call idiom.
             uint32_t viewCount;
-            XR_CHECK(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, 0, &viewCount, nullptr));
+            XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, 0, &viewCount, nullptr));
             assert(viewCount == HmdImpl.STEREO_VIEW_COUNT);
             Resources.ConfigViews.resize(viewCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
-            XR_CHECK(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, Resources.ConfigViews.data()));
+            XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, Resources.ConfigViews.data()));
 
             // Create all the swapchains.
             const XrViewConfigurationView& view = Resources.ConfigViews[0];
@@ -276,13 +277,18 @@ namespace xr
             Resources.Views.resize(viewCount, { XR_TYPE_VIEW });
         }
 
-        std::unique_ptr<System::Session::Frame> GetNextFrame()
+        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
-            bool exitRenderLoop;
-            bool requestRestart;
-            ProcessEvents(exitRenderLoop, requestRestart);
+            ProcessEvents(shouldEndSession, shouldRestartSession);
 
-            return std::make_unique<Frame>(*this, exitRenderLoop, requestRestart);
+            if (!shouldEndSession)
+            {
+                return std::make_unique<Frame>(*this);
+            }
+            else
+            {
+                return nullptr;
+            }
         }
 
         void RequestEndSession()
@@ -319,12 +325,12 @@ namespace xr
             swapchainCreateInfo.createFlags = createFlags;
             swapchainCreateInfo.usageFlags = usageFlags;
 
-            XR_CHECK(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Handle));
+            XrCheck(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Handle));
 
             uint32_t chainLength;
-            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Handle, 0, &chainLength, nullptr));
+            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, 0, &chainLength, nullptr));
             swapchain.Images.resize(chainLength, { SWAPCHAIN_IMAGE_TYPE_ENUM });
-            XR_CHECK(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &chainLength,
+            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &chainLength,
                 reinterpret_cast<XrSwapchainImageBaseHeader*>(swapchain.Images.data())));
 
             return swapchain;
@@ -334,9 +340,9 @@ namespace xr
         {
             // Query runtime preferred swapchain formats. Two-call idiom.
             uint32_t swapchainFormatCount;
-            XR_CHECK(xrEnumerateSwapchainFormats(Session, 0, &swapchainFormatCount, nullptr));
+            XrCheck(xrEnumerateSwapchainFormats(Session, 0, &swapchainFormatCount, nullptr));
             std::vector<int64_t> swapchainFormats(swapchainFormatCount);
-            XR_CHECK(xrEnumerateSwapchainFormats(Session, static_cast<uint32_t>(swapchainFormats.size()), &swapchainFormatCount, swapchainFormats.data()));
+            XrCheck(xrEnumerateSwapchainFormats(Session, static_cast<uint32_t>(swapchainFormats.size()), &swapchainFormatCount, swapchainFormats.data()));
 
             auto colorFormatPtr = std::find_first_of(
                 std::begin(swapchainFormats),
@@ -379,11 +385,11 @@ namespace xr
                 assert(Session != XR_NULL_HANDLE);
                 XrSessionBeginInfo sessionBeginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
                 sessionBeginInfo.primaryViewConfigurationType = HmdImpl.VIEW_CONFIGURATION_TYPE;
-                XR_CHECK(xrBeginSession(Session, &sessionBeginInfo));
+                XrCheck(xrBeginSession(Session, &sessionBeginInfo));
                 break;
             }
             case XR_SESSION_STATE_STOPPING:
-                XR_CHECK(xrEndSession(Session));
+                XrCheck(xrEndSession(Session));
                 break;
             case XR_SESSION_STATE_EXITING:
                 // Do not attempt to restart because user closed this session.
@@ -431,27 +437,20 @@ namespace xr
         }
     };
 
-    System::Session::Frame::Frame(Session::Impl& sessionImpl, bool shouldEndSession, bool shouldRestartSession)
-        : m_sessionImpl{ sessionImpl }
-        , ShouldEndSession{ shouldEndSession }
-        , ShouldRestartSession{ shouldRestartSession }
+    System::Session::Frame::Frame(Session::Impl& sessionImpl)
+        : Views{ sessionImpl.Resources.ActiveFrameViews }
+        , m_sessionImpl{ sessionImpl }
     {
-        // If the session is supposed to be ending, early out without attempting to acquire views.
-        if (ShouldEndSession)
-        {
-            return;
-        }
-
         auto session = m_sessionImpl.Session;
 
         XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
         XrFrameState frameState{ XR_TYPE_FRAME_STATE };
-        XR_CHECK(xrWaitFrame(session, &frameWaitInfo, &frameState));
+        XrCheck(xrWaitFrame(session, &frameWaitInfo, &frameState));
         m_shouldRender = frameState.shouldRender;
         m_displayTime = frameState.predictedDisplayTime;
 
         XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
-        XR_CHECK(xrBeginFrame(session, &frameBeginInfo));
+        XrCheck(xrBeginFrame(session, &frameBeginInfo));
 
         auto& renderResources = m_sessionImpl.Resources;
 
@@ -466,7 +465,7 @@ namespace xr
             viewLocateInfo.viewConfigurationType = System::Impl::VIEW_CONFIGURATION_TYPE;
             viewLocateInfo.displayTime = m_displayTime;
             viewLocateInfo.space = m_sessionImpl.SceneSpace;
-            XR_CHECK(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, renderResources.Views.data()));
+            XrCheck(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, renderResources.Views.data()));
             assert(viewCountOutput == viewCapacityInput);
             assert(viewCountOutput == renderResources.ConfigViews.size());
             assert(viewCountOutput == renderResources.ColorSwapchains.size());
@@ -559,12 +558,12 @@ namespace xr
 
             for (auto& swapchain : renderResources.ColorSwapchains)
             {
-                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
+                XrAssert(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
             }
 
             for (auto& swapchain : renderResources.DepthSwapchains)
             {
-                XR_ASSERT(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
+                XrAssert(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
             }
         
             // Inform the runtime to consider alpha channel during composition
@@ -585,7 +584,7 @@ namespace xr
         frameEndInfo.environmentBlendMode = m_sessionImpl.HmdImpl.EnvironmentBlendMode;
         frameEndInfo.layerCount = m_shouldRender ? 1 : 0;
         frameEndInfo.layers = &layersPtr;
-        XR_ASSERT(xrEndFrame(m_sessionImpl.Session, &frameEndInfo));
+        XrAssert(xrEndFrame(m_sessionImpl.Session, &frameEndInfo));
     }
 
     System::System()
@@ -610,9 +609,9 @@ namespace xr
 
     System::Session::~Session() {}
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame()
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
     {
-        return m_impl->GetNextFrame();
+        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
     }
 
     void System::Session::RequestEndSession()

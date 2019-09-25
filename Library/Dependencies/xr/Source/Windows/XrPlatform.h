@@ -1,9 +1,11 @@
 #pragma once
 
-#ifdef WIN32
+#ifdef XR_USE_GRAPHICS_API_D3D11
+#error "XrPlatform.h must not be included more than once."
+#endif
+
 #include <d3d11.h>
 #define XR_USE_GRAPHICS_API_D3D11
-#endif
 
 #include <XrPlatformCommon.h>
 #include <XR.h>
@@ -12,11 +14,11 @@
 
 namespace xr
 {
-    auto CreateGraphicsBinding(XrInstance instance, XrSystemId systemId, void* graphicsDevice)
+    inline auto CreateGraphicsBinding(XrInstance instance, XrSystemId systemId, void* graphicsDevice)
     {
         // Create the D3D11 device for the adapter associated with the system.
         XrGraphicsRequirementsD3D11KHR graphicsRequirements{ XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
-        XR_CHECK(xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
+        XrCheck(xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
 
         XrGraphicsBindingD3D11KHR graphicsBinding{ XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
         graphicsBinding.device = reinterpret_cast<ID3D11Device*>(graphicsDevice);
@@ -36,7 +38,7 @@ namespace xr
         DXGI_FORMAT_D24_UNORM_S8_UINT
     };
 
-    xr::TextureFormat SwapchainFormatToTextureFormat(SwapchainFormat format)
+    inline xr::TextureFormat SwapchainFormatToTextureFormat(SwapchainFormat format)
     {
         switch (format)
         {

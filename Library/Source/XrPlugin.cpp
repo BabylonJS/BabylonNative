@@ -116,7 +116,14 @@ namespace babylon
 
         m_session->RequestEndSession();
 
-        while (!m_session->GetNextFrame()->ShouldEndSession);
+        bool shouldEndSession{};
+        bool shouldRestartSession{};
+        do
+        {
+            // Block and burn frames until XR successfully shuts down.
+            m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+            m_frame.reset();
+        } while (!shouldEndSession);
         m_session.reset();
     }
 
@@ -125,7 +132,13 @@ namespace babylon
         assert(m_session != nullptr);
         assert(m_frame == nullptr);
 
-        m_frame = m_session->GetNextFrame();
+        bool shouldEndSession{};
+        bool shouldRestartSession{};
+        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+
+        // Ending a session outside of calls to EndSession() is currently not supported.
+        assert(!shouldEndSession);
+        assert(m_frame != nullptr);
 
         m_activeFrameBuffers.reserve(m_frame->Views.size());
         for (const auto& view : m_frame->Views)
