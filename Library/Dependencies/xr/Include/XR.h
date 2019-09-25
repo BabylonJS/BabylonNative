@@ -1,10 +1,21 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace xr
 {
+    class Exception final : public std::exception
+    {
+    public:
+        Exception::Exception(const char* message);
+        const char* Exception::what() const noexcept;
+
+    private:
+        std::string m_message{};
+    };
+
     enum TextureFormat
     {
         RGBA8,
@@ -17,11 +28,12 @@ namespace xr
         class Session
         {
             friend class System;
-            struct Impl;
+            class Impl;
 
         public:
-            struct Frame
+            class Frame
             {
+            public:
                 struct View
                 {
                     struct
@@ -77,6 +89,7 @@ namespace xr
                 int64_t m_displayTime{};
             };
 
+            Session(System& headMountedDisplay, void* graphicsDevice);
             ~Session();
 
             Session(Session&) = delete;
@@ -87,8 +100,6 @@ namespace xr
 
         private:
             std::unique_ptr<Impl> m_impl{};
-
-            Session(System& headMountedDisplay, void* graphicsDevice);
         };
 
         System();
@@ -100,10 +111,8 @@ namespace xr
         bool IsInitialized() const;
         bool TryInitialize();
 
-        std::unique_ptr<Session> CreateSession(void* graphicsDevice);
-
     private:
-        struct Impl;
+        class Impl;
         std::unique_ptr<Impl> m_impl{};
     };
 }

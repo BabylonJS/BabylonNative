@@ -4,7 +4,7 @@ add_subdirectory(Dependencies/OpenXR-SDK)
 
 set(SOURCES
     "Include/XR.h"
-    "Source/System.cpp"
+    "Source/XR.cpp"
     "Source/XrPlatformCommon.h")
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")

@@ -62,6 +62,8 @@ if(WINDOWS_STORE)
     target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
 endif()
 
+# Currently OpenXR is only supported on Win32. More platforms will be added as 
+# they become viable/available.
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
     add_subdirectory(Dependencies/xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)

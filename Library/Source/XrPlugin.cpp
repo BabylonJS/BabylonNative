@@ -31,18 +31,17 @@ namespace babylon
         ~XrPlugin();
 
     private:
-        static Napi::FunctionReference constructor;
+        static inline Napi::FunctionReference constructor{};
 
         void BeginSession(const Napi::CallbackInfo&); // TODO: Make this asynchronous.
         void EndSession(const Napi::CallbackInfo&); // TODO: Make this asynchronous.
         void EndSession();
-        bool IsSessionActive() const;
         void BeginFrame(const Napi::CallbackInfo&);
         void EndFrame(const Napi::CallbackInfo&);
         void EndFrame();
         Napi::Value GetActiveFrameBuffers(const Napi::CallbackInfo& info);
 
-        xr::System m_hmd{};
+        xr::System m_system{};
         std::unique_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         FrameBufferManager& m_frameBufferManager;
@@ -50,8 +49,6 @@ namespace babylon
 
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
     };
-
-    Napi::FunctionReference XrPlugin::constructor;
 
     void XrPlugin::Initialize(Napi::Env& env)
     {
@@ -66,8 +63,7 @@ namespace babylon
                 InstanceMethod("beginFrame", &XrPlugin::BeginFrame),
                 InstanceMethod("endFrame", &XrPlugin::EndFrame),
                 InstanceMethod("getActiveFrameBuffers", &XrPlugin::GetActiveFrameBuffers)
-            },
-            nullptr);
+            });
 
         constructor = Napi::Persistent(func);
         constructor.SuppressDestruct();
@@ -82,7 +78,7 @@ namespace babylon
 
     XrPlugin::~XrPlugin()
     {
-        if (IsSessionActive())
+        if (m_session != nullptr)
         {
             if (m_frame != nullptr)
             {
@@ -96,15 +92,15 @@ namespace babylon
     // TODO: Make this asynchronous.
     void XrPlugin::BeginSession(const Napi::CallbackInfo&)
     {
-        assert(!IsSessionActive());
+        assert(m_session == nullptr);
         assert(m_frame == nullptr);
 
-        if (!m_hmd.IsInitialized())
+        if (!m_system.IsInitialized())
         {
-            while (!m_hmd.TryInitialize());
+            while (!m_system.TryInitialize());
         }
 
-        m_session = m_hmd.CreateSession(bgfx::getInternalData()->context);
+        m_session = std::make_unique<xr::System::Session>(m_system, bgfx::getInternalData()->context);
     }
 
     // TODO: Make this asynchronous.
@@ -115,7 +111,7 @@ namespace babylon
 
     void XrPlugin::EndSession()
     {
-        assert(IsSessionActive());
+        assert(m_session != nullptr);
         assert(m_frame == nullptr);
 
         m_session->RequestEndSession();
@@ -124,14 +120,9 @@ namespace babylon
         m_session.reset();
     }
 
-    bool XrPlugin::IsSessionActive() const
-    {
-        return m_session != nullptr;
-    }
-
     void XrPlugin::BeginFrame(const Napi::CallbackInfo&)
     {
-        assert(IsSessionActive());
+        assert(m_session != nullptr);
         assert(m_frame == nullptr);
 
         m_frame = m_session->GetNextFrame();
@@ -189,7 +180,7 @@ namespace babylon
 
     void XrPlugin::EndFrame()
     {
-        assert(IsSessionActive());
+        assert(m_session != nullptr);
         assert(m_frame != nullptr);
 
         m_activeFrameBuffers.clear();

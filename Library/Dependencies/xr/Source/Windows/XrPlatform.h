@@ -10,7 +10,7 @@
 
 #include <array>
 
-namespace
+namespace xr
 {
     auto CreateGraphicsBinding(XrInstance instance, XrSystemId systemId, void* graphicsDevice)
     {
