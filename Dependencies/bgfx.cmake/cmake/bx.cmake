@@ -38,7 +38,8 @@ endif()
 # Add include directory of bx
 target_include_directories( bx
 	PUBLIC
-		$<BUILD_INTERFACE:${BX_DIR}/include/ ${BX_DIR}/include ${BX_DIR}/3rdparty>
+		$<BUILD_INTERFACE:${BX_DIR}/include>
+		$<BUILD_INTERFACE:${BX_DIR}/3rdparty>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # Build system specific configurations

@@ -28,7 +28,10 @@ file(
 )
 
 add_library( nvtt STATIC ${NVTT_SOURCES} )
-target_include_directories( nvtt PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty ${BIMG_DIR}/3rdparty/nvtt> )
+target_include_directories( nvtt
+	PUBLIC
+		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty>
+		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/nvtt> )
 set_target_properties( nvtt PROPERTIES FOLDER "bgfx/3rdparty" )
 target_link_libraries( nvtt PUBLIC bx )
 
