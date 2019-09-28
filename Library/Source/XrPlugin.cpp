@@ -22,6 +22,138 @@ namespace
 
 namespace babylon
 {
+    struct XrSessionType
+    {
+        static inline const std::string IMMERSIVE_VR{ "immersive-vr" };
+        static inline const std::string IMMERSIVE_AR{ "immersive-vr" };
+        static inline const std::string IMMERSIVE_INLINE{ "inline" };
+    };
+
+    // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
+    class XRSession : public Napi::ObjectWrap<XRSession>
+    {
+        static constexpr auto JS_CLASS_NAME = "XRSession";
+
+    public:
+        static void Initialize(Napi::Env& env)
+        {
+            Napi::HandleScope scope{ env };
+
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    // TODO: Methods
+                });
+
+            constructor = Napi::Persistent(func);
+            constructor.SuppressDestruct();
+
+            env.Global().Set(JS_CLASS_NAME, func);
+        }
+
+        static Napi::Object New(const Napi::CallbackInfo& info)
+        {
+            return constructor.New({ info[0] });
+        }
+
+        XRSession(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<XRSession>{ info }
+        {
+            // Currently only immersive VR is supported.
+            assert(info[0].As<Napi::String>().Utf8Value() == XrSessionType::IMMERSIVE_VR);
+        }
+
+    private:
+        static inline Napi::FunctionReference constructor{};
+
+        // TODO: Methods
+    };
+
+    // Implementation of the XR interface: https://immersive-web.github.io/webxr/#xr-interface
+    class XR : public Napi::ObjectWrap<XR>
+    {
+        static constexpr auto JS_CLASS_NAME = "NativeXR";
+        static constexpr auto JS_NAVIGATOR_NAME = "navigator";
+        static constexpr auto JS_XR_NAME = "xr";
+        static constexpr auto JS_NATIVE_NAME = "native";
+
+    public:
+        static void Initialize(Napi::Env& env)
+        {
+            Napi::HandleScope scope{ env };
+
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
+                    InstanceMethod("requestSession", &XR::RequestSession)
+                });
+
+            Napi::Object global = env.Global();
+            Napi::Object navigator;
+            if (global.Has(JS_NAVIGATOR_NAME))
+            {
+                navigator = global.Get(JS_NAVIGATOR_NAME).As<Napi::Object>();
+            }
+            else
+            {
+                navigator = Napi::Object::New(env);
+                global.Set(JS_NAVIGATOR_NAME, navigator);
+            }
+
+            auto xr = func.New({});
+            navigator.Set(JS_XR_NAME, xr);
+            xr.Set(JS_NATIVE_NAME, Napi::Boolean::New(env, true));
+        }
+
+        XR(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<XR>{ info }
+        {}
+
+    private:
+
+        Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
+        {
+            auto sessionType = info[0].As<Napi::String>().Utf8Value();
+            bool isSupported = false;
+
+            if (sessionType == XrSessionType::IMMERSIVE_VR)
+            {
+                isSupported = true;
+            }
+
+            auto deferred = Napi::Promise::Deferred::New(info.Env());
+            deferred.Resolve(Napi::Boolean::New(info.Env(), isSupported));
+            return deferred.Promise();
+        }
+
+        Napi::Value RequestSession(const Napi::CallbackInfo& info)
+        {
+            auto deferred = Napi::Promise::Deferred::New(info.Env());
+            deferred.Resolve(XRSession::New(info));
+            return deferred.Promise();
+        }
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     class XrPlugin : public Napi::ObjectWrap<XrPlugin>
     {
     public:
@@ -214,6 +346,9 @@ namespace babylon
 
     void InitializeXrPlugin(babylon::Env& env)
     {
+        XRSession::Initialize(env);
+        XR::Initialize(env);
+
         XrPlugin::Initialize(env);
     }
 }

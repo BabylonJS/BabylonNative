@@ -3110,33 +3110,73 @@ napi_status napi_run_script(napi_env env,
 //  return napi_ok;
 //}
 
+#define CHECK_JSEC(operation) do { auto result = operation; if (result != JsErrorCode::JsNoError) return result; } while (false)
+JsErrorCode JsCreatePromise(JsValueRef* promise, JsValueRef* resolve, JsValueRef* reject)
+{
+    JsValueRef global{};
+    CHECK_JSEC(JsGetGlobalObject(&global));
+    
+    JsPropertyIdRef promiseConstructorId{};
+    CHECK_JSEC(JsGetPropertyIdFromName(L"Promise", &promiseConstructorId));
+
+    JsValueRef promiseConstructor{};
+    CHECK_JSEC(JsGetProperty(global, promiseConstructorId, &promiseConstructor));
+
+    struct CallbackStruct
+    {
+        static JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount, void* callbackState)
+        {
+            return (reinterpret_cast<CallbackStruct*>(callbackState))->Callback(callee, isConstructCall, arguments, argumentCount);
+        }
+
+        JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount)
+        {
+            *Resolve = arguments[0];
+            *Reject = arguments[1];
+
+            return{};
+        }
+
+        JsValueRef* Resolve{};
+        JsValueRef* Reject{};
+    } cbs{ resolve, reject };
+
+    JsValueRef callbackFunction{};
+    CHECK_JSEC(JsCreateFunction(&CallbackStruct::Callback, &cbs, &callbackFunction));
+
+    JsValueRef argv[2] = { *promise, callbackFunction };
+    CHECK_JSEC(JsConstructObject(promiseConstructor, argv, 2, promise));
+
+    return JsErrorCode::JsNoError;
+}
+#undef CHECK_JSEC
+
 NAPI_EXTERN napi_status napi_create_promise(napi_env env,
                                             napi_deferred* deferred,
                                             napi_value* promise) {
-  //CHECK_ARG(deferred);
-  //CHECK_ARG(promise);
+  CHECK_ARG(deferred);
+  CHECK_ARG(promise);
 
-  //JsValueRef js_promise, resolve, reject, container;
-  //napi_ref ref;
-  //napi_value js_deferred;
+  JsValueRef js_promise, resolve, reject, container;
+  napi_ref ref;
+  napi_value js_deferred;
 
-  //CHECK_JSRT(JsCreatePromise(&js_promise, &resolve, &reject));
+  CHECK_JSRT(JsCreatePromise(&js_promise, &resolve, &reject));
 
-  //CHECK_JSRT(JsCreateObject(&container));
-  //js_deferred = reinterpret_cast<napi_value>(container);
+  CHECK_JSRT(JsCreateObject(&container));
+  js_deferred = reinterpret_cast<napi_value>(container);
 
-  //CHECK_NAPI(napi_set_named_property(env, js_deferred, "resolve",
-  //  reinterpret_cast<napi_value>(resolve)));
-  //CHECK_NAPI(napi_set_named_property(env, js_deferred, "reject",
-  //  reinterpret_cast<napi_value>(reject)));
+  CHECK_NAPI(napi_set_named_property(env, js_deferred, "resolve",
+    reinterpret_cast<napi_value>(resolve)));
+  CHECK_NAPI(napi_set_named_property(env, js_deferred, "reject",
+    reinterpret_cast<napi_value>(reject)));
 
-  //CHECK_NAPI(napi_create_reference(env, js_deferred, 1, &ref));
+  CHECK_NAPI(napi_create_reference(env, js_deferred, 1, &ref));
 
-  //*deferred = reinterpret_cast<napi_deferred>(ref);
-  //*promise = reinterpret_cast<napi_value>(js_promise);
+  *deferred = reinterpret_cast<napi_deferred>(ref);
+  *promise = reinterpret_cast<napi_value>(js_promise);
 
-  //return napi_ok;
-  throw std::exception("not implemented");
+  return napi_ok;
 }
 
 NAPI_EXTERN napi_status napi_resolve_deferred(napi_env env,
