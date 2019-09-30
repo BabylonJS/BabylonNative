@@ -82,6 +82,7 @@ namespace babylon
         {
             Napi::HandleScope scope{ env };
             auto func = NapiBridge<NativeEngineT>::Define("NativeEngine", env, impl)
+                .template AddValueReturningMethod<&NativeEngineT::GetEngine>("getEngine")
                 .template AddVoidReturningMethod<&NativeEngineT::RequestAnimationFrame>("requestAnimationFrame")
                 .template AddValueReturningMethod<&NativeEngineT::CreateVertexArray>("createVertexArray")
                 .template AddVoidReturningMethod<&NativeEngineT::DeleteVertexArray>("deleteVertexArray")
@@ -131,7 +132,10 @@ namespace babylon
                 .template AddVoidReturningMethod<&NativeEngineT::SetTextureAnisotropicLevel>("setTextureAnisotropicLevel")
                 .template AddVoidReturningMethod<&NativeEngineT::SetTexture>("setTexture")
                 .template AddVoidReturningMethod<&NativeEngineT::DeleteTexture>("deleteTexture")
+                .template AddValueReturningMethod<&NativeEngineT::CreateFrameBuffer>("createFrameBuffer")
                 .template AddVoidReturningMethod<&NativeEngineT::DrawIndexed>("drawIndexed")
+                .template AddVoidReturningMethod<&NativeEngineT::BindFrameBuffer>("bindFrameBuffer")
+                .template AddVoidReturningMethod<&NativeEngineT::UnbindFrameBuffer>("unbindFrameBuffer")
                 .template AddVoidReturningMethod<&NativeEngineT::Draw>("draw")
                 .template AddVoidReturningMethod<&NativeEngineT::Clear>("clear")
                 .template AddValueReturningMethod<&NativeEngineT::GetRenderWidth>("getRenderWidth")

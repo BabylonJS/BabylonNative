@@ -39,10 +39,32 @@ elseif(BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
         ${APPX_ASSETS}
         "Source/UWP/App.cpp"
         "Source/UWP/App.h")
+
+elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+    set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/Source/macOS/Info.plist")
+
+    set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/Source/macOS/Base.lproj/Main.storyboard")
+    set(JSSCRIPT "${CMAKE_CURRENT_LIST_DIR}/Scripts/babylon.glTF2FileLoader.js"
+                "${CMAKE_CURRENT_LIST_DIR}/Scripts/babylon.max.js"
+                "${CMAKE_CURRENT_LIST_DIR}/Scripts/experience.js"
+                "${CMAKE_CURRENT_LIST_DIR}/Scripts/playground_runner.js")
+    set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT})
+
+    set(SOURCES
+        ${SOURCES}
+        "Source/macOS/main.m"
+        "Source/macOS/AppDelegate.m"
+        "Source/macOS/AppDelegate.h"
+        "Source/macOS/ViewController.mm"
+        "Source/macOS/ViewController.h")        
+endif()
+
+if(APPLE)
+    find_library(JSCORE_LIBRARY JavaScriptCore)
 endif()
 
 set(WIN32_EXECUTABLE TRUE)
-add_executable(TestApp WIN32 ${SOURCES})
+add_executable(TestApp WIN32 ${SOURCES} ${RESOURCE_FILES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT TestApp)
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
@@ -57,7 +79,16 @@ endif()
 
 target_include_directories(TestApp PRIVATE "Source")
 
-target_link_libraries(TestApp PRIVATE Library)
+target_link_libraries(TestApp PRIVATE Library ${JSCORE_LIBRARY})
+
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+    set_target_properties(TestApp PROPERTIES
+        MACOSX_BUNDLE true
+        MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+        RESOURCE "${RESOURCE_FILES}"
+        FOLDER "TestApp")
+endif()
 
 if(WINDOWS_STORE)
     set_property(SOURCE ${SCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)

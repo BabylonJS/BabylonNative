@@ -1,6 +1,5 @@
 #pragma once
 
-#include <napi/env.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -9,7 +8,8 @@ namespace babylon
 {
     class RuntimeImpl;
     using MessageLogger = void(*)(const char* message);
-
+    class Env;
+    
     class Runtime
     {
     public:
@@ -21,6 +21,7 @@ namespace babylon
         void UpdateSize(float width, float height);
         void UpdateRenderTarget();
         void Suspend();
+        void Resume();
 
         void LoadScript(const std::string& url);
         void Eval(const std::string& string, const std::string& sourceUrl);
