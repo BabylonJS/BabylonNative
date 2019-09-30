@@ -3131,10 +3131,10 @@ JsErrorCode JsCreatePromise(JsValueRef* promise, JsValueRef* resolve, JsValueRef
 
         JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount)
         {
-            *Resolve = arguments[0];
-            *Reject = arguments[1];
+            *Resolve = arguments[1];
+            *Reject = arguments[2];
 
-            return{};
+            return JS_INVALID_REFERENCE;
         }
 
         JsValueRef* Resolve{};
@@ -3144,8 +3144,10 @@ JsErrorCode JsCreatePromise(JsValueRef* promise, JsValueRef* resolve, JsValueRef
     JsValueRef callbackFunction{};
     CHECK_JSEC(JsCreateFunction(&CallbackStruct::Callback, &cbs, &callbackFunction));
 
-    JsValueRef argv[2] = { *promise, callbackFunction };
-    CHECK_JSEC(JsConstructObject(promiseConstructor, argv, 2, promise));
+    JsValueRef args[2];
+    CHECK_JSEC(JsGetUndefinedValue(&args[0]));
+    args[1] = callbackFunction;
+    CHECK_JSEC(JsConstructObject(promiseConstructor, args, 2, promise));
 
     return JsErrorCode::JsNoError;
 }
