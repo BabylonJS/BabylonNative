@@ -22,17 +22,33 @@ namespace
 
 namespace babylon
 {
-    struct XrSessionType
+    struct XRSessionType
     {
         static inline const std::string IMMERSIVE_VR{ "immersive-vr" };
         static inline const std::string IMMERSIVE_AR{ "immersive-vr" };
         static inline const std::string IMMERSIVE_INLINE{ "inline" };
     };
 
-    // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
-    class XRSession : public Napi::ObjectWrap<XRSession>
+    struct XRReferenceSpaceType
     {
-        static constexpr auto JS_CLASS_NAME = "XRSession";
+        static inline const std::string VIEWER{ "viewer" };
+        static inline const std::string LOCAL{ "local" };
+        static inline const std::string LOCAL_FLOOR{ "local-floor" };
+        static inline const std::string BOUNDED_FLOOR{ "bounded-floor" };
+        static inline const std::string UNBOUNDED{ "unbounded" };
+    };
+
+    struct XREye
+    {
+        static inline const std::string NONE{ "none" };
+        static inline const std::string LEFT{ "left" };
+        static inline const std::string RIGHT{ "right" };
+    };
+
+    // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
+    class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
+    {
+        static constexpr auto JS_CLASS_NAME = "XRReferenceSpace";
 
     public:
         static void Initialize(Napi::Env& env)
@@ -43,7 +59,52 @@ namespace babylon
                 env,
                 JS_CLASS_NAME,
                 {
-                    // TODO: Methods
+
+                });
+
+            constructor = Napi::Persistent(func);
+            constructor.SuppressDestruct();
+
+            env.Global().Set(JS_CLASS_NAME, func);
+        }
+
+        static Napi::Object New(const Napi::CallbackInfo& info)
+        {
+            return constructor.New({ info[0] });
+        }
+
+        XRReferenceSpace(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<XRReferenceSpace>{ info }
+        {
+            // TODO: Figure out what in the world THIS is supposed to do.
+            assert(info[0].As<Napi::String>().Utf8Value() == XRReferenceSpaceType::UNBOUNDED);
+        }
+
+    private:
+        static inline Napi::FunctionReference constructor{};
+    };
+
+    // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
+    class XRSession : public Napi::ObjectWrap<XRSession>
+    {
+        static constexpr auto JS_CLASS_NAME = "XRSession";
+        static constexpr auto JS_EVENT_NAME_END = "end";
+
+    public:
+        static void Initialize(Napi::Env& env)
+        {
+            Napi::HandleScope scope{ env };
+
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    InstanceMethod("addEventListener", &XRSession::AddEventListener),
+                    InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
+                    InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
+                    InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
+                    InstanceMethod("cancelAnimationFrame", &XRSession::CancelAnimationFrame),
+                    InstanceMethod("end", &XRSession::End)
                 });
 
             constructor = Napi::Persistent(func);
@@ -61,13 +122,196 @@ namespace babylon
             : Napi::ObjectWrap<XRSession>{ info }
         {
             // Currently only immersive VR is supported.
-            assert(info[0].As<Napi::String>().Utf8Value() == XrSessionType::IMMERSIVE_VR);
+            assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR);
+        }
+
+        void SetEngine(NativeEngine::Impl& engine)
+        {
+            m_engine = &engine;
         }
 
     private:
         static inline Napi::FunctionReference constructor{};
 
-        // TODO: Methods
+        std::map<const std::string, Napi::FunctionReference> m_eventNamesToCallbacks{};
+        NativeEngine::Impl* m_engine{};
+
+        void AddEventListener(const Napi::CallbackInfo& info)
+        {
+            auto [pair, success] = m_eventNamesToCallbacks.insert({
+                info[0].As<Napi::String>().Utf8Value(),
+                Napi::Persistent(info[1].As<Napi::Function>()) });
+            assert(success);
+        }
+
+        Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
+        {
+            auto deferred = Napi::Promise::Deferred::New(info.Env());
+            deferred.Resolve(XRReferenceSpace::New(info));
+            return deferred.Promise();
+        }
+
+        Napi::Value UpdateRenderState(const Napi::CallbackInfo& info)
+        {
+            auto renderState = info[0].As<Napi::Object>();
+
+            auto deferred = Napi::Promise::Deferred::New(info.Env());
+            deferred.Resolve(Napi::Value::From(info.Env(), 0));
+            return deferred.Promise();
+        }
+
+        Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
+        {
+            m_engine->Dispatch([func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()]()
+            {
+                func->Call({ Napi::Value::From(env, 12345), Napi::Object::New(env) });
+            });
+            
+            // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
+            return Napi::Value::From(info.Env(), 0);
+        }
+
+        void CancelAnimationFrame(const Napi::CallbackInfo& info)
+        {
+            throw;
+        }
+
+        Napi::Value End(const Napi::CallbackInfo& info)
+        {
+            throw;
+        }
+    };
+
+    class NativeWebXROutputTarget : public Napi::ObjectWrap<NativeWebXROutputTarget>
+    {
+        static constexpr auto JS_CLASS_NAME = "NativeWebXROutputTarget";
+
+        // TODO: Remove this once the correct (non-singleton) design is in place for the NativeEngine.
+        static auto& GetNativeEngineImplRef(const Napi::CallbackInfo& info)
+        {
+            auto jsEngine = info[0].As<Napi::Object>();
+            auto nativeEngine = jsEngine.Get("_native").As<Napi::Object>();
+            auto getEngine = nativeEngine.Get("getEngine").As<Napi::Function>();
+            return *getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine::Impl>>().Data();
+        }
+
+    public:
+        static void Initialize(Napi::Env& env)
+        {
+            Napi::HandleScope scope{ env };
+
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    InstanceMethod("initializeXRLayerAsync", &NativeWebXROutputTarget::InitializeXRLayerAsync)
+                });
+
+            constructor = Napi::Persistent(func);
+            constructor.SuppressDestruct();
+
+            env.Global().Set(JS_CLASS_NAME, func);
+        }
+
+        static Napi::Object New(const Napi::CallbackInfo& info)
+        {
+            return constructor.New({ info[0] });
+        }
+
+        NativeWebXROutputTarget(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<NativeWebXROutputTarget>{ info }
+            , m_jsEngineReference{ Napi::Persistent(info[0].As<Napi::Object>()) }
+            , m_engine{ GetNativeEngineImplRef(info) }
+        {}
+
+    private:
+        static inline Napi::FunctionReference constructor{};
+
+        // Lifetime control to prevent the cleanup of the NativeEngine while XR is still alive.
+        Napi::ObjectReference m_jsEngineReference{};
+        // TODO: Keep a less dramatic impression of the native engine than this.
+        NativeEngine::Impl& m_engine;
+
+        Napi::Value InitializeXRLayerAsync(const Napi::CallbackInfo& info)
+        {
+            // TODO BAD DESIGN: Having this here introduces something of a circular dependency with the session 
+            // and the output target having to know about each other. There are several possible solutions to 
+            // this, including rearchitecting the JavaScript side slightly (probably the safest, but will be
+            // a bit invasive) and combining the session and the output target to be the same thing. For now,
+            // keep the circular dependency ONLY TO SEE HOW THE REST OF THE LOGIC FALLS AROUND IT. Once all the
+            // logic is in place and working, hopefully it will be clear what's the best way to refactor to 
+            // remove the circular dependency.
+            auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
+            session.SetEngine(m_engine);
+
+            // throw std::exception{ /* What the hell are we even supposed to do here? */ };
+
+            auto deferred = Napi::Promise::Deferred::New(info.Env());
+            deferred.Resolve(Napi::Value::From(info.Env(), 0)); // TODO: Why is it REQUIRED that I pass a valid value here?
+            return deferred.Promise();
+        }
+    };
+
+    class NativeRenderTargetProvider : public Napi::ObjectWrap<NativeRenderTargetProvider>
+    {
+        static constexpr auto JS_CLASS_NAME = "NativeRenderTargetProvider";
+
+    public:
+        static void Initialize(Napi::Env& env)
+        {
+            Napi::HandleScope scope{ env };
+
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    InstanceMethod("getRenderTargetForEye", &NativeRenderTargetProvider::GetRenderTargetForEye)
+                });
+
+            constructor = Napi::Persistent(func);
+            constructor.SuppressDestruct();
+
+            env.Global().Set(JS_CLASS_NAME, func);
+        }
+
+        static Napi::Object New(const Napi::CallbackInfo& info)
+        {
+            return constructor.New({ info[0], info[1] });
+        }
+
+        NativeRenderTargetProvider(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<NativeRenderTargetProvider>{ info }
+        {
+            auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
+            auto createRenderTextureCallback = info[1].As<Napi::Function>();
+
+            // TODO: Do stuff.
+        }
+
+    private:
+        static inline Napi::FunctionReference constructor{};
+
+        Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
+        {
+            const std::string eye{ info[0].As<Napi::String>().Utf8Value() };
+
+            if (eye == XREye::LEFT)
+            {
+                throw;
+            }
+            else if (eye == XREye::RIGHT)
+            {
+                throw;
+            }
+            else if (eye == XREye::NONE)
+            {
+                throw;
+            }
+            else
+            {
+                throw std::exception{ /* Unrecognized eye. */ };
+            }
+        }
     };
 
     // Implementation of the XR interface: https://immersive-web.github.io/webxr/#xr-interface
@@ -88,7 +332,10 @@ namespace babylon
                 JS_CLASS_NAME,
                 {
                     InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
-                    InstanceMethod("requestSession", &XR::RequestSession)
+                    InstanceMethod("requestSession", &XR::RequestSession),
+                    InstanceMethod("getWebXROutputTarget", &XR::GetWebXROutputTarget),
+                    InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
+                    InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true))
                 });
 
             Napi::Object global = env.Global();
@@ -105,7 +352,6 @@ namespace babylon
 
             auto xr = func.New({});
             navigator.Set(JS_XR_NAME, xr);
-            xr.Set(JS_NATIVE_NAME, Napi::Boolean::New(env, true));
         }
 
         XR(const Napi::CallbackInfo& info)
@@ -119,7 +365,7 @@ namespace babylon
             auto sessionType = info[0].As<Napi::String>().Utf8Value();
             bool isSupported = false;
 
-            if (sessionType == XrSessionType::IMMERSIVE_VR)
+            if (sessionType == XRSessionType::IMMERSIVE_VR)
             {
                 isSupported = true;
             }
@@ -134,6 +380,16 @@ namespace babylon
             auto deferred = Napi::Promise::Deferred::New(info.Env());
             deferred.Resolve(XRSession::New(info));
             return deferred.Promise();
+        }
+
+        Napi::Value GetWebXROutputTarget(const Napi::CallbackInfo& info)
+        {
+            return NativeWebXROutputTarget::New(info);
+        }
+
+        Napi::Value GetNativeRenderTargetProvider(const Napi::CallbackInfo& info)
+        {
+            return NativeRenderTargetProvider::New(info);
         }
     };
 
@@ -346,7 +602,10 @@ namespace babylon
 
     void InitializeXrPlugin(babylon::Env& env)
     {
+        XRReferenceSpace::Initialize(env);
         XRSession::Initialize(env);
+        NativeWebXROutputTarget::Initialize(env);
+        NativeRenderTargetProvider::Initialize(env);
         XR::Initialize(env);
 
         XrPlugin::Initialize(env);

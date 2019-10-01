@@ -21,5 +21,7 @@ namespace babylon
         std::unique_ptr<Impl> m_impl;
 
         friend class XrPlugin;
+        friend class NativeWebXROutputTarget; // TODO: Temporary. Remove.
+        friend class XRSession; // TODO: Temporary. Remove.
     };
 }

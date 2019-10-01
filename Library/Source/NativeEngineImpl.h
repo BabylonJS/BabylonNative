@@ -287,6 +287,7 @@ namespace babylon
         void Suspend();
 
         FrameBufferManager& GetFrameBufferManager();
+        void Dispatch(std::function<void()>);
 
     private:
         using EngineDefiner = NativeEngineDefiner<NativeEngine::Impl>;
@@ -347,6 +348,7 @@ namespace babylon
         void SetTexture(const Napi::CallbackInfo& info);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
+        void DeleteFrameBuffer(const Napi::CallbackInfo& info);
         void BindFrameBuffer(const Napi::CallbackInfo& info);
         void UnbindFrameBuffer(const Napi::CallbackInfo& info);
         void DrawIndexed(const Napi::CallbackInfo& info);
