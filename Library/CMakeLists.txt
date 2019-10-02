@@ -54,7 +54,7 @@ set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+if(APPLE)
     set(CURL_CA_BUNDLE "none" CACHE FILEPATH "Path to SSL CA Certificate Bundle")
     set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
     set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
@@ -112,7 +112,7 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL 
 elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
     set(SOURCES ${SOURCES}
         "Source/ShaderCompilerOpenGL.cpp")
-elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+elseif(APPLE)
     set(SOURCES ${SOURCES}
         "Source/ShaderCompilerMetal.cpp")
 endif()
