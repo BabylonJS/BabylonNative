@@ -5,7 +5,7 @@
 namespace babylon
 {
     RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl)
-        : Runtime { std::make_unique<RuntimeImpl>(window, rootUrl,0 ,0) }
+        : Runtime { std::make_unique<RuntimeImpl>(window, rootUrl) }
         , m_window{ window }
     {
         m_window->AddRef();

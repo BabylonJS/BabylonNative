@@ -107,8 +107,7 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                     babylon::Runtime::RegisterErrorOutput(AndroidErrorMessage);
 
                     runtime = std::make_unique<babylon::RuntimeAndroid>(engine->m_window,
-                                                                        "file:///data/local/tmp",
-                                                                        width, height);
+                                                                        "file:///data/local/tmp");
 
                     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
                     InputManager::Initialize(*runtime, *inputBuffer);

@@ -189,6 +189,7 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL 
         PRIVATE "shlwapi.lib"
         PRIVATE "ws2_32.lib"
         PRIVATE "wldap32.lib")
+endif()
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
     target_link_libraries(Library PRIVATE xr)

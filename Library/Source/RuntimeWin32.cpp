@@ -8,12 +8,12 @@
 namespace babylon
 {
     RuntimeWin32::RuntimeWin32(HWND hWnd)
-        : RuntimeWin32{ hWnd, GetUrlFromPath(GetModulePath().parent_path()), 16, 16 }
+        : RuntimeWin32{ hWnd, GetUrlFromPath(GetModulePath().parent_path()) }
     {
     }
 
-    RuntimeWin32::RuntimeWin32(HWND hWnd, const std::string& rootUrl, uint32_t width, uint32_t height)
-        : Runtime{ std::make_unique<RuntimeImpl>(hWnd, rootUrl, width, height) }
+    RuntimeWin32::RuntimeWin32(HWND hWnd, const std::string& rootUrl)
+        : Runtime{ std::make_unique<RuntimeImpl>(hWnd, rootUrl) }
     {
         RECT rect;
         if (GetWindowRect(hWnd, &rect))
