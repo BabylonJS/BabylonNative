@@ -228,13 +228,13 @@ namespace babylon
         , m_size{ 1024, 768 }
         , m_engineState{ BGFX_STATE_DEFAULT }
         , m_viewClearState{ 0 }
-        , m_nativeWindow{ nativeWindowPtr }
+        , m_nativeWindowPtr{ nativeWindowPtr }
     {}
 
     void NativeEngine::Impl::InitializeRendering()
     {
         bgfx::Init init{};
-        init.platformData.nwh = m_nativeWindow;
+        init.platformData.nwh = m_nativeWindowPtr;
         bgfx::setPlatformData(init.platformData);
 
         init.type = bgfx::RendererType::Direct3D11;
