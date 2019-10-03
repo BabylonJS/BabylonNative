@@ -20,602 +20,54 @@ namespace
     }
 }
 
+// XrPlugin implementation proper.
 namespace babylon
 {
-    struct XRSessionType
-    {
-        static inline const std::string IMMERSIVE_VR{ "immersive-vr" };
-        static inline const std::string IMMERSIVE_AR{ "immersive-vr" };
-        static inline const std::string IMMERSIVE_INLINE{ "inline" };
-    };
-
-    struct XRReferenceSpaceType
-    {
-        static inline const std::string VIEWER{ "viewer" };
-        static inline const std::string LOCAL{ "local" };
-        static inline const std::string LOCAL_FLOOR{ "local-floor" };
-        static inline const std::string BOUNDED_FLOOR{ "bounded-floor" };
-        static inline const std::string UNBOUNDED{ "unbounded" };
-    };
-
-    struct XREye
-    {
-        static inline const std::string NONE{ "none" };
-        static inline const std::string LEFT{ "left" };
-        static inline const std::string RIGHT{ "right" };
-    };
-
-    class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
-    {
-        static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    InstanceAccessor("matrix", &XRRigidTransform::Matrix, nullptr)
-                });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(const Napi::CallbackInfo& info)
-        {
-            return constructor.New({ info[0] });
-        }
-
-        XRRigidTransform(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRRigidTransform>{ info }
-        {
-            m_matrix = info[0].As<Napi::Float32Array>();
-        }
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-
-        Napi::Float32Array m_matrix{};
-
-        Napi::Value Matrix(const Napi::CallbackInfo& info)
-        {
-            return m_matrix;
-        }
-    };
-
-    class XRViewerPose : public Napi::ObjectWrap<XRViewerPose>
-    {
-        static constexpr auto JS_CLASS_NAME = "XRViewerPose";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(env, JS_CLASS_NAME, {});
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(Napi::Env env, gsl::span<float, 16> matrix, gsl::span<xr::System::Session::Frame::View> views)
-        {
-            auto object = constructor.New({});
-
-            auto jsMatrix = Napi::Float32Array::New(env, matrix.size());
-            std::memcpy(jsMatrix.Data(), matrix.data(), jsMatrix.ByteLength());
-            object.Set("transform", jsMatrix);
-
-            // TODO: Set up all the views.
-            object.Set("views", Napi::Value::From(env, false));
-
-            return object;
-        }
-
-        XRViewerPose(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRViewerPose>{ info }
-        {}
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-    };
-
-    // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
-    class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
-    {
-        static constexpr auto JS_CLASS_NAME = "XRReferenceSpace";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-
-                });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(const Napi::CallbackInfo& info)
-        {
-            return constructor.New({ info[0] });
-        }
-
-        XRReferenceSpace(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRReferenceSpace>{ info }
-        {
-            // TODO: Figure out what in the world THIS is supposed to do.
-            assert(info[0].As<Napi::String>().Utf8Value() == XRReferenceSpaceType::UNBOUNDED);
-        }
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-    };
-
-    class XRFrame : public Napi::ObjectWrap<XRFrame>
-    {
-        static constexpr auto JS_CLASS_NAME = "XRFrame";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                    InstanceMethod("getPose", &XRFrame::GetPose)
-                });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(const xr::System::Session::Frame& frame)
-        {
-            auto object = constructor.New({});
-            XRFrame::Unwrap(object)->m_frame = &frame;
-            return object;
-        }
-
-        XRFrame(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRFrame>{ info }
-        {}
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-
-        const xr::System::Session::Frame* m_frame{};
-
-        Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
-        {
-            auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-
-            // TODO: Debug
-            std::array<float, 16> matrix
-            {
-                1.f, 0.f, 0.f, 0.f,
-                0.f, 1.f, 0.f, 0.f,
-                0.f, 0.f, 1.f, 0.f,
-                0.f, 0.f, 0.f, 1.f
-            };
-
-            return XRViewerPose::New(info.Env(), matrix, m_frame->Views);
-        }
-
-        Napi::Value GetPose(const Napi::CallbackInfo& info)
-        {
-            auto space = info[0].As<Napi::Object>();
-            auto baseSpace = info[1].As<Napi::Object>();
-
-            // TODO: Do stuff.
-            throw;
-        }
-    };
-
-    // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
-    class XRSession : public Napi::ObjectWrap<XRSession>
-    {
-        static constexpr auto JS_CLASS_NAME = "XRSession";
-        static constexpr auto JS_EVENT_NAME_END = "end";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    InstanceMethod("addEventListener", &XRSession::AddEventListener),
-                    InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
-                    InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
-                    InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
-                    InstanceMethod("cancelAnimationFrame", &XRSession::CancelAnimationFrame),
-                    InstanceMethod("end", &XRSession::End)
-                });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(const Napi::CallbackInfo& info)
-        {
-            return constructor.New({ info[0] });
-        }
-
-        XRSession(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRSession>{ info }
-        {
-            // Currently only immersive VR is supported.
-            assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR);
-        }
-
-        void SetEngine(NativeEngine::Impl& engine)
-        {
-            m_engine = &engine;
-        }
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-
-        std::map<const std::string, Napi::FunctionReference> m_eventNamesToCallbacks{};
-        NativeEngine::Impl* m_engine{};
-
-        void AddEventListener(const Napi::CallbackInfo& info)
-        {
-            auto [pair, success] = m_eventNamesToCallbacks.insert({
-                info[0].As<Napi::String>().Utf8Value(),
-                Napi::Persistent(info[1].As<Napi::Function>()) });
-            assert(success);
-        }
-
-        Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
-        {
-            auto deferred = Napi::Promise::Deferred::New(info.Env());
-            deferred.Resolve(XRReferenceSpace::New(info));
-            return deferred.Promise();
-        }
-
-        Napi::Value UpdateRenderState(const Napi::CallbackInfo& info)
-        {
-            auto renderState = info[0].As<Napi::Object>();
-
-            auto deferred = Napi::Promise::Deferred::New(info.Env());
-            deferred.Resolve(Napi::Value::From(info.Env(), 0));
-            return deferred.Promise();
-        }
-
-        Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
-        {
-            m_engine->Dispatch([func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()]()
-            {
-                xr::System::Session::Frame* framePtr{}; // TODO DEBUG
-                auto jsFrame = XRFrame::New(*framePtr);
-                auto& frame = *XRFrame::Unwrap(jsFrame);
-
-                // TODO: initialize the frame.
-
-                func->Call({ Napi::Value::From(env, -1), jsFrame });
-            });
-            
-            // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
-            return Napi::Value::From(info.Env(), 0);
-        }
-
-        void CancelAnimationFrame(const Napi::CallbackInfo& info)
-        {
-            throw;
-        }
-
-        Napi::Value End(const Napi::CallbackInfo& info)
-        {
-            throw;
-        }
-    };
-
-    class NativeWebXROutputTarget : public Napi::ObjectWrap<NativeWebXROutputTarget>
-    {
-        static constexpr auto JS_CLASS_NAME = "NativeWebXROutputTarget";
-
-        // TODO: Remove this once the correct (non-singleton) design is in place for the NativeEngine.
-        static auto& GetNativeEngineImplRef(const Napi::CallbackInfo& info)
-        {
-            auto jsEngine = info[0].As<Napi::Object>();
-            auto nativeEngine = jsEngine.Get("_native").As<Napi::Object>();
-            auto getEngine = nativeEngine.Get("getEngine").As<Napi::Function>();
-            return *getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine::Impl>>().Data();
-        }
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    InstanceMethod("initializeXRLayerAsync", &NativeWebXROutputTarget::InitializeXRLayerAsync)
-                });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(const Napi::CallbackInfo& info)
-        {
-            return constructor.New({ info[0] });
-        }
-
-        NativeWebXROutputTarget(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<NativeWebXROutputTarget>{ info }
-            , m_jsEngineReference{ Napi::Persistent(info[0].As<Napi::Object>()) }
-            , m_engine{ GetNativeEngineImplRef(info) }
-        {}
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-
-        // Lifetime control to prevent the cleanup of the NativeEngine while XR is still alive.
-        Napi::ObjectReference m_jsEngineReference{};
-        // TODO: Keep a less dramatic impression of the native engine than this.
-        NativeEngine::Impl& m_engine;
-
-        Napi::Value InitializeXRLayerAsync(const Napi::CallbackInfo& info)
-        {
-            // TODO BAD DESIGN: Having this here introduces something of a circular dependency with the session 
-            // and the output target having to know about each other. There are several possible solutions to 
-            // this, including rearchitecting the JavaScript side slightly (probably the safest, but will be
-            // a bit invasive) and combining the session and the output target to be the same thing. For now,
-            // keep the circular dependency ONLY TO SEE HOW THE REST OF THE LOGIC FALLS AROUND IT. Once all the
-            // logic is in place and working, hopefully it will be clear what's the best way to refactor to 
-            // remove the circular dependency.
-            auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
-            session.SetEngine(m_engine);
-
-            // throw std::exception{ /* What the hell are we even supposed to do here? */ };
-
-            auto deferred = Napi::Promise::Deferred::New(info.Env());
-            deferred.Resolve(Napi::Value::From(info.Env(), 0)); // TODO: Why is it REQUIRED that I pass a valid value here?
-            return deferred.Promise();
-        }
-    };
-
-    class NativeRenderTargetProvider : public Napi::ObjectWrap<NativeRenderTargetProvider>
-    {
-        static constexpr auto JS_CLASS_NAME = "NativeRenderTargetProvider";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    InstanceMethod("getRenderTargetForEye", &NativeRenderTargetProvider::GetRenderTargetForEye)
-                });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set(JS_CLASS_NAME, func);
-        }
-
-        static Napi::Object New(const Napi::CallbackInfo& info)
-        {
-            return constructor.New({ info[0], info[1] });
-        }
-
-        NativeRenderTargetProvider(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<NativeRenderTargetProvider>{ info }
-        {
-            auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
-            auto createRenderTextureCallback = info[1].As<Napi::Function>();
-
-            // TODO: Do stuff.
-        }
-
-    private:
-        static inline Napi::FunctionReference constructor{};
-
-        Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
-        {
-            const std::string eye{ info[0].As<Napi::String>().Utf8Value() };
-
-            if (eye == XREye::LEFT)
-            {
-                throw;
-            }
-            else if (eye == XREye::RIGHT)
-            {
-                throw;
-            }
-            else if (eye == XREye::NONE)
-            {
-                throw;
-            }
-            else
-            {
-                throw std::exception{ /* Unrecognized eye. */ };
-            }
-        }
-    };
-
-    // Implementation of the XR interface: https://immersive-web.github.io/webxr/#xr-interface
-    class XR : public Napi::ObjectWrap<XR>
-    {
-        static constexpr auto JS_CLASS_NAME = "NativeXR";
-        static constexpr auto JS_NAVIGATOR_NAME = "navigator";
-        static constexpr auto JS_XR_NAME = "xr";
-        static constexpr auto JS_NATIVE_NAME = "native";
-
-    public:
-        static void Initialize(Napi::Env& env)
-        {
-            Napi::HandleScope scope{ env };
-
-            Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
-                    InstanceMethod("requestSession", &XR::RequestSession),
-                    InstanceMethod("getWebXROutputTarget", &XR::GetWebXROutputTarget),
-                    InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
-                    InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true))
-                });
-
-            Napi::Object global = env.Global();
-            Napi::Object navigator;
-            if (global.Has(JS_NAVIGATOR_NAME))
-            {
-                navigator = global.Get(JS_NAVIGATOR_NAME).As<Napi::Object>();
-            }
-            else
-            {
-                navigator = Napi::Object::New(env);
-                global.Set(JS_NAVIGATOR_NAME, navigator);
-            }
-
-            auto xr = func.New({});
-            navigator.Set(JS_XR_NAME, xr);
-        }
-
-        XR(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XR>{ info }
-        {}
-
-    private:
-
-        Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
-        {
-            auto sessionType = info[0].As<Napi::String>().Utf8Value();
-            bool isSupported = false;
-
-            if (sessionType == XRSessionType::IMMERSIVE_VR)
-            {
-                isSupported = true;
-            }
-
-            auto deferred = Napi::Promise::Deferred::New(info.Env());
-            deferred.Resolve(Napi::Boolean::New(info.Env(), isSupported));
-            return deferred.Promise();
-        }
-
-        Napi::Value RequestSession(const Napi::CallbackInfo& info)
-        {
-            auto deferred = Napi::Promise::Deferred::New(info.Env());
-            deferred.Resolve(XRSession::New(info));
-            return deferred.Promise();
-        }
-
-        Napi::Value GetWebXROutputTarget(const Napi::CallbackInfo& info)
-        {
-            return NativeWebXROutputTarget::New(info);
-        }
-
-        Napi::Value GetNativeRenderTargetProvider(const Napi::CallbackInfo& info)
-        {
-            return NativeRenderTargetProvider::New(info);
-        }
-    };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    class XrPlugin : public Napi::ObjectWrap<XrPlugin>
+    class XrPlugin
     {
     public:
-        static void Initialize(Napi::Env&);
-
-        XrPlugin::XrPlugin(const Napi::CallbackInfo& info);
+        XrPlugin::XrPlugin();
         ~XrPlugin();
 
-    private:
-        static inline Napi::FunctionReference constructor{};
-
-        void BeginSession(const Napi::CallbackInfo&); // TODO: Make this asynchronous.
-        void EndSession(const Napi::CallbackInfo&); // TODO: Make this asynchronous.
-        void EndSession();
-        void BeginFrame(const Napi::CallbackInfo&);
-        void EndFrame(const Napi::CallbackInfo&);
+        void BeginSession(); // TODO: Make this asynchronous.
+        void EndSession(); // TODO: Make this asynchronous.
+        void BeginFrame();
         void EndFrame();
-        Napi::Value GetActiveFrameBuffers(const Napi::CallbackInfo& info);
 
+        const auto& Frame() const
+        {
+            return *m_frame;
+        }
+
+        auto ActiveFrameBuffers() const
+        {
+            return gsl::make_span(m_activeFrameBuffers);
+        }
+
+        void SetEngine(Napi::Object& jsEngine)
+        {
+            auto nativeEngine = jsEngine.Get("_native").As<Napi::Object>();
+            auto getEngine = nativeEngine.Get("getEngine").As<Napi::Function>();
+            m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine::Impl>>().Data();
+        }
+
+        template<typename CallableT>
+        void Dispatch(CallableT&& callable)
+        {
+            m_engineImpl->Dispatch(callable);
+        }
+
+    private:
         xr::System m_system{};
         std::unique_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
-        FrameBufferManager& m_frameBufferManager;
+        NativeEngine::Impl* m_engineImpl{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
 
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
     };
 
-    void XrPlugin::Initialize(Napi::Env& env)
-    {
-        Napi::HandleScope scope{ env };
-
-        Napi::Function func = DefineClass(
-            env,
-            "XrPlugin",
-            {
-                InstanceMethod("beginSession", &XrPlugin::BeginSession),
-                InstanceMethod("endSession", &XrPlugin::EndSession),
-                InstanceMethod("beginFrame", &XrPlugin::BeginFrame),
-                InstanceMethod("endFrame", &XrPlugin::EndFrame),
-                InstanceMethod("getActiveFrameBuffers", &XrPlugin::GetActiveFrameBuffers)
-            });
-
-        constructor = Napi::Persistent(func);
-        constructor.SuppressDestruct();
-
-        env.Global().Set("XrPlugin", func);
-    }
-
-    XrPlugin::XrPlugin(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<XrPlugin>{ info }
-        , m_frameBufferManager{ info[0].As<Napi::External<NativeEngine::Impl>>().Data()->GetFrameBufferManager() }
+    XrPlugin::XrPlugin()
     {}
 
     XrPlugin::~XrPlugin()
@@ -632,7 +84,7 @@ namespace babylon
     }
 
     // TODO: Make this asynchronous.
-    void XrPlugin::BeginSession(const Napi::CallbackInfo&)
+    void XrPlugin::BeginSession()
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -646,11 +98,6 @@ namespace babylon
     }
 
     // TODO: Make this asynchronous.
-    void XrPlugin::EndSession(const Napi::CallbackInfo&)
-    {
-        EndSession();
-    }
-
     void XrPlugin::EndSession()
     {
         assert(m_session != nullptr);
@@ -669,8 +116,9 @@ namespace babylon
         m_session.reset();
     }
 
-    void XrPlugin::BeginFrame(const Napi::CallbackInfo&)
+    void XrPlugin::BeginFrame()
     {
+        assert(m_engineImpl != nullptr);
         assert(m_session != nullptr);
         assert(m_frame == nullptr);
 
@@ -713,7 +161,7 @@ namespace babylon
                 attachments[1].init(depthTex);
                 auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                auto fbPtr = m_frameBufferManager.CreateNew(
+                auto fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
                     frameBuffer,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
                     static_cast<uint16_t>(view.ColorTextureSize.Height));
@@ -728,11 +176,6 @@ namespace babylon
         }
     }
 
-    void XrPlugin::EndFrame(const Napi::CallbackInfo&)
-    {
-        EndFrame();
-    }
-
     void XrPlugin::EndFrame()
     {
         assert(m_session != nullptr);
@@ -742,21 +185,662 @@ namespace babylon
 
         m_frame.reset();
     }
+}
 
-    Napi::Value XrPlugin::GetActiveFrameBuffers(const Napi::CallbackInfo& info)
+namespace babylon
+{
+    namespace
     {
-        auto activeFrameBuffers = Napi::Array::New(info.Env(), m_activeFrameBuffers.size());
-        for (uint32_t idx = 0; idx < m_activeFrameBuffers.size(); ++idx)
+        struct XRSessionType
         {
-            activeFrameBuffers[idx] = Napi::External<FrameBufferData>::New(info.Env(), m_activeFrameBuffers[idx]);
-        }
+            static inline const std::string IMMERSIVE_VR{ "immersive-vr" };
+            static inline const std::string IMMERSIVE_AR{ "immersive-vr" };
+            static inline const std::string IMMERSIVE_INLINE{ "inline" };
+        };
 
-        return activeFrameBuffers;
+        struct XRReferenceSpaceType
+        {
+            static inline const std::string VIEWER{ "viewer" };
+            static inline const std::string LOCAL{ "local" };
+            static inline const std::string LOCAL_FLOOR{ "local-floor" };
+            static inline const std::string BOUNDED_FLOOR{ "bounded-floor" };
+            static inline const std::string UNBOUNDED{ "unbounded" };
+        };
+
+        struct XREye
+        {
+            static inline const std::string NONE{ "none" };
+            static inline const std::string LEFT{ "left" };
+            static inline const std::string RIGHT{ "right" };
+        };
+
+        class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRWebGLLayer";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getViewport", &XRWebGLLayer::GetViewport)
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New()
+            {
+                return constructor.New({});
+            }
+
+            XRWebGLLayer(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRWebGLLayer>{ info }
+            {}
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+
+            Napi::Value GetViewport(const Napi::CallbackInfo& info)
+            {
+                return info.This().As<Napi::Object>().Get("viewport");
+            }
+        };
+
+        class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("matrix", &XRRigidTransform::Matrix, nullptr)
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(Napi::Env env, gsl::span<const float, 16> matrix)
+            {
+                auto jsMatrix = Napi::Float32Array::New(env, matrix.size());
+                std::memcpy(jsMatrix.Data(), matrix.data(), jsMatrix.ByteLength());
+                return constructor.New({ jsMatrix });
+            }
+
+            XRRigidTransform(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRRigidTransform>{ info }
+            {
+                m_matrix = info[0].As<Napi::Float32Array>();
+            }
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+
+            Napi::Float32Array m_matrix{};
+
+            Napi::Value Matrix(const Napi::CallbackInfo& info)
+            {
+                return m_matrix;
+            }
+        };
+
+        class XRView : public Napi::ObjectWrap<XRView>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRView";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(env, JS_CLASS_NAME, {});
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(Napi::Env env, const std::string& eye, gsl::span<const float, 16> projectionMatrix, gsl::span<const float, 16> transformMatrix)
+            {
+                auto object = constructor.New({});
+
+                object.Set("eye", Napi::Value::From(env, eye.c_str()));
+
+                auto jsMatrix = Napi::Float32Array::New(env, projectionMatrix.size());
+                std::memcpy(jsMatrix.Data(), projectionMatrix.data(), jsMatrix.ByteLength());
+                object.Set("projectionMatrix", jsMatrix);
+
+                object.Set("transform", XRRigidTransform::New(env, transformMatrix));
+
+                return object;
+            }
+
+            XRView(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRView>{ info }
+            {}
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+        };
+
+        class XRViewerPose : public Napi::ObjectWrap<XRViewerPose>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRViewerPose";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(env, JS_CLASS_NAME, {});
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(Napi::Env env, gsl::span<const float, 16> matrix, gsl::span<const xr::System::Session::Frame::View> views)
+            {
+                auto object = constructor.New({});
+
+                object.Set("transform", XRRigidTransform::New(env, matrix));
+
+                auto jsViews = Napi::Array::New(env, views.size());
+                for (int idx = 0; idx < views.size(); ++idx)
+                {
+                    jsViews.Set(idx, XRView::New(env, "left", matrix, matrix));
+                }
+                object.Set("views", jsViews);
+
+                return object;
+            }
+
+            XRViewerPose(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRViewerPose>{ info }
+            {}
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+        };
+
+        // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
+        class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRReferenceSpace";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return constructor.New({ info[0] });
+            }
+
+            XRReferenceSpace(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRReferenceSpace>{ info }
+            {
+                // TODO: Figure out what in the world THIS is supposed to do.
+                assert(info[0].As<Napi::String>().Utf8Value() == XRReferenceSpaceType::UNBOUNDED);
+            }
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+        };
+
+        class XRFrame : public Napi::ObjectWrap<XRFrame>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRFrame";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
+                        InstanceMethod("getPose", &XRFrame::GetPose)
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const xr::System::Session::Frame& frame)
+            {
+                auto object = constructor.New({});
+                XRFrame::Unwrap(object)->m_frame = &frame;
+                return object;
+            }
+
+            XRFrame(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRFrame>{ info }
+            {}
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+
+            const xr::System::Session::Frame* m_frame{};
+
+            Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
+            {
+                auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+
+                // TODO: Debug
+                constexpr std::array<float, 16> matrix
+                {
+                    1.f, 0.f, 0.f, 0.f,
+                    0.f, 1.f, 0.f, 0.f,
+                    0.f, 0.f, 1.f, 0.f,
+                    0.f, 0.f, 0.f, 1.f
+                };
+
+                return XRViewerPose::New(info.Env(), matrix, m_frame->Views);
+            }
+
+            Napi::Value GetPose(const Napi::CallbackInfo& info)
+            {
+                auto space = info[0].As<Napi::Object>();
+                auto baseSpace = info[1].As<Napi::Object>();
+
+                // TODO: Do stuff.
+                throw;
+            }
+        };
+
+        // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
+        class XRSession : public Napi::ObjectWrap<XRSession>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRSession";
+            static constexpr auto JS_EVENT_NAME_END = "end";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("addEventListener", &XRSession::AddEventListener),
+                        InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
+                        InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
+                        InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
+                        InstanceMethod("cancelAnimationFrame", &XRSession::CancelAnimationFrame),
+                        InstanceMethod("end", &XRSession::End)
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
+            {
+                auto jsSession = constructor.New({ info[0] });
+                auto& session = *XRSession::Unwrap(jsSession);
+
+                session.m_xrPlugin.BeginSession();
+
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(jsSession);
+                return deferred.Promise();
+            }
+
+            XRSession(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRSession>{ info }
+            {
+                // Currently only immersive VR is supported.
+                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR);
+            }
+
+            void SetEngine(Napi::Object& jsEngine)
+            {
+                m_xrPlugin.SetEngine(jsEngine);
+            }
+
+            void InitializeXrLayer(Napi::Object layer)
+            {
+                constexpr size_t WIDTH = 1280;
+                constexpr size_t HEIGHT = 1280;
+
+                auto env = layer.Env();
+                auto viewport = Napi::Object::New(env);
+                viewport.Set("x", Napi::Value::From(env, 0));
+                viewport.Set("y", Napi::Value::From(env, 0));
+                viewport.Set("width", Napi::Value::From(env, WIDTH));
+                viewport.Set("height", Napi::Value::From(env, HEIGHT));
+                layer.Set("viewport", viewport);
+
+                layer.Set("framebufferWidth", Napi::Value::From(env, WIDTH));
+                layer.Set("framebufferHeight", Napi::Value::From(env, HEIGHT));
+            }
+
+            FrameBufferData* GetFrameBufferForEye(const std::string& eye)
+            {
+                // TODO: Get the correct one by eye.
+                return m_xrPlugin.ActiveFrameBuffers()[0];
+            }
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+
+            XrPlugin m_xrPlugin{};
+
+            std::map<const std::string, Napi::FunctionReference> m_eventNamesToCallbacks{};
+
+            void AddEventListener(const Napi::CallbackInfo& info)
+            {
+                auto [pair, success] = m_eventNamesToCallbacks.insert({
+                    info[0].As<Napi::String>().Utf8Value(),
+                    Napi::Persistent(info[1].As<Napi::Function>()) });
+                assert(success);
+            }
+
+            Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
+            {
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(XRReferenceSpace::New(info));
+                return deferred.Promise();
+            }
+
+            Napi::Value UpdateRenderState(const Napi::CallbackInfo& info)
+            {
+                auto renderState = info[0].As<Napi::Object>();
+                info.This().As<Napi::Object>().Set("renderState", renderState);
+
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(Napi::Value::From(info.Env(), 0));
+                return deferred.Promise();
+            }
+
+            Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
+            {
+                m_xrPlugin.Dispatch([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()]()
+                {
+                    m_xrPlugin.BeginFrame();
+
+                    auto jsFrame = XRFrame::New(m_xrPlugin.Frame());
+                    auto& frame = *XRFrame::Unwrap(jsFrame);
+
+                    // TODO: initialize the frame.
+
+                    func->Call({ Napi::Value::From(env, -1), jsFrame });
+
+                    m_xrPlugin.EndFrame();
+                });
+
+                // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
+                return Napi::Value::From(info.Env(), 0);
+            }
+
+            void CancelAnimationFrame(const Napi::CallbackInfo& info)
+            {
+                throw;
+            }
+
+            Napi::Value End(const Napi::CallbackInfo& info)
+            {
+                throw;
+            }
+        };
+
+        class NativeWebXROutputTarget : public Napi::ObjectWrap<NativeWebXROutputTarget>
+        {
+            static constexpr auto JS_CLASS_NAME = "NativeWebXROutputTarget";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("initializeXRLayerAsync", &NativeWebXROutputTarget::InitializeXRLayerAsync)
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return constructor.New({ info[0] });
+            }
+
+            NativeWebXROutputTarget(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<NativeWebXROutputTarget>{ info }
+                , m_jsEngineReference{ Napi::Persistent(info[0].As<Napi::Object>()) }
+            {}
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+
+            // Lifetime control to prevent the cleanup of the NativeEngine while XR is still alive.
+            Napi::ObjectReference m_jsEngineReference{};
+
+            Napi::Value InitializeXRLayerAsync(const Napi::CallbackInfo& info)
+            {
+                // TODO BAD DESIGN: Having this here introduces something of a circular dependency with the session 
+                // and the output target having to know about each other. There are several possible solutions to 
+                // this, including rearchitecting the JavaScript side slightly (probably the safest, but will be
+                // a bit invasive) and combining the session and the output target to be the same thing. For now,
+                // keep the circular dependency ONLY TO SEE HOW THE REST OF THE LOGIC FALLS AROUND IT. Once all the
+                // logic is in place and working, hopefully it will be clear what's the best way to refactor to 
+                // remove the circular dependency.
+                auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
+                session.SetEngine(m_jsEngineReference.Value());
+
+                auto xrLayer = XRWebGLLayer::New();
+                session.InitializeXrLayer(xrLayer);
+                info.This().As<Napi::Object>().Set("xrLayer", xrLayer);
+
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(Napi::Value::From(info.Env(), 0)); // TODO: Why is it REQUIRED that I pass a valid value here?
+                return deferred.Promise();
+            }
+        };
+
+        class NativeRenderTargetProvider : public Napi::ObjectWrap<NativeRenderTargetProvider>
+        {
+            static constexpr auto JS_CLASS_NAME = "NativeRenderTargetProvider";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getRenderTargetForEye", &NativeRenderTargetProvider::GetRenderTargetForEye)
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return constructor.New({ info[0], info[1] });
+            }
+
+            NativeRenderTargetProvider(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<NativeRenderTargetProvider>{ info }
+            {
+                m_session = XRSession::Unwrap(info[0].As<Napi::Object>());
+
+                auto createRenderTextureCallback = info[1].As<Napi::Function>();
+                auto dimension = Napi::Value::From(info.Env(), 1280);
+                auto lrtt = createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>();
+                auto rrtt = createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>();
+
+                m_leftEyeRenderTargetTexture = Napi::Persistent(lrtt);
+                m_rightEyeRenderTargetTexture = Napi::Persistent(rrtt);
+            }
+
+        private:
+            static inline Napi::FunctionReference constructor{};
+
+            XRSession* m_session{};
+
+            Napi::ObjectReference m_leftEyeRenderTargetTexture{};
+            Napi::ObjectReference m_rightEyeRenderTargetTexture{};
+
+            Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
+            {
+                const std::string eye{ info[0].As<Napi::String>().Utf8Value() };
+
+                if (eye == XREye::LEFT)
+                {
+                    auto rtt = m_leftEyeRenderTargetTexture.Value();
+                    rtt.Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session->GetFrameBufferForEye(eye)));
+                    return rtt;
+                }
+                else if (eye == XREye::RIGHT)
+                {
+                    throw;
+                }
+                else if (eye == XREye::NONE)
+                {
+                    throw std::exception{ /* Non-stereo XR not supported. */ };
+                }
+                else
+                {
+                    throw std::exception{ /* Unrecognized eye. */ };
+                }
+            }
+        };
+
+        // Implementation of the XR interface: https://immersive-web.github.io/webxr/#xr-interface
+        class XR : public Napi::ObjectWrap<XR>
+        {
+            static constexpr auto JS_CLASS_NAME = "NativeXR";
+            static constexpr auto JS_NAVIGATOR_NAME = "navigator";
+            static constexpr auto JS_XR_NAME = "xr";
+            static constexpr auto JS_NATIVE_NAME = "native";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::HandleScope scope{ env };
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
+                        InstanceMethod("requestSession", &XR::RequestSession),
+                        InstanceMethod("getWebXROutputTarget", &XR::GetWebXROutputTarget),
+                        InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
+                        InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true))
+                    });
+
+                Napi::Object global = env.Global();
+                Napi::Object navigator;
+                if (global.Has(JS_NAVIGATOR_NAME))
+                {
+                    navigator = global.Get(JS_NAVIGATOR_NAME).As<Napi::Object>();
+                }
+                else
+                {
+                    navigator = Napi::Object::New(env);
+                    global.Set(JS_NAVIGATOR_NAME, navigator);
+                }
+
+                auto xr = func.New({});
+                navigator.Set(JS_XR_NAME, xr);
+            }
+
+            XR(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XR>{ info }
+            {}
+
+        private:
+
+            Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
+            {
+                auto sessionType = info[0].As<Napi::String>().Utf8Value();
+                bool isSupported = false;
+
+                if (sessionType == XRSessionType::IMMERSIVE_VR)
+                {
+                    isSupported = true;
+                }
+
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(Napi::Boolean::New(info.Env(), isSupported));
+                return deferred.Promise();
+            }
+
+            Napi::Value RequestSession(const Napi::CallbackInfo& info)
+            {
+                return XRSession::CreateAsync(info);
+            }
+
+            Napi::Value GetWebXROutputTarget(const Napi::CallbackInfo& info)
+            {
+                return NativeWebXROutputTarget::New(info);
+            }
+
+            Napi::Value GetNativeRenderTargetProvider(const Napi::CallbackInfo& info)
+            {
+                return NativeRenderTargetProvider::New(info);
+            }
+        };
     }
 
     void InitializeXrPlugin(babylon::Env& env)
     {
+        XRWebGLLayer::Initialize(env);
         XRRigidTransform::Initialize(env);
+        XRView::Initialize(env);
         XRViewerPose::Initialize(env);
         XRReferenceSpace::Initialize(env);
         XRFrame::Initialize(env);
@@ -764,7 +848,5 @@ namespace babylon
         NativeWebXROutputTarget::Initialize(env);
         NativeRenderTargetProvider::Initialize(env);
         XR::Initialize(env);
-
-        XrPlugin::Initialize(env);
     }
 }

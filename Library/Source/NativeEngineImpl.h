@@ -173,7 +173,16 @@ namespace babylon
 
         void Bind(FrameBufferData* data)
         {
-            assert(m_boundFrameBuffer == nullptr);
+            if (m_boundFrameBuffer == data)
+            {
+                return;
+            }
+            
+            if (m_boundFrameBuffer != nullptr)
+            {
+                Unbind(m_boundFrameBuffer);
+            }
+
             m_boundFrameBuffer = data;
 
             // TODO: Consider doing this only on bgfx::reset(); the effects of this call don't survive reset, but as

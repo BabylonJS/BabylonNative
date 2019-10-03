@@ -67,10 +67,7 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-    // scene.createDefaultCamera(true);
-    scene.createDefaultXRExperienceAsync({ disableDefaultUI: true }).then((xr) => {
-        return xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.outputTarget);
-    });
+    scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     
     CreateInputHandling(scene);
@@ -130,6 +127,15 @@ CreateBoxAsync().then(function () {
     engine.runRenderLoop(function () {
         scene.render();
     });
+
+    setTimeout(function () {
+        scene.createDefaultXRExperienceAsync({ disableDefaultUI: true }).then((xr) => {
+            setTimeout(function () { xr.baseExperience.exitXRAsync(); }, 10000);
+            return xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.outputTarget);
+        });
+    }, 5000);
+
+    
 }, function (ex) {
     console.log(ex.message, ex.stack);
 });
