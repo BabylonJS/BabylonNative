@@ -1,3 +1,4 @@
+#pragma once
 #include <napi/napi.h>
 
 #include <memory>
