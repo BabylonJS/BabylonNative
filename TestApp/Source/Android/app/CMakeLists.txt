@@ -25,31 +25,19 @@ set(OPENGL_LIB GLESv3)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(ANDROID_STL "c++_shared")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-<<<<<<< HEAD
-
-=======
->>>>>>> af5c2d45b1a62f7faacd54f3f23b33a39731c46c
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/")
 
 set(BABYLON_NATIVE_TESTAPP_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
-<<<<<<< HEAD
 
-=======
->>>>>>> af5c2d45b1a62f7faacd54f3f23b33a39731c46c
 add_library(BabylonNativeJNI SHARED
             src/main/cpp/BabylonNativeJNI.cpp
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/js_native_api_v8.cc
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/env_v8.cc
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/env.cc
-<<<<<<< HEAD
-            ${BABYLON_NATIVE_TESTAPP_DIR}/Shared/InputManager.cpp
-         )
-=======
             ${BABYLON_NATIVE_TESTAPP_DIR}/Shared/InputManager.cpp)
->>>>>>> af5c2d45b1a62f7faacd54f3f23b33a39731c46c
 
 target_compile_definitions(BabylonNativeJNI PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 
@@ -58,12 +46,7 @@ target_include_directories(BabylonNativeJNI
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Include
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/v8/include
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/include
-<<<<<<< HEAD
-        ${BABYLON_NATIVE_TESTAPP_DIR}/Shared
-        )
-=======
         ${BABYLON_NATIVE_TESTAPP_DIR}/Shared)
->>>>>>> af5c2d45b1a62f7faacd54f3f23b33a39731c46c
 
 add_definitions(-DANDROID_STL=c++_shared)
 
@@ -74,10 +57,4 @@ target_link_libraries(BabylonNativeJNI
         log
         -lz
         Library
-<<<<<<< HEAD
-        ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.cr.so
-        ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8_libplatform.cr.so
-        ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libc++_shared.so)
-=======
         ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.so)
->>>>>>> af5c2d45b1a62f7faacd54f3f23b33a39731c46c
