@@ -214,32 +214,12 @@ namespace babylon
             // ALPHA_SCREENMODE: SRC + (1 - SRC) * DEST, SRC ALPHA + (1 - SRC ALPHA) * DEST ALPHA
             BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
         };
-    }
-
-    class NativeEngine::Impl final
-    {
-    public:
-        Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
-
-        void Initialize(Napi::Env& env);
-        
-        void UpdateSize(float width, float height);
-        void UpdateRenderTarget();
-        void Suspend();
-
-    private:
-        void InitializeRendering();
-
-        using EngineDefiner = NativeEngineDefiner<NativeEngine::Impl>;
-        friend EngineDefiner;
-
-        struct VertexArray final
+    
         constexpr std::array<bgfx::TextureFormat::Enum, 2> TEXTURE_FORMAT
         {
             bgfx::TextureFormat::RGBA8,
             bgfx::TextureFormat::RGBA32F
         };
-
     }
 
     NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
