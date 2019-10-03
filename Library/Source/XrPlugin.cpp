@@ -212,6 +212,36 @@ namespace babylon
             static inline const std::string NONE{ "none" };
             static inline const std::string LEFT{ "left" };
             static inline const std::string RIGHT{ "right" };
+
+            template<typename IdxT>
+            static inline const auto& IndexToEye(IdxT idx)
+            {
+                switch (idx)
+                {
+                case 0:
+                    return LEFT;
+                case 1:
+                    return RIGHT;
+                default:
+                    throw std::exception{ /* Unsupported idx */ };
+                }
+            }
+
+            static inline const auto EyeToIndex(const std::string& eye)
+            {
+                if (eye == LEFT)
+                {
+                    return 0;
+                }
+                else if (eye == RIGHT)
+                {
+                    return 1;
+                }
+                else
+                {
+                    throw std::exception{ /* Unsupported eye */ };
+                }
+            }
         };
 
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
@@ -366,7 +396,7 @@ namespace babylon
                 auto jsViews = Napi::Array::New(env, views.size());
                 for (int idx = 0; idx < views.size(); ++idx)
                 {
-                    jsViews.Set(idx, XRView::New(env, "left", matrix, matrix));
+                    jsViews.Set(idx, XRView::New(env, XREye::IndexToEye(idx), matrix, matrix));
                 }
                 object.Set("views", jsViews);
 
@@ -480,7 +510,7 @@ namespace babylon
                 auto space = info[0].As<Napi::Object>();
                 auto baseSpace = info[1].As<Napi::Object>();
 
-                // TODO: Do stuff.
+                // TODO: Stub.
                 throw;
             }
         };
@@ -555,10 +585,9 @@ namespace babylon
                 layer.Set("framebufferHeight", Napi::Value::From(env, HEIGHT));
             }
 
-            FrameBufferData* GetFrameBufferForEye(const std::string& eye)
+            FrameBufferData* GetFrameBufferForEye(const std::string& eye) const
             {
-                // TODO: Get the correct one by eye.
-                return m_xrPlugin.ActiveFrameBuffers()[0];
+                return m_xrPlugin.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
             }
 
         private:
@@ -607,6 +636,8 @@ namespace babylon
                     func->Call({ Napi::Value::From(env, -1), jsFrame });
 
                     m_xrPlugin.EndFrame();
+
+                    bgfx::frame();
                 });
 
                 // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
@@ -718,11 +749,11 @@ namespace babylon
 
                 auto createRenderTextureCallback = info[1].As<Napi::Function>();
                 auto dimension = Napi::Value::From(info.Env(), 1280);
-                auto lrtt = createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>();
-                auto rrtt = createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>();
 
-                m_leftEyeRenderTargetTexture = Napi::Persistent(lrtt);
-                m_rightEyeRenderTargetTexture = Napi::Persistent(rrtt);
+                for (size_t idx = 0; idx < m_renderTargetTextures.size(); ++idx)
+                {
+                    m_renderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>());
+                }
             }
 
         private:
@@ -730,31 +761,15 @@ namespace babylon
 
             XRSession* m_session{};
 
-            Napi::ObjectReference m_leftEyeRenderTargetTexture{};
-            Napi::ObjectReference m_rightEyeRenderTargetTexture{};
+            std::array<Napi::ObjectReference, 2> m_renderTargetTextures;
 
             Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
             {
                 const std::string eye{ info[0].As<Napi::String>().Utf8Value() };
 
-                if (eye == XREye::LEFT)
-                {
-                    auto rtt = m_leftEyeRenderTargetTexture.Value();
-                    rtt.Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session->GetFrameBufferForEye(eye)));
-                    return rtt;
-                }
-                else if (eye == XREye::RIGHT)
-                {
-                    throw;
-                }
-                else if (eye == XREye::NONE)
-                {
-                    throw std::exception{ /* Non-stereo XR not supported. */ };
-                }
-                else
-                {
-                    throw std::exception{ /* Unrecognized eye. */ };
-                }
+                auto rtt = m_renderTargetTextures[XREye::EyeToIndex(eye)].Value();
+                rtt.Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session->GetFrameBufferForEye(eye)));
+                return rtt;
             }
         };
 

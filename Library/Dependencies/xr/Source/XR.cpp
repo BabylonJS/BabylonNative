@@ -587,8 +587,8 @@ namespace xr
         XrAssert(xrEndFrame(m_sessionImpl.Session, &frameEndInfo));
     }
 
-    System::System()
-        : m_impl{ std::make_unique<System::Impl>("APP NAME HERE") }
+    System::System(const char* appName)
+        : m_impl{ std::make_unique<System::Impl>(appName) }
     {}
 
     System::~System() {}

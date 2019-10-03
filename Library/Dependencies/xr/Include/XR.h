@@ -100,7 +100,7 @@ namespace xr
             std::unique_ptr<Impl> m_impl{};
         };
 
-        System();
+        System(const char* = "OpenXR Experience");
         ~System();
 
         System(System&) = delete;
