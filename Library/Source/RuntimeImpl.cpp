@@ -9,8 +9,8 @@
 
 namespace babylon
 {
-    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, uint32_t width, uint32_t height)
-        : m_engine{ std::make_unique<NativeEngine>(nativeWindowPtr, *this, width, height) }
+    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
+        : m_engine{ std::make_unique<NativeEngine>(nativeWindowPtr, *this) }
         , m_thread{ [this] { ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
     {

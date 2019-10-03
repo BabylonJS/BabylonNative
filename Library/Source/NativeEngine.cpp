@@ -218,7 +218,7 @@ namespace babylon
     class NativeEngine::Impl final
     {
     public:
-        Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl, uint32_t width, uint32_t height);
+        Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
 
         void Initialize(Napi::Env& env);
         
@@ -241,10 +241,10 @@ namespace babylon
 
     }
 
-    NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl, uint32_t width, uint32_t height)
+    NativeEngine::Impl::Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
         : m_runtimeImpl{ runtimeImpl }
         , m_currentProgram{ nullptr }
-        , m_size{ width, height }
+        , m_size{ 1024, 768 }
         , m_engineState{ BGFX_STATE_DEFAULT }
         , m_nativeWindow{ nativeWindowPtr }
     {
@@ -1099,8 +1099,8 @@ namespace babylon
 
     // NativeEngine exterior definitions.
 
-    NativeEngine::NativeEngine(void* nativeWindowPtr, RuntimeImpl& runtimeImpl, uint32_t width, uint32_t height)
-        : m_impl{ std::make_unique<NativeEngine::Impl>(nativeWindowPtr, runtimeImpl, width, height) }
+    NativeEngine::NativeEngine(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
+        : m_impl{ std::make_unique<NativeEngine::Impl>(nativeWindowPtr, runtimeImpl) }
     {
     }
 
