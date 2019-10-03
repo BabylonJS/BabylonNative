@@ -71,7 +71,7 @@ namespace
     void RefreshBabylon(HWND hWnd)
     {
         std::string rootUrl{ GetUrlFromPath(GetModulePath().parent_path().parent_path()) };
-        runtime = std::make_unique<babylon::RuntimeWin32>(hWnd, rootUrl, 16, 16);
+        runtime = std::make_unique<babylon::RuntimeWin32>(hWnd, rootUrl);
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);

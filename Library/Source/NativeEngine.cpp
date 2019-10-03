@@ -246,10 +246,9 @@ namespace babylon
         , m_currentProgram{ nullptr }
         , m_size{ 1024, 768 }
         , m_engineState{ BGFX_STATE_DEFAULT }
+        , m_viewClearState{ 0 }
         , m_nativeWindow{ nativeWindowPtr }
-    {
-        
-    }
+    {}
 
     void NativeEngine::Impl::InitializeRendering()
     {
@@ -447,6 +446,7 @@ namespace babylon
                 {
                     const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                     AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
+
                     // name attribute has been preprocessed to make link between bgfx and the shader (position -> a_position)
                     // but bjs doesn't know the attribute names. So the make the reverse here
                     std::string attributeName = stageInput.name;
@@ -462,6 +462,7 @@ namespace babylon
                         attributeName = "matricesIndices";
                     else if (attributeName == "a_weight")
                         attributeName = "matricesWeights";
+
                     attributeLocations[attributeName] = location;
                 }
 
