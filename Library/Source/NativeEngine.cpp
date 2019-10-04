@@ -30,11 +30,6 @@ namespace babylon
 {
     namespace
     {
-        std::initializer_list<napi_value> getEmptyNapiInitializerList()
-        {
-            return{};
-        }
-
         template<typename AppendageT>
         inline void AppendBytes(std::vector<uint8_t>& bytes, const AppendageT appendage)
         {

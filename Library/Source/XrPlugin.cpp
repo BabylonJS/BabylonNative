@@ -18,6 +18,14 @@ namespace
             throw std::exception{ /* Unsupported texture format */ };
         }
     }
+
+    constexpr std::array<float, 16> IDENTITY_MATRIX
+    {
+        1.f, 0.f, 0.f, 0.f,
+        0.f, 1.f, 0.f, 0.f,
+        0.f, 0.f, 1.f, 0.f,
+        0.f, 0.f, 0.f, 1.f
+    };
 }
 
 // XrPlugin implementation proper.
@@ -463,8 +471,7 @@ namespace babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                        InstanceMethod("getPose", &XRFrame::GetPose)
+                        InstanceMethod("getViewerPose", &XRFrame::GetViewerPose)
                     });
 
                 constructor = Napi::Persistent(func);
@@ -493,25 +500,9 @@ namespace babylon
             {
                 auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
-                // TODO: Debug
-                constexpr std::array<float, 16> matrix
-                {
-                    1.f, 0.f, 0.f, 0.f,
-                    0.f, 1.f, 0.f, 0.f,
-                    0.f, 0.f, 1.f, 0.f,
-                    0.f, 0.f, 0.f, 1.f
-                };
-
-                return XRViewerPose::New(info.Env(), matrix, m_frame->Views);
-            }
-
-            Napi::Value GetPose(const Napi::CallbackInfo& info)
-            {
-                auto space = info[0].As<Napi::Object>();
-                auto baseSpace = info[1].As<Napi::Object>();
-
-                // TODO: Stub.
-                throw;
+                // Tracking the location of the space is currently not supported, so XRViewerPose transform
+                // is always the identity matrix.
+                return XRViewerPose::New(info.Env(), IDENTITY_MATRIX, m_frame->Views);
             }
         };
 
@@ -533,9 +524,7 @@ namespace babylon
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
                         InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
-                        InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
-                        InstanceMethod("cancelAnimationFrame", &XRSession::CancelAnimationFrame),
-                        InstanceMethod("end", &XRSession::End)
+                        InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame)
                     });
 
                 constructor = Napi::Persistent(func);
@@ -643,21 +632,11 @@ namespace babylon
                 // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
                 return Napi::Value::From(info.Env(), 0);
             }
-
-            void CancelAnimationFrame(const Napi::CallbackInfo& info)
-            {
-                throw;
-            }
-
-            Napi::Value End(const Napi::CallbackInfo& info)
-            {
-                throw;
-            }
         };
 
-        class NativeWebXROutputTarget : public Napi::ObjectWrap<NativeWebXROutputTarget>
+        class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget>
         {
-            static constexpr auto JS_CLASS_NAME = "NativeWebXROutputTarget";
+            static constexpr auto JS_CLASS_NAME = "NativeWebXRRenderTarget";
 
         public:
             static void Initialize(Napi::Env& env)
@@ -668,7 +647,7 @@ namespace babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceMethod("initializeXRLayerAsync", &NativeWebXROutputTarget::InitializeXRLayerAsync)
+                        InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync)
                     });
 
                 constructor = Napi::Persistent(func);
@@ -682,8 +661,8 @@ namespace babylon
                 return constructor.New({ info[0] });
             }
 
-            NativeWebXROutputTarget(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<NativeWebXROutputTarget>{ info }
+            NativeWebXRRenderTarget(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<NativeWebXRRenderTarget>{ info }
                 , m_jsEngineReference{ Napi::Persistent(info[0].As<Napi::Object>()) }
             {}
 
@@ -792,7 +771,7 @@ namespace babylon
                     {
                         InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
                         InstanceMethod("requestSession", &XR::RequestSession),
-                        InstanceMethod("getWebXROutputTarget", &XR::GetWebXROutputTarget),
+                        InstanceMethod("getWebXRRenderTarget", &XR::GetWebXRRenderTarget),
                         InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true))
                     });
@@ -839,9 +818,9 @@ namespace babylon
                 return XRSession::CreateAsync(info);
             }
 
-            Napi::Value GetWebXROutputTarget(const Napi::CallbackInfo& info)
+            Napi::Value GetWebXRRenderTarget(const Napi::CallbackInfo& info)
             {
-                return NativeWebXROutputTarget::New(info);
+                return NativeWebXRRenderTarget::New(info);
             }
 
             Napi::Value GetNativeRenderTargetProvider(const Napi::CallbackInfo& info)
@@ -860,7 +839,7 @@ namespace babylon
         XRReferenceSpace::Initialize(env);
         XRFrame::Initialize(env);
         XRSession::Initialize(env);
-        NativeWebXROutputTarget::Initialize(env);
+        NativeWebXRRenderTarget::Initialize(env);
         NativeRenderTargetProvider::Initialize(env);
         XR::Initialize(env);
     }
