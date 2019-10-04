@@ -26,6 +26,65 @@ namespace
         0.f, 0.f, 1.f, 0.f,
         0.f, 0.f, 0.f, 1.f
     };
+
+    // From https://github.com/microsoft/OpenXR-SDK-VisualStudio/blob/master/samples/XrUtility/XrMath.h#L332-L335
+    // 2 * n / (r - l)        0                     0                    0
+    // 0                      2 * n / (t - b)       0                    0
+    // (r + l) / (r - l)      (t + b) / (t - b)     f / (n - f)         -1
+    // 0                      0                     n*f / (n - f)        0
+    // Except we're row-major, so we transpose.
+    inline std::array<float, 16> createProjectionMatrix(const xr::System::Session::Frame::View & view)
+    {
+        constexpr float n{ std::min(xr::System::DEPTH_NEAR_Z, xr::System::DEPTH_FAR_Z) };
+        constexpr float f{ std::max(xr::System::DEPTH_NEAR_Z, xr::System::DEPTH_FAR_Z) };
+        float r{ view.FieldOfView.AngleRight };
+        float l{ view.FieldOfView.AngleLeft };
+        float t{ view.FieldOfView.AngleUp };
+        float b{ view.FieldOfView.AngleDown };
+
+        return{
+            2.f * n / (r - l),  0.f,                (r + l) / (r - l),  0.f,
+            0.f,                2.f * n / (t - b),  (t + b) / (t - b),  0.f,
+            0.f,                0.f,                f / (n - f),        n* f / (n - f),
+            0.f,                0.f,                -1.f,               0.f
+        };
+    }
+
+    // From https://github.com/BabylonJS/Babylon.js/blob/c620b2730fdc42d00d485b9cd43a993fad331254/src/Maths/math.vector.ts#L5216-L5248
+    inline std::array<float, 16> createTransformMatrix(const xr::System::Session::Frame::View& view)
+    {
+        auto& quat = view.Orientation;
+        auto& pos = view.Position;
+
+        float xx = quat.X * quat.X;
+        float yy = quat.Y * quat.Y;
+        float zz = quat.Z * quat.Z;
+        float xy = quat.X * quat.Y;
+        float zw = quat.Z * quat.W;
+        float zx = quat.Z * quat.X;
+        float yw = quat.Y * quat.W;
+        float yz = quat.Y * quat.Z;
+        float xw = quat.X * quat.W;
+
+        auto result{ IDENTITY_MATRIX };
+
+        result[0] = 1.f - (2.f * (yy + zz));
+        result[1] = 2.f * (xy + zw);
+        result[2] = 2.f * (zx - yw);
+        result[3] = pos.X;
+
+        result[4] = 2.f * (xy - zw);
+        result[5] = 1.f - (2.f * (zz + xx));
+        result[6] = 2.f * (yz + xw);
+        result[7] = pos.Y;
+
+        result[8] = 2.f * (zx + yw);
+        result[9] = 2.f * (yz - xw);
+        result[10] = 1.f - (2.f * (yy + xx));
+        result[11] = pos.Z;
+
+        return result;
+    }
 }
 
 // XrPlugin implementation proper.
@@ -404,7 +463,16 @@ namespace babylon
                 auto jsViews = Napi::Array::New(env, views.size());
                 for (int idx = 0; idx < views.size(); ++idx)
                 {
-                    jsViews.Set(idx, XRView::New(env, XREye::IndexToEye(idx), matrix, matrix));
+                    auto& view = views[idx];
+
+                    auto projectionMatrix = createProjectionMatrix(view);
+
+                    auto xrView = XRView::New(
+                        env, 
+                        XREye::IndexToEye(idx), 
+                        projectionMatrix, 
+                        createTransformMatrix(view));
+                    jsViews.Set(idx, xrView);
                 }
                 object.Set("views", jsViews);
 

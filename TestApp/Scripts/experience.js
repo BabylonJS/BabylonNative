@@ -131,6 +131,9 @@ CreateBoxAsync().then(function () {
     setTimeout(function () {
         scene.createDefaultXRExperienceAsync({ disableDefaultUI: true }).then((xr) => {
             // setTimeout(function () { xr.baseExperience.exitXRAsync(); }, 10000);
+            setTimeout(function () {
+                scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
+            }, 10000);
             return xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
         });
     }, 5000);

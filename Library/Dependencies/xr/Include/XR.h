@@ -25,6 +25,11 @@ namespace xr
     class System
     {
     public:
+        // These values are taken from Microsoft's OpenXR sample and are used in conjunction with the depth extension. Values are reversed, as in example.
+        // https://github.com/microsoft/OpenXR-SDK-VisualStudio/blob/42172676a9388f02ce5a776c89a62cecf95429bd/samples/BasicXrApp/OpenXrProgram.cpp#L226
+        constexpr static float DEPTH_NEAR_Z{ 20.f };
+        constexpr static float DEPTH_FAR_Z{ 1.f };
+
         class Session
         {
             friend class System;
