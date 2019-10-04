@@ -35,7 +35,6 @@ target_include_directories(native-activity PRIVATE
 target_compile_definitions(native-activity PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 
 add_definitions(-DANDROID_STL=c++_shared)
-# add lib dependencies
 
 target_link_libraries(native-activity
     android

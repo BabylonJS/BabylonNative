@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
+def platformVersion = 21
 android {
     compileSdkVersion 28
 
     defaultConfig {
-        applicationId = 'com.example.native_activity'
-        minSdkVersion 14
+        applicationId = 'com.android.testapp'
         targetSdkVersion 28
         externalNativeBuild {
             cmake {

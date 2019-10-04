@@ -15,7 +15,7 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.android.appviewer">
+          package="com.android.testapp">
   <uses-feature android:glEsVersion="0x00030000" android:required="true" />
   <application
       android:allowBackup="false"
