@@ -282,7 +282,7 @@ namespace babylon
         Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
 
         void Initialize(Napi::Env& env);
-        void InitializeRendering();
+        void InitializeRendering(Napi::Env& env);
         void UpdateSize(float width, float height);
         void UpdateRenderTarget();
         void Suspend();
