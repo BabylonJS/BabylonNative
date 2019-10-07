@@ -39,10 +39,11 @@ namespace
     {
         constexpr float n{ std::min(xr::System::DEPTH_NEAR_Z, xr::System::DEPTH_FAR_Z) };
         constexpr float f{ std::max(xr::System::DEPTH_NEAR_Z, xr::System::DEPTH_FAR_Z) };
-        float r{ view.FieldOfView.AngleRight };
-        float l{ view.FieldOfView.AngleLeft };
-        float t{ view.FieldOfView.AngleUp };
-        float b{ view.FieldOfView.AngleDown };
+
+        float r = std::tanf(view.FieldOfView.AngleRight) * n;
+        float l = std::tanf(view.FieldOfView.AngleLeft) * n;
+        float t = std::tanf(view.FieldOfView.AngleUp) * n;
+        float b = std::tanf(view.FieldOfView.AngleDown) * n;
 
         return{
             2.f * n / (r - l),  0.f,                (r + l) / (r - l),  0.f,
