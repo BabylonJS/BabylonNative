@@ -62,6 +62,17 @@ namespace babylon
             : m_viewId{ viewId }
         {}
 
+        ~ViewClearState()
+        {
+            for (auto& linked : m_linkedViewClearStates)
+            {
+                auto& otherLinks = linked->m_linkedViewClearStates;
+                auto found = std::find(otherLinks.begin(), otherLinks.end(), this);
+                assert(found != otherLinks.end());
+                otherLinks.erase(found);
+            }
+        }
+
         bool Update(const Napi::CallbackInfo& info)
         {
             auto r = info[0].As<Napi::Number>().FloatValue();
@@ -90,6 +101,19 @@ namespace babylon
                 m_stencil = stencil;
 
                 Update();
+
+                for (auto& linked : m_linkedViewClearStates)
+                {
+                    linked->m_red = r;
+                    linked->m_green = g;
+                    linked->m_blue = b;
+                    linked->m_alpha = a;
+                    linked->m_backBuffer = backBuffer;
+                    linked->m_depth = depth;
+                    linked->m_stencil = stencil;
+
+                    linked->Update();
+                }
             }
 
             return needToUpdate;
@@ -102,6 +126,14 @@ namespace babylon
             bgfx::touch(m_viewId);
         }
 
+        void Link(ViewClearState& other)
+        {
+            assert(std::find(m_linkedViewClearStates.begin(), m_linkedViewClearStates.end(), &other) == m_linkedViewClearStates.end());
+            assert(std::find(other.m_linkedViewClearStates.begin(), other.m_linkedViewClearStates.end(), this) == other.m_linkedViewClearStates.end());
+            m_linkedViewClearStates.push_back(&other);
+            other.m_linkedViewClearStates.push_back(this);
+        }
+
     private:
         const uint16_t m_viewId{};
         float m_red{ 68.f / 255.f };
@@ -111,6 +143,7 @@ namespace babylon
         bool m_backBuffer{ true };
         bool m_depth{ true };
         bool m_stencil{ true };
+        std::vector<ViewClearState*> m_linkedViewClearStates{};
 
         uint32_t Color() const
         {

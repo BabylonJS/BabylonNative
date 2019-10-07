@@ -232,6 +232,16 @@ namespace babylon
                     frameBuffer,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
                     static_cast<uint16_t>(view.ColorTextureSize.Height));
+
+                // Links between view clear states do not propagate across a graph, so everything
+                // must be linked to everything else directly so that it can all be updated in one
+                // pass. Note that for VR, this is overkill; the only truly neceesary links are 
+                // between the eyes. However, because that assumption is not generalizable, we 
+                // currently link all the framebuffers for the XR plugin to each other.
+                for (auto& [texturePtr, frameBufferPtr] : m_texturesToFrameBuffers)
+                {
+                    fbPtr->ViewClearState.Link(frameBufferPtr->ViewClearState);
+                }
                 m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{ fbPtr };
 
                 m_activeFrameBuffers.push_back(fbPtr);
