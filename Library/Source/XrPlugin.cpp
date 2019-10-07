@@ -4,6 +4,8 @@
 
 #include <XR.h>
 
+#include <bx/bx.h>
+
 namespace
 {
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
@@ -66,24 +68,32 @@ namespace
         float yz = quat.Y * quat.Z;
         float xw = quat.X * quat.W;
 
-        auto result{ IDENTITY_MATRIX };
+        auto worldSpaceTransform{ IDENTITY_MATRIX };
 
-        result[0] = 1.f - (2.f * (yy + zz));
-        result[1] = 2.f * (xy + zw);
-        result[2] = 2.f * (zx - yw);
-        result[3] = pos.X;
+        worldSpaceTransform[0] = 1.f - (2.f * (yy + zz));
+        worldSpaceTransform[1] = 2.f * (xy + zw);
+        worldSpaceTransform[2] = 2.f * (zx - yw);
+        worldSpaceTransform[3] = 0.f;
 
-        result[4] = 2.f * (xy - zw);
-        result[5] = 1.f - (2.f * (zz + xx));
-        result[6] = 2.f * (yz + xw);
-        result[7] = pos.Y;
+        worldSpaceTransform[4] = 2.f * (xy - zw);
+        worldSpaceTransform[5] = 1.f - (2.f * (zz + xx));
+        worldSpaceTransform[6] = 2.f * (yz + xw);
+        worldSpaceTransform[7] = 0.f;
 
-        result[8] = 2.f * (zx + yw);
-        result[9] = 2.f * (yz - xw);
-        result[10] = 1.f - (2.f * (yy + xx));
-        result[11] = pos.Z;
+        worldSpaceTransform[8] = 2.f * (zx + yw);
+        worldSpaceTransform[9] = 2.f * (yz - xw);
+        worldSpaceTransform[10] = 1.f - (2.f * (yy + xx));
+        worldSpaceTransform[11] = 0.f;
 
-        return result;
+        worldSpaceTransform[12] = pos.X;
+        worldSpaceTransform[13] = pos.Y;
+        worldSpaceTransform[14] = pos.Z;
+        worldSpaceTransform[15] = 1.f;
+
+        std::array<float, 16> viewSpaceTransform{};
+        bx::mtxInverse(viewSpaceTransform.data(), worldSpaceTransform.data());
+
+        return viewSpaceTransform;
     }
 }
 
