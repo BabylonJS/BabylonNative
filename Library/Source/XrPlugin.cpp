@@ -37,20 +37,18 @@ namespace
     // Except we're row-major, so we transpose.
     inline std::array<float, 16> createProjectionMatrix(const xr::System::Session::Frame::View & view)
     {
-        constexpr float n{ std::min(xr::System::DEPTH_NEAR_Z, xr::System::DEPTH_FAR_Z) };
-        constexpr float f{ std::max(xr::System::DEPTH_NEAR_Z, xr::System::DEPTH_FAR_Z) };
+        constexpr float n{ xr::System::DEPTH_NEAR_Z };
+        constexpr float f{ xr::System::DEPTH_FAR_Z };
 
         float r = std::tanf(view.FieldOfView.AngleRight) * n;
         float l = std::tanf(view.FieldOfView.AngleLeft) * n;
         float t = std::tanf(view.FieldOfView.AngleUp) * n;
         float b = std::tanf(view.FieldOfView.AngleDown) * n;
 
-        return{
-            2.f * n / (r - l),  0.f,                (r + l) / (r - l),  0.f,
-            0.f,                2.f * n / (t - b),  (t + b) / (t - b),  0.f,
-            0.f,                0.f,                f / (n - f),        n* f / (n - f),
-            0.f,                0.f,                -1.f,               0.f
-        };
+        std::array<float, 16> bxResult{};
+        bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
+
+        return bxResult;
     }
 
     // From https://github.com/BabylonJS/Babylon.js/blob/c620b2730fdc42d00d485b9cd43a993fad331254/src/Maths/math.vector.ts#L5216-L5248
