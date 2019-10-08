@@ -1053,6 +1053,8 @@ namespace babylon
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
 
+            m_frameBufferManager.Unbind(&m_frameBufferManager.GetBound());
+
             callbackPtr->Call({});
             bgfx::frame();
         });

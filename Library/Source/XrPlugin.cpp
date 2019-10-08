@@ -107,13 +107,6 @@ namespace babylon
 
         void BeginSession(); // TODO: Make this asynchronous.
         void EndSession(); // TODO: Make this asynchronous.
-        void BeginFrame();
-        void EndFrame();
-
-        const auto& Frame() const
-        {
-            return *m_frame;
-        }
 
         auto ActiveFrameBuffers() const
         {
@@ -127,6 +120,22 @@ namespace babylon
             m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine::Impl>>().Data();
         }
 
+        void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
+        {
+            Dispatch([this, callback = std::move(callback)]()
+            {
+                // Early out if there's no session available.
+                if (m_session == nullptr)
+                {
+                    return;
+                }
+
+                BeginFrame();
+                callback(*m_frame);
+                EndFrame();
+            });
+        }
+
         template<typename CallableT>
         void Dispatch(CallableT&& callable)
         {
@@ -134,13 +143,15 @@ namespace babylon
         }
 
     private:
+        std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
         std::unique_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
-        NativeEngine::Impl* m_engineImpl{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
+        NativeEngine::Impl* m_engineImpl{};
 
-        std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
+        void BeginFrame();
+        void EndFrame();
     };
 
     XrPlugin::XrPlugin()
@@ -611,7 +622,8 @@ namespace babylon
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
                         InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
-                        InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame)
+                        InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
+                        InstanceMethod("end", &XRSession::End)
                     });
 
                 constructor = Napi::Persistent(func);
@@ -671,14 +683,13 @@ namespace babylon
 
             XrPlugin m_xrPlugin{};
 
-            std::map<const std::string, Napi::FunctionReference> m_eventNamesToCallbacks{};
+            std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
             void AddEventListener(const Napi::CallbackInfo& info)
             {
-                auto [pair, success] = m_eventNamesToCallbacks.insert({
+                m_eventNamesAndCallbacks.emplace_back(
                     info[0].As<Napi::String>().Utf8Value(),
-                    Napi::Persistent(info[1].As<Napi::Function>()) });
-                assert(success);
+                    Napi::Persistent(info[1].As<Napi::Function>()));
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
@@ -700,24 +711,35 @@ namespace babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xrPlugin.Dispatch([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()]()
+                m_xrPlugin.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame)
                 {
-                    m_xrPlugin.BeginFrame();
-
-                    auto jsFrame = XRFrame::New(m_xrPlugin.Frame());
-                    auto& frame = *XRFrame::Unwrap(jsFrame);
-
-                    // TODO: initialize the frame.
-
+                    auto jsFrame = XRFrame::New(frame);
                     func->Call({ Napi::Value::From(env, -1), jsFrame });
-
-                    m_xrPlugin.EndFrame();
-
                     bgfx::frame();
                 });
 
                 // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
                 return Napi::Value::From(info.Env(), 0);
+            }
+
+            Napi::Value End(const Napi::CallbackInfo& info)
+            {
+                m_xrPlugin.Dispatch([this]()
+                {
+                    m_xrPlugin.EndSession();
+
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                    {
+                        if (name == JS_EVENT_NAME_END)
+                        {
+                            callback.Call({});
+                        }
+                    }
+                });
+
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(Napi::Value::From(info.Env(), 0));
+                return deferred.Promise();
             }
         };
 
