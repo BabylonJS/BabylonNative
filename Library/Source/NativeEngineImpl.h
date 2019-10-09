@@ -206,15 +206,7 @@ namespace babylon
 
         void Bind(FrameBufferData* data)
         {
-            if (m_boundFrameBuffer == data)
-            {
-                return;
-            }
-
-            if (m_boundFrameBuffer != nullptr)
-            {
-                Unbind(m_boundFrameBuffer);
-            }
+            assert(m_boundFrameBuffer == nullptr);
 
             m_boundFrameBuffer = data;
 
@@ -330,6 +322,7 @@ namespace babylon
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
+        void LinkToDefaultViewClearState(ViewClearState&);
 
     private:
         using EngineDefiner = NativeEngineDefiner<NativeEngine::Impl>;

@@ -253,15 +253,13 @@ namespace babylon
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
                     static_cast<uint16_t>(view.ColorTextureSize.Height));
 
-                // Links between view clear states do not propagate across a graph, so everything
-                // must be linked to everything else directly so that it can all be updated in one
-                // pass. Note that for VR, this is overkill; the only truly neceesary links are 
-                // between the eyes. However, because that assumption is not generalizable, we 
-                // currently link all the framebuffers for the XR plugin to each other.
-                for (auto& [texturePtr, frameBufferPtr] : m_texturesToFrameBuffers)
-                {
-                    fbPtr->ViewClearState.Link(frameBufferPtr->ViewClearState);
-                }
+                // WebXR does not clear its own framebuffers, but instead clears the default view with
+                // the expectation that its behavior will be propagated to the XR render targets. We
+                // satisfy this expectation by linking the states of the XR framebuffers to the engine's
+                // default clear state. Note that since the default clear state is the only one that will
+                // ever be updated with a clear color, the XR framebuffers do not need to be linked to 
+                // each other as propagation is not an issue.
+                m_engineImpl->LinkToDefaultViewClearState(fbPtr->ViewClearState);
                 m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{ fbPtr };
 
                 m_activeFrameBuffers.push_back(fbPtr);

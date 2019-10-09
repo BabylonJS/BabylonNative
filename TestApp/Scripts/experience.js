@@ -131,7 +131,9 @@ CreateBoxAsync().then(function () {
     setTimeout(function () {
         scene.createDefaultXRExperienceAsync({ disableDefaultUI: true }).then((xr) => {
             setTimeout(function () {
-                xr.baseExperience.exitXRAsync();
+                xr.baseExperience.exitXRAsync().then(function () {
+                    xr = null;
+                });
                 scene.meshes[0].position.x = 0;
                 scene.meshes[0].position.y = 0;
                 scene.meshes[0].position.z = 0;

@@ -1053,8 +1053,6 @@ namespace babylon
         {
             //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
 
-            m_frameBufferManager.Unbind(&m_frameBufferManager.GetBound());
-
             callbackPtr->Call({});
             bgfx::frame();
         });
@@ -1066,6 +1064,11 @@ namespace babylon
         {
             function();
         });
+    }
+
+    void NativeEngine::Impl::LinkToDefaultViewClearState(ViewClearState& viewClearState)
+    {
+        m_viewClearState.Link(viewClearState);
     }
 
     // NativeEngine exterior definitions.
