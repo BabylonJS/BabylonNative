@@ -1,17 +1,9 @@
-#import "ViewController.h"
+#include "LibNativeBridge.h"
 #import <Babylon/RuntimeApple.h>
 #import <Shared/InputManager.h>
 
 std::unique_ptr<babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
-
-
-@implementation ViewController
-
-- (void)viewDidLoad {
-    [super viewDidLoad];
-
-}
 
 void MacLogMessage(const char *outputString)
 {
@@ -28,19 +20,29 @@ void MacErrorMessage(const char *outputString)
     NSLog(@"%s", outputString);
 }
 
-- (void)viewDidAppear {
-    [super viewDidAppear];
+@implementation LibNativeBridge
+
+- (instancetype)init
+{
+    self = [super init];
+    return self;
+}
+
+- (void)dealloc
+{
     
+}
+
+- (void)init:( void* )CALayerPtr width:(int)inWidth height:(int)inHeight
+{
     babylon::Runtime::RegisterLogOutput(MacLogMessage);
     babylon::Runtime::RegisterWarnOutput(MacWarnMessage);
     babylon::Runtime::RegisterErrorOutput(MacErrorMessage);
-
+    
     NSBundle *main = [NSBundle mainBundle];
     NSURL * resourceUrl = [main resourceURL];
-
-    NSWindow* nativeWindow = [[self view] window];
-    runtime = std::make_unique<babylon::RuntimeApple>((__bridge void*)nativeWindow, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
-
+    runtime = std::make_unique<babylon::RuntimeApple>(CALayerPtr, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
+    
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
     
@@ -49,26 +51,10 @@ void MacErrorMessage(const char *outputString)
     runtime->LoadScript("experience.js");
 }
 
-- (void)setRepresentedObject:(id)representedObject {
-    [super setRepresentedObject:representedObject];
-
-    // Update the view, if already loaded.
-}
-
-- (void)mouseDown:(NSEvent *)theEvent {
+- (void)setInputs:(int)x y:(int)y tap:(bool)tap
+{
     
-    inputBuffer->SetPointerDown(true);
-}
-
-- (void)mouseDragged:(NSEvent *)theEvent {
-    
-    NSPoint eventLocation = [theEvent locationInWindow];
-    inputBuffer->SetPointerPosition(eventLocation.x, eventLocation.y);
-}
-
-- (void)mouseUp:(NSEvent *)theEvent {
-    
-    inputBuffer->SetPointerDown(false);
 }
 
 @end
+

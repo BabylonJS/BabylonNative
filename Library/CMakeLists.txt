@@ -25,9 +25,10 @@ add_compile_definitions(BGFX_CONFIG_DEBUG_UNIFORM=0)
 add_compile_definitions(BGFX_CONFIG_MULTITHREADED=0)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=32)
 add_compile_definitions(BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
-    # no Vulkan on Apple
+if(APPLE)
+    # no Vulkan on Apple but Metal
     add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
+    add_compile_definitions(BGFX_CONFIG_RENDERER_METAL=1)
 endif()
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Build the BGFX examples.")
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "Build the BGFX tools.")
@@ -45,13 +46,19 @@ set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+if(APPLE OR ANDROID)
     set(CURL_CA_BUNDLE "none" CACHE FILEPATH "Path to SSL CA Certificate Bundle")
     set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
+endif()    
+
+if(APPLE)
     set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
-else()
+elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
+else()
+    set(CMAKE_USE_WINSSL OFF CACHE BOOL "Set cURL to use WinSSL by default.")
 endif()
+
 add_subdirectory(Dependencies/curl EXCLUDE_FROM_ALL)
 set_property(TARGET libcurl PROPERTY FOLDER Dependencies/curl)
 
@@ -103,7 +110,7 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL 
 elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Android")
     set(SOURCES ${SOURCES}
         "Source/ShaderCompilerOpenGL.cpp")
-elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
+elseif(APPLE)
     set(SOURCES ${SOURCES}
         "Source/ShaderCompilerMetal.cpp")
 endif()
@@ -166,6 +173,11 @@ endif()
 
 if(WINDOWS_STORE)
     target_link_libraries(Library PRIVATE arcana)
+endif()
+
+if(APPLE)
+    target_link_libraries(Library
+        PRIVATE spirv-cross-msl)
 endif()
 
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
