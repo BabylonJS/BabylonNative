@@ -64,7 +64,7 @@ endif()
 
 # Currently OpenXR is only supported on Win32. More platforms will be added as 
 # they become viable/available.
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     add_subdirectory(Dependencies/xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
@@ -109,7 +109,7 @@ elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Apple")
 endif()
 
 # Platform-specific XR plugin (only included when used)
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(SOURCES ${SOURCES}
         "Source/XrPlugin.cpp"
         "Source/XrPlugin.h")
@@ -160,7 +160,7 @@ target_link_libraries(Library
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl)
 
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     target_link_libraries(Library PRIVATE xr)
 endif()
 
