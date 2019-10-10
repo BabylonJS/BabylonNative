@@ -382,6 +382,7 @@ namespace babylon
         class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
         {
             static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
+            static constexpr size_t MATRIX_SIZE = 16;
 
         public:
             static void Initialize(Napi::Env& env)
@@ -401,40 +402,48 @@ namespace babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(Napi::Env env, gsl::span<const float, 16> matrix)
+            static Napi::Object New()
             {
-                auto jsMatrix = Napi::Float32Array::New(env, matrix.size());
-                std::memcpy(jsMatrix.Data(), matrix.data(), jsMatrix.ByteLength());
-                return constructor.New({ jsMatrix });
+                return constructor.New({});
             }
 
             XRRigidTransform(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRigidTransform>{ info }
+                , m_matrix{ Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE)) }
+            {}
+
+            void Update(gsl::span<const float, MATRIX_SIZE> matrix)
             {
-                m_matrix = info[0].As<Napi::Float32Array>();
+                std::memcpy(m_matrix.Value().Data(), matrix.data(), m_matrix.Value().ByteLength());
             }
 
         private:
             static inline Napi::FunctionReference constructor{};
 
-            Napi::Float32Array m_matrix{};
+            Napi::Reference<Napi::Float32Array> m_matrix{};
 
             Napi::Value Matrix(const Napi::CallbackInfo& info)
             {
-                return m_matrix;
+                return m_matrix.Value();
             }
         };
 
         class XRView : public Napi::ObjectWrap<XRView>
         {
             static constexpr auto JS_CLASS_NAME = "XRView";
+            static constexpr size_t MATRIX_SIZE = 16;
 
         public:
             static void Initialize(Napi::Env& env)
             {
                 Napi::HandleScope scope{ env };
 
-                Napi::Function func = DefineClass(env, JS_CLASS_NAME, {});
+                Napi::Function func = DefineClass(env, JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("eye", &XRView::GetEye, nullptr),
+                        InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
+                        InstanceAccessor("transform", &XRView::GetTransform, nullptr)
+                    });
 
                 constructor = Napi::Persistent(func);
                 constructor.SuppressDestruct();
@@ -442,27 +451,51 @@ namespace babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(Napi::Env env, const std::string& eye, gsl::span<const float, 16> projectionMatrix, gsl::span<const float, 16> transformMatrix)
+            static Napi::Object New()
             {
-                auto object = constructor.New({});
-
-                object.Set("eye", Napi::Value::From(env, eye.c_str()));
-
-                auto jsMatrix = Napi::Float32Array::New(env, projectionMatrix.size());
-                std::memcpy(jsMatrix.Data(), projectionMatrix.data(), jsMatrix.ByteLength());
-                object.Set("projectionMatrix", jsMatrix);
-
-                object.Set("transform", XRRigidTransform::New(env, transformMatrix));
-
-                return object;
+                return constructor.New({});
             }
 
             XRView(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRView>{ info }
+                , m_eye{ Napi::Persistent(Napi::String::From(info.Env(), "")) }
+                , m_projectionMatrix{ Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE)) }
+                , m_rigidTransform{ Napi::Persistent(XRRigidTransform::New()) }
             {}
+
+            void Update(const std::string& eye, gsl::span<const float, 16> projectionMatrix, gsl::span<const float, 16> transformMatrix)
+            {
+                if (eye != m_eye.Value().Utf8Value())
+                {
+                    m_eye = Napi::Persistent(Napi::String::From(m_eye.Env(), eye));
+                }
+
+                std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
+
+                XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(transformMatrix);
+            }
 
         private:
             static inline Napi::FunctionReference constructor{};
+
+            Napi::Reference<Napi::String> m_eye{};
+            Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
+            Napi::ObjectReference m_rigidTransform{};
+
+            Napi::Value GetEye(const Napi::CallbackInfo&)
+            {
+                return m_eye.Value();
+            }
+
+            Napi::Value GetProjectionMatrix(const Napi::CallbackInfo&)
+            {
+                return m_projectionMatrix.Value();
+            }
+
+            Napi::Value GetTransform(const Napi::CallbackInfo&)
+            {
+                return m_rigidTransform.Value();
+            }
         };
 
         class XRViewerPose : public Napi::ObjectWrap<XRViewerPose>
@@ -474,7 +507,11 @@ namespace babylon
             {
                 Napi::HandleScope scope{ env };
 
-                Napi::Function func = DefineClass(env, JS_CLASS_NAME, {});
+                Napi::Function func = DefineClass(env, JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("transform", &XRViewerPose::GetTransform, nullptr),
+                        InstanceAccessor("views", &XRViewerPose::GetViews, nullptr)
+                    });
 
                 constructor = Napi::Persistent(func);
                 constructor.SuppressDestruct();
@@ -482,37 +519,76 @@ namespace babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(Napi::Env env, gsl::span<const float, 16> matrix, gsl::span<const xr::System::Session::Frame::View> views)
+            static Napi::Object New()
             {
-                auto object = constructor.New({});
-
-                object.Set("transform", XRRigidTransform::New(env, matrix));
-
-                auto jsViews = Napi::Array::New(env, views.size());
-                for (int idx = 0; idx < views.size(); ++idx)
-                {
-                    auto& view = views[idx];
-
-                    auto projectionMatrix = createProjectionMatrix(view);
-
-                    auto xrView = XRView::New(
-                        env, 
-                        XREye::IndexToEye(idx), 
-                        projectionMatrix, 
-                        createTransformMatrix(view));
-                    jsViews.Set(idx, xrView);
-                }
-                object.Set("views", jsViews);
-
-                return object;
+                return constructor.New({});
             }
 
             XRViewerPose(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRViewerPose>{ info }
+                , m_jsTransform{ Napi::Persistent(XRRigidTransform::New()) }
+                , m_jsViews{ Napi::Persistent(Napi::Array::New(info.Env(), 0)) }
+                , m_transform{ *XRRigidTransform::Unwrap(m_jsTransform.Value()) }
             {}
+
+            void Update(gsl::span<const float, 16> matrix, gsl::span<const xr::System::Session::Frame::View> views)
+            {
+                // Update the transform.
+                m_transform.Update(matrix);
+
+                // Update the views array if necessary.
+                const auto oldSize = static_cast<uint32_t>(m_views.size());
+                const auto newSize = static_cast<uint32_t>(views.size());
+                if (oldSize != newSize)
+                {
+                    auto newViews = Napi::Array::New(m_jsViews.Env(), newSize);
+                    m_views.resize(newSize);
+
+                    for (uint32_t idx = 0; idx < newSize; ++idx)
+                    {
+                        if (idx < oldSize)
+                        {
+                            newViews.Set(idx, m_jsViews.Value().Get(idx));
+                        }
+                        else
+                        {
+                            newViews.Set(idx, XRView::New());
+                        }
+
+                        m_views[idx] = XRView::Unwrap(newViews.Get(idx).As<Napi::Object>());
+                    }
+
+                    m_jsViews = Napi::Persistent(newViews);
+                }
+
+                // Update the individual views.
+                for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
+                {
+                    const auto& view = views[idx];
+                    const auto projectionMatrix = createProjectionMatrix(view);
+                    const auto transformMatrix = createTransformMatrix(view);
+                    m_views[idx]->Update(XREye::IndexToEye(idx), projectionMatrix, transformMatrix);
+                }
+            }
 
         private:
             static inline Napi::FunctionReference constructor{};
+
+            Napi::ObjectReference m_jsTransform{};
+            Napi::Reference<Napi::Array> m_jsViews{};
+
+            XRRigidTransform& m_transform;
+            std::vector<XRView*> m_views{};
+
+            Napi::Value GetTransform(const Napi::CallbackInfo& info)
+            {
+                return m_jsTransform.Value();
+            }
+
+            Napi::Value GetViews(const Napi::CallbackInfo& info)
+            {
+                return m_jsViews.Value();
+            }
         };
 
         // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
@@ -576,29 +652,41 @@ namespace babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(const xr::System::Session::Frame& frame)
+            static Napi::Object New()
             {
-                auto object = constructor.New({});
-                XRFrame::Unwrap(object)->m_frame = &frame;
-                return object;
+                return constructor.New({});
             }
 
             XRFrame(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRFrame>{ info }
+                , m_jsXRViewerPose{ Napi::Persistent(XRViewerPose::New()) }
+                , m_xrViewerPose{ *XRViewerPose::Unwrap(m_jsXRViewerPose.Value()) }
             {}
+
+            void Update(const xr::System::Session::Frame& frame)
+            {
+                // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot 
+                // update the viewer pose here because we don't yet know the desired reference space.
+                m_frame = &frame;
+            }
 
         private:
             static inline Napi::FunctionReference constructor{};
 
             const xr::System::Session::Frame* m_frame{};
+            Napi::ObjectReference m_jsXRViewerPose{};
+            XRViewerPose& m_xrViewerPose;
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
-                auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                // TODO: Support reference spaces.
+                // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
-                // Tracking the location of the space is currently not supported, so XRViewerPose transform
-                // is always the identity matrix.
-                return XRViewerPose::New(info.Env(), IDENTITY_MATRIX, m_frame->Views);
+                // Until reference spaces are supported, assume the reference space position is always the 
+                // identity matrix.
+                m_xrViewerPose.Update(IDENTITY_MATRIX, m_frame->Views);
+
+                return m_jsXRViewerPose.Value();
             }
         };
 
@@ -644,6 +732,8 @@ namespace babylon
 
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{ info }
+                , m_jsXRFrame{ Napi::Persistent(XRFrame::New()) }
+                , m_xrFrame{ *XRFrame::Unwrap(m_jsXRFrame.Value()) }
             {
                 // Currently only immersive VR is supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR);
@@ -680,6 +770,8 @@ namespace babylon
             static inline Napi::FunctionReference constructor{};
 
             XrPlugin m_xrPlugin{};
+            Napi::ObjectReference m_jsXRFrame{};
+            XRFrame& m_xrFrame;
 
             std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
@@ -711,8 +803,8 @@ namespace babylon
             {
                 m_xrPlugin.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame)
                 {
-                    auto jsFrame = XRFrame::New(frame);
-                    func->Call({ Napi::Value::From(env, -1), jsFrame });
+                    m_xrFrame.Update(frame);
+                    func->Call({ Napi::Value::From(env, -1), m_jsXRFrame.Value() });
                     bgfx::frame();
                 });
 
@@ -830,31 +922,31 @@ namespace babylon
 
             NativeRenderTargetProvider(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<NativeRenderTargetProvider>{ info }
+                , m_jsSession{ Napi::Persistent(info[0].As<Napi::Object>()) }
+                , m_session{ *XRSession::Unwrap(m_jsSession.Value()) }
             {
-                m_session = XRSession::Unwrap(info[0].As<Napi::Object>());
-
                 auto createRenderTextureCallback = info[1].As<Napi::Function>();
-                auto dimension = Napi::Value::From(info.Env(), 1280);
+                auto dimension = Napi::Value::From(info.Env(), 1280); // TODO: Magic number!
 
-                for (size_t idx = 0; idx < m_renderTargetTextures.size(); ++idx)
+                for (size_t idx = 0; idx < m_jsRenderTargetTextures.size(); ++idx)
                 {
-                    m_renderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>());
+                    m_jsRenderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>());
                 }
             }
 
         private:
             static inline Napi::FunctionReference constructor{};
 
-            XRSession* m_session{};
-
-            std::array<Napi::ObjectReference, 2> m_renderTargetTextures;
+            Napi::ObjectReference m_jsSession{};
+            std::array<Napi::ObjectReference, 2> m_jsRenderTargetTextures;
+            XRSession& m_session;
 
             Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
             {
                 const std::string eye{ info[0].As<Napi::String>().Utf8Value() };
 
-                auto rtt = m_renderTargetTextures[XREye::EyeToIndex(eye)].Value();
-                rtt.Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session->GetFrameBufferForEye(eye)));
+                auto rtt = m_jsRenderTargetTextures[XREye::EyeToIndex(eye)].Value();
+                rtt.Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session.GetFrameBufferForEye(eye)));
                 return rtt;
             }
         };
