@@ -627,7 +627,7 @@ namespace babylon
             XRReferenceSpace(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRReferenceSpace>{ info }
             {
-                // TODO: Figure out what in the world THIS is supposed to do.
+                // Only unbounded reference spaces are supported at the moment.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRReferenceSpaceType::UNBOUNDED);
             }
 
@@ -687,9 +687,11 @@ namespace babylon
                 // TODO: Support reference spaces.
                 // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
-                // Until reference spaces are supported, assume the reference space position is always the 
-                // identity matrix.
-                m_xrViewerPose.Update(IDENTITY_MATRIX, m_frame->Views);
+                // Updating the reference space is currently not supported. Until it is, we assume the 
+                // reference space is unmoving at identity (which is usually true).
+                auto spaceTransform = IDENTITY_MATRIX;
+
+                m_xrViewerPose.Update(spaceTransform, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
