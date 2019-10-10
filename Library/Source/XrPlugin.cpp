@@ -142,6 +142,11 @@ namespace babylon
             m_engineImpl->Dispatch(callable);
         }
 
+        std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        {
+            return m_session->GetWidthAndHeightForViewIndex(viewIndex);
+        }
+
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
@@ -746,8 +751,18 @@ namespace babylon
 
             void InitializeXrLayer(Napi::Object layer)
             {
-                constexpr size_t WIDTH = 1280;
-                constexpr size_t HEIGHT = 1280;
+                // NOTE: We currently only support rendering to the entire frame. Because the following values
+                // are only used in the context of each other, width and hight as used here don't need to have
+                // anything to do with actual pixel widths. This behavior is permitted by the draft WebXR spec,
+                // which states that the, "exact interpretation of the viewport values depends on the conventions
+                // of the graphics API the viewport is associated with." Since Babylon.js is here doing the
+                // the interpretation for our graphics API, we are able to provide Babylon.js with simple values
+                // that will communicate the correct behavior. In theory, for partial texture rendering, the
+                // only part of this that will need to be fixed is the viewport (the layer will need one for 
+                // each view, not just the one that currently exists).
+                // Spec reference: https://immersive-web.github.io/webxr/#dom-xrviewport-width
+                constexpr size_t WIDTH = 1;
+                constexpr size_t HEIGHT = 1;
 
                 auto env = layer.Env();
                 auto viewport = Napi::Object::New(env);
@@ -764,6 +779,11 @@ namespace babylon
             FrameBufferData* GetFrameBufferForEye(const std::string& eye) const
             {
                 return m_xrPlugin.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
+            }
+
+            std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
+            {
+                return m_xrPlugin.GetWidthAndHeightForViewIndex(viewIndex);
             }
 
         private:
@@ -926,11 +946,13 @@ namespace babylon
                 , m_session{ *XRSession::Unwrap(m_jsSession.Value()) }
             {
                 auto createRenderTextureCallback = info[1].As<Napi::Function>();
-                auto dimension = Napi::Value::From(info.Env(), 1280); // TODO: Magic number!
 
                 for (size_t idx = 0; idx < m_jsRenderTargetTextures.size(); ++idx)
                 {
-                    m_jsRenderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({ dimension, dimension }).As<Napi::Object>());
+                    auto [width, height] = m_session.GetWidthAndHeightForViewIndex(idx);
+                    auto jsWidth = Napi::Value::From(info.Env(), width);
+                    auto jsHeight = Napi::Value::From(info.Env(), height);
+                    m_jsRenderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({ jsWidth, jsHeight }).As<Napi::Object>());
                 }
             }
 

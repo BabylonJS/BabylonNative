@@ -245,9 +245,9 @@ namespace xr
             XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, Resources.ConfigViews.data()));
 
             // Create all the swapchains.
-            const XrViewConfigurationView& view = Resources.ConfigViews[0];
             for (uint32_t idx = 0; idx < viewCount; ++idx)
             {
+                const XrViewConfigurationView& view = Resources.ConfigViews[idx];
                 Resources.ColorSwapchains.push_back(
                     CreateSwapchain(Session,
                         colorSwapchainFormat,
@@ -289,6 +289,12 @@ namespace xr
         void RequestEndSession()
         {
             xrRequestExitSession(Session);
+        }
+
+        std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        {
+            const auto& swapchain = Resources.ColorSwapchains[viewIndex];
+            return{ swapchain.Width, swapchain.Height };
         }
 
     private:
@@ -612,5 +618,10 @@ namespace xr
     void System::Session::RequestEndSession()
     {
         m_impl->RequestEndSession();
+    }
+
+    std::pair<size_t, size_t> System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
+    {
+        return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 }
