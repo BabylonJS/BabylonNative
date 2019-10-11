@@ -10,7 +10,8 @@ function CreateBoxAsync() {
 }
 
 function CreateSpheresAsync() {
-    var size = 12;
+    var root = new BABYLON.Mesh("root", scene);
+    var size = 8;
     for (var i = 0; i < size; i++) {
         for (var j = 0; j < size; j++) {
             for (var k = 0; k < size; k++) {
@@ -18,6 +19,7 @@ function CreateSpheresAsync() {
                 sphere.position.x = i;
                 sphere.position.y = j;
                 sphere.position.z = k;
+                sphere.setParent(root);
             }
         }
     }
@@ -48,14 +50,14 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function () {
+//CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Suzanne/glTF/Suzanne.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf").then(function () {
-//BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Sponza/glTF/Sponza.gltf").then(function () {
+BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Sponza/glTF/Sponza.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BrainStem/glTF/BrainStem.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf").then(function () {
@@ -111,7 +113,7 @@ CreateBoxAsync().then(function () {
 
     if (turntable) {
         scene.beforeRender = function () {
-            scene.meshes[0].rotation.y += 0.005 * scene.getAnimationRatio();
+            scene.meshes[0].rotate(BABYLON.Vector3.Up(), 0.005 * scene.getAnimationRatio());
         };
     }
 
@@ -130,16 +132,19 @@ CreateBoxAsync().then(function () {
 
     setTimeout(function () {
         scene.createDefaultXRExperienceAsync({ disableDefaultUI: true }).then((xr) => {
+            // setTimeout(function () {
+            //     xr.baseExperience.exitXRAsync().then(function () {
+            //         xr = null;
+            //     });
+            //     scene.meshes[0].position.x = 0;
+            //     scene.meshes[0].position.y = 0;
+            //     scene.meshes[0].position.z = 0;
+            // }, 10000);
             setTimeout(function () {
-                xr.baseExperience.exitXRAsync().then(function () {
-                    xr = null;
-                });
-                scene.meshes[0].position.x = 0;
-                scene.meshes[0].position.y = 0;
-                scene.meshes[0].position.z = 0;
-            }, 10000);
-            setTimeout(function () {
-                scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
+                //scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
+                scene.meshes[0].position.y -= 1;
+                //scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
+                scene.meshes[0].scaling.scaleInPlace(3);
             }, 5000);
             return xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
         });
