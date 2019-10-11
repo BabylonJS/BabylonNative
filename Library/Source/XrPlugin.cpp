@@ -29,12 +29,6 @@ namespace
         0.f, 0.f, 0.f, 1.f
     };
 
-    // From https://github.com/microsoft/OpenXR-SDK-VisualStudio/blob/master/samples/XrUtility/XrMath.h#L332-L335
-    // 2 * n / (r - l)        0                     0                    0
-    // 0                      2 * n / (t - b)       0                    0
-    // (r + l) / (r - l)      (t + b) / (t - b)     f / (n - f)         -1
-    // 0                      0                     n*f / (n - f)        0
-    // Except we're row-major, so we transpose.
     inline std::array<float, 16> createProjectionMatrix(const xr::System::Session::Frame::View & view)
     {
         constexpr float n{ xr::System::DEPTH_NEAR_Z };
