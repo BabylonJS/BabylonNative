@@ -198,6 +198,9 @@ namespace xr
         };
         RenderResources Resources{};
 
+        float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
+        float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
+
         XrSessionState SessionState{ XR_SESSION_STATE_UNKNOWN };
 
         Impl(System::Impl& hmdImpl, void* graphicsContext)
@@ -515,6 +518,8 @@ namespace xr
                 view.DepthTexturePointer = depthSwapchain.Images[depthSwapchainImageIndex].texture;
                 view.DepthTextureSize.Width = depthSwapchain.Width;
                 view.DepthTextureSize.Height = depthSwapchain.Height;
+                view.DepthNearZ = sessionImpl.DepthNearZ;
+                view.DepthFarZ = sessionImpl.DepthFarZ;
         
                 renderResources.ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                 renderResources.ProjectionLayerViews[idx].pose = renderResources.Views[idx].pose;
@@ -528,8 +533,8 @@ namespace xr
                     renderResources.DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
                     renderResources.DepthInfoViews[idx].minDepth = 0;
                     renderResources.DepthInfoViews[idx].maxDepth = 1;
-                    renderResources.DepthInfoViews[idx].nearZ = System::DEPTH_NEAR_Z;
-                    renderResources.DepthInfoViews[idx].farZ = System::DEPTH_FAR_Z;
+                    renderResources.DepthInfoViews[idx].nearZ = sessionImpl.DepthNearZ;
+                    renderResources.DepthInfoViews[idx].farZ = sessionImpl.DepthFarZ;
                     renderResources.DepthInfoViews[idx].subImage.swapchain = depthSwapchain.Handle;
                     renderResources.DepthInfoViews[idx].subImage.imageRect = imageRect;
                     renderResources.DepthInfoViews[idx].subImage.imageArrayIndex = 0;
@@ -623,5 +628,11 @@ namespace xr
     std::pair<size_t, size_t> System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
     {
         return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
+    }
+
+    void System::Session::SetDepthsNearFar(float depthNear, float depthFar)
+    {
+        m_impl->DepthNearZ = depthNear;
+        m_impl->DepthFarZ = depthFar;
     }
 }

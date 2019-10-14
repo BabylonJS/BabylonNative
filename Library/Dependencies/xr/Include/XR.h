@@ -25,8 +25,8 @@ namespace xr
     class System
     {
     public:
-        constexpr static float DEPTH_NEAR_Z{ 0.5f };
-        constexpr static float DEPTH_FAR_Z{ 1000.f };
+        constexpr static float DEFAULT_DEPTH_NEAR_Z{ 0.5f };
+        constexpr static float DEFAULT_DEPTH_FAR_Z{ 1000.f };
 
         class Session
         {
@@ -77,6 +77,9 @@ namespace xr
                         size_t Width{};
                         size_t Height{};
                     } DepthTextureSize;
+
+                    float DepthNearZ{};
+                    float DepthFarZ{};
                 };
 
                 std::vector<View>& Views;
@@ -99,6 +102,7 @@ namespace xr
             std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession);
             void RequestEndSession();
             std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const;
+            void SetDepthsNearFar(float depthNear, float depthFar);
 
         private:
             std::unique_ptr<Impl> m_impl{};

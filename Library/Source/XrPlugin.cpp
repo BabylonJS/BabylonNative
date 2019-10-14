@@ -29,15 +29,15 @@ namespace
         0.f, 0.f, 0.f, 1.f
     };
 
-    inline std::array<float, 16> createProjectionMatrix(const xr::System::Session::Frame::View & view)
+    inline std::array<float, 16> createProjectionMatrix(const xr::System::Session::Frame::View& view)
     {
-        constexpr float n{ xr::System::DEPTH_NEAR_Z };
-        constexpr float f{ xr::System::DEPTH_FAR_Z };
+        const float n{ view.DepthNearZ };
+        const float f{ view.DepthFarZ };
 
-        float r = std::tanf(view.FieldOfView.AngleRight) * n;
-        float l = std::tanf(view.FieldOfView.AngleLeft) * n;
-        float t = std::tanf(view.FieldOfView.AngleUp) * n;
-        float b = std::tanf(view.FieldOfView.AngleDown) * n;
+        const float r = std::tanf(view.FieldOfView.AngleRight) * n;
+        const float l = std::tanf(view.FieldOfView.AngleLeft) * n;
+        const float t = std::tanf(view.FieldOfView.AngleUp) * n;
+        const float b = std::tanf(view.FieldOfView.AngleDown) * n;
 
         std::array<float, 16> bxResult{};
         bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
@@ -139,6 +139,11 @@ namespace babylon
         std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
         {
             return m_session->GetWidthAndHeightForViewIndex(viewIndex);
+        }
+
+        void SetDepthsNarFar(float depthNear, float depthFar)
+        {
+            m_session->SetDepthsNearFar(depthNear, depthFar);
         }
 
     private:
@@ -809,6 +814,10 @@ namespace babylon
             {
                 auto renderState = info[0].As<Napi::Object>();
                 info.This().As<Napi::Object>().Set("renderState", renderState);
+
+                float depthNear = renderState.Get("depthNear").As<Napi::Number>().FloatValue();
+                float depthFar = renderState.Get("depthFar").As<Napi::Number>().FloatValue();
+                m_xrPlugin.SetDepthsNarFar(depthNear, depthFar);
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(Napi::Value::From(info.Env(), 0));
