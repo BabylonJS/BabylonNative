@@ -222,6 +222,48 @@ STDAPI_(JsErrorCode) JsCreateEnhancedFunction(JsEnhancedNativeFunction nativeFun
 
 typedef BYTE* ChakraBytePtr;
 
+#define CHECK_JSEC(operation) do { auto result = operation; if (result != JsErrorCode::JsNoError) return result; } while (false)
+JsErrorCode JsCreatePromise(JsValueRef* promise, JsValueRef* resolve, JsValueRef* reject)
+{
+    JsValueRef global{};
+    CHECK_JSEC(JsGetGlobalObject(&global));
+
+    JsPropertyIdRef promiseConstructorId{};
+    CHECK_JSEC(JsGetPropertyIdFromName(L"Promise", &promiseConstructorId));
+
+    JsValueRef promiseConstructor{};
+    CHECK_JSEC(JsGetProperty(global, promiseConstructorId, &promiseConstructor));
+
+    struct CallbackStruct
+    {
+        static JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount, void* callbackState)
+        {
+            return (reinterpret_cast<CallbackStruct*>(callbackState))->Callback(callee, isConstructCall, arguments, argumentCount);
+        }
+
+        JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount)
+        {
+            *Resolve = arguments[1];
+            *Reject = arguments[2];
+
+            return JS_INVALID_REFERENCE;
+        }
+
+        JsValueRef* Resolve{};
+        JsValueRef* Reject{};
+    } cbs{ resolve, reject };
+
+    JsValueRef callbackFunction{};
+    CHECK_JSEC(JsCreateFunction(&CallbackStruct::Callback, &cbs, &callbackFunction));
+
+    JsValueRef args[2];
+    CHECK_JSEC(JsGetUndefinedValue(&args[0]));
+    args[1] = callbackFunction;
+    CHECK_JSEC(JsConstructObject(promiseConstructor, args, 2, promise));
+
+    return JsErrorCode::JsNoError;
+}
+#undef CHECK_JSEC
 } // end of anonymous namespace
 
 namespace {
@@ -3109,49 +3151,6 @@ napi_status napi_run_script(napi_env env,
 //
 //  return napi_ok;
 //}
-
-#define CHECK_JSEC(operation) do { auto result = operation; if (result != JsErrorCode::JsNoError) return result; } while (false)
-JsErrorCode JsCreatePromise(JsValueRef* promise, JsValueRef* resolve, JsValueRef* reject)
-{
-    JsValueRef global{};
-    CHECK_JSEC(JsGetGlobalObject(&global));
-    
-    JsPropertyIdRef promiseConstructorId{};
-    CHECK_JSEC(JsGetPropertyIdFromName(L"Promise", &promiseConstructorId));
-
-    JsValueRef promiseConstructor{};
-    CHECK_JSEC(JsGetProperty(global, promiseConstructorId, &promiseConstructor));
-
-    struct CallbackStruct
-    {
-        static JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount, void* callbackState)
-        {
-            return (reinterpret_cast<CallbackStruct*>(callbackState))->Callback(callee, isConstructCall, arguments, argumentCount);
-        }
-
-        JsValueRef Callback(JsValueRef callee, bool isConstructCall, JsValueRef* arguments, unsigned short argumentCount)
-        {
-            *Resolve = arguments[1];
-            *Reject = arguments[2];
-
-            return JS_INVALID_REFERENCE;
-        }
-
-        JsValueRef* Resolve{};
-        JsValueRef* Reject{};
-    } cbs{ resolve, reject };
-
-    JsValueRef callbackFunction{};
-    CHECK_JSEC(JsCreateFunction(&CallbackStruct::Callback, &cbs, &callbackFunction));
-
-    JsValueRef args[2];
-    CHECK_JSEC(JsGetUndefinedValue(&args[0]));
-    args[1] = callbackFunction;
-    CHECK_JSEC(JsConstructObject(promiseConstructor, args, 2, promise));
-
-    return JsErrorCode::JsNoError;
-}
-#undef CHECK_JSEC
 
 NAPI_EXTERN napi_status napi_create_promise(napi_env env,
                                             napi_deferred* deferred,

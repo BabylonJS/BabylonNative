@@ -294,10 +294,10 @@ namespace xr
             xrRequestExitSession(Session);
         }
 
-        std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
         {
             const auto& swapchain = Resources.ColorSwapchains[viewIndex];
-            return{ swapchain.Width, swapchain.Height };
+            return{ static_cast<size_t>(swapchain.Width), static_cast<size_t>(swapchain.Height) };
         }
 
     private:
@@ -625,7 +625,7 @@ namespace xr
         m_impl->RequestEndSession();
     }
 
-    std::pair<size_t, size_t> System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
+    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
     {
         return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }

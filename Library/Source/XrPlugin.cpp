@@ -136,7 +136,7 @@ namespace babylon
             m_engineImpl->Dispatch(callable);
         }
 
-        std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        xr::Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
         {
             return m_session->GetWidthAndHeightForViewIndex(viewIndex);
         }
@@ -778,7 +778,7 @@ namespace babylon
                 return m_xrPlugin.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
             }
 
-            std::pair<size_t, size_t> GetWidthAndHeightForViewIndex(size_t viewIndex) const
+            xr::Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
             {
                 return m_xrPlugin.GetWidthAndHeightForViewIndex(viewIndex);
             }
@@ -950,9 +950,9 @@ namespace babylon
 
                 for (size_t idx = 0; idx < m_jsRenderTargetTextures.size(); ++idx)
                 {
-                    auto [width, height] = m_session.GetWidthAndHeightForViewIndex(idx);
-                    auto jsWidth = Napi::Value::From(info.Env(), width);
-                    auto jsHeight = Napi::Value::From(info.Env(), height);
+                    auto size = m_session.GetWidthAndHeightForViewIndex(idx);
+                    auto jsWidth = Napi::Value::From(info.Env(), size.Width);
+                    auto jsHeight = Napi::Value::From(info.Env(), size.Height);
                     m_jsRenderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({ jsWidth, jsHeight }).As<Napi::Object>());
                 }
             }
