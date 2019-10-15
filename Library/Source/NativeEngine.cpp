@@ -1081,11 +1081,6 @@ namespace babylon
         });
     }
 
-    void NativeEngine::Impl::LinkToDefaultViewClearState(ViewClearState& viewClearState)
-    {
-        m_viewClearState.Link(viewClearState);
-    }
-
     // NativeEngine exterior definitions.
 
     NativeEngine::NativeEngine(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
