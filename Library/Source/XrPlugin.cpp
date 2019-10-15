@@ -45,12 +45,12 @@ namespace
         return bxResult;
     }
 
-    // From https://github.com/BabylonJS/Babylon.js/blob/c620b2730fdc42d00d485b9cd43a993fad331254/src/Maths/math.vector.ts#L5216-L5248
     std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::View& view)
     {
         auto& quat = view.Orientation;
         auto& pos = view.Position;
 
+        // Quaternion to matrix from https://github.com/BabylonJS/Babylon.js/blob/v4.0.0/src/Maths/math.ts#L6245-L6283
         const float xx{ quat.X * quat.X };
         const float yy{ quat.Y * quat.Y };
         const float zz{ quat.Z * quat.Z };
@@ -78,11 +78,13 @@ namespace
         worldSpaceTransform[10] = 1.f - (2.f * (yy + xx));
         worldSpaceTransform[11] = 0.f;
 
+        // Insert position into rotation matrix.
         worldSpaceTransform[12] = pos.X;
         worldSpaceTransform[13] = pos.Y;
         worldSpaceTransform[14] = pos.Z;
         worldSpaceTransform[15] = 1.f;
 
+        // Invert to get the view space transform.
         std::array<float, 16> viewSpaceTransform{};
         bx::mtxInverse(viewSpaceTransform.data(), worldSpaceTransform.data());
 
