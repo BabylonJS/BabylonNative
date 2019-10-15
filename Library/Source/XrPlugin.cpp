@@ -45,7 +45,7 @@ namespace
         return bxResult;
     }
 
-    // From https://github.com/BabylonJS/Babylon.js/blob/c620b2730fdc42d00d485b9cd43a993fad331254/src/Maths/math.vector.ts#L5216-L5248
+    // From https://github.com/BabylonJS/Babylon.js/blob/v4.0.0/src/Maths/math.ts#L6245-L6283
     inline std::array<float, 16> createTransformMatrix(const xr::System::Session::Frame::View& view)
     {
         auto& quat = view.Orientation;
