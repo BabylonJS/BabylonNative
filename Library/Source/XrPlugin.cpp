@@ -29,15 +29,15 @@ namespace
         0.f, 0.f, 0.f, 1.f
     };
 
-    inline std::array<float, 16> createProjectionMatrix(const xr::System::Session::Frame::View& view)
+    std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
     {
         const float n{ view.DepthNearZ };
         const float f{ view.DepthFarZ };
 
-        const float r = std::tanf(view.FieldOfView.AngleRight) * n;
-        const float l = std::tanf(view.FieldOfView.AngleLeft) * n;
-        const float t = std::tanf(view.FieldOfView.AngleUp) * n;
-        const float b = std::tanf(view.FieldOfView.AngleDown) * n;
+        const float r{ std::tanf(view.FieldOfView.AngleRight) * n };
+        const float l{ std::tanf(view.FieldOfView.AngleLeft) * n };
+        const float t{ std::tanf(view.FieldOfView.AngleUp) * n };
+        const float b{ std::tanf(view.FieldOfView.AngleDown) * n };
 
         std::array<float, 16> bxResult{};
         bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
@@ -46,20 +46,20 @@ namespace
     }
 
     // From https://github.com/BabylonJS/Babylon.js/blob/c620b2730fdc42d00d485b9cd43a993fad331254/src/Maths/math.vector.ts#L5216-L5248
-    inline std::array<float, 16> createTransformMatrix(const xr::System::Session::Frame::View& view)
+    std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::View& view)
     {
         auto& quat = view.Orientation;
         auto& pos = view.Position;
 
-        float xx = quat.X * quat.X;
-        float yy = quat.Y * quat.Y;
-        float zz = quat.Z * quat.Z;
-        float xy = quat.X * quat.Y;
-        float zw = quat.Z * quat.W;
-        float zx = quat.Z * quat.X;
-        float yw = quat.Y * quat.W;
-        float yz = quat.Y * quat.Z;
-        float xw = quat.X * quat.W;
+        const float xx{ quat.X * quat.X };
+        const float yy{ quat.Y * quat.Y };
+        const float zz{ quat.Z * quat.Z };
+        const float xy{ quat.X * quat.Y };
+        const float zw{ quat.Z * quat.W };
+        const float zx{ quat.Z * quat.X };
+        const float yw{ quat.Y * quat.W };
+        const float yz{ quat.Y * quat.Z };
+        const float xw{ quat.X * quat.W };
 
         auto worldSpaceTransform{ IDENTITY_MATRIX };
 
@@ -109,6 +109,9 @@ namespace babylon
 
         void SetEngine(Napi::Object& jsEngine)
         {
+            // This implementation must be switched to simply unwrapping the JavaScript object as soon as NativeEngine
+            // is transitioned away from a singleton pattern. Part of that change will remove the GetEngine method, as
+            // documented in https://github.com/BabylonJS/BabylonNative/issues/62
             auto nativeEngine = jsEngine.Get("_native").As<Napi::Object>();
             auto getEngine = nativeEngine.Get("getEngine").As<Napi::Function>();
             m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine::Impl>>().Data();
@@ -130,8 +133,7 @@ namespace babylon
             });
         }
 
-        template<typename CallableT>
-        void Dispatch(CallableT&& callable)
+        void Dispatch(std::function<void()>&& callable)
         {
             m_engineImpl->Dispatch(callable);
         }
@@ -308,8 +310,7 @@ namespace babylon
             static inline const std::string LEFT{ "left" };
             static inline const std::string RIGHT{ "right" };
 
-            template<typename IdxT>
-            static inline const auto& IndexToEye(IdxT idx)
+            static const auto& IndexToEye(size_t idx)
             {
                 switch (idx)
                 {
@@ -322,7 +323,7 @@ namespace babylon
                 }
             }
 
-            static inline const auto EyeToIndex(const std::string& eye)
+            static const auto EyeToIndex(const std::string& eye)
             {
                 if (eye == LEFT)
                 {
@@ -458,16 +459,18 @@ namespace babylon
 
             XRView(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRView>{ info }
-                , m_eye{ Napi::Persistent(Napi::String::From(info.Env(), "")) }
+                , m_eyeIdx{ 0 }
+                , m_eye{ Napi::Persistent(Napi::String::From(info.Env(), XREye::IndexToEye(m_eyeIdx))) }
                 , m_projectionMatrix{ Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE)) }
                 , m_rigidTransform{ Napi::Persistent(XRRigidTransform::New()) }
             {}
 
-            void Update(const std::string& eye, gsl::span<const float, 16> projectionMatrix, gsl::span<const float, 16> transformMatrix)
+            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, gsl::span<const float, 16> transformMatrix)
             {
-                if (eye != m_eye.Value().Utf8Value())
+                if (eyeIdx != m_eyeIdx)
                 {
-                    m_eye = Napi::Persistent(Napi::String::From(m_eye.Env(), eye));
+                    m_eyeIdx = eyeIdx;
+                    m_eye = Napi::Persistent(Napi::String::From(m_eye.Env(), XREye::IndexToEye(m_eyeIdx)));
                 }
 
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
@@ -478,6 +481,7 @@ namespace babylon
         private:
             static inline Napi::FunctionReference constructor{};
 
+            size_t m_eyeIdx{};
             Napi::Reference<Napi::String> m_eye{};
             Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
             Napi::ObjectReference m_rigidTransform{};
@@ -565,9 +569,9 @@ namespace babylon
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
                 {
                     const auto& view = views[idx];
-                    const auto projectionMatrix = createProjectionMatrix(view);
-                    const auto transformMatrix = createTransformMatrix(view);
-                    m_views[idx]->Update(XREye::IndexToEye(idx), projectionMatrix, transformMatrix);
+                    const auto projectionMatrix = CreateProjectionMatrix(view);
+                    const auto transformMatrix = CreateTransformMatrix(view);
+                    m_views[idx]->Update(idx, projectionMatrix, transformMatrix);
                 }
             }
 
@@ -816,7 +820,7 @@ namespace babylon
                 m_xrPlugin.SetDepthsNarFar(depthNear, depthFar);
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(Napi::Value::From(info.Env(), 0));
+                deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
 
@@ -849,7 +853,7 @@ namespace babylon
                 });
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(Napi::Value::From(info.Env(), 0));
+                deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
         };
@@ -894,13 +898,6 @@ namespace babylon
 
             Napi::Value InitializeXRLayerAsync(const Napi::CallbackInfo& info)
             {
-                // TODO BAD DESIGN: Having this here introduces something of a circular dependency with the session 
-                // and the output target having to know about each other. There are several possible solutions to 
-                // this, including rearchitecting the JavaScript side slightly (probably the safest, but will be
-                // a bit invasive) and combining the session and the output target to be the same thing. For now,
-                // keep the circular dependency ONLY TO SEE HOW THE REST OF THE LOGIC FALLS AROUND IT. Once all the
-                // logic is in place and working, hopefully it will be clear what's the best way to refactor to 
-                // remove the circular dependency.
                 auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
                 session.SetEngine(m_jsEngineReference.Value());
 
@@ -909,7 +906,7 @@ namespace babylon
                 info.This().As<Napi::Object>().Set("xrLayer", xrLayer);
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(Napi::Value::From(info.Env(), 0)); // TODO: Why is it REQUIRED that I pass a valid value here?
+                deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
         };
