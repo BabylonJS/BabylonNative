@@ -231,8 +231,11 @@ namespace babylon
         , m_nativeWindowPtr{ nativeWindowPtr }
     {}
 
-    void NativeEngine::Impl::InitializeRendering(Napi::Env& env)
+    void NativeEngine::Impl::Initialize(Napi::Env& env)
     {
+        // Rendering and context initialization must happen in the same thread for OpenGL(ES)
+        // OpenGL context is associated with 1 thread only at a time. To Associate it with another thread, MakeCurrentContext must be used
+        // but bgfx doesn't expose it. 
         bgfx::Init init{};
         init.platformData.nwh = m_nativeWindowPtr;
         bgfx::setPlatformData(init.platformData);
@@ -246,14 +249,6 @@ namespace babylon
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
         EngineDefiner::Define(env, this);
-    }
-
-    void NativeEngine::Impl::Initialize(Napi::Env& env)
-    {
-        // Rendering is initialized here because for OpenGL(ES) initialization must happen in the same thread for rendering
-        // OpenGL context is associated with 1 thread only at a time. To Associate it with another thread, MakeCurrentContext must be used
-        // but bgfx doesn't expose it.
-        InitializeRendering(env);
     }
     
     void NativeEngine::Impl::UpdateSize(float width, float height)

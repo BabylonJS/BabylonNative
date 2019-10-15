@@ -31,7 +31,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/")
 set(BABYLON_NATIVE_TESTAPP_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
-
 add_library(BabylonNativeJNI SHARED
             src/main/cpp/BabylonNativeJNI.cpp
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/js_native_api_v8.cc

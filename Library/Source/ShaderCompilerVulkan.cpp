@@ -34,7 +34,6 @@ namespace babylon
         {
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 
-
             spirv_cross::Parser parser{ spirv };
             parser.parse();
 

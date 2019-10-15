@@ -28,8 +28,6 @@ add_compile_definitions(BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
 
 if(ANDROID)
     add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=30)
-elseif()
-    add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=31)
 endif()
 
 if(APPLE)
@@ -175,6 +173,19 @@ target_link_libraries(Library
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl)
 
+if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
+    target_link_libraries(Library PRIVATE xr)
+endif()
+
+if(WINDOWS_STORE)
+    target_link_libraries(Library PRIVATE arcana)
+endif()
+
+if(APPLE)
+    target_link_libraries(Library
+        PRIVATE spirv-cross-msl)
+endif()
+
 if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     target_link_libraries(Library
         PRIVATE "crypt32.lib"
@@ -189,19 +200,6 @@ if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL 
         PRIVATE "shlwapi.lib"
         PRIVATE "ws2_32.lib"
         PRIVATE "wldap32.lib")
-endif()
-
-if(BABYLON_NATIVE_PLATFORM STREQUAL "Win32")
-    target_link_libraries(Library PRIVATE xr)
-endif()
-
-if(WINDOWS_STORE)
-    target_link_libraries(Library PRIVATE arcana)
-endif()
-
-if(APPLE)
-    target_link_libraries(Library
-        PRIVATE spirv-cross-msl)
 endif()
 
 if(WINDOWS_STORE)
