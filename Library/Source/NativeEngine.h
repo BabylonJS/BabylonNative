@@ -9,17 +9,8 @@ namespace babylon
     class NativeEngine final
     {
     public:
-        NativeEngine(void* nativeWindowPtr, RuntimeImpl&);
-        ~NativeEngine();
-
-        void Initialize(Napi::Env& env);
-        void UpdateSize(float width, float height);
-        void UpdateRenderTarget();
-
-    private:
-        class Impl;
-        std::unique_ptr<Impl> m_impl;
-
-        friend class XrPlugin;
+        static void Initialize(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
+        static void UpdateSize(float width, float height);
+        static void UpdateRenderTarget();
     };
 }

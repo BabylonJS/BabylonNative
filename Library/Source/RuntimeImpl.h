@@ -8,7 +8,6 @@
 namespace babylon
 {
     class Env;
-    class NativeEngine;
 
     class RuntimeImpl
     {
@@ -56,7 +55,7 @@ namespace babylon
         std::condition_variable m_suspendVariable;
         bool m_suspended{ false };
 
-        std::unique_ptr<NativeEngine> m_engine{};
+        void* m_nativeWindowPtr{};
 
         std::thread m_thread{};
 

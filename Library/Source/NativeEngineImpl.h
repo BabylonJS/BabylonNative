@@ -6,7 +6,7 @@
 #include "RuntimeImpl.h"
 
 #include <napi/napi.h>
-#include "NapiBridge.h"
+// #include "NapiBridge.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -281,22 +281,28 @@ namespace babylon
         std::vector<VertexBuffer> vertexBuffers;
     };
 
-    class NativeEngine::Impl final
+    class NativeEngineImpl final : public Napi::ObjectWrap<NativeEngineImpl>
     {
-    public:
-        Impl(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
+        static constexpr auto JS_CLASS_NAME = "NativeEngineImpl";
 
-        void Initialize(Napi::Env& env);
-        void UpdateSize(float width, float height);
-        void UpdateRenderTarget();
-        void Suspend();
+    public:
+        NativeEngineImpl(const Napi::CallbackInfo& info);
+
+        static void Initialize(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
+
+        static void UpdateSize(float width, float height);
+        static void UpdateRenderTarget();
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
 
     private:
-        using EngineDefiner = NativeEngineDefiner<NativeEngine::Impl>;
-        friend EngineDefiner;
+        static inline Napi::FunctionReference constructor{};
+        static inline struct
+        {
+            uint32_t Width{ 1024 };
+            uint32_t Height{ 768 };
+        } RenderTargetSize{};
 
         enum BlendMode {}; // TODO DEBUG
         enum class Filter {}; // TODO DEBUG
@@ -370,19 +376,11 @@ namespace babylon
 
         RuntimeImpl& m_runtimeImpl;
 
-        struct
-        {
-            uint32_t Width{};
-            uint32_t Height{};
-        } m_size;
-
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
         ViewClearState m_viewClearState;
 
         FrameBufferManager m_frameBufferManager{};
-
-        void* m_nativeWindowPtr{};
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};

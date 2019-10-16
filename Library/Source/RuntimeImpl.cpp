@@ -10,7 +10,7 @@
 namespace babylon
 {
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
-        : m_engine{ std::make_unique<NativeEngine>(nativeWindowPtr, *this) }
+        : m_nativeWindowPtr{ nativeWindowPtr }
         , m_thread{ [this] { ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
     {
@@ -28,12 +28,12 @@ namespace babylon
 
     void RuntimeImpl::UpdateSize(float width, float height)
     {
-        m_dispatcher.queue([width, height, this] { m_engine->UpdateSize(width, height); });
+        m_dispatcher.queue([width, height, this] { NativeEngine::UpdateSize(width, height); });
     }
 
     void RuntimeImpl::UpdateRenderTarget()
     {
-        m_dispatcher.queue([this] { m_engine->UpdateRenderTarget(); });
+        m_dispatcher.queue([this] { NativeEngine::UpdateRenderTarget(); });
     }
 
     void RuntimeImpl::Suspend()
@@ -198,7 +198,7 @@ namespace babylon
 
         Window window{ *this };
 
-        m_engine->Initialize(env);
+        NativeEngine::Initialize(m_nativeWindowPtr, *this);
 
         // TODO: Handle device lost/restored.
 

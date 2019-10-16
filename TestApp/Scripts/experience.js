@@ -46,6 +46,8 @@ function CreateInputHandling(scene) {
     });
 }
 
+var nativeEngine = new NativeEngineImpl();
+
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
