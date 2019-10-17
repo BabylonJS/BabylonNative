@@ -230,8 +230,8 @@ namespace babylon
         init.platformData.nwh = window.GetWindowPtr();
         bgfx::setPlatformData(init.platformData);
         init.type = bgfx::RendererType::Direct3D11;
-        init.resolution.width = window.GetWidth();
-        init.resolution.height = window.GetHeight();
+        init.resolution.width = static_cast<uint32_t>(window.GetWidth());
+        init.resolution.height = static_cast<uint32_t>(window.GetHeight());
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4;
         bgfx::init(init);
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
