@@ -23,8 +23,8 @@ namespace babylon
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
 
     public:
-        static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env&);
-        static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env&);
+        static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
+        static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env);
 
         RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
         virtual ~RuntimeImpl();

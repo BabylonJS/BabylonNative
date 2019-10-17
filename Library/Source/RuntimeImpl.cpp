@@ -12,7 +12,7 @@
 
 namespace babylon
 {
-    RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env& env)
+    RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env env)
     {
         return *env.Global()
             .Get(JS_NATIVE_NAME).ToObject()
@@ -20,7 +20,7 @@ namespace babylon
             .Data();
     }
 
-    NativeWindow& RuntimeImpl::GetNativeWindowFromJavaScript(Napi::Env& env)
+    NativeWindow& RuntimeImpl::GetNativeWindowFromJavaScript(Napi::Env env)
     {
         return *NativeWindow::Unwrap(
             env.Global()
