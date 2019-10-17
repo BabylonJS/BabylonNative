@@ -221,14 +221,6 @@ namespace babylon
         };
     }
 
-    NativeEngineImpl::NativeEngineImpl(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<NativeEngineImpl>{ info }
-        , m_runtimeImpl{ *static_cast<RuntimeImpl*>(info.Data()) }
-        , m_currentProgram{ nullptr }
-        , m_engineState{ BGFX_STATE_DEFAULT }
-        , m_viewClearState{ 0 }
-    {}
-
     void NativeEngineImpl::Initialize(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
     {
         // Initialize bgfx.
@@ -318,24 +310,33 @@ namespace babylon
         env.Global().Set(JS_CLASS_NAME, func);
     }
 
-    void NativeEngineImpl::UpdateSize(float width, float height)
+    NativeEngineImpl::NativeEngineImpl(const Napi::CallbackInfo& info)
+        : NativeEngineImpl(info, *NativeWindow::Unwrap(info.Env().Global().Get("_runtime").ToObject().Get("nativeWindow").ToObject()))
+    {}
+
+    NativeEngineImpl::NativeEngineImpl(const Napi::CallbackInfo& info, NativeWindow& nativeWindow)
+        : Napi::ObjectWrap<NativeEngineImpl>{ info }
+        , m_runtimeImpl{ *static_cast<RuntimeImpl*>(info.Data()) }
+        , m_currentProgram{ nullptr }
+        , m_engineState{ BGFX_STATE_DEFAULT }
+        , m_viewClearState{ 0 }
+        , m_renderTargetSize{ static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()) }
+        , m_resizeCallbackTicket{ nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); }) }
+    {}
+
+    void NativeEngineImpl::UpdateSize(size_t width, size_t height)
     {
         auto w = static_cast<uint32_t>(width);
         auto h = static_cast<uint32_t>(height);
 
-        auto& size = NativeEngineImpl::RenderTargetSize;
+        auto& size = m_renderTargetSize;
         if (w != size.Width || h != size.Height)
         {
             size = { w, h };
-            UpdateRenderTarget();
-        }
-    }
 
-    void NativeEngineImpl::UpdateRenderTarget()
-    {
-        auto& size = NativeEngineImpl::RenderTargetSize;
-        bgfx::reset(size.Width, size.Height, BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4);
-        bgfx::setViewRect(0, 0, 0, size.Width, size.Height);
+            bgfx::reset(size.Width, size.Height, BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4);
+            bgfx::setViewRect(0, 0, 0, size.Width, size.Height);
+        }
     }
 
     FrameBufferManager& NativeEngineImpl::GetFrameBufferManager()
@@ -1123,13 +1124,13 @@ namespace babylon
     Napi::Value NativeEngineImpl::GetRenderWidth(const Napi::CallbackInfo& info)
     {
         // TODO CHECK: Is this not just the size?  What is this?
-        return Napi::Value::From(info.Env(), NativeEngineImpl::RenderTargetSize.Width);
+        return Napi::Value::From(info.Env(), m_renderTargetSize.Width);
     }
 
     Napi::Value NativeEngineImpl::GetRenderHeight(const Napi::CallbackInfo& info)
     {
         // TODO CHECK: Is this not just the size?  What is this?
-        return Napi::Value::From(info.Env(), NativeEngineImpl::RenderTargetSize.Height);
+        return Napi::Value::From(info.Env(), m_renderTargetSize.Height);
     }
 
     void NativeEngineImpl::DispatchAnimationFrameAsync(Napi::FunctionReference callback)
@@ -1160,16 +1161,6 @@ namespace babylon
     void NativeEngine::Initialize(void* nativeWindowPtr, RuntimeImpl& runtimeImpl)
     {
         NativeEngineImpl::Initialize(nativeWindowPtr, runtimeImpl);
-    }
-
-    void NativeEngine::UpdateSize(float width, float height)
-    {
-        NativeEngineImpl::UpdateSize(width, height);
-    }
-
-    void NativeEngine::UpdateRenderTarget()
-    {
-        NativeEngineImpl::UpdateRenderTarget();
     }
 }
 

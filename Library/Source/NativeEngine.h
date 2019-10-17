@@ -10,7 +10,5 @@ namespace babylon
     {
     public:
         static void Initialize(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
-        static void UpdateSize(float width, float height);
-        static void UpdateRenderTarget();
     };
 }

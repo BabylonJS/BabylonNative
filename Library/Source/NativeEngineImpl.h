@@ -2,6 +2,7 @@
 
 #include "NativeEngine.h"
 
+#include "NativeWindow.h"
 #include "ShaderCompiler.h"
 #include "RuntimeImpl.h"
 
@@ -287,22 +288,15 @@ namespace babylon
 
     public:
         NativeEngineImpl(const Napi::CallbackInfo& info);
+        NativeEngineImpl(const Napi::CallbackInfo& info, NativeWindow& nativeWindow);
 
         static void Initialize(void* nativeWindowPtr, RuntimeImpl& runtimeImpl);
-
-        static void UpdateSize(float width, float height);
-        static void UpdateRenderTarget();
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
 
     private:
         static inline Napi::FunctionReference constructor{};
-        static inline struct
-        {
-            uint32_t Width{ 1024 };
-            uint32_t Height{ 768 };
-        } RenderTargetSize{};
 
         enum BlendMode {}; // TODO DEBUG
         enum class Filter {}; // TODO DEBUG
@@ -368,7 +362,9 @@ namespace babylon
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
 
+        void UpdateSize(size_t width, size_t height);
         void DispatchAnimationFrameAsync(Napi::FunctionReference callback);
+
 
         ShaderCompiler m_shaderCompiler;
 
@@ -381,6 +377,13 @@ namespace babylon
         ViewClearState m_viewClearState;
 
         FrameBufferManager m_frameBufferManager{};
+
+        struct
+        {
+            uint32_t Width{};
+            uint32_t Height{};
+        } m_renderTargetSize{};
+        NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};

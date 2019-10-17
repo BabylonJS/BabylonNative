@@ -8,15 +8,15 @@
 namespace babylon
 {
     class Env;
+    class NativeWindow;
 
-    class RuntimeImpl
+    class RuntimeImpl final
     {
     public:
         RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
         virtual ~RuntimeImpl();
 
         void UpdateSize(float width, float height);
-        void UpdateRenderTarget();
         void Suspend();
         void Resume();
 
@@ -45,6 +45,7 @@ namespace babylon
         std::scoped_lock<std::mutex> AcquireTaskLock();
 
     private:
+        void InitializeJavaScriptVariables();
         void BaseThreadProcedure();
         void ThreadProcedure();
 
@@ -66,6 +67,7 @@ namespace babylon
         // access when the env is available, reverting to nullptr once the env
         // is destroyed.
         babylon::Env* m_env{};
+        NativeWindow* m_nativeWindow{};
         const std::string m_rootUrl{};
     };
 }
