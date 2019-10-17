@@ -1,7 +1,7 @@
 #include "RuntimeImpl.h"
 
 #include "Console.h"
-#include "NativeEngine.h"
+#include "NativeEnginePlugin.h"
 #include "NativeWindow.h"
 #include "Window.h"
 #include "XMLHttpRequest.h"
@@ -12,6 +12,22 @@
 
 namespace babylon
 {
+    RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env& env)
+    {
+        return *env.Global()
+            .Get(JS_NATIVE_NAME).ToObject()
+            .Get(JS_RUNTIME_NAME).As<Napi::External<RuntimeImpl>>()
+            .Data();
+    }
+
+    NativeWindow& RuntimeImpl::GetNativeWindowFromJavaScript(Napi::Env& env)
+    {
+        return *NativeWindow::Unwrap(
+            env.Global()
+            .Get(JS_NATIVE_NAME).ToObject()
+            .Get(JS_WINDOW_NAME).ToObject());
+    }
+
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
         : m_nativeWindowPtr{ nativeWindowPtr }
         , m_thread{ [this] { ThreadProcedure(); } }
@@ -33,8 +49,12 @@ namespace babylon
     {
         m_dispatcher.queue([width, height, this]
         {
-            assert(m_nativeWindow != nullptr);
-            m_nativeWindow->Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+            // If this query is showing up on profiles as being noticeably inefficient,
+            // a pointer to the window could simply be cached off as runtime state. That
+            // would add a little efficiency at the cost of a little clutter, so that
+            // tradeoff should be made only if profiles show that it makes sense.
+            auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(*m_env);
+            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
 
@@ -180,13 +200,17 @@ namespace babylon
     {
         auto& env = *m_env;
 
-        auto jsRuntime = Napi::Object::New(env);
+        auto jsNative = Napi::Object::New(env);
+        env.Global().Set(JS_NATIVE_NAME, jsNative);
 
-        auto jsNativeWindow = NativeWindow::Create(env, 1024, 768);
-        m_nativeWindow = NativeWindow::Unwrap(jsNativeWindow);
-        jsRuntime.Set("nativeWindow", jsNativeWindow);
+        auto jsRuntime = Napi::External<RuntimeImpl>::New(env, this);
+        jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
 
-        env.Global().Set("_runtime", jsRuntime);
+        auto jsWindow = NativeWindow::Create(env, m_nativeWindowPtr, 1024, 768);
+        jsNative.Set(JS_WINDOW_NAME, jsWindow);
+
+        auto jsNativeEngineConstructor = CreateNativeEngineConstructor(env);
+        jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor);
     }
 
     void RuntimeImpl::BaseThreadProcedure()
@@ -214,16 +238,14 @@ namespace babylon
 
         Window window{ *this };
 
-        NativeEngine::Initialize(m_nativeWindowPtr, *this);
-
         // TODO: Handle device lost/restored.
 
         while (!m_cancelSource.cancelled())
         {
             // check if suspended
             {
-                std::unique_lock<std::mutex> lck(m_suspendMutex);
-                m_suspendVariable.wait(lck, [this](){ return !m_suspended;});
+                std::unique_lock<std::mutex> lock(m_suspendMutex);
+                m_suspendVariable.wait(lock, [this](){ return !m_suspended;});
             }
             m_dispatcher.blocking_tick(m_cancelSource);
         }

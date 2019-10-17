@@ -9,7 +9,7 @@ namespace babylon
     class NativeWindow : public Napi::ObjectWrap<NativeWindow>
     {
     public:
-        static Napi::Object Create(Napi::Env& env, size_t width, size_t height);
+        static Napi::Object Create(Napi::Env& env, void* windowPtr, size_t width, size_t height);
 
         NativeWindow(const Napi::CallbackInfo& info);
 
@@ -19,10 +19,12 @@ namespace babylon
         using OnResizeCallbackTicket = arcana::ticketed_collection<OnResizeCallback>::ticket;
         OnResizeCallbackTicket AddOnResizeCallback(OnResizeCallback&& callback);
 
+        void* GetWindowPtr() const;
         size_t GetWidth() const;
         size_t GetHeight() const;
 
     private:
+        void* m_windowPtr{};
         size_t m_width{};
         size_t m_height{};
 

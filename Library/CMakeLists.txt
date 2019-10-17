@@ -88,7 +88,7 @@ set(SOURCES
     "Source/Console.h"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
-    "Source/NativeEngineImpl.h"
+    "Source/NativeEnginePlugin.h"
     "Source/NativeWindow.cpp"
     "Source/NativeWindow.h"
     "Source/ResourceLimits.cpp"

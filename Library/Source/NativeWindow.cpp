@@ -2,7 +2,7 @@
 
 namespace babylon
 {
-    Napi::Object NativeWindow::Create(Napi::Env& env, size_t width, size_t height)
+    Napi::Object NativeWindow::Create(Napi::Env& env, void* windowPtr, size_t width, size_t height)
     {
         constexpr auto JS_CLASS_NAME = "NativeWindow";
 
@@ -16,13 +16,14 @@ namespace babylon
                 InstanceAccessor("height", &NativeWindow::GetHeight, nullptr)
             });
 
-        return constructor.New({ Napi::Number::From(env, width), Napi::Number::From(env, height) });
+        return constructor.New({ Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height) });
     }
 
     NativeWindow::NativeWindow(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeWindow>{ info }
-        , m_width{ static_cast<size_t>(info[0].As<Napi::Number>().Uint32Value()) }
-        , m_height{ static_cast<size_t>(info[1].As<Napi::Number>().Uint32Value()) }
+        , m_windowPtr{ info[0].As<Napi::External<void>>().Data() }
+        , m_width{ static_cast<size_t>(info[1].As<Napi::Number>().Uint32Value()) }
+        , m_height{ static_cast<size_t>(info[2].As<Napi::Number>().Uint32Value()) }
         , m_jsWidth{ Napi::Persistent(Napi::Value::From(info.Env(), m_width)) }
         , m_jsHeight{ Napi::Persistent(Napi::Value::From(info.Env(), m_height)) }
     {}
@@ -48,6 +49,11 @@ namespace babylon
     {
         std::lock_guard guard{ m_mutex };
         return m_onResizeCallbacks.insert(callback, m_mutex);
+    }
+
+    void* NativeWindow::GetWindowPtr() const
+    {
+        return m_windowPtr;
     }
 
     size_t NativeWindow::GetWidth() const

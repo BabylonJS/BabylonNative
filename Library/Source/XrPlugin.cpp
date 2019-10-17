@@ -1,6 +1,6 @@
 #include "XrPlugin.h"
 
-#include "NativeEngineImpl.h"
+#include "NativeEngine.h"
 
 #include <XR.h>
 
@@ -116,7 +116,7 @@ namespace babylon
             // documented in https://github.com/BabylonJS/BabylonNative/issues/62
             auto nativeEngine = jsEngine.Get("_native").As<Napi::Object>();
             auto getEngine = nativeEngine.Get("getEngine").As<Napi::Function>();
-            m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngineImpl>>().Data();
+            m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine>>().Data();
         }
 
         void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
@@ -156,7 +156,7 @@ namespace babylon
         std::unique_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
-        NativeEngineImpl* m_engineImpl{};
+        NativeEngine* m_engineImpl{};
 
         void BeginFrame();
         void EndFrame();

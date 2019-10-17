@@ -5,6 +5,11 @@
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 
+namespace Napi
+{
+    class Env;
+}
+
 namespace babylon
 {
     class Env;
@@ -12,7 +17,15 @@ namespace babylon
 
     class RuntimeImpl final
     {
+        static constexpr auto JS_NATIVE_NAME = "_native";
+        static constexpr auto JS_RUNTIME_NAME = "runtime";
+        static constexpr auto JS_WINDOW_NAME = "window";
+        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
+
     public:
+        static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env&);
+        static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env&);
+
         RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
         virtual ~RuntimeImpl();
 
@@ -67,7 +80,6 @@ namespace babylon
         // access when the env is available, reverting to nullptr once the env
         // is destroyed.
         babylon::Env* m_env{};
-        NativeWindow* m_nativeWindow{};
         const std::string m_rootUrl{};
     };
 }
