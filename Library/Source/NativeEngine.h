@@ -287,7 +287,7 @@ namespace babylon
         NativeEngine(const Napi::CallbackInfo& info);
         NativeEngine(const Napi::CallbackInfo& info, NativeWindow& nativeWindow);
 
-        static Napi::Function Initialize(Napi::Env&);
+        static Napi::Function InitializeAndCreateConstructor(Napi::Env&);
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);

@@ -1,7 +1,7 @@
 #include "RuntimeImpl.h"
 
 #include "Console.h"
-#include "NativeEnginePlugin.h"
+#include "NativeEngine.h"
 #include "NativeWindow.h"
 #include "Window.h"
 #include "XMLHttpRequest.h"
@@ -12,6 +12,14 @@
 
 namespace babylon
 {
+    namespace
+    {
+        static constexpr auto JS_NATIVE_NAME = "_native";
+        static constexpr auto JS_RUNTIME_NAME = "runtime";
+        static constexpr auto JS_WINDOW_NAME = "window";
+        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
+    }
+
     RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env env)
     {
         return *env.Global()
@@ -49,10 +57,6 @@ namespace babylon
     {
         m_dispatcher.queue([width, height, this]
         {
-            // If this query is showing up on profiles as being noticeably inefficient,
-            // a pointer to the window could simply be cached off as runtime state. That
-            // would add a little efficiency at the cost of a little clutter, so that
-            // tradeoff should be made only if profiles show that it makes sense.
             auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(*m_env);
             window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
@@ -206,10 +210,10 @@ namespace babylon
         auto jsRuntime = Napi::External<RuntimeImpl>::New(env, this);
         jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
 
-        auto jsWindow = NativeWindow::Create(env, m_nativeWindowPtr, 1024, 768);
+        auto jsWindow = NativeWindow::Create(env, m_nativeWindowPtr, 32, 32);
         jsNative.Set(JS_WINDOW_NAME, jsWindow);
 
-        auto jsNativeEngineConstructor = CreateNativeEngineConstructor(env);
+        auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor);
     }
 

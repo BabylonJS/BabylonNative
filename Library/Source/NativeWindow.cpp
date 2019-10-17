@@ -12,8 +12,7 @@ namespace babylon
             env,
             JS_CLASS_NAME,
             {
-                InstanceAccessor("width", &NativeWindow::GetWidth, nullptr),
-                InstanceAccessor("height", &NativeWindow::GetHeight, nullptr)
+                // If JavaScript methods/accessors are introduced, they go here
             });
 
         return constructor.New({ Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height) });
@@ -24,8 +23,6 @@ namespace babylon
         , m_windowPtr{ info[0].As<Napi::External<void>>().Data() }
         , m_width{ static_cast<size_t>(info[1].As<Napi::Number>().Uint32Value()) }
         , m_height{ static_cast<size_t>(info[2].As<Napi::Number>().Uint32Value()) }
-        , m_jsWidth{ Napi::Persistent(Napi::Value::From(info.Env(), m_width)) }
-        , m_jsHeight{ Napi::Persistent(Napi::Value::From(info.Env(), m_height)) }
     {}
 
     void NativeWindow::Resize(size_t newWidth, size_t newHeight)
@@ -34,9 +31,6 @@ namespace babylon
         {
             m_width = newWidth;
             m_height = newHeight;
-
-            m_jsWidth = Napi::Persistent(Napi::Value::From(m_jsWidth.Env(), m_width));
-            m_jsHeight = Napi::Persistent(Napi::Value::From(m_jsHeight.Env(), m_height));
 
             std::scoped_lock lock{ m_mutex };
             for (const auto& callback : m_onResizeCallbacks)
@@ -65,15 +59,5 @@ namespace babylon
     size_t NativeWindow::GetHeight() const
     {
         return m_height;
-    }
-
-    Napi::Value NativeWindow::GetWidth(const Napi::CallbackInfo& info)
-    {
-        return m_jsWidth.Value();
-    }
-
-    Napi::Value NativeWindow::GetHeight(const Napi::CallbackInfo& info)
-    {
-        return m_jsHeight.Value();
     }
 }

@@ -221,7 +221,7 @@ namespace babylon
         };
     }
 
-    Napi::Function NativeEngine::Initialize(Napi::Env& env)
+    Napi::Function NativeEngine::InitializeAndCreateConstructor(Napi::Env& env)
     {
         auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(env);
 
@@ -321,9 +321,10 @@ namespace babylon
         , m_currentProgram{ nullptr }
         , m_engineState{ BGFX_STATE_DEFAULT }
         , m_viewClearState{ 0 }
-        , m_renderTargetSize{ static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()) }
         , m_resizeCallbackTicket{ nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); }) }
-    {}
+    {
+        UpdateSize(static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()));
+    }
 
     void NativeEngine::UpdateSize(size_t width, size_t height)
     {
@@ -1155,13 +1156,6 @@ namespace babylon
         {
             function();
         });
-    }
-
-    // NativeEngine exterior definitions.
-
-    Napi::Function CreateNativeEngineConstructor(Napi::Env& env)
-    {
-        return NativeEngine::Initialize(env);
     }
 }
 

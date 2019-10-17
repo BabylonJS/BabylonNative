@@ -28,13 +28,7 @@ namespace babylon
         size_t m_width{};
         size_t m_height{};
 
-        Napi::Reference<Napi::Value> m_jsWidth{};
-        Napi::Reference<Napi::Value> m_jsHeight{};
-
         std::mutex m_mutex{};
         arcana::ticketed_collection<std::function<void(size_t, size_t)>> m_onResizeCallbacks{};
-
-        Napi::Value GetWidth(const Napi::CallbackInfo& info);
-        Napi::Value GetHeight(const Napi::CallbackInfo& info);
     };
 }

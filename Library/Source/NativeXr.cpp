@@ -1,4 +1,4 @@
-#include "XrPlugin.h"
+#include "NativeXr.h"
 
 #include "NativeEngine.h"
 
@@ -92,14 +92,14 @@ namespace
     }
 }
 
-// XrPlugin implementation proper.
+// NativeXr implementation proper.
 namespace babylon
 {
-    class XrPlugin
+    class NativeXr
     {
     public:
-        XrPlugin::XrPlugin();
-        ~XrPlugin();
+        NativeXr::NativeXr();
+        ~NativeXr();
 
         void BeginSession(); // TODO: Make this asynchronous.
         void EndSession(); // TODO: Make this asynchronous.
@@ -162,10 +162,10 @@ namespace babylon
         void EndFrame();
     };
 
-    XrPlugin::XrPlugin()
+    NativeXr::NativeXr()
     {}
 
-    XrPlugin::~XrPlugin()
+    NativeXr::~NativeXr()
     {
         if (m_session != nullptr)
         {
@@ -179,7 +179,7 @@ namespace babylon
     }
 
     // TODO: Make this asynchronous.
-    void XrPlugin::BeginSession()
+    void NativeXr::BeginSession()
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -193,7 +193,7 @@ namespace babylon
     }
 
     // TODO: Make this asynchronous.
-    void XrPlugin::EndSession()
+    void NativeXr::EndSession()
     {
         assert(m_session != nullptr);
         assert(m_frame == nullptr);
@@ -211,7 +211,7 @@ namespace babylon
         m_session.reset();
     }
 
-    void XrPlugin::BeginFrame()
+    void NativeXr::BeginFrame()
     {
         assert(m_engineImpl != nullptr);
         assert(m_session != nullptr);
@@ -275,7 +275,7 @@ namespace babylon
         }
     }
 
-    void XrPlugin::EndFrame()
+    void NativeXr::EndFrame()
     {
         assert(m_session != nullptr);
         assert(m_frame != nullptr);
@@ -731,7 +731,7 @@ namespace babylon
                 auto jsSession = constructor.New({ info[0] });
                 auto& session = *XRSession::Unwrap(jsSession);
 
-                session.m_xrPlugin.BeginSession();
+                session.m_xr.BeginSession();
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(jsSession);
@@ -749,7 +749,7 @@ namespace babylon
 
             void SetEngine(Napi::Object& jsEngine)
             {
-                m_xrPlugin.SetEngine(jsEngine);
+                m_xr.SetEngine(jsEngine);
             }
 
             void InitializeXrLayer(Napi::Object layer)
@@ -781,18 +781,18 @@ namespace babylon
 
             FrameBufferData* GetFrameBufferForEye(const std::string& eye) const
             {
-                return m_xrPlugin.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
+                return m_xr.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
             }
 
             xr::Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
             {
-                return m_xrPlugin.GetWidthAndHeightForViewIndex(viewIndex);
+                return m_xr.GetWidthAndHeightForViewIndex(viewIndex);
             }
 
         private:
             static inline Napi::FunctionReference constructor{};
 
-            XrPlugin m_xrPlugin{};
+            NativeXr m_xr{};
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
 
@@ -819,7 +819,7 @@ namespace babylon
 
                 float depthNear = renderState.Get("depthNear").As<Napi::Number>().FloatValue();
                 float depthFar = renderState.Get("depthFar").As<Napi::Number>().FloatValue();
-                m_xrPlugin.SetDepthsNarFar(depthNear, depthFar);
+                m_xr.SetDepthsNarFar(depthNear, depthFar);
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
@@ -828,7 +828,7 @@ namespace babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xrPlugin.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame)
+                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame)
                 {
                     m_xrFrame.Update(frame);
                     func->Call({ Napi::Value::From(env, -1), m_jsXRFrame.Value() });
@@ -841,9 +841,9 @@ namespace babylon
 
             Napi::Value End(const Napi::CallbackInfo& info)
             {
-                m_xrPlugin.Dispatch([this]()
+                m_xr.Dispatch([this]()
                 {
-                    m_xrPlugin.EndSession();
+                    m_xr.EndSession();
 
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
@@ -1051,7 +1051,7 @@ namespace babylon
         };
     }
 
-    void InitializeXrPlugin(babylon::Env& env)
+    void InitializeNativeXr(babylon::Env& env)
     {
         XRWebGLLayer::Initialize(env);
         XRRigidTransform::Initialize(env);

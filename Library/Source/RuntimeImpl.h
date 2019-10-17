@@ -17,11 +17,6 @@ namespace babylon
 
     class RuntimeImpl final
     {
-        static constexpr auto JS_NATIVE_NAME = "_native";
-        static constexpr auto JS_RUNTIME_NAME = "runtime";
-        static constexpr auto JS_WINDOW_NAME = "window";
-        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
-
     public:
         static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
         static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env);

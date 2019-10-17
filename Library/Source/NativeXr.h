@@ -4,5 +4,5 @@
 
 namespace babylon
 {
-    void InitializeXrPlugin(babylon::Env& env);
+    void InitializeNativeXr(babylon::Env& env);
 }
