@@ -38,6 +38,7 @@ namespace babylon
             m_jsWidth = Napi::Persistent(Napi::Value::From(m_jsWidth.Env(), m_width));
             m_jsHeight = Napi::Persistent(Napi::Value::From(m_jsHeight.Env(), m_height));
 
+            std::scoped_lock lock{ m_mutex };
             for (const auto& callback : m_onResizeCallbacks)
             {
                 callback(m_width, m_height);
@@ -47,7 +48,7 @@ namespace babylon
 
     NativeWindow::OnResizeCallbackTicket NativeWindow::AddOnResizeCallback(OnResizeCallback&& callback)
     {
-        std::lock_guard guard{ m_mutex };
+        std::scoped_lock lock{ m_mutex };
         return m_onResizeCallbacks.insert(callback, m_mutex);
     }
 
