@@ -7,8 +7,15 @@
 namespace babylon
 {
     class RuntimeImpl;
-    using MessageLogger = void(*)(const char* message);
     class Env;
+
+    enum class LogLevel
+    {
+        Log,
+        Warn,
+        Error,
+    };
+    using LogCallback = std::function<void(const char*, LogLevel)>;
     
     class Runtime
     {
@@ -29,10 +36,6 @@ namespace babylon
 
         babylon::Env& Env() const;
         const std::string& RootUrl() const;
-
-        static void RegisterLogOutput(MessageLogger output);
-        static void RegisterWarnOutput(MessageLogger output);
-        static void RegisterErrorOutput(MessageLogger output);
 
     protected:
         std::unique_ptr<RuntimeImpl> m_impl;

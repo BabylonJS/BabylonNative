@@ -29,6 +29,6 @@ namespace babylon
         size_t m_height{};
 
         std::mutex m_mutex{};
-        arcana::ticketed_collection<std::function<void(size_t, size_t)>> m_onResizeCallbacks{};
+        arcana::ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
     };
 }

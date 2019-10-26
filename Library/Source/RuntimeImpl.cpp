@@ -17,6 +17,7 @@ namespace babylon
         static constexpr auto JS_NATIVE_NAME = "_native";
         static constexpr auto JS_RUNTIME_NAME = "runtime";
         static constexpr auto JS_WINDOW_NAME = "window";
+        static constexpr auto JS_CONSOLE_NAME = "console";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
     }
 
@@ -36,12 +37,12 @@ namespace babylon
             .Get(JS_WINDOW_NAME).ToObject());
     }
 
-    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
+    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback)
         : m_nativeWindowPtr{ nativeWindowPtr }
         , m_thread{ [this] { ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
-    {
-    }
+        , m_logCallback{ logCallback }
+    {}
 
     RuntimeImpl::~RuntimeImpl()
     {
@@ -213,6 +214,10 @@ namespace babylon
         auto jsWindow = NativeWindow::Create(env, m_nativeWindowPtr, 32, 32);
         jsNative.Set(JS_WINDOW_NAME, jsWindow.Value());
 
+        auto jsConsole = Console::Create(env, m_logCallback);
+        jsNative.Set(JS_CONSOLE_NAME, jsConsole.Value());
+        env.Global().Set(JS_CONSOLE_NAME, jsConsole.Value());
+
         auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
     }
@@ -235,8 +240,6 @@ namespace babylon
         auto hostScopeGuard = gsl::finally([this] { m_env = nullptr; });
 
         InitializeJavaScriptVariables();
-
-        Console::Initialize(env);
 
         XMLHttpRequest::Initialize(env, *this);
 
