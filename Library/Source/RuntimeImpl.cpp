@@ -18,7 +18,9 @@ namespace babylon
         static constexpr auto JS_RUNTIME_NAME = "runtime";
         static constexpr auto JS_WINDOW_NAME = "window";
         static constexpr auto JS_CONSOLE_NAME = "console";
+
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
+        static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
     }
 
     RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env env)
@@ -220,6 +222,9 @@ namespace babylon
 
         auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
+
+        auto jsXmlHttpRequestConstructor = XMLHttpRequest::InitializeAndCreateConstructor(env);
+        env.Global().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, jsXmlHttpRequestConstructor.Value());
     }
 
     void RuntimeImpl::BaseThreadProcedure()
@@ -240,8 +245,6 @@ namespace babylon
         auto hostScopeGuard = gsl::finally([this] { m_env = nullptr; });
 
         InitializeJavaScriptVariables();
-
-        XMLHttpRequest::Initialize(env, *this);
 
         Window window{ *this };
 
