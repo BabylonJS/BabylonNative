@@ -218,8 +218,8 @@ namespace babylon
 
         auto jsWindow = NativeWindow::Create(env, m_nativeWindowPtr, 32, 32);
         jsNative.Set(JS_NATIVE_WINDOW_NAME, jsWindow.Value());
-        global.Set("setTimeout", NativeWindow::GetSetTimeoutFunction(jsWindow.Value()).Value());
-        global.Set("atob", NativeWindow::GetAToBFunction(jsWindow.Value()).Value());
+        global.Set("setTimeout", NativeWindow::GetSetTimeoutFunction(jsWindow).Value());
+        global.Set("atob", NativeWindow::GetAToBFunction(jsWindow).Value());
 
         auto jsConsole = Console::Create(env, m_logCallback);
         jsNative.Set(JS_CONSOLE_NAME, jsConsole.Value());

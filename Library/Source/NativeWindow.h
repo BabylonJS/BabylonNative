@@ -11,8 +11,8 @@ namespace babylon
     {
     public:
         static Napi::ObjectReference Create(Napi::Env& env, void* windowPtr, size_t width, size_t height);
-        static Napi::FunctionReference GetSetTimeoutFunction(Napi::Object& nativeWindow);
-        static Napi::FunctionReference GetAToBFunction(Napi::Object& nativeWindow);
+        static Napi::FunctionReference GetSetTimeoutFunction(Napi::ObjectReference& nativeWindow);
+        static Napi::FunctionReference GetAToBFunction(Napi::ObjectReference& nativeWindow);
 
         NativeWindow(const Napi::CallbackInfo& info);
 

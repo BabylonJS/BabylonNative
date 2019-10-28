@@ -25,12 +25,12 @@ namespace babylon
         return Napi::Persistent(constructor.New({ Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height) }));
     }
 
-    Napi::FunctionReference NativeWindow::GetSetTimeoutFunction(Napi::Object& nativeWindow)
+    Napi::FunctionReference NativeWindow::GetSetTimeoutFunction(Napi::ObjectReference& nativeWindow)
     {
-        return Napi::Persistent(Napi::Function::New(nativeWindow.Env(), &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(nativeWindow)));
+        return Napi::Persistent(Napi::Function::New(nativeWindow.Env(), &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(nativeWindow.Value())));
     }
 
-    Napi::FunctionReference NativeWindow::GetAToBFunction(Napi::Object& nativeWindow)
+    Napi::FunctionReference NativeWindow::GetAToBFunction(Napi::ObjectReference& nativeWindow)
     {
         return Napi::Persistent(Napi::Function::New(nativeWindow.Env(), &NativeWindow::DecodeBase64, JS_A_TO_B_NAME));
     }

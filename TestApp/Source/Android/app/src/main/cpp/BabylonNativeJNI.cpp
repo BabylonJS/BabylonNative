@@ -61,7 +61,7 @@ Java_com_android_appviewer_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobj
 {
 }
 
-void AndroidLogMessage(const char* message, babylon::LogLevel level)
+void LogMessage(const char* message, babylon::LogLevel level)
 {
     switch (level)
     {
@@ -84,7 +84,13 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp");
+        runtime = std::make_unique<babylon::RuntimeAndroid>(
+            window, 
+            "file:///data/local/tmp",
+            [](const char* message, babylon::LogLevel level)
+            {
+                LogMessage(message, level);
+            });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
