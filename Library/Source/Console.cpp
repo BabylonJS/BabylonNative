@@ -25,8 +25,7 @@ namespace babylon
         , m_callback{ *info[0].As<Napi::External<LogCallback>>().Data() }
     {}
 
-    template<typename LogLevelT>
-    void Console::SendToOutputs(const Napi::CallbackInfo& info, LogLevelT logLevel) const
+    void Console::SendToOutputs(const Napi::CallbackInfo& info, LogLevel logLevel) const
     {
         std::stringstream ss{};
         for (unsigned int index = 0; index < info.Length(); index++)

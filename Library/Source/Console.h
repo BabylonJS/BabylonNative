@@ -17,8 +17,7 @@ namespace babylon
         void Warn(const Napi::CallbackInfo& info);
         void Error(const Napi::CallbackInfo& info);
 
-        template<typename LogLevelT>
-        void SendToOutputs(const Napi::CallbackInfo&, LogLevelT) const;
+        void SendToOutputs(const Napi::CallbackInfo&, LogLevel) const;
 
         const LogCallback& m_callback;
     };
