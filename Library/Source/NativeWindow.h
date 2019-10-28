@@ -35,9 +35,9 @@ namespace babylon
         std::mutex m_mutex{};
         arcana::ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
 
-        static void NativeWindow::SetTimeout(const Napi::CallbackInfo& info);
-        static Napi::Value NativeWindow::DecodeBase64(const Napi::CallbackInfo& info);
+        static void SetTimeout(const Napi::CallbackInfo& info);
+        static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
 
-        void NativeWindow::RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
+        void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
     };
 }

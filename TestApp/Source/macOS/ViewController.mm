@@ -13,33 +13,25 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 }
 
-void MacLogMessage(const char *outputString)
-{
-    NSLog(@"%s", outputString);
-}
-
-void MacWarnMessage(const char *outputString)
-{
-    NSLog(@"%s", outputString);
-}
-
-void MacErrorMessage(const char *outputString)
+void LogMessage(const char* outputString, babylon::LogLevel)
 {
     NSLog(@"%s", outputString);
 }
 
 - (void)viewDidAppear {
     [super viewDidAppear];
-    
-    babylon::Runtime::RegisterLogOutput(MacLogMessage);
-    babylon::Runtime::RegisterWarnOutput(MacWarnMessage);
-    babylon::Runtime::RegisterErrorOutput(MacErrorMessage);
 
     NSBundle *main = [NSBundle mainBundle];
     NSURL * resourceUrl = [main resourceURL];
 
     NSWindow* nativeWindow = [[self view] window];
-    runtime = std::make_unique<babylon::RuntimeApple>((__bridge void*)nativeWindow, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
+    runtime = std::make_unique<babylon::RuntimeApple>(
+        (__bridge void*)nativeWindow, 
+        [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
+        [](const char* message, babylon::LogLevel level)
+        {
+            LogMessage(message, level);
+        });
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);

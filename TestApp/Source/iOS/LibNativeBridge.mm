@@ -5,17 +5,7 @@
 std::unique_ptr<babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
-void MacLogMessage(const char *outputString)
-{
-    NSLog(@"%s", outputString);
-}
-
-void MacWarnMessage(const char *outputString)
-{
-    NSLog(@"%s", outputString);
-}
-
-void MacErrorMessage(const char *outputString)
+void LogMessage(const char* outputString, babylon::LogLevel)
 {
     NSLog(@"%s", outputString);
 }
@@ -35,13 +25,15 @@ void MacErrorMessage(const char *outputString)
 
 - (void)init:( void* )CALayerPtr width:(int)inWidth height:(int)inHeight
 {
-    babylon::Runtime::RegisterLogOutput(MacLogMessage);
-    babylon::Runtime::RegisterWarnOutput(MacWarnMessage);
-    babylon::Runtime::RegisterErrorOutput(MacErrorMessage);
-    
-    NSBundle *main = [NSBundle mainBundle];
-    NSURL * resourceUrl = [main resourceURL];
-    runtime = std::make_unique<babylon::RuntimeApple>(CALayerPtr, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
+    NSBundle* main = [NSBundle mainBundle];
+    NSURL* resourceUrl = [main resourceURL];
+    runtime = std::make_unique<babylon::RuntimeApple>(
+        CALayerPtr, 
+        [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
+        [](const char* message, babylon::LogLevel level)
+        {
+            LogMessage(message, level);
+        });
     
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
