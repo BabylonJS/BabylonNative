@@ -8,7 +8,7 @@ set(SOURCES
     ${SCRIPTS}
     "Source/Shared/InputManager.cpp"
     "Source/Shared/InputManager.h")
-if(WIN32)
+if(WIN32 AND NOT WINDOWS_STORE)
     set(SOURCES
         ${SOURCES}
         "Source/Win32/App.cpp"
