@@ -5,11 +5,6 @@
 std::unique_ptr<babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
-void LogMessage(const char* outputString, babylon::LogLevel)
-{
-    NSLog(@"%s", outputString);
-}
-
 @implementation LibNativeBridge
 
 - (instancetype)init
@@ -32,7 +27,7 @@ void LogMessage(const char* outputString, babylon::LogLevel)
         [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
         [](const char* message, babylon::LogLevel level)
         {
-            LogMessage(message, level);
+            NSLog(@"%s", message);
         });
     
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
