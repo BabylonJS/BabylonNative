@@ -4,7 +4,7 @@
 
 namespace babylon
 {
-    Napi::FunctionReference XMLHttpRequest::InitializeAndCreateConstructor(Napi::Env& env)
+    Napi::FunctionReference XMLHttpRequest::CreateConstructor(Napi::Env& env)
     {
         Napi::HandleScope scope{ env };
 

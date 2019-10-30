@@ -44,7 +44,8 @@ namespace babylon
         , m_thread{ [this] { ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
         , m_logCallback{ logCallback }
-    {}
+    {
+    }
 
     RuntimeImpl::~RuntimeImpl()
     {
@@ -228,7 +229,7 @@ namespace babylon
         auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
 
-        auto jsXmlHttpRequestConstructor = XMLHttpRequest::InitializeAndCreateConstructor(env);
+        auto jsXmlHttpRequestConstructor = XMLHttpRequest::CreateConstructor(env);
         global.Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, jsXmlHttpRequestConstructor.Value());
     }
 

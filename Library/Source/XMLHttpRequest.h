@@ -93,7 +93,7 @@ namespace babylon
     class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest>
     {
     public:
-        static Napi::FunctionReference InitializeAndCreateConstructor(Napi::Env& env);
+        static Napi::FunctionReference CreateConstructor(Napi::Env& env);
 
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
