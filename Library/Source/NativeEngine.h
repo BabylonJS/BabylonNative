@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "NativeWindow.h"
 #include "ShaderCompiler.h"
 #include "RuntimeImpl.h"
