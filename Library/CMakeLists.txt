@@ -51,6 +51,7 @@ if(APPLE OR ANDROID)
     set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
 endif()    
 
+set(CMAKE_USE_OPENSSL OFF CACHE BOOL "Please stop trying to use OpenSSL. It isn't there. Stop trying.")
 if(APPLE)
     # set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
 elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
