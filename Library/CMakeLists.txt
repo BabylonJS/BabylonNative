@@ -52,7 +52,7 @@ if(APPLE OR ANDROID)
 endif()    
 
 if(APPLE)
-    set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
+    # set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
 elseif(BABYLON_NATIVE_PLATFORM STREQUAL "Win32" OR BABYLON_NATIVE_PLATFORM STREQUAL "UWP")
     set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
 else()
