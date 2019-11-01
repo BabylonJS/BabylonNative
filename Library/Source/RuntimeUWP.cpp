@@ -7,7 +7,7 @@
 namespace babylon
 {
     RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, LogCallback callback)
-        : RuntimeUWP{ window, ".", std::move(callback) }
+        : RuntimeUWP{ window, {}, std::move(callback) }
     {
     }
 
