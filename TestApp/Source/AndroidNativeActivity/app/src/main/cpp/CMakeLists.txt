@@ -4,7 +4,6 @@ set(BABYLON_NATIVE_PLATFORM "Android")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(ANDROID_STL "c++_shared")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 ")
 
 # build native_app_glue as a static lib
@@ -22,19 +21,16 @@ add_library(native-activity SHARED main.cpp
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/js_native_api_v8.cc
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/env_v8.cc
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/source/env.cc
-        ${BABYLON_NATIVE_TESTAPP_DIR}/Shared/InputManager.cpp
-        )
+        ${BABYLON_NATIVE_TESTAPP_DIR}/Shared/InputManager.cpp)
 
 target_include_directories(native-activity PRIVATE
     ${ANDROID_NDK}/sources/android/native_app_glue
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Include
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/v8/include
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/include
-        ${BABYLON_NATIVE_TESTAPP_DIR}/Shared
-        )
-target_compile_definitions(native-activity PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
+        ${BABYLON_NATIVE_TESTAPP_DIR}/Shared)
 
-add_definitions(-DANDROID_STL=c++_shared)
+target_compile_definitions(native-activity PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 
 target_link_libraries(native-activity
     android
@@ -46,3 +42,8 @@ target_link_libraries(native-activity
     log
     Library
     ${CMAKE_CURRENT_LIST_DIR}/../jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.so)
+
+configure_file(
+        "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"
+        "${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libc++_shared.so"
+        COPYONLY)
