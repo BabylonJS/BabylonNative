@@ -47,8 +47,6 @@ target_include_directories(BabylonNativeJNI
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/include
         ${BABYLON_NATIVE_TESTAPP_DIR}/Shared)
 
-add_definitions(-DANDROID_STL=c++_shared)
-
 target_link_libraries(BabylonNativeJNI
         ${OPENGL_LIB}
         android

@@ -23,7 +23,6 @@ namespace babylon
 
             if (!shader.parse(&DefaultTBuiltInResource, 430, false, EShMsgDefault))
             {
-                Console::Error(shader.getInfoDebugLog());
                 throw std::exception();
             }
 
@@ -84,7 +83,6 @@ namespace babylon
 
         if (!program.link(EShMsgDefault))
         {
-            Console::Error(program.getInfoDebugLog());
             throw std::exception();
         }
 

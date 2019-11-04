@@ -48,9 +48,8 @@ android {
     }
 }
 
-task copyFiles << {
-    copy
-    {
+task copyFiles {
+    copy {
         from '../../../Scripts'
         include "*.js"
         into 'src/main/assets/Scripts'

@@ -1,4 +1,4 @@
-package com.android.appviewer;
+package com.android.testapp;
 
 import android.content.Context;
 import android.util.Log;

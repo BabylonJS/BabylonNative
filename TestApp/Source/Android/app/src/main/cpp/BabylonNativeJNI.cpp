@@ -13,15 +13,15 @@
 #include <InputManager.h>
 
 extern "C" {
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_initEngine(JNIEnv* env, jobject obj, jobject assetMgr, jstring path);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobject obj);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_openFile(JNIEnv* env, jobject obj, jstring path);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_openStream(JNIEnv* env, jobject obj, jobjectArray input);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom);
-    JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_step(JNIEnv* env, jobject obj);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_initEngine(JNIEnv* env, jobject obj, jobject assetMgr, jstring path);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobject obj);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_openFile(JNIEnv* env, jobject obj, jstring path);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_openStream(JNIEnv* env, jobject obj, jobjectArray input);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_step(JNIEnv* env, jobject obj);
 };
 
 std::unique_ptr<babylon::RuntimeAndroid> runtime{};
@@ -47,7 +47,7 @@ namespace babylon
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_initEngine(JNIEnv* env, jobject obj,
+Java_com_android_testapp_AndroidViewAppActivity_initEngine(JNIEnv* env, jobject obj,
                                                        jobject assetMgr, jstring path)
 {
     auto asset_manager = AAssetManager_fromJava(env, assetMgr);
@@ -57,7 +57,7 @@ Java_com_android_appviewer_AndroidViewAppActivity_initEngine(JNIEnv* env, jobjec
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobject obj)
+Java_com_android_testapp_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobject obj)
 {
 }
 
@@ -78,7 +78,7 @@ void LogMessage(const char* message, babylon::LogLevel level)
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
+Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
 {
     if (!runtime)
     {
@@ -96,34 +96,34 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height)
+Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height)
 {
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_openFile(JNIEnv* env, jobject obj, jstring path)
+Java_com_android_testapp_AndroidViewAppActivity_openFile(JNIEnv* env, jobject obj, jstring path)
 {
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_openStream(JNIEnv* env, jobject obj, jobjectArray input)
+Java_com_android_testapp_AndroidViewAppActivity_openStream(JNIEnv* env, jobject obj, jobjectArray input)
 {
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_step(JNIEnv* env, jobject obj)
+Java_com_android_testapp_AndroidViewAppActivity_step(JNIEnv* env, jobject obj)
 {
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobject obj, jfloat x, jfloat y, jboolean down)
+Java_com_android_testapp_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobject obj, jfloat x, jfloat y, jboolean down)
 {
     inputBuffer->SetPointerPosition(x, y);
     inputBuffer->SetPointerDown(down);
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_appviewer_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom)
+Java_com_android_testapp_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom)
 {
 }
 
