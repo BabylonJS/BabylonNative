@@ -324,6 +324,11 @@ napi_status napi_coerce_to_string(napi_env env,
   return napi_ok;
 }
 
+napi_status napi_create_object(napi_env env, napi_value* result) {
+  assert(0);
+  return napi_ok;
+}
+
 napi_status napi_create_array_with_length(napi_env env,
                       size_t length,
                       napi_value* result) {
@@ -334,6 +339,17 @@ napi_status napi_create_array_with_length(napi_env env,
   }
   JSObjectRef array = JSObjectMakeArray(env->m_globalContext, length, values.data(), nullptr);
   *result = reinterpret_cast<napi_value>(array);
+  return napi_ok;
+}
+
+
+napi_status napi_create_typedarray(napi_env env,
+                                   napi_typedarray_type type,
+                                   size_t length,
+                                   napi_value arraybuffer,
+                                   size_t byte_offset,
+                                   napi_value* result) {
+  assert(0);
   return napi_ok;
 }
 
@@ -791,6 +807,13 @@ napi_status napi_typeof(napi_env env, napi_value vv, napi_valuetype* result) {
     default:
       assert(0);
   }
+  return napi_ok;
+}
+
+napi_status napi_coerce_to_object(napi_env env,
+                                  napi_value v,
+                                  napi_value* result) {
+  assert(0);
   return napi_ok;
 }
 
