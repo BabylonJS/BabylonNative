@@ -1,12 +1,9 @@
 #pragma once
-<<<<<<< HEAD
-=======
 
 #include "NativeWindow.h"
 #include "ShaderCompiler.h"
 #include "RuntimeImpl.h"
 
->>>>>>> 69d98f0617a14313c25c2d95a02cd7176f5854c4
 #include <napi/napi.h>
 
 #include <bgfx/bgfx.h>

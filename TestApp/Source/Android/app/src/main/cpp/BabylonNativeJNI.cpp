@@ -84,14 +84,7 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-<<<<<<< HEAD
-        int32_t width  = ANativeWindow_getWidth(window);
-        int32_t height = ANativeWindow_getHeight(window);
-
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp");
-=======
         runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp", LogMessage);
->>>>>>> 69d98f0617a14313c25c2d95a02cd7176f5854c4
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);

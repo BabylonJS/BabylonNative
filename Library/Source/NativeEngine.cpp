@@ -1,14 +1,6 @@
 #include "NativeEngine.h"
 
-<<<<<<< HEAD
-#include "RuntimeImpl.h"
-#include "NapiBridge.h"
-#include "ShaderCompiler.h"
-#include "Console.h"
-#include "NativeEngineImpl.h"
-=======
 #include <napi/env.h>
->>>>>>> 69d98f0617a14313c25c2d95a02cd7176f5854c4
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -282,15 +274,9 @@ namespace babylon
 
     Napi::FunctionReference NativeEngine::InitializeAndCreateConstructor(Napi::Env& env)
     {
-<<<<<<< HEAD
-        // Rendering and context initialization must happen in the same thread for OpenGL(ES)
-        // OpenGL context is associated with 1 thread only at a time. To Associate it with another thread, MakeCurrentContext must be used
-        // but bgfx doesn't expose it. 
-=======
         auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(env);
 
         // Initialize bgfx.
->>>>>>> 69d98f0617a14313c25c2d95a02cd7176f5854c4
         bgfx::Init init{};
         init.platformData.nwh = window.GetWindowPtr();
         bgfx::setPlatformData(init.platformData);
@@ -300,13 +286,6 @@ namespace babylon
         init.resolution.reset = BGFX_RESET_FLAGS;
         bgfx::init(init);
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-<<<<<<< HEAD
-        bgfx::setViewRect(0, 0, 0, m_size.Width, m_size.Height);
-        EngineDefiner::Define(env, this);
-    }
-    
-    void NativeEngine::Impl::UpdateSize(float width, float height)
-=======
         bgfx::setViewRect(0, 0, 0, init.resolution.width, init.resolution.height);
         bgfx::touch(0);
 
@@ -404,7 +383,6 @@ namespace babylon
     }
 
     void NativeEngine::UpdateSize(size_t width, size_t height)
->>>>>>> 69d98f0617a14313c25c2d95a02cd7176f5854c4
     {
         const auto w = static_cast<uint16_t>(width);
         const auto h = static_cast<uint16_t>(height);
