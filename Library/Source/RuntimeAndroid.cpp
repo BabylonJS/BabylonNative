@@ -20,5 +20,4 @@ namespace babylon
     {
         RuntimeImpl::BaseThreadProcedure();
     }
-
 }

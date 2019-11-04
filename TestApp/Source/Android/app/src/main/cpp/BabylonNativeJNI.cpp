@@ -33,15 +33,18 @@ static AAssetManager* g_assetMgrNative = nullptr;
 namespace babylon
 {
     // this is the way to load apk embedded assets.
-    std::vector<char> GetFileContents(const std::string &file_name)
+    static std::vector<char> GetAssetContents(const char* filename)
     {
         std::vector<char> buffer;
-        AAsset *asset = AAssetManager_open(g_assetMgrNative, file_name.c_str(),
+        AAsset *asset = AAssetManager_open(g_assetMgrNative, filename,
                                            AASSET_MODE_UNKNOWN);
-        size_t size = AAsset_getLength64(asset);
-        buffer.resize(size);
-        AAsset_read(asset, buffer.data(), size);
-        AAsset_close(asset);
+        if (asset != nullptr)
+        {
+            size_t size = AAsset_getLength64(asset);
+            buffer.resize(size);
+            AAsset_read(asset, buffer.data(), size);
+            AAsset_close(asset);
+        }
         return buffer;
     }
 }
@@ -84,7 +87,7 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp", LogMessage);
+        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp", LogMessage, GetAssetContents);
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
