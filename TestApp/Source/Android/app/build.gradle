@@ -48,7 +48,7 @@ android {
     }
 }
 
-task copyFiles << {
+task copyFiles {
     copy
             {
                 from '../../../Scripts'
