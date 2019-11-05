@@ -23,7 +23,7 @@ namespace babylon
      * Type of logging callback argument required to create Runtime.
      */
     using LogCallback = std::function<void(const char*, LogLevel)>;
-    
+
     /**
      * This class represents an instance of Babylon Native. It holds and manages all program
      * state and behavior relevant to Babylon Native's functionality, including the JavaScript
@@ -34,7 +34,7 @@ namespace babylon
     {
     public:
         /**
-         * Inform the runtime that the size of the default rendering backbuffer has changed. A 
+         * Inform the runtime that the size of the default rendering backbuffer has changed. A
          * familiar example of this would be if the window containing a full-frame rendering
          * were resized.
          */
@@ -60,7 +60,7 @@ namespace babylon
         void LoadScript(const std::string& url);
 
         /**
-         * Execute code contained in a string (fetched from the sourceUrl) in the JavaScript 
+         * Execute code contained in a string (fetched from the sourceUrl) in the JavaScript
          * environment. This method is thread-safe, but it is implicitly asynchronous: order of
          * execution is guaranteed, but not immediacy of execution.
          */
@@ -95,4 +95,4 @@ namespace babylon
         Runtime& operator=(const Runtime&) = delete;
         virtual ~Runtime();
     };
-}
+} // namespace babylon

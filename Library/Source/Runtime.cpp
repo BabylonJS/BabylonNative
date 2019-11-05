@@ -4,8 +4,7 @@
 
 namespace babylon
 {
-    Runtime::Runtime(std::unique_ptr<RuntimeImpl> impl)
-        : m_impl{ std::move(impl) }
+    Runtime::Runtime(std::unique_ptr<RuntimeImpl> impl) : m_impl {std::move(impl)}
     {
     }
 
@@ -40,10 +39,7 @@ namespace babylon
 
     void Runtime::Execute(std::function<void(Runtime&)> func)
     {
-        m_impl->Execute([this, func = std::move(func)](auto&)
-        {
-            func(*this);
-        });
+        m_impl->Execute([this, func = std::move(func)](auto&) { func(*this); });
     }
 
     babylon::Env& Runtime::Env() const
@@ -55,4 +51,4 @@ namespace babylon
     {
         return m_impl->RootUrl();
     }
-}
+} // namespace babylon

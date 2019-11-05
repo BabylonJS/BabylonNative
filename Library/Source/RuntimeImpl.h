@@ -29,7 +29,8 @@ namespace babylon
         void Resume();
 
         std::string GetAbsoluteUrl(const std::string& url);
-        template<typename T> arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
+        template<typename T>
+        arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
         void LoadScript(const std::string& url);
         void Eval(const std::string& string, const std::string& url);
@@ -57,16 +58,16 @@ namespace babylon
         void BaseThreadProcedure();
         void ThreadProcedure();
 
-        arcana::manual_dispatcher<babylon_dispatcher::work_size> m_dispatcher{};
-        arcana::cancellation_source m_cancelSource{};
+        arcana::manual_dispatcher<babylon_dispatcher::work_size> m_dispatcher {};
+        arcana::cancellation_source m_cancelSource {};
         std::mutex m_taskMutex;
         std::mutex m_suspendMutex;
         std::condition_variable m_suspendVariable;
-        bool m_suspended{ false };
+        bool m_suspended {false};
 
-        void* m_nativeWindowPtr{};
+        void* m_nativeWindowPtr {};
 
-        std::thread m_thread{};
+        std::thread m_thread {};
 
         // This env is technically owned by the thread on which it runs, and so
         // the actually object is maintained as a local variable within the
@@ -74,9 +75,8 @@ namespace babylon
         // occasionally need access to the env as well; m_env provides this
         // access when the env is available, reverting to nullptr once the env
         // is destroyed.
-        babylon::Env* m_env{};
-        const std::string m_rootUrl{};
-        LogCallback m_logCallback{};
+        babylon::Env* m_env {};
+        const std::string m_rootUrl {};
+        LogCallback m_logCallback {};
     };
-}
-    
+} // namespace babylon

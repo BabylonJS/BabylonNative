@@ -21,12 +21,13 @@ namespace babylon
     class RecycleSet
     {
     public:
-        RecycleSet(T firstId)
-            : m_nextId{ firstId }
-        {}
+        RecycleSet(T firstId) : m_nextId {firstId}
+        {
+        }
 
-        RecycleSet() : RecycleSet({ 0 })
-        {}
+        RecycleSet() : RecycleSet({0})
+        {
+        }
 
         T Get()
         {
@@ -49,16 +50,16 @@ namespace babylon
         }
 
     private:
-        T m_nextId{};
-        std::queue<bgfx::ViewId> m_queue{};
+        T m_nextId {};
+        std::queue<bgfx::ViewId> m_queue {};
     };
 
     class ViewClearState final
     {
     public:
-        ViewClearState(uint16_t viewId)
-            : m_viewId{ viewId }
-        {}
+        ViewClearState(uint16_t viewId) : m_viewId {viewId}
+        {
+        }
 
         void UpdateFlags(const Napi::CallbackInfo& info)
         {
@@ -70,7 +71,7 @@ namespace babylon
                 Update();
             }
         }
-        
+
         void UpdateColor(const Napi::CallbackInfo& info)
         {
             const auto r = info[0].As<Napi::Number>().FloatValue();
@@ -82,10 +83,7 @@ namespace babylon
 
         void UpdateColor(float r, float g, float b, float a = 1.f)
         {
-            const bool needToUpdate = r != m_red
-                || g != m_green
-                || b != m_blue
-                || a != m_alpha;
+            const bool needToUpdate = r != m_red || g != m_green || b != m_blue || a != m_alpha;
             if (needToUpdate)
             {
                 m_red = r;
@@ -125,14 +123,14 @@ namespace babylon
         }
 
     private:
-        const uint16_t m_viewId{};
-        float m_red{ 68.f / 255.f };
-        float m_green{ 51.f / 255.f };
-        float m_blue{ 85.f / 255.f };
-        float m_alpha{ 1.f };
-        float m_depth{ 1.f };
-        uint16_t m_flags{ BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH };
-        uint8_t m_stencil{ 0 };
+        const uint16_t m_viewId {};
+        float m_red {68.f / 255.f};
+        float m_green {51.f / 255.f};
+        float m_blue {85.f / 255.f};
+        float m_alpha {1.f};
+        float m_depth {1.f};
+        uint16_t m_flags {BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH};
+        uint8_t m_stencil {0};
 
         uint32_t Color() const
         {
@@ -150,13 +148,16 @@ namespace babylon
 
     struct FrameBufferData final
     {
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, RecycleSet<bgfx::ViewId>& viewIdSet, uint16_t width, uint16_t height)
-            : FrameBuffer{ frameBuffer }
-            , ViewId{ viewIdSet.Get() }
-            , ViewClearState{ ViewId }
-            , Width{ width }
-            , Height{ height }
-            , m_idSet{ viewIdSet }
+        FrameBufferData(bgfx::FrameBufferHandle frameBuffer,
+                        RecycleSet<bgfx::ViewId>& viewIdSet,
+                        uint16_t width,
+                        uint16_t height)
+            : FrameBuffer {frameBuffer}
+            , ViewId {viewIdSet.Get()}
+            , ViewClearState {ViewId}
+            , Width {width}
+            , Height {height}
+            , m_idSet {viewIdSet}
         {
             assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
@@ -176,11 +177,11 @@ namespace babylon
             bgfx::setViewRect(ViewId, 0, 0, Width, Height);
         }
 
-        bgfx::FrameBufferHandle FrameBuffer{ bgfx::kInvalidHandle };
-        bgfx::ViewId ViewId{};
+        bgfx::FrameBufferHandle FrameBuffer {bgfx::kInvalidHandle};
+        bgfx::ViewId ViewId {};
         ViewClearState ViewClearState;
-        uint16_t Width{};
-        uint16_t Height{};
+        uint16_t Width {};
+        uint16_t Height {};
 
     private:
         RecycleSet<bgfx::ViewId>& m_idSet;
@@ -188,8 +189,7 @@ namespace babylon
 
     struct FrameBufferManager final
     {
-        FrameBufferManager(RecycleSet<bgfx::ViewId>& viewIdSet) 
-            : m_idSet{ viewIdSet }
+        FrameBufferManager(RecycleSet<bgfx::ViewId>& viewIdSet) : m_idSet {viewIdSet}
         {
         }
 
@@ -229,14 +229,14 @@ namespace babylon
 
     private:
         RecycleSet<bgfx::ViewId>& m_idSet;
-        FrameBufferData* m_boundFrameBuffer{ nullptr };
+        FrameBufferData* m_boundFrameBuffer {nullptr};
     };
 
     struct UniformInfo final
     {
-        uint8_t Stage{};
+        uint8_t Stage {};
         // uninitilized bgfx resource is kInvalidHandle. 0 can be a valid handle.
-        bgfx::UniformHandle Handle{ bgfx::kInvalidHandle };
+        bgfx::UniformHandle Handle {bgfx::kInvalidHandle};
     };
 
     struct TextureData final
@@ -251,10 +251,10 @@ namespace babylon
             }
         }
 
-        std::vector<bimg::ImageContainer*> Images{};
-        bgfx::TextureHandle Texture{ bgfx::kInvalidHandle };
-        uint32_t Flags{ 0 };
-        uint8_t AnisotropicLevel{ 0 };
+        std::vector<bimg::ImageContainer*> Images {};
+        bgfx::TextureHandle Texture {bgfx::kInvalidHandle};
+        uint32_t Flags {0};
+        uint8_t AnisotropicLevel {0};
     };
 
     struct ImageData final
@@ -276,19 +276,19 @@ namespace babylon
             bgfx::destroy(Program);
         }
 
-        std::unordered_map<std::string, uint32_t> AttributeLocations{};
-        std::unordered_map<std::string, UniformInfo> VertexUniformNameToInfo{};
-        std::unordered_map<std::string, UniformInfo> FragmentUniformNameToInfo{};
+        std::unordered_map<std::string, uint32_t> AttributeLocations {};
+        std::unordered_map<std::string, UniformInfo> VertexUniformNameToInfo {};
+        std::unordered_map<std::string, UniformInfo> FragmentUniformNameToInfo {};
 
-        bgfx::ProgramHandle Program{};
+        bgfx::ProgramHandle Program {};
 
         struct UniformValue
         {
-            std::vector<float> Data{};
-            uint16_t ElementLength{};
+            std::vector<float> Data {};
+            uint16_t ElementLength {};
         };
 
-        std::unordered_map<uint16_t, UniformValue> Uniforms{};
+        std::unordered_map<uint16_t, UniformValue> Uniforms {};
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
@@ -331,7 +331,8 @@ namespace babylon
         void Dispatch(std::function<void()>);
 
     private:
-        Napi::Value GetEngine(const Napi::CallbackInfo& info); // TODO: Hack, temporary method. Remove as part of the change to get rid of NapiBridge.
+        Napi::Value GetEngine(const Napi::CallbackInfo& info); // TODO: Hack, temporary method. Remove as part of the
+                                                               // change to get rid of NapiBridge.
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);
@@ -411,19 +412,22 @@ namespace babylon
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
         ViewClearState m_viewClearState;
-        bgfx::ViewId m_currentBackbufferViewId{ 0 };
+        bgfx::ViewId m_currentBackbufferViewId {0};
         std::vector<bgfx::ViewId> m_viewportIds;
-        RecycleSet<bgfx::ViewId> m_viewidSet{ 1 };
+        RecycleSet<bgfx::ViewId> m_viewidSet {1};
 
-        FrameBufferManager m_frameBufferManager{ m_viewidSet };
+        FrameBufferManager m_frameBufferManager {m_viewidSet};
 
         NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
 
-        template<int size, typename arrayType> void SetTypeArrayN(const Napi::CallbackInfo& info);
-        template<int size> void SetFloatN(const Napi::CallbackInfo& info);
-        template<int size> void SetMatrixN(const Napi::CallbackInfo& info);
+        template<int size, typename arrayType>
+        void SetTypeArrayN(const Napi::CallbackInfo& info);
+        template<int size>
+        void SetFloatN(const Napi::CallbackInfo& info);
+        template<int size>
+        void SetMatrixN(const Napi::CallbackInfo& info);
 
         // Scratch vector used for data alignment.
-        std::vector<float> m_scratch{};
+        std::vector<float> m_scratch {};
     };
-}
+} // namespace babylon

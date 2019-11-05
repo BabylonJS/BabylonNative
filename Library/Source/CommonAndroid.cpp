@@ -2,10 +2,9 @@
 
 namespace babylon
 {
-
     Filepath GetModulePath()
     {
-        return Filepath{ "." };
+        return Filepath {"."};
     }
 
     std::string GetUrlFromPath(const Filepath& path)
@@ -13,4 +12,4 @@ namespace babylon
         // stub
         return std::string("");
     }
-}
+} // namespace babylon

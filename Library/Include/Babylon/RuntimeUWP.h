@@ -11,15 +11,18 @@ namespace babylon
     {
     public:
         explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, LogCallback callback);
-        explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl, LogCallback callback);
+        explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window,
+                            const std::string& rootUrl,
+                            LogCallback callback);
 
         // TODO: Allow creation from swap chain, which is required by XAML apps.
-        // explicit RuntimeUWP(ABI::Windows::UI::Xaml::Controls::ISwapChainPanel* panel, const std::string& rootUrl = {});
-        
+        // explicit RuntimeUWP(ABI::Windows::UI::Xaml::Controls::ISwapChainPanel* panel, const std::string& rootUrl =
+        // {});
+
         RuntimeUWP(const Runtime&) = delete;
         ~RuntimeUWP();
 
     private:
-        ABI::Windows::UI::Core::ICoreWindow* m_window{};
+        ABI::Windows::UI::Core::ICoreWindow* m_window {};
     };
-}
+} // namespace babylon

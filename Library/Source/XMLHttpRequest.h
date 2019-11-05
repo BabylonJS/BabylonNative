@@ -10,7 +10,7 @@ namespace babylon
 {
     class RuntimeImpl;
 
-    
+
     enum class HTTPStatusCode : int32_t
     {
         None = 0,
@@ -80,15 +80,15 @@ namespace babylon
         {
             constexpr const char* Text = "text";
             constexpr const char* ArrayBuffer = "arraybuffer";
-        }
+        } // namespace ResponseType
 
         namespace EventType
         {
             constexpr const char* ReadyStateChange = "readystatechange";
             constexpr const char* Progress = "progress";
             constexpr const char* LoadEnd = "loadend";
-        }
-    }
+        } // namespace EventType
+    }     // namespace XMLHttpRequestTypes
 
     class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest>
     {
@@ -118,20 +118,21 @@ namespace babylon
         void Send(const Napi::CallbackInfo& info);
 
         arcana::task<void, std::exception_ptr> SendAsync();
-        arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed. 
+        arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file
+                                                                // access bug is fixed.
         void SetReadyState(ReadyState readyState);
 
         RuntimeImpl& m_runtimeImpl;
 
-        ReadyState m_readyState{ ReadyState::Unsent };
+        ReadyState m_readyState {ReadyState::Unsent};
         Napi::Reference<Napi::ArrayBuffer> m_response;
         std::string m_responseText;
         std::string m_responseType;
-        HTTPStatusCode m_status{ HTTPStatusCode::None };
+        HTTPStatusCode m_status {HTTPStatusCode::None};
         std::string m_responseURL;
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs;
 
         std::string m_method;
         std::string m_url;
     };
-}
+} // namespace babylon

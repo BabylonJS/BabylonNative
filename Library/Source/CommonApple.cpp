@@ -11,4 +11,4 @@ namespace babylon
         return {};
     }
 
-}
+} // namespace babylon

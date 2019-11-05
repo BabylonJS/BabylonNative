@@ -15,79 +15,69 @@ using namespace Windows::Foundation;
 using namespace Windows::Graphics::Display;
 
 // The main function is only used to initialize our IFrameworkView class.
-[Platform::MTAThread]
-int main(Platform::Array<Platform::String^>^)
-{
+[Platform::MTAThread] int main(Platform::Array<Platform::String ^> ^) {
     auto direct3DApplicationSource = ref new Direct3DApplicationSource();
     CoreApplication::Run(direct3DApplicationSource);
     return 0;
 }
 
-IFrameworkView^ Direct3DApplicationSource::CreateView()
+    IFrameworkView
+    ^ Direct3DApplicationSource::CreateView()
 {
     return ref new App();
 }
 
-App::App() :
-    m_windowClosed{ false },
-    m_windowVisible{ true }
+App::App() : m_windowClosed {false}, m_windowVisible {true}
 {
 }
 
 // The first method called when the IFrameworkView is being created.
-void App::Initialize(CoreApplicationView^ applicationView)
+void App::Initialize(CoreApplicationView ^ applicationView)
 {
     // Register event handlers for app lifecycle. This example includes Activated, so that we
     // can make the CoreWindow active and start rendering on the window.
     applicationView->Activated +=
-        ref new TypedEventHandler<CoreApplicationView^, IActivatedEventArgs^>(this, &App::OnActivated);
+        ref new TypedEventHandler<CoreApplicationView ^, IActivatedEventArgs ^>(this, &App::OnActivated);
 
-    CoreApplication::Suspending +=
-        ref new EventHandler<SuspendingEventArgs^>(this, &App::OnSuspending);
+    CoreApplication::Suspending += ref new EventHandler<SuspendingEventArgs ^>(this, &App::OnSuspending);
 
-    CoreApplication::Resuming +=
-        ref new EventHandler<Platform::Object^>(this, &App::OnResuming);
+    CoreApplication::Resuming += ref new EventHandler<Platform::Object ^>(this, &App::OnResuming);
 }
 
 // Called when the CoreWindow object is created (or re-created).
-void App::SetWindow(CoreWindow^ window)
+void App::SetWindow(CoreWindow ^ window)
 {
     window->SizeChanged +=
-        ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>(this, &App::OnWindowSizeChanged);
+        ref new TypedEventHandler<CoreWindow ^, WindowSizeChangedEventArgs ^>(this, &App::OnWindowSizeChanged);
 
     window->VisibilityChanged +=
-        ref new TypedEventHandler<CoreWindow^, VisibilityChangedEventArgs^>(this, &App::OnVisibilityChanged);
+        ref new TypedEventHandler<CoreWindow ^, VisibilityChangedEventArgs ^>(this, &App::OnVisibilityChanged);
 
-    window->Closed +=
-        ref new TypedEventHandler<CoreWindow^, CoreWindowEventArgs^>(this, &App::OnWindowClosed);
+    window->Closed += ref new TypedEventHandler<CoreWindow ^, CoreWindowEventArgs ^>(this, &App::OnWindowClosed);
 
-    DisplayInformation^ currentDisplayInformation = DisplayInformation::GetForCurrentView();
+    DisplayInformation ^ currentDisplayInformation = DisplayInformation::GetForCurrentView();
 
     currentDisplayInformation->DpiChanged +=
-        ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDpiChanged);
+        ref new TypedEventHandler<DisplayInformation ^, Object ^>(this, &App::OnDpiChanged);
 
     currentDisplayInformation->OrientationChanged +=
-        ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnOrientationChanged);
+        ref new TypedEventHandler<DisplayInformation ^, Object ^>(this, &App::OnOrientationChanged);
 
     DisplayInformation::DisplayContentsInvalidated +=
-        ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
+        ref new TypedEventHandler<DisplayInformation ^, Object ^>(this, &App::OnDisplayContentsInvalidated);
 
-    window->PointerMoved +=
-        ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerMoved);
+    window->PointerMoved += ref new TypedEventHandler<CoreWindow ^, PointerEventArgs ^>(this, &App::OnPointerMoved);
 
-    window->PointerPressed +=
-        ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerPressed);
+    window->PointerPressed += ref new TypedEventHandler<CoreWindow ^, PointerEventArgs ^>(this, &App::OnPointerPressed);
 
     window->PointerReleased +=
-        ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerReleased);
+        ref new TypedEventHandler<CoreWindow ^, PointerEventArgs ^>(this, &App::OnPointerReleased);
 
-    window->KeyDown +=
-        ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyPressed);
-
+    window->KeyDown += ref new TypedEventHandler<CoreWindow ^, KeyEventArgs ^>(this, &App::OnKeyPressed);
 }
 
 // Initializes scene resources, or loads a previously saved app state.
-void App::Load(Platform::String^ entryPoint)
+void App::Load(Platform::String ^ entryPoint)
 {
 }
 
@@ -109,14 +99,14 @@ void App::Uninitialize()
 
 // Application lifecycle event handlers.
 
-void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^ args)
+void App::OnActivated(CoreApplicationView ^ applicationView, IActivatedEventArgs ^ args)
 {
     // Run() won't start until the CoreWindow is activated.
     CoreWindow::GetForCurrentThread()->Activate();
 
     if (args->Kind == Activation::ActivationKind::File)
     {
-        m_fileActivatedArgs = static_cast<FileActivatedEventArgs^>(args);
+        m_fileActivatedArgs = static_cast<FileActivatedEventArgs ^>(args);
     }
     else
     {
@@ -134,19 +124,19 @@ concurrency::task<void> App::RestartRuntimeAsync()
     m_inputBuffer.reset();
     m_runtime.reset();
 
-    std::string appUrl{ "file:///" + std::filesystem::current_path().generic_string() };
+    std::string appUrl {"file:///" + std::filesystem::current_path().generic_string()};
 
-    std::string rootUrl{ appUrl };
+    std::string rootUrl {appUrl};
     if (m_fileActivatedArgs != nullptr)
     {
-        auto file = static_cast<Windows::Storage::IStorageFile^>(m_fileActivatedArgs->Files->GetAt(0));
+        auto file = static_cast<Windows::Storage::IStorageFile ^>(m_fileActivatedArgs->Files->GetAt(0));
         const auto path = winrt::to_string(file->Path->Data());
-        auto parentPath = std::filesystem::path{ path }.parent_path();
+        auto parentPath = std::filesystem::path {path}.parent_path();
         rootUrl = "file:///" + parentPath.generic_string();
     }
 
     m_runtime = std::make_unique<babylon::RuntimeUWP>(
-        reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread()), 
+        reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread()),
         rootUrl,
         [](const char* message, babylon::LogLevel) { OutputDebugStringA(message); });
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
@@ -163,7 +153,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
     {
         for (unsigned int idx = 0; idx < m_fileActivatedArgs->Files->Size; idx++)
         {
-            auto file = static_cast<Windows::Storage::IStorageFile^>(m_fileActivatedArgs->Files->GetAt(idx));
+            auto file = static_cast<Windows::Storage::IStorageFile ^>(m_fileActivatedArgs->Files->GetAt(idx));
             const auto path = winrt::to_string(file->Path->Data());
             auto text = co_await Windows::Storage::FileIO::ReadTextAsync(file);
             m_runtime->Eval(winrt::to_string(text->Data()), path);
@@ -173,7 +163,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
     }
 }
 
-void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
+void App::OnSuspending(Platform::Object ^ sender, SuspendingEventArgs ^ args)
 {
     // Save app state after requesting a deferral. Holding a deferral
     // indicates that the application is busy performing suspending operations. Be
@@ -184,7 +174,7 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
     deferral->Complete();
 }
 
-void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
+void App::OnResuming(Platform::Object ^ sender, Platform::Object ^ args)
 {
     // Restore any data or state that was unloaded on suspend. By default, data
     // and state are persisted when resuming from suspend. Note that this event
@@ -195,38 +185,38 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 
 // Window event handlers.
 
-void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs^ args)
+void App::OnWindowSizeChanged(CoreWindow ^ /*sender*/, WindowSizeChangedEventArgs ^ args)
 {
     m_runtime->UpdateSize(args->Size.Width, args->Size.Height);
 }
 
-void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
+void App::OnVisibilityChanged(CoreWindow ^ sender, VisibilityChangedEventArgs ^ args)
 {
     m_windowVisible = args->Visible;
 }
 
-void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
+void App::OnWindowClosed(CoreWindow ^ sender, CoreWindowEventArgs ^ args)
 {
     m_windowClosed = true;
 }
 
-void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
+void App::OnPointerMoved(CoreWindow ^, PointerEventArgs ^ args)
 {
     const auto& point = args->CurrentPoint->RawPosition;
     m_inputBuffer->SetPointerPosition(static_cast<int>(point.X), static_cast<int>(point.Y));
 }
 
-void App::OnPointerPressed(CoreWindow^, PointerEventArgs^)
+void App::OnPointerPressed(CoreWindow ^, PointerEventArgs ^)
 {
     m_inputBuffer->SetPointerDown(true);
 }
 
-void App::OnPointerReleased(CoreWindow^, PointerEventArgs^)
+void App::OnPointerReleased(CoreWindow ^, PointerEventArgs ^)
 {
     m_inputBuffer->SetPointerDown(false);
 }
 
-void App::OnKeyPressed(CoreWindow^, KeyEventArgs^ args)
+void App::OnKeyPressed(CoreWindow ^, KeyEventArgs ^ args)
 {
     if (args->VirtualKey == VirtualKey::R)
     {
@@ -236,20 +226,20 @@ void App::OnKeyPressed(CoreWindow^, KeyEventArgs^ args)
 
 // DisplayInformation event handlers.
 
-void App::OnDpiChanged(DisplayInformation^ /*sender*/, Object^ /*args*/)
+void App::OnDpiChanged(DisplayInformation ^ /*sender*/, Object ^ /*args*/)
 {
     // TODO: Implement.
-    //m_runtime->UpdateRenderTarget();
+    // m_runtime->UpdateRenderTarget();
 }
 
-void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)
+void App::OnOrientationChanged(DisplayInformation ^ sender, Object ^ args)
 {
     // TODO: Implement.
-    //m_deviceResources->SetCurrentOrientation(sender->CurrentOrientation);
+    // m_deviceResources->SetCurrentOrientation(sender->CurrentOrientation);
 }
 
-void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
+void App::OnDisplayContentsInvalidated(DisplayInformation ^ sender, Object ^ args)
 {
     // TODO: Implement.
-    //m_deviceResources->ValidateDevice();
+    // m_deviceResources->ValidateDevice();
 }

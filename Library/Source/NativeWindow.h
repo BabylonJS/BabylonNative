@@ -28,16 +28,17 @@ namespace babylon
 
     private:
         RuntimeImpl& m_runtimeImpl;
-        void* m_windowPtr{};
-        size_t m_width{};
-        size_t m_height{};
+        void* m_windowPtr {};
+        size_t m_width {};
+        size_t m_height {};
 
-        std::mutex m_mutex{};
-        arcana::ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
+        std::mutex m_mutex {};
+        arcana::ticketed_collection<OnResizeCallback> m_onResizeCallbacks {};
 
         static void SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
 
-        void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
+        void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function,
+                                 std::chrono::system_clock::time_point whenToRun);
     };
-}
+} // namespace babylon

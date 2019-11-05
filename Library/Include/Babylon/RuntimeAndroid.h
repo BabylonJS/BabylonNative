@@ -13,4 +13,4 @@ namespace babylon
         explicit RuntimeAndroid(ANativeWindow* nativeWindowPtr, const std::string& rootUrl, LogCallback callback);
         RuntimeAndroid(const RuntimeAndroid&) = delete;
     };
-}
+} // namespace babylon

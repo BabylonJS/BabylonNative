@@ -7,7 +7,7 @@ namespace babylon
     {
         char buffer[1024];
         ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
-        return std::filesystem::path{ buffer };
+        return std::filesystem::path {buffer};
     }
 
     std::string GetUrlFromPath(const std::filesystem::path& path)
@@ -15,4 +15,4 @@ namespace babylon
         // TODO: implement with Windows::Foundation::Uri
         throw std::exception("Not implemented!");
     }
-}
+} // namespace babylon

@@ -12,4 +12,4 @@ namespace babylon
         explicit RuntimeWin32(HWND hWnd, const std::string& rootUrl, LogCallback);
         RuntimeWin32(const RuntimeWin32&) = delete;
     };
-}
+} // namespace babylon

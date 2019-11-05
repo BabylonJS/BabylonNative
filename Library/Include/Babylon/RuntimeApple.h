@@ -11,4 +11,4 @@ namespace babylon
         explicit RuntimeApple(void* nativeWindowPtr, const std::string& rootUrl, LogCallback callback);
         RuntimeApple(const RuntimeApple&) = delete;
     };
-}
+} // namespace babylon

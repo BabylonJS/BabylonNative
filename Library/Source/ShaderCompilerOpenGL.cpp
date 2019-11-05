@@ -4,16 +4,18 @@ namespace babylon
 {
     ShaderCompiler::ShaderCompiler()
     {
-        //glslang::InitializeProcess();
+        // glslang::InitializeProcess();
     }
 
     ShaderCompiler::~ShaderCompiler()
     {
-        //glslang::FinalizeProcess();
+        // glslang::FinalizeProcess();
     }
 
-    void ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, std::function<void(ShaderInfo, ShaderInfo)> onCompiled)
+    void ShaderCompiler::Compile(std::string_view vertexSource,
+                                 std::string_view fragmentSource,
+                                 std::function<void(ShaderInfo, ShaderInfo)> onCompiled)
     {
         // android stub
     }
-}
+} // namespace babylon

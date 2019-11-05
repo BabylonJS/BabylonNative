@@ -6,4 +6,4 @@ namespace babylon
     {
         return SendAsyncImpl();
     }
-}
+} // namespace babylon

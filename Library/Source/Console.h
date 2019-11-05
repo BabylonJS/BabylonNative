@@ -9,7 +9,7 @@ namespace babylon
     {
     public:
         static Napi::ObjectReference Create(Napi::Env env, LogCallback& callback);
-        
+
         explicit Console(const Napi::CallbackInfo& info);
 
     private:
@@ -21,4 +21,4 @@ namespace babylon
 
         const LogCallback& m_callback;
     };
-}
+} // namespace babylon
