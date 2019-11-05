@@ -132,6 +132,8 @@ namespace babylon
                 BeginFrame();
                 callback(*m_frame);
                 EndFrame();
+
+                m_engineImpl->EndFrame();
             });
         }
 
@@ -832,7 +834,6 @@ namespace babylon
                 {
                     m_xrFrame.Update(frame);
                     func->Call({ Napi::Value::From(env, -1), m_jsXRFrame.Value() });
-                    bgfx::frame();
                 });
 
                 // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
