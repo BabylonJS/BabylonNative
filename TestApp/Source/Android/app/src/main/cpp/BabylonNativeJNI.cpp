@@ -29,12 +29,17 @@ std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 static AAssetManager* g_assetMgrNative = nullptr;
-
+static const char* Root = "file://";
 namespace
 {
     // this is the way to load apk embedded assets.
     static std::vector<char> GetAssetContents(const char* filename)
     {
+        std::string filenameStr{filename};
+        if (filenameStr.substr(0, strlen(Root)) == std::string(Root))
+        {
+            filename += strlen(Root) + 1; // + "/"
+        }
         std::vector<char> buffer;
         AAsset *asset = AAssetManager_open(g_assetMgrNative, filename,
                                            AASSET_MODE_UNKNOWN);
@@ -87,7 +92,7 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp", LogMessage, GetAssetContents);
+        runtime = std::make_unique<babylon::RuntimeAndroid>(window, Root, LogMessage, GetAssetContents);
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
@@ -121,8 +126,11 @@ Java_com_android_testapp_AndroidViewAppActivity_step(JNIEnv* env, jobject obj)
 JNIEXPORT void JNICALL
 Java_com_android_testapp_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobject obj, jfloat x, jfloat y, jboolean down)
 {
-    inputBuffer->SetPointerPosition(x, y);
-    inputBuffer->SetPointerDown(down);
+    if (inputBuffer != nullptr)
+    {
+        inputBuffer->SetPointerPosition(x, y);
+        inputBuffer->SetPointerDown(down);
+    }
 }
 
 JNIEXPORT void JNICALL
