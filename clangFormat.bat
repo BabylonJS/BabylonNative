@@ -1,0 +1,5 @@
+forfiles /p .\Library\Source\ /s /m *.cpp /c "cmd /c clang-format -style=file -i @file"
+forfiles /p .\Library\Source\ /s /m *.h /c "cmd /c clang-format -style=file -i @file"
+forfiles /p .\Library\Include\Babylon /s /m *.h /c "cmd /c clang-format -style=file -i @file"
+forfiles /p .\TestApp\ /s /m *.cpp /c "cmd /c clang-format -style=file -i @file"
+forfiles /p .\TestApp\ /s /m *.h /c "cmd /c clang-format -style=file -i @file"
