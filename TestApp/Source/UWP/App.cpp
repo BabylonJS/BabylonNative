@@ -3,7 +3,6 @@
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
 
-#include <sstream>
 #include <filesystem>
 
 using namespace Windows::ApplicationModel;
@@ -14,37 +13,6 @@ using namespace Windows::UI::Input;
 using namespace Windows::System;
 using namespace Windows::Foundation;
 using namespace Windows::Graphics::Display;
-
-namespace
-{
-    void concat(std::stringstream& ss)
-    {
-    }
-
-    template<typename T, typename ...Ts>
-    void concat(std::stringstream& ss, const T* t, Ts... ts)
-    {
-        ss << t;
-        concat(ss, ts...);
-    }
-
-    template<typename T, typename ...Ts>
-    void concat(std::stringstream& ss, const T& t, Ts... ts)
-    {
-        ss << t;
-        concat(ss, ts...);
-    }
-
-    template<typename ...Ts>
-    std::string concat(Ts... ts)
-    {
-        std::stringstream ss{};
-
-        concat(ss, ts...);
-
-        return ss.str();
-    }
-}
 
 // The main function is only used to initialize our IFrameworkView class.
 [Platform::MTAThread]
@@ -166,7 +134,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
     m_inputBuffer.reset();
     m_runtime.reset();
 
-    std::string appUrl{ concat("file:///", std::filesystem::current_path().generic_string()) };
+    std::string appUrl{ "file:///" + std::filesystem::current_path().generic_string() };
 
     std::string rootUrl{ appUrl };
     if (m_fileActivatedArgs != nullptr)
@@ -174,7 +142,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
         auto file = static_cast<Windows::Storage::IStorageFile^>(m_fileActivatedArgs->Files->GetAt(0));
         const auto path = winrt::to_string(file->Path->Data());
         auto parentPath = std::filesystem::path{ path }.parent_path();
-        rootUrl = concat("file:///", parentPath.generic_string());
+        rootUrl = "file:///" + parentPath.generic_string();
     }
 
     m_runtime = std::make_unique<babylon::RuntimeUWP>(
@@ -184,8 +152,8 @@ concurrency::task<void> App::RestartRuntimeAsync()
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
     InputManager::Initialize(*m_runtime, *m_inputBuffer);
 
-    m_runtime->LoadScript(concat(appUrl, "/Scripts/babylon.max.js"));
-    m_runtime->LoadScript(concat(appUrl, "/Scripts/babylon.glTF2FileLoader.js"));
+    m_runtime->LoadScript(appUrl + "/Scripts/babylon.max.js");
+    m_runtime->LoadScript(appUrl + "/Scripts/babylon.glTF2FileLoader.js");
 
     if (m_fileActivatedArgs == nullptr)
     {
@@ -201,7 +169,7 @@ concurrency::task<void> App::RestartRuntimeAsync()
             m_runtime->Eval(winrt::to_string(text->Data()), path);
         }
 
-        m_runtime->LoadScript(concat(appUrl, "/Scripts/playground_runner.js"));
+        m_runtime->LoadScript(appUrl + "/Scripts/playground_runner.js");
     }
 }
 
