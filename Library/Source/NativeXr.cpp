@@ -131,9 +131,8 @@ namespace babylon
 
                 BeginFrame();
                 callback(*m_frame);
-                EndFrame();
-
                 m_engineImpl->EndFrame();
+                EndFrame();
             });
         }
 
