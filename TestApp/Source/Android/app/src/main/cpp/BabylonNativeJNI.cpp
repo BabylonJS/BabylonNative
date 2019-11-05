@@ -30,7 +30,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 static AAssetManager* g_assetMgrNative = nullptr;
 
-namespace babylon
+namespace
 {
     // this is the way to load apk embedded assets.
     static std::vector<char> GetAssetContents(const char* filename)
