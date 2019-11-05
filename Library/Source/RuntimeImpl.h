@@ -20,8 +20,9 @@ namespace babylon
     public:
         static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
         static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env);
+        static std::vector<char> EmptyResourceLoadingCallback(const char*) { return {}; }
 
-        RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback);
+        RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback, ResourceLoadingCallback&& resourceLoadingCallback = EmptyResourceLoadingCallback);
         virtual ~RuntimeImpl();
 
         void UpdateSize(float width, float height);
@@ -77,6 +78,7 @@ namespace babylon
         babylon::Env* m_env{};
         const std::string m_rootUrl{};
         LogCallback m_logCallback{};
+        ResourceLoadingCallback m_resourceLoadingCallback{};
     };
 }
     

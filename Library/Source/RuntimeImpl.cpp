@@ -39,11 +39,12 @@ namespace babylon
             .Get(JS_WINDOW_NAME).ToObject());
     }
 
-    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback)
+    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback, ResourceLoadingCallback&& resourceLoadingCallback)
         : m_nativeWindowPtr{ nativeWindowPtr }
         , m_thread{ [this] { ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
         , m_logCallback{ logCallback }
+        , m_resourceLoadingCallback(resourceLoadingCallback)
     {
     }
 
@@ -117,9 +118,17 @@ namespace babylon
 
     template<typename T> arcana::task<T, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url)
     {
-        return arcana::make_task(m_dispatcher, m_cancelSource, [url]()
+        return arcana::make_task(m_dispatcher, m_cancelSource, [url, this]()
         {
             T data{};
+
+            // try to load with local resources
+            auto resource = m_resourceLoadingCallback(url.c_str());
+            if (!resource.empty())
+            {
+                data.insert(data.end(), resource.data(), resource.data() + resource.size());
+                return data;
+            }
 
             auto curl = curl_easy_init();
             if (curl)
