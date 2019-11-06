@@ -46,7 +46,7 @@ namespace xr
         case DXGI_FORMAT_R8G8B8A8_UNORM:
             return xr::TextureFormat::RGBA8;
         case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-            return xr::TextureFormat::RGBA8S;
+            return xr::TextureFormat::RGBA8;
         case DXGI_FORMAT_D24_UNORM_S8_UINT:
             return xr::TextureFormat::D24S8;
         default:
