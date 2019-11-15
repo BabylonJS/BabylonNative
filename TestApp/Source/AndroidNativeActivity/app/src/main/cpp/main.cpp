@@ -40,6 +40,7 @@ void LogMessage(const char* message, babylon::LogLevel level)
 
 static AAssetManager* g_assetMgrNative = nullptr;
 static const char* Root = "file://";
+
 namespace
 {
     // this is the way to load apk embedded assets.
@@ -63,6 +64,7 @@ namespace
         return buffer;
     }
 }
+
 /**
  * Shared state for our app.
  */

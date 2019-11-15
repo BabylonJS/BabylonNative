@@ -100,6 +100,10 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
         runtime->LoadScript("Scripts/babylon.max.js");
         runtime->LoadScript("Scripts/babylon.glTF2FileLoader.js");
         runtime->LoadScript("Scripts/experience.js");
+
+        int32_t width  = ANativeWindow_getWidth(window);
+        int32_t height = ANativeWindow_getHeight(window);
+        runtime->UpdateSize(width, height);
     }
 }
 
