@@ -89,3 +89,26 @@ receive a response within 24 hours. If for some reason you do not, please follow
 email to ensure we received your original message. Further information, including the
 [MSRC PGP](https://technet.microsoft.com/en-us/security/dn606155) key, can be found in
 the [Security TechCenter](https://technet.microsoft.com/en-us/security/default).
+
+## Android projects
+
+2 Android Studio projects are available:
+- A Java app using JNI (Android folder)
+- A native activity app without Java (AndroidNativeActivity folder)
+
+Both projects build with CI. The native activity app needs work to be runnable. Mainly .so packaging in APK
+The Java app runs and supports screen rotation
+
+## How to build and run TestApp on Android
+
+- Checkout branch https://github.com/CedricGuillemet/BabylonNative/tree/AndroidRender
+- Download V8 npm, untar/unxz and copy .so in expected folders. see https://github.com/CedricGuillemet/BabylonNative/blob/AndroidRender/azure-pipelines.yml#L172 for complete command lines
+- Open project with Android Studio (TestApp\Source\Android)
+- Connect your Android device (Android 5.0+ with OpenGL ES 3.0+) with developer option enabled
+- In Android Studio, menu Run->Run App. Select your device
+- Wait 2-3 minutes for a complete build and APK installation
+- App should be running and display a cube. You can rotate the cube by touching the screen
+
+## Android Known issues/ improvements 
+
+https://github.com/BabylonJS/BabylonNative/issues/102
