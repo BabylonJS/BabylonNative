@@ -1,5 +1,5 @@
 #include <initializer_list>
-#include <memory>
+//#include <memory>
 #include <cstdlib>
 #include <cstring>
 #include <jni.h>
@@ -19,7 +19,6 @@
 #include <InputManager.h>
 
 std::unique_ptr<babylon::RuntimeAndroid> runtime{};
-std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 
@@ -39,6 +38,31 @@ void LogMessage(const char* message, babylon::LogLevel level)
     }
 }
 
+static AAssetManager* g_assetMgrNative = nullptr;
+static const char* Root = "file://";
+namespace
+{
+    // this is the way to load apk embedded assets.
+    static std::vector<char> GetAssetContents(const char* filename)
+    {
+        std::string filenameStr{filename};
+        if (filenameStr.substr(0, strlen(Root)) == std::string(Root))
+        {
+            filename += strlen(Root) + 1; // + "/"
+        }
+        std::vector<char> buffer;
+        AAsset *asset = AAssetManager_open(g_assetMgrNative, filename,
+                                           AASSET_MODE_UNKNOWN);
+        if (asset != nullptr)
+        {
+            size_t size = AAsset_getLength64(asset);
+            buffer.resize(size);
+            AAsset_read(asset, buffer.data(), size);
+            AAsset_close(asset);
+        }
+        return buffer;
+    }
+}
 /**
  * Shared state for our app.
  */
@@ -86,7 +110,8 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                 if (!runtime) {
                     runtime = std::make_unique<babylon::RuntimeAndroid>(engine->m_window,
                                                                         "file:///data/local/tmp",
-                                                                        LogMessage);
+                                                                        LogMessage,
+                                                                        GetAssetContents);
 
                     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
                     InputManager::Initialize(*runtime, *inputBuffer);
@@ -187,6 +212,7 @@ void android_main(struct android_app* state) {
     state->userData = &engine;
     state->onAppCmd = engine_handle_cmd;
     state->onInputEvent = engine_handle_input;
+    g_assetMgrNative = state->activity->assetManager;
     ANativeActivity_setWindowFlags(state->activity, 0
                                                     | AWINDOW_FLAG_FULLSCREEN
                                                     | AWINDOW_FLAG_KEEP_SCREEN_ON
