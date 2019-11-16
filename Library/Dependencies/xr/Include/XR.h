@@ -18,8 +18,8 @@ namespace xr
 
     enum class TextureFormat
     {
-        RGBA8,
-        RGBA8_NONLINEAR,
+        RGBA8_SRGB,
+        BGRA8_SRGB,
         D24S8
     };
 

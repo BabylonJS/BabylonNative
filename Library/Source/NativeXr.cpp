@@ -8,16 +8,22 @@
 
 namespace
 {
-    std::pair<bgfx::TextureFormat::Enum, uint64_t> XrTextureFormatToBgfxFormat(xr::TextureFormat format)
+    bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
     {
         switch (format)
         {
-        case xr::TextureFormat::RGBA8:
-            return{ bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT };
-        case xr::TextureFormat::RGBA8_NONLINEAR:
-            return{ bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT /*| BGFX_TEXTURE_SRGB*/ };
+        // Color Formats
+        // NOTE: Use linear formats even though XR requests sRGB to match what happens on the web.
+        //       WebGL shaders expect sRGB output while native shaders expect linear output.
+        case xr::TextureFormat::BGRA8_SRGB:
+            return bgfx::TextureFormat::BGRA8;
+        case xr::TextureFormat::RGBA8_SRGB:
+            return bgfx::TextureFormat::RGBA8;
+
+        // Depth Formats
         case xr::TextureFormat::D24S8:
-            return{ bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT };
+            return bgfx::TextureFormat::D24S8;
+
         default:
             throw std::exception{ /* Unsupported texture format */ };
         }
@@ -239,14 +245,11 @@ namespace babylon
                 assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
                 assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
 
-                auto [colorTextureFormat, colorTextureFlags] = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                auto [depthTextureFormat, depthTextureFlags] = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
+                auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
+                auto colorTex = bgfx::createTexture2D(1, 1, false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
 
-                assert(bgfx::isTextureValid(0, false, 1, colorTextureFormat, colorTextureFlags));
-                assert(bgfx::isTextureValid(0, false, 1, depthTextureFormat, depthTextureFlags));
-
-                auto colorTex = bgfx::createTexture2D(1, 1, false, 1, colorTextureFormat, colorTextureFlags);
-                auto depthTex = bgfx::createTexture2D(1, 1, false, 1, depthTextureFormat, depthTextureFlags);
+                auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
+                auto depthTex = bgfx::createTexture2D(1, 1, false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
 
                 // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
                 bgfx::frame();
