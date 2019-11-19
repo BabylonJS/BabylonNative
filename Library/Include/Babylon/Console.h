@@ -28,9 +28,9 @@ namespace babylon
                 env,
                 "Console",
                 {
-                    InstanceMethod("log", &Console::Log),
-                    InstanceMethod("warn", &Console::Warn),
-                    InstanceMethod("error", &Console::Error),
+                    Napi::ObjectWrap<Console<LogHandlerT>>::InstanceMethod("log", &Console::Log),
+                    Napi::ObjectWrap<Console<LogHandlerT>>::InstanceMethod("warn", &Console::Warn),
+                    Napi::ObjectWrap<Console<LogHandlerT>>::InstanceMethod("error", &Console::Error),
                 });
 
             return Napi::Persistent(func.New({ Napi::External<LogHandlerT>::New(env, &handler) }));
