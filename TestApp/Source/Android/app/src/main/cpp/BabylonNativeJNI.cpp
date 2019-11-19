@@ -7,6 +7,7 @@
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
+#include <Babylon/Console.h>
 #include <Babylon/RuntimeAndroid.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
@@ -27,6 +28,28 @@ extern "C" {
 std::unique_ptr<babylon::RuntimeAndroid> runtime{};
 std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+
+struct LogHandler;
+using Console = babylon::Console<LogHandler>;
+struct LogHandler
+{
+    void Log(const char* message, Console::LogLevel level) const
+    {
+        switch (level)
+        {
+        case Console::LogLevel::Log:
+            __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
+            break;
+        case Console::LogLevel::Warn:
+            __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
+            break;
+        case Console::LogLevel::Error:
+            __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
+            break;
+        }
+    }
+};
+LogHandler logHandler{};
 
 static AAssetManager* g_assetMgrNative = nullptr;
 
@@ -61,22 +84,6 @@ Java_com_android_appviewer_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobj
 {
 }
 
-void LogMessage(const char* message, babylon::LogLevel level)
-{
-    switch (level)
-    {
-    case babylon::LogLevel::Log:
-        __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
-        break;
-    case babylon::LogLevel::Warn:
-        __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
-        break;
-    case babylon::LogLevel::Error:
-        __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
-        break;
-    }
-}
-
 JNIEXPORT void JNICALL
 Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
 {
@@ -84,7 +91,13 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp", LogMessage);
+        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp");
+
+        runtime->Dispatch([](babylon::Env& env)
+        {
+            auto jsConsole = Console::Create(env, logHandler);
+            env.Global().Set("console", jsConsole.Value());
+        });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);

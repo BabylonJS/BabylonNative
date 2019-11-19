@@ -1,7 +1,6 @@
 #pragma once
 
 #include <napi/napi.h>
-#include <Babylon/Runtime.h>
 
 #include <sstream>
 

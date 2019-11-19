@@ -1,9 +1,21 @@
 #include "LibNativeBridge.h"
+#import <Babylon/Console.h>
 #import <Babylon/RuntimeApple.h>
 #import <Shared/InputManager.h>
 
 std::unique_ptr<babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+
+struct LogHandler;
+using Console = babylon::Console<LogHandler>;
+struct LogHandler
+{
+    void Log(const char* message, Console::LogLevel) const
+    {
+        NSLog(@"%s", message);
+    }
+};
+LogHandler logHandler{};
 
 @implementation LibNativeBridge
 
@@ -23,12 +35,13 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     NSBundle* main = [NSBundle mainBundle];
     NSURL* resourceUrl = [main resourceURL];
     runtime = std::make_unique<babylon::RuntimeApple>(
-        CALayerPtr, 
-        [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
-        [](const char* message, babylon::LogLevel level)
-        {
-            NSLog(@"%s", message);
-        });
+        CALayerPtr, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
+    
+    runtime->Dispatch([](babylon::Env& env)
+    {
+        auto jsConsole = Console::Create(env, logHandler);
+        env.Global().Set("console", jsConsole.Value());
+    });
     
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);

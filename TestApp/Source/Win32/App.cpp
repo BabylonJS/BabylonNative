@@ -9,14 +9,16 @@
 
 #include <Shared/InputManager.h>
 
-#include <Babylon/RuntimeWin32.h>
 #include <Babylon/Console.h>
+#include <Babylon/RuntimeWin32.h>
 
 #define MAX_LOADSTRING 100
 
+struct LogHandler;
+using Console = babylon::Console<LogHandler>;
 struct LogHandler
 {
-    void Log(const char* message, babylon::Console<LogHandler>::LogLevel) const
+    void Log(const char* message, Console::LogLevel) const
     {
         OutputDebugStringA(message);
     }
@@ -86,7 +88,7 @@ namespace
 
         runtime->Dispatch([](babylon::Env& env)
         {
-            auto jsConsole = babylon::Console<LogHandler>::Create(env, logHandler);
+            auto jsConsole = Console::Create(env, logHandler);
             env.Global().Set("console", jsConsole.Value());
         });
 
