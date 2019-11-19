@@ -143,9 +143,14 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     }
 
     m_runtime = std::make_unique<babylon::RuntimeUWP>(
-        reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread()), 
-        rootUrl,
-        [](const char* message, babylon::LogLevel) { OutputDebugStringA(message); });
+        reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread()), rootUrl);
+
+    m_runtime->Dispatch([&logHandler = m_logHandler](babylon::Env& env)
+    {
+        auto jsConsole = Console::Create(env, logHandler);
+        env.Global().Set("console", jsConsole.Value());
+    });
+
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
     InputManager::Initialize(*m_runtime, *m_inputBuffer);
 
@@ -170,6 +175,11 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     }
 
     m_runtime->UpdateSize(bounds.Width, bounds.Height);
+}
+
+void App::LogHandler::Log(const char* message, Console::LogLevel) const
+{
+    OutputDebugStringA(message);
 }
 
 void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)

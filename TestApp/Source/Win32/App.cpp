@@ -8,16 +8,27 @@
 #include <filesystem>
 
 #include <Shared/InputManager.h>
+
 #include <Babylon/RuntimeWin32.h>
+#include <Babylon/Console.h>
 
 #define MAX_LOADSTRING 100
 
-// Global Variables:
+struct LogHandler
+{
+    void Log(const char* message, babylon::Console<LogHandler>::LogLevel) const
+    {
+        OutputDebugStringA(message);
+    }
+};
+
+    // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<babylon::RuntimeWin32> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+LogHandler logHandler{};
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -68,15 +79,16 @@ namespace
         return arguments;
     }
 
-    static void DebugString(const char* message, babylon::LogLevel)
-    {
-        OutputDebugStringA(message);
-    }
-
     void RefreshBabylon(HWND hWnd)
     {
         std::string rootUrl{ GetUrlFromPath(GetModulePath().parent_path().parent_path()) };
-        runtime = std::make_unique<babylon::RuntimeWin32>(hWnd, rootUrl, DebugString);
+        runtime = std::make_unique<babylon::RuntimeWin32>(hWnd, rootUrl);
+
+        runtime->Dispatch([](babylon::Env& env)
+        {
+            auto jsConsole = babylon::Console<LogHandler>::Create(env, logHandler);
+            env.Global().Set("console", jsConsole.Value());
+        });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);

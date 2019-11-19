@@ -2,7 +2,7 @@
 
 #include <Shared/InputManager.h>
 #include <Babylon/RuntimeUWP.h>
-
+#include <Babylon/Console.h>
 #include <ppltasks.h>
 
 // Main entry point for our app. Connects the app with the Windows shell and handles application lifecycle events.
@@ -39,6 +39,14 @@ private:
     void OnDisplayContentsInvalidated(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);
 
     concurrency::task<void> RestartRuntimeAsync(Windows::Foundation::Rect);
+
+    struct LogHandler;
+    using Console = babylon::Console<LogHandler>;
+    struct LogHandler
+    {
+        void Log(const char*, Console::LogLevel) const;
+    };
+    LogHandler m_logHandler{};
 
     std::unique_ptr<babylon::RuntimeUWP> m_runtime{};
     std::unique_ptr<InputManager::InputBuffer> m_inputBuffer{};

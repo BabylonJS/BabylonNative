@@ -1,6 +1,5 @@
 #include "RuntimeImpl.h"
 
-#include "Console.h"
 #include "NativeEngine.h"
 #include "NativeWindow.h"
 #include "XMLHttpRequest.h"
@@ -39,11 +38,10 @@ namespace babylon
             .Get(JS_WINDOW_NAME).ToObject());
     }
 
-    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback)
+    RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
         : m_nativeWindowPtr{ nativeWindowPtr }
         , m_thread{ [this] { ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
-        , m_logCallback{ logCallback }
     {
     }
 
@@ -214,9 +212,9 @@ namespace babylon
         global.Set("setTimeout", NativeWindow::GetSetTimeoutFunction(jsWindow).Value());
         global.Set("atob", NativeWindow::GetAToBFunction(jsWindow).Value());
 
-        auto jsConsole = Console::Create(env, m_logCallback);
-        jsNative.Set(JS_CONSOLE_NAME, jsConsole.Value());
-        global.Set(JS_CONSOLE_NAME, jsConsole.Value());
+        // auto jsConsole = Console::Create(env, m_logCallback);
+        // jsNative.Set(JS_CONSOLE_NAME, jsConsole.Value());
+        // global.Set(JS_CONSOLE_NAME, jsConsole.Value());
 
         auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
