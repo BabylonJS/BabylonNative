@@ -112,7 +112,7 @@ namespace
 }
 
 // NativeXr implementation proper.
-namespace babylon
+namespace Babylon
 {
     class NativeXr
     {
@@ -306,7 +306,7 @@ namespace babylon
     }
 }
 
-namespace babylon
+namespace Babylon
 {
     namespace
     {
@@ -1076,7 +1076,7 @@ namespace babylon
         };
     }
 
-    void InitializeNativeXr(babylon::Env& env)
+    void InitializeNativeXr(Env& env)
     {
         XRWebGLLayer::Initialize(env);
         XRRigidTransform::Initialize(env);

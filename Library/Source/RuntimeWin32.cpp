@@ -5,7 +5,7 @@
 
 #include <filesystem>
 
-namespace babylon
+namespace Babylon
 {
     RuntimeWin32::RuntimeWin32(HWND hWnd, LogCallback callback)
         : RuntimeWin32{hWnd, GetUrlFromPath(GetModulePath().parent_path()), std::move(callback)}
@@ -30,8 +30,8 @@ namespace babylon
         assert(SUCCEEDED(hr));
         auto coInitializeScopeGuard = gsl::finally([] { CoUninitialize(); });
 
-        Execute([](RuntimeImpl& runtime) {
-            InitializeNativeXr(runtime.Env());
+        Dispatch([](Env& env) {
+            InitializeNativeXr(env);
         });
 
         RuntimeImpl::BaseThreadProcedure();
