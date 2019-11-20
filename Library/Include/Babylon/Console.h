@@ -10,6 +10,8 @@ namespace babylon
     class Console final : public Napi::ObjectWrap<Console<LogHandlerT>>
     {
     public:
+        using ParentT = Napi::ObjectWrap<Console<LogHandlerT>>;
+
         /**
          * Importance level of messages sent via logging callbacks.
          */
@@ -24,20 +26,20 @@ namespace babylon
         {
             Napi::HandleScope scope{ env };
 
-            Napi::Function func = DefineClass(
+            Napi::Function func = ParentT::DefineClass(
                 env,
                 "Console",
                 {
-                    Napi::ObjectWrap<Console<LogHandlerT>>::InstanceMethod("log", &Console::Log),
-                    Napi::ObjectWrap<Console<LogHandlerT>>::InstanceMethod("warn", &Console::Warn),
-                    Napi::ObjectWrap<Console<LogHandlerT>>::InstanceMethod("error", &Console::Error),
+                    ParentT::InstanceMethod("log", &Console::Log),
+                    ParentT::InstanceMethod("warn", &Console::Warn),
+                    ParentT::InstanceMethod("error", &Console::Error),
                 });
 
             return Napi::Persistent(func.New({ Napi::External<LogHandlerT>::New(env, &handler) }));
         }
         
         explicit Console(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<Console>{ info }
+            : ParentT{ info }
             , m_handler{ *info[0].As<Napi::External<LogHandlerT>>().Data() }
         {}
 
