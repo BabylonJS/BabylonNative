@@ -8,12 +8,12 @@
 namespace babylon
 {
     RuntimeWin32::RuntimeWin32(HWND hWnd, LogCallback callback)
-        : RuntimeWin32{ hWnd, GetUrlFromPath(GetModulePath().parent_path()), std::move(callback) }
+        : RuntimeWin32{hWnd, GetUrlFromPath(GetModulePath().parent_path()), std::move(callback)}
     {
     }
 
     RuntimeWin32::RuntimeWin32(HWND hWnd, const std::string& rootUrl, LogCallback callback)
-        : Runtime{ std::make_unique<RuntimeImpl>(hWnd, rootUrl, std::move(callback)) }
+        : Runtime{std::make_unique<RuntimeImpl>(hWnd, rootUrl, std::move(callback))}
     {
         RECT rect;
         if (GetWindowRect(hWnd, &rect))
@@ -30,8 +30,7 @@ namespace babylon
         assert(SUCCEEDED(hr));
         auto coInitializeScopeGuard = gsl::finally([] { CoUninitialize(); });
 
-        Execute([](RuntimeImpl& runtime)
-        {
+        Execute([](RuntimeImpl& runtime) {
             InitializeNativeXr(runtime.Env());
         });
 

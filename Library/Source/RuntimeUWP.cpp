@@ -7,13 +7,13 @@
 namespace babylon
 {
     RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, LogCallback callback)
-        : RuntimeUWP{ window, {}, std::move(callback) }
+        : RuntimeUWP{window, {}, std::move(callback)}
     {
     }
 
     RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl, LogCallback callback)
-        : Runtime { std::make_unique<RuntimeImpl>(window, rootUrl, std::move(callback)) }
-        , m_window{ window }
+        : Runtime{std::make_unique<RuntimeImpl>(window, rootUrl, std::move(callback))}
+        , m_window{window}
     {
         m_window->AddRef();
     }
@@ -29,8 +29,7 @@ namespace babylon
 
     void RuntimeImpl::ThreadProcedure()
     {
-        this->Execute([](RuntimeImpl& runtimeImpl)
-        {
+        this->Execute([](RuntimeImpl& runtimeImpl) {
             InitializeNativeXr(runtimeImpl.Env());
         });
 

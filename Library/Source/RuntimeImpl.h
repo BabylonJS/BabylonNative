@@ -29,7 +29,8 @@ namespace babylon
         void Resume();
 
         std::string GetAbsoluteUrl(const std::string& url);
-        template<typename T> arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
+        template<typename T>
+        arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
         void LoadScript(const std::string& url);
         void Eval(const std::string& string, const std::string& url);
@@ -62,7 +63,7 @@ namespace babylon
         std::mutex m_taskMutex;
         std::mutex m_suspendMutex;
         std::condition_variable m_suspendVariable;
-        bool m_suspended{ false };
+        bool m_suspended{false};
 
         void* m_nativeWindowPtr{};
 
@@ -79,4 +80,3 @@ namespace babylon
         LogCallback m_logCallback{};
     };
 }
-    

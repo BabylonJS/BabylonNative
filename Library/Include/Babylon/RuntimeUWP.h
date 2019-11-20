@@ -15,7 +15,7 @@ namespace babylon
 
         // TODO: Allow creation from swap chain, which is required by XAML apps.
         // explicit RuntimeUWP(ABI::Windows::UI::Xaml::Controls::ISwapChainPanel* panel, const std::string& rootUrl = {});
-        
+
         RuntimeUWP(const Runtime&) = delete;
         ~RuntimeUWP();
 

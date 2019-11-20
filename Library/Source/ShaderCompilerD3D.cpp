@@ -20,7 +20,7 @@ namespace babylon
     {
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
         {
-            const std::array<const char*, 1> sources{ source.data() };
+            const std::array<const char*, 1> sources{source.data()};
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
             shader.setEnvInput(glslang::EShSourceGlsl, shader.getStage(), glslang::EShClientVulkan, 100);
             shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
@@ -39,11 +39,11 @@ namespace babylon
             std::vector<uint32_t> spirv;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 
-            spirv_cross::Parser parser{ std::move(spirv) };
+            spirv_cross::Parser parser{std::move(spirv)};
             parser.parse();
 
             auto compiler = std::make_unique<spirv_cross::CompilerHLSL>(parser.get_parsed_ir());
-            compiler->set_hlsl_options({ 40 });
+            compiler->set_hlsl_options({40});
 
             for (const auto& attribute : attributes)
             {
@@ -84,10 +84,10 @@ namespace babylon
     {
         glslang::TProgram program;
 
-        glslang::TShader vertexShader{ EShLangVertex };
+        glslang::TShader vertexShader{EShLangVertex};
         AddShader(program, vertexShader, vertexSource);
 
-        glslang::TShader fragmentShader{ EShLangFragment };
+        glslang::TShader fragmentShader{EShLangFragment};
         AddShader(program, fragmentShader, fragmentSource);
         InvertYDerivativeOperands(fragmentShader);
 
@@ -96,22 +96,21 @@ namespace babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        static const spirv_cross::HLSLVertexAttributeRemap attributes[] =
-        {
-            { bgfx::Attrib::Position,   "POSITION"      },
-            { bgfx::Attrib::Normal,     "NORMAL"        },
-            { bgfx::Attrib::Tangent,    "TANGENT"       },
-            { bgfx::Attrib::Color0,     "COLOR"         },
-            { bgfx::Attrib::Indices,    "BLENDINDICES"  },
-            { bgfx::Attrib::Weight,     "BLENDWEIGHT"   },
-            { bgfx::Attrib::TexCoord0,  "TEXCOORD0"     },
-            { bgfx::Attrib::TexCoord1,  "TEXCOORD1"     },
-            { bgfx::Attrib::TexCoord2,  "TEXCOORD2"     },
-            { bgfx::Attrib::TexCoord3,  "TEXCOORD3"     },
-            { bgfx::Attrib::TexCoord4,  "TEXCOORD4"     },
-            { bgfx::Attrib::TexCoord5,  "TEXCOORD5"     },
-            { bgfx::Attrib::TexCoord6,  "TEXCOORD6"     },
-            { bgfx::Attrib::TexCoord7,  "TEXCOORD7"     },
+        static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
+            {bgfx::Attrib::Position, "POSITION"},
+            {bgfx::Attrib::Normal, "NORMAL"},
+            {bgfx::Attrib::Tangent, "TANGENT"},
+            {bgfx::Attrib::Color0, "COLOR"},
+            {bgfx::Attrib::Indices, "BLENDINDICES"},
+            {bgfx::Attrib::Weight, "BLENDWEIGHT"},
+            {bgfx::Attrib::TexCoord0, "TEXCOORD0"},
+            {bgfx::Attrib::TexCoord1, "TEXCOORD1"},
+            {bgfx::Attrib::TexCoord2, "TEXCOORD2"},
+            {bgfx::Attrib::TexCoord3, "TEXCOORD3"},
+            {bgfx::Attrib::TexCoord4, "TEXCOORD4"},
+            {bgfx::Attrib::TexCoord5, "TEXCOORD5"},
+            {bgfx::Attrib::TexCoord6, "TEXCOORD6"},
+            {bgfx::Attrib::TexCoord7, "TEXCOORD7"},
         };
 
         Microsoft::WRL::ComPtr<ID3DBlob> vertexBlob;
@@ -120,10 +119,8 @@ namespace babylon
         Microsoft::WRL::ComPtr<ID3DBlob> fragmentBlob;
         auto fragmentCompiler = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
 
-        onCompiled
-        (
-            { std::move(vertexCompiler), gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize()) },
-            { std::move(fragmentCompiler), gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize()) }
-        );
+        onCompiled(
+            {std::move(vertexCompiler), gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize())},
+            {std::move(fragmentCompiler), gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize())});
     }
 }

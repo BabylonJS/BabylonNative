@@ -25,25 +25,21 @@ namespace babylon
 
     RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env env)
     {
-        return *env.Global()
-            .Get(JS_NATIVE_NAME).ToObject()
-            .Get(JS_RUNTIME_NAME).As<Napi::External<RuntimeImpl>>()
-            .Data();
+        const auto& _native{env.Global().Get(JS_NATIVE_NAME).ToObject()};
+        return *_native.Get(JS_RUNTIME_NAME).As<Napi::External<RuntimeImpl>>().Data();
     }
 
     NativeWindow& RuntimeImpl::GetNativeWindowFromJavaScript(Napi::Env env)
     {
-        return *NativeWindow::Unwrap(
-            env.Global()
-            .Get(JS_NATIVE_NAME).ToObject()
-            .Get(JS_WINDOW_NAME).ToObject());
+        const auto& _native{env.Global().Get(JS_NATIVE_NAME).ToObject()};
+        return *NativeWindow::Unwrap(_native.Get(JS_WINDOW_NAME).ToObject());
     }
 
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback)
-        : m_nativeWindowPtr{ nativeWindowPtr }
-        , m_thread{ [this] { ThreadProcedure(); } }
-        , m_rootUrl{ rootUrl }
-        , m_logCallback{ logCallback }
+        : m_nativeWindowPtr{nativeWindowPtr}
+        , m_thread{[this] { ThreadProcedure(); }}
+        , m_rootUrl{rootUrl}
+        , m_logCallback{logCallback}
     {
     }
 
@@ -59,8 +55,7 @@ namespace babylon
 
     void RuntimeImpl::UpdateSize(float width, float height)
     {
-        m_dispatcher.queue([width, height, this]
-        {
+        m_dispatcher.queue([width, height, this] {
             auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(*m_env);
             window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
@@ -96,7 +91,7 @@ namespace babylon
 
         if (code != CURLUE_OK)
         {
-            throw std::exception{ };
+            throw std::exception{};
         }
 
         char* buf;
@@ -104,10 +99,10 @@ namespace babylon
 
         if (code != CURLUE_OK)
         {
-            throw std::exception{ };
+            throw std::exception{};
         }
 
-        std::string absoluteUrl{ buf };
+        std::string absoluteUrl{buf};
 
         curl_free(buf);
         curl_url_cleanup(curl);
@@ -115,10 +110,10 @@ namespace babylon
         return absoluteUrl;
     }
 
-    template<typename T> arcana::task<T, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url)
+    template<typename T>
+    arcana::task<T, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url)
     {
-        return arcana::make_task(m_dispatcher, m_cancelSource, [url]()
-        {
+        return arcana::make_task(m_dispatcher, m_cancelSource, [url]() {
             T data{};
 
             auto curl = curl_easy_init();
@@ -127,8 +122,7 @@ namespace babylon
                 curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-                curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData)
-                {
+                curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData) {
                     auto& data = *static_cast<T*>(userData);
                     data.insert(data.end(), buffer, buffer + nitems);
                     return nitems;
@@ -152,20 +146,19 @@ namespace babylon
 
     void RuntimeImpl::LoadScript(const std::string& url)
     {
+        // clang-format off
         auto lock = AcquireTaskLock();
-        Task = Task.then(m_dispatcher, m_cancelSource, [this, url]
-        {
+        Task = Task.then(m_dispatcher, m_cancelSource, [this, url] {
             return LoadUrlAsync<std::string>(GetAbsoluteUrl(url).c_str());
-        }).then(m_dispatcher, m_cancelSource, [this, url](const std::string& script)
-        {
+        }).then(m_dispatcher, m_cancelSource, [this, url](const std::string& script) {
             Env().Eval(script.data(), url.data());
         });
+        // clang-format on
     }
 
     void RuntimeImpl::Eval(const std::string& string, const std::string& sourceUrl)
     {
-        Execute([this, string, sourceUrl](auto&)
-        {
+        Execute([this, string, sourceUrl](auto&) {
             Env().Eval(string.data(), sourceUrl.data());
         });
     }
@@ -173,8 +166,7 @@ namespace babylon
     void RuntimeImpl::Execute(std::function<void(RuntimeImpl&)> func)
     {
         auto lock = AcquireTaskLock();
-        Task = Task.then(m_dispatcher, m_cancelSource, [func = std::move(func), this]()
-        {
+        Task = Task.then(m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
             func(*this);
         });
     }
@@ -201,7 +193,7 @@ namespace babylon
 
     std::scoped_lock<std::mutex> RuntimeImpl::AcquireTaskLock()
     {
-        return std::scoped_lock{ m_taskMutex };
+        return std::scoped_lock{m_taskMutex};
     }
 
     void RuntimeImpl::InitializeJavaScriptVariables()
@@ -237,15 +229,13 @@ namespace babylon
     {
         m_dispatcher.set_affinity(std::this_thread::get_id());
 
-        auto executeOnScriptThread = [this](std::function<void()> action)
-        {
-            Execute([action = std::move(action)](auto&)
-            {
+        auto executeOnScriptThread = [this](std::function<void()> action) {
+            Execute([action = std::move(action)](auto&) {
                 action();
             });
         };
 
-        babylon::Env env{ GetModulePath().u8string().data(), std::move(executeOnScriptThread) };
+        babylon::Env env{GetModulePath().u8string().data(), std::move(executeOnScriptThread)};
 
         m_env = &env;
         auto hostScopeGuard = gsl::finally([this] { m_env = nullptr; });
@@ -259,7 +249,7 @@ namespace babylon
             // check if suspended
             {
                 std::unique_lock<std::mutex> lock(m_suspendMutex);
-                m_suspendVariable.wait(lock, [this](){ return !m_suspended;});
+                m_suspendVariable.wait(lock, [this]() { return !m_suspended; });
             }
             m_dispatcher.blocking_tick(m_cancelSource);
         }

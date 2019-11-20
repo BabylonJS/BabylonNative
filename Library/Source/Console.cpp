@@ -6,7 +6,7 @@ namespace babylon
 {
     Napi::ObjectReference Console::Create(Napi::Env env, LogCallback& callback)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
@@ -17,13 +17,14 @@ namespace babylon
                 InstanceMethod("error", &Console::Error),
             });
 
-        return Napi::Persistent(func.New({ Napi::External<LogCallback>::New(env, &callback) }));
+        return Napi::Persistent(func.New({Napi::External<LogCallback>::New(env, &callback)}));
     }
 
     Console::Console(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<Console>{ info }
-        , m_callback{ *info[0].As<Napi::External<LogCallback>>().Data() }
-    {}
+        : Napi::ObjectWrap<Console>{info}
+        , m_callback{*info[0].As<Napi::External<LogCallback>>().Data()}
+    {
+    }
 
     void Console::SendToOutputs(const Napi::CallbackInfo& info, LogLevel logLevel) const
     {

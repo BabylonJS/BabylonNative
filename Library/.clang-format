@@ -1,0 +1,21 @@
+# https://releases.llvm.org/8.0.0/tools/clang/docs/ClangFormatStyleOptions.html
+---
+BasedOnStyle: LLVM
+---
+Language: Cpp
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign
+AlignOperands: false
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: BeforeComma
+ColumnLimit: 0
+FixNamespaceComments: false
+IndentCaseLabels: true
+IndentWidth: 4
+NamespaceIndentation: All
+PointerAlignment: Left
+SortIncludes: false
+SpaceAfterTemplateKeyword: false
+---
