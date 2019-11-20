@@ -81,7 +81,12 @@ namespace babylon
         void Update() const
         {
             bgfx::setViewClear(m_viewId, m_flags, Color(), m_depth, m_stencil);
+            // with Open GL/ES, touching the view gives a red or black square in the middle of the screen (1/9 screen size)
+            // that's the default bgfx touch mesh. why?
+#ifndef ANDROID
             bgfx::touch(m_viewId);
+#endif
+            bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
         }
 
         void UpdateViewId(uint16_t viewId)
