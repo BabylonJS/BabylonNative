@@ -29,24 +29,14 @@ namespace
         }
     }
 
+    // clang-format off
     constexpr std::array<float, 16> IDENTITY_MATRIX{
-        1.f,
-        0.f,
-        0.f,
-        0.f,
-        0.f,
-        1.f,
-        0.f,
-        0.f,
-        0.f,
-        0.f,
-        1.f,
-        0.f,
-        0.f,
-        0.f,
-        0.f,
-        1.f,
+        1.f, 0.f, 0.f, 0.f,
+        0.f, 1.f, 0.f, 0.f,
+        0.f, 0.f, 1.f, 0.f,
+        0.f, 0.f, 0.f, 1.f
     };
+    // clang-format on
 
     std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
     {

@@ -78,11 +78,10 @@ namespace Babylon
     void RuntimeImpl::LoadScript(const std::string& url)
     {
         auto lock = AcquireTaskLock();
-        Task = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url).data()), Task).then(m_dispatcher, m_cancelSource,
-            [this, url](const std::tuple<std::string, arcana::void_placeholder>& args)
-            {
-                m_env->Eval(std::get<0>(args).data(), url.data());
-            });
+        auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url).data()), Task);
+        Task = whenAllTask.then(m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
+            m_env->Eval(std::get<0>(args).data(), url.data());
+        });
     }
 
     void RuntimeImpl::Eval(const std::string& string, const std::string& sourceUrl)
