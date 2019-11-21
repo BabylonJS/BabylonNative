@@ -8,7 +8,7 @@
 #include <napi/env.h>
 #include <sstream>
 
-namespace babylon
+namespace Babylon
 {
     namespace
     {

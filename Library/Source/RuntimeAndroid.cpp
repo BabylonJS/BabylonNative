@@ -2,7 +2,7 @@
 #include "RuntimeImpl.h"
 //#include <filesystem>
 
-namespace babylon
+namespace Babylon
 {
 
     RuntimeAndroid::RuntimeAndroid(ANativeWindow* nativeWindowPtr)
@@ -20,5 +20,4 @@ namespace babylon
     {
         RuntimeImpl::BaseThreadProcedure();
     }
-
 }

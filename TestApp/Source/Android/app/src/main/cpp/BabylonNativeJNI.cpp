@@ -25,12 +25,12 @@ extern "C" {
     JNIEXPORT void JNICALL Java_com_android_appviewer_AndroidViewAppActivity_step(JNIEnv* env, jobject obj);
 };
 
-std::unique_ptr<babylon::RuntimeAndroid> runtime{};
+std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 struct LogHandler;
-using Console = babylon::Console<LogHandler>;
+using Console = Babylon::Console<LogHandler>;
 struct LogHandler
 {
     void Log(const char* message, Console::LogLevel level) const
@@ -53,7 +53,7 @@ LogHandler logHandler{};
 
 static AAssetManager* g_assetMgrNative = nullptr;
 
-namespace babylon
+namespace
 {
     // this is the way to load apk embedded assets.
     std::vector<char> GetFileContents(const std::string &file_name)
@@ -91,9 +91,9 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, "file:///data/local/tmp");
+        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, "file:///data/local/tmp");
 
-        runtime->Dispatch([](babylon::Env& env)
+        runtime->Dispatch([](Babylon::Env& env)
         {
             auto jsConsole = Console::Create(env, logHandler);
             env.Global().Set("console", jsConsole.Value());
@@ -139,4 +139,3 @@ JNIEXPORT void JNICALL
 Java_com_android_appviewer_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom)
 {
 }
-

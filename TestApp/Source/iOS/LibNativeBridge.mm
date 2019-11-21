@@ -3,11 +3,11 @@
 #import <Babylon/RuntimeApple.h>
 #import <Shared/InputManager.h>
 
-std::unique_ptr<babylon::RuntimeApple> runtime{};
+std::unique_ptr<Babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 struct LogHandler;
-using Console = babylon::Console<LogHandler>;
+using Console = Babylon::Console<LogHandler>;
 struct LogHandler
 {
     void Log(const char* message, Console::LogLevel) const
@@ -34,10 +34,10 @@ LogHandler logHandler{};
 {
     NSBundle* main = [NSBundle mainBundle];
     NSURL* resourceUrl = [main resourceURL];
-    runtime = std::make_unique<babylon::RuntimeApple>(
+    runtime = std::make_unique<Babylon::RuntimeApple>(
         CALayerPtr, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
     
-    runtime->Dispatch([](babylon::Env& env)
+    runtime->Dispatch([](Babylon::Env& env)
     {
         auto jsConsole = Console::Create(env, logHandler);
         env.Global().Set("console", jsConsole.Value());

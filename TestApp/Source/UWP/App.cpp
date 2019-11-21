@@ -142,10 +142,10 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         rootUrl = "file:///" + parentPath.generic_string();
     }
 
-    m_runtime = std::make_unique<babylon::RuntimeUWP>(
+    m_runtime = std::make_unique<Babylon::RuntimeUWP>(
         reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread()), rootUrl);
 
-    m_runtime->Dispatch([&logHandler = m_logHandler](babylon::Env& env)
+    m_runtime->Dispatch([&logHandler = m_logHandler](Babylon::Env& env)
     {
         auto jsConsole = Console::Create(env, logHandler);
         env.Global().Set("console", jsConsole.Value());

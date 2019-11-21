@@ -41,14 +41,14 @@ private:
     concurrency::task<void> RestartRuntimeAsync(Windows::Foundation::Rect);
 
     struct LogHandler;
-    using Console = babylon::Console<LogHandler>;
+    using Console = Babylon::Console<LogHandler>;
     struct LogHandler
     {
         void Log(const char*, Console::LogLevel) const;
     };
     LogHandler m_logHandler{};
 
-    std::unique_ptr<babylon::RuntimeUWP> m_runtime{};
+    std::unique_ptr<Babylon::RuntimeUWP> m_runtime{};
     std::unique_ptr<InputManager::InputBuffer> m_inputBuffer{};
     Windows::ApplicationModel::Activation::FileActivatedEventArgs^ m_fileActivatedArgs;
     bool m_windowClosed;

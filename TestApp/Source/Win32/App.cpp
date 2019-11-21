@@ -15,7 +15,7 @@
 #define MAX_LOADSTRING 100
 
 struct LogHandler;
-using Console = babylon::Console<LogHandler>;
+using Console = Babylon::Console<LogHandler>;
 struct LogHandler
 {
     void Log(const char* message, Console::LogLevel) const
@@ -28,7 +28,7 @@ struct LogHandler
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-std::unique_ptr<babylon::RuntimeWin32> runtime{};
+std::unique_ptr<Babylon::RuntimeWin32> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 LogHandler logHandler{};
 
@@ -84,9 +84,9 @@ namespace
     void RefreshBabylon(HWND hWnd)
     {
         std::string rootUrl{ GetUrlFromPath(GetModulePath().parent_path().parent_path()) };
-        runtime = std::make_unique<babylon::RuntimeWin32>(hWnd, rootUrl);
+        runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl);
 
-        runtime->Dispatch([](babylon::Env& env)
+        runtime->Dispatch([](Babylon::Env& env)
         {
             auto jsConsole = Console::Create(env, logHandler);
             env.Global().Set("console", jsConsole.Value());

@@ -4,7 +4,7 @@
 
 #include "NativeXr.h"
 
-namespace babylon
+namespace Babylon
 {
     RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window)
         : RuntimeUWP{ window, {} }
