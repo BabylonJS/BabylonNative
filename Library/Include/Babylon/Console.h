@@ -4,7 +4,7 @@
 
 #include <sstream>
 
-namespace babylon
+namespace Babylon
 {
     template<typename LogHandlerT>
     class Console final : public Napi::ObjectWrap<Console<LogHandlerT>>
