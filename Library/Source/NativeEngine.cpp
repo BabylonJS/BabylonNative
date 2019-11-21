@@ -280,7 +280,7 @@ namespace babylon
         bgfx::Init init{};
         init.platformData.nwh = window.GetWindowPtr();
         bgfx::setPlatformData(init.platformData);
-        init.type = bgfx::RendererType::Direct3D11;
+        init.type = bgfx::RendererType::OpenGL;//:Direct3D11;
         init.resolution.width = static_cast<uint32_t>(window.GetWidth());
         init.resolution.height = static_cast<uint32_t>(window.GetHeight());
         init.resolution.reset = BGFX_RESET_FLAGS;
@@ -556,6 +556,8 @@ namespace babylon
                         attributeName = "normal";
                     else if (attributeName == "a_tangent")
                         attributeName = "tangent";
+                    else if (attributeName == "a_uv")
+                        attributeName = "uv";
                     else if (attributeName == "a_color")
                         attributeName = "color";
                     else if (attributeName == "a_index")

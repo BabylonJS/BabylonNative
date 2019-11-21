@@ -17,11 +17,11 @@ namespace babylon
         {
             const std::array<const char*, 1> sources{ source.data() };
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
-            shader.setEnvInput(glslang::EShSourceGlsl, shader.getStage(), glslang::EShClientOpenGL, 100);
-            shader.setEnvClient(glslang::EShClientOpenGL, glslang::EShTargetOpenGL_450);
+            shader.setEnvInput(glslang::EShSourceGlsl, shader.getStage(), glslang::EShClientVulkan, 100);
+            shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
             shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
 
-            if (!shader.parse(&DefaultTBuiltInResource, 430, false, EShMsgDefault))
+            if (!shader.parse(&DefaultTBuiltInResource, 450, false, EShMsgDefault))
             {
                 throw std::exception();
             }
@@ -38,35 +38,102 @@ namespace babylon
             parser.parse();
 
             auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser.get_parsed_ir());
+            
+            compiler->build_combined_image_samplers();
+            
+            spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
+#ifdef ANDROID
+            options.version = 300;
+            options.es = true;
+#else
+            options.version = 430;
+            options.es = false;
+#endif
+            compiler->set_common_options(options);
+            
+#if 0
+            spirv_cross::ShaderResources resources = compiler->get_shader_resources();
+            for (auto& resource : resources.uniform_buffers)
+            {
+                auto str = resource.name;
+                auto fbn = compiler->get_fallback_name(22);
+                auto activeBuffer = compiler->get_active_buffer_ranges(resource.id);
 
-            // remove "uniform Frame { .... }" . Keep the uniforms
-            const std::string frame = "uniform Frame {";
-            const std::string frameEnd = "};";
-            size_t pos = glsl.find(frame);
+                //auto& type = compiler->get<spirv_cross::SPIRType>(resource.type_id);
+                // Modify the decoration to prepare it for GLSL.
+                compiler->unset_decoration(resource.id, spv::DecorationDescriptorSet);
+
+                for (auto& active : activeBuffer)
+                {
+                    auto memberName = compiler->get_member_name(resource.id, active.index);
+                    //auto memberType = compiler->get_type(active.)
+                    int a = 1;
+                }
+                
+                //compiler->set_name(22, "truc");
+            }
+/*
+            compiler->set_variable_type_remap_callback([](const spirv_cross::SPIRType& type, const std::string& var_name, std::string& name_of_type){
+                
+                });
+                */
+            program.buildReflection();
+            //int numblk = program.getNumUniformVariables();
+
+
+            //auto& block = program.getUniformBlock(0);
+#endif
+
+            program.buildReflection();
+            int numUniforms = program.getNumUniformVariables();
+
+            for (int i = 0; i < numUniforms; i++)
+            {
+                const auto& uniform = program.getUniform(i);
+                std::string uniformString = "uniform highp ";
+                if (uniform.glDefineType == 0x8B5C) //GL_FLOAT_MAT4
+                {
+                    uniformString += "mat4 ";
+                }
+                else
+                {
+                    uniformString += "vec4 ";
+                }
+                uniformString += uniform.name;
+                uniformString += ";";
+                compiler->add_header_line(uniformString);
+            }
+
+            std::string compiled = compiler->compile();
+
+            // rename "uniform Frame { .... }" . Keep the uniforms
+            const std::string frameNewName = ((stage == EShLangVertex)?"FrameVS":"FrameFS");
+            const std::string frame = "Frame";
+            size_t pos = compiled.find(frame);
             if (pos != std::string::npos)
             {
-                glsl.replace(pos, frame.size(), "");
-                pos = glsl.find(frameEnd, pos);
-                if (pos != std::string::npos)
-                {
-                    glsl.replace(pos, frameEnd.size(), "");
-                }
+                compiled.replace(pos, frame.size(), frameNewName);
             }
-#ifdef ANDROID
-            // remove location
-            static const std::string locations[] = {"layout(location=0)", "layout(location=1)", "layout(location=2)", "layout(location=3)", "layout(location=4)","layout(location=5)"};
-            for (auto location : locations)
+            
+            spirv_cross::ShaderResources resources = compiler->get_shader_resources();
+            for (auto& resource : resources.uniform_buffers)
             {
-                pos = glsl.find(location);
+                auto str = resource.name;
+                auto fbn = compiler->get_fallback_name(resource.id);
+                std::string rep = fbn + ".";
+                size_t pos = compiled.find(rep);
                 while (pos != std::string::npos)
                 {
-                    glsl.replace(pos, location.size(), "");
-                    pos = glsl.find(location);
+                    compiled.replace(pos, rep.size(), "");
+                    pos = compiled.find(rep);
                 }
             }
 
+#ifdef ANDROID
+            glsl = compiled.substr(strlen("#version 300 es\n"));
+
             // frag def
-            static const std::string fragDef = "out vec4 glFragColor;";
+            static const std::string fragDef = "layout(location = 0) out highp vec4 glFragColor;";
             pos = glsl.find(fragDef);
             if (pos != std::string::npos)
             {
@@ -80,10 +147,31 @@ namespace babylon
             {
                 glsl.replace(pos, fragColor.size(), "gl_FragColor");
             }
-#else 
-            glsl = std::string("#version 430\n") + glsl;
-#endif
+#if 0
+            static const std::string cmt = "layout(std140) uniform";
+            pos = glsl.find(cmt);
+            if (pos != std::string::npos)
+            {
+                glsl.replace(pos, cmt.size(), "/*");
+            }
             
+            static const std::string cmt2 = "_22;";
+            pos = glsl.find(cmt2);
+            if (pos != std::string::npos)
+            {
+                glsl.replace(pos, cmt2.size(), "*/");
+            }
+
+            static const std::string cmt3 = "_69;";
+            pos = glsl.find(cmt3);
+            if (pos != std::string::npos)
+            {
+                glsl.replace(pos, cmt3.size(), "*/");
+            }
+#endif
+#else 
+            glsl = compiled;
+#endif
             return std::move(compiler);
         }
     }
@@ -115,141 +203,7 @@ namespace babylon
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto vertexCompiler = CompileShader(program, EShLangVertex, vertexGLSL);
-/*
-vertexGLSL = R"(#define DIFFUSEDIRECTUV 0
-    #define AMBIENTDIRECTUV 0
-    #define OPACITYDIRECTUV 0
-    #define EMISSIVEDIRECTUV 0
-    #define SPECULARDIRECTUV 0
-    #define BUMPDIRECTUV 0
-    #define SPECULARTERM
-    #define NORMAL
-    #define NUM_BONE_INFLUENCERS 0
-    #define BonesPerMesh 0
-    #define LIGHTMAPDIRECTUV 0
-    #define NUM_MORPH_INFLUENCERS 0
-    #define VIGNETTEBLENDMODEMULTIPLY
-    #define SAMPLER3DGREENDEPTH
-    #define SAMPLER3DBGRMAP
-    #define LIGHT0
-    #define HEMILIGHT0
-    
-    #define SHADER_NAME vertex:default
-    precision highp float;
 
-    uniform mat4 viewProjection;
-    uniform mat4 view;
-    uniform mat4 world;
-    uniform vec4 vLightData0;
-    uniform vec4 vLightDiffuse0;
-    uniform vec4 vLightSpecular0;
-    uniform vec4 vLightGround0;
-
-#define CUSTOM_VERTEX_BEGIN
-layout(location=0) in vec3 a_position;
-layout(location=1) in vec3 a_normal;
-const float PI=3.1415926535897932384626433832795;
-const float LinearEncodePowerApprox=2.2;
-const float GammaEncodePowerApprox=1.0/LinearEncodePowerApprox;
-const vec3 LuminanceEncodeApprox=vec3(0.2126,0.7152,0.0722);
-const float Epsilon=0.0000001;
-#define saturate(x) clamp(x,0.0,1.0)
-#define absEps(x) abs(x)+Epsilon
-#define maxEps(x) max(x,Epsilon)
-#define saturateEps(x) clamp(x,Epsilon,1.0)
-mat3 transposeMat3(mat3 inMatrix) {
-vec3 i0=inMatrix[0];
-vec3 i1=inMatrix[1];
-vec3 i2=inMatrix[2];
-mat3 outMatrix=mat3(
-vec3(i0.x,i1.x,i2.x),
-vec3(i0.y,i1.y,i2.y),
-vec3(i0.z,i1.z,i2.z)
-);
-return outMatrix;
-}
-mat3 inverseMat3(mat3 inMatrix) {
-float a00=inMatrix[0][0],a01=inMatrix[0][1],a02=inMatrix[0][2];
-float a10=inMatrix[1][0],a11=inMatrix[1][1],a12=inMatrix[1][2];
-float a20=inMatrix[2][0],a21=inMatrix[2][1],a22=inMatrix[2][2];
-float b01=a22*a11-a12*a21;
-float b11=-a22*a10+a12*a20;
-float b21=a21*a10-a11*a20;
-float det=a00*b01+a01*b11+a02*b21;
-return mat3(b01,(-a22*a01+a02*a21),(a12*a01-a02*a11),
-b11,(a22*a00-a02*a20),(-a12*a00+a02*a10),
-b21,(-a21*a00+a01*a20),(a11*a00-a01*a10))/det;
-}
-vec3 toLinearSpace(vec3 color)
-{
-return pow(color,vec3(LinearEncodePowerApprox));
-}
-vec3 toGammaSpace(vec3 color)
-{
-return pow(color,vec3(GammaEncodePowerApprox));
-}
-float toGammaSpace(float color)
-{
-return pow(color,GammaEncodePowerApprox);
-}
-float square(float value)
-{
-return value*value;
-}
-float pow5(float value) {
-float sq=value*value;
-return sq*sq*value;
-}
-float getLuminance(vec3 color)
-{
-return clamp(dot(color,LuminanceEncodeApprox),0.,1.);
-}
-float getRand(vec2 seed) {
-return fract(sin(dot(seed.xy ,vec2(12.9898,78.233)))*43758.5453);
-}
-float dither(vec2 seed,float varianceAmount) {
-float rand=getRand(seed);
-float dither=mix(-varianceAmount/255.0,varianceAmount/255.0,rand);
-return dither;
-}
-const float rgbdMaxRange=255.0;
-vec4 toRGBD(vec3 color) {
-float maxRGB=maxEps(max(color.r,max(color.g,color.b)));
-float D=max(rgbdMaxRange/maxRGB,1.);
-D=clamp(floor(D)/255.0,0.,1.);
-vec3 rgb=color.rgb*D;
-rgb=toGammaSpace(rgb);
-return vec4(rgb,D);
-}
-vec3 fromRGBD(vec4 rgbd) {
-rgbd.rgb=toLinearSpace(rgbd.rgb);
-return rgbd.rgb/rgbd.a;
-}
-
-out vec3 vPositionW;
-out vec3 vNormalW;
-
-
-
-
-#define CUSTOM_VERTEX_DEFINITIONS
-void main(void) {
-#define CUSTOM_VERTEX_MAIN_BEGIN
-vec3 positionUpdated=a_position;
-vec3 normalUpdated=a_normal;
-#define CUSTOM_VERTEX_UPDATE_POSITION
-#define CUSTOM_VERTEX_UPDATE_NORMAL
-mat4 finalWorld=world;
-vec4 worldPos=finalWorld*vec4(positionUpdated,1.0);
-gl_Position=viewProjection*worldPos;
-vPositionW=vec3(worldPos);
-mat3 normalWorld=mat3(finalWorld);
-vNormalW=normalize(normalWorld*normalUpdated);
-vec2 uvUpdated=vec2(0.,0.);
-vec2 uv2=vec2(0.,0.);
-#define CUSTOM_VERTEX_MAIN_END
-})";
-*/
         std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
         auto fragmentCompiler = CompileShader(program, EShLangFragment, fragmentGLSL);
 
