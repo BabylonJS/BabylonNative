@@ -92,7 +92,7 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<babylon::RuntimeAndroid>(window, Root, LogMessage, GetAssetContents);
+        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, LogMessage, GetAssetContents);
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);

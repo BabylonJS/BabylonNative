@@ -18,21 +18,21 @@
 #include <android/native_window.h>
 #include <InputManager.h>
 
-std::unique_ptr<babylon::RuntimeAndroid> runtime{};
+std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 
-void LogMessage(const char* message, babylon::LogLevel level)
+void LogMessage(const char* message, Babylon::LogLevel level)
 {
     switch (level)
     {
-        case babylon::LogLevel::Log:
+        case Babylon::LogLevel::Log:
             __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
             break;
-        case babylon::LogLevel::Warn:
+        case Babylon::LogLevel::Warn:
             __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
             break;
-        case babylon::LogLevel::Error:
+        case Babylon::LogLevel::Error:
             __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
             break;
     }
@@ -110,7 +110,7 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                 int32_t height = ANativeWindow_getHeight(engine->m_window);
 
                 if (!runtime) {
-                    runtime = std::make_unique<babylon::RuntimeAndroid>(engine->m_window,
+                    runtime = std::make_unique<Babylon::RuntimeAndroid>(engine->m_window,
                                                                         "file:///data/local/tmp",
                                                                         LogMessage,
                                                                         GetAssetContents);
