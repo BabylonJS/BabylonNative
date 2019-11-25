@@ -2,7 +2,7 @@
 
 #include <basen.hpp>
 
-namespace babylon
+namespace Babylon
 {
     namespace
     {
@@ -107,7 +107,7 @@ namespace babylon
         }
         else
         {
-            m_runtimeImpl.Execute([this, function = std::move(function), whenToRun](auto&)
+            m_runtimeImpl.Dispatch([this, function = std::move(function), whenToRun](auto&)
             {
                 RecursiveWaitOrCall(std::move(function), whenToRun);
             });

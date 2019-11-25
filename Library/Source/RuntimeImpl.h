@@ -10,7 +10,7 @@ namespace Napi
     class Env;
 }
 
-namespace babylon
+namespace Babylon
 {
     class Env;
     class NativeWindow;
@@ -28,17 +28,14 @@ namespace babylon
         void UpdateSize(float width, float height);
         void Suspend();
         void Resume();
+        void LoadScript(const std::string& url);
+        void Eval(const std::string& string, const std::string& sourceUrl);
+        void Dispatch(std::function<void(Env&)> callback);
+        const std::string& RootUrl() const;
 
         std::string GetAbsoluteUrl(const std::string& url);
         template<typename T> arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
-        void LoadScript(const std::string& url);
-        void Eval(const std::string& string, const std::string& url);
-
-        void Execute(std::function<void(RuntimeImpl&)>);
-
-        babylon::Env& Env();
-        const std::string& RootUrl() const;
         arcana::manual_dispatcher<babylon_dispatcher::work_size>& Dispatcher();
         arcana::cancellation& Cancellation();
 
@@ -75,7 +72,7 @@ namespace babylon
         // occasionally need access to the env as well; m_env provides this
         // access when the env is available, reverting to nullptr once the env
         // is destroyed.
-        babylon::Env* m_env{};
+        Babylon::Env* m_env{};
         const std::string m_rootUrl{};
         LogCallback m_logCallback{};
         ResourceLoadingCallback m_resourceLoadingCallback{};

@@ -3,9 +3,8 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
-namespace babylon
+namespace Babylon
 {
-
     RuntimeAndroid::RuntimeAndroid(ANativeWindow* nativeWindowPtr, LogCallback callback, ResourceLoadingCallback resourceLoadingCallback)
         : RuntimeAndroid{ nativeWindowPtr, ".", std::move(callback), std::move(resourceLoadingCallback) } // todo : GetModulePath().parent_path() std::fs experimental not available with ndk
     {

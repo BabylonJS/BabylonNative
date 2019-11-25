@@ -7,7 +7,7 @@
 #include <spirv_glsl.hpp>
 #include "Console.h"
 
-namespace babylon
+namespace Babylon
 {
     extern const TBuiltInResource DefaultTBuiltInResource;
 

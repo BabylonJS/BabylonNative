@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-namespace babylon
+namespace Babylon
 {
     class ViewClearState final
     {
@@ -290,7 +290,7 @@ namespace babylon
         {
             bgfx::VertexBufferHandle handle;
             uint32_t startVertex;
-            bgfx::VertexDeclHandle declHandle;
+            bgfx::VertexLayoutHandle vertexLayoutHandle;
         };
 
         std::vector<VertexBuffer> vertexBuffers;

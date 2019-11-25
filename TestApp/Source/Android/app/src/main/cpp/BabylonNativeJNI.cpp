@@ -24,7 +24,7 @@ extern "C" {
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_step(JNIEnv* env, jobject obj);
 };
 
-std::unique_ptr<babylon::RuntimeAndroid> runtime{};
+std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
@@ -69,17 +69,17 @@ Java_com_android_testapp_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobjec
 {
 }
 
-void LogMessage(const char* message, babylon::LogLevel level)
+void LogMessage(const char* message, Babylon::LogLevel level)
 {
     switch (level)
     {
-    case babylon::LogLevel::Log:
+    case Babylon::LogLevel::Log:
         __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
         break;
-    case babylon::LogLevel::Warn:
+    case Babylon::LogLevel::Warn:
         __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
         break;
-    case babylon::LogLevel::Error:
+    case Babylon::LogLevel::Error:
         __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
         break;
     }
@@ -141,4 +141,3 @@ JNIEXPORT void JNICALL
 Java_com_android_testapp_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom)
 {
 }
-
