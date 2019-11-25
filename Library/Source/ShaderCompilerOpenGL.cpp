@@ -107,7 +107,7 @@ namespace Babylon
             std::string compiled = compiler->compile();
 
             // rename "uniform Frame { .... }" . Keep the uniforms
-            const std::string frameNewName = ((stage == EShLangVertex)?"FrameVS":"FrameFS");
+            const std::string frameNewName = ((stage == EShLangVertex) ? "FrameVS" : "FrameFS");
             const std::string frame = "Frame";
             size_t pos = compiled.find(frame);
             if (pos != std::string::npos)
