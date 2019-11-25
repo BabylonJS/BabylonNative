@@ -42,6 +42,7 @@ namespace Babylon
             compiler->build_combined_image_samplers();
             
             spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
+
 #ifdef ANDROID
             options.version = 300;
             options.es = true;
@@ -50,40 +51,8 @@ namespace Babylon
             options.es = false;
 #endif
             compiler->set_common_options(options);
-            
-#if 0
-            spirv_cross::ShaderResources resources = compiler->get_shader_resources();
-            for (auto& resource : resources.uniform_buffers)
-            {
-                auto str = resource.name;
-                auto fbn = compiler->get_fallback_name(22);
-                auto activeBuffer = compiler->get_active_buffer_ranges(resource.id);
 
-                //auto& type = compiler->get<spirv_cross::SPIRType>(resource.type_id);
-                // Modify the decoration to prepare it for GLSL.
-                compiler->unset_decoration(resource.id, spv::DecorationDescriptorSet);
-
-                for (auto& active : activeBuffer)
-                {
-                    auto memberName = compiler->get_member_name(resource.id, active.index);
-                    //auto memberType = compiler->get_type(active.)
-                    int a = 1;
-                }
-                
-                //compiler->set_name(22, "truc");
-            }
-/*
-            compiler->set_variable_type_remap_callback([](const spirv_cross::SPIRType& type, const std::string& var_name, std::string& name_of_type){
-                
-                });
-                */
-            program.buildReflection();
-            //int numblk = program.getNumUniformVariables();
-
-
-            //auto& block = program.getUniformBlock(0);
-#endif
-
+            // rebuild uniform lists with the correct type
             program.buildReflection();
             int numUniforms = program.getNumUniformVariables();
 
@@ -147,28 +116,6 @@ namespace Babylon
             {
                 glsl.replace(pos, fragColor.size(), "gl_FragColor");
             }
-#if 0
-            static const std::string cmt = "layout(std140) uniform";
-            pos = glsl.find(cmt);
-            if (pos != std::string::npos)
-            {
-                glsl.replace(pos, cmt.size(), "/*");
-            }
-            
-            static const std::string cmt2 = "_22;";
-            pos = glsl.find(cmt2);
-            if (pos != std::string::npos)
-            {
-                glsl.replace(pos, cmt2.size(), "*/");
-            }
-
-            static const std::string cmt3 = "_69;";
-            pos = glsl.find(cmt3);
-            if (pos != std::string::npos)
-            {
-                glsl.replace(pos, cmt3.size(), "*/");
-            }
-#endif
 #else 
             glsl = compiled;
 #endif
