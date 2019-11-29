@@ -8,6 +8,19 @@ add_subdirectory(Dependencies/napi EXCLUDE_FROM_ALL)
 set_property(TARGET napi PROPERTY FOLDER Dependencies/napi)
 set(BABYLON_NATIVE_DEPENDENCIES ${NAPI_DEPENDENCIES} PARENT_SCOPE)
 
+if(ANDROID)
+    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl")
+    set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/include")
+    set(OPENSSL_CRYPTO_LIBRARY crypto.a)
+    set(OPENSSL_SSL_LIBRARY ssl.a)
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
+    set(cryptoLib crypto)
+    set(sslLib ssl)
+    add_subdirectory(Dependencies/openssl EXCLUDE_FROM_ALL)
+    set_property(TARGET ssl PROPERTY FOLDER Dependencies/openssl)
+	set_property(TARGET crypto PROPERTY FOLDER Dependencies/openssl)
+endif()
+
 set(SKIP_GLSLANG_INSTALL OFF CACHE BOOL "Skip installation")
 set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Enables building of SPVRemapper")
 set(ENABLE_AMD_EXTENSIONS OFF CACHE BOOL "Enables support of AMD-specific extensions")
@@ -15,6 +28,7 @@ set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-re
 set(ENABLE_NV_EXTENSIONS OFF CACHE BOOL "Enables support of Nvidia-specific extensions")
 set(ENABLE_HLSL OFF CACHE BOOL "Enables HLSL input support")
 set(ENABLE_OPT OFF CACHE BOOL "Enables spirv-opt capability if present")
+
 add_subdirectory(Dependencies/glslang EXCLUDE_FROM_ALL)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
@@ -175,7 +189,9 @@ target_link_libraries(Library
     PRIVATE libcurl
     PRIVATE glslang
     PRIVATE SPIRV
-    PRIVATE spirv-cross-hlsl)
+    PRIVATE spirv-cross-hlsl
+    PRIVATE ${cryptoLib}
+    PRIVATE ${sslLib})
 
 if(WIN32 OR WINDOWS_STORE)
     target_link_libraries(Library PRIVATE xr)
