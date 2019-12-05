@@ -178,13 +178,35 @@ namespace xr
 
         struct Swapchain
         {
-            XrSwapchain Handle;
+            XrSwapchain Handle{};
             SwapchainFormat Format{};
             int32_t Width{ 0 };
             int32_t Height{ 0 };
             uint32_t ArraySize{ 0 };
-            std::vector<SwapchainImage> Images;
+            std::vector<SwapchainImage> Images{};
         };
+
+        struct
+        {
+            static constexpr char* DEFAULT_XR_ACTION_SET_NAME{ "default_xr_action_set" };
+            static constexpr char* DEFAULT_XR_ACTION_SET_LOCALIZED_NAME{ "Default XR Action Set" };
+            XrActionSet ActionSet{};
+
+            static constexpr std::array<const char*, 2> CONTROLLER_SUBACTION_PATH_PREFIXES
+            {
+                "/user/hand/left",
+                "/user/hand/right"
+            };
+            std::array<XrPath, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionPaths{};
+            std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionSpaces{};
+
+            static constexpr char* CONTROLLER_GET_POSE_ACTION_NAME{ "controller_get_pose_action" };
+            static constexpr char* CONTROLLER_GET_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
+            static constexpr char* CONTROLLER_GET_POSE_PATH_SUFFIX{ "/input/grip/pose" };
+            XrAction GetControllerPoseAction{};
+
+            static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
+        } ActionResources{};
 
         struct RenderResources
         {
@@ -195,8 +217,7 @@ namespace xr
             std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews{};
             std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews{};
             std::vector<Frame::View> ActiveFrameViews{};
-        };
-        RenderResources Resources{};
+        } RenderResources{};
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -231,48 +252,8 @@ namespace xr
             spaceCreateInfo.poseInReferenceSpace = IDENTITY_TRANSFORM;
             XrCheck(xrCreateReferenceSpace(Session, &spaceCreateInfo, &SceneSpace));
 
-            // Read graphics properties for preferred swapchain length and logging.
-            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
-            XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
-
-            // Select color and depth swapchain pixel formats
-            SwapchainFormat colorSwapchainFormat;
-            SwapchainFormat depthSwapchainFormat;
-            SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
-
-            // Query and cache view configuration views. Two-call idiom.
-            uint32_t viewCount;
-            XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, 0, &viewCount, nullptr));
-            assert(viewCount == HmdImpl.STEREO_VIEW_COUNT);
-            Resources.ConfigViews.resize(viewCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
-            XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, Resources.ConfigViews.data()));
-
-            // Create all the swapchains.
-            for (uint32_t idx = 0; idx < viewCount; ++idx)
-            {
-                const XrViewConfigurationView& view = Resources.ConfigViews[idx];
-                Resources.ColorSwapchains.push_back(
-                    CreateSwapchain(Session,
-                        colorSwapchainFormat,
-                        view.recommendedImageRectWidth,
-                        view.recommendedImageRectHeight,
-                        1,
-                        view.recommendedSwapchainSampleCount,
-                        0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT));
-                Resources.DepthSwapchains.push_back(
-                    CreateSwapchain(Session,
-                        depthSwapchainFormat,
-                        view.recommendedImageRectWidth,
-                        view.recommendedImageRectHeight,
-                        1,
-                        view.recommendedSwapchainSampleCount,
-                        0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
-            }
-
-            // Pre-allocate the views, since we know how many there will be.
-            Resources.Views.resize(viewCount, { XR_TYPE_VIEW });
+            InitializeRenderResources(instance, systemId);
+            InitializeActionResources(instance);
         }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
@@ -296,12 +277,112 @@ namespace xr
 
         Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
         {
-            const auto& swapchain = Resources.ColorSwapchains[viewIndex];
+            const auto& swapchain = RenderResources.ColorSwapchains[viewIndex];
             return{ static_cast<size_t>(swapchain.Width), static_cast<size_t>(swapchain.Height) };
         }
 
     private:
         static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
+
+        void InitializeRenderResources(XrInstance instance, XrSystemId systemId)
+        {
+            // Read graphics properties for preferred swapchain length and logging.
+            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
+            XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
+
+            // Select color and depth swapchain pixel formats
+            SwapchainFormat colorSwapchainFormat;
+            SwapchainFormat depthSwapchainFormat;
+            SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
+
+            // Query and cache view configuration views. Two-call idiom.
+            uint32_t viewCount;
+            XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, 0, &viewCount, nullptr));
+            assert(viewCount == HmdImpl.STEREO_VIEW_COUNT);
+            RenderResources.ConfigViews.resize(viewCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
+            XrCheck(xrEnumerateViewConfigurationViews(instance, systemId, HmdImpl.VIEW_CONFIGURATION_TYPE, viewCount, &viewCount, RenderResources.ConfigViews.data()));
+
+            // Create all the swapchains.
+            for (uint32_t idx = 0; idx < viewCount; ++idx)
+            {
+                const XrViewConfigurationView& view = RenderResources.ConfigViews[idx];
+                RenderResources.ColorSwapchains.push_back(
+                    CreateSwapchain(Session,
+                        colorSwapchainFormat,
+                        view.recommendedImageRectWidth,
+                        view.recommendedImageRectHeight,
+                        1,
+                        view.recommendedSwapchainSampleCount,
+                        0,
+                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT));
+                RenderResources.DepthSwapchains.push_back(
+                    CreateSwapchain(Session,
+                        depthSwapchainFormat,
+                        view.recommendedImageRectWidth,
+                        view.recommendedImageRectHeight,
+                        1,
+                        view.recommendedSwapchainSampleCount,
+                        0,
+                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+            }
+
+            // Pre-allocate the views, since we know how many there will be.
+            RenderResources.Views.resize(viewCount, { XR_TYPE_VIEW });
+        }
+
+        void InitializeActionResources(XrInstance instance)
+        {
+            // Create action set
+            XrActionSetCreateInfo actionSetInfo{ XR_TYPE_ACTION_SET_CREATE_INFO };
+            std::strcpy(actionSetInfo.actionSetName, ActionResources.DEFAULT_XR_ACTION_SET_NAME);
+            std::strcpy(actionSetInfo.localizedActionSetName, ActionResources.DEFAULT_XR_ACTION_SET_LOCALIZED_NAME);
+            XrCheck(xrCreateActionSet(instance, &actionSetInfo, &ActionResources.ActionSet));
+
+            // Cache paths for subactions
+            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+            {
+                XrCheck(xrStringToPath(instance, ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx], &ActionResources.ControllerSubactionPaths[idx]));
+            }
+
+            std::vector<XrActionSuggestedBinding> bindings{};
+
+            // Create get controller get pose action, suggested bindings, and spaces
+            XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+            strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_POSE_ACTION_NAME);
+            strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_POSE_ACTION_LOCALIZED_NAME);
+            actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+            actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
+            XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.GetControllerPoseAction));
+            // For each controller subaction
+            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+            {
+                // Create suggested binding
+                std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+                path.append(ActionResources.CONTROLLER_GET_POSE_PATH_SUFFIX);
+                bindings.push_back({ ActionResources.GetControllerPoseAction });
+                XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+
+                // Create subaction space
+                XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
+                actionSpaceCreateInfo.action = ActionResources.GetControllerPoseAction;
+                actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
+                actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
+                XrCheck(xrCreateActionSpace(Session, &actionSpaceCreateInfo, &ActionResources.ControllerSubactionSpaces[idx]));
+            }
+
+            // Provide suggested bindings to instance
+            XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
+            suggestedBindings.suggestedBindings = bindings.data();
+            suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
+
+            XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
+            attachInfo.countActionSets = 1;
+            attachInfo.actionSets = &ActionResources.ActionSet;
+            XrCheck(xrAttachSessionActionSets(Session, &attachInfo));
+        }
 
         Swapchain CreateSwapchain(XrSession session,
             SwapchainFormat format,
@@ -442,7 +523,7 @@ namespace xr
     };
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
-        : Views{ sessionImpl.Resources.ActiveFrameViews }
+        : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , m_sessionImpl{ sessionImpl }
     {
         auto session = m_sessionImpl.Session;
@@ -456,7 +537,7 @@ namespace xr
         XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
         XrCheck(xrBeginFrame(session, &frameBeginInfo));
 
-        auto& renderResources = m_sessionImpl.Resources;
+        auto& renderResources = m_sessionImpl.RenderResources;
 
         // Only render when session is visible. otherwise submit zero layers
         if (m_shouldRender)
@@ -543,6 +624,28 @@ namespace xr
                     renderResources.ProjectionLayerViews[idx].next = &renderResources.DepthInfoViews[idx];
                 }
             }
+
+            // Locate all the things.
+            auto& actionResources = m_sessionImpl.ActionResources;
+
+            std::vector<XrActiveActionSet> activeActionSets = { { actionResources.ActionSet, XR_NULL_PATH } };
+            XrActionsSyncInfo syncInfo{ XR_TYPE_ACTIONS_SYNC_INFO };
+            syncInfo.countActiveActionSets = (uint32_t)activeActionSets.size();
+            syncInfo.activeActionSets = activeActionSets.data();
+            XrCheck(xrSyncActions(m_sessionImpl.Session, &syncInfo));
+
+            for (auto space : actionResources.ControllerSubactionSpaces)
+            {
+                XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
+                XrCheck(xrLocateSpace(space, m_sessionImpl.SceneSpace, m_displayTime, &location));
+
+                constexpr XrSpaceLocationFlags PoseValidFlags = XR_SPACE_LOCATION_POSITION_VALID_BIT | XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+                constexpr XrSpaceLocationFlags PoseTrackedFlags = XR_SPACE_LOCATION_POSITION_TRACKED_BIT | XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+                if ((location.locationFlags & PoseTrackedFlags) == PoseTrackedFlags)
+                {
+                    OutputDebugString("Tracked hand space pose this frame!");
+                }
+            }
         }
     }
 
@@ -558,7 +661,7 @@ namespace xr
 
         if (m_shouldRender)
         {
-            auto& renderResources = m_sessionImpl.Resources;
+            auto& renderResources = m_sessionImpl.RenderResources;
         
             XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 
