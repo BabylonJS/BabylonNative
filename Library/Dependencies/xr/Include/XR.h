@@ -44,7 +44,7 @@ namespace xr
             class Frame
             {
             public:
-                struct View
+                struct Space
                 {
                     struct
                     {
@@ -60,6 +60,11 @@ namespace xr
                         float Z{};
                         float W{};
                     } Orientation;
+                };
+
+                struct View
+                {
+                    Space Space{};
 
                     struct
                     {
@@ -81,7 +86,21 @@ namespace xr
                     float DepthFarZ{};
                 };
 
+                struct InputSource
+                {
+                    enum class HandednessEnum
+                    {
+                        Left = 0,
+                        Right = 1
+                    };
+
+                    bool TrackedThisFrame{};
+                    Space Space{};
+                    HandednessEnum Handedness{};
+                };
+
                 std::vector<View>& Views;
+                std::vector<InputSource>& InputSources;
 
                 Frame(System::Session::Impl&);
                 ~Frame();

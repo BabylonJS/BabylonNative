@@ -53,10 +53,10 @@ namespace
         return bxResult;
     }
 
-    std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::View& view)
+    std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space)
     {
-        auto& quat = view.Orientation;
-        auto& pos = view.Position;
+        auto& quat = space.Orientation;
+        auto& pos = space.Position;
 
         // Quaternion to matrix from https://github.com/BabylonJS/Babylon.js/blob/v4.0.0/src/Maths/math.ts#L6245-L6283
         const float xx{ quat.X * quat.X };
@@ -578,7 +578,7 @@ namespace Babylon
                 {
                     const auto& view = views[idx];
                     const auto projectionMatrix = CreateProjectionMatrix(view);
-                    const auto transformMatrix = CreateTransformMatrix(view);
+                    const auto transformMatrix = CreateTransformMatrix(view.Space);
                     m_views[idx]->Update(idx, projectionMatrix, transformMatrix);
                 }
             }

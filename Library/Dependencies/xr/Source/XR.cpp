@@ -188,6 +188,17 @@ namespace xr
 
         struct
         {
+            std::vector<XrView> Views{};
+            std::vector<XrViewConfigurationView> ConfigViews{};
+            std::vector<Swapchain> ColorSwapchains{};
+            std::vector<Swapchain> DepthSwapchains{};
+            std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews{};
+            std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews{};
+            std::vector<Frame::View> ActiveFrameViews{};
+        } RenderResources{};
+
+        struct
+        {
             static constexpr char* DEFAULT_XR_ACTION_SET_NAME{ "default_xr_action_set" };
             static constexpr char* DEFAULT_XR_ACTION_SET_LOCALIZED_NAME{ "Default XR Action Set" };
             XrActionSet ActionSet{};
@@ -206,18 +217,9 @@ namespace xr
             XrAction GetControllerPoseAction{};
 
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
-        } ActionResources{};
 
-        struct RenderResources
-        {
-            std::vector<XrView> Views{};
-            std::vector<XrViewConfigurationView> ConfigViews{};
-            std::vector<Swapchain> ColorSwapchains{};
-            std::vector<Swapchain> DepthSwapchains{};
-            std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews{};
-            std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews{};
-            std::vector<Frame::View> ActiveFrameViews{};
-        } RenderResources{};
+            std::vector<Frame::InputSource> ActiveInputSources{};
+        } ActionResources{};
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -524,6 +526,7 @@ namespace xr
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
+        , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
         , m_sessionImpl{ sessionImpl }
     {
         auto session = m_sessionImpl.Session;
@@ -580,13 +583,13 @@ namespace xr
 
                 // Populate the struct that consuming code will use for rendering.
                 auto& view = Views[idx];
-                view.Position.X = renderResources.Views[idx].pose.position.x;
-                view.Position.Y = renderResources.Views[idx].pose.position.y;
-                view.Position.Z = renderResources.Views[idx].pose.position.z;
-                view.Orientation.X = renderResources.Views[idx].pose.orientation.x;
-                view.Orientation.Y = renderResources.Views[idx].pose.orientation.y;
-                view.Orientation.Z = renderResources.Views[idx].pose.orientation.z;
-                view.Orientation.W = renderResources.Views[idx].pose.orientation.w;
+                view.Space.Position.X = renderResources.Views[idx].pose.position.x;
+                view.Space.Position.Y = renderResources.Views[idx].pose.position.y;
+                view.Space.Position.Z = renderResources.Views[idx].pose.position.z;
+                view.Space.Orientation.X = renderResources.Views[idx].pose.orientation.x;
+                view.Space.Orientation.Y = renderResources.Views[idx].pose.orientation.y;
+                view.Space.Orientation.Z = renderResources.Views[idx].pose.orientation.z;
+                view.Space.Orientation.W = renderResources.Views[idx].pose.orientation.w;
                 view.FieldOfView.AngleUp = renderResources.Views[idx].fov.angleUp;
                 view.FieldOfView.AngleDown = renderResources.Views[idx].fov.angleDown;
                 view.FieldOfView.AngleLeft = renderResources.Views[idx].fov.angleLeft;
@@ -634,16 +637,31 @@ namespace xr
             syncInfo.activeActionSets = activeActionSets.data();
             XrCheck(xrSyncActions(m_sessionImpl.Session, &syncInfo));
 
-            for (auto space : actionResources.ControllerSubactionSpaces)
+            InputSources.resize(actionResources.ControllerSubactionSpaces.size());
+            for (size_t idx = 0; idx < InputSources.size(); ++idx)
             {
+                XrSpace space = actionResources.ControllerSubactionSpaces[idx];
                 XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
                 XrCheck(xrLocateSpace(space, m_sessionImpl.SceneSpace, m_displayTime, &location));
 
-                constexpr XrSpaceLocationFlags PoseValidFlags = XR_SPACE_LOCATION_POSITION_VALID_BIT | XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
-                constexpr XrSpaceLocationFlags PoseTrackedFlags = XR_SPACE_LOCATION_POSITION_TRACKED_BIT | XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
-                if ((location.locationFlags & PoseTrackedFlags) == PoseTrackedFlags)
+                constexpr XrSpaceLocationFlags RequiredFlags = 
+                    XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                    XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+                    XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
+                    XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+                
+                auto& inputSource = InputSources[idx];
+                inputSource.TrackedThisFrame = (location.locationFlags & RequiredFlags) == RequiredFlags;
+                if (inputSource.TrackedThisFrame)
                 {
-                    OutputDebugString("Tracked hand space pose this frame!");
+                    inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
+                    inputSource.Space.Position.X = location.pose.position.x;
+                    inputSource.Space.Position.Y = location.pose.position.y;
+                    inputSource.Space.Position.Z = location.pose.position.z;
+                    inputSource.Space.Orientation.X = location.pose.orientation.x;
+                    inputSource.Space.Orientation.Y = location.pose.orientation.y;
+                    inputSource.Space.Orientation.Z = location.pose.orientation.z;
+                    inputSource.Space.Orientation.W = location.pose.orientation.w;
                 }
             }
         }
