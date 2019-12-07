@@ -14,23 +14,12 @@
 
 #define MAX_LOADSTRING 100
 
-struct LogHandler;
-using Console = Babylon::Console<LogHandler>;
-struct LogHandler
-{
-    void Log(const char* message, Console::LogLevel) const
-    {
-        OutputDebugStringA(message);
-    }
-};
-
     // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::RuntimeWin32> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
-LogHandler logHandler{};
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -88,8 +77,10 @@ namespace
 
         runtime->Dispatch([](Babylon::Env& env)
         {
-            auto jsConsole = Console::Create(env, logHandler);
-            env.Global().Set("console", jsConsole.Value());
+            Babylon::Console::AddConsoleToEnv(env, [](const char* message, auto)
+            {
+                OutputDebugStringA(message);
+            });
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);

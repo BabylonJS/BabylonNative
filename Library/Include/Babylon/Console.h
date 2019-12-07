@@ -1,16 +1,20 @@
 #pragma once
 
-#include <napi/napi.h>
+#include <napi/env.h>
 
+#include <functional>
 #include <sstream>
 
 namespace Babylon
 {
-    template<typename LogHandlerT>
-    class Console final : public Napi::ObjectWrap<Console<LogHandlerT>>
+    class Console final : public Napi::ObjectWrap<Console>
     {
     public:
-        using ParentT = Napi::ObjectWrap<Console<LogHandlerT>>;
+        static inline constexpr char* JS_CONSTRUCTOR_NAME{ "Console" };
+        static inline constexpr char* JS_METHOD_NAME_LOG{ "log" };
+        static inline constexpr char* JS_METHOD_NAME_WARN{ "warn" };
+        static inline constexpr char* JS_METHOD_NAME_ERROR{ "error" };
+        static inline constexpr char* JS_INSTANCE_NAME{ "console" };
 
         /**
          * Importance level of messages sent via logging callbacks.
@@ -22,25 +26,31 @@ namespace Babylon
             Error,
         };
 
-        static Napi::ObjectReference Create(Napi::Env env, LogHandlerT& handler)
+        using ParentT = Napi::ObjectWrap<Console>;
+        using CallbackT = std::function<void(const char*, LogLevel)>;
+
+        static Napi::ObjectReference AddConsoleToEnv(Napi::Env env, CallbackT callback)
         {
             Napi::HandleScope scope{ env };
 
             Napi::Function func = ParentT::DefineClass(
                 env,
-                "Console",
+                JS_CONSTRUCTOR_NAME,
                 {
-                    ParentT::InstanceMethod("log", &Console::Log),
-                    ParentT::InstanceMethod("warn", &Console::Warn),
-                    ParentT::InstanceMethod("error", &Console::Error),
+                    ParentT::InstanceMethod(JS_METHOD_NAME_LOG, &Console::Log),
+                    ParentT::InstanceMethod(JS_METHOD_NAME_WARN, &Console::Warn),
+                    ParentT::InstanceMethod(JS_METHOD_NAME_ERROR, &Console::Error),
                 });
 
-            return Napi::Persistent(func.New({ Napi::External<LogHandlerT>::New(env, &handler) }));
+            Napi::Object console = func.New({ Napi::External<CallbackT>::New(env, new CallbackT(std::move(callback))) });
+            env.Global().Set(JS_INSTANCE_NAME, console);
+
+            return Napi::Persistent(console);
         }
         
         explicit Console(const Napi::CallbackInfo& info)
             : ParentT{ info }
-            , m_handler{ *info[0].As<Napi::External<LogHandlerT>>().Data() }
+            , m_callback{ *info[0].As<Napi::External<CallbackT>>().Data() }
         {}
 
     private:
@@ -73,9 +83,9 @@ namespace Babylon
                 ss << info[index].ToString().Utf8Value().c_str();
             }
             ss << std::endl;
-            m_handler.Log(ss.str().c_str(), logLevel);
+            m_callback(ss.str().c_str(), logLevel);
         }
 
-        const LogHandlerT& m_handler;
+        CallbackT m_callback{};
     };
 }

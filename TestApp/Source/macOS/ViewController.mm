@@ -6,17 +6,6 @@
 std::unique_ptr<Babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
-struct LogHandler;
-using Console = Babylon::Console<LogHandler>;
-struct LogHandler
-{
-    void Log(const char* message, Console::LogLevel) const
-    {
-        NSLog(@"%s", message);
-    }
-};
-LogHandler logHandler{};
-
 @implementation ViewController
 
 - (void)viewDidLoad {
@@ -36,8 +25,10 @@ LogHandler logHandler{};
     
     runtime->Dispatch([](Babylon::Env& env)
     {
-        auto jsConsole = Console::Create(env, logHandler);
-        env.Global().Set("console", jsConsole.Value());
+        Babylon::Console::AddConsoleToEnv(env, [](const char* message, auto)
+        {
+            NSLog(@"%s", message);
+        });
     });
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);

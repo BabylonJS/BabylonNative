@@ -1,5 +1,7 @@
 #include "App.h"
 
+#include <Babylon/Console.h>
+
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
 
@@ -145,10 +147,12 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     m_runtime = std::make_unique<Babylon::RuntimeUWP>(
         reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread()), rootUrl);
 
-    m_runtime->Dispatch([&logHandler = m_logHandler](Babylon::Env& env)
+    m_runtime->Dispatch([](Babylon::Env& env)
     {
-        auto jsConsole = Console::Create(env, logHandler);
-        env.Global().Set("console", jsConsole.Value());
+        Babylon::Console::AddConsoleToEnv(env, [](const char* message, auto)
+        {
+            OutputDebugStringA(message);
+        });
     });
 
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
@@ -175,11 +179,6 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     }
 
     m_runtime->UpdateSize(bounds.Width, bounds.Height);
-}
-
-void App::LogHandler::Log(const char* message, Console::LogLevel) const
-{
-    OutputDebugStringA(message);
 }
 
 void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Shared/InputManager.h>
-#include <Babylon/Console.h>
 #include <Babylon/RuntimeUWP.h>
 #include <ppltasks.h>
 
@@ -39,14 +38,6 @@ private:
     void OnDisplayContentsInvalidated(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);
 
     concurrency::task<void> RestartRuntimeAsync(Windows::Foundation::Rect);
-
-    struct LogHandler;
-    using Console = Babylon::Console<LogHandler>;
-    struct LogHandler
-    {
-        void Log(const char*, Console::LogLevel) const;
-    };
-    LogHandler m_logHandler{};
 
     std::unique_ptr<Babylon::RuntimeUWP> m_runtime{};
     std::unique_ptr<InputManager::InputBuffer> m_inputBuffer{};

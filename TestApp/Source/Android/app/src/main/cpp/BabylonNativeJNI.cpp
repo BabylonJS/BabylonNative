@@ -29,28 +29,6 @@ std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
-struct LogHandler;
-using Console = Babylon::Console<LogHandler>;
-struct LogHandler
-{
-    void Log(const char* message, Console::LogLevel level) const
-    {
-        switch (level)
-        {
-        case Console::LogLevel::Log:
-            __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
-            break;
-        case Console::LogLevel::Warn:
-            __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
-            break;
-        case Console::LogLevel::Error:
-            __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
-            break;
-        }
-    }
-};
-LogHandler logHandler{};
-
 static AAssetManager* g_assetMgrNative = nullptr;
 
 namespace
@@ -95,8 +73,21 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
 
         runtime->Dispatch([](Babylon::Env& env)
         {
-            auto jsConsole = Console::Create(env, logHandler);
-            env.Global().Set("console", jsConsole.Value());
+            Babylon::Console::AddConsoleToEnv(env, [](const char* message, Babylon::Console::LogLevel level)
+            {
+                switch (level)
+                {
+                case Babylon::Console::LogLevel::Log:
+                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
+                    break;
+                case Babylon::Console::LogLevel::Warn:
+                    __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
+                    break;
+                case Babylon::Console::LogLevel::Error:
+                    __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
+                    break;
+                }
+            });
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);

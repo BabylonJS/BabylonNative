@@ -212,10 +212,6 @@ namespace Babylon
         global.Set("setTimeout", NativeWindow::GetSetTimeoutFunction(jsWindow).Value());
         global.Set("atob", NativeWindow::GetAToBFunction(jsWindow).Value());
 
-        // auto jsConsole = Console::Create(env, m_logCallback);
-        // jsNative.Set(JS_CONSOLE_NAME, jsConsole.Value());
-        // global.Set(JS_CONSOLE_NAME, jsConsole.Value());
-
         auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
 
