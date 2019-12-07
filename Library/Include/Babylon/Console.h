@@ -10,10 +10,6 @@ namespace Babylon
     class Console final : public Napi::ObjectWrap<Console>
     {
     public:
-        static inline constexpr char* JS_CONSTRUCTOR_NAME{ "Console" };
-        static inline constexpr char* JS_METHOD_NAME_LOG{ "log" };
-        static inline constexpr char* JS_METHOD_NAME_WARN{ "warn" };
-        static inline constexpr char* JS_METHOD_NAME_ERROR{ "error" };
         static inline constexpr char* JS_INSTANCE_NAME{ "console" };
 
         /**
@@ -29,17 +25,17 @@ namespace Babylon
         using ParentT = Napi::ObjectWrap<Console>;
         using CallbackT = std::function<void(const char*, LogLevel)>;
 
-        static Napi::ObjectReference AddConsoleToEnv(Napi::Env env, CallbackT callback)
+        static Napi::ObjectReference CreateInstance(Napi::Env env, CallbackT callback)
         {
             Napi::HandleScope scope{ env };
 
             Napi::Function func = ParentT::DefineClass(
                 env,
-                JS_CONSTRUCTOR_NAME,
+                "Console",
                 {
-                    ParentT::InstanceMethod(JS_METHOD_NAME_LOG, &Console::Log),
-                    ParentT::InstanceMethod(JS_METHOD_NAME_WARN, &Console::Warn),
-                    ParentT::InstanceMethod(JS_METHOD_NAME_ERROR, &Console::Error),
+                    ParentT::InstanceMethod("log", &Console::Log),
+                    ParentT::InstanceMethod("warn", &Console::Warn),
+                    ParentT::InstanceMethod("error", &Console::Error),
                 });
 
             Napi::Object console = func.New({ Napi::External<CallbackT>::New(env, new CallbackT(std::move(callback))) });

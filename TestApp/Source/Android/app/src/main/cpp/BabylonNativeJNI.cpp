@@ -73,7 +73,7 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
 
         runtime->Dispatch([](Babylon::Env& env)
         {
-            Babylon::Console::AddConsoleToEnv(env, [](const char* message, Babylon::Console::LogLevel level)
+            Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
             {
                 switch (level)
                 {

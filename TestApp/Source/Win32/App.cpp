@@ -77,7 +77,7 @@ namespace
 
         runtime->Dispatch([](Babylon::Env& env)
         {
-            Babylon::Console::AddConsoleToEnv(env, [](const char* message, auto)
+            Babylon::Console::CreateInstance(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
             });

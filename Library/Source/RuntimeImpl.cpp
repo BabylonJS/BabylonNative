@@ -16,7 +16,6 @@ namespace Babylon
         static constexpr auto JS_NATIVE_NAME = "_native";
         static constexpr auto JS_RUNTIME_NAME = "runtime";
         static constexpr auto JS_NATIVE_WINDOW_NAME = "window";
-        static constexpr auto JS_CONSOLE_NAME = "console";
 
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
         static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
