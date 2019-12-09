@@ -101,6 +101,7 @@ namespace Babylon
 
     void RuntimeImpl::Dispatch(std::function<void(Env&)> func)
     {
+        assert(!m_cancelSource.cancelled());
         auto lock = AcquireTaskLock();
         Task = Task.then(m_dispatcher, m_cancelSource, [func = std::move(func), this]()
         {
@@ -255,6 +256,9 @@ namespace Babylon
             }
             m_dispatcher.blocking_tick(m_cancelSource);
         }
+
+        // Force the dispatcher to drain. Since all tasks should now be cancelled, this should do no actual work.
+        m_dispatcher.blocking_tick(arcana::cancellation::none());
     }
 
     template arcana::task<std::string, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url);
