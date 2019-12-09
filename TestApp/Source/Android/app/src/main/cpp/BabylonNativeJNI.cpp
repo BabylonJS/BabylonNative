@@ -110,6 +110,10 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
 JNIEXPORT void JNICALL
 Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height)
 {
+    if (runtime)
+    {
+        runtime->UpdateSize(width, height);
+    }
 }
 
 JNIEXPORT void JNICALL
