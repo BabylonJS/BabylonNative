@@ -4,7 +4,7 @@
 
 #include "NativeXr.h"
 
-namespace babylon
+namespace Babylon
 {
     RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, LogCallback callback)
         : RuntimeUWP{window, {}, std::move(callback)}
@@ -29,8 +29,8 @@ namespace babylon
 
     void RuntimeImpl::ThreadProcedure()
     {
-        this->Execute([](RuntimeImpl& runtimeImpl) {
-            InitializeNativeXr(runtimeImpl.Env());
+        this->Dispatch([](Env& env) {
+            InitializeNativeXr(env);
         });
 
         RuntimeImpl::BaseThreadProcedure();
