@@ -6,6 +6,8 @@
 
 #include <bx/bx.h>
 
+#include <set>
+
 namespace
 {
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
@@ -97,6 +99,34 @@ namespace
         bx::mtxInverse(viewSpaceTransform.data(), worldSpaceTransform.data());
 
         return viewSpaceTransform;
+    }
+
+    void SetXRInputSourceSpaces(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    {
+        auto env = jsInputSource.Env();
+        jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.Space)>::New(env, &inputSource.Space));
+        jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.Space)>::New(env, &inputSource.Space));
+    }
+
+    Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
+    {
+        constexpr std::array<const char*, 2> HANDEDNESS_STRINGS
+        {
+            "left",
+            "right"
+        };
+        constexpr char* TARGET_RAY_MODE{ "tracked-pointer" };
+
+        auto jsInputSource = Napi::Object::New(env);
+        jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
+        jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
+        SetXRInputSourceSpaces(jsInputSource, inputSource);
+
+        // auto profiles = Napi::Array::New(env);
+        // Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
+        // profiles.Set(0, string);
+
+        return Napi::Persistent(jsInputSource);
     }
 }
 
@@ -709,6 +739,7 @@ namespace Babylon
         {
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
+            static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "oninputsourceschange";
 
         public:
             static void Initialize(Napi::Env& env)
@@ -719,6 +750,7 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
+                        InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
                         InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
@@ -748,6 +780,7 @@ namespace Babylon
                 : Napi::ObjectWrap<XRSession>{ info }
                 , m_jsXRFrame{ Napi::Persistent(XRFrame::New()) }
                 , m_xrFrame{ *XRFrame::Unwrap(m_jsXRFrame.Value()) }
+                , m_jsInputSources{ Napi::Persistent(Napi::Array::New(info.Env())) }
             {
                 // Currently only immersive VR is supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR);
@@ -804,6 +837,18 @@ namespace Babylon
 
             std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
+            Napi::Reference<Napi::Array> m_jsInputSources{};
+            std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+
+            Napi::Value GetInputSources(const Napi::CallbackInfo& info)
+            {
+                //return m_jsInputSources.Value();
+
+                // TODO: Delete the following and re-enable the above when ready.
+                auto arr = m_jsInputSources.Value();
+                return arr.Length() == 0 ? info.Env().Null() : arr;
+            }
+
             void AddEventListener(const Napi::CallbackInfo& info)
             {
                 m_eventNamesAndCallbacks.emplace_back(
@@ -832,10 +877,88 @@ namespace Babylon
                 return deferred.Promise();
             }
 
+            void ProcessInputSources(const xr::System::Session::Frame& frame, Napi::Env env)
+            {
+                // Figure out the new state.
+                std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
+                for (auto& inputSource : frame.InputSources)
+                {
+                    current.insert(inputSource.ID);
+
+                    auto found = m_idToInputSource.find(inputSource.ID);
+                    if (found == m_idToInputSource.end())
+                    {
+                        // Create the new input source, which will have the correct spaces associated with it.
+                        m_idToInputSource.insert({ inputSource.ID, CreateXRInputSource(inputSource, env) });
+
+                        added.insert(inputSource.ID);
+                    }
+                    else
+                    {
+                        // Ensure the correct spaces are associated with the existing input source.
+                        SetXRInputSourceSpaces(found->second.Value(), inputSource);
+                    }
+                }
+                for (const auto& [id, ref] : m_idToInputSource)
+                {
+                    if (current.find(id) == current.end())
+                    {
+                        // Do not update space association since said spaces no longer exist.
+                        removed.insert(id);
+                    }
+                }
+
+                // Only need to do more if there's been a change. Note that this block of code assumes
+                // that ALL known input sources -- including ones added AND REMOVED this frame -- are
+                // currently up-to-date and accessible though m_idToInputSource.
+                if (added.size() > 0 || removed.size() > 0)
+                {
+                    // Update the input sources array.
+                    auto jsCurrent = Napi::Array::New(env);
+                    for (const auto id : current)
+                    {
+                        jsCurrent.Set(jsCurrent.Length(), m_idToInputSource[id].Value());
+                    }
+                    m_jsInputSources = Napi::Persistent(jsCurrent);
+
+                    // Create and send the sources changed event.
+                    Napi::Array jsAdded = Napi::Array::New(env);
+                    for (const auto id : added)
+                    {
+                        jsAdded.Set(jsAdded.Length(), m_idToInputSource[id].Value());
+                    }
+                    Napi::Array jsRemoved = Napi::Array::New(env);
+                    for (const auto id : removed)
+                    {
+                        jsRemoved.Set(jsRemoved.Length(), m_idToInputSource[id].Value());
+                    }
+                    auto sourcesChangeEvent = Napi::Object::New(env);
+                    sourcesChangeEvent.Set("added", jsAdded);
+                    sourcesChangeEvent.Set("removed", jsRemoved);
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                    {
+                        if (name == JS_EVENT_NAME_INPUT_SOURCES_CHANGE)
+                        {
+                            callback.Call({ sourcesChangeEvent });
+                        }
+                    }
+
+                    // Finally, remove the removed.
+                    for (const auto id : removed)
+                    {
+                        m_idToInputSource.erase(id);
+                    }
+                }
+            }
+
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
                 m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame)
                 {
+                    ProcessInputSources(frame, env);
+
                     m_xrFrame.Update(frame);
                     func->Call({ Napi::Value::From(env, -1), m_jsXRFrame.Value() });
                 });

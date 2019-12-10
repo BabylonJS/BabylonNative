@@ -88,15 +88,21 @@ namespace xr
 
                 struct InputSource
                 {
+                    using Identifier = size_t;
+
                     enum class HandednessEnum
                     {
                         Left = 0,
                         Right = 1
                     };
 
+                    const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     Space Space{};
                     HandednessEnum Handedness{};
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
                 };
 
                 std::vector<View>& Views;
