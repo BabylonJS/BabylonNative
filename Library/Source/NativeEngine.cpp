@@ -1320,8 +1320,6 @@ namespace Babylon
         // the Napi::FunctionReference is not copyable, this breaks when trying to capture the callback directly, so we
         // wrap it in a std::shared_ptr to allow the capture to function correctly.
         m_runtimeImpl.Dispatch([this, callbackPtr = std::make_shared<Napi::FunctionReference>(std::move(callback))](auto&) {
-            //bgfx_test(static_cast<uint16_t>(m_size.Width), static_cast<uint16_t>(m_size.Height));
-
             callbackPtr->Call({});
             EndFrame();
         });

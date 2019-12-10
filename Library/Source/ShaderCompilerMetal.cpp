@@ -117,15 +117,16 @@ namespace Babylon
 
         std::string vertexShaderMSL(vertexSource.data(), vertexSource.size());
         auto vertexCompiler = CompileShader(program, EShLangVertex, vertexShaderMSL);
+        ShaderInfo vertexShaderInfo{
+            std::move(vertexCompiler),
+            gsl::make_span(static_cast<uint8_t*>(vertexShaderMSL.data()), vertexShaderMSL.size())};
 
         std::string fragmentShaderMSL(fragmentSource.data(), fragmentSource.size());
         auto fragmentCompiler = CompileShader(program, EShLangFragment, fragmentShaderMSL);
+        ShaderInfo fragmentShaderInfo{
+            std::move(fragmentCompiler),
+            gsl::make_span(static_cast<uint8_t*>(fragmentShaderMSL.data()), fragmentShaderMSL.size())};
 
-        uint8_t* strVertex = (uint8_t*)vertexShaderMSL.data();
-        uint8_t* strFragment = (uint8_t*)fragmentShaderMSL.data();
-
-        onCompiled(
-            {std::move(vertexCompiler), gsl::make_span(strVertex, vertexShaderMSL.size())},
-            {std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentShaderMSL.size())});
+        onCompiled(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
     }
 }
