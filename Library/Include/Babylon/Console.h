@@ -25,7 +25,7 @@ namespace Babylon
         using ParentT = Napi::ObjectWrap<Console>;
         using CallbackT = std::function<void(const char*, LogLevel)>;
 
-        static Napi::ObjectReference CreateInstance(Napi::Env env, CallbackT callback)
+        static void CreateInstance(Napi::Env env, CallbackT callback)
         {
             Napi::HandleScope scope{ env };
 
@@ -40,8 +40,6 @@ namespace Babylon
 
             Napi::Object console = func.New({ Napi::External<CallbackT>::New(env, new CallbackT(std::move(callback))) });
             env.Global().Set(JS_INSTANCE_NAME, console);
-
-            return Napi::Persistent(console);
         }
         
         explicit Console(const Napi::CallbackInfo& info)
