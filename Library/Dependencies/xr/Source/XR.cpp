@@ -209,12 +209,18 @@ namespace xr
                 "/user/hand/right"
             };
             std::array<XrPath, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionPaths{};
-            std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionSpaces{};
 
-            static constexpr char* CONTROLLER_GET_POSE_ACTION_NAME{ "controller_get_pose_action" };
-            static constexpr char* CONTROLLER_GET_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
-            static constexpr char* CONTROLLER_GET_POSE_PATH_SUFFIX{ "/input/grip/pose" };
-            XrAction GetControllerPoseAction{};
+            static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_NAME{ "controller_get_pose_action" };
+            static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
+            static constexpr char* CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX{ "/input/grip/pose" };
+            XrAction ControllerGetGripPoseAction{};
+            std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGripPoseSpaces{};
+
+            static constexpr char* CONTROLLER_GET_AIM_POSE_ACTION_NAME{ "controller_get_aim_action" };
+            static constexpr char* CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME{ "Controller Aim" };
+            static constexpr char* CONTROLLER_GET_AIM_POSE_PATH_SUFFIX{ "/input/aim/pose" };
+            XrAction ControllerGetAimPoseAction{};
+            std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerAimPoseSpaces{};
 
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
 
@@ -348,29 +354,58 @@ namespace xr
 
             std::vector<XrActionSuggestedBinding> bindings{};
 
-            // Create get controller get pose action, suggested bindings, and spaces
-            XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
-            actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-            strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_POSE_ACTION_NAME);
-            strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_POSE_ACTION_LOCALIZED_NAME);
-            actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
-            actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
-            XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.GetControllerPoseAction));
-            // For each controller subaction
-            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+            // Create controller get grip pose action, suggested bindings, and spaces
             {
-                // Create suggested binding
-                std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
-                path.append(ActionResources.CONTROLLER_GET_POSE_PATH_SUFFIX);
-                bindings.push_back({ ActionResources.GetControllerPoseAction });
-                XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+                XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
+                actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+                strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_NAME);
+                strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME);
+                actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+                actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
+                XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetGripPoseAction));
+                // For each controller subaction
+                for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+                {
+                    // Create suggested binding
+                    std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+                    path.append(ActionResources.CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX);
+                    bindings.push_back({ ActionResources.ControllerGetGripPoseAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
 
-                // Create subaction space
-                XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
-                actionSpaceCreateInfo.action = ActionResources.GetControllerPoseAction;
-                actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
-                actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
-                XrCheck(xrCreateActionSpace(Session, &actionSpaceCreateInfo, &ActionResources.ControllerSubactionSpaces[idx]));
+                    // Create subaction space
+                    XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
+                    actionSpaceCreateInfo.action = ActionResources.ControllerGetGripPoseAction;
+                    actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
+                    actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
+                    XrCheck(xrCreateActionSpace(Session, &actionSpaceCreateInfo, &ActionResources.ControllerGripPoseSpaces[idx]));
+                }
+            }
+
+            // Create controller controller get aim pose action, suggested bindings, and spaces
+            {
+                XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
+                actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+                strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_NAME);
+                strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME);
+                actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+                actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
+                XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetAimPoseAction));
+                // For each controller subaction
+                for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+                {
+                    // Create suggested binding
+                    std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+                    path.append(ActionResources.CONTROLLER_GET_AIM_POSE_PATH_SUFFIX);
+                    bindings.push_back({ ActionResources.ControllerGetAimPoseAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+
+                    // Create subaction space
+                    XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
+                    actionSpaceCreateInfo.action = ActionResources.ControllerGetAimPoseAction;
+                    actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
+                    actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
+                    XrCheck(xrCreateActionSpace(Session, &actionSpaceCreateInfo, &ActionResources.ControllerAimPoseSpaces[idx]));
+                }
             }
 
             // Provide suggested bindings to instance
@@ -637,31 +672,61 @@ namespace xr
             syncInfo.activeActionSets = activeActionSets.data();
             XrCheck(xrSyncActions(m_sessionImpl.Session, &syncInfo));
 
-            InputSources.resize(actionResources.ControllerSubactionSpaces.size());
+            InputSources.resize(actionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size());
             for (size_t idx = 0; idx < InputSources.size(); ++idx)
             {
-                XrSpace space = actionResources.ControllerSubactionSpaces[idx];
-                XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
-                XrCheck(xrLocateSpace(space, m_sessionImpl.SceneSpace, m_displayTime, &location));
-
-                constexpr XrSpaceLocationFlags RequiredFlags = 
-                    XR_SPACE_LOCATION_POSITION_VALID_BIT |
-                    XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
-                    XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
-                    XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
-                
-                auto& inputSource = InputSources[idx];
-                inputSource.TrackedThisFrame = (location.locationFlags & RequiredFlags) == RequiredFlags;
-                if (inputSource.TrackedThisFrame)
+                // Get grip space
                 {
-                    inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                    inputSource.Space.Position.X = location.pose.position.x;
-                    inputSource.Space.Position.Y = location.pose.position.y;
-                    inputSource.Space.Position.Z = location.pose.position.z;
-                    inputSource.Space.Orientation.X = location.pose.orientation.x;
-                    inputSource.Space.Orientation.Y = location.pose.orientation.y;
-                    inputSource.Space.Orientation.Z = location.pose.orientation.z;
-                    inputSource.Space.Orientation.W = location.pose.orientation.w;
+                    XrSpace space = actionResources.ControllerGripPoseSpaces[idx];
+                    XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
+                    XrCheck(xrLocateSpace(space, m_sessionImpl.SceneSpace, m_displayTime, &location));
+
+                    constexpr XrSpaceLocationFlags RequiredFlags =
+                        XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                        XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+                        XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
+                        XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+
+                    auto& inputSource = InputSources[idx];
+                    inputSource.TrackedThisFrame = (location.locationFlags & RequiredFlags) == RequiredFlags;
+                    if (inputSource.TrackedThisFrame)
+                    {
+                        inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
+                        inputSource.GripSpace.Position.X = location.pose.position.x;
+                        inputSource.GripSpace.Position.Y = location.pose.position.y;
+                        inputSource.GripSpace.Position.Z = location.pose.position.z;
+                        inputSource.GripSpace.Orientation.X = location.pose.orientation.x;
+                        inputSource.GripSpace.Orientation.Y = location.pose.orientation.y;
+                        inputSource.GripSpace.Orientation.Z = location.pose.orientation.z;
+                        inputSource.GripSpace.Orientation.W = location.pose.orientation.w;
+                    }
+                }
+
+                // Get aim space
+                {
+                    XrSpace space = actionResources.ControllerAimPoseSpaces[idx];
+                    XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
+                    XrCheck(xrLocateSpace(space, m_sessionImpl.SceneSpace, m_displayTime, &location));
+
+                    constexpr XrSpaceLocationFlags RequiredFlags =
+                        XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                        XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+                        XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
+                        XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+
+                    auto& inputSource = InputSources[idx];
+                    inputSource.TrackedThisFrame = (location.locationFlags & RequiredFlags) == RequiredFlags;
+                    if (inputSource.TrackedThisFrame)
+                    {
+                        inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
+                        inputSource.AimSpace.Position.X = location.pose.position.x;
+                        inputSource.AimSpace.Position.Y = location.pose.position.y;
+                        inputSource.AimSpace.Position.Z = location.pose.position.z;
+                        inputSource.AimSpace.Orientation.X = location.pose.orientation.x;
+                        inputSource.AimSpace.Orientation.Y = location.pose.orientation.y;
+                        inputSource.AimSpace.Orientation.Z = location.pose.orientation.z;
+                        inputSource.AimSpace.Orientation.W = location.pose.orientation.w;
+                    }
                 }
             }
         }

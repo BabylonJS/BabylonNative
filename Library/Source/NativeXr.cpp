@@ -55,7 +55,7 @@ namespace
         return bxResult;
     }
 
-    std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space)
+    std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space, bool viewSpace = true)
     {
         auto& quat = space.Orientation;
         auto& pos = space.Position;
@@ -94,18 +94,25 @@ namespace
         worldSpaceTransform[14] = pos.Z;
         worldSpaceTransform[15] = 1.f;
 
-        // Invert to get the view space transform.
-        std::array<float, 16> viewSpaceTransform{};
-        bx::mtxInverse(viewSpaceTransform.data(), worldSpaceTransform.data());
+        if (viewSpace)
+        {
+            // Invert to get the view space transform.
+            std::array<float, 16> viewSpaceTransform{};
+            bx::mtxInverse(viewSpaceTransform.data(), worldSpaceTransform.data());
 
-        return viewSpaceTransform;
+            return viewSpaceTransform;
+        }
+        else
+        {
+            return worldSpaceTransform;
+        }
     }
 
     void SetXRInputSourceSpaces(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
-        jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.Space)>::New(env, &inputSource.Space));
-        jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.Space)>::New(env, &inputSource.Space));
+        jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
+        jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
     }
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
@@ -376,6 +383,38 @@ namespace Babylon
                     throw std::exception{ /* Unsupported eye */ };
                 }
             }
+        };
+
+        class PointerEvent : public Napi::ObjectWrap<PointerEvent>
+        {
+            static constexpr auto JS_CLASS_NAME = "PointerEvent";
+
+        public:
+            static void Initialize(Napi::Env& env)
+            {
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                    });
+
+                constructor = Napi::Persistent(func);
+                constructor.SuppressDestruct();
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New()
+            {
+                return constructor.New({});
+            }
+
+            PointerEvent(const Napi::CallbackInfo & info)
+                : Napi::ObjectWrap<PointerEvent>{ info }
+            {}
+
+        private:
+            static inline Napi::FunctionReference constructor{};
         };
 
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
@@ -685,7 +724,8 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceMethod("getViewerPose", &XRFrame::GetViewerPose)
+                        InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
+                        InstanceMethod("getPose", &XRFrame::GetPose)
                     });
 
                 constructor = Napi::Persistent(func);
@@ -731,6 +771,19 @@ namespace Babylon
                 m_xrViewerPose.Update(spaceTransform, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
+            }
+
+            Napi::Value GetPose(const Napi::CallbackInfo& info)
+            {
+                const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+
+                // TODO: Don't new up here.
+                auto transform = XRRigidTransform::New();
+                XRRigidTransform::Unwrap(transform)->Update(CreateTransformMatrix(space, false));
+
+                auto pose = Napi::Object::New(info.Env());
+                pose.Set("transform", transform);
+                return pose;
             }
         };
 
@@ -1181,6 +1234,8 @@ namespace Babylon
 
     void InitializeNativeXr(Env& env)
     {
+        PointerEvent::Initialize(env);
+
         XRWebGLLayer::Initialize(env);
         XRRigidTransform::Initialize(env);
         XRView::Initialize(env);

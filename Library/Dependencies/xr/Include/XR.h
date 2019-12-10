@@ -98,7 +98,8 @@ namespace xr
 
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
-                    Space Space{};
+                    Space GripSpace{};
+                    Space AimSpace{};
                     HandednessEnum Handedness{};
 
                 private:
