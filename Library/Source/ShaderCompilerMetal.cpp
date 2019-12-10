@@ -119,13 +119,13 @@ namespace Babylon
         auto vertexCompiler = CompileShader(program, EShLangVertex, vertexShaderMSL);
         ShaderInfo vertexShaderInfo{
             std::move(vertexCompiler),
-            gsl::make_span(static_cast<uint8_t*>(vertexShaderMSL.data()), vertexShaderMSL.size())};
+            gsl::make_span(reinterpret_cast<uint8_t*>(vertexShaderMSL.data()), vertexShaderMSL.size())};
 
         std::string fragmentShaderMSL(fragmentSource.data(), fragmentSource.size());
         auto fragmentCompiler = CompileShader(program, EShLangFragment, fragmentShaderMSL);
         ShaderInfo fragmentShaderInfo{
             std::move(fragmentCompiler),
-            gsl::make_span(static_cast<uint8_t*>(fragmentShaderMSL.data()), fragmentShaderMSL.size())};
+            gsl::make_span(reinterpret_cast<uint8_t*>(fragmentShaderMSL.data()), fragmentShaderMSL.size())};
 
         onCompiled(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
     }
