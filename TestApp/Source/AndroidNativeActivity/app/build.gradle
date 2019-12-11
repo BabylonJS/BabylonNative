@@ -1,18 +1,17 @@
 apply plugin: 'com.android.application'
 
-def platformVersion = 21
 android {
     compileSdkVersion 28
 
     defaultConfig {
-        applicationId = 'com.android.testapp'
-        minSdkVersion "${platformVersion}"
+        applicationId = 'com.example.native_activity'
+        minSdkVersion 21
         targetSdkVersion 28
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_static',
                         '-DHTTP_ONLY=OFF',
-                        '-DCMAKE_USE_OPENSSL=OFF',
+                        '-DCMAKE_USE_OPENSSL=ON',
                         '-DBUILD_CURL_EXE=OFF',
                         '-DBUILD_CURL_TESTS=OFF',
                         '-DCURL_STATICLIB=ON',

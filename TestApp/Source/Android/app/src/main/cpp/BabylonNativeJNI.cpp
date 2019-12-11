@@ -16,7 +16,9 @@ extern "C" {
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_initEngine(JNIEnv* env, jobject obj, jobject assetMgr, jstring path);
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobject obj);
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface);
-    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_activityOnPause(JNIEnv* env);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_activityOnResume(JNIEnv* env);
+    JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface);
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_openFile(JNIEnv* env, jobject obj, jstring path);
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_openStream(JNIEnv* env, jobject obj, jobjectArray input);
     JNIEXPORT void JNICALL Java_com_android_testapp_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
@@ -108,11 +110,12 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
 }
 
 JNIEXPORT void JNICALL
-Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height)
+Java_com_android_testapp_AndroidViewAppActivity_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface)
 {
     if (runtime)
     {
-        runtime->UpdateSize(width, height);
+        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
+        runtime->UpdateSurface(width, height, window);
     }
 }
 
@@ -144,4 +147,22 @@ Java_com_android_testapp_AndroidViewAppActivity_setTouchInfo(JNIEnv* env, jobjec
 JNIEXPORT void JNICALL
 Java_com_android_testapp_AndroidViewAppActivity_setPinchInfo(JNIEnv* env, jobject obj, jfloat zoom)
 {
+}
+
+JNIEXPORT void JNICALL
+Java_com_android_testapp_AndroidViewAppActivity_activityOnPause(JNIEnv* env)
+{
+    if (runtime)
+    {
+        runtime->Suspend();
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_android_testapp_AndroidViewAppActivity_activityOnResume(JNIEnv* env)
+{
+    if (runtime)
+    {
+        runtime->Resume();
+    }
 }

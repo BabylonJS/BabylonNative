@@ -16,16 +16,9 @@ namespace Babylon
         // android stub
     }
 
-    void RuntimeAndroid::SetWindow(ANativeWindow* nativeWindowPtr)
+    void RuntimeAndroid::UpdateSurface(float width, float height, ANativeWindow* nativeWindowPtr)
     {
-        bgfx::PlatformData pd;
-        pd.ndt          = NULL;
-        pd.nwh          = nativeWindowPtr;
-        pd.context      = NULL;
-        pd.backBuffer   = NULL;
-        pd.backBufferDS = NULL;
-        bgfx::setPlatformData(pd);
-        bgfx::reset(128, 128);
+        m_impl->UpdateSurface(width, height, nativeWindowPtr);
     }
 
     void RuntimeImpl::ThreadProcedure()

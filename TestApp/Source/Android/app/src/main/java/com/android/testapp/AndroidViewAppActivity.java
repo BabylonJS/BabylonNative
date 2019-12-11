@@ -35,7 +35,9 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     public static native void initEngine(AssetManager assetManager, String path);
     public static native void finishEngine();
     public static native void surfaceCreated(Surface surface);
-    public static native void surfaceChanged(int width, int height);
+    public static native void surfaceChanged(int width, int height, Surface surface);
+    public static native void activityOnPause();
+    public static native void activityOnResume();
     public static native void openFile(String path);
     public static native void openStream(ByteBuffer bytes);
     public static native void setTouchInfo(float dx, float dy, boolean down);
@@ -126,6 +128,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override protected void onPause()
     {
         Log.v(TAG, "onPause");
+        activityOnPause();
         mView.setVisibility(View.GONE);
         super.onPause();
         mView.onPause();
@@ -134,6 +137,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override protected void onResume()
     {
         Log.v(TAG, "onResume");
+        activityOnResume();
         super.onResume();
         mView.onResume();
     }
@@ -155,7 +159,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override public void onSurfaceChanged(int width, int height)
     {
         Log.v(TAG, "onSurfaceChanged");
-        surfaceChanged(width, height);
+        surfaceChanged(width, height, mView.getHolder().getSurface());
     }
 
     @Override public void onDrawFrame()
