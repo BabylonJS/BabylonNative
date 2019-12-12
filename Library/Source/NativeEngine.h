@@ -94,6 +94,7 @@ namespace Babylon
         float m_blue{85.f / 255.f};
         float m_alpha{1.f};
         float m_depth{1.f};
+
         uint16_t m_flags{BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH};
         uint8_t m_stencil{0};
 
@@ -382,7 +383,10 @@ namespace Babylon
         RuntimeImpl& m_runtimeImpl;
 
         bx::DefaultAllocator m_allocator;
+
+
         uint64_t m_engineState;
+        float m_zOffset;
 
         FrameBufferManager m_frameBufferManager{};
 

@@ -703,21 +703,17 @@ namespace Babylon
             }
         }
 
-        // TODO: zOffset
-        const auto zOffset = info[1].As<Napi::Number>().FloatValue();
+        m_zOffset = info[1].As<Napi::Number>().FloatValue();
     }
 
     void NativeEngine::SetZOffset(const Napi::CallbackInfo& info)
     {
-        const auto zOffset = info[0].As<Napi::Number>().FloatValue();
-
-        // STUB: Stub.
+        m_zOffset = info[0].As<Napi::Number>().FloatValue();
     }
 
     Napi::Value NativeEngine::GetZOffset(const Napi::CallbackInfo& info)
     {
-        // STUB: Stub.
-        return {};
+        return Napi::Value::From(info.Env(), m_zOffset);
     }
 
     void NativeEngine::SetDepthTest(const Napi::CallbackInfo& info)
