@@ -1,10 +1,10 @@
 #import "ViewController.h"
+#import <Babylon/Console.h>
 #import <Babylon/RuntimeApple.h>
 #import <Shared/InputManager.h>
 
 std::unique_ptr<Babylon::RuntimeApple> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
-
 
 @implementation ViewController
 
@@ -21,12 +21,15 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
     NSWindow* nativeWindow = [[self view] window];
     runtime = std::make_unique<Babylon::RuntimeApple>(
-        (__bridge void*)nativeWindow, 
-        [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
-        [](const char* message, Babylon::LogLevel level)
+        (__bridge void*)nativeWindow, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String]);
+    
+    runtime->Dispatch([](Babylon::Env& env)
+    {
+        Babylon::Console::CreateInstance(env, [](const char* message, auto)
         {
             NSLog(@"%s", message);
         });
+    });
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
@@ -42,20 +45,35 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     // Update the view, if already loaded.
 }
 
+- (void)viewDidLayout {
+    [super viewDidLayout];
+    if (runtime)
+    {
+        NSSize size = [self view].frame.size;
+        runtime->UpdateSize(size.width, size.height);
+    }
+}
+
 - (void)mouseDown:(NSEvent *)theEvent {
-    
-    inputBuffer->SetPointerDown(true);
+    if (inputBuffer)
+    {
+        inputBuffer->SetPointerDown(true);
+    }
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent {
-    
-    NSPoint eventLocation = [theEvent locationInWindow];
-    inputBuffer->SetPointerPosition(eventLocation.x, eventLocation.y);
+    if (inputBuffer)
+    {
+        NSPoint eventLocation = [theEvent locationInWindow];
+        inputBuffer->SetPointerPosition(eventLocation.x, eventLocation.y);
+    }
 }
 
 - (void)mouseUp:(NSEvent *)theEvent {
-    
-    inputBuffer->SetPointerDown(false);
+    if (inputBuffer)
+    {
+        inputBuffer->SetPointerDown(false);
+    }
 }
 
 @end

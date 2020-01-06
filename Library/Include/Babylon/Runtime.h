@@ -10,21 +10,6 @@ namespace Babylon
     class Env;
 
     /**
-     * Importance level of messages sent via logging callbacks.
-     */
-    enum class LogLevel
-    {
-        Log,
-        Warn,
-        Error,
-    };
-
-    /**
-     * Type of logging callback argument required to create Runtime.
-     */
-    using LogCallback = std::function<void(const char*, LogLevel)>;
-    
-    /**
      * This class represents an instance of Babylon Native. It holds and manages all program
      * state and behavior relevant to Babylon Native's functionality, including the JavaScript
      * environment, the graphics engine, and other add-ons required to support the the execution

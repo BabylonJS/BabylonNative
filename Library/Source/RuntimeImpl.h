@@ -21,7 +21,7 @@ namespace Babylon
         static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
         static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env);
 
-        RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, LogCallback&& logCallback);
+        RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
         virtual ~RuntimeImpl();
 
         void UpdateSize(float width, float height);
@@ -33,7 +33,8 @@ namespace Babylon
         const std::string& RootUrl() const;
 
         std::string GetAbsoluteUrl(const std::string& url);
-        template<typename T> arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
+        template<typename T>
+        arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
         arcana::manual_dispatcher<babylon_dispatcher::work_size>& Dispatcher();
         arcana::cancellation& Cancellation();
@@ -58,8 +59,11 @@ namespace Babylon
         arcana::cancellation_source m_cancelSource{};
         std::mutex m_taskMutex;
         std::mutex m_suspendMutex;
+        // when asking for suspension, we need to ensure no rendering is on going.
+        // This mutex is used to be sure no rendering is happening after Suspend method returns.
+        std::mutex m_blockTickingMutex;
         std::condition_variable m_suspendVariable;
-        bool m_suspended{ false };
+        bool m_suspended{false};
 
         void* m_nativeWindowPtr{};
 
@@ -73,7 +77,5 @@ namespace Babylon
         // is destroyed.
         Babylon::Env* m_env{};
         const std::string m_rootUrl{};
-        LogCallback m_logCallback{};
     };
 }
-    

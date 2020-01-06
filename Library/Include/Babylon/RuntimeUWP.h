@@ -10,12 +10,12 @@ namespace Babylon
     class RuntimeUWP final : public Runtime
     {
     public:
-        explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, LogCallback callback);
-        explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl, LogCallback callback);
+        explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window);
+        explicit RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl);
 
         // TODO: Allow creation from swap chain, which is required by XAML apps.
         // explicit RuntimeUWP(ABI::Windows::UI::Xaml::Controls::ISwapChainPanel* panel, const std::string& rootUrl = {});
-        
+
         RuntimeUWP(const Runtime&) = delete;
         ~RuntimeUWP();
 

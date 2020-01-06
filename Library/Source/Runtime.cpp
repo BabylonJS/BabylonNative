@@ -1,11 +1,10 @@
 #include <Babylon/Runtime.h>
 #include "RuntimeImpl.h"
-#include "Console.h"
 
 namespace Babylon
 {
     Runtime::Runtime(std::unique_ptr<RuntimeImpl> impl)
-        : m_impl{ std::move(impl) }
+        : m_impl{std::move(impl)}
     {
     }
 
