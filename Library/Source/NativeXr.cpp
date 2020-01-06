@@ -495,39 +495,34 @@ namespace Babylon
 
             XRRigidTransform(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRigidTransform>{info}
-                , m_position{Napi::Persistent(Napi::Float32Array::New(info.Env(), VECTOR_SIZE))}
-                , m_orientation{Napi::Persistent(Napi::Float32Array::New(info.Env(), VECTOR_SIZE))}
+                , m_position{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_orientation{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
             }
 
-            void Update(const xr::System::Session::Frame::Space& space)
+            void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
             {
-                float* posPtr = m_position.Value().Data();
-                posPtr[0] = space.Position.X;
-                posPtr[1] = space.Position.Y;
-                posPtr[2] = space.Position.Z;
-                posPtr[3] = 1.f;
+                auto pos = m_position.Value();
+                pos.Set("x", space.Position.X);
+                pos.Set("y", space.Position.Y);
+                pos.Set("z", space.Position.Z);
+                pos.Set("w", 1.f);
 
-                float* orPtr = m_orientation.Value().Data();
-                orPtr[0] = space.Orientation.X;
-                orPtr[1] = space.Orientation.Y;
-                orPtr[2] = space.Orientation.Z;
-                orPtr[3] = space.Orientation.W;
+                auto or = m_orientation.Value();
+                or.Set("x", space.Orientation.X);
+                or.Set("y", space.Orientation.Y);
+                or.Set("z", space.Orientation.Z);
+                or.Set("w", space.Orientation.W);
 
-                Update(CreateTransformMatrix(space, false));
-            }
-
-            void Update(gsl::span<const float, MATRIX_SIZE> matrix)
-            {
-                std::memcpy(m_matrix.Value().Data(), matrix.data(), m_matrix.Value().ByteLength());
+                std::memcpy(m_matrix.Value().Data(), CreateTransformMatrix(space, isViewSpace).data(), m_matrix.Value().ByteLength());
             }
 
         private:
             static inline Napi::FunctionReference constructor{};
 
-            Napi::Reference<Napi::Float32Array> m_position{};
-            Napi::Reference<Napi::Float32Array> m_orientation{};
+            Napi::ObjectReference m_position{};
+            Napi::ObjectReference m_orientation{};
             Napi::Reference<Napi::Float32Array> m_matrix{};
 
             Napi::Value Position(const Napi::CallbackInfo&)
@@ -585,7 +580,7 @@ namespace Babylon
             {
             }
 
-            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, gsl::span<const float, 16> transformMatrix)
+            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space)
             {
                 if (eyeIdx != m_eyeIdx)
                 {
@@ -595,7 +590,7 @@ namespace Babylon
 
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
-                XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(transformMatrix);
+                XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, true);
             }
 
         private:
@@ -658,10 +653,10 @@ namespace Babylon
             {
             }
 
-            void Update(gsl::span<const float, 16> matrix, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const xr::System::Session::Frame::Space& space, gsl::span<const xr::System::Session::Frame::View> views)
             {
                 // Update the transform.
-                m_transform.Update(matrix);
+                m_transform.Update(space, true);
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
@@ -692,9 +687,7 @@ namespace Babylon
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
                 {
                     const auto& view = views[idx];
-                    const auto projectionMatrix = CreateProjectionMatrix(view);
-                    const auto transformMatrix = CreateTransformMatrix(view.Space);
-                    m_views[idx]->Update(idx, projectionMatrix, transformMatrix);
+                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space);
                 }
             }
 
@@ -811,9 +804,8 @@ namespace Babylon
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-                auto spaceTransform = IDENTITY_MATRIX;
 
-                m_xrViewerPose.Update(spaceTransform, m_frame->Views);
+                m_xrViewerPose.Update({ {0, 0, 0}, {0, 0, 0, 1} }, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -824,7 +816,7 @@ namespace Babylon
 
                 // TODO: Don't new up here.
                 auto transform = XRRigidTransform::New();
-                XRRigidTransform::Unwrap(transform)->Update(space);
+                XRRigidTransform::Unwrap(transform)->Update(space, false);
 
                 auto pose = Napi::Object::New(info.Env());
                 pose.Set("transform", transform);
@@ -1053,8 +1045,7 @@ namespace Babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame)
-                {
+                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
                     m_xrFrame.Update(frame);
