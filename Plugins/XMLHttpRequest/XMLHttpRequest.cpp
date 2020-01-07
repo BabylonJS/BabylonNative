@@ -4,7 +4,7 @@
 
 namespace Babylon
 {
-    Napi::FunctionReference XMLHttpRequest::CreateConstructor(Napi::Env& env)
+    void XMLHttpRequest::CreateInstance(Napi::Env& env)
     {
         Napi::HandleScope scope{env};
 
@@ -29,7 +29,10 @@ namespace Babylon
                 InstanceMethod("send", &XMLHttpRequest::Send),
             });
 
-        return Napi::Persistent(func);
+        constructor = Napi::Persistent(func);
+        constructor.SuppressDestruct();
+
+        env.Global().Set("XMLHttpRequest", func);
     }
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
@@ -126,7 +129,7 @@ namespace Babylon
     }
 
     // TODO: Make this just be SendAsync() once the UWP file access bug is fixed.
-    arcana::task<void, std::exception_ptr> XMLHttpRequest::SendAsyncImpl()
+    virtual arcana::task<void, std::exception_ptr> XMLHttpRequest::SendAsyncImpl()
     {
         if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
         {
@@ -150,7 +153,7 @@ namespace Babylon
             throw std::exception();
         }
     }
-
+    
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
     {
         m_readyState = readyState;

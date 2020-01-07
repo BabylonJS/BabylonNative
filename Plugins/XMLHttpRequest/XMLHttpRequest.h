@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Common.h"
+//#include "Common.h"
 #include <napi/napi.h>
-#include <arcana/threading/task.h>
-#include <arcana/type_traits.h>
+//#include <arcana/threading/task.h>
+//#include <arcana/type_traits.h>
 #include <unordered_map>
 
 namespace Babylon
@@ -89,10 +89,10 @@ namespace Babylon
         }
     }
 
-    class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest>
+    class XMLHttpRequest : public Napi::ObjectWrap<XMLHttpRequest>
     {
     public:
-        static Napi::FunctionReference CreateConstructor(Napi::Env& env);
+        static void CreateInstance(Napi::Env& env);
 
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
@@ -116,8 +116,14 @@ namespace Babylon
         void Open(const Napi::CallbackInfo& info);
         void Send(const Napi::CallbackInfo& info);
 
-        arcana::task<void, std::exception_ptr> SendAsync();
+        virtual arcana::task<void, std::exception_ptr> SendAsync()
+        {
+            // default for Win32, Apple and Android, overriden with UWP and Android(resources) impl
+            return SendAsyncImpl();
+        }
+
         arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
+
         void SetReadyState(ReadyState readyState);
 
         RuntimeImpl& m_runtimeImpl;
@@ -132,5 +138,7 @@ namespace Babylon
 
         std::string m_method;
         std::string m_url;
+
+        static inline Napi::FunctionReference constructor{};
     };
 }

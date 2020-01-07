@@ -9,7 +9,8 @@
 
 #include <Shared/InputManager.h>
 
-#include <Babylon/Console.h>
+#include <Console/Console.h>
+#include <XMLHttpRequest/XMLHttpRequest.h>
 #include <Babylon/RuntimeWin32.h>
 
 #define MAX_LOADSTRING 100
@@ -74,6 +75,15 @@ namespace
     {
         std::string rootUrl{ GetUrlFromPath(GetModulePath().parent_path().parent_path()) };
         runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl);
+
+
+        runtime->Dispatch([](Babylon::Env& env)
+        {
+            Babylon::XMLHttpRequest::CreateInstance(env);
+        });
+        //auto jsXmlHttpRequestConstructor = XMLHttpRequest::CreateConstructor(env);
+        //global.Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, jsXmlHttpRequestConstructor.Value());
+
 
         runtime->Dispatch([](Babylon::Env& env)
         {

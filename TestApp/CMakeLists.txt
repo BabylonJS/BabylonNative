@@ -100,7 +100,7 @@ if(WINDOWS_STORE)
     target_compile_options(TestApp PRIVATE /await)
 endif()
 
-target_include_directories(TestApp PRIVATE "Source")
+target_include_directories(TestApp PRIVATE "Source" "../Plugins")
 
 target_link_libraries(TestApp PRIVATE Library ${ADDITIONAL_LIBRARIES})
 

@@ -2,7 +2,6 @@
 
 #include "NativeEngine.h"
 #include "NativeWindow.h"
-#include "XMLHttpRequest.h"
 
 #include <curl/curl.h>
 #include <napi/env.h>
@@ -206,9 +205,6 @@ namespace Babylon
 
         auto jsNativeEngineConstructor = NativeEngine::InitializeAndCreateConstructor(env);
         jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
-
-        auto jsXmlHttpRequestConstructor = XMLHttpRequest::CreateConstructor(env);
-        global.Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, jsXmlHttpRequestConstructor.Value());
     }
 
     void RuntimeImpl::BaseThreadProcedure()

@@ -102,7 +102,6 @@ endif()
 set(SOURCES
     "Include/Babylon/Runtime.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
-    "Include/Babylon/Console.h"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/NativeEngine.cpp"
@@ -116,10 +115,7 @@ set(SOURCES
     "Source/RuntimeImpl.h"
     "Source/Runtime${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/ShaderCompiler.h"
-    "Source/ShaderCompiler.cpp"
-    "Source/XMLHttpRequest.cpp"
-    "Source/XMLHttpRequest.h"
-    "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp")
+    "Source/ShaderCompiler.cpp")
 
 # Platform-specific shader compiler
 if(WIN32 OR WINDOWS_STORE)
