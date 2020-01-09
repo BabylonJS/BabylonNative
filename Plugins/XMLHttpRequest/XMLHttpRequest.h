@@ -8,7 +8,7 @@
 
 namespace Babylon
 {
-    class RuntimeImpl;
+    class PluginHost;
 
     enum class HTTPStatusCode : int32_t
     {
@@ -115,18 +115,18 @@ namespace Babylon
         void RemoveEventListener(const Napi::CallbackInfo& info);
         void Open(const Napi::CallbackInfo& info);
         void Send(const Napi::CallbackInfo& info);
-
+        /*
         virtual arcana::task<void, std::exception_ptr> SendAsync()
         {
             // default for Win32, Apple and Android, overriden with UWP and Android(resources) impl
             return SendAsyncImpl();
         }
-
+        
         arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
-
+        */
         void SetReadyState(ReadyState readyState);
 
-        RuntimeImpl& m_runtimeImpl;
+        PluginHost& m_pluginHost;
 
         ReadyState m_readyState{ReadyState::Unsent};
         Napi::Reference<Napi::ArrayBuffer> m_response;

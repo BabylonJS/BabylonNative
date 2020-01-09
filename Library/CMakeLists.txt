@@ -101,9 +101,11 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Runtime.h"
+    "Include/Babylon/PluginHost.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
+    "Source/PluginHost.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/NativeWindow.cpp"

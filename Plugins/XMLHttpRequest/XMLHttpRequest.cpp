@@ -1,5 +1,5 @@
 #include "XMLHttpRequest.h"
-#include "RuntimeImpl.h"
+#include "PluginHost.h"
 #include <curl/curl.h>
 
 namespace Babylon
@@ -37,7 +37,7 @@ namespace Babylon
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<XMLHttpRequest>{info}
-        , m_runtimeImpl{RuntimeImpl::GetRuntimeImplFromJavaScript(info.Env())}
+        , m_pluginHost{PluginHost::GetRuntimeImplFromJavaScript(info.Env())}
     {
     }
 

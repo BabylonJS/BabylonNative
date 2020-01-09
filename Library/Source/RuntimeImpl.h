@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include <Babylon/PluginHost.h>
 #include <Babylon/Runtime.h>
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
@@ -15,7 +16,7 @@ namespace Babylon
     class Env;
     class NativeWindow;
 
-    class RuntimeImpl final
+    class RuntimeImpl final : public PluginHost
     {
     public:
         static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
