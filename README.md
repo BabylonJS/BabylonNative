@@ -102,13 +102,32 @@ The Java app runs and supports screen rotation
 ## How to build and run TestApp on Android
 
 - Checkout branch https://github.com/CedricGuillemet/BabylonNative/tree/AndroidRender
-- Download V8 npm, untar/unxz and copy .so in expected folders. see https://github.com/CedricGuillemet/BabylonNative/blob/AndroidRender/azure-pipelines.yml#L172 for complete command lines
+- Download and unzip Ninja (see [azure-pipelines.yml](azure-pipelines.yml#L226)) and **add it to the system path**
+- Download V8 npm, untar/unxz and copy headers and .so into the expected folders (see see [azure-pipelines.yml](azure-pipelines.yml#L231))
+- Download and install [Android Studio](https://developer.android.com/studio/) with the default installation configuration
 - Open project with Android Studio (TestApp\Source\Android)
+- Install the NDK by opening the SDK Manager (box with a down arrow icon in the upper right), checking the *NDK (Side by side)* item, then clicking *Apply*
+- Sync the project with Gradle via *File->Sync Project with Gradle Files*
 - Connect your Android device (Android 5.0+ with OpenGL ES 3.0+) with developer option enabled
-- In Android Studio, menu Run->Run App. Select your device
+- In Android Studio, click the *Run->Run App* menu item and select your device if prompted
 - Wait 2-3 minutes for a complete build and APK installation
 - App should be running and display a cube. You can rotate the cube by touching the screen
 
-## Android Known issues/ improvements 
+### Using the Android Emulator
+
+- Install HAXM by again opening the SDK Manager, checking *Intel x86 Emulator Accelerator (HAXM installer)*, then clicking *Apply*. If the installer fails, see [HAXM Installation Troubleshooting](#HAXM-Installation-Troubleshooting).
+- Create an Android Emulator through the AVD Manager (Android phone icon in the upper right). Pixel 2 with API 27 has been tested.
+- In Android Studio, click the *Run->Run App* menu item and select your device if prompted.
+
+### HAXM Installation Troubleshooting
+
+The HAXM installer can fail for a number of reasons. Many solutions are discussed in [HAXM issue 105](https://github.com/intel/haxm/issues/105), including:
+
+- Enabling Intel virtualization in the bios
+- Disabling Hyper-V in Windows
+- Disabling memory integrity in Windows
+- Disabling virtualization security with the Device Guard and Credential Guard hardware readiness tool
+
+## Android Known issues/ improvements
 
 https://github.com/BabylonJS/BabylonNative/issues/102
