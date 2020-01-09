@@ -1,4 +1,4 @@
 <resources>
-    <string name="appviewer_activity">appviewer</string>
+    <string name="testapp_activity">testapp</string>
 
 </resources>

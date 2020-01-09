@@ -35,7 +35,11 @@ namespace Babylon
 
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl, ResourceLoadingCallback&& resourceLoadingCallback)
         : m_nativeWindowPtr{ nativeWindowPtr }
-        , m_thread{ [this] { ThreadProcedure(); } }
+        , m_thread{ [this] { 
+#ifdef ANDROID
+            NativeEngine::InitializeWindow(m_nativeWindowPtr, 32, 32);
+#endif
+            ThreadProcedure(); } }
         , m_rootUrl{ rootUrl }
         , m_resourceLoadingCallback(resourceLoadingCallback)
 

@@ -82,7 +82,7 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
         int32_t width  = ANativeWindow_getWidth(window);
         int32_t height = ANativeWindow_getHeight(window);
 
-        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, "file:///data/local/tmp", width, height, GetAssetContents);
+        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, width, height, GetAssetContents);
 
         runtime->Dispatch([](Babylon::Env& env)
         {

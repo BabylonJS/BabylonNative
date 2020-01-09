@@ -21,7 +21,7 @@
       android:allowBackup="false"
       android:fullBackupContent="false"
       android:icon="@mipmap/ic_launcher"
-      android:label="@string/appviewer_activity">
+      android:label="@string/testapp_activity">
     <activity android:name="AndroidViewAppActivity"
               android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
               android:launchMode="singleTask"

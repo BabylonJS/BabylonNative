@@ -14,7 +14,7 @@ namespace Babylon
     RuntimeAndroid::RuntimeAndroid(ANativeWindow* nativeWindowPtr, const std::string& rootUrl, float width, float height, ResourceLoadingCallback resourceLoadingCallback)
         : Runtime{std::make_unique<RuntimeImpl>(nativeWindowPtr, rootUrl, std::move(resourceLoadingCallback))}
     {
-        NativeEngine::InitializeWindow(nativeWindowPtr, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        //NativeEngine::InitializeWindow(nativeWindowPtr, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
     void RuntimeAndroid::UpdateSurface(float width, float height, ANativeWindow* nativeWindowPtr)
