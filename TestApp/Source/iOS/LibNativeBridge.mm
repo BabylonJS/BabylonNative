@@ -1,4 +1,5 @@
 #include "LibNativeBridge.h"
+#import <Babylon/Console.h>
 #import <Babylon/RuntimeApple.h>
 #import <Shared/InputManager.h>
 
@@ -18,17 +19,21 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     
 }
 
-- (void)init:( void* )CALayerPtr width:(int)inWidth height:(int)inHeight
+- (void)init:(void*)CALayerPtr width:(int)inWidth height:(int)inHeight
 {
     NSBundle* main = [NSBundle mainBundle];
     NSURL* resourceUrl = [main resourceURL];
     runtime = std::make_unique<Babylon::RuntimeApple>(
-        CALayerPtr, 
-        [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
-        [](const char* message, Babylon::LogLevel level)
+        CALayerPtr, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
+        inWidth, inHeight);
+    
+    runtime->Dispatch([](Babylon::Env& env)
+    {
+        Babylon::Console::CreateInstance(env, [](const char* message, auto)
         {
             NSLog(@"%s", message);
         });
+    });
     
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
@@ -38,9 +43,21 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     runtime->LoadScript("experience.js");
 }
 
+- (void)resize:(int)inWidth height:(int)inHeight
+{
+    if (runtime) 
+    {
+        runtime->UpdateSize(inWidth, inHeight);
+    }
+}
+
 - (void)setInputs:(int)x y:(int)y tap:(bool)tap
 {
-    
+    if (inputBuffer)
+    {
+        inputBuffer->SetPointerPosition(x, y);
+        inputBuffer->SetPointerDown(tap);
+    }
 }
 
 @end

@@ -1,20 +1,26 @@
 #include "Babylon/Runtime.h"
 #include "Babylon/RuntimeUWP.h"
 #include "RuntimeImpl.h"
-
+#include "NativeEngine.h"
 #include "NativeXr.h"
+
+#include <winrt/Windows.Graphics.Display.h>
+
+using namespace winrt;
+using namespace Windows::Graphics::Display;
 
 namespace Babylon
 {
-    RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, LogCallback callback)
-        : RuntimeUWP{ window, {}, std::move(callback) }
+    RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, float width, float height)
+        : RuntimeUWP{window, {}, width, height}
     {
     }
 
-    RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl, LogCallback callback)
-        : Runtime { std::make_unique<RuntimeImpl>(window, rootUrl, std::move(callback)) }
-        , m_window{ window }
+    RuntimeUWP::RuntimeUWP(ABI::Windows::UI::Core::ICoreWindow* window, const std::string& rootUrl, float width, float height)
+        : Runtime{std::make_unique<RuntimeImpl>(window, rootUrl)}
+        , m_window{window}
     {
+        NativeEngine::InitializeWindow(window, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
         m_window->AddRef();
     }
 
@@ -29,8 +35,7 @@ namespace Babylon
 
     void RuntimeImpl::ThreadProcedure()
     {
-        this->Dispatch([](Env& env)
-        {
+        this->Dispatch([](Env& env) {
             InitializeNativeXr(env);
         });
 

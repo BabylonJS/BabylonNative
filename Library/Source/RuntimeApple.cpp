@@ -1,18 +1,19 @@
 #include "Babylon/RuntimeApple.h"
 #include "RuntimeImpl.h"
-//#include <filesystem>
+#include "NativeEngine.h"
 
 namespace Babylon
 {
-    RuntimeApple::RuntimeApple(void* nativeWindowPtr, LogCallback callback)
-    : RuntimeApple{nativeWindowPtr, ".", std::move(callback) } // todo : use parent module path. std::filesystem or std::experimental::filesystem not supported
+
+    RuntimeApple::RuntimeApple(void* nativeWindowPtr, float width, float height)
+        : RuntimeApple{nativeWindowPtr, ".", width, height} // todo : use parent module path. std::filesystem or std::experimental::filesystem not supported
     {
     }
 
-    RuntimeApple::RuntimeApple(void* nativeWindowPtr, const std::string& rootUrl, LogCallback callback)
-        : Runtime{ std::make_unique<RuntimeImpl>(nativeWindowPtr, rootUrl, std::move(callback)) }
+    RuntimeApple::RuntimeApple(void* nativeWindowPtr, const std::string& rootUrl, float width, float height)
+        : Runtime{std::make_unique<RuntimeImpl>(nativeWindowPtr, rootUrl)}
     {
-        // Apple Stub
+        NativeEngine::InitializeWindow(nativeWindowPtr, width, height);
     }
 
     void RuntimeImpl::ThreadProcedure()

@@ -21,8 +21,9 @@ namespace Babylon
     {
     public:
         ViewClearState(uint16_t viewId)
-            : m_viewId{ viewId }
-        {}
+            : m_viewId{viewId}
+        {
+        }
 
         void UpdateFlags(const Napi::CallbackInfo& info)
         {
@@ -30,7 +31,7 @@ namespace Babylon
             m_flags = flags;
             Update();
         }
-        
+
         void UpdateColor(const Napi::CallbackInfo& info)
         {
             const auto r = info[0].As<Napi::Number>().FloatValue();
@@ -42,10 +43,7 @@ namespace Babylon
 
         void UpdateColor(float r, float g, float b, float a = 1.f)
         {
-            const bool needToUpdate = r != m_red
-                || g != m_green
-                || b != m_blue
-                || a != m_alpha;
+            const bool needToUpdate = r != m_red || g != m_green || b != m_blue || a != m_alpha;
             if (needToUpdate)
             {
                 m_red = r;
@@ -81,11 +79,8 @@ namespace Babylon
         void Update() const
         {
             bgfx::setViewClear(m_viewId, m_flags, Color(), m_depth, m_stencil);
-            // with Open GL/ES, touching the view gives a red or black square in the middle of the screen (1/9 screen size)
-            // that's the default bgfx touch mesh. why?
-#ifndef ANDROID
+            bgfx::discard();
             bgfx::touch(m_viewId);
-#endif
             bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
         }
 
@@ -96,13 +91,13 @@ namespace Babylon
 
     private:
         uint16_t m_viewId{};
-        float m_red{ 68.f / 255.f };
-        float m_green{ 51.f / 255.f };
-        float m_blue{ 85.f / 255.f };
-        float m_alpha{ 1.f };
-        float m_depth{ 1.f };
-        uint16_t m_flags{ BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH };
-        uint8_t m_stencil{ 0 };
+        float m_red{68.f / 255.f};
+        float m_green{51.f / 255.f};
+        float m_blue{85.f / 255.f};
+        float m_alpha{1.f};
+        float m_depth{1.f};
+        uint16_t m_flags{BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH};
+        uint8_t m_stencil{0};
 
         uint32_t Color() const
         {
@@ -121,11 +116,11 @@ namespace Babylon
     struct FrameBufferData final
     {
         FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, uint16_t width, uint16_t height)
-            : FrameBuffer{ frameBuffer }
-            , ViewId{ viewId }
-            , ViewClearState{ ViewId }
-            , Width{ width }
-            , Height{ height }
+            : FrameBuffer{frameBuffer}
+            , ViewId{viewId}
+            , ViewClearState{ViewId}
+            , Width{width}
+            , Height{height}
         {
             assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
@@ -151,7 +146,7 @@ namespace Babylon
             bgfx::setViewRect(ViewId, 0, 0, Width, Height);
         }
 
-        bgfx::FrameBufferHandle FrameBuffer{ bgfx::kInvalidHandle };
+        bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
         bgfx::ViewId ViewId{};
         ViewClearState ViewClearState;
         uint16_t Width{};
@@ -160,9 +155,9 @@ namespace Babylon
 
     struct FrameBufferManager final
     {
-        FrameBufferManager() 
+        FrameBufferManager()
         {
-            m_boundFrameBuffer = m_backBuffer = new FrameBufferData({ bgfx::kInvalidHandle }, GetNewViewId(), bgfx::getStats()->width, bgfx::getStats()->height);
+            m_boundFrameBuffer = m_backBuffer = new FrameBufferData({bgfx::kInvalidHandle}, GetNewViewId(), bgfx::getStats()->width, bgfx::getStats()->height);
         }
 
         FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height)
@@ -206,16 +201,16 @@ namespace Babylon
         }
 
     private:
-        FrameBufferData* m_boundFrameBuffer{ nullptr };
-        FrameBufferData* m_backBuffer{ nullptr };
-        uint16_t m_nextId{ 0 };
+        FrameBufferData* m_boundFrameBuffer{nullptr};
+        FrameBufferData* m_backBuffer{nullptr};
+        uint16_t m_nextId{0};
     };
 
     struct UniformInfo final
     {
         uint8_t Stage{};
         // uninitilized bgfx resource is kInvalidHandle. 0 can be a valid handle.
-        bgfx::UniformHandle Handle{ bgfx::kInvalidHandle };
+        bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
     };
 
     struct TextureData final
@@ -231,9 +226,9 @@ namespace Babylon
         }
 
         std::vector<bimg::ImageContainer*> Images{};
-        bgfx::TextureHandle Texture{ bgfx::kInvalidHandle };
-        uint32_t Flags{ 0 };
-        uint8_t AnisotropicLevel{ 0 };
+        bgfx::TextureHandle Texture{bgfx::kInvalidHandle};
+        uint32_t Flags{0};
+        uint8_t AnisotropicLevel{0};
     };
 
     struct ImageData final
@@ -304,7 +299,8 @@ namespace Babylon
         NativeEngine(const Napi::CallbackInfo& info);
         NativeEngine(const Napi::CallbackInfo& info, NativeWindow& nativeWindow);
 
-        static Napi::FunctionReference InitializeAndCreateConstructor(Napi::Env&);
+        static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
+        static Napi::FunctionReference CreateConstructor(Napi::Env&);
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
@@ -395,9 +391,14 @@ namespace Babylon
 
         NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
 
-        template<int size, typename arrayType> void SetTypeArrayN(const Napi::CallbackInfo& info);
-        template<int size> void SetFloatN(const Napi::CallbackInfo& info);
-        template<int size> void SetMatrixN(const Napi::CallbackInfo& info);
+        template<int size, typename arrayType>
+        void SetTypeArrayN(const Napi::CallbackInfo& info);
+
+        template<int size>
+        void SetFloatN(const Napi::CallbackInfo& info);
+
+        template<int size>
+        void SetMatrixN(const Napi::CallbackInfo& info);
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};

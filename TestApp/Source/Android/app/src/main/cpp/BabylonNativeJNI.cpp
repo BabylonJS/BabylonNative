@@ -7,6 +7,7 @@
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
+#include <Babylon/Console.h>
 #include <Babylon/RuntimeAndroid.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
@@ -71,22 +72,6 @@ Java_com_android_testapp_AndroidViewAppActivity_finishEngine(JNIEnv* env, jobjec
 {
 }
 
-void LogMessage(const char* message, Babylon::LogLevel level)
-{
-    switch (level)
-    {
-    case Babylon::LogLevel::Log:
-        __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
-        break;
-    case Babylon::LogLevel::Warn:
-        __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
-        break;
-    case Babylon::LogLevel::Error:
-        __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
-        break;
-    }
-}
-
 JNIEXPORT void JNICALL
 Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
 {
@@ -94,7 +79,29 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, LogMessage, GetAssetContents);
+        int32_t width  = ANativeWindow_getWidth(window);
+        int32_t height = ANativeWindow_getHeight(window);
+
+        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, "file:///data/local/tmp", width, height, GetAssetContents);
+
+        runtime->Dispatch([](Babylon::Env& env)
+        {
+            Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
+            {
+                switch (level)
+                {
+                case Babylon::Console::LogLevel::Log:
+                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
+                    break;
+                case Babylon::Console::LogLevel::Warn:
+                    __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
+                    break;
+                case Babylon::Console::LogLevel::Error:
+                    __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
+                    break;
+                }
+            });
+        });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
@@ -103,8 +110,6 @@ Java_com_android_testapp_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jobj
         runtime->LoadScript("Scripts/babylon.glTF2FileLoader.js");
         runtime->LoadScript("Scripts/experience.js");
 
-        int32_t width  = ANativeWindow_getWidth(window);
-        int32_t height = ANativeWindow_getHeight(window);
         runtime->UpdateSize(width, height);
     }
 }

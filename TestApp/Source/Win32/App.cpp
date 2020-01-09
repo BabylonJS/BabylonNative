@@ -8,11 +8,13 @@
 #include <filesystem>
 
 #include <Shared/InputManager.h>
+
+#include <Babylon/Console.h>
 #include <Babylon/RuntimeWin32.h>
 
 #define MAX_LOADSTRING 100
 
-// Global Variables:
+    // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
@@ -68,15 +70,30 @@ namespace
         return arguments;
     }
 
-    static void DebugString(const char* message, Babylon::LogLevel)
-    {
-        OutputDebugStringA(message);
-    }
-
     void RefreshBabylon(HWND hWnd)
     {
         std::string rootUrl{ GetUrlFromPath(GetModulePath().parent_path().parent_path()) };
-        runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl, DebugString);
+        RECT rect;
+        if (!GetWindowRect(hWnd, &rect))
+        {
+            return;
+        }
+        auto width = rect.right - rect.left;
+        auto height = rect.bottom - rect.top;
+        runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl, width, height);
+        
+        // issue a resize here because on some platforms (UWP, WIN32) WM_SIZE is received before the runtime construction
+        // So the context is created with the right size but the nativeWindow still has the wrong size
+        // depending on how you create your app (runtime created before WM_SIZE is received, this call is not needed)
+        runtime->UpdateSize(width, height);
+
+        runtime->Dispatch([](Babylon::Env& env)
+        {
+            Babylon::Console::CreateInstance(env, [](const char* message, auto)
+            {
+                OutputDebugStringA(message);
+            });
+        });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
