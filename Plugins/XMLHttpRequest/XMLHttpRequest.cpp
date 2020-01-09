@@ -1,6 +1,5 @@
 #include "XMLHttpRequest.h"
-#include "PluginHost.h"
-#include <curl/curl.h>
+#include <Babylon/PluginHost.h>
 
 namespace Babylon
 {
@@ -43,7 +42,7 @@ namespace Babylon
 
     Napi::Value XMLHttpRequest::GetReadyState(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), arcana::underlying_cast(m_readyState));
+        return Napi::Value::From(Env(), static_cast<int32_t>(m_readyState));
     }
 
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
@@ -73,7 +72,7 @@ namespace Babylon
 
     Napi::Value XMLHttpRequest::GetStatus(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), arcana::underlying_cast(m_status));
+        return Napi::Value::From(Env(), static_cast<int32_t>(m_status));
     }
 
     void XMLHttpRequest::AddEventListener(const Napi::CallbackInfo& info)
@@ -115,25 +114,25 @@ namespace Babylon
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
         m_method = info[0].As<Napi::String>().Utf8Value();
-        m_url = m_runtimeImpl.GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value());
+        m_url = m_pluginHost.GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value());
         SetReadyState(ReadyState::Opened);
     }
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        auto lock = m_runtimeImpl.AcquireTaskLock();
-
-        m_runtimeImpl.Task = m_runtimeImpl.Task.then(arcana::inline_scheduler, arcana::cancellation::none(), [this] {
-            return SendAsync();
+        m_pluginHost.AddTask([this] () {
+            /*return*/ SendAsync(); // TODOPLUGIN
         });
+        
     }
-
+    
     // TODO: Make this just be SendAsync() once the UWP file access bug is fixed.
-    virtual arcana::task<void, std::exception_ptr> XMLHttpRequest::SendAsyncImpl()
+    void/*arcana::task<void, std::exception_ptr>*/ XMLHttpRequest::SendAsyncImpl()
     {
         if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
         {
-            return m_runtimeImpl.LoadUrlAsync<std::string>(m_url).then(arcana::inline_scheduler, m_runtimeImpl.Cancellation(), [this](const std::string& data) {
+            // TODOPLUGIN
+            /*return*/ m_pluginHost.LoadUrlAsync(m_url, [this](const std::string& data) {
                 m_responseText = std::move(data);
                 m_status = HTTPStatusCode::Ok;
                 SetReadyState(ReadyState::Done);
@@ -141,7 +140,8 @@ namespace Babylon
         }
         else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
         {
-            return m_runtimeImpl.LoadUrlAsync<std::vector<char>>(m_url).then(arcana::inline_scheduler, m_runtimeImpl.Cancellation(), [this](const std::vector<char>& data) {
+            // TODOPLUGIN
+            /*return*/ m_pluginHost.LoadUrlAsync(m_url, [this](const std::vector<char>& data) {
                 m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), data.size()));
                 memcpy(m_response.Value().Data(), data.data(), data.size());
                 m_status = HTTPStatusCode::Ok;
@@ -168,5 +168,4 @@ namespace Babylon
             }
         }
     }
-
 }

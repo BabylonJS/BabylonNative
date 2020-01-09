@@ -97,7 +97,7 @@ namespace Babylon
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
     private:
-        enum class ReadyState
+        enum class ReadyState : int32_t
         {
             Unsent = 0,
             Opened = 1,
@@ -115,15 +115,16 @@ namespace Babylon
         void RemoveEventListener(const Napi::CallbackInfo& info);
         void Open(const Napi::CallbackInfo& info);
         void Send(const Napi::CallbackInfo& info);
-        /*
-        virtual arcana::task<void, std::exception_ptr> SendAsync()
+        
+        virtual void/*arcana::task<void, std::exception_ptr>*/ SendAsync() // TODOPLUGIN
         {
             // default for Win32, Apple and Android, overriden with UWP and Android(resources) impl
-            return SendAsyncImpl();
+            /*return*/ SendAsyncImpl();
         }
         
-        arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
-        */
+        // TODOPLUGIN
+        /*arcana::task<void, std::exception_ptr>*/void SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
+        
         void SetReadyState(ReadyState readyState);
 
         PluginHost& m_pluginHost;

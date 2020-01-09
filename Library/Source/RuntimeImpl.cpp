@@ -185,6 +185,23 @@ namespace Babylon
         return std::scoped_lock{m_taskMutex};
     }
 
+    void RuntimeImpl::AddTask(std::function<void()>&& function)
+    {
+        auto lock = AcquireTaskLock();
+
+        Task = Task.then(arcana::inline_scheduler, arcana::cancellation::none(), function);
+    }
+
+    void RuntimeImpl::LoadUrlAsync(const std::string& url, std::function<void(const std::string & data)>&& function)
+    {
+        LoadUrlAsync<std::string>(url).then(arcana::inline_scheduler, Cancellation(), function);
+    }
+
+    void RuntimeImpl::LoadUrlAsync(const std::string& url, std::function<void(const std::vector<char> & data)>&& function)
+    {
+        LoadUrlAsync<std::vector<char>>(url).then(arcana::inline_scheduler, Cancellation(), function);
+    }
+
     void RuntimeImpl::InitializeJavaScriptVariables()
     {
         auto& env = *m_env;

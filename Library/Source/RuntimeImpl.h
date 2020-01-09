@@ -37,6 +37,9 @@ namespace Babylon
         template<typename T>
         arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
+        void LoadUrlAsync(const std::string& url, std::function<void(const std::string & data)>&& function);
+        void LoadUrlAsync(const std::string& url, std::function<void(const std::vector<char> & data)>&& function);
+
         arcana::manual_dispatcher<babylon_dispatcher::work_size>& Dispatcher();
         arcana::cancellation& Cancellation();
 
@@ -51,6 +54,7 @@ namespace Babylon
         arcana::task<void, std::exception_ptr> Task = arcana::task_from_result<std::exception_ptr>();
         std::scoped_lock<std::mutex> AcquireTaskLock();
 
+        void AddTask(std::function<void()>&& function);
     private:
         void InitializeJavaScriptVariables();
         void BaseThreadProcedure();
