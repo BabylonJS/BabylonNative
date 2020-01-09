@@ -10,21 +10,6 @@ namespace Babylon
     class Env;
 
     /**
-     * Importance level of messages sent via logging callbacks.
-     */
-    enum class LogLevel
-    {
-        Log,
-        Warn,
-        Error,
-    };
-
-    /**
-     * Type of logging callback argument required to create Runtime.
-     */
-    using LogCallback = std::function<void(const char*, LogLevel)>;
-    
-    /**
      * Type of resource loading callback argument required to create Runtime for Android.
      */
     using ResourceLoadingCallback = std::function<std::vector<char>(const char*)>;
