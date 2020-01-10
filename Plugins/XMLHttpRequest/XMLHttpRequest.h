@@ -123,8 +123,8 @@ namespace Babylon
         }
         
         // TODOPLUGIN
-        /*arcana::task<void, std::exception_ptr>*/void SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
-        
+        /*arcana::task<void, std::exception_ptr>*/virtual void SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
+    protected:
         void SetReadyState(ReadyState readyState);
 
         PluginHost& m_pluginHost;

@@ -1,23 +1,24 @@
-#include "XMLHttpRequest.h"
-
-#include "Common.h"
-#include "RuntimeImpl.h"
+#include "XMLHttpRequest/XMLHttpRequest.h"
 
 #include <robuffer.h>
 #include <winrt/Windows.Storage.Streams.h>
+#include <ppltasks.h>
 
 // Included after the WinRT headers because they enable non-WinRT interfaces. If this were included before
 // the WinRT headers, we'd have to explicitly include unknwn.h, or build would fail with C2338.
-#include <arcana/threading/task_conversions.h>
+//#include <arcana/threading/task_conversions.h>
+using namespace concurrency;
+using namespace Windows::Foundation;
+using namespace Windows::Storage;
 
 namespace Babylon
 {
-    class XMLHttpRequestUWP : public XMLHttpRequest
+    class XMLHttpRequestUWP : protected XMLHttpRequest
     {
-        arcana::task<void, std::exception_ptr> XMLHttpRequest::SendAsync()
+        void XMLHttpRequestUWP::SendAsync()
         {
             // clang-format off
-            return SendAsyncImpl()
+            /*return SendAsyncImpl()
                 .then(arcana::inline_scheduler, m_runtimeImpl.Cancellation(), [url = m_url, responseType = m_responseType, this](arcana::expected<void, std::exception_ptr> result)
             {
                 if (result.has_error())
@@ -76,7 +77,59 @@ namespace Babylon
                     return arcana::task_from_result<std::exception_ptr>();
                 }
             });
+            */
             // clang-format off
+            winrt::Windows::Foundation::Uri uri{ winrt::to_hstring(m_url) };
+            
+            std::wstring_view path{ uri.Path() };
+            if (path[0] != L'/')
+            {
+                throw std::runtime_error("Invalid file url");
+            }
+
+            std::wstring localPath{ path.substr(1) };
+            std::replace(localPath.begin(), localPath.end(), '/', '\\');
+
+            /*
+            create_task(StorageFile::GetFileFromPathAsync(L"")).then([](StorageFile^ storageFileSample) -> IAsyncAction^ {
+                return storageFileSample->DeleteAsync();
+                }).then([](void) {
+                    OutputDebugString(L"File deleted.");
+                    });
+                    */
+                    
+            // TODO: decode escaped url characters
+            Platform::String^ strLocalPath = ref new Platform::String(localPath.c_str());
+
+            create_task(StorageFile::GetFileFromPathAsync(strLocalPath)).then([url = m_url, responseType = m_responseType, this](StorageFile^ file) -> IAsyncAction^ {
+                if (responseType.empty() || responseType == XMLHttpRequestTypes::ResponseType::Text)
+                {
+                    create_task(FileIO::ReadTextAsync(file)).then([responseType = std::move(responseType), this](Platform::String^ text) {
+                            std::wstring responseWString(text->Data());
+                            int bytes = ::WideCharToMultiByte(CP_UTF8, 0, responseWString.data(), -1, NULL, 0, NULL, NULL);
+                            m_responseText.resize(bytes);
+                            ::WideCharToMultiByte(CP_UTF8, 0, responseWString.data(), bytes, m_responseText.data(), bytes, nullptr, nullptr);;
+                        });
+                }
+                else if (responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
+                {
+                    create_task(FileIO::ReadBufferAsync(file)).then([this](Streams::IBuffer^ buffer)
+                            {
+                            auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(buffer);
+                            const auto length = reader->UnconsumedBufferLength;
+                            if (length)
+                            {
+                                m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), length));
+                                reader->ReadBytes(::Platform::ArrayReference<unsigned char>((unsigned char*)m_response.Value().Data(), length));
+                            }
+                        });
+                }
+                else
+                {
+                    throw std::logic_error("Unexpected response type.");
+                }
+            });
+            
         }
-    }
+    };
 }

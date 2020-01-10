@@ -1,6 +1,8 @@
 #include "App.h"
 
-#include <Babylon/Console.h>
+#include <Console/Console.h>
+#include <XMLHttpRequest/UWP/XMLHttpRequestUWP.h>
+#include <XMLHttpRequest/XMLHttpRequest.cpp>
 
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
@@ -152,6 +154,11 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         {
             OutputDebugStringA(message);
         });
+    });
+
+    m_runtime->Dispatch([](Babylon::Env& env)
+    {
+        Babylon::XMLHttpRequest::CreateInstance(env);
     });
 
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
