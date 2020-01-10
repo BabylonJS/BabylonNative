@@ -21,28 +21,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import BabylonNative.BabylonNativeWrapper;
+
 public class AndroidViewAppActivity extends Activity implements AndroidViewAppSurfaceView.Renderer {
     private static final String TAG = "AndroidViewAppActivity";
     AndroidViewAppSurfaceView mView;
     private ScaleGestureDetector mScaleDetector;
     private Uri mUri = Uri.EMPTY;
     public boolean mScaling = false;
-    // JNI interface
-    static {
-        System.loadLibrary("BabylonNativeJNI");
-    }
-
-    public static native void initEngine(AssetManager assetManager, String path);
-    public static native void finishEngine();
-    public static native void surfaceCreated(Surface surface);
-    public static native void surfaceChanged(int width, int height, Surface surface);
-    public static native void activityOnPause();
-    public static native void activityOnResume();
-    public static native void openFile(String path);
-    public static native void openStream(ByteBuffer bytes);
-    public static native void setTouchInfo(float dx, float dy, boolean down);
-    public static native void setPinchInfo(float zoom);
-    public static native void step();
 
     // Activity life
     @Override protected void onCreate(Bundle icicle)
@@ -54,7 +40,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
         setContentView(mView);
 
         try {
-            initEngine(getApplication().getResources().getAssets(), getDataDir(getApplicationContext()));
+            BabylonNative.BabylonNativeWrapper.initEngine(getApplication().getResources().getAssets(), getDataDir(getApplicationContext()));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -65,7 +51,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
             public boolean onScale(ScaleGestureDetector detector)
             {
                 Log.v("TAG", "Pinch "+detector.getScaleFactor());
-                setPinchInfo(detector.getScaleFactor());
+                BabylonNative.BabylonNativeWrapper.setPinchInfo(detector.getScaleFactor());
                 return true;
             }
             @Override
@@ -128,7 +114,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override protected void onPause()
     {
         Log.v(TAG, "onPause");
-        activityOnPause();
+        BabylonNative.BabylonNativeWrapper.activityOnPause();
         mView.setVisibility(View.GONE);
         super.onPause();
         mView.onPause();
@@ -137,7 +123,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override protected void onResume()
     {
         Log.v(TAG, "onResume");
-        activityOnResume();
+        BabylonNative.BabylonNativeWrapper.activityOnResume();
         super.onResume();
         mView.onResume();
     }
@@ -145,7 +131,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override protected void onDestroy()
     {
         Log.v(TAG, "onDestroy");
-        finishEngine();
+        BabylonNative.BabylonNativeWrapper.finishEngine();
         super.onDestroy();
     }
 
@@ -153,13 +139,13 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
     @Override public void onSurfaceCreated(SurfaceHolder surfaceHolder)
     {
         Log.v(TAG, "onSurfaceCreated");
-        surfaceCreated(surfaceHolder.getSurface());
+        BabylonNative.BabylonNativeWrapper.surfaceCreated(surfaceHolder.getSurface());
     }
 
     @Override public void onSurfaceChanged(int width, int height)
     {
         Log.v(TAG, "onSurfaceChanged");
-        surfaceChanged(width, height, mView.getHolder().getSurface());
+        BabylonNative.BabylonNativeWrapper.surfaceChanged(width, height, mView.getHolder().getSurface());
     }
 
     @Override public void onDrawFrame()
@@ -171,7 +157,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
                 InputStream inputStream = getContentResolver().openInputStream(mUri);
                 ByteBuffer byteBuffer = readBytes(inputStream);
                 byteBuffer.position(0);
-                openStream(byteBuffer);
+                BabylonNative.BabylonNativeWrapper.openStream(byteBuffer);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -179,7 +165,7 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
             }
             mUri = Uri.EMPTY;
         }
-        step();
+        BabylonNative.BabylonNativeWrapper.step();
     }
 
     // Touch handling
@@ -191,13 +177,13 @@ public class AndroidViewAppActivity extends Activity implements AndroidViewAppSu
             float mY = event.getY();
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    setTouchInfo(mX, mY, true);
+                    BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, true);
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    setTouchInfo(mX, mY, true);
+                    BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, true);
                     break;
                 case MotionEvent.ACTION_UP:
-                    setTouchInfo(mX, mY, false);
+                    BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, false);
                     break;
             }
         }
