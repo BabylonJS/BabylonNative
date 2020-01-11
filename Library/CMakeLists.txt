@@ -226,31 +226,3 @@ endif()
 
 target_include_directories(Library PUBLIC "Include")
 target_link_libraries(Library PUBLIC napi)
-
-if(ANDROID)
-set(LIBNAME "libBabylonNativeLib.a")
-
-add_custom_command(
-    TARGET Library
-    POST_BUILD
-    COMMAND ${CMAKE_AR} -rcT ${LIBNAME} 
-        $<TARGET_FILE:Library>
-        $<TARGET_FILE:bx>
-        $<TARGET_FILE:bimg>
-        $<TARGET_FILE:bgfx>
-        $<TARGET_FILE:libcurl>
-        $<TARGET_FILE:SPIRV>
-        $<TARGET_FILE:spirv-cross-hlsl>
-        $<TARGET_FILE:spirv-cross-glsl>
-        $<TARGET_FILE:spirv-cross-core>
-        $<TARGET_FILE:napi>
-        $<TARGET_FILE:SSL>
-        $<TARGET_FILE:Crypto>
-        $<TARGET_FILE:astc>
-        $<TARGET_FILE:astc-codec>
-        $<TARGET_FILE:glslang>
-        $<TARGET_FILE:OSDependent>
-        $<TARGET_FILE:OGLCompiler>
-    COMMENT "Combining libs..."
-)
-endif()
