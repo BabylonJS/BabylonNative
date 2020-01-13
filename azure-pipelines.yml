@@ -242,8 +242,8 @@ jobs:
     displayName: 'Install V8 npm'    
   - task: Gradle@2
     inputs:
-        workingDirectory: 'TestApp/Source/Android'
-        gradleWrapperFile: 'TestApp/Source/Android/gradlew'
+        workingDirectory: 'TestApp/Source/AndroidPackage'
+        gradleWrapperFile: 'TestApp/Source/AndroidPackage/gradlew'
         gradleOptions: '-Xmx1536m'
         publishJUnitResults: false
         tasks: 'assembleDebug'
