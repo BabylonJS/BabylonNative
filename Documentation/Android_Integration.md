@@ -4,6 +4,16 @@ For more informations on the subject, check the following links:
 https://www.babylonjs.com/
 https://github.com/BabylonJS/BabylonNative
 
+# Download NPM
+
+NPM download is not automatic (for now). To download NPM, run this command in the destination folder :
+
+```
+npm install --prefix . babylonnativepackage
+```
+
+The package contains 4 .aar files. Debug and Release with and without V8.
+
 # Project creation
 
 Create a new Android Studio project with a Basic Activity
@@ -250,4 +260,4 @@ At this point, your app is ready to be build and run. Once running, you should s
 
 # Known issues
 
-BabylonNative uses V8 and bundles the .so for the various ABI. There might be some conflicts if your app is also using V8.
+BabylonNative uses V8 and bundles the .so for the various ABI (depending on the package .aar). There might be some conflicts if your app is also using V8.
