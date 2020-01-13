@@ -243,3 +243,11 @@ public class MainActivity extends Activity implements BabylonSurfaceView.Rendere
 }
 
 ```
+
+# Build and Run
+
+At this point, your app is ready to be build and run. Once running, you should see a grey cube that you can rotate by touching your screen.
+
+# Known issues
+
+BabylonNative uses V8 and bundles the .so for the various ABI. There might be some conflicts if your app is also using V8.
