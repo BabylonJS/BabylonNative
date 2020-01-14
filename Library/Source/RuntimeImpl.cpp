@@ -17,7 +17,6 @@ namespace Babylon
         static constexpr auto JS_NATIVE_WINDOW_NAME = "window";
 
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
-        static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
     }
 
     RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env env)
@@ -81,15 +80,18 @@ namespace Babylon
             m_env->Eval(std::get<0>(args).data(), url.data());
         });
         */
-        std::string loadScript = R"(var xhr = new XMLHttpRequest();
-            xhr.open("GET", ")" + GetAbsoluteUrl(url) + R"(", true);
+        std::string loadScript = R"(function BabylonLoadScript(url) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
             xhr.addEventListener("readystatechange", function() {
             if (xhr.status === 200) {
-                    //console.log(xhr.responseText);
+                    console.log(xhr.responseText);
                     eval(xhr.responseText);
                 }
             });
             xhr.send();
+        }
+        BabylonLoadScript(")" + GetAbsoluteUrl(url) + R"(");
         )";
         Eval(loadScript, url);
     }

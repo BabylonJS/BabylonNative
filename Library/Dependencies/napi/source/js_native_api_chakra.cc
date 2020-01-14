@@ -36,29 +36,6 @@ JsErrorCode JsCopyString(_In_ JsValueRef value, _Out_opt_ char* buffer, _In_ siz
 
   if (buffer != nullptr) {
     int result = ::WideCharToMultiByte(codePage, 0, stringValue, static_cast<int>(stringLength), buffer, static_cast<int>(bufferSize), nullptr, nullptr);
-    if (!result)
-    {
-        auto err = GetLastError();
-        switch(err)
-        {
-        case ERROR_INSUFFICIENT_BUFFER: 
-            OutputDebugStringA("ERROR_INSUFFICIENT_BUFFER");
-            break;
-        case ERROR_INVALID_FLAGS:
-            OutputDebugStringA("ERROR_INVALID_FLAGS");
-            break;
-
-        case ERROR_INVALID_PARAMETER:
-            OutputDebugStringA("ERROR_INVALID_PARAMETER");
-            break;
-
-        case ERROR_NO_UNICODE_TRANSLATION:
-            OutputDebugStringA("ERROR_NO_UNICODE_TRANSLATION");
-            break;
-
-        }
-
-    }
     assert(result != 0);
   }
 

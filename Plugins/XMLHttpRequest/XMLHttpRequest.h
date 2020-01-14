@@ -172,7 +172,7 @@ namespace Babylon
 
         void AddEventListener(const Napi::CallbackInfo& info)
         {
-            std::string eventType = info[0].As<Napi::String>().Utf8Value();
+            std::string eventType = info[0].As<Napi::String>().Utf8Value().c_str();
             Napi::Function eventHandler = info[1].As<Napi::Function>();
 
             const auto& eventHandlerRefs = m_eventHandlerRefs[eventType];
@@ -227,7 +227,9 @@ namespace Babylon
                 m_pluginHost.LoadUrlAsync(m_url, [this](const std::string& data) {
                     m_responseText = std::move(data);
                     m_status = HTTPStatusCode::Ok;
-                    SetReadyState(ReadyState::Done);
+                    m_pluginHost.AddTask([this]() {
+                        SetReadyState(ReadyState::Done);
+                    });
                 });
             }
             else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
