@@ -1,10 +1,8 @@
 #pragma once
 
-//#include "Common.h"
 #include <napi/napi.h>
-//#include <arcana/threading/task.h>
-//#include <arcana/type_traits.h>
 #include <unordered_map>
+#include <Babylon/PluginHost.h>
 
 namespace Babylon
 {
@@ -72,7 +70,6 @@ namespace Babylon
         NetworkAuthenticationRequired = 511,
     };
 
-    // TODO: Move these down into the CPP file once the UWP file access bug is fixed.
     namespace XMLHttpRequestTypes
     {
         namespace ResponseType
@@ -89,14 +86,48 @@ namespace Babylon
         }
     }
 
-    class XMLHttpRequest : public Napi::ObjectWrap<XMLHttpRequest>
+    template<typename T> class XMLHttpRequestBase : public Napi::ObjectWrap<T>
     {
     public:
-        static void CreateInstance(Napi::Env& env);
+        static void CreateInstance(Napi::Env& env)
+        {
+            Napi::HandleScope scope{ env };
 
-        explicit XMLHttpRequest(const Napi::CallbackInfo& info);
+            Napi::Function func = DefineClass(
+                env,
+                "XMLHttpRequest",
+                {
+                    StaticValue("UNSENT", Napi::Value::From(env, 0)),
+                    StaticValue("OPENED", Napi::Value::From(env, 1)),
+                    StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
+                    StaticValue("LOADING", Napi::Value::From(env, 3)),
+                    StaticValue("DONE", Napi::Value::From(env, 4)),
+                    InstanceAccessor("readyState", &T::GetReadyState, nullptr),
+                    InstanceAccessor("response", &T::GetResponse, nullptr),
+                    InstanceAccessor("responseText", &T::GetResponseText, nullptr),
+                    InstanceAccessor("responseType", &T::GetResponseType, &T::SetResponseType),
+                    InstanceAccessor("responseURL", &T::GetResponseURL, nullptr),
+                    InstanceAccessor("status", &T::GetStatus, nullptr),
+                    InstanceMethod("addEventListener", &T::AddEventListener),
+                    InstanceMethod("removeEventListener", &T::RemoveEventListener),
+                    InstanceMethod("open", &T::Open),
+                    InstanceMethod("send", &T::Send),
+                });
 
-    private:
+            constructor = Napi::Persistent(func);
+            constructor.SuppressDestruct();
+
+            env.Global().Set("XMLHttpRequest", func);
+        }
+
+        explicit XMLHttpRequestBase(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<T>{ info }
+            , m_pluginHost{ PluginHost::GetRuntimeImplFromJavaScript(info.Env()) }
+        {
+        }
+
+    protected:
+
         enum class ReadyState : int32_t
         {
             Unsent = 0,
@@ -104,28 +135,130 @@ namespace Babylon
             Done = 4,
         };
 
-        Napi::Value GetReadyState(const Napi::CallbackInfo& info);
-        Napi::Value GetResponse(const Napi::CallbackInfo& info);
-        Napi::Value GetResponseText(const Napi::CallbackInfo& info);
-        Napi::Value GetResponseType(const Napi::CallbackInfo& info);
-        void SetResponseType(const Napi::CallbackInfo& info, const Napi::Value& value);
-        Napi::Value GetResponseURL(const Napi::CallbackInfo& info);
-        Napi::Value GetStatus(const Napi::CallbackInfo& info);
-        void AddEventListener(const Napi::CallbackInfo& info);
-        void RemoveEventListener(const Napi::CallbackInfo& info);
-        void Open(const Napi::CallbackInfo& info);
-        void Send(const Napi::CallbackInfo& info);
-        
-        virtual void/*arcana::task<void, std::exception_ptr>*/ SendAsync() // TODOPLUGIN
+        Napi::Value GetReadyState(const Napi::CallbackInfo& info)
         {
-            // default for Win32, Apple and Android, overriden with UWP and Android(resources) impl
-            /*return*/ SendAsyncImpl();
+            return Napi::Value::From(Env(), static_cast<int32_t>(m_readyState));
+        }
+
+        Napi::Value GetResponse(const Napi::CallbackInfo& info)
+        {
+            return m_response.Value();
+        }
+
+        Napi::Value GetResponseText(const Napi::CallbackInfo& info)
+        {
+            return Napi::Value::From(Env(), m_responseText);
+        }
+
+        Napi::Value GetResponseType(const Napi::CallbackInfo& info)
+        {
+            return Napi::Value::From(Env(), m_responseType);
+        }
+
+        void SetResponseType(const Napi::CallbackInfo& info, const Napi::Value& value)
+        {
+            m_responseType = value.As<Napi::String>().Utf8Value();
+        }
+
+        Napi::Value GetResponseURL(const Napi::CallbackInfo& info)
+        {
+            return Napi::Value::From(Env(), m_responseURL);
+        }
+
+        Napi::Value GetStatus(const Napi::CallbackInfo& info)
+        {
+            return Napi::Value::From(Env(), static_cast<int32_t>(m_status));
+        }
+
+        void AddEventListener(const Napi::CallbackInfo& info)
+        {
+            std::string eventType = info[0].As<Napi::String>().Utf8Value();
+            Napi::Function eventHandler = info[1].As<Napi::Function>();
+
+            const auto& eventHandlerRefs = m_eventHandlerRefs[eventType];
+            for (auto it = eventHandlerRefs.begin(); it != eventHandlerRefs.end(); ++it)
+            {
+                if (it->Value() == eventHandler)
+                {
+                    throw Napi::Error::New(info.Env(), "Cannot add the same event handler twice");
+                }
+            }
+
+            m_eventHandlerRefs[eventType].push_back(Napi::Persistent(eventHandler));
+        }
+
+        void RemoveEventListener(const Napi::CallbackInfo& info)
+        {
+            std::string eventType = info[0].As<Napi::String>().Utf8Value();
+            Napi::Function eventHandler = info[1].As<Napi::Function>();
+            auto itType = m_eventHandlerRefs.find(eventType);
+            if (itType != m_eventHandlerRefs.end())
+            {
+                auto& eventHandlerRefs = itType->second;
+                for (auto it = eventHandlerRefs.begin(); it != eventHandlerRefs.end(); ++it)
+                {
+                    if (it->Value() == eventHandler)
+                    {
+                        eventHandlerRefs.erase(it);
+                        break;
+                    }
+                }
+            }
+        }
+
+        void Open(const Napi::CallbackInfo& info)
+        {
+            m_method = info[0].As<Napi::String>().Utf8Value();
+            m_url = m_pluginHost.GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value());
+            SetReadyState(ReadyState::Opened);
+        }
+
+        void Send(const Napi::CallbackInfo& info)
+        {
+            m_pluginHost.AddTask([this]() {
+                SendAsync();
+            });
         }
         
-        // TODOPLUGIN
-        /*arcana::task<void, std::exception_ptr>*/virtual void SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
-    protected:
-        void SetReadyState(ReadyState readyState);
+        virtual void SendAsync()
+        {
+            if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
+            {
+                m_pluginHost.LoadUrlAsync(m_url, [this](const std::string& data) {
+                    m_responseText = std::move(data);
+                    m_status = HTTPStatusCode::Ok;
+                    SetReadyState(ReadyState::Done);
+                });
+            }
+            else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
+            {
+                m_pluginHost.LoadUrlAsync(m_url, [this](const std::vector<char>& data) {
+                    m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), data.size()));
+                    memcpy(m_response.Value().Data(), data.data(), data.size());
+                    m_status = HTTPStatusCode::Ok;
+                    SetReadyState(ReadyState::Done);
+                });
+            }
+            else
+            {
+                throw std::exception();
+            }
+        }
+    
+        void SetReadyState(ReadyState readyState)
+        {
+            m_readyState = readyState;
+
+            auto it = m_eventHandlerRefs.find(XMLHttpRequestTypes::EventType::ReadyStateChange);
+            if (it != m_eventHandlerRefs.end())
+            {
+                const auto& eventHandlerRefs = it->second;
+                for (const auto& eventHandlerRef : eventHandlerRefs)
+                {
+                    eventHandlerRef.Call({});
+                }
+            }
+        }
 
         PluginHost& m_pluginHost;
 
@@ -141,5 +274,18 @@ namespace Babylon
         std::string m_url;
 
         static inline Napi::FunctionReference constructor{};
+    };
+
+    class XMLHttpRequest : public XMLHttpRequestBase<XMLHttpRequest>
+    {
+    public:
+        explicit XMLHttpRequest(const Napi::CallbackInfo& info)
+            : XMLHttpRequestBase{ info }
+        {
+        }
+        static void CreateInstance(Napi::Env env)
+        {
+            XMLHttpRequestBase<XMLHttpRequest>::CreateInstance(env);
+        }
     };
 }

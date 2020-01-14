@@ -8,15 +8,23 @@
 
 namespace Babylon
 {
-    class XMLHttpRequestAndroid : public XMLHttpRequest
+    class XMLHttpRequestAndroid : public XMLHttpRequestBase<XMLHttpRequestAndroid>
     {
+    public:
+        explicit XMLHttpRequestAndroid(const Napi::CallbackInfo& info)
+            : XMLHttpRequestBase{ info }
+        {
+        }
+
         static void CreateInstance(Napi::Env env, AAssetManager* assetMgrNative)
         {
             m_assetMgrNative = assetMgrNative;
-            XMLHttpRequest::CreateInstance(env);
+            XMLHttpRequestBase<XMLHttpRequestAndroid>::CreateInstance(env);
         }
-            
-        arcana::task<void, std::exception_ptr> XMLHttpRequest::SendAsyncImpl()
+
+    protected:
+
+        void XMLHttpRequest::SendAsync()
         {
             // try to load apk asset
             auto data = GetAssetContents(m_url);
@@ -40,7 +48,7 @@ namespace Babylon
             }
             else
             {
-                return XMLHttpRequest::SendAsyncImpl();
+                return XMLHttpRequest::SendAsync();
             }
         }
         

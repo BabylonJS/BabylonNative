@@ -11,7 +11,6 @@
 
 #include <Console/Console.h>
 #include <XMLHttpRequest/XMLHttpRequest.h>
-#include <XMLHttpRequest/XMLHttpRequest.cpp>
 #include <Babylon/RuntimeWin32.h>
 
 #define MAX_LOADSTRING 100
@@ -79,15 +78,11 @@ namespace
 
         runtime->Dispatch([](Babylon::Env& env)
         {
-            Babylon::XMLHttpRequest::CreateInstance(env);
-        });
-
-        runtime->Dispatch([](Babylon::Env& env)
-        {
             Babylon::Console::CreateInstance(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
             });
+            Babylon::XMLHttpRequest::CreateInstance(env);
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);

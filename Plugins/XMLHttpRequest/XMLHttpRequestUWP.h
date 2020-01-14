@@ -13,8 +13,19 @@ using namespace Windows::Storage;
 
 namespace Babylon
 {
-    class XMLHttpRequestUWP : protected XMLHttpRequest
+    class XMLHttpRequestUWP : public XMLHttpRequestBase<XMLHttpRequestUWP>
     {
+    public:
+        explicit XMLHttpRequestUWP(const Napi::CallbackInfo& info)
+            : XMLHttpRequestBase{ info }
+        {
+        }
+        static void CreateInstance(Napi::Env env)
+        {
+            XMLHttpRequestBase<XMLHttpRequestUWP>::CreateInstance(env);
+        }
+    protected:
+
         void XMLHttpRequestUWP::SendAsync()
         {
             // clang-format off
@@ -78,6 +89,10 @@ namespace Babylon
                 }
             });
             */
+
+            XMLHttpRequestBase::SendAsync();
+            return;
+
             // clang-format off
             winrt::Windows::Foundation::Uri uri{ winrt::to_hstring(m_url) };
             
@@ -90,46 +105,44 @@ namespace Babylon
             std::wstring localPath{ path.substr(1) };
             std::replace(localPath.begin(), localPath.end(), '/', '\\');
 
-            /*
-            create_task(StorageFile::GetFileFromPathAsync(L"")).then([](StorageFile^ storageFileSample) -> IAsyncAction^ {
-                return storageFileSample->DeleteAsync();
-                }).then([](void) {
-                    OutputDebugString(L"File deleted.");
-                    });
-                    */
-                    
             // TODO: decode escaped url characters
             Platform::String^ strLocalPath = ref new Platform::String(localPath.c_str());
 
-            create_task(StorageFile::GetFileFromPathAsync(strLocalPath)).then([url = m_url, responseType = m_responseType, this](StorageFile^ file) -> IAsyncAction^ {
+            concurrency::create_task(StorageFile::GetFileFromPathAsync(strLocalPath)).then([url = m_url, responseType = m_responseType, this](StorageFile^ file) {
                 if (responseType.empty() || responseType == XMLHttpRequestTypes::ResponseType::Text)
                 {
-                    create_task(FileIO::ReadTextAsync(file)).then([responseType = std::move(responseType), this](Platform::String^ text) {
-                            std::wstring responseWString(text->Data());
-                            int bytes = ::WideCharToMultiByte(CP_UTF8, 0, responseWString.data(), -1, NULL, 0, NULL, NULL);
-                            m_responseText.resize(bytes);
-                            ::WideCharToMultiByte(CP_UTF8, 0, responseWString.data(), bytes, m_responseText.data(), bytes, nullptr, nullptr);;
-                        });
+                    return concurrency::create_task(FileIO::ReadTextAsync(file)).then([responseType = std::move(responseType), this](Platform::String^ text) {
+                        std::wstring responseWString(text->Data());
+                        int bytes = ::WideCharToMultiByte(CP_UTF8, 0, responseWString.data(), -1, NULL, 0, NULL, NULL);
+                        m_responseText.resize(bytes);
+                        ::WideCharToMultiByte(CP_UTF8, 0, responseWString.data(), bytes, m_responseText.data(), bytes, nullptr, nullptr);;
+                    });
                 }
                 else if (responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
                 {
-                    create_task(FileIO::ReadBufferAsync(file)).then([this](Streams::IBuffer^ buffer)
-                            {
-                            auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(buffer);
-                            const auto length = reader->UnconsumedBufferLength;
-                            if (length)
-                            {
-                                m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), length));
-                                reader->ReadBytes(::Platform::ArrayReference<unsigned char>((unsigned char*)m_response.Value().Data(), length));
-                            }
-                        });
+                    return concurrency::create_task(FileIO::ReadBufferAsync(file)).then([this](Streams::IBuffer^ buffer) {
+                        auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(buffer);
+                        const auto length = reader->UnconsumedBufferLength;
+                        if (length)
+                        {
+                            m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), length));
+                            reader->ReadBytes(::Platform::ArrayReference<unsigned char>((unsigned char*)m_response.Value().Data(), length));
+                        }
+                    });
                 }
                 else
                 {
                     throw std::logic_error("Unexpected response type.");
                 }
+            }).then([this, url = std::move(m_url)] {
+                m_responseURL = url;
+                m_status = HTTPStatusCode::Ok;
+
+                m_pluginHost.AddTask([this]{
+                    SetReadyState(ReadyState::Done);
+                });
             });
-            
+            // clang-format off
         }
     };
 }
