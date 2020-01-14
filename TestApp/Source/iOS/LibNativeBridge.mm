@@ -1,5 +1,6 @@
 #include "LibNativeBridge.h"
-#import <Babylon/Console.h>
+#include <Console/Console.h>
+#include <XMLHttpRequest/XMLHttpRequest.h>
 #import <Babylon/RuntimeApple.h>
 #import <Shared/InputManager.h>
 
@@ -32,6 +33,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
         {
             NSLog(@"%s", message);
         });
+        Babylon::XMLHttpRequest::CreateInstance(env);
     });
     
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
