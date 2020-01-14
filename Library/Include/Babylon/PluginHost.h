@@ -14,7 +14,7 @@ namespace Babylon
     class PluginHost
     {
     public:
-        static PluginHost& PluginHost::GetRuntimeImplFromJavaScript(Napi::Env env);
+        static PluginHost& GetRuntimeImplFromJavaScript(Napi::Env env);
 
         virtual std::string GetAbsoluteUrl(const std::string& url) = 0;
         virtual void AddTask(std::function<void()>&& function) = 0;
