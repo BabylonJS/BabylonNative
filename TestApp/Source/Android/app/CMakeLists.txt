@@ -42,6 +42,7 @@ target_compile_definitions(BabylonNativeJNI PUBLIC NODE_ADDON_API_DISABLE_DEPREC
 
 target_include_directories(BabylonNativeJNI
         PRIVATE
+        ${BABYLON_NATIVE_TESTAPP_DIR}/../../Plugins
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Include
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/v8/include
         ${BABYLON_NATIVE_TESTAPP_DIR}/../../Library/Dependencies/napi/include

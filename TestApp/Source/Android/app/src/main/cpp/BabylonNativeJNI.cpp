@@ -7,7 +7,9 @@
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
-#include <Babylon/Console.h>
+
+#include <Console/Console.h>
+#include <XMLHttpRequest/XMLHttpRequestAndroid.h>
 #include <Babylon/RuntimeAndroid.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
@@ -88,6 +90,7 @@ Java_com_android_appviewer_AndroidViewAppActivity_surfaceCreated(JNIEnv* env, jo
                     break;
                 }
             });
+            Babylon::XMLHttpRequestAndroid::CreateInstance(env);
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
