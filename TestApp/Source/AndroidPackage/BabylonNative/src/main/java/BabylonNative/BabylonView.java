@@ -10,61 +10,83 @@ import android.view.View;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
-    private static final String TAG = "BabylonSurfaceView";
-    private static final boolean DEBUG = true;
-    private Renderer mRenderer;
+public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
+    private static final String TAG = "BabylonView";
+
+    private ViewDelegate mViewDelegate;
     public final static int RENDERMODE_CONTINUOUSLY = 1;
 
-    public BabylonSurfaceView(Context context, Renderer renderer) {
+    public BabylonView(Context context, ViewDelegate viewDelegate) {
         super(context);
-        init(renderer);
+        init(viewDelegate);
+        BabylonNative.Wrapper.initEngine(context.getResources().getAssets());
     }
-    private void init(Renderer renderer) {
+    private void init(ViewDelegate viewDelegate) {
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
         setOnTouchListener(this);
-        mRenderer = renderer;
+        mViewDelegate = viewDelegate;
         mGLThread = new GLThread(mThisWeakRef);
         mGLThread.start();
     }
 
+    public void loadScript(String path)
+    {
+        BabylonNative.Wrapper.loadScript(path);
+    }
+
+    public void eval(String source, String sourceURL)
+    {
+        BabylonNative.Wrapper.eval(source, sourceURL);
+    }
+
     public void onPause() {
+        setVisibility(View.GONE);
+        BabylonNative.Wrapper.activityOnPause();
         mGLThread.onPause();
     }
 
     public void onResume() {
+        BabylonNative.Wrapper.activityOnResume();
         mGLThread.onResume();
     }
 
     // render life
     public void onSurfaceCreated() {
-        mRenderer.onSurfaceCreated(getHolder());
+        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface());
+        mViewDelegate.onViewReady();
     }
 
     public void onSurfaceChanged(int w, int h) {
-        mRenderer.onSurfaceChanged(w, h);
+        BabylonNative.Wrapper.surfaceChanged(w, h, getHolder().getSurface());
     }
 
-    public void onDrawFrame() {
-        mRenderer.onDrawFrame();
-    }
-
-    public interface Renderer {
-        void onSurfaceCreated(SurfaceHolder surfaceHolder);
-        void onSurfaceChanged(int width, int height);
-        void onDrawFrame();
-        boolean onTouchEvent(MotionEvent event);
+    public interface ViewDelegate {
+        void onViewReady();
     }
 
     @Override
     public boolean onTouch(View v, MotionEvent event)
     {
-        return mRenderer.onTouchEvent(event);
+        float mX = event.getX();
+        float mY = event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
+                break;
+            case MotionEvent.ACTION_UP:
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, false);
+                break;
+        }
+        return true;
     }
 
     @Override
     protected void finalize() throws Throwable {
+        BabylonNative.Wrapper.finishEngine();
         try {
             if (mGLThread != null) {
                 // GLThread may still be running if this view was never
@@ -78,14 +100,14 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
 
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
-     * not normally called or subclassed by clients of BabylonSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
         mGLThread.surfaceCreated();
     }
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
-     * not normally called or subclassed by clients of BabylonSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceDestroyed(SurfaceHolder holder) {
         // Surface will be destroyed when we return
@@ -93,14 +115,14 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
     }
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
-     * not normally called or subclassed by clients of BabylonSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         mGLThread.onWindowResize(w, h);
     }
     /**
      * This method is part of the SurfaceHolder.Callback2 interface, and is
-     * not normally called or subclassed by clients of BabylonSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceRedrawNeededAsync(SurfaceHolder holder, Runnable finishDrawing) {
         if (mGLThread != null) {
@@ -109,7 +131,7 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
     }
     /**
      * This method is part of the SurfaceHolder.Callback2 interface, and is
-     * not normally called or subclassed by clients of BabylonSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     @Deprecated
     @Override
@@ -119,14 +141,14 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
     }
 
     static class GLThread extends Thread {
-        GLThread(WeakReference<BabylonSurfaceView> BabylonSurfaceViewWeakRef) {
+        GLThread(WeakReference<BabylonView> BabylonViewWeakRef) {
             super();
             mWidth = 0;
             mHeight = 0;
             mRequestRender = true;
             mRenderMode = RENDERMODE_CONTINUOUSLY;
             mWantRenderNotification = false;
-            mBabylonSurfaceViewWeakRef = BabylonSurfaceViewWeakRef;
+            mBabylonViewWeakRef = BabylonViewWeakRef;
         }
         @Override
         public void run() {
@@ -161,7 +183,7 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
             }
         }
         private void guardedRun() throws InterruptedException {
-            //mEglHelper = new EglHelper(mBabylonSurfaceViewWeakRef);
+            //mEglHelper = new EglHelper(mBabylonViewWeakRef);
             mHaveEglContext = false;
             mHaveEglSurface = false;
             mWantRenderNotification = false;
@@ -227,10 +249,10 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                             }
                             // When pausing, optionally release the EGL Context:
                             if (pausing && mHaveEglContext) {
-                                BabylonSurfaceView view = mBabylonSurfaceViewWeakRef.get();
+                                BabylonView view = mBabylonViewWeakRef.get();
 
                                 //if (!preserveEglContextOnPause) {
-                                    stopEglContextLocked();
+                                stopEglContextLocked();
                                 //}
                             }
                             // Have we lost the SurfaceView surface?
@@ -356,7 +378,7 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         createGlInterface = false;
                     }
                     if (createEglContext) {
-                        BabylonSurfaceView view = mBabylonSurfaceViewWeakRef.get();
+                        BabylonView view = mBabylonViewWeakRef.get();
                         if (view != null) {
                             try {
                                 view.onSurfaceCreated();
@@ -366,7 +388,7 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         createEglContext = false;
                     }
                     if (sizeChanged) {
-                        BabylonSurfaceView view = mBabylonSurfaceViewWeakRef.get();
+                        BabylonView view = mBabylonViewWeakRef.get();
                         if (view != null) {
                             try {
                                 view.onSurfaceChanged(w, h);
@@ -376,10 +398,9 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         sizeChanged = false;
                     }
                     {
-                        BabylonSurfaceView view = mBabylonSurfaceViewWeakRef.get();
+                        BabylonView view = mBabylonViewWeakRef.get();
                         if (view != null) {
                             try {
-                                view.onDrawFrame();
                                 if (finishDrawingRunnable != null) {
                                     finishDrawingRunnable.run();
                                     finishDrawingRunnable = null;
@@ -612,10 +633,10 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
         private Runnable mFinishDrawingRunnable = null;
         /**
          * Set once at thread construction time, nulled out when the parent view is garbage
-         * called. This weak reference allows the BabylonSurfaceView to be garbage collected while
+         * called. This weak reference allows the BabylonView to be garbage collected while
          * the GLThread is still alive.
          */
-        private WeakReference<BabylonSurfaceView> mBabylonSurfaceViewWeakRef;
+        private WeakReference<BabylonView> mBabylonViewWeakRef;
     }
 
     private static class GLThreadManager {
@@ -632,8 +653,8 @@ public class BabylonSurfaceView extends SurfaceView implements SurfaceHolder.Cal
             notifyAll();
         }
     }
-    private final WeakReference<BabylonSurfaceView> mThisWeakRef =
-            new WeakReference<BabylonSurfaceView>(this);
+    private final WeakReference<BabylonView> mThisWeakRef =
+            new WeakReference<BabylonView>(this);
     private static final GLThreadManager sGLThreadManager = new GLThreadManager();
     private GLThread mGLThread;
 }
