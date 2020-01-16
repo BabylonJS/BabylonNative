@@ -31,7 +31,7 @@ JsErrorCode JsCopyString(_In_ JsValueRef value, _Out_opt_ char* buffer, _In_ siz
   CHECK_JSRT_ERROR_CODE(JsStringToPointer(value, &stringValue, &stringLength));
 
   if (length != nullptr) {
-    *length = stringLength;
+    *length = ::WideCharToMultiByte(codePage, 0, stringValue, static_cast<int>(stringLength), nullptr, 0, nullptr, nullptr);
   }
 
   if (buffer != nullptr) {
