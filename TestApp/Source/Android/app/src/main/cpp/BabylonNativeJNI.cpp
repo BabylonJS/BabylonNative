@@ -14,15 +14,15 @@
 #include <InputManager.h>
 
 extern "C" {
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_finishEngine(JNIEnv* env, jobject obj);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_activityOnPause(JNIEnv* env);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_activityOnResume(JNIEnv* env);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_loadScript(JNIEnv* env, jobject obj, jstring path);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_eval(JNIEnv* env, jobject obj, jstring source, jstring sourceURL);
-    JNIEXPORT void JNICALL Java_BabylonNative_BabylonNativeWrapper_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_activityOnResume(JNIEnv* env);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jobject obj, jstring path);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_eval(JNIEnv* env, jobject obj, jstring source, jstring sourceURL);
+JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
 };
 
 std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
@@ -55,8 +55,8 @@ namespace
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_initEngine(JNIEnv* env, jobject obj,
-                                                       jobject assetMgr)
+Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
+                                      jobject assetMgr)
 {
     auto asset_manager = AAssetManager_fromJava(env, assetMgr);
     g_assetMgrNative = asset_manager;
@@ -64,12 +64,12 @@ Java_BabylonNative_BabylonNativeWrapper_initEngine(JNIEnv* env, jobject obj,
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_finishEngine(JNIEnv* env, jobject obj)
+Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj)
 {
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
+Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
 {
     if (!runtime)
     {
@@ -81,23 +81,23 @@ Java_BabylonNative_BabylonNativeWrapper_surfaceCreated(JNIEnv* env, jobject obj,
         runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, width, height, GetAssetContents);
 
         runtime->Dispatch([](Babylon::Env& env)
-        {
-            Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
-            {
-                switch (level)
-                {
-                case Babylon::Console::LogLevel::Log:
-                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
-                    break;
-                case Babylon::Console::LogLevel::Warn:
-                    __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
-                    break;
-                case Babylon::Console::LogLevel::Error:
-                    __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
-                    break;
-                }
-            });
-        });
+                          {
+                              Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
+                              {
+                                  switch (level)
+                                  {
+                                      case Babylon::Console::LogLevel::Log:
+                                          __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
+                                          break;
+                                      case Babylon::Console::LogLevel::Warn:
+                                          __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
+                                          break;
+                                      case Babylon::Console::LogLevel::Error:
+                                          __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
+                                          break;
+                                  }
+                              });
+                          });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
@@ -111,7 +111,7 @@ Java_BabylonNative_BabylonNativeWrapper_surfaceCreated(JNIEnv* env, jobject obj,
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface)
+Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface)
 {
     if (runtime)
     {
@@ -121,7 +121,7 @@ Java_BabylonNative_BabylonNativeWrapper_surfaceChanged(JNIEnv* env, jobject obj,
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_loadScript(JNIEnv* env, jobject obj, jstring path)
+Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jobject obj, jstring path)
 {
     if (runtime)
     {
@@ -131,7 +131,7 @@ Java_BabylonNative_BabylonNativeWrapper_loadScript(JNIEnv* env, jobject obj, jst
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_eval(JNIEnv* env, jobject obj, jstring source, jstring sourceURL)
+Java_BabylonNative_Wrapper_eval(JNIEnv* env, jobject obj, jstring source, jstring sourceURL)
 {
     if (runtime)
     {
@@ -142,7 +142,7 @@ Java_BabylonNative_BabylonNativeWrapper_eval(JNIEnv* env, jobject obj, jstring s
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_setTouchInfo(JNIEnv* env, jobject obj, jfloat x, jfloat y, jboolean down)
+Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jobject obj, jfloat x, jfloat y, jboolean down)
 {
     if (inputBuffer != nullptr)
     {
@@ -152,7 +152,7 @@ Java_BabylonNative_BabylonNativeWrapper_setTouchInfo(JNIEnv* env, jobject obj, j
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_activityOnPause(JNIEnv* env)
+Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env)
 {
     if (runtime)
     {
@@ -161,7 +161,7 @@ Java_BabylonNative_BabylonNativeWrapper_activityOnPause(JNIEnv* env)
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_BabylonNativeWrapper_activityOnResume(JNIEnv* env)
+Java_BabylonNative_Wrapper_activityOnResume(JNIEnv* env)
 {
     if (runtime)
     {

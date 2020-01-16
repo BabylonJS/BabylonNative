@@ -5,7 +5,7 @@ import android.view.Surface;
 
 import java.nio.ByteBuffer;
 
-public class BabylonNativeWrapper {
+public class Wrapper {
     // JNI interface
     static {
         System.loadLibrary("BabylonNativeJNI");

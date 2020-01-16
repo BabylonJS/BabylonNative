@@ -4,14 +4,16 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 
-public class AndroidViewAppActivity extends Activity implements AndroidViewAppSurfaceView.ViewDelegate {
-    AndroidViewAppSurfaceView mView;
+import BabylonNative.BabylonView;
+
+public class AndroidViewAppActivity extends Activity implements BabylonView.ViewDelegate {
+    BabylonView mView;
 
     // Activity life
     @Override protected void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
-        mView = new AndroidViewAppSurfaceView(getApplication(), this);
+        mView = new BabylonView(getApplication(), this);
         setContentView(mView);
     }
 

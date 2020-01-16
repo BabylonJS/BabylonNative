@@ -1,4 +1,4 @@
-package com.android.testapp;
+package BabylonNative;
 
 import android.content.Context;
 import android.util.Log;
@@ -10,16 +10,16 @@ import android.view.View;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
-    private static final String TAG = "AndroidViewAppSurfaceView";
+public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
+    private static final String TAG = "BabylonView";
 
     private ViewDelegate mViewDelegate;
     public final static int RENDERMODE_CONTINUOUSLY = 1;
 
-    public AndroidViewAppSurfaceView(Context context, ViewDelegate viewDelegate) {
+    public BabylonView(Context context, ViewDelegate viewDelegate) {
         super(context);
         init(viewDelegate);
-        BabylonNative.BabylonNativeWrapper.initEngine(context.getResources().getAssets());
+        BabylonNative.Wrapper.initEngine(context.getResources().getAssets());
     }
     private void init(ViewDelegate viewDelegate) {
         SurfaceHolder holder = getHolder();
@@ -32,33 +32,33 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
 
     public void loadScript(String path)
     {
-        BabylonNative.BabylonNativeWrapper.loadScript(path);
+        BabylonNative.Wrapper.loadScript(path);
     }
 
     public void eval(String source, String sourceURL)
     {
-        BabylonNative.BabylonNativeWrapper.eval(source, sourceURL);
+        BabylonNative.Wrapper.eval(source, sourceURL);
     }
 
     public void onPause() {
         setVisibility(View.GONE);
-        BabylonNative.BabylonNativeWrapper.activityOnPause();
+        BabylonNative.Wrapper.activityOnPause();
         mGLThread.onPause();
     }
 
     public void onResume() {
-        BabylonNative.BabylonNativeWrapper.activityOnResume();
+        BabylonNative.Wrapper.activityOnResume();
         mGLThread.onResume();
     }
 
     // render life
     public void onSurfaceCreated() {
-        BabylonNative.BabylonNativeWrapper.surfaceCreated(getHolder().getSurface());
+        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface());
         mViewDelegate.onViewReady();
     }
 
     public void onSurfaceChanged(int w, int h) {
-        BabylonNative.BabylonNativeWrapper.surfaceChanged(w, h, getHolder().getSurface());
+        BabylonNative.Wrapper.surfaceChanged(w, h, getHolder().getSurface());
     }
 
     public interface ViewDelegate {
@@ -72,13 +72,13 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
         float mY = event.getY();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, true);
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
                 break;
             case MotionEvent.ACTION_MOVE:
-                BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, true);
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
                 break;
             case MotionEvent.ACTION_UP:
-                BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, false);
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, false);
                 break;
         }
         return true;
@@ -86,7 +86,7 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
 
     @Override
     protected void finalize() throws Throwable {
-        BabylonNative.BabylonNativeWrapper.finishEngine();
+        BabylonNative.Wrapper.finishEngine();
         try {
             if (mGLThread != null) {
                 // GLThread may still be running if this view was never
@@ -100,14 +100,14 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
 
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
-     * not normally called or subclassed by clients of AndroidViewAppSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
         mGLThread.surfaceCreated();
     }
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
-     * not normally called or subclassed by clients of AndroidViewAppSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceDestroyed(SurfaceHolder holder) {
         // Surface will be destroyed when we return
@@ -115,14 +115,14 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
     }
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
-     * not normally called or subclassed by clients of AndroidViewAppSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         mGLThread.onWindowResize(w, h);
     }
     /**
      * This method is part of the SurfaceHolder.Callback2 interface, and is
-     * not normally called or subclassed by clients of AndroidViewAppSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceRedrawNeededAsync(SurfaceHolder holder, Runnable finishDrawing) {
         if (mGLThread != null) {
@@ -131,7 +131,7 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
     }
     /**
      * This method is part of the SurfaceHolder.Callback2 interface, and is
-     * not normally called or subclassed by clients of AndroidViewAppSurfaceView.
+     * not normally called or subclassed by clients of BabylonView.
      */
     @Deprecated
     @Override
@@ -141,14 +141,14 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
     }
 
     static class GLThread extends Thread {
-        GLThread(WeakReference<AndroidViewAppSurfaceView> AndroidViewAppSurfaceViewWeakRef) {
+        GLThread(WeakReference<BabylonView> BabylonViewWeakRef) {
             super();
             mWidth = 0;
             mHeight = 0;
             mRequestRender = true;
             mRenderMode = RENDERMODE_CONTINUOUSLY;
             mWantRenderNotification = false;
-            mAndroidViewAppSurfaceViewWeakRef = AndroidViewAppSurfaceViewWeakRef;
+            mBabylonViewWeakRef = BabylonViewWeakRef;
         }
         @Override
         public void run() {
@@ -183,7 +183,7 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
             }
         }
         private void guardedRun() throws InterruptedException {
-            //mEglHelper = new EglHelper(mAndroidViewAppSurfaceViewWeakRef);
+            //mEglHelper = new EglHelper(mBabylonViewWeakRef);
             mHaveEglContext = false;
             mHaveEglSurface = false;
             mWantRenderNotification = false;
@@ -249,10 +249,10 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                             }
                             // When pausing, optionally release the EGL Context:
                             if (pausing && mHaveEglContext) {
-                                AndroidViewAppSurfaceView view = mAndroidViewAppSurfaceViewWeakRef.get();
+                                BabylonView view = mBabylonViewWeakRef.get();
 
                                 //if (!preserveEglContextOnPause) {
-                                    stopEglContextLocked();
+                                stopEglContextLocked();
                                 //}
                             }
                             // Have we lost the SurfaceView surface?
@@ -378,7 +378,7 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         createGlInterface = false;
                     }
                     if (createEglContext) {
-                        AndroidViewAppSurfaceView view = mAndroidViewAppSurfaceViewWeakRef.get();
+                        BabylonView view = mBabylonViewWeakRef.get();
                         if (view != null) {
                             try {
                                 view.onSurfaceCreated();
@@ -388,7 +388,7 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         createEglContext = false;
                     }
                     if (sizeChanged) {
-                        AndroidViewAppSurfaceView view = mAndroidViewAppSurfaceViewWeakRef.get();
+                        BabylonView view = mBabylonViewWeakRef.get();
                         if (view != null) {
                             try {
                                 view.onSurfaceChanged(w, h);
@@ -398,7 +398,7 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         sizeChanged = false;
                     }
                     {
-                        AndroidViewAppSurfaceView view = mAndroidViewAppSurfaceViewWeakRef.get();
+                        BabylonView view = mBabylonViewWeakRef.get();
                         if (view != null) {
                             try {
                                 if (finishDrawingRunnable != null) {
@@ -633,10 +633,10 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
         private Runnable mFinishDrawingRunnable = null;
         /**
          * Set once at thread construction time, nulled out when the parent view is garbage
-         * called. This weak reference allows the AndroidViewAppSurfaceView to be garbage collected while
+         * called. This weak reference allows the BabylonView to be garbage collected while
          * the GLThread is still alive.
          */
-        private WeakReference<AndroidViewAppSurfaceView> mAndroidViewAppSurfaceViewWeakRef;
+        private WeakReference<BabylonView> mBabylonViewWeakRef;
     }
 
     private static class GLThreadManager {
@@ -653,8 +653,8 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
             notifyAll();
         }
     }
-    private final WeakReference<AndroidViewAppSurfaceView> mThisWeakRef =
-            new WeakReference<AndroidViewAppSurfaceView>(this);
+    private final WeakReference<BabylonView> mThisWeakRef =
+            new WeakReference<BabylonView>(this);
     private static final GLThreadManager sGLThreadManager = new GLThreadManager();
     private GLThread mGLThread;
 }
