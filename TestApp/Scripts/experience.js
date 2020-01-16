@@ -4,9 +4,10 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var xr = false;
+var cube;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.7);
+    cube = BABYLON.Mesh.CreateBox("box1", 0.7);
     return Promise.resolve();
 }
 

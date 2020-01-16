@@ -12,59 +12,81 @@ import java.util.ArrayList;
 
 class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
     private static final String TAG = "AndroidViewAppSurfaceView";
-    private static final boolean DEBUG = true;
-    private Renderer mRenderer;
+
+    private ViewDelegate mViewDelegate;
     public final static int RENDERMODE_CONTINUOUSLY = 1;
 
-    public AndroidViewAppSurfaceView(Context context, Renderer renderer) {
+    public AndroidViewAppSurfaceView(Context context, ViewDelegate viewDelegate) {
         super(context);
-        init(renderer);
+        init(viewDelegate);
+        BabylonNative.BabylonNativeWrapper.initEngine(context.getResources().getAssets());
     }
-    private void init(Renderer renderer) {
+    private void init(ViewDelegate viewDelegate) {
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
         setOnTouchListener(this);
-        mRenderer = renderer;
+        mViewDelegate = viewDelegate;
         mGLThread = new GLThread(mThisWeakRef);
         mGLThread.start();
     }
 
+    public void loadScript(String path)
+    {
+        BabylonNative.BabylonNativeWrapper.loadScript(path);
+    }
+
+    public void eval(String source, String sourceURL)
+    {
+        BabylonNative.BabylonNativeWrapper.eval(source, sourceURL);
+    }
+
     public void onPause() {
+        setVisibility(View.GONE);
+        BabylonNative.BabylonNativeWrapper.activityOnPause();
         mGLThread.onPause();
     }
 
     public void onResume() {
+        BabylonNative.BabylonNativeWrapper.activityOnResume();
         mGLThread.onResume();
     }
 
     // render life
     public void onSurfaceCreated() {
-        mRenderer.onSurfaceCreated(getHolder());
+        BabylonNative.BabylonNativeWrapper.surfaceCreated(getHolder().getSurface());
+        mViewDelegate.onViewReady();
     }
 
     public void onSurfaceChanged(int w, int h) {
-        mRenderer.onSurfaceChanged(w, h);
+        BabylonNative.BabylonNativeWrapper.surfaceChanged(w, h, getHolder().getSurface());
     }
 
-    public void onDrawFrame() {
-        mRenderer.onDrawFrame();
-    }
-
-    public interface Renderer {
-        void onSurfaceCreated(SurfaceHolder surfaceHolder);
-        void onSurfaceChanged(int width, int height);
-        void onDrawFrame();
-        boolean onTouchEvent(MotionEvent event);
+    public interface ViewDelegate {
+        void onViewReady();
     }
 
     @Override
     public boolean onTouch(View v, MotionEvent event)
     {
-        return mRenderer.onTouchEvent(event);
+        float mX = event.getX();
+        float mY = event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, true);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, true);
+                break;
+            case MotionEvent.ACTION_UP:
+                BabylonNative.BabylonNativeWrapper.setTouchInfo(mX, mY, false);
+                break;
+        }
+        return true;
     }
 
     @Override
     protected void finalize() throws Throwable {
+        BabylonNative.BabylonNativeWrapper.finishEngine();
         try {
             if (mGLThread != null) {
                 // GLThread may still be running if this view was never
@@ -379,7 +401,6 @@ class AndroidViewAppSurfaceView extends SurfaceView implements SurfaceHolder.Cal
                         AndroidViewAppSurfaceView view = mAndroidViewAppSurfaceViewWeakRef.get();
                         if (view != null) {
                             try {
-                                view.onDrawFrame();
                                 if (finishDrawingRunnable != null) {
                                     finishDrawingRunnable.run();
                                     finishDrawingRunnable = null;
