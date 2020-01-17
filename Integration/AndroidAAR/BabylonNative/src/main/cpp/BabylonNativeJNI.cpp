@@ -78,7 +78,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         int32_t width  = ANativeWindow_getWidth(window);
         int32_t height = ANativeWindow_getHeight(window);
 
-        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, width, height, GetAssetContents);
+        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, width, height);
 
         runtime->Dispatch([](Babylon::Env& env)
                           {
@@ -116,7 +116,7 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
     if (runtime)
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-        runtime->UpdateSurface(width, height, window);
+        //runtime->UpdateSurface(width, height, window);
     }
 }
 
