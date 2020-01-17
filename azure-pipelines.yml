@@ -214,7 +214,7 @@ jobs:
     displayName: 'Build androidJNI'
     
 
-- job: Integration Android AAR
+- job: Integration_Android_AAR
   pool:
     vmImage: 'macOS-10.14'
     
