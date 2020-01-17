@@ -27,7 +27,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/")
 
-set(BABYLON_NATIVE_PACKAGE_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
+set(BABYLON_NATIVE_PACKAGE_DIR "${CMAKE_CURRENT_LIST_DIR}/..")
 add_subdirectory(${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/ ${BABYLON_NATIVE_PACKAGE_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
 add_library(BabylonNativeJNI SHARED
@@ -35,7 +35,7 @@ add_library(BabylonNativeJNI SHARED
             ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/source/js_native_api_v8.cc
             ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/source/env_v8.cc
             ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/source/env.cc
-            ${BABYLON_NATIVE_PACKAGE_DIR}/Shared/InputManager.cpp)
+            ${BABYLON_NATIVE_PACKAGE_DIR}/../../TestApp/Source/Shared/InputManager.cpp)
 
 target_compile_definitions(BabylonNativeJNI PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 
@@ -44,7 +44,7 @@ target_include_directories(BabylonNativeJNI
         ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Include
         ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/v8/include
         ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/include
-        ${BABYLON_NATIVE_PACKAGE_DIR}/Shared)
+        ${BABYLON_NATIVE_PACKAGE_DIR}/../../TestApp/Source/Shared)
 
 target_link_libraries(BabylonNativeJNI
         ${OPENGL_LIB}
@@ -53,9 +53,9 @@ target_link_libraries(BabylonNativeJNI
         log
         -lz
         Library
-        C:/Users/cedri/Dev/Babylon/tempAndroidRender/BabylonNative/TestApp/Source/Android/app/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.so)
+        ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.so)
 
-#configure_file(
-#    "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"
-#    "${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libc++_shared.so"
-#    COPYONLY)
+configure_file(
+    "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"
+    "${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libc++_shared.so"
+    COPYONLY)
