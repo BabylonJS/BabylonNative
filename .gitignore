@@ -1,1 +1,8 @@
 /Build
+.cxx
+*.iml
+*.so
+local.properties
+.gradle
+.idea
+Library/Dependencies/v8/include
