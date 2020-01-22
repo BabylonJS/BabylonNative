@@ -17,15 +17,13 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
 
     public BabylonView(Context context, ViewDelegate viewDelegate) {
         super(context);
-        init(viewDelegate);
-        BabylonNative.Wrapper.initEngine(context.getResources().getAssets());
-    }
-
-    private void init(ViewDelegate viewDelegate) {
+        
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
         setOnTouchListener(this);
-        mViewDelegate = viewDelegate;
+        this.mViewDelegate = viewDelegate;
+        
+        BabylonNative.Wrapper.initEngine(context.getResources().getAssets());
     }
 
     public void loadScript(String path) {
@@ -52,7 +50,7 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     public void surfaceCreated(SurfaceHolder holder) {
         BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface());
         if (!this.mViewReady) {
-            mViewDelegate.onViewReady();
+            this.mViewDelegate.onViewReady();
             mViewReady = true;
         }
     }
@@ -107,7 +105,6 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     @Deprecated
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
-        // Since we are part of the framework we know only surfaceRedrawNeededAsync
-        // will be called.
+        // Redraw happens in the bgfx thread. No need to handle it here.
     }
 }

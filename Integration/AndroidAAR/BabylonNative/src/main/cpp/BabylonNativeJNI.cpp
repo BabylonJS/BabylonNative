@@ -30,29 +30,6 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 static AAssetManager* g_assetMgrNative = nullptr;
 static const char* Root = "file://";
-namespace
-{
-    // this is the way to load apk embedded assets.
-    static std::vector<char> GetAssetContents(const char* filename)
-    {
-        std::string filenameStr{filename};
-        if (filenameStr.substr(0, strlen(Root)) == std::string(Root))
-        {
-            filename += strlen(Root) + 1; // + "/"
-        }
-        std::vector<char> buffer;
-        AAsset *asset = AAssetManager_open(g_assetMgrNative, filename,
-                                           AASSET_MODE_UNKNOWN);
-        if (asset != nullptr)
-        {
-            size_t size = AAsset_getLength64(asset);
-            buffer.resize(size);
-            AAsset_read(asset, buffer.data(), size);
-            AAsset_close(asset);
-        }
-        return buffer;
-    }
-}
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
@@ -60,12 +37,13 @@ Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
 {
     auto asset_manager = AAssetManager_fromJava(env, assetMgr);
     g_assetMgrNative = asset_manager;
-    jboolean iscopy;
 }
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj)
 {
+    inputBuffer.reset();
+    runtime.reset();
 }
 
 JNIEXPORT void JNICALL
@@ -105,8 +83,6 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         runtime->LoadScript("Scripts/babylon.max.js");
         runtime->LoadScript("Scripts/babylon.glTF2FileLoader.js");
         //runtime->LoadScript("Scripts/experience.js");
-
-        runtime->UpdateSize(width, height);
     }
 }
 
