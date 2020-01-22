@@ -29,3 +29,5 @@ add_subdirectory(Library)
 if(NOT ANDROID)
 add_subdirectory(TestApp)
 endif()
+
+add_subdirectory(Integration)

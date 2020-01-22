@@ -32,6 +32,14 @@ jobs:
       sdk: 'macosx'
       useXcpretty: false
     displayName: 'Build macOS'
+
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+      scheme: 'BabylonNativeMacOS'
+      sdk: 'macosx'
+      useXcpretty: false
+    displayName: 'Build macOS framework'
     
 - job: iOS
   pool:
