@@ -28,8 +28,8 @@ JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jobj
 std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
-static AAssetManager* g_assetMgrNative = nullptr;
-static const char* Root = "file://";
+AAssetManager* g_assetMgrNative = nullptr;
+const char* Root = "file://";
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,

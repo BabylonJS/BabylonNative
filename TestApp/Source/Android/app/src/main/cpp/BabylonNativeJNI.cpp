@@ -29,7 +29,7 @@ std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::string androidPackagePath;
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
-static AAssetManager* g_assetMgrNative = nullptr;
+AAssetManager* g_assetMgrNative = nullptr;
 
 namespace
 {
