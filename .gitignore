@@ -6,3 +6,11 @@ local.properties
 .gradle
 .idea
 Library/Dependencies/v8/include
+.gradle
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+*.apk
+*.ap_
+*.log
