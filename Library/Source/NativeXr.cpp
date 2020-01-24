@@ -724,7 +724,9 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {});
+                    {
+                        InstanceMethod("getOffsetReferenceSpace", &XRReferenceSpace::GetOffsetReferenceSpace),
+                    });
 
                 constructor = Napi::Persistent(func);
                 constructor.SuppressDestruct();
@@ -740,12 +742,30 @@ namespace Babylon
             XRReferenceSpace(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRReferenceSpace>{info}
             {
-                // Only unbounded reference spaces are supported at the moment.
-                assert(info[0].As<Napi::String>().Utf8Value() == XRReferenceSpaceType::UNBOUNDED);
+                if (info[0].IsString())
+                {
+                    // TODO: Actually support the different types of reference spaces.
+                    const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
+                    assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED || referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                }
+                else
+                {
+                    // TODO: Actually take the offset into account.
+                    auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
+                    assert(transform != nullptr);
+                }
             }
 
         private:
             static inline Napi::FunctionReference constructor{};
+
+            Napi::Value GetOffsetReferenceSpace(const Napi::CallbackInfo& info)
+            {
+                // TODO: Handle XRBoundedReferenceSpace case
+                // https://immersive-web.github.io/webxr/#dom-xrreferencespace-getoffsetreferencespace
+
+                return XRReferenceSpace::New(info);
+            }
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
@@ -829,7 +849,7 @@ namespace Babylon
         {
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
-            static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "oninputsourceschange";
+            static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
 
         public:
             static void Initialize(Napi::Env& env)
@@ -975,6 +995,11 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
                 for (auto& inputSource : frame.InputSources)
                 {
+                    if (!inputSource.TrackedThisFrame)
+                    {
+                        continue;
+                    }
+
                     current.insert(inputSource.ID);
 
                     auto found = m_idToInputSource.find(inputSource.ID);
