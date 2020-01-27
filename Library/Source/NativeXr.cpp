@@ -130,9 +130,10 @@ namespace
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
         SetXRInputSourceSpaces(jsInputSource, inputSource);
 
-        // auto profiles = Napi::Array::New(env);
-        // Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
-        // profiles.Set(0, string);
+        auto profiles = Napi::Array::New(env, 1);
+        Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
+        profiles.Set(uint32_t{ 0 }, string);
+        jsInputSource.Set("profiles", profiles);
 
         return Napi::Persistent(jsInputSource);
     }
@@ -800,7 +801,11 @@ namespace Babylon
                 : Napi::ObjectWrap<XRFrame>{info}
                 , m_jsXRViewerPose{Napi::Persistent(XRViewerPose::New())}
                 , m_xrViewerPose{*XRViewerPose::Unwrap(m_jsXRViewerPose.Value())}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New())}
+                , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
+                , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
+                m_jsPose.Set("transform", m_jsTransform.Value());
             }
 
             void Update(const xr::System::Session::Frame& frame)
@@ -816,6 +821,10 @@ namespace Babylon
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
+
+            Napi::ObjectReference m_jsTransform{};
+            XRRigidTransform& m_transform;
+            Napi::ObjectReference m_jsPose{};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
@@ -834,13 +843,8 @@ namespace Babylon
             {
                 const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
 
-                // TODO: Don't new up here.
-                auto transform = XRRigidTransform::New();
-                XRRigidTransform::Unwrap(transform)->Update(space, false);
-
-                auto pose = Napi::Object::New(info.Env());
-                pose.Set("transform", transform);
-                return pose;
+                m_transform.Update(space, false);
+                return m_jsPose.Value();
             }
         };
 
@@ -952,11 +956,7 @@ namespace Babylon
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& info)
             {
-                //return m_jsInputSources.Value();
-
-                // TODO: Delete the following and re-enable the above when ready.
-                auto arr = m_jsInputSources.Value();
-                return arr.Length() == 0 ? info.Env().Null() : arr;
+                return m_jsInputSources.Value();
             }
 
             void AddEventListener(const Napi::CallbackInfo& info)
