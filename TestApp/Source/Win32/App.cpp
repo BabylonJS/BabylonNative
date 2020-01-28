@@ -75,7 +75,20 @@ namespace
         std::vector<std::string> scripts = GetCommandLineArguments();
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path());
         std::string rootUrl{ scripts.empty() ? moduleRootUrl : GetUrlFromPath(std::filesystem::path{ scripts.back() }.parent_path()) };
-        runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl);
+
+        RECT rect;
+        if (!GetWindowRect(hWnd, &rect))
+        {
+            return;
+        }
+        auto width = rect.right - rect.left;
+        auto height = rect.bottom - rect.top;
+        runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl, width, height);
+        
+        // issue a resize here because on some platforms (UWP, WIN32) WM_SIZE is received before the runtime construction
+        // So the context is created with the right size but the nativeWindow still has the wrong size
+        // depending on how you create your app (runtime created before WM_SIZE is received, this call is not needed)
+        runtime->UpdateSize(width, height);
 
         runtime->Dispatch([](Babylon::Env& env)
         {
