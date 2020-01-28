@@ -1,4 +1,4 @@
-project(BabylonNative)
+project(BabylonNativeMacOSFramework)
 
 set(FRAMEWORK_NAME BabylonNativeMacOS)
 
@@ -9,7 +9,14 @@ set(SCRIPTS "${RESOURCE_DIR}/Scripts/babylon.glTF2FileLoader.js"
     "${RESOURCE_DIR}/Scripts/playground_runner.js"
     "${RESOURCE_DIR}/Scripts/babylonjs.materials.js")
 
-add_library(${FRAMEWORK_NAME} "BabylonViewController.mm" ${SCRIPTS})
+add_library(${FRAMEWORK_NAME} STATIC 
+"BabylonViewController.mm" 
+"BabylonViewController.h" 
+            "${CMAKE_CURRENT_LIST_DIR}/../../Library/Dependencies/napi/source/js_native_api_JavaScriptCore.cc"
+            "${CMAKE_CURRENT_LIST_DIR}/../../Library/Dependencies/napi/source/env_JavaScriptCore.cc"
+            "${CMAKE_CURRENT_LIST_DIR}/../../Library/Dependencies/napi/source/env.cc"
+            "${CMAKE_CURRENT_LIST_DIR}/../../TestApp/Source/Shared/InputManager.cpp"
+${SCRIPTS})
 
 target_compile_definitions(${FRAMEWORK_NAME} PRIVATE HAVE_INSPECTOR=0)
 target_compile_definitions(${FRAMEWORK_NAME} PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
@@ -25,7 +32,7 @@ add_dependencies(${FRAMEWORK_NAME} Library)
 add_custom_command(
     TARGET ${FRAMEWORK_NAME}
     POST_BUILD
-    COMMAND ${CMAKE_AR} -rcT $<TARGET_FILE:${FRAMEWORK_NAME}>
+    COMMAND libtool -static $<TARGET_FILE:${FRAMEWORK_NAME}>
         $<TARGET_FILE:Library>
         $<TARGET_FILE:bx>
         $<TARGET_FILE:bimg>
@@ -41,6 +48,7 @@ add_custom_command(
         $<TARGET_FILE:glslang>
         $<TARGET_FILE:OSDependent>
         $<TARGET_FILE:OGLCompiler>
+        -o $<TARGET_FILE:${FRAMEWORK_NAME}>
     COMMENT "Combining libs..."
 )
 
@@ -49,7 +57,8 @@ set_target_properties(${FRAMEWORK_NAME} PROPERTIES
   FRAMEWORK_VERSION C
   MACOSX_FRAMEWORK_IDENTIFIER com.babylon.native
   #MACOSX_FRAMEWORK_INFO_PLIST Info.plist
-  PUBLIC_HEADER BabylonViewController.h
+  PUBLIC_HEADER "BabylonViewController.h"
+  #ADD_EXECUTABLE libBabylonNative.a
   #XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "MacOS Developer"
   RESOURCE "${SCRIPTS}"
 )
