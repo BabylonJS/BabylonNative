@@ -63,15 +63,19 @@ namespace Babylon
 
         void DisposeJsRuntimeForThread()
         {
-            JsContextRef context;
-            ThrowIfFailed(JsGetCurrentContext(&context));
-
-            JsRuntimeHandle runtime;
-            ThrowIfFailed(JsGetRuntime(context, &runtime));
-
-            ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
-
-            ThrowIfFailed(JsDisposeRuntime(runtime));
+            // TODO: There's an order-of-teardown dependency right now that gets triggered
+            // if we actually dispose the runtime properly. Commenting this out until we
+            // find a way to resolve that problem.
+            //
+            // JsContextRef context;
+            // ThrowIfFailed(JsGetCurrentContext(&context));
+            // 
+            // JsRuntimeHandle runtime;
+            // ThrowIfFailed(JsGetRuntime(context, &runtime));
+            // 
+            // ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
+            // 
+            // ThrowIfFailed(JsDisposeRuntime(runtime));
         }
     }
 
@@ -306,7 +310,7 @@ namespace Babylon
         // Create the N-API environment
         auto env = Napi::Attach();
         m_env = &env;
-        auto hostScopeGuard = gsl::finally([this, env]
+        auto envScopeGuard = gsl::finally([this, env]
         {
             m_env = nullptr;
             Napi::Detach(env);
