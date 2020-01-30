@@ -2,15 +2,12 @@
 
 #include "napi.h"
 
-namespace Babylon
+namespace Napi
 {
-    class Env : public Napi::Env
-    {
-    public:
-        explicit Env(const char* executablePath, std::function<void(std::function<void()>)> executeOnScriptThread);
-        Env(const Env&) = delete;
-        ~Env();
+    // TODO: Move this to a JS-specific location.
+    Napi::Env Attach();
 
-        void Eval(const char* string, const char* sourceUrl);
-    };
+    void Detach(Napi::Env);
+
+    Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl);
 }

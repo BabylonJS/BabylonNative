@@ -24,7 +24,7 @@ namespace Babylon
         assert(SUCCEEDED(hr));
         auto coInitializeScopeGuard = gsl::finally([] { CoUninitialize(); });
 
-        Dispatch([](Env& env) {
+        Dispatch([](auto env) {
             InitializeNativeXr(env);
         });
 

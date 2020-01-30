@@ -4,12 +4,77 @@
 #include "NativeWindow.h"
 #include "XMLHttpRequest.h"
 
+#define USE_EDGEMODE_JSRT
+#include <jsrt.h>
+#undef USE_EDGEMODE_JSRT
+
 #include <curl/curl.h>
 #include <napi/env.h>
 #include <sstream>
 
 namespace Babylon
 {
+    namespace
+    {
+        void ThrowIfFailed(JsErrorCode errorCode)
+        {
+            if (errorCode != JsErrorCode::JsNoError)
+            {
+                throw std::exception();
+            }
+        }
+
+        using DispatchFunction = std::function<void(std::function<void()>)>;
+        void CreateJsRuntimeForThread(DispatchFunction& dispatch)
+        {
+            // Create the runtime. We're only going to use one runtime for this host.
+            JsRuntimeHandle jsRuntime;
+            ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
+
+            // Create a single execution context.
+            JsContextRef context;
+            ThrowIfFailed(JsCreateContext(jsRuntime, &context));
+
+            // Now set the execution context as being the current one on this thread.
+            ThrowIfFailed(JsSetCurrentContext(context));
+
+            // Set up ES6 Promise.
+            ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState)
+            {
+                ThrowIfFailed(JsAddRef(task, nullptr));
+                auto* dispatch = reinterpret_cast<DispatchFunction*>(callbackState);
+                dispatch->operator()([task]()
+                {
+                    JsValueRef undefined;
+                    ThrowIfFailed(JsGetUndefinedValue(&undefined));
+                    ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
+                    ThrowIfFailed(JsRelease(task, nullptr));
+                });
+            }, &dispatch));
+
+            // UWP namespace projection; all UWP under Windows namespace should work.
+            ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
+
+#ifdef _DEBUG
+            // Put Chakra in debug mode.
+            ThrowIfFailed(JsStartDebugging());
+#endif
+        }
+
+        void DisposeJsRuntimeForThread()
+        {
+            JsContextRef context;
+            ThrowIfFailed(JsGetCurrentContext(&context));
+
+            JsRuntimeHandle runtime;
+            ThrowIfFailed(JsGetRuntime(context, &runtime));
+
+            ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
+
+            ThrowIfFailed(JsDisposeRuntime(runtime));
+        }
+    }
+
     namespace
     {
         static constexpr auto JS_WINDOW_NAME = "window";
@@ -79,7 +144,7 @@ namespace Babylon
         auto lock = AcquireTaskLock();
         auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url).data()), Task);
         Task = whenAllTask.then(m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
-            m_env->Eval(std::get<0>(args).data(), url.data());
+            Napi::Eval(*m_env, std::get<0>(args).data(), url.data());
         });
     }
 
@@ -87,11 +152,11 @@ namespace Babylon
     {
         auto lock = AcquireTaskLock();
         Task = Task.then(m_dispatcher, m_cancelSource, [this, string, sourceUrl]() {
-            m_env->Eval(string.data(), sourceUrl.data());
+            Napi::Eval(*m_env, string.data(), sourceUrl.data());
         });
     }
 
-    void RuntimeImpl::Dispatch(std::function<void(Env&)> func)
+    void RuntimeImpl::Dispatch(std::function<void(Napi::Env)> func)
     {
         auto lock = AcquireTaskLock();
         Task = Task.then(m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
@@ -197,7 +262,7 @@ namespace Babylon
 
     void RuntimeImpl::InitializeJavaScriptVariables()
     {
-        auto& env = *m_env;
+        auto env = *m_env;
         auto global = env.Global();
 
         global.Set(JS_WINDOW_NAME, global);
@@ -224,16 +289,28 @@ namespace Babylon
     {
         m_dispatcher.set_affinity(std::this_thread::get_id());
 
-        auto executeOnScriptThread = [this](std::function<void()> action) {
-            Dispatch([action = std::move(action)](auto&) {
-                action();
-            });
+        // Create the JavaScript runtime.
+        DispatchFunction dispatchFunction{
+            [this](std::function<void()> action) {
+                Dispatch([action = std::move(action)](auto&) {
+                    action();
+                });
+            }
         };
+        CreateJsRuntimeForThread(dispatchFunction);
+        auto jsScopeGuard = gsl::finally([]
+        {
+            DisposeJsRuntimeForThread();
+        });
 
-        Env env{GetModulePath().u8string().data(), std::move(executeOnScriptThread)};
-
+        // Create the N-API environment
+        auto env = Napi::Attach();
         m_env = &env;
-        auto hostScopeGuard = gsl::finally([this] { m_env = nullptr; });
+        auto hostScopeGuard = gsl::finally([this, env]
+        {
+            m_env = nullptr;
+            Napi::Detach(env);
+        });
 
         InitializeJavaScriptVariables();
 
