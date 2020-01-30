@@ -16,7 +16,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if( APPLE AND NOT IOS )
+# Makefile generators on apple need this flag to compile mixed objective/c++
+if( APPLE AND NOT XCODE )
 	set( CMAKE_CXX_FLAGS "-ObjC++" )
 endif()
 

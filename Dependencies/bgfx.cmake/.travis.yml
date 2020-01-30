@@ -43,9 +43,23 @@ matrix:
     os: osx
     osx_image: xcode10
     env:
+      - CMAKE_FLAGS="-GXcode"
       - AMALGAMATED=OFF
 
   - name: "macOS Xcode 10 Amalgamated"
+    os: osx
+    osx_image: xcode10
+    env:
+      - CMAKE_FLAGS="-GXcode"
+      - AMALGAMATED=ON
+
+  - name: "macOS Xcode 10 (Makefiles)"
+    os: osx
+    osx_image: xcode10
+    env:
+      - AMALGAMATED=OFF
+
+  - name: "macOS Xcode 10 Amalgamated (Makefiles)"
     os: osx
     osx_image: xcode10
     env:
