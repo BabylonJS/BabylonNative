@@ -103,7 +103,8 @@ namespace Babylon
     }
 
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
-        : m_nativeWindowPtr{nativeWindowPtr}
+        : m_dispatcher{std::make_unique<DispatcherT>()}
+        , m_nativeWindowPtr{nativeWindowPtr}
         , m_thread{[this] { ThreadProcedure(); }}
         , m_rootUrl{rootUrl}
     {
@@ -121,7 +122,7 @@ namespace Babylon
 
     void RuntimeImpl::UpdateSize(float width, float height)
     {
-        m_dispatcher.queue([width, height, this] {
+        m_dispatcher->queue([width, height, this] {
             auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(*m_env);
             window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
@@ -147,7 +148,7 @@ namespace Babylon
     {
         auto lock = AcquireTaskLock();
         auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url).data()), Task);
-        Task = whenAllTask.then(m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
+        Task = whenAllTask.then(*m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
             Napi::Eval(*m_env, std::get<0>(args).data(), url.data());
         });
     }
@@ -155,7 +156,7 @@ namespace Babylon
     void RuntimeImpl::Eval(const std::string& string, const std::string& sourceUrl)
     {
         auto lock = AcquireTaskLock();
-        Task = Task.then(m_dispatcher, m_cancelSource, [this, string, sourceUrl]() {
+        Task = Task.then(*m_dispatcher, m_cancelSource, [this, string, sourceUrl]() {
             Napi::Eval(*m_env, string.data(), sourceUrl.data());
         });
     }
@@ -163,7 +164,7 @@ namespace Babylon
     void RuntimeImpl::Dispatch(std::function<void(Napi::Env)> func)
     {
         auto lock = AcquireTaskLock();
-        Task = Task.then(m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
+        Task = Task.then(*m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
             func(*m_env);
         });
     }
@@ -209,7 +210,7 @@ namespace Babylon
     template<typename T>
     arcana::task<T, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url)
     {
-        return arcana::make_task(m_dispatcher, m_cancelSource, [url]() {
+        return arcana::make_task(*m_dispatcher, m_cancelSource, [url]() {
             T data{};
 
             auto curl = curl_easy_init();
@@ -249,9 +250,9 @@ namespace Babylon
         });
     }
 
-    arcana::manual_dispatcher<babylon_dispatcher::work_size>& RuntimeImpl::Dispatcher()
+    RuntimeImpl::DispatcherT& RuntimeImpl::Dispatcher()
     {
-        return m_dispatcher;
+        return *m_dispatcher;
     }
 
     arcana::cancellation& RuntimeImpl::Cancellation()
@@ -291,7 +292,7 @@ namespace Babylon
 
     void RuntimeImpl::BaseThreadProcedure()
     {
-        m_dispatcher.set_affinity(std::this_thread::get_id());
+        m_dispatcher->set_affinity(std::this_thread::get_id());
 
         // Create the JavaScript runtime.
         DispatchFunction dispatchFunction{
@@ -312,6 +313,11 @@ namespace Babylon
         m_env = &env;
         auto envScopeGuard = gsl::finally([this, env]
         {
+            // Because the dispatcher and task may take references to the N-API environment,
+            // they must be cleared before the env itself is destroyed.
+            m_dispatcher.reset();
+            Task = arcana::task_from_result<std::exception_ptr>();
+
             m_env = nullptr;
             Napi::Detach(env);
         });
@@ -329,7 +335,7 @@ namespace Babylon
             }
             {
                 std::unique_lock<std::mutex> lock(m_blockTickingMutex);
-                m_dispatcher.blocking_tick(m_cancelSource);
+                m_dispatcher->blocking_tick(m_cancelSource);
             }
         }
     }
