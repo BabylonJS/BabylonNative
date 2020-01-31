@@ -3,6 +3,7 @@
 #include "NativeWindow.h"
 #include "ShaderCompiler.h"
 #include "RuntimeImpl.h"
+#include "unsafe_ticketed_collection.h"
 
 #include <napi/napi.h>
 
@@ -17,8 +18,6 @@
 
 namespace Babylon
 {
-    using BgfxInitializationId = size_t;
-
     class ViewClearState final
     {
     public:
@@ -247,11 +246,14 @@ namespace Babylon
 
     struct ProgramData final
     {
-        ProgramData(BgfxInitializationId bgfxInitId)
-            : m_bgfxInitId{bgfxInitId}
+        ProgramData() = default;
+        ProgramData(const ProgramData&) = delete;
+        ProgramData(ProgramData&&) = delete;
+
+        ~ProgramData()
         {
+            bgfx::destroy(Program);
         }
-        ~ProgramData();
 
         std::unordered_map<std::string, uint32_t> AttributeLocations{};
         std::unordered_map<std::string, UniformInfo> VertexUniformNameToInfo{};
@@ -273,9 +275,6 @@ namespace Babylon
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
-
-    private:
-        const BgfxInitializationId m_bgfxInitId;
     };
 
     struct VertexArray final
@@ -388,6 +387,7 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler;
 
         ProgramData* m_currentProgram;
+        unsafe_ticketed_collection<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         RuntimeImpl& m_runtimeImpl;
 

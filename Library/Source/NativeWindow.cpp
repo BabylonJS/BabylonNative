@@ -44,14 +44,6 @@ namespace Babylon
     {
     }
 
-    NativeWindow::~NativeWindow()
-    {
-        for (const auto& [ptr, callback] : m_onResizeCallbacks)
-        {
-            *ptr = false;
-        }
-    }
-
     void NativeWindow::Resize(size_t newWidth, size_t newHeight)
     {
         if (newWidth != m_width || newHeight != m_height)
@@ -59,33 +51,16 @@ namespace Babylon
             m_width = newWidth;
             m_height = newHeight;
 
-            for (const auto& [ptr, callback] : m_onResizeCallbacks)
+            m_onResizeCallbacks.apply_to_all([this](auto& callback)
             {
                 callback(m_width, m_height);
-            }
+            });
         }
-    }
-
-    NativeWindow::OnResizeCallbackTicket::OnResizeCallbackTicket(OnResizeCallback&& callback, std::map<bool*, OnResizeCallback>& onResizeCallbacks)
-        : m_isCollectionStillAlive{ new bool{ true } }
-        , m_onResizeCallbacks{ onResizeCallbacks }
-    {
-        onResizeCallbacks[m_isCollectionStillAlive] = std::move(callback);
-    }
-
-    NativeWindow::OnResizeCallbackTicket::~OnResizeCallbackTicket()
-    {
-        if (*m_isCollectionStillAlive)
-        {
-            m_onResizeCallbacks.erase(m_isCollectionStillAlive);
-        }
-
-        delete m_isCollectionStillAlive;
     }
 
     NativeWindow::OnResizeCallbackTicket NativeWindow::AddOnResizeCallback(OnResizeCallback&& callback)
     {
-        return{ std::move(callback), m_onResizeCallbacks };
+        return m_onResizeCallbacks.insert(std::move(callback));
     }
 
     void* NativeWindow::GetWindowPtr() const
