@@ -360,7 +360,7 @@ namespace Babylon
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
 
-            static const auto& IndexToEye(size_t idx)
+            static const auto IndexToEye(size_t idx)
             {
                 switch (idx)
                 {
