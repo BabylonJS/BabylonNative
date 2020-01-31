@@ -4,8 +4,9 @@
 
 namespace Babylon
 {
+    // NOTE: This type is not thread-safe.
     template<typename T>
-    class unsafe_ticketed_collection
+    class ticketed_collection
     {
         using MapT = std::map<bool*, T>;
 
@@ -33,7 +34,7 @@ namespace Babylon
             }
 
         private:
-            friend class unsafe_ticketed_collection;
+            friend class ticketed_collection;
 
             ticket(T&& value, MapT& collection)
                 : m_isCollectionStillAlive{ new bool{true} }
@@ -46,7 +47,7 @@ namespace Babylon
             MapT& m_collection;
         };
 
-        ~unsafe_ticketed_collection()
+        ~ticketed_collection()
         {
             clear();
         }

@@ -285,9 +285,7 @@ namespace Babylon
         init.resolution.width = width;
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_FLAGS;
-
         bgfx::init(init);
-
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, init.resolution.width, init.resolution.height);
         bgfx::touch(0);
@@ -625,10 +623,10 @@ namespace Babylon
 
         programData->Program = bgfx::createProgram(vertexShader, fragmentShader, true);
 
-        auto* programDataPtr = programData.get();
+        auto* rawProgramData = programData.get();
         auto ticket = m_programDataCollection.insert(std::move(programData));
         auto finalizer = [ticket = std::move(ticket)](Napi::Env, ProgramData*) {};
-        return Napi::External<ProgramData>::New(info.Env(), programDataPtr, std::move(finalizer));
+        return Napi::External<ProgramData>::New(info.Env(), rawProgramData, std::move(finalizer));
     }
 
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)

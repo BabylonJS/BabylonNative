@@ -3,7 +3,7 @@
 #include "NativeWindow.h"
 #include "ShaderCompiler.h"
 #include "RuntimeImpl.h"
-#include "unsafe_ticketed_collection.h"
+#include "ticketed_collection.h"
 
 #include <napi/napi.h>
 
@@ -387,7 +387,7 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler;
 
         ProgramData* m_currentProgram;
-        unsafe_ticketed_collection<std::unique_ptr<ProgramData>> m_programDataCollection{};
+        ticketed_collection<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         RuntimeImpl& m_runtimeImpl;
 
