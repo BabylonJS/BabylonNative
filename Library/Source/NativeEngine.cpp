@@ -33,6 +33,37 @@ namespace Babylon
 {
     namespace
     {
+        class {
+        public:
+            void RecordBgfxInit()
+            {
+                assert(!m_isBgfxInitialized);
+                m_isBgfxInitialized = true;
+                m_bgfxInitializationId += 1;
+            }
+
+            void RecordBgfxShutdown()
+            {
+                assert(m_isBgfxInitialized);
+                m_isBgfxInitialized = false;
+            }
+
+            bool IsBgfxInitialized() const
+            {
+                return m_isBgfxInitialized;
+            }
+
+            BgfxInitializationId GetBgfxInitializationId() const
+            {
+                assert(m_isBgfxInitialized);
+                return m_bgfxInitializationId;
+            }
+
+        private:
+            bool m_isBgfxInitialized{ false };
+            BgfxInitializationId m_bgfxInitializationId{ 0 };
+        } BgfxStatus;
+
         template<typename AppendageT>
         inline void AppendBytes(std::vector<uint8_t>& bytes, const AppendageT appendage)
         {
@@ -275,6 +306,19 @@ namespace Babylon
             bgfx::TextureFormat::RGBA32F};
     }
 
+    ProgramData::~ProgramData()
+    {
+        // Because this class can be owned by JavaScript, it is possible for it to sometimes outlive 
+        // the bgfx initialization on which it depends. This is okay, as bgfx::shutdown will clean it
+        // up anyway; however, to avoid attempting to clean it up twice, we must make sure we only
+        // call bgfx::destroy() if the originating bgfx initialization is still active at the time
+        // this is destroyed.
+        if (BgfxStatus.IsBgfxInitialized() && BgfxStatus.GetBgfxInitializationId() == m_bgfxInitId)
+        {
+            bgfx::destroy(Program);
+        }
+    }
+
     void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
     {
         // Initialize bgfx.
@@ -285,7 +329,10 @@ namespace Babylon
         init.resolution.width = width;
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_FLAGS;
+
         bgfx::init(init);
+        BgfxStatus.RecordBgfxInit();
+
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, init.resolution.width, init.resolution.height);
         bgfx::touch(0);
@@ -388,6 +435,7 @@ namespace Babylon
 
     NativeEngine::~NativeEngine()
     {
+        BgfxStatus.RecordBgfxShutdown();
         bgfx::shutdown();
     }
 
@@ -515,7 +563,7 @@ namespace Babylon
         const auto vertexSource = info[0].As<Napi::String>().Utf8Value();
         const auto fragmentSource = info[1].As<Napi::String>().Utf8Value();
 
-        auto programData = new ProgramData();
+        auto programData = new ProgramData(BgfxStatus.GetBgfxInitializationId());
 
         std::vector<uint8_t> vertexBytes{};
         std::vector<uint8_t> fragmentBytes{};

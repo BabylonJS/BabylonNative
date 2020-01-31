@@ -17,6 +17,8 @@
 
 namespace Babylon
 {
+    using BgfxInitializationId = size_t;
+
     class ViewClearState final
     {
     public:
@@ -245,10 +247,11 @@ namespace Babylon
 
     struct ProgramData final
     {
-        ~ProgramData()
+        ProgramData(BgfxInitializationId bgfxInitId)
+            : m_bgfxInitId{bgfxInitId}
         {
-            bgfx::destroy(Program);
         }
+        ~ProgramData();
 
         std::unordered_map<std::string, uint32_t> AttributeLocations{};
         std::unordered_map<std::string, UniformInfo> VertexUniformNameToInfo{};
@@ -270,6 +273,9 @@ namespace Babylon
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
+
+    private:
+        const BgfxInitializationId m_bgfxInitId;
     };
 
     struct VertexArray final

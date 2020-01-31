@@ -3,7 +3,7 @@
 #include "napi/napi.h"
 #include "RuntimeImpl.h"
 
-#include <arcana/containers/ticketed_collection.h>
+#include <map>
 
 namespace Babylon
 {
@@ -15,11 +15,26 @@ namespace Babylon
         static Napi::FunctionReference GetAToBFunction(Napi::ObjectReference& nativeWindow);
 
         NativeWindow(const Napi::CallbackInfo& info);
+        ~NativeWindow();
 
         void Resize(size_t newWidth, size_t newHeight);
 
         using OnResizeCallback = std::function<void(size_t, size_t)>;
-        using OnResizeCallbackTicket = arcana::ticketed_collection<OnResizeCallback>::ticket;
+        class OnResizeCallbackTicket
+        {
+        public:
+            ~OnResizeCallbackTicket();
+
+            OnResizeCallbackTicket(const OnResizeCallbackTicket&) = delete;
+
+        private:
+            friend class NativeWindow;
+
+            OnResizeCallbackTicket(OnResizeCallback&&, std::map<bool*, OnResizeCallback>&);
+
+            bool* m_isCollectionStillAlive{};
+            std::map<bool*, OnResizeCallback>& m_onResizeCallbacks;
+        };
         OnResizeCallbackTicket AddOnResizeCallback(OnResizeCallback&& callback);
 
         void* GetWindowPtr() const;
@@ -32,8 +47,7 @@ namespace Babylon
         size_t m_width{};
         size_t m_height{};
 
-        std::mutex m_mutex{};
-        arcana::ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
+        std::map<bool*, OnResizeCallback> m_onResizeCallbacks{};
 
         static void SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
