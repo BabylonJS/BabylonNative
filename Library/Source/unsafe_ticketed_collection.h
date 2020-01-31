@@ -59,9 +59,9 @@ namespace Babylon
         template<typename CallableT>
         void apply_to_all(CallableT callable)
         {
-            for (auto& [ptr, T] : m_map)
+            for (auto& [ptr, value] : m_map)
             {
-                callable(T);
+                callable(value);
             }
         }
 
