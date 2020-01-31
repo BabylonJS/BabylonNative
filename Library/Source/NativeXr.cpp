@@ -340,25 +340,25 @@ namespace Babylon
     {
         struct XRSessionType
         {
-            static inline const gsl::czstring<> IMMERSIVE_VR{"immersive-vr"};
-            static inline const gsl::czstring<> IMMERSIVE_AR{"immersive-vr"};
-            static inline const gsl::czstring<> IMMERSIVE_INLINE{"inline"};
+            static constexpr auto IMMERSIVE_VR{"immersive-vr"};
+            static constexpr auto IMMERSIVE_AR{"immersive-vr"};
+            static constexpr auto IMMERSIVE_INLINE{"inline"};
         };
 
         struct XRReferenceSpaceType
         {
-            static inline const gsl::czstring<> VIEWER{"viewer"};
-            static inline const gsl::czstring<> LOCAL{"local"};
-            static inline const gsl::czstring<> LOCAL_FLOOR{"local-floor"};
-            static inline const gsl::czstring<> BOUNDED_FLOOR{"bounded-floor"};
-            static inline const gsl::czstring<> UNBOUNDED{"unbounded"};
+            static constexpr auto VIEWER{"viewer"};
+            static constexpr auto LOCAL{"local"};
+            static constexpr auto LOCAL_FLOOR{"local-floor"};
+            static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
+            static constexpr auto UNBOUNDED{"unbounded"};
         };
 
         struct XREye
         {
-            static inline const gsl::czstring<> NONE{"none"};
-            static inline const gsl::czstring<> LEFT{"left"};
-            static inline const gsl::czstring<> RIGHT{"right"};
+            static constexpr auto NONE{"none"};
+            static constexpr auto LEFT{"left"};
+            static constexpr auto RIGHT{"right"};
 
             static const auto& IndexToEye(size_t idx)
             {
