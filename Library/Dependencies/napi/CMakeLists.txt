@@ -88,7 +88,7 @@ target_include_directories(napi PUBLIC "include")
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
     target_link_libraries(napi PRIVATE "chakrart.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    target_link_libraries(napi PRIVATE v8)
+    target_link_libraries(napi PUBLIC v8)
 endif()
 
 set(NAPI_DEPENDENCIES ${NAPI_DEPENDENCIES} PARENT_SCOPE)
