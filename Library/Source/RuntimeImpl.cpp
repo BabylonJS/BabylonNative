@@ -136,21 +136,18 @@ namespace Babylon
             isolate->Dispose();
         }
 
-        void CreateJsRuntimeForThread(v8::Isolate* isolate)
+        void CreateJsRuntimeForThread(DispatchFunction&, std::function<void(v8::Local<v8::Context>)> callback)
         {
-            v8::Isolate::Scope isolate_scope{ isolate };
-            v8::HandleScope isolate_handle_scope{ isolate };
-            v8::Local<v8::Context> context = v8::Context::New(isolate);
-            v8::Context::Scope context_scope{ context };
+            v8::Isolate* isolate = CreateIsolate(GetModulePath().u8string().data());
+            {
+                v8::Isolate::Scope isolate_scope{ isolate };
+                v8::HandleScope isolate_handle_scope{ isolate };
+                v8::Local<v8::Context> context = v8::Context::New(isolate);
+                v8::Context::Scope context_scope{ context };
 
-            auto env = Napi::Attach();
-
-            // Now we somehow have to do all of this stuff inside here, without ever exiting this scope. :-/
-        }
-
-        void DisposeJsRuntimeForThread()
-        {
-
+                callback(context);
+            }
+            DestroyIsolate(isolate);
         }
     }
 
@@ -377,42 +374,39 @@ namespace Babylon
                 });
             }
         };
-        CreateJsRuntimeForThread(dispatchFunction);
-        auto jsScopeGuard = gsl::finally([]
+        CreateJsRuntimeForThread(dispatchFunction, [this](v8::Local<v8::Context> context)
         {
-            DisposeJsRuntimeForThread();
-        });
-
-        // Create the N-API environment
-        auto env = Napi::Attach();
-        m_env = &env;
-        auto envScopeGuard = gsl::finally([this, env]
-        {
-            // Because the dispatcher and task may take references to the N-API environment,
-            // they must be cleared before the env itself is destroyed.
-            m_dispatcher.reset();
-            Task = arcana::task_from_result<std::exception_ptr>();
-
-            m_env = nullptr;
-            Napi::Detach(env);
-        });
-
-        InitializeJavaScriptVariables();
-
-        // TODO: Handle device lost/restored.
-
-        while (!m_cancelSource.cancelled())
-        {
-            // check if suspended
+            // Create the N-API environment
+            auto env = Napi::Attach(context);
+            m_env = &env;
+            auto envScopeGuard = gsl::finally([this, env]
             {
-                std::unique_lock<std::mutex> lock(m_suspendMutex);
-                m_suspendVariable.wait(lock, [this]() { return !m_suspended; });
-            }
+                // Because the dispatcher and task may take references to the N-API environment,
+                // they must be cleared before the env itself is destroyed.
+                m_dispatcher.reset();
+                Task = arcana::task_from_result<std::exception_ptr>();
+
+                m_env = nullptr;
+                Napi::Detach(env);
+            });
+
+            InitializeJavaScriptVariables();
+
+            // TODO: Handle device lost/restored.
+
+            while (!m_cancelSource.cancelled())
             {
-                std::unique_lock<std::mutex> lock(m_blockTickingMutex);
-                m_dispatcher->blocking_tick(m_cancelSource);
+                // check if suspended
+                {
+                    std::unique_lock<std::mutex> lock(m_suspendMutex);
+                    m_suspendVariable.wait(lock, [this]() { return !m_suspended; });
+                }
+                {
+                    std::unique_lock<std::mutex> lock(m_blockTickingMutex);
+                    m_dispatcher->blocking_tick(m_cancelSource);
+                }
             }
-        }
+        });
     }
 
     template arcana::task<std::string, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url);

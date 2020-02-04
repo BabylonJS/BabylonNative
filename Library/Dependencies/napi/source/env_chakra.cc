@@ -20,11 +20,11 @@ namespace Napi
     {
         Napi:Env env{new napi_env__({})};
 
-        JsPropertyIdRef propertyId;
         JsValueRef global;
         ThrowIfFailed(JsGetGlobalObject(&global));
-        JsValueRef object;
+        JsPropertyIdRef propertyId;
         ThrowIfFailed(JsGetPropertyIdFromName(L"Object", &propertyId));
+        JsValueRef object;
         ThrowIfFailed(JsGetProperty(global, propertyId, &object));
         JsValueRef prototype;
         ThrowIfFailed(JsGetPrototype(object, &prototype));
@@ -36,6 +36,6 @@ namespace Napi
 
     void Detach(Napi::Env env)
     {
-        delete static_cast<napi_env__*>(env.operator napi_env());
+        delete env.operator napi_env();
     }
 }

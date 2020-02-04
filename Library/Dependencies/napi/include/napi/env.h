@@ -4,8 +4,7 @@
 
 namespace Napi
 {
-    // TODO: Move this to a JS-specific location.
-    Napi::Env Attach();
+    template<typename ...Ts> Napi::Env Attach(Ts... args);
 
     void Detach(Napi::Env);
 
