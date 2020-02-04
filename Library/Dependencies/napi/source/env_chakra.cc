@@ -16,7 +16,8 @@ namespace
 
 namespace Napi
 {
-    Napi::Env Attach()
+    template<>
+    Napi::Env Attach<>()
     {
         Napi:Env env{new napi_env__({})};
 

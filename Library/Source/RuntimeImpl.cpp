@@ -4,14 +4,16 @@
 #include "NativeWindow.h"
 #include "XMLHttpRequest.h"
 
-/*
+//#define CHAKRA
+
+#ifdef CHAKRA
 #define USE_EDGEMODE_JSRT
 #include <jsrt.h>
 #undef USE_EDGEMODE_JSRT
-*/
-
+#else
 #include <v8.h>
 #include <libplatform/libplatform.h>
+#endif
 
 #include <curl/curl.h>
 #include <napi/env.h>
@@ -23,7 +25,7 @@ namespace Babylon
     {
         using DispatchFunction = std::function<void(std::function<void()>)>;
 
-        /*
+#ifdef CHAKRA
         void ThrowIfFailed(JsErrorCode errorCode)
         {
             if (errorCode != JsErrorCode::JsNoError)
@@ -32,7 +34,7 @@ namespace Babylon
             }
         }
 
-        void CreateJsRuntimeForThread(DispatchFunction& dispatch)
+        void CreateJsRuntimeForThread(DispatchFunction& dispatch, std::function<void(Napi::Env) > callback)
         {
             // Create the runtime. We're only going to use one runtime for this host.
             JsRuntimeHandle jsRuntime;
@@ -66,10 +68,11 @@ namespace Babylon
             // Put Chakra in debug mode.
             ThrowIfFailed(JsStartDebugging());
 #endif
-        }
 
-        void DisposeJsRuntimeForThread()
-        {
+            Napi::Env env = Napi::Attach();
+            callback(env);
+            Napi::Detach(env);
+
             // TODO: There's an order-of-teardown dependency right now that gets triggered
             // if we actually dispose the runtime properly. Commenting this out until we
             // find a way to resolve that problem.
@@ -84,8 +87,7 @@ namespace Babylon
             // 
             // ThrowIfFailed(JsDisposeRuntime(runtime));
         }
-        */
-
+#else
         class Module final
         {
         public:
@@ -136,7 +138,7 @@ namespace Babylon
             isolate->Dispose();
         }
 
-        void CreateJsRuntimeForThread(DispatchFunction&, std::function<void(v8::Local<v8::Context>)> callback)
+        void CreateJsRuntimeForThread(DispatchFunction&, std::function<void(Napi::Env)> callback)
         {
             v8::Isolate* isolate = CreateIsolate(GetModulePath().u8string().data());
             {
@@ -145,10 +147,13 @@ namespace Babylon
                 v8::Local<v8::Context> context = v8::Context::New(isolate);
                 v8::Context::Scope context_scope{ context };
 
-                callback(context);
+                Napi::Env env = Napi::Attach(context);
+                callback(env);
+                Napi::Detach(env);
             }
             DestroyIsolate(isolate);
         }
+#endif
     }
 
     namespace
@@ -374,10 +379,8 @@ namespace Babylon
                 });
             }
         };
-        CreateJsRuntimeForThread(dispatchFunction, [this](v8::Local<v8::Context> context)
+        CreateJsRuntimeForThread(dispatchFunction, [this](Napi::Env env)
         {
-            // Create the N-API environment
-            auto env = Napi::Attach(context);
             m_env = &env;
             auto envScopeGuard = gsl::finally([this, env]
             {
@@ -387,7 +390,6 @@ namespace Babylon
                 Task = arcana::task_from_result<std::exception_ptr>();
 
                 m_env = nullptr;
-                Napi::Detach(env);
             });
 
             InitializeJavaScriptVariables();
