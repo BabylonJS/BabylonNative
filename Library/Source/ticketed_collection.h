@@ -8,6 +8,9 @@ namespace Babylon
     template<typename T>
     class ticketed_collection
     {
+        // NOTE: Philosophically, this type is actually std::map<MapT**, T>.
+        // That's a recursive type, though, so for simplicity's sake we use
+        // void instead of MapT in the definition here.
         using MapT = std::map<void**, T>;
 
     public:
