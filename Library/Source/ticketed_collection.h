@@ -8,7 +8,7 @@ namespace Babylon
     template<typename T>
     class ticketed_collection
     {
-        using MapT = std::map<bool*, T>;
+        using MapT = std::map<void**, T>;
 
     public:
         class ticket
@@ -17,37 +17,42 @@ namespace Babylon
             ticket(const ticket&) = delete;
 
             ticket(ticket&& other)
-                : m_isCollectionStillAlive{ other.m_isCollectionStillAlive }
-                , m_collection{ other.m_collection }
+                : m_collection{ other.m_collection }
             {
-                other.m_isCollectionStillAlive = nullptr;
+                other.m_collection = nullptr;
             }
 
             ~ticket()
             {
-                if (m_isCollectionStillAlive != nullptr)
+                // If m_collection itself is a nullptr, then the object being
+                // destructed is the "empty shell" left over after the use of 
+                // a move constructor has been used to logically move the 
+                // ticket. In this case, there's nothing the destructor needs
+                // to do, so early-out.
+                if (m_collection == nullptr)
                 {
-                    if (*m_isCollectionStillAlive)
-                    {
-                        m_collection.erase(m_isCollectionStillAlive);
-                    }
-
-                    delete m_isCollectionStillAlive;
+                    return;
                 }
+
+                MapT* ptr = *m_collection;
+                if (ptr != nullptr)
+                {
+                    ptr->erase(reinterpret_cast<void**>(m_collection));
+                }
+
+                delete m_collection;
             }
 
         private:
             friend class ticketed_collection;
 
             ticket(T&& value, MapT& collection)
-                : m_isCollectionStillAlive{ new bool{true} }
-                , m_collection{ collection }
+                : m_collection{ new MapT*(&collection) }
             {
-                m_collection[m_isCollectionStillAlive] = std::move(value);
+                collection[reinterpret_cast<void**>(m_collection)] = std::move(value);
             }
 
-            bool* m_isCollectionStillAlive{};
-            MapT& m_collection;
+            MapT** m_collection;
         };
 
         ticketed_collection() = default;
@@ -77,7 +82,7 @@ namespace Babylon
         {
             for (auto& [ptr, value] : m_map)
             {
-                *ptr = false;
+                *ptr = nullptr;
             }
 
             m_map.clear();
