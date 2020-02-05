@@ -1,4 +1,4 @@
-Please note this documentation is primarily and subject to change.
+Please note this documentation is a preliminary version and is subject to change.
 This documentation describes how to integrate BabylonNative in your Android project.
 For more informations on the subject, check the following links:
 https://www.babylonjs.com/
