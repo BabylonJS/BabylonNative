@@ -14,23 +14,26 @@ namespace Babylon
         class ticket
         {
         public:
-            ~ticket()
-            {
-                if (m_isCollectionStillAlive != nullptr && *m_isCollectionStillAlive)
-                {
-                    m_collection.erase(m_isCollectionStillAlive);
-                }
-
-                delete m_isCollectionStillAlive;
-            }
-
             ticket(const ticket&) = delete;
-            
+
             ticket(ticket&& other)
                 : m_isCollectionStillAlive{ other.m_isCollectionStillAlive }
                 , m_collection{ other.m_collection }
             {
                 other.m_isCollectionStillAlive = nullptr;
+            }
+
+            ~ticket()
+            {
+                if (m_isCollectionStillAlive != nullptr)
+                {
+                    if (*m_isCollectionStillAlive)
+                    {
+                        m_collection.erase(m_isCollectionStillAlive);
+                    }
+
+                    delete m_isCollectionStillAlive;
+                }
             }
 
         private:
@@ -46,6 +49,10 @@ namespace Babylon
             bool* m_isCollectionStillAlive{};
             MapT& m_collection;
         };
+
+        ticketed_collection() = default;
+        ticketed_collection(const ticketed_collection&) = delete;
+        ticketed_collection(ticketed_collection&&) = delete;
 
         ~ticketed_collection()
         {
