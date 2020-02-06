@@ -4,7 +4,7 @@
 #include "NativeWindow.h"
 #include "XMLHttpRequest.h"
 
-//#define CHAKRA
+#define CHAKRA
 
 #ifdef CHAKRA
 #define USE_EDGEMODE_JSRT
@@ -73,19 +73,8 @@ namespace Babylon
             callback(env);
             Napi::Detach(env);
 
-            // TODO: There's an order-of-teardown dependency right now that gets triggered
-            // if we actually dispose the runtime properly. Commenting this out until we
-            // find a way to resolve that problem.
-            //
-            // JsContextRef context;
-            // ThrowIfFailed(JsGetCurrentContext(&context));
-            // 
-            // JsRuntimeHandle runtime;
-            // ThrowIfFailed(JsGetRuntime(context, &runtime));
-            // 
-            // ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
-            // 
-            // ThrowIfFailed(JsDisposeRuntime(runtime));
+            ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
+            ThrowIfFailed(JsDisposeRuntime(jsRuntime));
         }
 #else
         class Module final
