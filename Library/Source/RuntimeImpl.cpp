@@ -4,147 +4,12 @@
 #include "NativeWindow.h"
 #include "XMLHttpRequest.h"
 
-#define CHAKRA
-
-#ifdef CHAKRA
-#define USE_EDGEMODE_JSRT
-#include <jsrt.h>
-#undef USE_EDGEMODE_JSRT
-#else
-#include <v8.h>
-#include <libplatform/libplatform.h>
-#endif
-
 #include <curl/curl.h>
 #include <napi/env.h>
 #include <sstream>
 
 namespace Babylon
 {
-    namespace
-    {
-        using DispatchFunction = std::function<void(std::function<void()>)>;
-
-#ifdef CHAKRA
-        void ThrowIfFailed(JsErrorCode errorCode)
-        {
-            if (errorCode != JsErrorCode::JsNoError)
-            {
-                throw std::exception();
-            }
-        }
-
-        void CreateJsRuntimeForThread(DispatchFunction& dispatch, std::function<void(Napi::Env) > callback)
-        {
-            // Create the runtime. We're only going to use one runtime for this host.
-            JsRuntimeHandle jsRuntime;
-            ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
-
-            // Create a single execution context.
-            JsContextRef context;
-            ThrowIfFailed(JsCreateContext(jsRuntime, &context));
-
-            // Now set the execution context as being the current one on this thread.
-            ThrowIfFailed(JsSetCurrentContext(context));
-
-            // Set up ES6 Promise.
-            ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState)
-            {
-                ThrowIfFailed(JsAddRef(task, nullptr));
-                auto* dispatch = reinterpret_cast<DispatchFunction*>(callbackState);
-                dispatch->operator()([task]()
-                {
-                    JsValueRef undefined;
-                    ThrowIfFailed(JsGetUndefinedValue(&undefined));
-                    ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
-                    ThrowIfFailed(JsRelease(task, nullptr));
-                });
-            }, &dispatch));
-
-            // UWP namespace projection; all UWP under Windows namespace should work.
-            ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
-
-#ifdef _DEBUG
-            // Put Chakra in debug mode.
-            ThrowIfFailed(JsStartDebugging());
-#endif
-
-            Napi::Env env = Napi::Attach();
-            callback(env);
-            Napi::Detach(env);
-
-            ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
-            ThrowIfFailed(JsDisposeRuntime(jsRuntime));
-        }
-#else
-        class Module final
-        {
-        public:
-            Module(const char* executablePath)
-            {
-                v8::V8::InitializeICUDefaultLocation(executablePath);
-                v8::V8::InitializeExternalStartupData(executablePath);
-                m_platform = v8::platform::NewDefaultPlatform();
-                v8::V8::InitializePlatform(m_platform.get());
-                v8::V8::Initialize();
-            }
-
-            ~Module()
-            {
-                v8::V8::Dispose();
-                v8::V8::ShutdownPlatform();
-            }
-
-            static void Initialize(const char* executablePath)
-            {
-                if (s_module == nullptr)
-                {
-                    s_module = std::make_unique<Module>(executablePath);
-                }
-            }
-
-        private:
-            std::unique_ptr<v8::Platform> m_platform;
-
-            static std::unique_ptr<Module> s_module;
-        };
-
-        std::unique_ptr<Module> Module::s_module;
-
-        v8::Isolate* CreateIsolate(const char* executablePath)
-        {
-            Module::Initialize(executablePath);
-
-            v8::Isolate::CreateParams create_params;
-            create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-            return v8::Isolate::New(create_params);
-        }
-
-        void DestroyIsolate(v8::Isolate* isolate)
-        {
-            // todo : GetArrayBufferAllocator not available?
-            //delete isolate->GetArrayBufferAllocator();
-            isolate->Dispose();
-        }
-
-        void CreateJsRuntimeForThread(DispatchFunction&, std::function<void(Napi::Env)> callback)
-        {
-            v8::Isolate* isolate = CreateIsolate(GetModulePath().u8string().data());
-            {
-                v8::Isolate::Scope isolate_scope{ isolate };
-                v8::HandleScope isolate_handle_scope{ isolate };
-                v8::Local<v8::Context> context = v8::Context::New(isolate);
-                v8::Context::Scope context_scope{ context };
-
-                Napi::Env env = Napi::Attach(context);
-                callback(env);
-                Napi::Detach(env);
-            }
-            DestroyIsolate(isolate);
-        }
-#endif
-    }
-
     namespace
     {
         static constexpr auto JS_WINDOW_NAME = "window";
@@ -356,48 +221,37 @@ namespace Babylon
         global.Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, jsXmlHttpRequestConstructor.Value());
     }
 
-    void RuntimeImpl::BaseThreadProcedure()
+    void RuntimeImpl::RunJavaScript(Napi::Env env)
     {
         m_dispatcher->set_affinity(std::this_thread::get_id());
 
-        // Create the JavaScript runtime.
-        DispatchFunction dispatchFunction{
-            [this](std::function<void()> action) {
-                Dispatch([action = std::move(action)](auto&) {
-                    action();
-                });
-            }
-        };
-        CreateJsRuntimeForThread(dispatchFunction, [this](Napi::Env env)
+        m_env = &env;
+        auto envScopeGuard = gsl::finally([this, env]
         {
-            m_env = &env;
-            auto envScopeGuard = gsl::finally([this, env]
-            {
-                // Because the dispatcher and task may take references to the N-API environment,
-                // they must be cleared before the env itself is destroyed.
-                m_dispatcher.reset();
-                Task = arcana::task_from_result<std::exception_ptr>();
+            // Because the dispatcher and task may take references to the N-API environment,
+            // they must be cleared before the env itself is destroyed.
+            m_dispatcher.reset();
+            Task = arcana::task_from_result<std::exception_ptr>();
 
-                m_env = nullptr;
-            });
-
-            InitializeJavaScriptVariables();
-
-            // TODO: Handle device lost/restored.
-
-            while (!m_cancelSource.cancelled())
-            {
-                // check if suspended
-                {
-                    std::unique_lock<std::mutex> lock(m_suspendMutex);
-                    m_suspendVariable.wait(lock, [this]() { return !m_suspended; });
-                }
-                {
-                    std::unique_lock<std::mutex> lock(m_blockTickingMutex);
-                    m_dispatcher->blocking_tick(m_cancelSource);
-                }
-            }
+            m_env = nullptr;
         });
+
+        InitializeJavaScriptVariables();
+
+        // TODO: Handle device lost/restored.
+
+        while (!m_cancelSource.cancelled())
+        {
+            // check if suspended
+            {
+                std::unique_lock<std::mutex> lock(m_suspendMutex);
+                m_suspendVariable.wait(lock, [this]() { return !m_suspended; });
+            }
+            {
+                std::unique_lock<std::mutex> lock(m_blockTickingMutex);
+                m_dispatcher->blocking_tick(m_cancelSource);
+            }
+        }
     }
 
     template arcana::task<std::string, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url);

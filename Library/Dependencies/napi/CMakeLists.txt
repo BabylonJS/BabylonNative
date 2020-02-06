@@ -75,7 +75,7 @@ target_compile_definitions(napi PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 target_compile_definitions(napi PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
-    target_compile_definitions(napi PRIVATE USE_EDGEMODE_JSRT)
+    target_compile_definitions(napi PUBLIC USE_EDGEMODE_JSRT)
 endif()
 
 # V8 android build until we figured out how to deal with custom V8 nugget
@@ -86,7 +86,7 @@ endif()
 target_include_directories(napi PUBLIC "include")
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
-    target_link_libraries(napi PRIVATE "chakrart.lib")
+    target_link_libraries(napi PUBLIC "chakrart.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_link_libraries(napi PUBLIC v8)
 endif()

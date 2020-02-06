@@ -51,6 +51,7 @@ namespace Babylon
 
     private:
         void InitializeJavaScriptVariables();
+        void RunJavaScript(Napi::Env);
         void BaseThreadProcedure();
         void ThreadProcedure();
 

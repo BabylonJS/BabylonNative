@@ -114,6 +114,7 @@ set(SOURCES
     "Source/ResourceLimits.h"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.cpp"
+    "Source/RuntimeImpl${NAPI_JAVASCRIPT_ENGINE}.cpp"
     "Source/RuntimeImpl.h"
     "Source/Runtime${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/ShaderCompiler.h"
