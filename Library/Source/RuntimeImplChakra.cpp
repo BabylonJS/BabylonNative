@@ -1,8 +1,6 @@
 #include "RuntimeImpl.h"
 
-#define USE_EDGEMODE_JSRT
 #include <jsrt.h>
-#undef USE_EDGEMODE_JSRT
 
 #include <napi/env.h>
 
@@ -10,8 +8,6 @@ namespace Babylon
 {
     namespace
     {
-        using DispatchFunction = std::function<void(std::function<void()>)>;
-
         void ThrowIfFailed(JsErrorCode errorCode)
         {
             if (errorCode != JsErrorCode::JsNoError)
@@ -23,6 +19,7 @@ namespace Babylon
 
     void RuntimeImpl::BaseThreadProcedure()
     {
+        using DispatchFunction = std::function<void(std::function<void()>)>;
         DispatchFunction dispatchFunction{
             [this](std::function<void()> action) {
                 Dispatch([action = std::move(action)](auto&) {
