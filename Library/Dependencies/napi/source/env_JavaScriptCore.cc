@@ -6,7 +6,7 @@
 namespace Napi
 {
     template<>
-    void Attach<JsGlobalContextRef>(JsGlobalContextRef globalContext)
+    void Attach<JSGlobalContextRef>(JSGlobalContextRef globalContext)
     {
         return{ new napi_env__(globalContext) };
     }
