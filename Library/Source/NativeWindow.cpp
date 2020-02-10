@@ -106,7 +106,7 @@ namespace Babylon
         }
         else
         {
-            m_runtimeImpl.Dispatch([this, function = std::move(function), whenToRun](auto&) {
+            m_runtimeImpl.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
                 RecursiveWaitOrCall(std::move(function), whenToRun);
             });
         }
