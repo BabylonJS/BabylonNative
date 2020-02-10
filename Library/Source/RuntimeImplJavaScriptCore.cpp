@@ -9,7 +9,7 @@ namespace Babylon
     void RuntimeImpl::BaseThreadProcedure()
     {
         auto contextGroup = JSContextGroupCreate();
-        auto globalContext = JSGlobalContextCreateInGroup(m_contextGroup, nullptr);
+        auto globalContext = JSGlobalContextCreateInGroup(contextGroup, nullptr);
 
         Napi::Env env = Napi::Attach(globalContext);
         RunJavaScript(env);
