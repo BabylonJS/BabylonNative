@@ -8,7 +8,9 @@ namespace Napi
     template<>
     Napi::Env Attach<JSGlobalContextRef>(JSGlobalContextRef globalContext)
     {
-        return{ new napi_env__(globalContext) };
+        auto envPtr = new napi_env__();
+        envPtr->m_globalContext = globalContext;
+        return{ envPtr };
     }
 
     void Detach(Napi::Env env)

@@ -2,10 +2,14 @@ cmake_minimum_required(VERSION 3.12)
 
 project(napi)
 
-if (ANDROID)
-    set(NAPI_JAVASCRIPT_ENGINE "V8")
+if (WIN32 OR WINDOWS_STORE)
+    set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
+elseif (ANDROID)
+    set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for N-API.")
 elseif (APPLE)
-    set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore")
+    set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for N-API.")
+else()
+    message(FATAL_ERROR "Unable to select N-API JavaScript engine for platform.")
 endif()
 
 set(SUPPORTED_JAVASCRIPT_ENGINES "Chakra" "V8" "JavaScriptCore")

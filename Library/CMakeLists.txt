@@ -1,7 +1,6 @@
 add_subdirectory(Dependencies/arcana.cpp EXCLUDE_FROM_ALL)
 set_property(TARGET arcana PROPERTY FOLDER Dependencies/arcana)
 
-set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(Dependencies/napi EXCLUDE_FROM_ALL)
