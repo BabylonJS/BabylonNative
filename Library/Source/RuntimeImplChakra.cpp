@@ -22,7 +22,7 @@ namespace Babylon
         using DispatchFunction = std::function<void(std::function<void()>)>;
         DispatchFunction dispatchFunction{
             [this](std::function<void()> action) {
-                Dispatch([action = std::move(action)](auto&) {
+                Dispatch([action = std::move(action)](Napi::Env) {
                     action();
                 });
             }
