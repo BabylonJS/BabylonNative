@@ -13,24 +13,6 @@ namespace Babylon
     namespace
     {
         static constexpr auto JS_WINDOW_NAME = "window";
-        static constexpr auto JS_NATIVE_NAME = "_native";
-        static constexpr auto JS_RUNTIME_NAME = "runtime";
-        static constexpr auto JS_NATIVE_WINDOW_NAME = "window";
-
-        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
-        static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
-    }
-
-    RuntimeImpl& RuntimeImpl::GetRuntimeImplFromJavaScript(Napi::Env env)
-    {
-        const auto& _native{env.Global().Get(JS_NATIVE_NAME).ToObject()};
-        return *_native.Get(JS_RUNTIME_NAME).As<Napi::External<RuntimeImpl>>().Data();
-    }
-
-    NativeWindow& RuntimeImpl::GetNativeWindowFromJavaScript(Napi::Env env)
-    {
-        const auto& _native{env.Global().Get(JS_NATIVE_NAME).ToObject()};
-        return *NativeWindow::Unwrap(_native.Get(JS_WINDOW_NAME).ToObject());
     }
 
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
@@ -54,7 +36,7 @@ namespace Babylon
     void RuntimeImpl::UpdateSize(float width, float height)
     {
         m_dispatcher->queue([width, height, this] {
-            auto& window = RuntimeImpl::GetNativeWindowFromJavaScript(*m_env);
+            auto& window = NativeWindow::GetFromJavaScript(*m_env);
             window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
@@ -203,22 +185,10 @@ namespace Babylon
 
         global.Set(JS_WINDOW_NAME, global);
 
-        auto jsNative = Napi::Object::New(env);
-        global.Set(JS_NATIVE_NAME, jsNative);
-
-        auto jsRuntime = Napi::External<RuntimeImpl>::New(env, this);
-        jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
-
-        auto jsWindow = NativeWindow::Create(env, m_nativeWindowPtr, 32, 32);
-        jsNative.Set(JS_NATIVE_WINDOW_NAME, jsWindow.Value());
-        global.Set("setTimeout", NativeWindow::GetSetTimeoutFunction(jsWindow).Value());
-        global.Set("atob", NativeWindow::GetAToBFunction(jsWindow).Value());
-
-        auto jsNativeEngineConstructor = NativeEngine::CreateConstructor(env);
-        jsNative.Set(JS_ENGINE_CONSTRUCTOR_NAME, jsNativeEngineConstructor.Value());
-
-        auto jsXmlHttpRequestConstructor = XMLHttpRequest::CreateConstructor(env);
-        global.Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, jsXmlHttpRequestConstructor.Value());
+        JsRuntime::Initialize(env, [this](std::function<void(Napi::Env)> func){ Dispatch(std::move(func)); });
+        NativeWindow::Initialize(env, m_nativeWindowPtr, 32, 32);
+        NativeEngine::Initialize(env);
+        XMLHttpRequest::Initialize(env, *this);
     }
 
     void RuntimeImpl::RunJavaScript(Napi::Env env)

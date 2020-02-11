@@ -17,9 +17,6 @@ namespace Babylon
     class RuntimeImpl final
     {
     public:
-        static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
-        static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env);
-
         RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
         virtual ~RuntimeImpl();
 

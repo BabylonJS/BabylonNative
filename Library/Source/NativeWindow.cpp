@@ -11,7 +11,7 @@ namespace Babylon
         constexpr auto JS_A_TO_B_NAME = "atob";
     }
 
-    Napi::ObjectReference NativeWindow::Create(Napi::Env& env, void* windowPtr, size_t width, size_t height)
+    void NativeWindow::Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
     {
         Napi::HandleScope scope{env};
 
@@ -22,22 +22,23 @@ namespace Babylon
 
             });
 
-        return Napi::Persistent(constructor.New({Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height)}));
+        auto global = env.Global();
+        auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
+        auto jsWindow = constructor.New({ Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height) });
+
+        jsNative.Set(JS_NATIVE_WINDOW_NAME, jsWindow);
+        global.Set("setTimeout", Napi::Function::New(env, &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(jsWindow)));
+        global.Set("atob", Napi::Function::New(env, &NativeWindow::DecodeBase64, JS_A_TO_B_NAME));
     }
 
-    Napi::FunctionReference NativeWindow::GetSetTimeoutFunction(Napi::ObjectReference& nativeWindow)
+    NativeWindow& NativeWindow::GetFromJavaScript(Napi::Env env)
     {
-        return Napi::Persistent(Napi::Function::New(nativeWindow.Env(), &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(nativeWindow.Value())));
-    }
-
-    Napi::FunctionReference NativeWindow::GetAToBFunction(Napi::ObjectReference& nativeWindow)
-    {
-        return Napi::Persistent(Napi::Function::New(nativeWindow.Env(), &NativeWindow::DecodeBase64, JS_A_TO_B_NAME));
+        return *NativeWindow::Unwrap(env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_NATIVE_WINDOW_NAME).As<Napi::Object>());
     }
 
     NativeWindow::NativeWindow(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeWindow>{info}
-        , m_runtimeImpl{RuntimeImpl::GetRuntimeImplFromJavaScript(info.Env())}
+        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_windowPtr{info[0].As<Napi::External<void>>().Data()}
         , m_width{static_cast<size_t>(info[1].As<Napi::Number>().Uint32Value())}
         , m_height{static_cast<size_t>(info[2].As<Napi::Number>().Uint32Value())}
@@ -106,7 +107,7 @@ namespace Babylon
         }
         else
         {
-            m_runtimeImpl.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
+            m_runtime.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
                 RecursiveWaitOrCall(std::move(function), whenToRun);
             });
         }

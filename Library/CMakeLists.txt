@@ -103,6 +103,7 @@ set(SOURCES
     "Include/Babylon/Runtime.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
     "Include/Babylon/Console.h"
+    "Include/Babylon/JsRuntime.h"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/NativeEngine.cpp"

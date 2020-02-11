@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Common.h"
+
+#include <Babylon/JsRuntime.h>
+
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
 #include <arcana/type_traits.h>
@@ -91,8 +94,10 @@ namespace Babylon
 
     class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest>
     {
+        static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
+
     public:
-        static Napi::FunctionReference CreateConstructor(Napi::Env& env);
+        static void Initialize(Napi::Env env, RuntimeImpl& runtimeImpl);
 
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
@@ -120,6 +125,7 @@ namespace Babylon
         arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
         void SetReadyState(ReadyState readyState);
 
+        JsRuntime& m_runtime;
         RuntimeImpl& m_runtimeImpl;
 
         ReadyState m_readyState{ReadyState::Unsent};

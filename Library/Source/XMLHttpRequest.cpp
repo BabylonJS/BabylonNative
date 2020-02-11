@@ -1,10 +1,12 @@
 #include "XMLHttpRequest.h"
 #include "RuntimeImpl.h"
+
+#include <Babylon/JsRuntime.h>
 #include <curl/curl.h>
 
 namespace Babylon
 {
-    Napi::FunctionReference XMLHttpRequest::CreateConstructor(Napi::Env& env)
+    void XMLHttpRequest::Initialize(Napi::Env env, RuntimeImpl& runtimeImpl)
     {
         Napi::HandleScope scope{env};
 
@@ -27,14 +29,15 @@ namespace Babylon
                 InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
                 InstanceMethod("open", &XMLHttpRequest::Open),
                 InstanceMethod("send", &XMLHttpRequest::Send),
-            });
+            }, &runtimeImpl);
 
-        return Napi::Persistent(func);
+        env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
     }
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<XMLHttpRequest>{info}
-        , m_runtimeImpl{RuntimeImpl::GetRuntimeImplFromJavaScript(info.Env())}
+        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
+        , m_runtimeImpl{*reinterpret_cast<RuntimeImpl*>(info.Data())}
     {
     }
 
@@ -118,7 +121,7 @@ namespace Babylon
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_runtimeImpl.Dispatch(std::function<arcana::task<void, std::exception_ptr>(Napi::Env)>{
+        m_runtime.Dispatch(std::function<arcana::task<void, std::exception_ptr>(Napi::Env)>{
             [this](Napi::Env) {
                 return SendAsync();
             }
