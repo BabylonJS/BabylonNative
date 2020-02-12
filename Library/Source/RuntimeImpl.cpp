@@ -164,13 +164,8 @@ namespace Babylon
         });
     }
 
-    void RuntimeImpl::InitializeJavaScriptVariables()
+    void RuntimeImpl::InitializeJavaScriptVariables(Napi::Env env)
     {
-        auto env = *m_env;
-        auto global = env.Global();
-
-        global.Set(JS_WINDOW_NAME, global);
-
         JsRuntime::Initialize(env, [this](std::function<void(Napi::Env)> func){ Dispatch(std::move(func)); });
         NativeWindow::Initialize(env, m_nativeWindowPtr, 32, 32);
         NativeEngine::Initialize(env);
@@ -192,7 +187,7 @@ namespace Babylon
             m_env = nullptr;
         });
 
-        InitializeJavaScriptVariables();
+        InitializeJavaScriptVariables(env);
 
         // TODO: Handle device lost/restored.
 

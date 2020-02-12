@@ -31,7 +31,7 @@ namespace Babylon
         arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
     private:
-        void InitializeJavaScriptVariables();
+        void InitializeJavaScriptVariables(Napi::Env);
         void RunJavaScript(Napi::Env);
         void BaseThreadProcedure();
         void ThreadProcedure();

@@ -18,6 +18,11 @@ namespace Babylon
         {
             auto global = env.Global();
 
+            if (global.Get(JS_WINDOW_NAME).IsUndefined())
+            {
+                global.Set(JS_WINDOW_NAME, global);
+            }
+
             auto jsNative = Napi::Object::New(env);
             global.Set(JS_NATIVE_NAME, jsNative);
 
