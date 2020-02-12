@@ -42,27 +42,17 @@ namespace Babylon
         };
 
         std::unique_ptr<Module> Module::s_module;
-
-        v8::Isolate* CreateIsolate(const char* executablePath)
-        {
-            Module::Initialize(executablePath);
-
-            v8::Isolate::CreateParams create_params;
-            create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-            return v8::Isolate::New(create_params);
-        }
-
-        void DestroyIsolate(v8::Isolate* isolate)
-        {
-            // todo : GetArrayBufferAllocator not available?
-            //delete isolate->GetArrayBufferAllocator();
-            isolate->Dispose();
-        }
     }
 
     void RuntimeImpl::BaseThreadProcedure()
     {
-        v8::Isolate* isolate = CreateIsolate(GetModulePath().u8string().data());
+        // Create the isolate.
+        Module::Initialize(GetModulePath().u8string().data());
+        v8::Isolate::CreateParams create_params;
+        create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+        v8::Isolate* isolate = v8::Isolate::New(create_params);
+
+        // Use the isolate within a scope.
         {
             v8::Isolate::Scope isolate_scope{ isolate };
             v8::HandleScope isolate_handle_scope{ isolate };
@@ -73,6 +63,10 @@ namespace Babylon
             RunJavaScript(env);
             Napi::Detach(env);
         }
-        DestroyIsolate(isolate);
+
+        // Destroy the isolate.
+        // todo : GetArrayBufferAllocator not available?
+        // delete isolate->GetArrayBufferAllocator();
+        isolate->Dispose();
     }
 }
