@@ -2,6 +2,7 @@
 
 #include "NativeWindow.h"
 #include "ShaderCompiler.h"
+#include "BgfxCallback.h"
 #include "ticketed_collection.h"
 
 #include <Babylon/JsRuntime.h>
@@ -219,7 +220,10 @@ namespace Babylon
     {
         ~TextureData()
         {
-            bgfx::destroy(Texture);
+            if (Texture.idx != bgfx::kInvalidHandle)
+            {
+                bgfx::destroy(Texture);
+            }
 
             for (auto image : Images)
             {
@@ -360,6 +364,7 @@ namespace Babylon
         Napi::Value LoadCubeTexture(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
+        void UpdateRawTexture(const Napi::CallbackInfo& info);
         void SetTextureSampling(const Napi::CallbackInfo& info);
         void SetTextureWrapMode(const Napi::CallbackInfo& info);
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
@@ -378,6 +383,7 @@ namespace Babylon
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
+        Napi::Value GetFramebufferData(const Napi::CallbackInfo& info);
 
         void UpdateSize(size_t width, size_t height);
         void DispatchAnimationFrameAsync(Napi::FunctionReference callback);
@@ -396,6 +402,7 @@ namespace Babylon
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
 
+        static inline BgfxCallback s_bgfxCallback{};
         FrameBufferManager m_frameBufferManager{};
 
         NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
@@ -409,6 +416,7 @@ namespace Babylon
         template<int size>
         void SetMatrixN(const Napi::CallbackInfo& info);
 
+        void ConvertImageToTexture(TextureData* const textureData, bimg::ImageContainer& image, bool invertY, bool mipMap) const;
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
     };

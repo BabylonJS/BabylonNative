@@ -102,6 +102,8 @@ endif()
 set(SOURCES
     "Include/Babylon/Runtime.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
+    "Source/BgfxCallback.cpp"
+    "Source/BgfxCallback.h"
     "Include/Babylon/Console.h"
     "Include/Babylon/JsRuntime.h"
     "Source/Common.h"

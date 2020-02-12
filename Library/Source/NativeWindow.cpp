@@ -9,6 +9,8 @@ namespace Babylon
         constexpr auto JS_CLASS_NAME = "NativeWindow";
         constexpr auto JS_SET_TIMEOUT_NAME = "setTimeout";
         constexpr auto JS_A_TO_B_NAME = "atob";
+        constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
+        constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
     }
 
     void NativeWindow::Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
@@ -19,7 +21,6 @@ namespace Babylon
             env,
             JS_CLASS_NAME,
             {
-
             });
 
         auto global = env.Global();
@@ -27,8 +28,10 @@ namespace Babylon
         auto jsWindow = constructor.New({ Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height) });
 
         jsNative.Set(JS_NATIVE_WINDOW_NAME, jsWindow);
-        global.Set("setTimeout", Napi::Function::New(env, &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(jsWindow)));
-        global.Set("atob", Napi::Function::New(env, &NativeWindow::DecodeBase64, JS_A_TO_B_NAME));
+        global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(jsWindow)));
+        global.Set(JS_A_TO_B_NAME, Napi::Function::New(env, &NativeWindow::DecodeBase64, JS_A_TO_B_NAME));
+        global.Set(JS_ADD_EVENT_LISTENER_NAME, Napi::Function::New(env, &NativeWindow::AddEventListener, JS_ADD_EVENT_LISTENER_NAME));
+        global.Set(JS_REMOVE_EVENT_LISTENER_NAME, Napi::Function::New(env, &NativeWindow::RemoveEventListener, JS_REMOVE_EVENT_LISTENER_NAME));
     }
 
     NativeWindow& NativeWindow::GetFromJavaScript(Napi::Env env)
@@ -95,6 +98,16 @@ namespace Babylon
         std::u16string decodedData;
         bn::decode_b64(encodedData.begin(), encodedData.end(), std::back_inserter(decodedData));
         return Napi::Value::From(info.Env(), decodedData);
+    }
+
+    void NativeWindow::AddEventListener(const Napi::CallbackInfo& info)
+    {
+        // TODO: handle events
+    }
+
+    void NativeWindow::RemoveEventListener(const Napi::CallbackInfo& info)
+    {
+        // TODO: handle events
     }
 
     void NativeWindow::RecursiveWaitOrCall(

@@ -12,8 +12,6 @@ namespace Babylon
 {
     namespace
     {
-        static constexpr auto JS_WINDOW_NAME = "window";
-
         std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
         {
             auto curl = curl_url();

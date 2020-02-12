@@ -9,6 +9,7 @@ namespace Babylon
     class JsRuntime
     {
         static constexpr auto JS_RUNTIME_NAME = "runtime";
+        static constexpr auto JS_WINDOW_NAME = "window";
 
     public:
         static constexpr auto JS_NATIVE_NAME = "_native";
