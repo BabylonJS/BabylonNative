@@ -112,6 +112,8 @@ set(SOURCES
     "Source/NativeEngine.h"
     "Source/NativeWindow.cpp"
     "Source/NativeWindow.h"
+    "Source/NetworkUtils.cpp"
+    "Source/NetworkUtils.h"
     "Source/ResourceLimits.cpp"
     "Source/ResourceLimits.h"
     "Source/Runtime.cpp"
