@@ -4,8 +4,96 @@
 #include <Babylon/JsRuntime.h>
 #include <curl/curl.h>
 
+#include <thread>
+
 namespace Babylon
 {
+    namespace
+    {
+        std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
+        {
+            auto curl = curl_url();
+
+            auto code = curl_url_set(curl, CURLUPART_URL, url.data(), 0);
+
+            // If input could not be turned into a valid URL, try using it as a regular URL.
+            if (code == CURLUE_MALFORMED_INPUT)
+            {
+                code = curl_url_set(curl, CURLUPART_URL, (rootUrl + "/" + url).data(), 0);
+            }
+
+            if (code != CURLUE_OK)
+            {
+                throw std::exception{};
+            }
+
+            char* buf;
+            code = curl_url_get(curl, CURLUPART_URL, &buf, 0);
+
+            if (code != CURLUE_OK)
+            {
+                throw std::exception{};
+            }
+
+            std::string absoluteUrl{ buf };
+
+            curl_free(buf);
+            curl_url_cleanup(curl);
+
+            return std::move(absoluteUrl);
+        }
+
+        template<typename DataT>
+        arcana::task<DataT, std::exception_ptr> LoadUrl(const std::string& url, JsRuntime& runtime)
+        {
+            arcana::task_completion_source<DataT, std::exception_ptr> taskCompletionSource{};
+
+            std::thread{ [taskCompletionSource, url = url, &runtime]() mutable
+            {
+                DataT data{};
+                auto curl = curl_easy_init();
+                if (curl)
+                {
+                    curl_easy_setopt(curl, CURLOPT_URL, url.data());
+                    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+                    curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData) {
+                        auto& data = *static_cast<DataT*>(userData);
+                        data.insert(data.end(), buffer, buffer + nitems);
+                        return nitems;
+                    };
+
+                    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+                    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+
+#if (ANDROID)
+                    /*
+                        * /!\ warning! this is a security issue
+                        * https://github.com/BabylonJS/BabylonNative/issues/96
+                        */
+                    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+                    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+#endif
+
+                    auto result = curl_easy_perform(curl);
+                    if (result != CURLE_OK)
+                    {
+                        throw std::exception();
+                    }
+
+                    curl_easy_cleanup(curl);
+
+                    runtime.Dispatch([data = std::move(data), taskCompletionSource = std::move(taskCompletionSource)](auto env) mutable
+                    {
+                        taskCompletionSource.complete(std::move(data));
+                    });
+                }
+            } }.detach();
+
+            return taskCompletionSource.as_task();
+        }
+    }
+
     void XMLHttpRequest::Initialize(Napi::Env env, RuntimeImpl& runtimeImpl)
     {
         Napi::HandleScope scope{env};
@@ -31,7 +119,7 @@ namespace Babylon
                 InstanceMethod("send", &XMLHttpRequest::Send),
             }, &runtimeImpl);
 
-        env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
+        env.Global().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
     }
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
@@ -115,7 +203,7 @@ namespace Babylon
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
         m_method = info[0].As<Napi::String>().Utf8Value();
-        m_url = m_runtimeImpl.GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value());
+        m_url = GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value(), m_runtimeImpl.RootUrl());
         SetReadyState(ReadyState::Opened);
     }
 
@@ -133,7 +221,7 @@ namespace Babylon
     {
         if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
         {
-            return m_runtimeImpl.LoadUrlAsync<std::string>(m_url).then(arcana::inline_scheduler, m_runtimeImpl.Cancellation(), [this](const std::string& data) {
+            return LoadUrl<std::string>(m_url, m_runtime).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data) {
                 m_responseText = std::move(data);
                 m_status = HTTPStatusCode::Ok;
                 SetReadyState(ReadyState::Done);
@@ -141,7 +229,7 @@ namespace Babylon
         }
         else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
         {
-            return m_runtimeImpl.LoadUrlAsync<std::vector<char>>(m_url).then(arcana::inline_scheduler, m_runtimeImpl.Cancellation(), [this](const std::vector<char>& data) {
+            return LoadUrl<std::vector<char>>(m_url, m_runtime).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<char>& data) {
                 m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), data.size()));
                 memcpy(m_response.Value().Data(), data.data(), data.size());
                 m_status = HTTPStatusCode::Ok;

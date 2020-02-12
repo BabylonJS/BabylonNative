@@ -13,6 +13,39 @@ namespace Babylon
     namespace
     {
         static constexpr auto JS_WINDOW_NAME = "window";
+
+        std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
+        {
+            auto curl = curl_url();
+
+            auto code = curl_url_set(curl, CURLUPART_URL, url.data(), 0);
+
+            // If input could not be turned into a valid URL, try using it as a regular URL.
+            if (code == CURLUE_MALFORMED_INPUT)
+            {
+                code = curl_url_set(curl, CURLUPART_URL, (rootUrl + "/" + url).data(), 0);
+            }
+
+            if (code != CURLUE_OK)
+            {
+                throw std::exception{};
+            }
+
+            char* buf;
+            code = curl_url_get(curl, CURLUPART_URL, &buf, 0);
+
+            if (code != CURLUE_OK)
+            {
+                throw std::exception{};
+            }
+
+            std::string absoluteUrl{ buf };
+
+            curl_free(buf);
+            curl_url_cleanup(curl);
+
+            return std::move(absoluteUrl);
+        }
     }
 
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
@@ -60,7 +93,7 @@ namespace Babylon
     void RuntimeImpl::LoadScript(const std::string& url)
     {
         auto lock = AcquireTaskLock();
-        auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url).data()), Task);
+        auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url, m_rootUrl).data()), Task);
         Task = whenAllTask.then(*m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
             Napi::Eval(*m_env, std::get<0>(args).data(), url.data());
         });
@@ -85,39 +118,6 @@ namespace Babylon
     const std::string& RuntimeImpl::RootUrl() const
     {
         return m_rootUrl;
-    }
-
-    std::string RuntimeImpl::GetAbsoluteUrl(const std::string& url)
-    {
-        auto curl = curl_url();
-
-        auto code = curl_url_set(curl, CURLUPART_URL, url.data(), 0);
-
-        // If input could not be turned into a valid URL, try using it as a regular URL.
-        if (code == CURLUE_MALFORMED_INPUT)
-        {
-            code = curl_url_set(curl, CURLUPART_URL, (m_rootUrl + "/" + url).data(), 0);
-        }
-
-        if (code != CURLUE_OK)
-        {
-            throw std::exception{};
-        }
-
-        char* buf;
-        code = curl_url_get(curl, CURLUPART_URL, &buf, 0);
-
-        if (code != CURLUE_OK)
-        {
-            throw std::exception{};
-        }
-
-        std::string absoluteUrl{buf};
-
-        curl_free(buf);
-        curl_url_cleanup(curl);
-
-        return std::move(absoluteUrl);
     }
 
     template<typename T>
