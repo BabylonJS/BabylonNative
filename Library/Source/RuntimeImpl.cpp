@@ -68,8 +68,9 @@ namespace Babylon
 
     void RuntimeImpl::UpdateSize(float width, float height)
     {
-        m_dispatcher->queue([width, height, this] {
-            auto& window = NativeWindow::GetFromJavaScript(*m_env);
+        Dispatch([width, height](Napi::Env env)
+        {
+            auto& window = NativeWindow::GetFromJavaScript(env);
             window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
@@ -92,25 +93,25 @@ namespace Babylon
 
     void RuntimeImpl::LoadScript(const std::string& url)
     {
-        auto lock = AcquireTaskLock();
-        auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url, m_rootUrl).data()), Task);
-        Task = whenAllTask.then(*m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
+        std::scoped_lock lock{ m_taskMutex };
+        auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url, m_rootUrl).data()), m_task);
+        m_task = whenAllTask.then(*m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
             Napi::Eval(*m_env, std::get<0>(args).data(), url.data());
         });
     }
 
     void RuntimeImpl::Eval(const std::string& string, const std::string& sourceUrl)
     {
-        auto lock = AcquireTaskLock();
-        Task = Task.then(*m_dispatcher, m_cancelSource, [this, string, sourceUrl]() {
+        std::scoped_lock lock{ m_taskMutex };
+        m_task = m_task.then(*m_dispatcher, m_cancelSource, [this, string, sourceUrl]() {
             Napi::Eval(*m_env, string.data(), sourceUrl.data());
         });
     }
 
     void RuntimeImpl::Dispatch(std::function<void(Napi::Env)> func)
     {
-        auto lock = AcquireTaskLock();
-        Task = Task.then(*m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
+        std::scoped_lock lock{ m_taskMutex };
+        m_task = m_task.then(*m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
             func(*m_env);
         });
     }
@@ -163,21 +164,6 @@ namespace Babylon
         });
     }
 
-    RuntimeImpl::DispatcherT& RuntimeImpl::Dispatcher()
-    {
-        return *m_dispatcher;
-    }
-
-    arcana::cancellation& RuntimeImpl::Cancellation()
-    {
-        return m_cancelSource;
-    }
-
-    std::scoped_lock<std::mutex> RuntimeImpl::AcquireTaskLock()
-    {
-        return std::scoped_lock{m_taskMutex};
-    }
-
     void RuntimeImpl::InitializeJavaScriptVariables()
     {
         auto env = *m_env;
@@ -201,7 +187,7 @@ namespace Babylon
             // Because the dispatcher and task may take references to the N-API environment,
             // they must be cleared before the env itself is destroyed.
             m_dispatcher.reset();
-            Task = arcana::task_from_result<std::exception_ptr>();
+            m_task = arcana::task_from_result<std::exception_ptr>();
 
             m_env = nullptr;
         });

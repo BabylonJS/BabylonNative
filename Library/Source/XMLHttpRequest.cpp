@@ -43,7 +43,7 @@ namespace Babylon
         }
 
         template<typename DataT>
-        arcana::task<DataT, std::exception_ptr> LoadUrl(const std::string& url, JsRuntime& runtime)
+        arcana::task<DataT, std::exception_ptr> LoadUrlAsync(const std::string& url, JsRuntime& runtime)
         {
             arcana::task_completion_source<DataT, std::exception_ptr> taskCompletionSource{};
 
@@ -220,7 +220,7 @@ namespace Babylon
     {
         if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
         {
-            return LoadUrl<std::string>(m_url, m_runtime).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data) {
+            return LoadUrlAsync<std::string>(m_url, m_runtime).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data) {
                 m_responseText = std::move(data);
                 m_status = HTTPStatusCode::Ok;
                 SetReadyState(ReadyState::Done);
@@ -228,7 +228,7 @@ namespace Babylon
         }
         else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
         {
-            return LoadUrl<std::vector<char>>(m_url, m_runtime).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<char>& data) {
+            return LoadUrlAsync<std::vector<char>>(m_url, m_runtime).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<char>& data) {
                 m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), data.size()));
                 memcpy(m_response.Value().Data(), data.data(), data.size());
                 m_status = HTTPStatusCode::Ok;
