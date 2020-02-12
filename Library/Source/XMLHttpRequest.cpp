@@ -1,5 +1,4 @@
 #include "XMLHttpRequest.h"
-#include "RuntimeImpl.h"
 
 #include <Babylon/JsRuntime.h>
 #include <curl/curl.h>
@@ -94,7 +93,7 @@ namespace Babylon
         }
     }
 
-    void XMLHttpRequest::Initialize(Napi::Env env, RuntimeImpl& runtimeImpl)
+    void XMLHttpRequest::Initialize(Napi::Env env, const char* rootUrl)
     {
         Napi::HandleScope scope{env};
 
@@ -117,7 +116,7 @@ namespace Babylon
                 InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
                 InstanceMethod("open", &XMLHttpRequest::Open),
                 InstanceMethod("send", &XMLHttpRequest::Send),
-            }, &runtimeImpl);
+            }, const_cast<char*>(rootUrl));
 
         env.Global().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
     }
@@ -125,7 +124,7 @@ namespace Babylon
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<XMLHttpRequest>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_runtimeImpl{*reinterpret_cast<RuntimeImpl*>(info.Data())}
+        , m_rootUrl{reinterpret_cast<const char*>(info.Data())}
     {
     }
 
@@ -203,7 +202,7 @@ namespace Babylon
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
         m_method = info[0].As<Napi::String>().Utf8Value();
-        m_url = GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value(), m_runtimeImpl.RootUrl());
+        m_url = GetAbsoluteUrl(info[1].As<Napi::String>().Utf8Value(), m_rootUrl);
         SetReadyState(ReadyState::Opened);
     }
 

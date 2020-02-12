@@ -11,8 +11,6 @@
 
 namespace Babylon
 {
-    class RuntimeImpl;
-
     enum class HTTPStatusCode : int32_t
     {
         None = 0,
@@ -97,7 +95,7 @@ namespace Babylon
         static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
 
     public:
-        static void Initialize(Napi::Env env, RuntimeImpl& runtimeImpl);
+        static void Initialize(Napi::Env env, const char* rootUrl);
 
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
@@ -126,7 +124,7 @@ namespace Babylon
         void SetReadyState(ReadyState readyState);
 
         JsRuntime& m_runtime;
-        RuntimeImpl& m_runtimeImpl;
+        const std::string m_rootUrl{};
 
         ReadyState m_readyState{ReadyState::Unsent};
         Napi::Reference<Napi::ArrayBuffer> m_response;

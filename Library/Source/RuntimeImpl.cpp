@@ -188,7 +188,7 @@ namespace Babylon
         JsRuntime::Initialize(env, [this](std::function<void(Napi::Env)> func){ Dispatch(std::move(func)); });
         NativeWindow::Initialize(env, m_nativeWindowPtr, 32, 32);
         NativeEngine::Initialize(env);
-        XMLHttpRequest::Initialize(env, *this);
+        XMLHttpRequest::Initialize(env, m_rootUrl.c_str());
     }
 
     void RuntimeImpl::RunJavaScript(Napi::Env env)
