@@ -2,50 +2,14 @@
 
 #include "NativeEngine.h"
 #include "NativeWindow.h"
+#include "NetworkUtils.h"
 #include "XMLHttpRequest.h"
 
-#include <curl/curl.h>
 #include <napi/env.h>
 #include <sstream>
 
 namespace Babylon
 {
-    namespace
-    {
-        std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
-        {
-            auto curl = curl_url();
-
-            auto code = curl_url_set(curl, CURLUPART_URL, url.data(), 0);
-
-            // If input could not be turned into a valid URL, try using it as a regular URL.
-            if (code == CURLUE_MALFORMED_INPUT)
-            {
-                code = curl_url_set(curl, CURLUPART_URL, (rootUrl + "/" + url).data(), 0);
-            }
-
-            if (code != CURLUE_OK)
-            {
-                throw std::exception{};
-            }
-
-            char* buf;
-            code = curl_url_get(curl, CURLUPART_URL, &buf, 0);
-
-            if (code != CURLUE_OK)
-            {
-                throw std::exception{};
-            }
-
-            std::string absoluteUrl{ buf };
-
-            curl_free(buf);
-            curl_url_cleanup(curl);
-
-            return std::move(absoluteUrl);
-        }
-    }
-
     RuntimeImpl::RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl)
         : m_dispatcher{std::make_unique<DispatcherT>()}
         , m_nativeWindowPtr{nativeWindowPtr}
@@ -92,7 +56,9 @@ namespace Babylon
     void RuntimeImpl::LoadScript(const std::string& url)
     {
         std::scoped_lock lock{ m_taskMutex };
-        auto whenAllTask = arcana::when_all(LoadUrlAsync<std::string>(GetAbsoluteUrl(url, m_rootUrl).data()), m_task);
+        auto absoluteUrl = GetAbsoluteUrl(url, m_rootUrl);
+        auto loadUrlTask = LoadUrlToStringAsync(std::move(absoluteUrl));
+        auto whenAllTask = arcana::when_all(loadUrlTask, m_task);
         m_task = whenAllTask.then(*m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
             Napi::Eval(*m_env, std::get<0>(args).data(), url.data());
         });
@@ -117,49 +83,6 @@ namespace Babylon
     const std::string& RuntimeImpl::RootUrl() const
     {
         return m_rootUrl;
-    }
-
-    template<typename T>
-    arcana::task<T, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url)
-    {
-        return arcana::make_task(*m_dispatcher, m_cancelSource, [url]() {
-            T data{};
-
-            auto curl = curl_easy_init();
-            if (curl)
-            {
-                curl_easy_setopt(curl, CURLOPT_URL, url.data());
-                curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-
-                curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData) {
-                    auto& data = *static_cast<T*>(userData);
-                    data.insert(data.end(), buffer, buffer + nitems);
-                    return nitems;
-                };
-
-                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-
-#if (ANDROID)
-                /*
-                 * /!\ warning! this is a security issue
-                 * https://github.com/BabylonJS/BabylonNative/issues/96
-                 */
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-#endif
-
-                auto result = curl_easy_perform(curl);
-                if (result != CURLE_OK)
-                {
-                    throw std::exception();
-                }
-
-                curl_easy_cleanup(curl);
-            }
-
-            return std::move(data);
-        });
     }
 
     void RuntimeImpl::InitializeJavaScriptVariables(Napi::Env env)
@@ -202,7 +125,4 @@ namespace Babylon
             }
         }
     }
-
-    template arcana::task<std::string, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url);
-    template arcana::task<std::vector<char>, std::exception_ptr> RuntimeImpl::LoadUrlAsync(const std::string& url);
 }

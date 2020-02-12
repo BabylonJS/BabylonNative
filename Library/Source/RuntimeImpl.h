@@ -27,8 +27,6 @@ namespace Babylon
         void Eval(const std::string& string, const std::string& sourceUrl);
         void Dispatch(std::function<void(Napi::Env)> callback);
         const std::string& RootUrl() const;
-        template<typename T>
-        arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
 
     private:
         void InitializeJavaScriptVariables(Napi::Env);
