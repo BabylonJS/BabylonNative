@@ -17,6 +17,8 @@
 #include <gsl/gsl>
 
 #include <assert.h>
+#include <optional>
+#include <tuple>
 
 namespace Babylon
 {
@@ -419,5 +421,7 @@ namespace Babylon
         void ConvertImageToTexture(TextureData* const textureData, bimg::ImageContainer& image, bool invertY, bool mipMap) const;
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
+
+        std::optional<std::pair<uint16_t, uint16_t>> m_updateSizeWidthHeight{};
     };
 }

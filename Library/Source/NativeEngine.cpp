@@ -409,9 +409,10 @@ namespace Babylon
         auto bgfxStats = bgfx::getStats();
         if (w != bgfxStats->width || h != bgfxStats->height)
         {
-            bgfx::reset(w, h, BGFX_RESET_FLAGS);
-            bgfx::setViewRect(0, 0, 0, w, h);
-            bgfx::frame();
+            m_runtime.Dispatch([this, w, h](Napi::Env)
+            {
+                m_updateSizeWidthHeight = std::make_optional(std::make_pair(w, h));
+            });
         }
     }
 
@@ -1426,6 +1427,16 @@ namespace Babylon
         GetFrameBufferManager().Reset();
 
         bgfx::frame();
+
+        if (m_updateSizeWidthHeight)
+        {
+            auto [w, h] = *m_updateSizeWidthHeight;
+            m_updateSizeWidthHeight.reset();
+
+            bgfx::reset(w, h, BGFX_RESET_FLAGS);
+            bgfx::setViewRect(0, 0, 0, w, h);
+            bgfx::frame();
+        }
     }
 
     void NativeEngine::Dispatch(std::function<void()> function)
