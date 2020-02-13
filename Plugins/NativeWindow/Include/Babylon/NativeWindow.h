@@ -1,8 +1,7 @@
 #pragma once
 
-#include "ticketed_collection.h"
-
 #include <Babylon/JsRuntime.h>
+#include <Babylon/ticketed_collection.h>
 
 #include <napi/napi.h>
 
