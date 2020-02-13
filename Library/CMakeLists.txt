@@ -104,14 +104,11 @@ set(SOURCES
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
-    "Include/Babylon/Console.h"
     "Include/Babylon/JsRuntime.h"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
-    "Source/NativeWindow.cpp"
-    "Source/NativeWindow.h"
     "Source/NetworkUtils.cpp"
     "Source/NetworkUtils.h"
     "Source/ResourceLimits.cpp"
@@ -123,7 +120,7 @@ set(SOURCES
     "Source/Runtime${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/ShaderCompiler.h"
     "Source/ShaderCompiler.cpp"
-    "Source/ticketed_collection.h"
+    "Include/Babylon/ticketed_collection.h"
     "Source/XMLHttpRequest.cpp"
     "Source/XMLHttpRequest.h"
     "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp")
@@ -147,6 +144,9 @@ if(WIN32 OR WINDOWS_STORE)
         "Source/NativeXr.h")
 endif()
 
+add_library(base-n INTERFACE)
+target_include_directories(base-n INTERFACE "Dependencies/base-n/include")
+
 add_library(Library ${SOURCES})
 
 set_target_properties(Library PROPERTIES
@@ -164,7 +164,6 @@ target_compile_definitions(Library PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECA
 
 target_include_directories(Library PRIVATE "Dependencies/arcana.cpp/Source/Shared")
 target_include_directories(Library PRIVATE "Dependencies/arcana.cpp/Source/Submodules/GSL/include")
-target_include_directories(Library PRIVATE "Dependencies/base-n/include")
 target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bgfx/include")
 target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bimg/include")
 target_include_directories(Library PRIVATE "Dependencies/bgfx.cmake/bx/include")

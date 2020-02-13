@@ -112,6 +112,7 @@ endif()
 target_include_directories(Playground PRIVATE "Source" "." ${TEST_DEPENDENCY})
 
 target_link_libraries(Playground PRIVATE Library ${ADDITIONAL_LIBRARIES})
+target_link_libraries(Playground PRIVATE Console NativeWindow)
 
 if(APPLE)
     if(IOS)
