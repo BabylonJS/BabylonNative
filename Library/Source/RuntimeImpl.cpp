@@ -37,6 +37,23 @@ namespace Babylon
         });
     }
 
+    void RuntimeImpl::UpdateWindow(float width, float height, void* nativeWindowPtr)
+    {
+        m_dispatcher->queue([width, height, nativeWindowPtr, this]
+        {
+            bgfx::PlatformData pd;
+            pd.ndt          = NULL;
+            pd.nwh          = nativeWindowPtr;
+            pd.context      = NULL;
+            pd.backBuffer   = NULL;
+            pd.backBufferDS = NULL;
+            bgfx::setPlatformData(pd);
+            bgfx::reset(width, height);
+            auto& window = NativeWindow::GetFromJavaScript(*m_env);
+            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+        });
+    }
+
     void RuntimeImpl::Suspend()
     {
         std::unique_lock<std::mutex> lockSuspension(m_suspendMutex);

@@ -2,10 +2,26 @@
 
 #include <curl/curl.h>
 
+// TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
+#if (ANDROID)
+#include <android/asset_manager.h>
+extern AAssetManager* g_assetMgrNative;
+#endif
+
 namespace Babylon
 {
     std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
     {
+        // TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
+#if (ANDROID)
+        AAsset* asset = AAssetManager_open(g_assetMgrNative, url.c_str(),
+            AASSET_MODE_UNKNOWN);
+        if (asset)
+        {
+            return url;
+        }
+#endif
+
         auto curl = curl_url();
 
         auto code = curl_url_set(curl, CURLUPART_URL, url.data(), 0);
@@ -45,6 +61,21 @@ namespace Babylon
         std::thread{[taskCompletionSource, url = std::move(url)] () mutable
         {
             DataT data{};
+
+            // TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
+#if (ANDROID)
+            AAsset* asset = AAssetManager_open(g_assetMgrNative, url.c_str(),
+                AASSET_MODE_UNKNOWN);
+            if (asset)
+            {
+                size_t size = AAsset_getLength64(asset);
+                data.resize(size);
+                AAsset_read(asset, data.data(), size);
+                AAsset_close(asset);
+                return std::move(data);
+            }
+#endif
+
             auto curl = curl_easy_init();
             if (curl)
             {
