@@ -133,7 +133,7 @@ namespace Babylon
     {
         if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
         {
-            return LoadUrlToStringAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data)
+            return LoadTextAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data)
             {
                 m_runtime.Dispatch([this, data = data](Napi::Env)
                 {
@@ -145,7 +145,7 @@ namespace Babylon
         }
         else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
         {
-            return LoadUrlToBytesAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<uint8_t>& data)
+            return LoadBinaryAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<uint8_t>& data)
             {
                 m_runtime.Dispatch([this, data = data](Napi::Env)
                 {

@@ -84,12 +84,12 @@ namespace Babylon
         return taskCompletionSource.as_task();
     }
 
-    arcana::task<std::string, std::exception_ptr> LoadUrlToStringAsync(std::string url)
+    arcana::task<std::string, std::exception_ptr> LoadTextAsync(std::string url)
     {
         return LoadUrlAsync<std::string>(std::move(url));
     }
 
-    arcana::task<std::vector<uint8_t>, std::exception_ptr> LoadUrlToBytesAsync(std::string url)
+    arcana::task<std::vector<uint8_t>, std::exception_ptr> LoadBinaryAsync(std::string url)
     {
         return LoadUrlAsync<std::vector<uint8_t>>(std::move(url));
     }

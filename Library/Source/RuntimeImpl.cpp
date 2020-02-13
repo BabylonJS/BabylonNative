@@ -57,7 +57,7 @@ namespace Babylon
     {
         std::scoped_lock lock{ m_taskMutex };
         auto absoluteUrl = GetAbsoluteUrl(url, m_rootUrl);
-        auto loadUrlTask = LoadUrlToStringAsync(std::move(absoluteUrl));
+        auto loadUrlTask = LoadTextAsync(std::move(absoluteUrl));
         auto whenAllTask = arcana::when_all(loadUrlTask, m_task);
         m_task = whenAllTask.then(*m_dispatcher, m_cancelSource, [this, url](const std::tuple<std::string, arcana::void_placeholder>& args) {
             Napi::Eval(*m_env, std::get<0>(args).data(), url.data());
