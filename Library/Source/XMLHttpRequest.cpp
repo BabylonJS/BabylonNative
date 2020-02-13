@@ -37,7 +37,7 @@ namespace Babylon
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<XMLHttpRequest>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_rootUrl{reinterpret_cast<const char*>(info.Data())}
+        , m_rootUrl{static_cast<const char*>(info.Data())}
     {
     }
 
@@ -137,7 +137,17 @@ namespace Babylon
             {
                 m_runtime.Dispatch([this, data = data](Napi::Env)
                 {
-                    m_responseText = std::move(data);
+                    // check UTF-8 BOM encoding
+                    if (data.size() >= 3 && data[0] == '\xEF' && data[1] == '\xBB' && data[2] == '\xBF')
+                    {
+                        m_responseText = data.substr(3);
+                    }
+                    else
+                    {
+                        // UTF8 encoding
+                        m_responseText = std::move(data);
+                    }
+
                     m_status = HTTPStatusCode::Ok;
                     SetReadyState(ReadyState::Done);
                 });

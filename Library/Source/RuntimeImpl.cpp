@@ -55,7 +55,7 @@ namespace Babylon
 
     void RuntimeImpl::LoadScript(const std::string& url)
     {
-        std::scoped_lock lock{ m_taskMutex };
+        std::scoped_lock lock{m_taskMutex};
         auto absoluteUrl = GetAbsoluteUrl(url, m_rootUrl);
         auto loadUrlTask = LoadTextAsync(std::move(absoluteUrl));
         auto whenAllTask = arcana::when_all(loadUrlTask, m_task);
@@ -66,7 +66,7 @@ namespace Babylon
 
     void RuntimeImpl::Eval(const std::string& string, const std::string& sourceUrl)
     {
-        std::scoped_lock lock{ m_taskMutex };
+        std::scoped_lock lock{m_taskMutex};
         m_task = m_task.then(*m_dispatcher, m_cancelSource, [this, string, sourceUrl]() {
             Napi::Eval(*m_env, string.data(), sourceUrl.data());
         });
@@ -74,7 +74,7 @@ namespace Babylon
 
     void RuntimeImpl::Dispatch(std::function<void(Napi::Env)> func)
     {
-        std::scoped_lock lock{ m_taskMutex };
+        std::scoped_lock lock{m_taskMutex};
         m_task = m_task.then(*m_dispatcher, m_cancelSource, [func = std::move(func), this]() {
             func(*m_env);
         });

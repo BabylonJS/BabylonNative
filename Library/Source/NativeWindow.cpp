@@ -25,7 +25,7 @@ namespace Babylon
 
         auto global = env.Global();
         auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
-        auto jsWindow = constructor.New({ Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height) });
+        auto jsWindow = constructor.New({Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height)});
 
         jsNative.Set(JS_NATIVE_WINDOW_NAME, jsWindow);
         global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &NativeWindow::SetTimeout, JS_SET_TIMEOUT_NAME, NativeWindow::Unwrap(jsWindow)));

@@ -51,7 +51,7 @@ namespace Babylon
 
     private:
         JsRuntime(DispatchFunctionT&& dispatchFunction)
-            : m_dispatchFunction{ dispatchFunction }
+            : m_dispatchFunction{dispatchFunction}
         {
         }
 

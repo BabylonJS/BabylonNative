@@ -29,7 +29,7 @@ namespace Babylon
             throw std::exception{};
         }
 
-        std::string absoluteUrl{ buf };
+        std::string absoluteUrl{buf};
 
         curl_free(buf);
         curl_url_cleanup(curl);
@@ -42,7 +42,7 @@ namespace Babylon
     {
         arcana::task_completion_source<DataT, std::exception_ptr> taskCompletionSource{};
 
-        std::thread{ [taskCompletionSource, url = std::move(url)] () mutable
+        std::thread{[taskCompletionSource, url = std::move(url)] () mutable
         {
             DataT data{};
             auto curl = curl_easy_init();
