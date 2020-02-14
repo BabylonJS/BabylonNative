@@ -1,9 +1,10 @@
 #include "RuntimeImpl.h"
+#include "JsRuntime.h"
 
-#include "NativeEngine.h"
-#include "NativeWindow.h"
-#include "NetworkUtils.h"
-#include "XMLHttpRequest.h"
+// #include "NativeEngine.h"
+// #include "NativeWindow.h"
+#include <Babylon/NetworkUtils.h>
+//#include "XMLHttpRequest.h"
 
 #include <napi/env.h>
 #include <sstream>
@@ -32,8 +33,8 @@ namespace Babylon
     {
         Dispatch([width, height](Napi::Env env)
         {
-            auto& window = NativeWindow::GetFromJavaScript(env);
-            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+            // auto& window = NativeWindow::GetFromJavaScript(env);
+            // window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
 
@@ -41,16 +42,16 @@ namespace Babylon
     {
         m_dispatcher->queue([width, height, nativeWindowPtr, this]
         {
-            bgfx::PlatformData pd;
-            pd.ndt          = NULL;
-            pd.nwh          = nativeWindowPtr;
-            pd.context      = NULL;
-            pd.backBuffer   = NULL;
-            pd.backBufferDS = NULL;
-            bgfx::setPlatformData(pd);
-            bgfx::reset(width, height);
-            auto& window = NativeWindow::GetFromJavaScript(*m_env);
-            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+            // bgfx::PlatformData pd;
+            // pd.ndt          = NULL;
+            // pd.nwh          = nativeWindowPtr;
+            // pd.context      = NULL;
+            // pd.backBuffer   = NULL;
+            // pd.backBufferDS = NULL;
+            // bgfx::setPlatformData(pd);
+            // bgfx::reset(width, height);
+            // auto& window = NativeWindow::GetFromJavaScript(*m_env);
+            // window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
 
@@ -105,9 +106,9 @@ namespace Babylon
     void RuntimeImpl::InitializeJavaScriptVariables(Napi::Env env)
     {
         JsRuntime::Initialize(env, [this](std::function<void(Napi::Env)> func){ Dispatch(std::move(func)); });
-        NativeWindow::Initialize(env, m_nativeWindowPtr, 32, 32);
-        NativeEngine::Initialize(env);
-        XMLHttpRequest::Initialize(env, m_rootUrl.c_str());
+        // NativeWindow::Initialize(env, m_nativeWindowPtr, 32, 32);
+        // NativeEngine::Initialize(env);
+        // XMLHttpRequest::Initialize(env, m_rootUrl.c_str());
     }
 
     void RuntimeImpl::RunJavaScript(Napi::Env env)

@@ -1,7 +1,9 @@
-#include <Babylon/RuntimeWin32.h>
+#include "RuntimeWin32.h"
 #include "RuntimeImpl.h"
-#include "NativeEngine.h"
-#include "NativeXr.h"
+// #include "NativeEngine.h"
+// #include "NativeXr.h"
+
+#include <napi/env.h>
 
 #include <filesystem>
 
@@ -15,7 +17,7 @@ namespace Babylon
     RuntimeWin32::RuntimeWin32(HWND hWnd, const std::string& rootUrl, float width, float height)
         : Runtime{std::make_unique<RuntimeImpl>(hWnd, rootUrl)}
     {
-        NativeEngine::InitializeWindow(hWnd, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        // NativeEngine::InitializeWindow(hWnd, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
     void RuntimeImpl::ThreadProcedure()
@@ -25,7 +27,7 @@ namespace Babylon
         auto coInitializeScopeGuard = gsl::finally([] { CoUninitialize(); });
 
         Dispatch([](Napi::Env env) {
-            InitializeNativeXr(env);
+            // InitializeNativeXr(env);
         });
 
         RuntimeImpl::BaseThreadProcedure();
