@@ -1,6 +1,6 @@
 #pragma once
 
-#include "JsRuntime.h"
+#include <Babylon/JsRuntime.h>
 
 #include <memory>
 #include <string>
