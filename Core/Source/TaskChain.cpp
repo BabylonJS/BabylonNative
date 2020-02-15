@@ -29,7 +29,7 @@ namespace Babylon
     void TaskChain::Suspend()
     {
         // Lock m_blockingTickMutex as well as m_suspendMutex to ensure we do not 
-        // suspend in the middle of a blocking tick.
+        // accidentally suspend in the middle of a blocking tick.
         std::scoped_lock<std::mutex> lockTicking(m_blockingTickMutex);
         std::scoped_lock<std::mutex> lockSuspension(m_suspendMutex);
         m_suspended = true;
@@ -50,7 +50,6 @@ namespace Babylon
 
         while (!m_cancelSource.cancelled())
         {
-            // check if suspended
             {
                 std::unique_lock<std::mutex> lock{ m_suspendMutex };
                 m_suspendConditionVariable.wait(lock, [this]() { return !m_suspended; });

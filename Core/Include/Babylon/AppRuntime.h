@@ -7,6 +7,8 @@
 
 namespace Babylon
 {
+    class TaskChain;
+
     class AppRuntime final : public JsRuntime
     {
     public:
@@ -20,7 +22,10 @@ namespace Babylon
         void Dispatch(std::function<void(Napi::Env)> callback);
 
     private:
-        class Impl;
-        std::unique_ptr<Impl> m_impl{};
+        void CreateEnvironmentAndRun();
+        void Run(Napi::Env);
+
+        const std::string m_rootUrl{};
+        std::unique_ptr<TaskChain> m_taskChain{};
     };
 }
