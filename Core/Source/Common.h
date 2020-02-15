@@ -17,7 +17,7 @@ typedef std::filesystem::path Filepath;
 
 namespace Babylon
 {
-    using babylon_dispatcher = arcana::dispatcher<128>;
+    using babylon_dispatcher = arcana::manual_dispatcher<128>;
 
     Filepath GetModulePath();
     std::string GetUrlFromPath(const Filepath& path);

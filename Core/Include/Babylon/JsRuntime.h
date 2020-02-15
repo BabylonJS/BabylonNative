@@ -17,21 +17,8 @@ namespace Babylon
 
         static void Initialize(Napi::Env env, DispatchFunctionT dispatchFunction)
         {
-            auto global = env.Global();
-
-            if (global.Get(JS_WINDOW_NAME).IsUndefined())
-            {
-                global.Set(JS_WINDOW_NAME, global);
-            }
-
-            auto jsNative = Napi::Object::New(env);
-            global.Set(JS_NATIVE_NAME, jsNative);
-
-            auto jsRuntime = Napi::External<JsRuntime>::New(
-                env, 
-                new JsRuntime(std::move(dispatchFunction)),
-                [](Napi::Env, JsRuntime* jsRuntime) { delete jsRuntime; });
-            jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
+            JsRuntime* runtime = new JsRuntime(std::move(dispatchFunction));
+            runtime->AddJavaScriptReference(env, true);
         }
 
         static JsRuntime& GetFromJavaScript(Napi::Env env)
@@ -49,12 +36,37 @@ namespace Babylon
             m_dispatchFunction(std::move(function));
         }
 
-    private:
+    protected:
+        void AddJavaScriptReference(Napi::Env env, bool doesJavaScriptOwnJsRuntime)
+        {
+            auto global = env.Global();
+
+            if (global.Get(JS_WINDOW_NAME).IsUndefined())
+            {
+                global.Set(JS_WINDOW_NAME, global);
+            }
+
+            auto jsNative = Napi::Object::New(env);
+            global.Set(JS_NATIVE_NAME, jsNative);
+
+            Napi::Value jsRuntime;
+            if (doesJavaScriptOwnJsRuntime)
+            {
+                jsRuntime = Napi::External<JsRuntime>::New(env, this, [](Napi::Env, JsRuntime* jsRuntime) { delete jsRuntime; });
+            }
+            else
+            {
+                jsRuntime = Napi::External<JsRuntime>::New(env, this);
+            }
+            jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
+        }
+
         JsRuntime(DispatchFunctionT&& dispatchFunction)
             : m_dispatchFunction{dispatchFunction}
         {
         }
 
+    private:
         DispatchFunctionT m_dispatchFunction{};
     };
 }

@@ -1,14 +1,20 @@
 set(SOURCES
+    "Include/Babylon/AppRuntime.h"
     "Include/Babylon/Runtime.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
     "Include/Babylon/JsRuntime.h"
+    "Source/AppRuntime.cpp"
+    "Source/AppRuntimeImpl.cpp"
+    "Source/AppRuntimeImpl.h"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.cpp"
     "Source/RuntimeImpl${NAPI_JAVASCRIPT_ENGINE}.cpp"
     "Source/RuntimeImpl.h"
-    "Source/Runtime${BABYLON_NATIVE_PLATFORM}.cpp")
+    "Source/Runtime${BABYLON_NATIVE_PLATFORM}.cpp"
+    "Source/TaskChain.cpp"
+    "Source/TaskChain.h")
 
 add_library(BabylonNativeCore ${SOURCES})
 
