@@ -36,7 +36,7 @@ add_library(BabylonNativeJNI SHARED
             ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/source/js_native_api_v8.cc
             ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/source/env_v8.cc
             ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/source/env.cc
-            ${BABYLON_NATIVE_PACKAGE_DIR}/../../TestApp/Source/Shared/InputManager.cpp)
+            ${BABYLON_NATIVE_PACKAGE_DIR}/../../Apps/Playground/Shared/InputManager.cpp)
 
 target_compile_definitions(BabylonNativeJNI PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 
@@ -45,7 +45,7 @@ target_include_directories(BabylonNativeJNI
         ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Include
         ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/v8/include
         ${BABYLON_NATIVE_PACKAGE_DIR}/../../Library/Dependencies/napi/include
-        ${BABYLON_NATIVE_PACKAGE_DIR}/../../TestApp/Source/Shared)
+        ${BABYLON_NATIVE_PACKAGE_DIR}/../../Apps/Playground/Shared)
 
 target_link_libraries(BabylonNativeJNI
         ${OPENGL_LIB}
