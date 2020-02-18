@@ -1,7 +1,6 @@
 add_subdirectory(Dependencies/arcana.cpp EXCLUDE_FROM_ALL)
 set_property(TARGET arcana PROPERTY FOLDER Dependencies/arcana)
 
-set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(Dependencies/napi EXCLUDE_FROM_ALL)
@@ -103,21 +102,28 @@ endif()
 set(SOURCES
     "Include/Babylon/Runtime.h"
     "Include/Babylon/Runtime${BABYLON_NATIVE_PLATFORM}.h"
+    "Source/BgfxCallback.cpp"
+    "Source/BgfxCallback.h"
     "Include/Babylon/Console.h"
+    "Include/Babylon/JsRuntime.h"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/NativeWindow.cpp"
     "Source/NativeWindow.h"
+    "Source/NetworkUtils.cpp"
+    "Source/NetworkUtils.h"
     "Source/ResourceLimits.cpp"
     "Source/ResourceLimits.h"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.cpp"
+    "Source/RuntimeImpl${NAPI_JAVASCRIPT_ENGINE}.cpp"
     "Source/RuntimeImpl.h"
     "Source/Runtime${BABYLON_NATIVE_PLATFORM}.cpp"
     "Source/ShaderCompiler.h"
     "Source/ShaderCompiler.cpp"
+    "Source/ticketed_collection.h"
     "Source/XMLHttpRequest.cpp"
     "Source/XMLHttpRequest.h"
     "Source/XMLHttpRequest${BABYLON_NATIVE_PLATFORM}.cpp")

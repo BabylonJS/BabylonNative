@@ -2,7 +2,10 @@
 
 #include "NativeWindow.h"
 #include "ShaderCompiler.h"
-#include "RuntimeImpl.h"
+#include "BgfxCallback.h"
+#include "ticketed_collection.h"
+
+#include <Babylon/JsRuntime.h>
 
 #include <napi/napi.h>
 
@@ -217,7 +220,10 @@ namespace Babylon
     {
         ~TextureData()
         {
-            bgfx::destroy(Texture);
+            if (Texture.idx != bgfx::kInvalidHandle)
+            {
+                bgfx::destroy(Texture);
+            }
 
             for (auto image : Images)
             {
@@ -245,6 +251,10 @@ namespace Babylon
 
     struct ProgramData final
     {
+        ProgramData() = default;
+        ProgramData(const ProgramData&) = delete;
+        ProgramData(ProgramData&&) = delete;
+
         ~ProgramData()
         {
             bgfx::destroy(Program);
@@ -294,13 +304,15 @@ namespace Babylon
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
+        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
         NativeEngine(const Napi::CallbackInfo& info, NativeWindow& nativeWindow);
+        ~NativeEngine();
 
         static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
-        static Napi::FunctionReference CreateConstructor(Napi::Env&);
+        static void Initialize(Napi::Env);
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
@@ -352,6 +364,7 @@ namespace Babylon
         Napi::Value LoadCubeTexture(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
+        void UpdateRawTexture(const Napi::CallbackInfo& info);
         void SetTextureSampling(const Napi::CallbackInfo& info);
         void SetTextureWrapMode(const Napi::CallbackInfo& info);
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
@@ -370,6 +383,7 @@ namespace Babylon
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
+        Napi::Value GetFramebufferData(const Napi::CallbackInfo& info);
 
         void UpdateSize(size_t width, size_t height);
         void DispatchAnimationFrameAsync(Napi::FunctionReference callback);
@@ -381,12 +395,14 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler;
 
         ProgramData* m_currentProgram;
+        ticketed_collection<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
-        RuntimeImpl& m_runtimeImpl;
+        JsRuntime& m_runtime;
 
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
 
+        static inline BgfxCallback s_bgfxCallback{};
         FrameBufferManager m_frameBufferManager{};
 
         NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
@@ -400,6 +416,7 @@ namespace Babylon
         template<int size>
         void SetMatrixN(const Napi::CallbackInfo& info);
 
+        void ConvertImageToTexture(TextureData* const textureData, bimg::ImageContainer& image, bool invertY, bool mipMap) const;
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
     };

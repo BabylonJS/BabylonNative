@@ -12,50 +12,32 @@ namespace Napi
 
 namespace Babylon
 {
-    class Env;
     class NativeWindow;
 
     class RuntimeImpl final
     {
     public:
-        static RuntimeImpl& GetRuntimeImplFromJavaScript(Napi::Env);
-        static NativeWindow& GetNativeWindowFromJavaScript(Napi::Env);
-
         RuntimeImpl(void* nativeWindowPtr, const std::string& rootUrl);
         virtual ~RuntimeImpl();
 
         void UpdateSize(float width, float height);
+        void UpdateWindow(float width, float height, void* nativeWindowPtr);
         void Suspend();
         void Resume();
         void LoadScript(const std::string& url);
         void Eval(const std::string& string, const std::string& sourceUrl);
-        void Dispatch(std::function<void(Env&)> callback);
+        void Dispatch(std::function<void(Napi::Env)> callback);
         const std::string& RootUrl() const;
 
-        std::string GetAbsoluteUrl(const std::string& url);
-        template<typename T>
-        arcana::task<T, std::exception_ptr> LoadUrlAsync(const std::string& url);
-
-        arcana::manual_dispatcher<babylon_dispatcher::work_size>& Dispatcher();
-        arcana::cancellation& Cancellation();
-
-        // TODO: Reduce exposure of Task and mutex once we decide on an effective alternative.
-        // Appending to the task chain is NOT thread-safe.  Before setting the RuntimeImpl's Task
-        // to a new value, AcquireTaskLock MUST be called.  Correct usage is something like the
-        // following:
-        //
-        //     auto lock = RuntimeImpl.AcquireTaskLock();
-        //     RuntimeImpl.Task = RuntimeImpl.Task.then(...);
-        //
-        arcana::task<void, std::exception_ptr> Task = arcana::task_from_result<std::exception_ptr>();
-        std::scoped_lock<std::mutex> AcquireTaskLock();
-
     private:
-        void InitializeJavaScriptVariables();
+        void InitializeJavaScriptVariables(Napi::Env);
+        void RunJavaScript(Napi::Env);
         void BaseThreadProcedure();
         void ThreadProcedure();
 
-        arcana::manual_dispatcher<babylon_dispatcher::work_size> m_dispatcher{};
+        arcana::task<void, std::exception_ptr> m_task = arcana::task_from_result<std::exception_ptr>();
+        using DispatcherT = arcana::manual_dispatcher<babylon_dispatcher::work_size>;
+        std::unique_ptr<DispatcherT> m_dispatcher{};
         arcana::cancellation_source m_cancelSource{};
         std::mutex m_taskMutex;
         std::mutex m_suspendMutex;
@@ -75,7 +57,7 @@ namespace Babylon
         // occasionally need access to the env as well; m_env provides this
         // access when the env is available, reverting to nullptr once the env
         // is destroyed.
-        Babylon::Env* m_env{};
+        Napi::Env* m_env{};
         const std::string m_rootUrl{};
     };
 }

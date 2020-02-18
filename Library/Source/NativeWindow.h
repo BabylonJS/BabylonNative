@@ -1,25 +1,29 @@
 #pragma once
 
-#include "napi/napi.h"
-#include "RuntimeImpl.h"
+#include "ticketed_collection.h"
 
-#include <arcana/containers/ticketed_collection.h>
+#include <Babylon/JsRuntime.h>
+
+#include <napi/napi.h>
+
+#include <chrono>
 
 namespace Babylon
 {
     class NativeWindow : public Napi::ObjectWrap<NativeWindow>
     {
+        static constexpr auto JS_NATIVE_WINDOW_NAME = "nativeWindow";
+
     public:
-        static Napi::ObjectReference Create(Napi::Env& env, void* windowPtr, size_t width, size_t height);
-        static Napi::FunctionReference GetSetTimeoutFunction(Napi::ObjectReference& nativeWindow);
-        static Napi::FunctionReference GetAToBFunction(Napi::ObjectReference& nativeWindow);
+        static void Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height);
+        static NativeWindow& GetFromJavaScript(Napi::Env);
 
         NativeWindow(const Napi::CallbackInfo& info);
 
         void Resize(size_t newWidth, size_t newHeight);
 
         using OnResizeCallback = std::function<void(size_t, size_t)>;
-        using OnResizeCallbackTicket = arcana::ticketed_collection<OnResizeCallback>::ticket;
+        using OnResizeCallbackTicket = ticketed_collection<OnResizeCallback>::ticket;
         OnResizeCallbackTicket AddOnResizeCallback(OnResizeCallback&& callback);
 
         void* GetWindowPtr() const;
@@ -27,16 +31,17 @@ namespace Babylon
         size_t GetHeight() const;
 
     private:
-        RuntimeImpl& m_runtimeImpl;
+        JsRuntime& m_runtime;
         void* m_windowPtr{};
         size_t m_width{};
         size_t m_height{};
 
-        std::mutex m_mutex{};
-        arcana::ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
+        ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
 
         static void SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
+        static void AddEventListener(const Napi::CallbackInfo& info);
+        static void RemoveEventListener(const Napi::CallbackInfo& info);
 
         void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
     };
