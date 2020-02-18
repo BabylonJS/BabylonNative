@@ -29,7 +29,6 @@ std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 AAssetManager* g_assetMgrNative = nullptr;
-const char* Root = "file://";
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
@@ -56,26 +55,26 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         int32_t width  = ANativeWindow_getWidth(window);
         int32_t height = ANativeWindow_getHeight(window);
 
-        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, Root, width, height);
+        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, "", width, height);
 
-        runtime->Dispatch([](Babylon::Env& env)
-                          {
-                              Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
-                              {
-                                  switch (level)
-                                  {
-                                      case Babylon::Console::LogLevel::Log:
-                                          __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
-                                          break;
-                                      case Babylon::Console::LogLevel::Warn:
-                                          __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
-                                          break;
-                                      case Babylon::Console::LogLevel::Error:
-                                          __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
-                                          break;
-                                  }
-                              });
-                          });
+        runtime->Dispatch([](Napi::Env env)
+        {
+            Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
+            {
+                switch (level)
+                {
+                case Babylon::Console::LogLevel::Log:
+                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
+                    break;
+                case Babylon::Console::LogLevel::Warn:
+                    __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
+                    break;
+                case Babylon::Console::LogLevel::Error:
+                    __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
+                    break;
+                }
+            });
+        });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
@@ -92,7 +91,7 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
     if (runtime)
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-        //runtime->UpdateSurface(width, height, window);
+        runtime->UpdateWindow(width, height, window);
     }
 }
 
