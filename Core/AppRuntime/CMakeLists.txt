@@ -17,3 +17,6 @@ target_include_directories(AppRuntime INTERFACE "Include")
 target_link_libraries(AppRuntime
     PRIVATE arcana
     PUBLIC JsRuntime)
+
+target_compile_definitions(AppRuntime
+    PRIVATE NOMINMAX)

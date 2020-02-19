@@ -13,6 +13,7 @@ namespace Babylon
     {
     public:
         AppRuntime(const char* rootUrl = nullptr);
+        ~AppRuntime();
 
         const std::string& GetRootUrl() const;
 

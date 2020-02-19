@@ -10,13 +10,15 @@ namespace Babylon
         , m_taskChain{std::make_unique<TaskChain>([this] { CreateEnvironmentAndRun(); })}
     {
     }
+
+    AppRuntime::~AppRuntime()
+    {
+    }
     
     void AppRuntime::Run(Napi::Env env)
     {
         AddJavaScriptReference(env, false);
-
         m_taskChain->RunTaskChain(env);
-        m_taskChain.reset();
     }
 
     const std::string& AppRuntime::GetRootUrl() const

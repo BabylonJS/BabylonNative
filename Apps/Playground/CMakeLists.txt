@@ -103,16 +103,22 @@ if(WINDOWS_STORE)
 endif()
 
 if(WIN32)
-    set(TEST_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/../../Library/Dependencies/bgfx.cmake/bx/include/compat/msvc"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../Library/Dependencies/bgfx.cmake/bgfx/include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../Library/Dependencies/bgfx.cmake/bx/include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../Library/Dependencies/bgfx.cmake/bimg/include")
+    set(TEST_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/bgfx.cmake/bx/include/compat/msvc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/bgfx.cmake/bgfx/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/bgfx.cmake/bx/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/bgfx.cmake/bimg/include")
 endif()
 
 target_include_directories(Playground PRIVATE "Source" "." ${TEST_DEPENDENCY})
 
-target_link_libraries(Playground PRIVATE Library ${ADDITIONAL_LIBRARIES})
-target_link_libraries(Playground PRIVATE Console NativeWindow)
+# TODO: Link to all the things.
+target_link_libraries(Playground PRIVATE AppRuntime ${ADDITIONAL_LIBRARIES})
+# target_link_libraries(Playground PRIVATE Console NativeWindow)
+
+if (WIN32)
+    target_link_libraries(Playground 
+        PRIVATE "shlwapi.lib")
+endif()
 
 if(APPLE)
     if(IOS)

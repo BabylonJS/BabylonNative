@@ -9,8 +9,8 @@
 
 #include <Shared/InputManager.h>
 
-#include <Babylon/Console.h>
-#include <Babylon/RuntimeWin32.h>
+//#include <Babylon/Console.h>
+#include <Babylon/AppRuntime.h>
 
 #define MAX_LOADSTRING 100
 
@@ -18,7 +18,7 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-std::unique_ptr<Babylon::RuntimeWin32> runtime{};
+std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 // Forward declarations of functions included in this code module:
@@ -85,40 +85,40 @@ namespace
         auto width = static_cast<float>(rect.right - rect.left);
         auto height = static_cast<float>(rect.bottom - rect.top);
         runtime.reset();
-        runtime = std::make_unique<Babylon::RuntimeWin32>(hWnd, rootUrl, width, height);
+        runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
 
         // issue a resize here because on some platforms (UWP, WIN32) WM_SIZE is received before the runtime construction
         // So the context is created with the right size but the nativeWindow still has the wrong size
         // depending on how you create your app (runtime created before WM_SIZE is received, this call is not needed)
-        runtime->UpdateSize(width, height);
+        //runtime->UpdateSize(width, height);
 
         runtime->Dispatch([](Napi::Env env)
         {
-            Babylon::Console::CreateInstance(env, [](const char* message, auto)
+            /*Babylon::Console::CreateInstance(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
-            });
+            });*/
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
 
-        runtime->LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
-        runtime->LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
-        runtime->LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
+        //runtime->LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
+        //runtime->LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
+        //runtime->LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
 
         if (scripts.empty())
         {
-            runtime->LoadScript("Scripts/experience.js");
+            //runtime->LoadScript("Scripts/experience.js");
         }
         else
         {
             for (const auto& script : scripts)
             {
-                runtime->LoadScript(GetUrlFromPath(script));
+                //runtime->LoadScript(GetUrlFromPath(script));
             }
 
-            runtime->LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
+            //runtime->LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
         }
     }
 }
@@ -273,7 +273,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (runtime != nullptr) {
                 float width = static_cast<float>(LOWORD(lParam));
                 float height = static_cast<float>(HIWORD(lParam));
-                runtime->UpdateSize(width, height);
+                //runtime->UpdateSize(width, height);
             }
             break;
         }

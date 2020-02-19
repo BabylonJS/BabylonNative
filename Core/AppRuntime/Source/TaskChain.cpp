@@ -13,7 +13,10 @@ namespace Babylon
         {
             Resume();
         }
+
         m_cancelSource.cancel();
+        m_dispatcher.cancelled();
+        
         m_thread.join();
     }
 

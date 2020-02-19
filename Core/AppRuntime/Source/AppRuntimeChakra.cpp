@@ -2,6 +2,9 @@
 
 #include <jsrt.h>
 
+#include <gsl/gsl>
+#include <cassert>
+
 namespace Babylon
 {
     namespace
@@ -17,6 +20,10 @@ namespace Babylon
 
     void AppRuntime::CreateEnvironmentAndRun()
     {
+        HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        assert(SUCCEEDED(hr));
+        auto coInitScopeGuard = gsl::finally([] {CoUninitialize(); });
+
         using DispatchFunction = std::function<void(std::function<void()>)>;
         DispatchFunction dispatchFunction{
             [this](std::function<void()> action) {
