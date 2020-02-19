@@ -117,7 +117,8 @@ target_link_libraries(Playground
     PRIVATE Console
     PRIVATE NativeEngine
     PRIVATE NativeWindow
-    PRIVATE ScriptLoader)
+    PRIVATE ScriptLoader
+    PRIVATE XMLHttpRequest)
 # target_link_libraries(Playground PRIVATE Console NativeWindow)
 
 if (WIN32)

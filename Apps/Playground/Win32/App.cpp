@@ -14,6 +14,7 @@
 #include <Babylon/NativeEngine.h>
 #include <Babylon/NativeWindow.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/XMLHttpRequest.h>
 
 #define MAX_LOADSTRING 100
 
@@ -108,6 +109,12 @@ namespace
 
         // Initialize NativeEngine plugin.
         Babylon::InitializeNativeEngine(*runtime, hWnd, width, height);
+
+        // Initialize XMLHttpRequest plugin.
+        runtime->Dispatch([rootUrl](Napi::Env env)
+        {
+            Babylon::XMLHttpRequest::Initialize(env, rootUrl.data());
+        });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);

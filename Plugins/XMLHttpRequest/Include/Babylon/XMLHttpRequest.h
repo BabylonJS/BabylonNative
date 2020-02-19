@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Common.h"
-
 #include <Babylon/JsRuntime.h>
 
 #include <napi/napi.h>

@@ -1,6 +1,6 @@
 #include "XMLHttpRequest.h"
 
-#include "NetworkUtils.h"
+#include <Babylon/NetworkUtils.h>
 
 #include <Babylon/JsRuntime.h>
 
