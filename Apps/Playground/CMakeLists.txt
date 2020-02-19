@@ -115,7 +115,8 @@ target_include_directories(Playground PRIVATE "Source" "." ${TEST_DEPENDENCY})
 target_link_libraries(Playground PRIVATE AppRuntime ${ADDITIONAL_LIBRARIES})
 target_link_libraries(Playground
     PRIVATE Console
-    PRIVATE NativeWindow)
+    PRIVATE NativeWindow
+    PRIVATE ScriptLoader)
 # target_link_libraries(Playground PRIVATE Console NativeWindow)
 
 if (WIN32)

@@ -11,3 +11,5 @@ target_include_directories(JsRuntime INTERFACE "Include")
 
 target_link_libraries(JsRuntime
     PUBLIC napi)
+
+set_property(TARGET JsRuntime PROPERTY FOLDER Core)

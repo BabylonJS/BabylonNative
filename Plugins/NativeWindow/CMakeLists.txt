@@ -1,9 +1,8 @@
 set(SOURCES
-    "Source/NativeWindow.cpp")
-
-add_library(NativeWindow 
     "Include/Babylon/NativeWindow.h"
     "Source/NativeWindow.cpp")
+
+add_library(NativeWindow ${SOURCES})
 
 target_include_directories(NativeWindow PRIVATE "Include/Babylon")
 target_include_directories(NativeWindow INTERFACE "Include")

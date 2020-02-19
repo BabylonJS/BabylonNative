@@ -12,6 +12,7 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Console.h>
 #include <Babylon/NativeWindow.h>
+#include <Babylon/ScriptLoader.h>
 
 #define MAX_LOADSTRING 100
 
@@ -111,22 +112,24 @@ namespace
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
 
-        //runtime->LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
-        //runtime->LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
-        //runtime->LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
+        Babylon::ScriptLoader loader{ *runtime, rootUrl };
+
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
 
         if (scripts.empty())
         {
-            //runtime->LoadScript("Scripts/experience.js");
+            loader.LoadScript("Scripts/experience.js");
         }
         else
         {
             for (const auto& script : scripts)
             {
-                //runtime->LoadScript(GetUrlFromPath(script));
+                loader.LoadScript(GetUrlFromPath(script));
             }
 
-            //runtime->LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
+            loader.LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
         }
     }
 }

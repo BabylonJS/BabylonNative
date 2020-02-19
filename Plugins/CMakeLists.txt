@@ -1,2 +1,3 @@
-add_subdirectory(Console)
-add_subdirectory(NativeWindow)
+add_subdirectory(Console EXCLUDE_FROM_ALL)
+add_subdirectory(NativeWindow EXCLUDE_FROM_ALL)
+add_subdirectory(ScriptLoader EXCLUDE_FROM_ALL)

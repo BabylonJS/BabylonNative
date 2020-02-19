@@ -20,3 +20,6 @@ target_link_libraries(AppRuntime
 
 target_compile_definitions(AppRuntime
     PRIVATE NOMINMAX)
+
+    set_property(TARGET AppRuntime PROPERTY FOLDER Core)
+    

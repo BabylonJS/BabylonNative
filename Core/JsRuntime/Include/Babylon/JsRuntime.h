@@ -3,6 +3,7 @@
 #include <napi/env.h>
 
 #include <functional>
+#include <mutex>
 
 namespace Babylon
 {
@@ -17,10 +18,13 @@ namespace Babylon
         void Dispatch(std::function<void(Napi::Env)>);
 
     protected:
-        void AddJavaScriptReference(Napi::Env env, bool doesJavaScriptOwnJsRuntime);
         JsRuntime(DispatchFunctionT&&);
+        JsRuntime(const JsRuntime&) = delete;
+
+        void AddJavaScriptReference(Napi::Env env, bool doesJavaScriptOwnJsRuntime);
 
     private:
         DispatchFunctionT m_dispatchFunction{};
+        std::mutex m_mutex{};
     };
 }
