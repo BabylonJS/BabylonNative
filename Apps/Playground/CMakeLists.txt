@@ -113,6 +113,9 @@ target_include_directories(Playground PRIVATE "Source" "." ${TEST_DEPENDENCY})
 
 # TODO: Link to all the things.
 target_link_libraries(Playground PRIVATE AppRuntime ${ADDITIONAL_LIBRARIES})
+target_link_libraries(Playground
+    PRIVATE Console
+    PRIVATE NativeWindow)
 # target_link_libraries(Playground PRIVATE Console NativeWindow)
 
 if (WIN32)

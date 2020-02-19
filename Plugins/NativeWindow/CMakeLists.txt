@@ -10,6 +10,7 @@ target_include_directories(NativeWindow INTERFACE "Include")
 
 target_link_libraries(NativeWindow 
     PRIVATE base-n
-    PUBLIC Library)
+    PUBLIC BabylonNativeUtils
+    PUBLIC JsRuntime)
 
 set_property(TARGET NativeWindow PROPERTY FOLDER Plugins/Babylon)

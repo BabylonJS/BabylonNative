@@ -62,5 +62,8 @@ namespace Babylon
                 m_dispatcher.blocking_tick(m_cancelSource);
             }
         }
+
+        m_dispatcher.clear();
+        m_task = arcana::task_from_result<std::exception_ptr>();
     }
 }

@@ -5,13 +5,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Dependencies: none
 add_subdirectory(arcana.cpp EXCLUDE_FROM_ALL)
 if(WINDOWS_STORE)
-    set_property(TARGET arcana PROPERTY FOLDER Dependencies/arcana)
+    set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 endif()
 
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
-target_include_directories(base-n INTERFACE "Dependencies/base-n/include")
+target_include_directories(base-n INTERFACE "base-n/include")
 
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
@@ -78,7 +78,7 @@ endif()
 # -------------------------------- napi --------------------------------
 # Dependencies: none
 add_subdirectory(napi EXCLUDE_FROM_ALL)
-set_property(TARGET napi PROPERTY FOLDER Dependencies/napi)
+set_property(TARGET napi PROPERTY FOLDER Dependencies)
 set(BABYLON_NATIVE_DEPENDENCIES ${NAPI_DEPENDENCIES} PARENT_SCOPE)
 
 # -------------------------------- SPIRV-Cross --------------------------------
@@ -116,7 +116,7 @@ else()
 endif()
 
 add_subdirectory(curl EXCLUDE_FROM_ALL)
-set_property(TARGET libcurl PROPERTY FOLDER Dependencies/curl)
+set_property(TARGET libcurl PROPERTY FOLDER Dependencies)
 
 # TODO: Certain parts of cURL's functionality are gated behind WINAPI checks
 # that cause the functionality to become unavailable in UWP. Find a better way 
@@ -128,4 +128,4 @@ endif()
 # -------------------------------- babylon_native_utils --------------------------------
 # Dependencies: arcana, curl
 add_subdirectory(babylon_native_utils EXCLUDE_FROM_ALL)
-set_property(TARGET BabylonNativeUtils PROPERTY FOLDER Dependencies/BabylonNativeUtils)
+set_property(TARGET BabylonNativeUtils PROPERTY FOLDER Dependencies)

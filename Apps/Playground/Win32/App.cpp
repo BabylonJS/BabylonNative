@@ -9,8 +9,9 @@
 
 #include <Shared/InputManager.h>
 
-//#include <Babylon/Console.h>
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Console.h>
+#include <Babylon/NativeWindow.h>
 
 #define MAX_LOADSTRING 100
 
@@ -92,12 +93,19 @@ namespace
         // depending on how you create your app (runtime created before WM_SIZE is received, this call is not needed)
         //runtime->UpdateSize(width, height);
 
+        // Initialize console plugin.
         runtime->Dispatch([](Napi::Env env)
         {
-            /*Babylon::Console::CreateInstance(env, [](const char* message, auto)
+            Babylon::Console::CreateInstance(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
-            });*/
+            });
+        });
+
+        // Initialize NativeWindow plugin.
+        runtime->Dispatch([hWnd, width, height](Napi::Env env)
+        {
+            Babylon::NativeWindow::Initialize(env, hWnd, width, height);
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
