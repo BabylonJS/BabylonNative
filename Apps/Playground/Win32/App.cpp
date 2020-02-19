@@ -84,11 +84,11 @@ namespace
             return;
         }
 
-        auto width = static_cast<float>(rect.right - rect.left);
-        auto height = static_cast<float>(rect.bottom - rect.top);
+        // Separately call reset and make_unique to ensure prior runtime is destroyed before new one is created.
         runtime.reset();
         runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
 
+        // TODO: Still?
         // issue a resize here because on some platforms (UWP, WIN32) WM_SIZE is received before the runtime construction
         // So the context is created with the right size but the nativeWindow still has the wrong size
         // depending on how you create your app (runtime created before WM_SIZE is received, this call is not needed)
@@ -104,6 +104,8 @@ namespace
         });
 
         // Initialize NativeWindow plugin.
+        auto width = static_cast<float>(rect.right - rect.left);
+        auto height = static_cast<float>(rect.bottom - rect.top);
         runtime->Dispatch([hWnd, width, height](Napi::Env env)
         {
             Babylon::NativeWindow::Initialize(env, hWnd, width, height);
@@ -113,14 +115,13 @@ namespace
         InputManager::Initialize(*runtime, *inputBuffer);
 
         Babylon::ScriptLoader loader{ *runtime, rootUrl };
-
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
 
         if (scripts.empty())
         {
-            loader.LoadScript("Scripts/experience.js");
+            //loader.LoadScript("Scripts/experience.js");
         }
         else
         {
