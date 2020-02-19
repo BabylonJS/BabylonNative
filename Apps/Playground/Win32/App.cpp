@@ -11,6 +11,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Console.h>
+#include <Babylon/NativeEngine.h>
 #include <Babylon/NativeWindow.h>
 #include <Babylon/ScriptLoader.h>
 
@@ -88,12 +89,6 @@ namespace
         runtime.reset();
         runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
 
-        // TODO: Still?
-        // issue a resize here because on some platforms (UWP, WIN32) WM_SIZE is received before the runtime construction
-        // So the context is created with the right size but the nativeWindow still has the wrong size
-        // depending on how you create your app (runtime created before WM_SIZE is received, this call is not needed)
-        //runtime->UpdateSize(width, height);
-
         // Initialize console plugin.
         runtime->Dispatch([](Napi::Env env)
         {
@@ -111,6 +106,9 @@ namespace
             Babylon::NativeWindow::Initialize(env, hWnd, width, height);
         });
 
+        // Initialize NativeEngine plugin.
+        Babylon::InitializeNativeEngine(*runtime, hWnd, width, height);
+
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
 
@@ -121,7 +119,7 @@ namespace
 
         if (scripts.empty())
         {
-            //loader.LoadScript("Scripts/experience.js");
+            loader.LoadScript("Scripts/experience.js");
         }
         else
         {
@@ -132,6 +130,15 @@ namespace
 
             loader.LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
         }
+    }
+
+    void UpdateWindowSize(float width, float height)
+    {
+        runtime->Dispatch([width, height](Napi::Env env)
+        {
+            auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
+            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+        });
     }
 }
 
@@ -285,7 +292,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (runtime != nullptr) {
                 float width = static_cast<float>(LOWORD(lParam));
                 float height = static_cast<float>(HIWORD(lParam));
-                //runtime->UpdateSize(width, height);
+                UpdateWindowSize(width, height);
             }
             break;
         }
