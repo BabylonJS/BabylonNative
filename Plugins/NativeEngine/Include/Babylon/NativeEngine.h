@@ -1,9 +1,9 @@
 #pragma once
 
-#include "NativeWindow.h"
+#include <Babylon/NativeWindow.h>
 #include "ShaderCompiler.h"
 #include "BgfxCallback.h"
-#include "ticketed_collection.h"
+#include <Babylon/ticketed_collection.h>
 
 #include <Babylon/JsRuntime.h>
 
