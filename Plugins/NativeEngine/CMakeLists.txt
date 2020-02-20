@@ -44,12 +44,12 @@ target_link_libraries(NativeEngine
 
 if(XR)
     target_link_libraries(NativeEngine
-        PRIVATE XR)
+        PRIVATE xr)
+    target_compile_definitions(NativeEngine PRIVATE NATIVE_ENGINE_XR)
 endif()
 
 if(WIN32 OR WINDOWS_STORE)
     target_link_libraries(NativeEngine
-        #PRIVATE "d3d11.lib"
         PRIVATE "d3dcompiler.lib")
 elseif(APPLE)
     target_link_libraries(NativeEngine
