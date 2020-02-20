@@ -13,4 +13,9 @@ target_link_libraries(XMLHttpRequest
     PUBLIC arcana
     PRIVATE BabylonNativeUtils)
 
+if(WINDOWS_STORE)
+    target_link_libraries(XMLHttpRequest
+        PUBLIC "Kernel32.lib")
+endif()
+
 set_property(TARGET XMLHttpRequest PROPERTY FOLDER Plugins/Babylon)

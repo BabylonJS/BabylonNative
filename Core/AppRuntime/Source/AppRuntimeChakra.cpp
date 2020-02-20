@@ -20,9 +20,11 @@ namespace Babylon
 
     void AppRuntime::CreateEnvironmentAndRun()
     {
+#if WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
         HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         assert(SUCCEEDED(hr));
-        auto coInitScopeGuard = gsl::finally([] {CoUninitialize(); });
+        auto coInitScopeGuard = gsl::finally([] { CoUninitialize(); });
+#endif
 
         using DispatchFunction = std::function<void(std::function<void()>)>;
         DispatchFunction dispatchFunction{

@@ -1,8 +1,5 @@
 #include "XMLHttpRequest.h"
 
-#include "Common.h"
-#include "RuntimeImpl.h"
-
 #include <robuffer.h>
 #include <winrt/Windows.Storage.Streams.h>
 

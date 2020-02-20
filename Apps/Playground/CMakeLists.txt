@@ -43,6 +43,9 @@ elseif(WINDOWS_STORE)
         "UWP/App.cpp"
         "UWP/App.h")
 
+    set(RESOURCE_FILES
+        ${BABYLON_NATIVE_DEPENDENCIES})
+
 elseif(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -165,6 +168,9 @@ endif()
 if(WINDOWS_STORE)
     set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    
+    set_property(SOURCE ${BABYLON_NATIVE_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${BABYLON_NATIVE_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION ".")
 else()
     foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
         get_filename_component(SCRIPT_NAME "${script}" NAME)
@@ -174,8 +180,8 @@ else()
             COMMENT "Copying ${SCRIPT_NAME}"
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
     endforeach()
+    
+    foreach(dependency ${BABYLON_NATIVE_DEPENDENCIES})
+        add_custom_command(TARGET Playground POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different ${dependency} $<TARGET_FILE_DIR:Playground>)
+    endforeach(dependency)
 endif()
-
-foreach(dependency ${BABYLON_NATIVE_DEPENDENCIES})
-    add_custom_command(TARGET Playground POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different ${dependency} $<TARGET_FILE_DIR:Playground>)
-endforeach(dependency)
