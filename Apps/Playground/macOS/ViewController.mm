@@ -1,10 +1,16 @@
 #import "ViewController.h"
+
+#import <Babylon/AppRuntime.h>
 #import <Babylon/Console.h>
-#import <Babylon/RuntimeApple.h>
+#import <Babylon/NativeEngine.h>
+#import <Babylon/NativeWindow.h>
+#import <Babylon/ScriptLoader.h>
+#import <Babylon/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
 
-std::unique_ptr<Babylon::RuntimeApple> runtime{};
+std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::string rootUrl;
 
 @implementation ViewController
 
@@ -18,13 +24,13 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
     NSBundle *main = [NSBundle mainBundle];
     NSURL * resourceUrl = [main resourceURL];
-
-    NSWindow* nativeWindow = [[self view] window];
-    NSSize size = [self view].frame.size;
-    runtime = std::make_unique<Babylon::RuntimeApple>(
-        (__bridge void*)nativeWindow, [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String],
-            size.width, size.height);
+    rootUrl = [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String];
     
+    // Create the AppRuntime
+    runtime.reset();
+    runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
+    
+    // Initialize console plugin
     runtime->Dispatch([](Napi::Env env)
     {
         Babylon::Console::CreateInstance(env, [](const char* message, auto)
@@ -32,13 +38,32 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
             NSLog(@"%s", message);
         });
     });
+    
+    // Initialize NativeWindow plugin
+    NSSize size = [self view].frame.size;
+    float width = size.width;
+    float height = size.height;
+    NSWindow* nativeWindow = [[self view] window];
+    void* windowPtr = (__bridge void*)nativeWindow;
+    runtime->Dispatch([windowPtr, width, height](Napi::Env env)
+    {
+        Babylon::NativeWindow::Initialize(env, windowPtr, width, height);
+    });
+    
+    Babylon::InitializeNativeEngine(*runtime, windowPtr, width, height);
+    
+    runtime->Dispatch([rootUrl = rootUrl.data()](Napi::Env env)
+    {
+        Babylon::XMLHttpRequest::Initialize(env, rootUrl);
+    });
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
     
-    runtime->LoadScript("babylon.max.js");
-    runtime->LoadScript("babylon.glTF2FileLoader.js");
-    runtime->LoadScript("experience.js");
+    Babylon::ScriptLoader loader{ *runtime, rootUrl };
+    loader.LoadScript("babylon.max.js");
+    loader.LoadScript("babylon.glTF2FileLoader.js");
+    loader.LoadScript("experience.js");
 }
 
 - (void)setRepresentedObject:(id)representedObject {
@@ -52,7 +77,13 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     if (runtime)
     {
         NSSize size = [self view].frame.size;
-        runtime->UpdateSize(size.width, size.height);
+        float width = size.width;
+        float height = size.height;
+        runtime->Dispatch([width, height](Napi::Env env)
+        {
+            auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
+            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+        });
     }
 }
 

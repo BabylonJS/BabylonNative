@@ -1,6 +1,9 @@
 #include <Babylon/NativeEngine.h>
 #include "NativeEngine.h"
+
+#ifdef NATIVE_ENGINE_XR
 #include "NativeXr.h"
+#endif
 
 namespace Babylon
 {
@@ -10,7 +13,9 @@ namespace Babylon
         runtime.Dispatch([](Napi::Env env)
         {
             NativeEngine::Initialize(env);
+#ifdef NATIVE_ENGINE_XR
             InitializeNativeXr(env);
+#endif
         });
     }
 }
