@@ -46,8 +46,17 @@ endif()
 
 target_include_directories(ValidationTests PRIVATE "Source" "." ${TEST_DEPENDENCY})
 
-target_link_libraries(ValidationTests PRIVATE Library ${ADDITIONAL_LIBRARIES})
-target_link_libraries(ValidationTests PRIVATE Console NativeWindow)
+target_link_libraries(ValidationTests PRIVATE ${ADDITIONAL_LIBRARIES})
+target_link_libraries(ValidationTests
+    PRIVATE bgfx
+    PRIVATE bimg
+    PRIVATE bx
+    PRIVATE AppRuntime
+    PRIVATE Console
+    PRIVATE NativeEngine
+    PRIVATE NativeWindow
+    PRIVATE ScriptLoader
+    PRIVATE XMLHttpRequest)
 
 foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
     get_filename_component(SCRIPT_NAME "${script}" NAME)
