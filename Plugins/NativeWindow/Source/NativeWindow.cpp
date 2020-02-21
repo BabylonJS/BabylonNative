@@ -55,7 +55,7 @@ namespace Babylon
             m_width = newWidth;
             m_height = newHeight;
 
-            m_onResizeCallbacks.apply_to_all([this](auto& callback)
+            m_onResizeCallbacks.ApplyToAll([this](auto& callback)
             {
                 callback(m_width, m_height);
             });
@@ -64,7 +64,7 @@ namespace Babylon
 
     NativeWindow::OnResizeCallbackTicket NativeWindow::AddOnResizeCallback(OnResizeCallback&& callback)
     {
-        return m_onResizeCallbacks.insert(std::move(callback));
+        return m_onResizeCallbacks.Insert(std::move(callback));
     }
 
     void* NativeWindow::GetWindowPtr() const

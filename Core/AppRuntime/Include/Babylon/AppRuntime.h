@@ -7,7 +7,7 @@
 
 namespace Babylon
 {
-    class TaskChain;
+    class WorkQueue;
 
     class AppRuntime final : public JsRuntime
     {
@@ -15,18 +15,16 @@ namespace Babylon
         AppRuntime(const char* rootUrl = nullptr);
         ~AppRuntime();
 
-        const std::string& GetRootUrl() const;
-
         void Suspend();
         void Resume();
 
         void Dispatch(std::function<void(Napi::Env)> callback);
 
+        const std::string RootUrl;
+
     private:
         void CreateEnvironmentAndRun();
         void Run(Napi::Env);
-
-        const std::string m_rootUrl{};
-        std::unique_ptr<TaskChain> m_taskChain{};
+        std::unique_ptr<WorkQueue> m_workQueue{};
     };
 }

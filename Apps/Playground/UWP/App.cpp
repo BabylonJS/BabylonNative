@@ -176,15 +176,15 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     Babylon::InitializeNativeEngine(*m_runtime, windowPtr, width, height);
 
     // Initialize XMLHttpRequest plugin.
-    m_runtime->Dispatch([rootUrl](Napi::Env env)
+    m_runtime->Dispatch([&runtime = *m_runtime](Napi::Env env)
     {
-        Babylon::XMLHttpRequest::Initialize(env, rootUrl.data());
+        Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
     });
 
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
     InputManager::Initialize(*m_runtime, *m_inputBuffer);
 
-    Babylon::ScriptLoader loader{ *m_runtime, rootUrl };
+    Babylon::ScriptLoader loader{ *m_runtime, m_runtime->RootUrl };
     loader.LoadScript(appUrl + "/Scripts/babylon.max.js");
     loader.LoadScript(appUrl + "/Scripts/babylon.glTF2FileLoader.js");
 

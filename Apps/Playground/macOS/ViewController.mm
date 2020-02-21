@@ -10,7 +10,6 @@
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
-std::string rootUrl;
 
 @implementation ViewController
 
@@ -24,7 +23,7 @@ std::string rootUrl;
 
     NSBundle *main = [NSBundle mainBundle];
     NSURL * resourceUrl = [main resourceURL];
-    rootUrl = [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String];
+    std::string rootUrl = [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String];
     
     // Create the AppRuntime
     runtime.reset();
@@ -52,15 +51,15 @@ std::string rootUrl;
     
     Babylon::InitializeNativeEngine(*runtime, windowPtr, width, height);
     
-    runtime->Dispatch([rootUrl = rootUrl.data()](Napi::Env env)
+    runtime->Dispatch([&runtime = *runtime](Napi::Env env)
     {
-        Babylon::XMLHttpRequest::Initialize(env, rootUrl);
+        Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
     });
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
     
-    Babylon::ScriptLoader loader{ *runtime, rootUrl };
+    Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl };
     loader.LoadScript("babylon.max.js");
     loader.LoadScript("babylon.glTF2FileLoader.js");
     loader.LoadScript("experience.js");

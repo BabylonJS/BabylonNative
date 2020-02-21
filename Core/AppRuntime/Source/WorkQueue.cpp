@@ -1,13 +1,13 @@
-#include "TaskChain.h"
+#include "WorkQueue.h"
 
 namespace Babylon
 {
-    TaskChain::TaskChain(std::function<void()> threadProcedure)
+    WorkQueue::WorkQueue(std::function<void()> threadProcedure)
         : m_thread{ std::move(threadProcedure) }
     {
     }
 
-    TaskChain::~TaskChain()
+    WorkQueue::~WorkQueue()
     {
         if (m_suspended)
         {
@@ -20,7 +20,7 @@ namespace Babylon
         m_thread.join();
     }
 
-    void TaskChain::Append(std::function<void(Napi::Env)> callable)
+    void WorkQueue::Append(std::function<void(Napi::Env)> callable)
     {
         std::scoped_lock lock{ m_appendMutex };
         m_task = m_task.then(m_dispatcher, m_cancelSource, [this, callable = std::move(callable)]
@@ -29,7 +29,7 @@ namespace Babylon
         });
     }
 
-    void TaskChain::Suspend()
+    void WorkQueue::Suspend()
     {
         // Lock m_blockingTickMutex as well as m_suspendMutex to ensure we do not 
         // accidentally suspend in the middle of a blocking tick.
@@ -39,14 +39,14 @@ namespace Babylon
         m_suspendConditionVariable.notify_one();
     }
 
-    void TaskChain::Resume()
+    void WorkQueue::Resume()
     {
         std::scoped_lock<std::mutex> lock(m_suspendMutex);
         m_suspended = false;
         m_suspendConditionVariable.notify_one();
     }
 
-    void TaskChain::RunTaskChain(Napi::Env env)
+    void WorkQueue::Run(Napi::Env env)
     {
         m_env = std::make_optional(env);
         m_dispatcher.set_affinity(std::this_thread::get_id());

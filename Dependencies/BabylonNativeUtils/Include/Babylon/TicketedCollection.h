@@ -6,7 +6,7 @@ namespace Babylon
 {
     // NOTE: This type is not thread-safe.
     template<typename T>
-    class ticketed_collection
+    class TicketedCollection
     {
         // NOTE: Philosophically, this type is actually std::map<MapT**, T>.
         // That's a recursive type, though, so for simplicity's sake we use
@@ -14,18 +14,18 @@ namespace Babylon
         using MapT = std::map<void**, T>;
 
     public:
-        class ticket
+        class Ticket
         {
         public:
-            ticket(const ticket&) = delete;
+            Ticket(const Ticket&) = delete;
 
-            ticket(ticket&& other)
+            Ticket(Ticket&& other)
                 : m_collection{ other.m_collection }
             {
                 other.m_collection = nullptr;
             }
 
-            ~ticket()
+            ~Ticket()
             {
                 // If m_collection itself is a nullptr, then the object being
                 // destructed is the "empty shell" left over after the use of 
@@ -47,9 +47,9 @@ namespace Babylon
             }
 
         private:
-            friend class ticketed_collection;
+            friend class TicketedCollection;
 
-            ticket(T&& value, MapT& collection)
+            Ticket(T&& value, MapT& collection)
                 : m_collection{ new MapT*(&collection) }
             {
                 collection[reinterpret_cast<void**>(m_collection)] = std::move(value);
@@ -58,22 +58,22 @@ namespace Babylon
             MapT** m_collection;
         };
 
-        ticketed_collection() = default;
-        ticketed_collection(const ticketed_collection&) = delete;
-        ticketed_collection(ticketed_collection&&) = delete;
+        TicketedCollection() = default;
+        TicketedCollection(const TicketedCollection&) = delete;
+        TicketedCollection(TicketedCollection&&) = delete;
 
-        ~ticketed_collection()
+        ~TicketedCollection()
         {
-            clear();
+            Clear();
         }
 
-        ticket insert(T&& value)
+        Ticket Insert(T&& value)
         {
             return{ std::move(value), m_map };
         }
 
         template<typename CallableT>
-        void apply_to_all(CallableT callable)
+        void ApplyToAll(CallableT callable)
         {
             for (auto& [ptr, value] : m_map)
             {
@@ -81,7 +81,7 @@ namespace Babylon
             }
         }
 
-        void clear()
+        void Clear()
         {
             for (auto& [ptr, value] : m_map)
             {

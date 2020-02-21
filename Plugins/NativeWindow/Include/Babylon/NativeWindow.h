@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-#include <Babylon/ticketed_collection.h> // TODO: Having this publicly exposed and be in BabylonNativeUtils causes arcana to be publicly exposed. Consider alternatives.
+#include <Babylon/TicketedCollection.h> // TODO: Having this publicly exposed and be in BabylonNativeUtils causes arcana to be publicly exposed. Consider alternatives.
 
 #include <napi/napi.h>
 
@@ -22,7 +22,7 @@ namespace Babylon
         void Resize(size_t newWidth, size_t newHeight);
 
         using OnResizeCallback = std::function<void(size_t, size_t)>;
-        using OnResizeCallbackTicket = ticketed_collection<OnResizeCallback>::ticket;
+        using OnResizeCallbackTicket = TicketedCollection<OnResizeCallback>::Ticket;
         OnResizeCallbackTicket AddOnResizeCallback(OnResizeCallback&& callback);
 
         void* GetWindowPtr() const;
@@ -35,7 +35,7 @@ namespace Babylon
         size_t m_width{};
         size_t m_height{};
 
-        ticketed_collection<OnResizeCallback> m_onResizeCallbacks{};
+        TicketedCollection<OnResizeCallback> m_onResizeCallbacks{};
 
         static void SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);

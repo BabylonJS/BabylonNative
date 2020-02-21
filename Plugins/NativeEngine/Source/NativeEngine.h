@@ -3,7 +3,7 @@
 #include <Babylon/NativeWindow.h>
 #include "ShaderCompiler.h"
 #include "BgfxCallback.h"
-#include <Babylon/ticketed_collection.h>
+#include <Babylon/TicketedCollection.h>
 
 #include <Babylon/JsRuntime.h>
 
@@ -395,7 +395,7 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler;
 
         ProgramData* m_currentProgram;
-        ticketed_collection<std::unique_ptr<ProgramData>> m_programDataCollection{};
+        TicketedCollection<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;
 

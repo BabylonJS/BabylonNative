@@ -111,15 +111,15 @@ namespace
         Babylon::InitializeNativeEngine(*runtime, hWnd, width, height);
 
         // Initialize XMLHttpRequest plugin.
-        runtime->Dispatch([rootUrl](Napi::Env env)
+        runtime->Dispatch([&runtime = *runtime](Napi::Env env)
         {
-            Babylon::XMLHttpRequest::Initialize(env, rootUrl.data());
+            Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
         });
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
 
-        Babylon::ScriptLoader loader{ *runtime, rootUrl };
+        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl };
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");

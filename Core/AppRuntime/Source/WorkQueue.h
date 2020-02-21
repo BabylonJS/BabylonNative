@@ -7,16 +7,16 @@
 
 namespace Babylon
 {
-    class TaskChain
+    class WorkQueue
     {
     public:
-        TaskChain(std::function<void()> threadProcedure);
-        ~TaskChain();
+        WorkQueue(std::function<void()> threadProcedure);
+        ~WorkQueue();
 
         void Append(std::function<void(Napi::Env)>);
         void Suspend();
         void Resume();
-        void RunTaskChain(Napi::Env);
+        void Run(Napi::Env);
 
     private:
         std::optional<Napi::Env> m_env{};

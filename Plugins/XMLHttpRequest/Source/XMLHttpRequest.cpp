@@ -6,9 +6,17 @@
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr auto JS_ROOT_URL_NAME = "RootUrl";
+    }
+
     void XMLHttpRequest::Initialize(Napi::Env env, const char* rootUrl)
     {
         Napi::HandleScope scope{env};
+
+        auto jsNative = env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
+        jsNative.Set(JS_ROOT_URL_NAME, Napi::String::New(env, rootUrl));
 
         Napi::Function func = DefineClass(
             env,
@@ -29,7 +37,7 @@ namespace Babylon
                 InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
                 InstanceMethod("open", &XMLHttpRequest::Open),
                 InstanceMethod("send", &XMLHttpRequest::Send),
-            }, const_cast<char*>(rootUrl));
+            });
 
         env.Global().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
     }
@@ -37,7 +45,7 @@ namespace Babylon
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<XMLHttpRequest>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_rootUrl{static_cast<const char*>(info.Data())}
+        , m_rootUrl{info.Env().Global().Get(JsRuntime::JS_NATIVE_NAME).ToObject().Get(JS_ROOT_URL_NAME).ToString()}
     {
     }
 

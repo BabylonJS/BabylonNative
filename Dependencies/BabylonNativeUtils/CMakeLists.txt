@@ -1,6 +1,6 @@
 set(SOURCES
     "Include/Babylon/NetworkUtils.h"
-    "Include/Babylon/ticketed_collection.h"
+    "Include/Babylon/TicketedCollection.h"
     "Source/NetworkUtils.cpp")
 
 add_library(BabylonNativeUtils ${SOURCES})

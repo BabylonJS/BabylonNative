@@ -26,7 +26,6 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::string rootUrl{};
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -57,7 +56,7 @@ namespace
 
     void RefreshBabylon(HWND hWnd)
     {
-        rootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path());
+        std::string rootUrl{GetUrlFromPath(GetModulePath().parent_path().parent_path())};
         RECT rect;
         if (!GetWindowRect(hWnd, &rect))
         {
@@ -88,9 +87,9 @@ namespace
         Babylon::InitializeNativeEngine(*runtime, hWnd, width, height);
 
         // Initialize XMLHttpRequest plugin.
-        runtime->Dispatch([rootUrl = rootUrl.data()](Napi::Env env)
+        runtime->Dispatch([&runtime = *runtime](Napi::Env env)
         {
-            Babylon::XMLHttpRequest::Initialize(env, rootUrl);
+            Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
         });
 
         runtime->Dispatch([hWnd](Napi::Env env)
@@ -98,7 +97,7 @@ namespace
             Babylon::TestUtils::CreateInstance(env, hWnd);
         });
 
-        Babylon::ScriptLoader loader{ *runtime, rootUrl };
+        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl };
         loader.LoadScript("Scripts/babylon.max.js");
         loader.LoadScript("Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript("Scripts/babylonjs.materials.js");

@@ -125,7 +125,7 @@ if(WINDOWS_STORE)
     target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
 endif()
 
-# -------------------------------- babylon_native_utils --------------------------------
+# -------------------------------- BabylonNativeUtils --------------------------------
 # Dependencies: arcana, curl
-add_subdirectory(babylon_native_utils EXCLUDE_FROM_ALL)
+add_subdirectory(BabylonNativeUtils EXCLUDE_FROM_ALL)
 set_property(TARGET BabylonNativeUtils PROPERTY FOLDER Dependencies)

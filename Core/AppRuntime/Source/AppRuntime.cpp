@@ -1,13 +1,13 @@
 #include "AppRuntime.h"
 
-#include "TaskChain.h"
+#include "WorkQueue.h"
 
 namespace Babylon
 {
     AppRuntime::AppRuntime(const char* rootUrl)
         : JsRuntime([this](auto func) { Dispatch(std::move(func)); })
-        , m_rootUrl{rootUrl}
-        , m_taskChain{std::make_unique<TaskChain>([this] { CreateEnvironmentAndRun(); })}
+        , RootUrl{rootUrl}
+        , m_workQueue{std::make_unique<WorkQueue>([this] { CreateEnvironmentAndRun(); })}
     {
     }
 
@@ -18,26 +18,21 @@ namespace Babylon
     void AppRuntime::Run(Napi::Env env)
     {
         AddJavaScriptReference(env, false);
-        m_taskChain->RunTaskChain(env);
-    }
-
-    const std::string& AppRuntime::GetRootUrl() const
-    {
-        return m_rootUrl;
+        m_workQueue->Run(env);
     }
 
     void AppRuntime::Suspend()
     {
-        m_taskChain->Suspend();
+        m_workQueue->Suspend();
     }
 
     void AppRuntime::Resume()
     {
-        m_taskChain->Resume();
+        m_workQueue->Resume();
     }
 
     void AppRuntime::Dispatch(std::function<void(Napi::Env)> func)
     {
-        m_taskChain->Append(std::move(func));
+        m_workQueue->Append(std::move(func));
     }
 }

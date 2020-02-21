@@ -4,8 +4,8 @@ set(SOURCES
     "Source/AppRuntime${NAPI_JAVASCRIPT_ENGINE}.cpp"
     "Source/Common.h"
     "Source/Common${BABYLON_NATIVE_PLATFORM}.cpp"
-    "Source/TaskChain.cpp"
-    "Source/TaskChain.h")
+    "Source/WorkQueue.cpp"
+    "Source/WorkQueue.h")
 
 add_library(AppRuntime ${SOURCES})
 
