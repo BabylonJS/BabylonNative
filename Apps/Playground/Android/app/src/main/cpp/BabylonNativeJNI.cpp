@@ -8,8 +8,12 @@
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
 
-#include <Babylon/RuntimeAndroid.h>
+#include <Babylon/AppRuntime.h>
 #include <Babylon/Console.h>
+#include <Babylon/NativeEngine.h>
+#include <Babylon/NativeWindow.h>
+#include <Babylon/ScriptLoader.h>
+#include <Babylon/XMLHttpRequest.h>
 #include <InputManager.h>
 
 #include <android/asset_manager.h>
@@ -27,7 +31,7 @@ extern "C" {
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
 };
 
-std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
+std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 std::unique_ptr<Babylon::ScriptLoader> loader{};
 
@@ -54,7 +58,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
 {
     if (!runtime)
     {
-        runtime = std::make_unique<Babylon::RuntimeAndroid>("");
+        runtime = std::make_unique<Babylon::AppRuntime>("");
 
         runtime->Dispatch([](Napi::Env env)
         {
