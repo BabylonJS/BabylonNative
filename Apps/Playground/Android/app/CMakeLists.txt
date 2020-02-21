@@ -29,9 +29,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/")
 
 set(BABYLON_NATIVE_TESTAPP_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
-add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Dependencies/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/Dependencies/)
-add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Core/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/Core/)
-add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Plugins/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/Plugins/)
+add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Dependencies/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
+add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Core/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
+add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Plugins/ ${BABYLON_NATIVE_TESTAPP_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
 add_library(BabylonNativeJNI SHARED
             src/main/cpp/BabylonNativeJNI.cpp
