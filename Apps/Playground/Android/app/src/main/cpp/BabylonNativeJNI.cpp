@@ -7,11 +7,13 @@
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
-#include <Babylon/Console.h>
+
 #include <Babylon/RuntimeAndroid.h>
+#include <Babylon/Console.h>
+#include <InputManager.h>
+
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
-#include <InputManager.h>
 
 extern "C" {
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr, jobject appContext);
@@ -27,6 +29,7 @@ extern "C" {
 
 std::unique_ptr<Babylon::RuntimeAndroid> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<Babylon::ScriptLoader> loader{};
 
 AAssetManager *g_assetMgrNative = nullptr;
 
@@ -41,6 +44,7 @@ Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj)
 {
+    loader.reset();
     inputBuffer.reset();
     runtime.reset();
 }
@@ -50,11 +54,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
 {
     if (!runtime)
     {
-        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-        int32_t width  = ANativeWindow_getWidth(window);
-        int32_t height = ANativeWindow_getHeight(window);
-
-        runtime = std::make_unique<Babylon::RuntimeAndroid>(window, "", width, height);
+        runtime = std::make_unique<Babylon::RuntimeAndroid>("");
 
         runtime->Dispatch([](Napi::Env env)
         {
@@ -75,11 +75,25 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
             });
         });
 
+        int32_t width  = ANativeWindow_getWidth(window);
+        int32_t height = ANativeWindow_getHeight(window);
+        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
+        runtime->Dispatch([window, width, height](Napi::Env env)
+        {
+            Babylon::NativeWindow::Initialize(env, window, width, height);
+        });
+        
+        Babylon::InitializeNativeEngine(*runtime, window, width, height);
+        
+        // Initialize XMLHttpRequest plugin.
+        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
+
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
-
-        runtime->LoadScript("Scripts/babylon.max.js");
-        runtime->LoadScript("Scripts/babylon.glTF2FileLoader.js");
+        
+        loader = std::make_unique<Babylon::ScriptLoader>(*runtime, runtime->RootUrl);
+        loader->LoadScript("Scripts/babylon.max.js");
+        loader->LoadScript("Scripts/babylon.glTF2FileLoader.js");
     }
 }
 
@@ -89,17 +103,18 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
     if (runtime)
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-        runtime->UpdateWindow(width, height, window);
+        // TODO: Add UpdateWindow for Android.
+        // runtime->UpdateWindow(width, height, window);
     }
 }
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jobject obj, jstring path)
 {
-    if (runtime)
+    if (loader)
     {
         jboolean iscopy;
-        runtime->LoadScript(env->GetStringUTFChars(path, &iscopy));
+        loader->LoadScript(env->GetStringUTFChars(path, &iscopy));
     }
 }
 
@@ -110,7 +125,12 @@ Java_BabylonNative_Wrapper_eval(JNIEnv* env, jobject obj, jstring source, jstrin
     {
         jboolean iscopy;
         std::string url = env->GetStringUTFChars(sourceURL, &iscopy);
-        runtime->Eval(env->GetStringUTFChars(source, &iscopy), url);
+        std::string src = env->GetStringUTFChars(source, &iscopy);
+        // TODO: Put this on ScriptLoader?
+        runtime->Dispatch([src = std::move(src), url = std::move(url)](Napi::Env env)
+        {
+            Napi::Eval(env, src.data(), url.data());
+        });
     }
 }
 
