@@ -44,9 +44,8 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     });
     
     // Initialize NativeWindow plugin
-    NSSize size = [self view].frame.size;
-    float width = size.width;
-    float height = size.height;
+    float width = inWidth;
+    float height = inHeight;
     NSWindow* nativeWindow = [[self view] window];
     void* windowPtr = (__bridge void*)nativeWindow;
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
