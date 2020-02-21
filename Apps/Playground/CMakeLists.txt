@@ -1,3 +1,6 @@
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js")
