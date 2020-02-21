@@ -1,4 +1,5 @@
 #include "XMLHttpRequest.h"
+#include <Babylon/XMLHttpRequest.h>
 
 #include <Babylon/NetworkUtils.h>
 
@@ -9,6 +10,14 @@ namespace Babylon
     namespace
     {
         constexpr auto JS_ROOT_URL_NAME = "RootUrl";
+    }
+
+    void InitializeXMLHttpRequest(JsRuntime& runtime, const char* rootUrl)
+    {
+        runtime.Dispatch([rootUrl = std::string{rootUrl}](Napi::Env env)
+        {
+            XMLHttpRequest::Initialize(env, rootUrl.data());
+        });
     }
 
     void XMLHttpRequest::Initialize(Napi::Env env, const char* rootUrl)

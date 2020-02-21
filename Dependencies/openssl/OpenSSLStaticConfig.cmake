@@ -44,28 +44,28 @@ unset(_expectedTargets)
 add_library(OpenSSL::SSL STATIC IMPORTED)
 
 set_target_properties(OpenSSL::SSL PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/include;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/providers/implementations/include;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/providers/common/include;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/crypto/ec/curve448/arch_32;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/crypto/ec/curve448;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/crypto"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/include;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/providers/implementations/include;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/providers/common/include;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/crypto/ec/curve448/arch_32;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/crypto/ec/curve448;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/crypto"
 )
 
 # Create imported target OpenSSL::Crypto
 add_library(OpenSSL::Crypto STATIC IMPORTED)
 
 set_target_properties(OpenSSL::Crypto PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/include;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/providers/implementations/include;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/providers/common/include;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/crypto/ec/curve448/arch_32;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/crypto/ec/curve448;${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/openssl/openssl/crypto"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/include;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/providers/implementations/include;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/providers/common/include;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/crypto/ec/curve448/arch_32;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/crypto/ec/curve448;${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/crypto"
 )
 
 # Import target "OpenSSL::SSL" for configuration "Debug"
 set_property(TARGET OpenSSL::SSL APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(OpenSSL::SSL PROPERTIES
   IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
-  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/Dependencies/openssl/libSSL.a"
+  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/openssl/libSSL.a"
   )
 
 # Import target "OpenSSL::Crypto" for configuration "Debug"
 set_property(TARGET OpenSSL::Crypto APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(OpenSSL::Crypto PROPERTIES
   IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
-  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/Dependencies/openssl/libCrypto.a"
+  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/openssl/libCrypto.a"
   )
 
 # This file does not depend on other imported targets which have

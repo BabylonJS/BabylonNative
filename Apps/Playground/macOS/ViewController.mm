@@ -51,10 +51,8 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     
     Babylon::InitializeNativeEngine(*runtime, windowPtr, width, height);
     
-    runtime->Dispatch([&runtime = *runtime](Napi::Env env)
-    {
-        Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
-    });
+    // Initialize XMLHttpRequest plugin.
+    Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);

@@ -46,8 +46,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     // Initialize NativeWindow plugin
     float width = inWidth;
     float height = inHeight;
-    NSWindow* nativeWindow = [[self view] window];
-    void* windowPtr = (__bridge void*)nativeWindow;
+    void* windowPtr = CALayerPtr;
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
         Babylon::NativeWindow::Initialize(env, windowPtr, width, height);
@@ -55,10 +54,8 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     
     Babylon::InitializeNativeEngine(*runtime, windowPtr, width, height);
     
-    runtime->Dispatch([&runtime = *runtime](Napi::Env env)
-    {
-        Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
-    });
+    // Initialize XMLHttpRequest plugin.
+    Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
@@ -73,7 +70,11 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 {
     if (runtime) 
     {
-        runtime->UpdateSize(inWidth, inHeight);
+        runtime->Dispatch([inWidth, inHeight](Napi::Env env)
+        {
+            auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
+            window.Resize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+        });
     }
 }
 

@@ -176,10 +176,7 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     Babylon::InitializeNativeEngine(*m_runtime, windowPtr, width, height);
 
     // Initialize XMLHttpRequest plugin.
-    m_runtime->Dispatch([&runtime = *m_runtime](Napi::Env env)
-    {
-        Babylon::XMLHttpRequest::Initialize(env, runtime.RootUrl.data());
-    });
+    Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
 
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
     InputManager::Initialize(*m_runtime, *m_inputBuffer);
