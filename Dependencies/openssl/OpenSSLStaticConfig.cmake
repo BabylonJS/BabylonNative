@@ -58,14 +58,14 @@ set_target_properties(OpenSSL::Crypto PROPERTIES
 set_property(TARGET OpenSSL::SSL APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(OpenSSL::SSL PROPERTIES
   IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
-  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/openssl/libSSL.a"
+  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/Dependencies/openssl/libSSL.a"
   )
 
 # Import target "OpenSSL::Crypto" for configuration "Debug"
 set_property(TARGET OpenSSL::Crypto APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(OpenSSL::Crypto PROPERTIES
   IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
-  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/openssl/libCrypto.a"
+  IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../build/Android_${ANDROID_ABI}/Dependencies/openssl/libCrypto.a"
   )
 
 # This file does not depend on other imported targets which have
