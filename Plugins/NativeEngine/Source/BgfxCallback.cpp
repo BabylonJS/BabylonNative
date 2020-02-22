@@ -50,30 +50,30 @@ namespace Babylon
         out[total] = '\0';
         bx::debugOutput(out);
     }
-    
-    void BgfxCallback::profilerBegin(const char* name, uint32_t abgr, const char* filePath, uint16_t line) 
+
+    void BgfxCallback::profilerBegin(const char* name, uint32_t abgr, const char* filePath, uint16_t line)
     {
     }
 
-    void BgfxCallback::profilerBeginLiteral(const char* name, uint32_t abgr, const char* filePath, uint16_t line) 
+    void BgfxCallback::profilerBeginLiteral(const char* name, uint32_t abgr, const char* filePath, uint16_t line)
     {
     }
 
-    void BgfxCallback::profilerEnd() 
+    void BgfxCallback::profilerEnd()
     {
     }
-    
-    uint32_t BgfxCallback::cacheReadSize(uint64_t id) 
-    { 
-        return 0; 
+
+    uint32_t BgfxCallback::cacheReadSize(uint64_t id)
+    {
+        return 0;
     }
-    
-    bool BgfxCallback::cacheRead(uint64_t id, void* data, uint32_t size) 
-    { 
-        return false; 
+
+    bool BgfxCallback::cacheRead(uint64_t id, void* data, uint32_t size)
+    {
+        return false;
     }
-    
-    void BgfxCallback::cacheWrite(uint64_t id, const void* data, uint32_t size) 
+
+    void BgfxCallback::cacheWrite(uint64_t id, const void* data, uint32_t size)
     {
     }
 
@@ -82,7 +82,7 @@ namespace Babylon
         m_screenShotBitmap.resize(width * height * 4);
         for (uint32_t y = 0; y < height; y++)
         {
-            const uint8_t *ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - y - 1) : y) * pitch;
+            const uint8_t* ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - y - 1) : y) * pitch;
             memcpy(&m_screenShotBitmap[y * width * 4], ptr, width * 4);
         }
     }

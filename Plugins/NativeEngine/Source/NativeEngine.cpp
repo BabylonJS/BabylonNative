@@ -1043,16 +1043,16 @@ namespace Babylon
 
         const void* data = nullptr;
 
-        switch(formatIndex)
+        switch (formatIndex)
         {
-        case 0: // RGBA8
-            data = info[1].As<Napi::Uint8Array>().Data();
-            break;
-        case 1: // RGBA32F
-            data = info[1].As<Napi::Float32Array>().Data();
-            break;
-        default:
-            throw std::exception(); // unsupported format
+            case 0: // RGBA8
+                data = info[1].As<Napi::Uint8Array>().Data();
+                break;
+            case 1: // RGBA32F
+                data = info[1].As<Napi::Float32Array>().Data();
+                break;
+            default:
+                throw std::exception(); // unsupported format
         }
 
         auto image = bimg::imageAlloc(&m_allocator, (bimg::TextureFormat::Enum)TEXTURE_FORMAT[formatIndex], width, height, 1, 1, false, false, data);

@@ -40,9 +40,9 @@ namespace glslang
         {
             compiler->set_name(resource.id, "_mtl_u");
         }
-        
+
         compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
-        
+
         shaderResult = compiler->compile();
         return std::move(compiler);
     }

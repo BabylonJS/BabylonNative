@@ -54,10 +54,10 @@ namespace Babylon
 
         // Use the isolate within a scope.
         {
-            v8::Isolate::Scope isolate_scope{ isolate };
-            v8::HandleScope isolate_handle_scope{ isolate };
+            v8::Isolate::Scope isolate_scope{isolate};
+            v8::HandleScope isolate_handle_scope{isolate};
             v8::Local<v8::Context> context = v8::Context::New(isolate);
-            v8::Context::Scope context_scope{ context };
+            v8::Context::Scope context_scope{context};
 
             Napi::Env env = Napi::Attach(context);
             Run(env);

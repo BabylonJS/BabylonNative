@@ -32,26 +32,24 @@ namespace Babylon
                 Dispatch([action = std::move(action)](Napi::Env) {
                     action();
                 });
-            }
-        };
+            }};
 
         JsRuntimeHandle jsRuntime;
         ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
         JsContextRef context;
         ThrowIfFailed(JsCreateContext(jsRuntime, &context));
         ThrowIfFailed(JsSetCurrentContext(context));
-        ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState)
-        {
+        ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState) {
             ThrowIfFailed(JsAddRef(task, nullptr));
             auto* dispatch = reinterpret_cast<DispatchFunction*>(callbackState);
-            dispatch->operator()([task]()
-            {
+            dispatch->operator()([task]() {
                 JsValueRef undefined;
                 ThrowIfFailed(JsGetUndefinedValue(&undefined));
                 ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
                 ThrowIfFailed(JsRelease(task, nullptr));
             });
-        }, &dispatchFunction));
+        },
+            &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
 #ifdef _DEBUG

@@ -14,7 +14,7 @@ namespace Babylon
     AppRuntime::~AppRuntime()
     {
     }
-    
+
     void AppRuntime::Run(Napi::Env env)
     {
         AddJavaScriptReference(env, false);

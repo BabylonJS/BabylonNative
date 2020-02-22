@@ -20,12 +20,9 @@ namespace Babylon
             auto absoluteUrl = GetAbsoluteUrl(url, RootUrl);
             auto loadUrlTask = LoadTextAsync(std::move(absoluteUrl));
             arcana::task_completion_source<void, std::exception_ptr> completionSource{};
-            auto loadScriptTask = arcana::when_all(loadUrlTask, Task).then(arcana::inline_scheduler, arcana::cancellation::none(),
-                [&runtime = Runtime, url = std::move(url), completionSource](const std::tuple<std::string, arcana::void_placeholder>& args) mutable
-            {
+            auto loadScriptTask = arcana::when_all(loadUrlTask, Task).then(arcana::inline_scheduler, arcana::cancellation::none(), [& runtime = Runtime, url = std::move(url), completionSource](const std::tuple<std::string, arcana::void_placeholder>& args) mutable {
                 std::string source = std::get<0>(args);
-                runtime.Dispatch([source = std::move(source), url = std::move(url), completionSource = std::move(completionSource)](Napi::Env env) mutable
-                {
+                runtime.Dispatch([source = std::move(source), url = std::move(url), completionSource = std::move(completionSource)](Napi::Env env) mutable {
                     Napi::Eval(env, source.data(), url.data());
                     completionSource.complete();
                 });

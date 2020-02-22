@@ -9,7 +9,7 @@ namespace Babylon
     }
 
     JsRuntime::JsRuntime(DispatchFunctionT&& dispatchFunction)
-        : m_dispatchFunction{ dispatchFunction }
+        : m_dispatchFunction{dispatchFunction}
     {
     }
 
@@ -22,11 +22,11 @@ namespace Babylon
     JsRuntime& JsRuntime::GetFromJavaScript(Napi::Env env)
     {
         return *env.Global()
-            .Get(JS_NATIVE_NAME)
-            .As<Napi::Object>()
-            .Get(JS_RUNTIME_NAME)
-            .As<Napi::External<JsRuntime>>()
-            .Data();
+                    .Get(JS_NATIVE_NAME)
+                    .As<Napi::Object>()
+                    .Get(JS_RUNTIME_NAME)
+                    .As<Napi::External<JsRuntime>>()
+                    .Data();
     }
 
     void JsRuntime::Dispatch(std::function<void(Napi::Env)> function)

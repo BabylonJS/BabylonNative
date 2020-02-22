@@ -20,8 +20,7 @@ namespace Babylon
         Napi::Function constructor = DefineClass(
             env,
             JS_CLASS_NAME,
-            {
-            });
+            {});
 
         auto global = env.Global();
         auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
@@ -55,8 +54,7 @@ namespace Babylon
             m_width = newWidth;
             m_height = newHeight;
 
-            m_onResizeCallbacks.ApplyToAll([this](auto& callback)
-            {
+            m_onResizeCallbacks.ApplyToAll([this](auto& callback) {
                 callback(m_width, m_height);
             });
         }

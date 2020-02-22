@@ -14,8 +14,7 @@ namespace Babylon
 
     void InitializeXMLHttpRequest(JsRuntime& runtime, const char* rootUrl)
     {
-        runtime.Dispatch([rootUrl = std::string{rootUrl}](Napi::Env env)
-        {
+        runtime.Dispatch([rootUrl = std::string{rootUrl}](Napi::Env env) {
             XMLHttpRequest::Initialize(env, rootUrl.data());
         });
     }
@@ -141,8 +140,7 @@ namespace Babylon
         m_runtime.Dispatch(std::function<arcana::task<void, std::exception_ptr>(Napi::Env)>{
             [this](Napi::Env) {
                 return SendAsync();
-            }
-        });
+            }});
     }
 
     // TODO: Make this just be SendAsync() once the UWP file access bug is fixed.
@@ -150,10 +148,8 @@ namespace Babylon
     {
         if (m_responseType.empty() || m_responseType == XMLHttpRequestTypes::ResponseType::Text)
         {
-            return LoadTextAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data)
-            {
-                m_runtime.Dispatch([this, data = data](Napi::Env)
-                {
+            return LoadTextAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data) {
+                m_runtime.Dispatch([this, data = data](Napi::Env) {
                     // check UTF-8 BOM encoding
                     if (data.size() >= 3 && data[0] == '\xEF' && data[1] == '\xBB' && data[2] == '\xBF')
                     {
@@ -172,10 +168,8 @@ namespace Babylon
         }
         else if (m_responseType == XMLHttpRequestTypes::ResponseType::ArrayBuffer)
         {
-            return LoadBinaryAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<uint8_t>& data)
-            {
-                m_runtime.Dispatch([this, data = data](Napi::Env)
-                {
+            return LoadBinaryAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::vector<uint8_t>& data) {
+                m_runtime.Dispatch([this, data = data](Napi::Env) {
                     m_response = Napi::Persistent(Napi::ArrayBuffer::New(Env(), data.size()));
                     memcpy(m_response.Value().Data(), data.data(), data.size());
                     m_status = HTTPStatusCode::Ok;

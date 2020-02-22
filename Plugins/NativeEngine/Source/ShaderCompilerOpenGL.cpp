@@ -14,7 +14,7 @@ namespace Babylon
     {
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
         {
-            const std::array<const char*, 1> sources{ source.data() };
+            const std::array<const char*, 1> sources{source.data()};
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
             shader.setEnvInput(glslang::EShSourceGlsl, shader.getStage(), glslang::EShClientVulkan, 100);
             shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
@@ -33,13 +33,13 @@ namespace Babylon
             std::vector<uint32_t> spirv;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 
-            spirv_cross::Parser parser{ std::move(spirv) };
+            spirv_cross::Parser parser{std::move(spirv)};
             parser.parse();
 
             auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser.get_parsed_ir());
-            
+
             compiler->build_combined_image_samplers();
-            
+
             spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
 
 #ifdef ANDROID
@@ -64,7 +64,7 @@ namespace Babylon
                     case 0x8B5C: //GL_FLOAT_MAT4
                         uniformString += "mat4 ";
                         break;
-                    case 0: // no type : skip
+                    case 0:      // no type : skip
                     case 0x8B5D: // GL_SAMPLER_1D
                     case 0x8B5E: // GL_SAMPLER_2D
                     case 0x8B5F: // GL_SAMPLER_3D
@@ -89,7 +89,7 @@ namespace Babylon
             {
                 compiled.replace(pos, frame.size(), frameNewName);
             }
-            
+
             spirv_cross::ShaderResources resources = compiler->get_shader_resources();
             for (auto& resource : resources.uniform_buffers)
             {
@@ -144,7 +144,7 @@ namespace Babylon
             {
                 glsl.replace(pos, fragColor.size(), "gl_FragColor");
             }
-#else 
+#else
             glsl = compiled;
 #endif
             return std::move(compiler);
@@ -165,10 +165,10 @@ namespace Babylon
     {
         glslang::TProgram program;
 
-        glslang::TShader vertexShader{ EShLangVertex };
+        glslang::TShader vertexShader{EShLangVertex};
         AddShader(program, vertexShader, vertexSource);
 
-        glslang::TShader fragmentShader{ EShLangFragment };
+        glslang::TShader fragmentShader{EShLangFragment};
         AddShader(program, fragmentShader, fragmentSource);
 
         if (!program.link(EShMsgDefault))
@@ -184,10 +184,8 @@ namespace Babylon
 
         uint8_t* strVertex = (uint8_t*)vertexGLSL.data();
         uint8_t* strFragment = (uint8_t*)fragmentGLSL.data();
-        onCompiled
-        (
-            { std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size()) },
-            { std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size()) }
-        );
+        onCompiled(
+            {std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size())},
+            {std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size())});
     }
 }

@@ -2,7 +2,7 @@
 
 #ifndef WIN32
 #include <alloca.h>
-#define alloca(size)   __builtin_alloca(size)
+#define alloca(size) __builtin_alloca(size)
 #endif
 
 #include <bgfx/bgfx.h>

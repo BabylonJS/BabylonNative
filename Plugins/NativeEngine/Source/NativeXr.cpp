@@ -118,12 +118,10 @@ namespace
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
     {
-        constexpr std::array<const char*, 2> HANDEDNESS_STRINGS
-        {
+        constexpr std::array<const char*, 2> HANDEDNESS_STRINGS{
             "left",
-            "right"
-        };
-        constexpr char* TARGET_RAY_MODE{ "tracked-pointer" };
+            "right"};
+        constexpr char* TARGET_RAY_MODE{"tracked-pointer"};
 
         auto jsInputSource = Napi::Object::New(env);
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
@@ -132,7 +130,7 @@ namespace
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
-        profiles.Set(uint32_t{ 0 }, string);
+        profiles.Set(uint32_t{0}, string);
         jsInputSource.Set("profiles", profiles);
 
         return Napi::Persistent(jsInputSource);
@@ -403,8 +401,7 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {
-                    });
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -414,9 +411,10 @@ namespace Babylon
                 return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
             }
 
-            PointerEvent(const Napi::CallbackInfo & info)
-                : Napi::ObjectWrap<PointerEvent>{ info }
-            {}
+            PointerEvent(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<PointerEvent>{info}
+            {
+            }
         };
 
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
@@ -801,7 +799,7 @@ namespace Babylon
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
 
-                m_xrViewerPose.Update(info, { {0, 0, 0}, {0, 0, 0, 1} }, m_frame->Views);
+                m_xrViewerPose.Update(info, {{0, 0, 0}, {0, 0, 0, 1}}, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -968,7 +966,7 @@ namespace Babylon
                     if (found == m_idToInputSource.end())
                     {
                         // Create the new input source, which will have the correct spaces associated with it.
-                        m_idToInputSource.insert({ inputSource.ID, CreateXRInputSource(inputSource, env) });
+                        m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
 
                         added.insert(inputSource.ID);
                     }
@@ -1018,7 +1016,7 @@ namespace Babylon
                     {
                         if (name == JS_EVENT_NAME_INPUT_SOURCES_CHANGE)
                         {
-                            callback.Call({ sourcesChangeEvent });
+                            callback.Call({sourcesChangeEvent});
                         }
                     }
 
