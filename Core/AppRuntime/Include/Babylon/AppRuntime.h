@@ -23,7 +23,8 @@ namespace Babylon
         const std::string RootUrl;
 
     private:
-        void CreateEnvironmentAndRun();
+        void RunPlatformTier();
+        void RunEnvironmentTier();
         void Run(Napi::Env);
         std::unique_ptr<WorkQueue> m_workQueue{};
     };

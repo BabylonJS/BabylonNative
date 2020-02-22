@@ -7,7 +7,7 @@ namespace Babylon
     AppRuntime::AppRuntime(const char* rootUrl)
         : JsRuntime([this](auto func) { Dispatch(std::move(func)); })
         , RootUrl{rootUrl}
-        , m_workQueue{std::make_unique<WorkQueue>([this] { CreateEnvironmentAndRun(); })}
+        , m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
     {
     }
 

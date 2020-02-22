@@ -44,7 +44,7 @@ namespace Babylon
         std::unique_ptr<Module> Module::s_module;
     }
 
-    void AppRuntime::CreateEnvironmentAndRun()
+    void AppRuntime::RunEnvironmentTier()
     {
         // Create the isolate.
         Module::Initialize(GetModulePath().u8string().data());

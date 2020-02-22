@@ -4,7 +4,7 @@
 
 namespace Babylon
 {
-    void AppRuntime::CreateEnvironmentAndRun()
+    void AppRuntime::RunEnvironmentTier()
     {
         auto contextGroup = JSContextGroupCreate();
         auto globalContext = JSGlobalContextCreateInGroup(contextGroup, nullptr);
