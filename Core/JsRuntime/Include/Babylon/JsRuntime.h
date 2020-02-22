@@ -18,12 +18,19 @@ namespace Babylon
         void Dispatch(std::function<void(Napi::Env)>);
 
     protected:
-        JsRuntime(DispatchFunctionT&&);
+        // Note: It is the contract of JsRuntime that its dispatch function must be usable
+        // at the moment of construction. JsRuntime cannot be built with dispatch function
+        // that captures a refence to a not-yet-completed object that will be completed
+        // later -- an instance of an inheriting type, for example. The dispatch function
+        // must be safely callable as soon as it is passed to the JsRuntime constructor.
+        JsRuntime(DispatchFunctionT);
         JsRuntime(const JsRuntime&) = delete;
-
-        void AddJavaScriptReference(Napi::Env env, bool doesJavaScriptOwnJsRuntime);
+        JsRuntime(JsRuntime&&) = delete;
 
     private:
+        using DeleterT = std::function<void(Napi::Env, JsRuntime*)>;
+        JsRuntime(DispatchFunctionT, DeleterT);
+
         DispatchFunctionT m_dispatchFunction{};
         std::mutex m_mutex{};
     };

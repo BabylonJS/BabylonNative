@@ -8,15 +8,34 @@ namespace Babylon
         static constexpr auto JS_WINDOW_NAME = "window";
     }
 
-    JsRuntime::JsRuntime(DispatchFunctionT&& dispatchFunction)
-        : m_dispatchFunction{dispatchFunction}
+    JsRuntime::JsRuntime(DispatchFunctionT dispatchFunction)
+        : JsRuntime(std::move(dispatchFunction), [](Napi::Env, JsRuntime*) {})
     {
+    }
+
+    JsRuntime::JsRuntime(DispatchFunctionT dispatchFunction, DeleterT deleter)
+        : m_dispatchFunction{std::move(dispatchFunction)}
+    {
+        Dispatch([this, deleter = std::move(deleter)](Napi::Env env) mutable {
+            auto global = env.Global();
+
+            if (global.Get(JS_WINDOW_NAME).IsUndefined())
+            {
+                global.Set(JS_WINDOW_NAME, global);
+            }
+
+            auto jsNative = Napi::Object::New(env);
+            global.Set(JS_NATIVE_NAME, jsNative);
+
+            Napi::Value jsRuntime = Napi::External<JsRuntime>::New(env, this, std::move(deleter));
+            jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
+        });
     }
 
     void JsRuntime::Initialize(Napi::Env env, DispatchFunctionT dispatchFunction)
     {
-        JsRuntime* runtime = new JsRuntime(std::move(dispatchFunction));
-        runtime->AddJavaScriptReference(env, true);
+        DeleterT deleter = [](Napi::Env, JsRuntime* runtime) { delete runtime; };
+        new JsRuntime(std::move(dispatchFunction), std::move(deleter));
     }
 
     JsRuntime& JsRuntime::GetFromJavaScript(Napi::Env env)
@@ -33,29 +52,5 @@ namespace Babylon
     {
         std::scoped_lock lock{m_mutex};
         m_dispatchFunction(std::move(function));
-    }
-
-    void JsRuntime::AddJavaScriptReference(Napi::Env env, bool doesJavaScriptOwnJsRuntime)
-    {
-        auto global = env.Global();
-
-        if (global.Get(JS_WINDOW_NAME).IsUndefined())
-        {
-            global.Set(JS_WINDOW_NAME, global);
-        }
-
-        auto jsNative = Napi::Object::New(env);
-        global.Set(JS_NATIVE_NAME, jsNative);
-
-        Napi::Value jsRuntime;
-        if (doesJavaScriptOwnJsRuntime)
-        {
-            jsRuntime = Napi::External<JsRuntime>::New(env, this, [](Napi::Env, JsRuntime* jsRuntime) { delete jsRuntime; });
-        }
-        else
-        {
-            jsRuntime = Napi::External<JsRuntime>::New(env, this);
-        }
-        jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
     }
 }
