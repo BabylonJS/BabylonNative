@@ -79,9 +79,9 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
             });
         });
 
+        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
         int32_t width  = ANativeWindow_getWidth(window);
         int32_t height = ANativeWindow_getHeight(window);
-        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
         runtime->Dispatch([window, width, height](Napi::Env env)
         {
             Babylon::NativeWindow::Initialize(env, window, width, height);
