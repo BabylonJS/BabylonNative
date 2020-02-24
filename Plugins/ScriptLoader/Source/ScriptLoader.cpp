@@ -30,6 +30,18 @@ namespace Babylon
             Task = completionSource.as_task();
         }
 
+        void Eval(std::string source, std::string url)
+        {
+            arcana::task_completion_source<void, std::exception_ptr> completionSource{};
+            auto evalTask = Task.then(arcana::inline_scheduler, arcana::cancellation::none(), [& runtime = Runtime, source = std::move(source), url = std::move(url), completionSource]() mutable {
+                runtime.Dispatch([source = std::move(source), url = std::move(url), completionSource = std::move(completionSource)](Napi::Env env) mutable {
+                    Napi::Eval(env, source.data(), url.data());
+                    completionSource.complete();
+                });
+            });
+            Task = completionSource.as_task();
+        }
+
         JsRuntime& Runtime;
         const std::string RootUrl{};
         arcana::task<void, std::exception_ptr> Task{};
@@ -47,5 +59,10 @@ namespace Babylon
     void ScriptLoader::LoadScript(std::string url)
     {
         m_impl->LoadScript(std::move(url));
+    }
+
+    void ScriptLoader::Eval(std::string source, std::string url)
+    {
+        m_impl->Eval(std::move(source), std::move(url));
     }
 }

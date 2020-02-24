@@ -107,8 +107,7 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
     if (runtime)
     {
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-        // TODO: Add UpdateWindow for Android.
-        // runtime->UpdateWindow(width, height, window);
+        Babylon::ReinitializeNativeEngine(*runtime, static_cast<size_t>(width), static_cast<size_t>(height), window);
     }
 }
 
@@ -130,11 +129,7 @@ Java_BabylonNative_Wrapper_eval(JNIEnv* env, jobject obj, jstring source, jstrin
         jboolean iscopy;
         std::string url = env->GetStringUTFChars(sourceURL, &iscopy);
         std::string src = env->GetStringUTFChars(source, &iscopy);
-        // TODO: Put this on ScriptLoader?
-        runtime->Dispatch([src = std::move(src), url = std::move(url)](Napi::Env env)
-        {
-            Napi::Eval(env, src.data(), url.data());
-        });
+        loader->Eval(std::move(src), std::move(url));
     }
 }
 

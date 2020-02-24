@@ -14,6 +14,7 @@ namespace Babylon
         ~ScriptLoader();
 
         void LoadScript(std::string url);
+        void Eval(std::string source, std::string url);
 
     private:
         struct Impl;
