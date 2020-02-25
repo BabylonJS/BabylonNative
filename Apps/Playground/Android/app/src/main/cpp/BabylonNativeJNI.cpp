@@ -90,12 +90,12 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         Babylon::InitializeNativeEngine(*runtime, window, width, height);
         
         // Initialize XMLHttpRequest plugin.
-        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
+        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl());
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
         
-        loader = std::make_unique<Babylon::ScriptLoader>(*runtime, runtime->RootUrl);
+        loader = std::make_unique<Babylon::ScriptLoader>(*runtime, runtime->RootUrl());
         loader->LoadScript("Scripts/babylon.max.js");
         loader->LoadScript("Scripts/babylon.glTF2FileLoader.js");
     }

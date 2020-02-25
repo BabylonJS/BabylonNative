@@ -21,13 +21,14 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 - (void)viewDidAppear {
     [super viewDidAppear];
 
-    NSBundle *main = [NSBundle mainBundle];
-    NSURL * resourceUrl = [main resourceURL];
-    std::string rootUrl = [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String];
-    
     // Create the AppRuntime
     runtime.reset();
-    runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
+    {
+        NSBundle *main = [NSBundle mainBundle];
+        NSURL * resourceUrl = [main resourceURL];
+        std::string rootUrl = [[NSString stringWithFormat:@"file://%s", [resourceUrl fileSystemRepresentation]] UTF8String];
+        runtime = std::make_unique<Babylon::AppRuntime>(std::move(rootUrl));
+    }
     
     // Initialize console plugin
     runtime->Dispatch([](Napi::Env env)
@@ -52,12 +53,12 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     Babylon::InitializeNativeEngine(*runtime, windowPtr, width, height);
     
     // Initialize XMLHttpRequest plugin.
-    Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
+    Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl()));
 
     inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
     InputManager::Initialize(*runtime, *inputBuffer);
     
-    Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl };
+    Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl() };
     loader.LoadScript("babylon.max.js");
     loader.LoadScript("babylon.glTF2FileLoader.js");
     loader.LoadScript("experience.js");
