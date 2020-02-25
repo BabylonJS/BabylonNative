@@ -1260,7 +1260,7 @@ namespace Babylon
         }
 
         bgfx::setState(m_engineState);
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, true);
+        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
