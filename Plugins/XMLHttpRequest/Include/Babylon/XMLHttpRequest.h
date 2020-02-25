@@ -2,7 +2,9 @@
 
 #include <Babylon/JsRuntime.h>
 
+#include <string>
+
 namespace Babylon
 {
-    void InitializeXMLHttpRequest(JsRuntime& runtime, const char* rootUrl);
+    void InitializeXMLHttpRequest(JsRuntime& runtime, std::string rootUrl);
 }

@@ -56,7 +56,6 @@ namespace
 
     void RefreshBabylon(HWND hWnd)
     {
-        std::string rootUrl{GetUrlFromPath(GetModulePath().parent_path().parent_path())};
         RECT rect;
         if (!GetWindowRect(hWnd, &rect))
         {
@@ -64,7 +63,7 @@ namespace
         }
 
         runtime.reset();
-        runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
+        runtime = std::make_unique<Babylon::AppRuntime>(GetUrlFromPath(GetModulePath().parent_path().parent_path()));
 
         // Initialize console plugin.
         runtime->Dispatch([](Napi::Env env)
@@ -87,14 +86,14 @@ namespace
         Babylon::InitializeNativeEngine(*runtime, hWnd, width, height);
 
         // Initialize XMLHttpRequest plugin.
-        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
+        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl());
 
         runtime->Dispatch([hWnd](Napi::Env env)
         {
             Babylon::TestUtils::CreateInstance(env, hWnd);
         });
 
-        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl };
+        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl() };
         loader.LoadScript("Scripts/babylon.max.js");
         loader.LoadScript("Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript("Scripts/babylonjs.materials.js");

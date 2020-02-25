@@ -12,15 +12,15 @@ namespace Babylon
     class AppRuntime final : public JsRuntime
     {
     public:
-        AppRuntime(const char* rootUrl = nullptr);
+        AppRuntime(std::string rootUrl);
         ~AppRuntime();
+
+        const std::string& RootUrl() const;
 
         void Suspend();
         void Resume();
 
         void Dispatch(std::function<void(Napi::Env)> callback);
-
-        const std::string RootUrl;
 
     private:
         // This secondary constructor exists to resolve a timing issue with the construction
@@ -35,7 +35,7 @@ namespace Babylon
         // function simply capture a reference directly to the underlying work queue. The
         // unique_ptr containing the work queue can then be moved so that it is owned by
         // m_workQueue.
-        AppRuntime(const char*, std::unique_ptr<WorkQueue>);
+        AppRuntime(std::string, std::unique_ptr<WorkQueue>);
 
         // These three methods are the mechanism by which platform- and JavaScript-specific
         // code can be "injected" into the execution of the JavaScript thread. These three
@@ -51,6 +51,7 @@ namespace Babylon
         void RunEnvironmentTier();
         void Run(Napi::Env);
 
+        const std::string m_rootUrl;
         std::unique_ptr<WorkQueue> m_workQueue{};
     };
 }

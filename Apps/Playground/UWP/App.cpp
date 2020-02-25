@@ -140,19 +140,18 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
 
     std::string appUrl{ "file:///" + std::filesystem::current_path().generic_string() };
 
-    std::string rootUrl{ appUrl };
-    if (m_fileActivatedArgs != nullptr)
+    // Initialize the runtime.
     {
-        auto file = static_cast<Windows::Storage::IStorageFile^>(m_fileActivatedArgs->Files->GetAt(0));
-        const auto path = winrt::to_string(file->Path->Data());
-        auto parentPath = std::filesystem::path{ path }.parent_path();
-        rootUrl = "file:///" + parentPath.generic_string();
+        std::string rootUrl{ appUrl };
+        if (m_fileActivatedArgs != nullptr)
+        {
+            auto file = static_cast<Windows::Storage::IStorageFile^>(m_fileActivatedArgs->Files->GetAt(0));
+            const auto path = winrt::to_string(file->Path->Data());
+            auto parentPath = std::filesystem::path{ path }.parent_path();
+            rootUrl = "file:///" + parentPath.generic_string();
+        }
+        m_runtime = std::make_unique<Babylon::AppRuntime>(std::move(rootUrl));
     }
-
-    DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
-    m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
-
-    m_runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
 
     // Create the console plugin.
     m_runtime->Dispatch([](Napi::Env env)
@@ -164,6 +163,8 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     });
 
     // Initialize NativeWindow plugin.
+    DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
+    m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
@@ -176,12 +177,12 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     Babylon::InitializeNativeEngine(*m_runtime, windowPtr, width, height);
 
     // Initialize XMLHttpRequest plugin.
-    Babylon::InitializeXMLHttpRequest(*m_runtime, m_runtime->RootUrl.data());
+    Babylon::InitializeXMLHttpRequest(*m_runtime, m_runtime->RootUrl()));
 
     m_inputBuffer = std::make_unique<InputManager::InputBuffer>(*m_runtime);
     InputManager::Initialize(*m_runtime, *m_inputBuffer);
 
-    Babylon::ScriptLoader loader{ *m_runtime, m_runtime->RootUrl };
+    Babylon::ScriptLoader loader{ *m_runtime, m_runtime->RootUrl() };
     loader.LoadScript(appUrl + "/Scripts/babylon.max.js");
     loader.LoadScript(appUrl + "/Scripts/babylon.glTF2FileLoader.js");
 

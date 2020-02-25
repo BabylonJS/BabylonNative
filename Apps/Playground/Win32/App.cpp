@@ -78,7 +78,6 @@ namespace
     {
         std::vector<std::string> scripts = GetCommandLineArguments();
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path());
-        std::string rootUrl{ scripts.empty() ? moduleRootUrl : GetUrlFromPath(std::filesystem::path{ scripts.back() }.parent_path()) };
 
         RECT rect;
         if (!GetWindowRect(hWnd, &rect))
@@ -88,7 +87,7 @@ namespace
 
         // Separately call reset and make_unique to ensure prior runtime is destroyed before new one is created.
         runtime.reset();
-        runtime = std::make_unique<Babylon::AppRuntime>(rootUrl.data());
+        runtime = std::make_unique<Babylon::AppRuntime>(scripts.empty() ? moduleRootUrl : GetUrlFromPath(std::filesystem::path{scripts.back()}.parent_path()));
 
         // Initialize console plugin.
         runtime->Dispatch([](Napi::Env env)
@@ -111,12 +110,12 @@ namespace
         Babylon::InitializeNativeEngine(*runtime, hWnd, width, height);
 
         // Initialize XMLHttpRequest plugin.
-        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl.data());
+        Babylon::InitializeXMLHttpRequest(*runtime, runtime->RootUrl());
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(*runtime);
         InputManager::Initialize(*runtime, *inputBuffer);
 
-        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl };
+        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl() };
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
