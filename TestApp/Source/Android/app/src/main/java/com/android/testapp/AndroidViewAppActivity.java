@@ -40,11 +40,9 @@ public class AndroidViewAppActivity extends Activity implements BabylonView.View
 
     @Override public void onViewReady()
     {
-        mView.loadScript("Scripts/experience.js");
-        mView.eval("setTimeout(function(){" +
-                "var red = new BABYLON.StandardMaterial(\"red\", scene);" +
-                "red.diffuseColor = new BABYLON.Color3 (128,0,0);" +
-                "cube.material = red;" +
-                "}, 2000);" , "testEval");
+        mView.eval("document = {};", "doc");
+        mView.loadScript("Scripts/ammo.js");
+        mView.loadScript("Scripts/marble.js");
+        mView.loadScript("Scripts/playground_runner.js");
     }
 }
