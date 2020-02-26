@@ -10,8 +10,8 @@ on the Web to work identically in native apps on Windows, Android, macOS, and iO
 Check out [the project's announcement](https://medium.com/@babylonjs/babylon-native-821f1694fffc) 
 and [home page](https://www.babylonjs.com/babylonNative) for more information.
 
-*NOTE: **This project is under heavy development**, and not all platforms/features are 
-currently available. Please refer to the sections below for details.*
+*NOTE: **This project is under heavy development** and not all platforms/features 
+are currently available. Please refer to the sections below for details.*
 
 ## Current Status
 
@@ -103,15 +103,15 @@ cmake ..
 
 CMake will generate a new `BabylonNative.sln` file in your working directory. Please
 be patient; this process can take several minutes. When the process is completed,
-open `BabylonNative.sln` by double-clicking on it in Windows Explorer, or with the
-following command:
+open `BabylonNative.sln` by double-clicking on it in Windows Explorer or by entering 
+the following command:
 
 ```
 start BabylonNative.sln
 ```
 
 By default, the "Playground" demo app should be set as the Visual Studio start-up
-project. Build and run this app by pressing the green "Play" button, or by pressing
+project. Build and run this app by pressing the green "Play" button or by pressing
 `F5` on your keyboard.
 
 ### **Building on Windows 10, Targeting the Universal Windows Platform (UWP)**
@@ -132,15 +132,15 @@ cmake -D CMAKE_SYSTEM_NAME=WindowStore -D CMAKE_SYSTEM_VERSION=10.0 ..
 
 CMake will generate a new `BabylonNative.sln` file in your working directory. Please
 be patient; this process can take several minutes. When the process is completed,
-open `BabylonNative.sln` by double-clicking on it in Windows Explorer, or with the
-following command:
+open `BabylonNative.sln` by double-clicking on it in Windows Explorer or by entering 
+the following command:
 
 ```
 start BabylonNative.sln
 ```
 
 By default, the "Playground" demo app should be set as the Visual Studio start-up
-project. Build and run this app by pressing the green "Play" button, or by pressing
+project. Build and run this app by pressing the green "Play" button or by pressing
 `F5` on your keyboard.
 
 ### **Building on macOS, Targeting macOS**
@@ -159,8 +159,8 @@ cmake -G Xcode ..
 
 CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
 Please be patient; this process can take several minutes. When the process is 
-completed, open the project by double-clicking on it in Finder, or with the following
-command:
+completed, open the project by double-clicking on it in Finder or by entering the 
+following command:
 
 ```
 open BabylonNative.xcodeproj
@@ -194,8 +194,8 @@ cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cm
 
 CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
 Please be patient; this process can take several minutes. When the process is 
-completed, open the project by double-clicking on it in Finder, or with the following
-command:
+completed, open the project by double-clicking on it in Finder or by entering the 
+following command:
 
 ```
 open BabylonNative.xcodeproj
