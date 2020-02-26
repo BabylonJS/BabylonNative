@@ -2,10 +2,10 @@
 
 # Babylon Native
 
-Babylon Native is a collection of technologies intended to bring the power and 
-flexibility of Babylon.js to cross-platform applications beyond the browser. The 
-goal of this project is to allow the same JavaScript that powers Babylon.js apps 
-on the Web to work identically in native apps on Windows, Android, macOS, and iOS.
+Welcome to Babylon! Babylon Native is a collection of technologies intended to bring 
+the power and flexibility of Babylon.js to cross-platform applications beyond the 
+browser. The goal of this project is to allow the same JavaScript that powers Babylon.js 
+apps on the Web to work identically in native apps on Windows, Android, macOS, and iOS.
 
 Check out [the project's announcement](https://medium.com/@babylonjs/babylon-native-821f1694fffc) 
 and [home page](https://www.babylonjs.com/babylonNative) for more information.
@@ -17,7 +17,7 @@ are currently available. Please refer to the sections below for details.*
 
 Babylon Native is currently available as a public preview. Many features are 
 currently available, and additional features are being added regularly, but certain
-features are currently unstable or not yet implemented..
+features are currently unstable or not yet implemented.
 
 The following major features are currently supported and expected to work. Note that 
 this list is not exhaustive.
@@ -29,9 +29,9 @@ UWP, macOS, iOS.
 - Loading and rendering glTF objects on all supported platforms.
 - Network requests (including accessing local files using the `file://` protocol) 
 made throught the Babylon.js APIs.
-- Extending JavaScript functionality using JavaScript add-ons and/or native plugins.
+- Extending JavaScript functionality using N-API and native plugins.
 
-The following major features are currently currently in unsupported preview. Note 
+The following major features are partially implemented but not yet supported. Note 
 that this list is not exhaustive.
 
 - Developing Babylon Native on the following platforms: Linux.
@@ -42,6 +42,7 @@ Android.
 The following major features are not yet supported or implemented, even as previews, 
 but are expected to be supported in the future. Note that this list is not exhaustive.
 
+- Debugging JavaScript with V8.
 - User input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
@@ -52,11 +53,11 @@ to us on [the Babylon forum](https://forum.babylonjs.com).
 
 ## Getting Started
 
-Welcome to Babylon! This quick overview will help you get started developing in the 
-Babylon Native repository. We support development on Windows and macOS. (It is also
-possible, though not yet fully supported, to develop on Linux.) This overview is 
-intended for reasonably experienced developers with familiar with common native 
-development principles.
+This quick overview will help you get started developing in the Babylon Native 
+repository. We support development on Windows and macOS. (It is also possible, 
+though not yet fully supported, to develop on Linux.) This overview is intended 
+for reasonably experienced developers with familiar with common native development 
+principles.
 
 ### **All Development Platforms, Common First Steps**
 
@@ -101,6 +102,17 @@ the following (amend paths for alternative build directories):
 cmake ..
 ```
 
+Note that, by default, this will target the same processor architecture that is being
+used to build the solution; so if your developer computer has 64-bit CPU, CMake's 
+generated solution will target 64-bit CPUs by default. To manually target specific 
+architectures, tell CMake the intended architecture using the `-A` flag, as shown below. 
+Supported arguments for using this flag with Babylon Native include `Win32` for 32-bit 
+processors and `x64` for 64-bit processors.
+
+```
+cmake -A Win32 ..
+```
+
 CMake will generate a new `BabylonNative.sln` file in your working directory. Please
 be patient; this process can take several minutes. When the process is completed,
 open `BabylonNative.sln` by double-clicking on it in Windows Explorer or by entering 
@@ -127,7 +139,19 @@ your `BabylonNative/Build` directory, type the following (amend paths for altern
 build directories):
 
 ```
-cmake -D CMAKE_SYSTEM_NAME=WindowStore -D CMAKE_SYSTEM_VERSION=10.0 ..
+cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ..
+```
+
+Note that, by default, this will target the same processor architecture that is being
+used to build the solution; so if your developer computer has 64-bit CPU, CMake's 
+generated solution will target 64-bit CPUs by default. To manually target specific 
+architectures, tell CMake the intended architecture using the `-A` flag, as shown below. 
+Supported arguments for using this flag with Babylon Native include `Win32` for 32-bit 
+processors, `x64` for 64-bit processors, `arm` for ARM processors, and `arm64` for 
+ARM64 processors.
+
+```
+cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
 ```
 
 CMake will generate a new `BabylonNative.sln` file in your working directory. Please
