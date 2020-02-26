@@ -2,11 +2,50 @@
 
 # Babylon Native
 
-Build cross-platform native applications with the power of the Babylon.js JavaScript framework.
+Babylon Native is a collection of technologies intended to bring the power and 
+flexibility of Babylon.js to cross-platform applications beyond the browser. The 
+goal of this project is to allow the same JavaScript that powers Babylon.js apps 
+on the Web to work identically in native apps on Windows, Android, macOS, and iOS.
 
-See [this blog entry](https://medium.com/@babylonjs/babylon-native-821f1694fffc) for more details.
+Check out [the project's announcement](https://medium.com/@babylonjs/babylon-native-821f1694fffc) 
+and [home page](https://www.babylonjs.com/babylonNative) for more information.
 
-*This project is under heavy development. Not all intended platforms are currently implemented. **DO NOT** use in production code.*
+*NOTE: **This project is under heavy development**, and not all platforms/features are 
+currently available. Please refer to the sections below for details.*
+
+## Current Status
+
+Babylon Native is currently available as a public preview. Many features are 
+currently available, and additional features are being added regularly, but there
+is still much work to be done.
+
+The following major features are currently supported and expected to work. Note that 
+this list is not exhaustive.
+
+- Building and running the libraries and demo apps for the following platforms: Win32,
+UWP, macOS, iOS.
+- Loading and rendering glTF objects on all supported platforms.
+- Network requests (including accessing local files using the `file://` protocol) 
+made throught the Babylon.js APIs.
+- Extending JavaScript functionality using JavaScript add-ons and/or native plugins.
+
+The following major features are currently currently in unsupported preview. Note 
+that this list is not exhaustive.
+
+- Building and running the libraries and demo apps for the following platforms: 
+Android.
+- Mixed reality powered by OpenXR on the following platforms: Win32, UWP.
+
+The following major features are not yet supported or implemented, even as previews, 
+but are expected to be supported in the future. Note that this list is not exhaustive.
+
+- User input.
+- Font rendering.
+- Sub-window, multi-window, and out-of-process rendering.
+- React Native integration.
+
+This section will be kept up-to-date. Please contact us on 
+[the Babylon forum](https://forum.babylonjs.com) with any questions.
 
 ## Getting Started
 
