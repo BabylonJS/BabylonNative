@@ -22,8 +22,10 @@ is still much work to be done.
 The following major features are currently supported and expected to work. Note that 
 this list is not exhaustive.
 
+- Developing Babylon Native on the following platforms: Windows 10, macOS.
 - Building and running the libraries and demo apps for the following platforms: Win32,
 UWP, macOS, iOS.
+- Loading and executing JavaScript code on all supported platforms.
 - Loading and rendering glTF objects on all supported platforms.
 - Network requests (including accessing local files using the `file://` protocol) 
 made throught the Babylon.js APIs.
@@ -32,6 +34,7 @@ made throught the Babylon.js APIs.
 The following major features are currently currently in unsupported preview. Note 
 that this list is not exhaustive.
 
+- Developing Babylon Native on the following platforms: Linux.
 - Building and running the libraries and demo apps for the following platforms: 
 Android.
 - Mixed reality powered by OpenXR on the following platforms: Win32, UWP.
@@ -44,55 +47,172 @@ but are expected to be supported in the future. Note that this list is not exhau
 - Sub-window, multi-window, and out-of-process rendering.
 - React Native integration.
 
-This section will be kept up-to-date. Please contact us on 
-[the Babylon forum](https://forum.babylonjs.com) with any questions.
+This section will be updated frequently. If you have any questions, please reach out
+to us on [the Babylon forum](https://forum.babylonjs.com).
 
 ## Getting Started
 
-### Windows
+Welcome to Babylon! This quick overview will help you get started developing in the 
+Babylon Native repository. We support development on Windows and macOS. (It is also
+possible, though not yet fully supported, to develop on Linux.) This overview is 
+intended for reasonably experienced developers with familiar with common native 
+development principles.
 
-#### Prerequisites
+### **All Development Platforms, Common First Steps**
 
-- [CMake](https://cmake.org/download/) 3.12 or higher
-- [Python](https://www.python.org/downloads/) 3.x
-- [Visual Studio](https://visualstudio.microsoft.com/downloads/) 2019 (16.3 or higher)
+**Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/)
 
-#### Build
+Step 1 for all development environments and targets is to clone the repo. Use a 
+git-enabled terminal to follow the steps below.
 
-- Clone this repo.
-- Update the submodules.
-  ```
-  C:\BabylonNative>git submodule update --init --recursive
-  ```
-- Create a new directory for the build files, e.g. `Build` at the root of the repo.
-  ```
-  C:\BabylonNative>mkdir Build
-  ```
-- Change your working directory to the new directory.
-  ```
-  C:\BabylonNative>cd Build
-  ```
-- Run CMake from the new directory and point to the root of the repo.
+```
+git clone https://github.com/BabylonJS/BabylonNative.git
+```
 
-    NOTE: If you get the CMake error *No preprocessor test for "Intel"*, update your Visual Studio to 16.3 or higher.
-  ```
-  C:\BabylonNative\Build>cmake ..
-  ```
-- Open the generated solution `BabylonNative.sln`.
-  ```
-  C:\BabylonNative\Build>start BabylonNative.sln
-  ```
-- Once the solution opens, right click the Playground project, click "Set as StartUp Project" and click the play button at the top to run the test app which should render a box
+Babylon Native makes extensive use of submodules to supply its dependencies, so it's
+also necessary to set up the submodules.
 
-### Android / iOS / MacOS
+```
+cd BabylonNative
+git submodule update --init --recursive
+```
 
-*Planned but not yet implemented*
+Babylon Native's build system is based on CMake, which customarily uses a separate
+build directory. Build directory location is up to you, but we recommend just creating 
+a `Build` directory within your clone of the Babylon Native repository (Babylon 
+Native's `.gitignore` file is already set up to ignore this `Build` directory).
+
+```
+mkdir Build
+cd Build
+```
+
+### **Building on Windows 10, Targeting Windows Desktop (Win32)**
+
+**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with 
+C++ development tools, [Python 3.0](https://www.python.org/) or newer (required by 
+dependencies)
+
+For Windows development, CMake will generate a Visual Studio Solution. From a 
+terminal with access to CMake located in your `BabylonNative/Build` directory, type
+the following (amend paths for alternative build directories):
+
+```
+cmake ..
+```
+
+CMake will generate a new `BabylonNative.sln` file in your working directory. Please
+be patient; this process can take several minutes. When the process is completed,
+open `BabylonNative.sln` by double-clicking on it in Windows Explorer, or with the
+following command:
+
+```
+start BabylonNative.sln
+```
+
+By default, the "Playground" demo app should be set as the Visual Studio start-up
+project. Build and run this app by pressing the green "Play" button, or by pressing
+`F5` on your keyboard.
+
+### **Building on Windows 10, Targeting the Universal Windows Platform (UWP)**
+
+**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with 
+C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required 
+by dependencies)
+
+For Windows development, CMake will generate a Visual Studio Solution. By default it 
+will target Win32, so to target UWP (which CMake describes as "Windows Store") you have 
+to specify certain CMake variables. From a terminal with access to CMake located in 
+your `BabylonNative/Build` directory, type the following (amend paths for alternative 
+build directories):
+
+```
+cmake -D CMAKE_SYSTEM_NAME=WindowStore -D CMAKE_SYSTEM_VERSION=10.0 ..
+```
+
+CMake will generate a new `BabylonNative.sln` file in your working directory. Please
+be patient; this process can take several minutes. When the process is completed,
+open `BabylonNative.sln` by double-clicking on it in Windows Explorer, or with the
+following command:
+
+```
+start BabylonNative.sln
+```
+
+By default, the "Playground" demo app should be set as the Visual Studio start-up
+project. Build and run this app by pressing the green "Play" button, or by pressing
+`F5` on your keyboard.
+
+### **Building on macOS, Targeting macOS**
+
+**Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer, 
+[Python 3.0](https://www.python.org/) or newer (required by dependencies)
+
+For macOS development, CMake by default will generate a Makefile. It may be possible
+to build Babylon Native for macOS using this approach, but at present only the Xcode
+method is supported. To generate an Xcode project using CMake, you must specify the
+correct build system generator for CMake to use, as follows:
+
+```
+cmake -G Xcode ..
+```
+
+CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
+Please be patient; this process can take several minutes. When the process is 
+completed, open the project by double-clicking on it in Finder, or with the following
+command:
+
+```
+open BabylonNative.xcodeproj
+```
+
+To select which project to build with Xcode, select the correct project name in the 
+menu to the right of the greyed-out "Stop" button adjacent to the "Play" button in
+the top-left corner of the Xcode window. For example, to build and run the Playground
+demo app, click on the project selector and find "Playground" in the list of possible
+selections. The "Play" button will subsequently allow you to build, run, and debug
+the selected Babylon Native demo app.
+
+### **Building on macOS, Targeting iOS**
+
+**Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer, 
+[Python 3.0](https://www.python.org/) or newer (required by dependencies)
+
+For macOS development, CMake by default will generate a Makefile. It may be possible
+to build Babylon Native for macOS using this approach, but at present only the Xcode
+method is supported. To generate an Xcode project using CMake, you must specify the
+correct build system generator for CMake to use. Additionally, you must tell CMake
+what toolchain to use, which provides additional information about how to generate an 
+iOS Xcode project correctly. Furthermore, a number of capabilities within Babylon 
+Native's dependencies must be deactivated in order for the project to build correctly;
+these capabilities are set to their correct state by the additional CMake variables in 
+the following command:
+
+```
+cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DHTTP_ONLY=OFF -DCMAKE_USE_OPENSSL=OFF -DBUILD_CURL_EXE=OFF -DBUILD_CURL_TESTS=OFF -DCURL_STATICLIB=ON -DUSE_UNIX_SOCKETS=0 -DHAVE_FSETXATTR=0 -DHAVE_LIBSOCKET=0 -DCURL_DISABLE_FTP=OFF -DCURL_DISABLE_LDAP=ON -DCURL_DISABLE_TELNET=ON -DCURL_DISABLE_DICT=ON -DCURL_DISABLE_TFTP=ON -DCURL_DISABLE_IMAP=ON -DCURL_DISABLE_POP3=ON -DCURL_DISABLE_SMTP=ON -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF -DHAVE_LIBIDN2=OFF ..
+```
+
+CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
+Please be patient; this process can take several minutes. When the process is 
+completed, open the project by double-clicking on it in Finder, or with the following
+command:
+
+```
+open BabylonNative.xcodeproj
+```
+
+To select which project to build with Xcode, select the correct project name in the 
+menu to the right of the greyed-out "Stop" button adjacent to the "Play" button in
+the top-left corner of the Xcode window. For example, to build and run the Playground
+demo app, click on the project selector and find "Playground" in the list of possible
+selections. The "Play" button will subsequently allow you to build, run, and debug
+the selected Babylon Native demo app.
 
 ## Development Notes
 
 ### glslang and SPIRV-Cross
 
-In order to compile the WebGL GLSL shader to the required bits for the target platform, this project utilizes [glslang](https://github.com/KhronosGroup/glslang) and [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross). See [ShaderCompiler.h](./Library/Source/ShaderCompiler.h) and its corresponding implementation for details.
+In order to compile the WebGL GLSL shader to the required bits for the target platform, this project utilizes [glslang](https://github.com/KhronosGroup/glslang) and [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross). See [ShaderCompiler.h](./Plugins/NativeEngine/Source/ShaderCompiler.h) and its corresponding implementation for details.
 
 ### arcana.cpp
 
@@ -102,11 +222,11 @@ This project makes substantial use of the utilities contained within the [arcana
 
 This project uses a subset of [node-addon-api](https://github.com/nodejs/node-addon-api) and the JavaScript part of [N-API](https://github.com/nodejs/node/blob/master/src/js_native_api.h) to target either V8 or Chakra. See [this thread](https://github.com/nodejs/abi-stable-node/issues/354) for some context. There is also [work](https://github.com/nodejs/node-addon-api/issues/399) needed to factor out the JavaScript part of node-addon-api.
 
-The code is located [here](./Library/Dependencies/napi). Some small modifications were made to avoid node dependencies and improve performance. The Chakra version [js_native_api_chakra.cc](./Library/Dependencies/napi/source/js_native_api_chakra.cc) came from [node_api_jsrt.cc](https://github.com/nodejs/node-chakracore/blob/master/src/node_api_jsrt.cc) and was modified to target Chakra directly. We will work on submitting these changes to the public version.
+The code is located [here](./Dependencies/napi). Some small modifications were made to avoid node dependencies and improve performance. The Chakra version [js_native_api_chakra.cc](./Dependencies/napi/source/js_native_api_chakra.cc) came from [node_api_jsrt.cc](https://github.com/nodejs/node-chakracore/blob/master/src/node_api_jsrt.cc) and was modified to target Chakra directly. We will work on submitting these changes to the public version.
 
 ### bgfx
 
-This project uses [bgfx](https://github.com/bkaradzic/bgfx) for the cross-platform rendering abstraction. It does not use the shader abstraction of bgfx, but instead [compiles the WebGL GLSL shader at runtime](#glslang-and-SPIRV-Cross) and generates the shader header that bgfx expects. See [NativeEngine.cpp](./Library/Source/NativeEngine.cpp) for implementation details.
+This project uses [bgfx](https://github.com/bkaradzic/bgfx) for the cross-platform rendering abstraction. It does not use the shader abstraction of bgfx, but instead [compiles the WebGL GLSL shader at runtime](#glslang-and-SPIRV-Cross) and generates the shader header that bgfx expects. See [NativeEngine.cpp](./Plugins/NativeEngine/Source/NativeEngine.cpp) for implementation details.
 
 ### base-n
 
