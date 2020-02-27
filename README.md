@@ -8,14 +8,14 @@ browser. The goal of this project is to allow the same JavaScript that powers Ba
 apps on the Web to work identically in native apps on Windows, Android, macOS, and iOS.
 
 Check out [the project's announcement](https://medium.com/@babylonjs/babylon-native-821f1694fffc) 
-and [home page](https://www.babylonjs.com/babylonNative) for more information.
+and [home page](https://aka.ms/Bnative) for more information.
 
 *NOTE: **This project is under heavy development** and not all platforms/features 
 are currently available. Please refer to the sections below for details.*
 
 ## Current Status
 
-Babylon Native is currently available as a public preview. Many features are 
+Babylon Native is currently available as a **public preview**. Many features are 
 currently available, and additional features are being added regularly, but certain
 features are currently unstable or not yet implemented.
 
