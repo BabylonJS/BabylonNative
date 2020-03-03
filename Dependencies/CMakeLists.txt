@@ -1,6 +1,9 @@
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# -------------------------------- BabylonNativeCMakeFunctions --------------------------------
+add_subdirectory(BabylonNativeCMakeFunctions)
+
 # -------------------------------- arcana --------------------------------
 # Dependencies: none
 add_subdirectory(arcana.cpp EXCLUDE_FROM_ALL)
