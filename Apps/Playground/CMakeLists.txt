@@ -43,9 +43,6 @@ elseif(WINDOWS_STORE)
         "UWP/App.cpp"
         "UWP/App.h")
 
-    set(RESOURCE_FILES
-        ${BABYLON_NATIVE_DEPENDENCIES})
-
 elseif(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -123,7 +120,7 @@ target_link_to_dependencies(Playground
     PRIVATE XMLHttpRequest)
 
 if (WIN32)
-    target_link_libraries(Playground 
+    target_link_to_dependencies(Playground 
         PRIVATE "shlwapi.lib")
 endif()
 
@@ -166,9 +163,6 @@ endif()
 if(WINDOWS_STORE)
     set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
-    
-    set_property(SOURCE ${BABYLON_NATIVE_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${BABYLON_NATIVE_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION ".")
 else()
     foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
         get_filename_component(SCRIPT_NAME "${script}" NAME)

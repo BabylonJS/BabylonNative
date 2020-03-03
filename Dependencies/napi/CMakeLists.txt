@@ -96,6 +96,4 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_link_libraries(napi PUBLIC v8)
 endif()
 
-set(NAPI_DEPENDENCIES ${NAPI_DEPENDENCIES} PARENT_SCOPE)
-
 set_target_properties(napi PROPERTIES ON_LINKED_AS_DEPENDENCY_CMAKE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/OnLibraryLinkedHandlers.cmake")

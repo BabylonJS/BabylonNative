@@ -15,7 +15,7 @@ set_target_properties(AppRuntime PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_
 target_include_directories(AppRuntime PRIVATE "Include/Babylon")
 target_include_directories(AppRuntime INTERFACE "Include")
 
-target_link_libraries(AppRuntime
+target_link_to_dependencies(AppRuntime
     PRIVATE arcana
     PUBLIC JsRuntime)
 

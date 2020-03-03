@@ -9,7 +9,7 @@ set_target_properties(JsRuntime PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_B
 target_include_directories(JsRuntime PRIVATE "Include/Babylon")
 target_include_directories(JsRuntime INTERFACE "Include")
 
-target_link_libraries(JsRuntime
+target_link_to_dependencies(JsRuntime
     PUBLIC napi)
 
 set_property(TARGET JsRuntime PROPERTY FOLDER Core)

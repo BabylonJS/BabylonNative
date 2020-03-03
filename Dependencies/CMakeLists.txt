@@ -79,7 +79,6 @@ endif()
 # Dependencies: none
 add_subdirectory(napi EXCLUDE_FROM_ALL)
 set_property(TARGET napi PROPERTY FOLDER Dependencies)
-set(BABYLON_NATIVE_DEPENDENCIES ${NAPI_DEPENDENCIES} PARENT_SCOPE)
 
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
