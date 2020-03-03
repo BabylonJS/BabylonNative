@@ -1,5 +1,7 @@
-function(on_after_link target)
+function(on_linked_as_dependency target)
     if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+        propagate_on_linked_as_dependency_cmake_file(napi ${target})
+    
         get_target_property(type ${target} TYPE)
         if(${type} STREQUAL "EXECUTABLE")
             if (WINDOWS_STORE)

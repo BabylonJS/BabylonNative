@@ -23,6 +23,3 @@ target_compile_definitions(AppRuntime
     PRIVATE NOMINMAX)
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)
-
-get_target_property(cmakeFile JsRuntime ON_LINKED_AS_DEPENDENCY_CMAKE_FILE)
-set_target_properties(AppRuntime PROPERTIES ON_LINKED_AS_DEPENDENCY_CMAKE_FILE ${cmakeFile})
