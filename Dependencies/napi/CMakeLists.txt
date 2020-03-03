@@ -45,7 +45,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND NOT ANDROID)
     target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
     target_include_directories(v8 INTERFACE "${NUGET_PATH}/v8-v141-${ARCH}.7.4.288.26/include")
 
-    set(NAPI_DEPENDENCIES
+    set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS
         "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/icudtl.dat"
         "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/icui18n.dll"
         "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/icuuc.dll"
@@ -53,7 +53,8 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND NOT ANDROID)
         "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/snapshot_blob.bin"
         "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8.dll"
         "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8_libbase.dll"
-        "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8_libplatform.dll")
+        "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8_libplatform.dll"
+        CACHE STRING "N-API runtime output artifacts")
 endif()
 
 set(SOURCES
@@ -96,3 +97,5 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
 endif()
 
 set(NAPI_DEPENDENCIES ${NAPI_DEPENDENCIES} PARENT_SCOPE)
+
+set_target_properties(napi PROPERTIES ON_LINKED_AS_DEPENDENCY_CMAKE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/OnLibraryLinkedHandlers.cmake")

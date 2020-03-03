@@ -114,8 +114,8 @@ endif()
 
 target_include_directories(Playground PRIVATE "Source" "." ${TEST_DEPENDENCY})
 
-target_link_libraries(Playground PRIVATE AppRuntime ${ADDITIONAL_LIBRARIES})
-target_link_libraries(Playground
+target_link_to_dependencies(Playground PRIVATE AppRuntime ${ADDITIONAL_LIBRARIES})
+target_link_to_dependencies(Playground
     PRIVATE Console
     PRIVATE NativeEngine
     PRIVATE NativeWindow
@@ -178,8 +178,4 @@ else()
             COMMENT "Copying ${SCRIPT_NAME}"
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
     endforeach()
-    
-    foreach(dependency ${BABYLON_NATIVE_DEPENDENCIES})
-        add_custom_command(TARGET Playground POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different ${dependency} $<TARGET_FILE_DIR:Playground>)
-    endforeach(dependency)
 endif()

@@ -13,3 +13,6 @@ target_link_libraries(JsRuntime
     PUBLIC napi)
 
 set_property(TARGET JsRuntime PROPERTY FOLDER Core)
+
+get_target_property(cmakeFile napi ON_LINKED_AS_DEPENDENCY_CMAKE_FILE)
+set_target_properties(JsRuntime PROPERTIES ON_LINKED_AS_DEPENDENCY_CMAKE_FILE ${cmakeFile})
