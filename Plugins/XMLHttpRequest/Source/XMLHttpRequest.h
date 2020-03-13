@@ -121,7 +121,26 @@ namespace Babylon
         arcana::task<void, std::exception_ptr> SendAsyncImpl(); // TODO: Eliminate this function once the UWP file access bug is fixed.
         void SetReadyState(ReadyState readyState);
 
-        JsRuntime& m_runtime;
+        class RuntimeScheduler
+        {
+        public:
+            explicit RuntimeScheduler(JsRuntime& runtime)
+                : m_runtime{runtime}
+            {
+            }
+
+            template<typename CallableT>
+            void operator()(CallableT&& callable) const
+            {
+                m_runtime.Dispatch([callable{std::forward<CallableT>(callable)}](Napi::Env){
+                    callable();
+                });
+            }
+
+        private:
+            JsRuntime& m_runtime;
+        } m_runtimeScheduler;
+
         const std::string m_rootUrl{};
 
         ReadyState m_readyState{ReadyState::Unsent};
