@@ -50,7 +50,6 @@ endif()
 
 target_include_directories(napi PUBLIC "include")
 
-# TODO: Make this block less weird.
 if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
     add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")
