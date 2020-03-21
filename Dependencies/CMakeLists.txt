@@ -90,14 +90,15 @@ set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
 
 # -------------------------------- xr --------------------------------
 # Dependencies: none
-# Currently OpenXR is only supported on Win32. More platforms will be added as 
-# they become viable/available.
-if(WIN32 OR WINDOWS_STORE)
+# Currently supported on Windows via OpenXR via ARCore.
+if(WIN32 OR WINDOWS_STORE OR ANDROID)
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
-    set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
-    set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-    set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+    if(WIN32 OR WINDOWS_STORE)
+        set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
+        set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+        set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+    endif()
 endif()
 
 # -------------------------------- curl --------------------------------

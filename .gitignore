@@ -1,1 +1,6 @@
 /Build
+
+/Dependencies/v8
+/Apps/Playground/Android/app/src/main/jniLibs
+/Apps/Playground/Android/app/src/main/assets
+/Apps/Playground/Android/app/.cxx

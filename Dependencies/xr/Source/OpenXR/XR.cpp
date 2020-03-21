@@ -24,7 +24,7 @@ namespace xr
                 {
                     if (!TryEnableExtension(extensionName, extensionProperties))
                     {
-                        throw Exception{ "Required extension not supported" };
+                        throw std::runtime_error{ "Required extension not supported" };
                     }
                 }
 
@@ -68,15 +68,6 @@ namespace xr
 
             return swapchainImageIndex;
         };
-    }
-
-    Exception::Exception(const char* message)
-        : m_message{ message }
-    {}
-
-    const char* Exception::what() const noexcept
-    {
-        return m_message.c_str();
     }
 
     class System::Impl
@@ -146,7 +137,7 @@ namespace xr
             }
             else if(!XR_SUCCEEDED(result))
             {
-                throw Exception{ "SystemId initialization failed with unexpected result type." };
+                throw std::runtime_error{ "SystemId initialization failed with unexpected result type." };
             }
 
             // Find the available environment blend modes.
@@ -473,7 +464,7 @@ namespace xr
                 std::end(SUPPORTED_COLOR_FORMATS));
             if (colorFormatPtr == std::end(swapchainFormats))
             {
-                throw Exception{ "No runtime swapchain format is supported for color." };
+                throw std::runtime_error{ "No runtime swapchain format is supported for color." };
             }
 
             auto depthFormatPtr = std::find_first_of(
@@ -483,7 +474,7 @@ namespace xr
                 std::end(SUPPORTED_DEPTH_FORMATS));
             if (depthFormatPtr == std::end(swapchainFormats))
             {
-                throw Exception{ "No runtime swapchain format is supported for depth." };
+                throw std::runtime_error{ "No runtime swapchain format is supported for depth." };
             }
 
             colorFormat = static_cast<SwapchainFormat>(*colorFormatPtr);

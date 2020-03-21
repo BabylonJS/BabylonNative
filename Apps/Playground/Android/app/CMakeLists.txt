@@ -46,6 +46,7 @@ target_link_libraries(BabylonNativeJNI
         log
         -lz
         AppRuntime
+        Platform
         Console
         NativeEngine
         NativeWindow

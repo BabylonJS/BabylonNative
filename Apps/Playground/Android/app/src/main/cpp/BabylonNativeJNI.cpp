@@ -9,6 +9,7 @@
 #include <android/log.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Platform.h>
 #include <Babylon/Console.h>
 #include <Babylon/NativeEngine.h>
 #include <Babylon/NativeWindow.h>
@@ -20,16 +21,21 @@
 #include <android/asset_manager_jni.h>
 
 extern "C" {
-    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr, jobject appContext);
+    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj);
-    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface);
+    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface, jobject appContext);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_activityOnResume(JNIEnv* env);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface);
+    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_xrSurfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jobject obj, jstring path);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_eval(JNIEnv* env, jobject obj, jstring source, jstring sourceURL);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jobject obj, jfloat dx, jfloat dy, jboolean down);
 };
+
+ANativeWindow* xrWindow{};
+uint32_t xrWindowWidth{};
+uint32_t xrWindowHeight{};
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
@@ -38,8 +44,7 @@ std::unique_ptr<Babylon::ScriptLoader> loader{};
 AAssetManager *g_assetMgrNative = nullptr;
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
-                                      jobject assetMgr, jobject appContext)
+Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr)
 {
     auto asset_manager = AAssetManager_fromJava(env, assetMgr);
     g_assetMgrNative = asset_manager;
@@ -51,10 +56,12 @@ Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj)
     loader.reset();
     inputBuffer.reset();
     runtime.reset();
+
+    // TODO: detach jvm
 }
 
 JNIEXPORT void JNICALL
-Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface)
+Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface, jobject appContext)
 {
     if (!runtime)
     {
@@ -78,6 +85,14 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                 }
             });
         });
+
+        JavaVM* javaVM{};
+        if (env->GetJavaVM(&javaVM) != JNI_OK)
+        {
+            throw std::runtime_error("Failed to get Java VM");
+        }
+
+        Babylon::Platform::Initialize(*runtime, javaVM, env->NewGlobalRef(appContext));
 
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
         int32_t width  = ANativeWindow_getWidth(window);
@@ -113,6 +128,14 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
         Babylon::ReinitializeNativeEngine(*runtime, window, static_cast<size_t>(width), static_cast<size_t>(height));
     }
+}
+
+JNIEXPORT void JNICALL
+Java_BabylonNative_Wrapper_xrSurfaceChanged(JNIEnv* env, jobject obj, jint width, jint height, jobject surface)
+{
+    ::xrWindow = ANativeWindow_fromSurface(env, surface);
+    ::xrWindowWidth = width;
+    ::xrWindowHeight = height;
 }
 
 JNIEXPORT void JNICALL

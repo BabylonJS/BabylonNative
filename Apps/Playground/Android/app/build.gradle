@@ -1,6 +1,10 @@
 apply plugin: 'com.android.application'
 
 def platformVersion = 21
+def arcore_libpath = "${buildDir}/arcore-native"
+
+configurations { natives }
+
 android {
     compileSdkVersion 28
 
@@ -30,10 +34,15 @@ android {
                         '-DCURL_DISABLE_SMTP=ON',
                         '-DENABLE_GLSLANG_BINARIES=OFF',
                         '-DSPIRV_CROSS_CLI=OFF',
-                        '-DHAVE_LIBIDN2=OFF'
+                        '-DHAVE_LIBIDN2=OFF',
+                        "-DARCORE_LIBPATH=${arcore_libpath}/jni"
             }
         }
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86"
+        }
     }
+
     buildTypes {
         release {
             minifyEnabled = false
@@ -41,11 +50,45 @@ android {
                           'proguard-rules.pro'
         }
     }
+
     externalNativeBuild {
         cmake {
             version '3.13.2+'
             path 'CMakeLists.txt'
         }
+    }
+
+    ndkVersion "21.0.6113669"
+}
+
+dependencies {
+    // ARCore library
+    implementation 'com.google.ar:core:1.14.0'
+    natives 'com.google.ar:core:1.14.0'
+
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:design:27.1.1'
+}
+
+// Extracts the shared libraries from aars in the natives configuration.
+// This is done so that NDK builds can access these libraries.
+task extractNativeLibraries() {
+    // Always extract, this insures the native libs are updated if the version changes.
+    outputs.upToDateWhen { false }
+    doFirst {
+        configurations.natives.files.each { f ->
+            copy {
+                from zipTree(f)
+                into arcore_libpath
+                include "jni/**/*"
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("external") && !task.name.contains("Clean")) {
+        task.dependsOn(extractNativeLibraries)
     }
 }
 

@@ -6,7 +6,7 @@ elseif(APPLE)
     set(XR OFF)
 elseif(ANDROID)
     set(GRAPHICS_API "OpenGL")
-    set(XR OFF)
+    set(XR ON)
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
 endif()
@@ -58,7 +58,8 @@ elseif(APPLE)
     target_link_libraries(NativeEngine
         PRIVATE spirv-cross-msl)
 elseif(ANDROID)
-    # Nothing to do.
+    target_link_libraries(NativeEngine
+        PRIVATE Platform)
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics linking could not be performed")
 endif()

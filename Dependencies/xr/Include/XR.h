@@ -4,18 +4,12 @@
 #include <string>
 #include <vector>
 
+#ifdef ANDROID
+#include <jni.h>
+#endif
+
 namespace xr
 {
-    class Exception final : public std::exception
-    {
-    public:
-        Exception::Exception(const char* message);
-        const char* Exception::what() const noexcept;
-
-    private:
-        std::string m_message{};
-    };
-
     enum class TextureFormat
     {
         RGBA8_SRGB,
@@ -118,7 +112,7 @@ namespace xr
                 int64_t m_displayTime{};
             };
 
-            Session(System& headMountedDisplay, void* graphicsDevice);
+            Session(System& system, void* graphicsDevice);
             ~Session();
 
             Session(Session&) = delete;
@@ -128,6 +122,8 @@ namespace xr
             void RequestEndSession();
             Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
+
+            // TODO: Probably need pause/resume functionality for ARCore
 
         private:
             std::unique_ptr<Impl> m_impl{};
@@ -140,7 +136,12 @@ namespace xr
         System& operator=(System&&) = delete;
 
         bool IsInitialized() const;
+
+#ifdef ANDROID
+        bool TryInitialize(JNIEnv* env, jobject appContext);
+#else
         bool TryInitialize();
+#endif
 
     private:
         class Impl;
