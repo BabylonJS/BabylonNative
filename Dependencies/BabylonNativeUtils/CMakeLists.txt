@@ -8,6 +8,12 @@ add_library(BabylonNativeUtils ${SOURCES})
 target_include_directories(BabylonNativeUtils PRIVATE "Include/Babylon")
 target_include_directories(BabylonNativeUtils INTERFACE "Include")
 
-target_link_libraries(BabylonNativeUtils
-    PUBLIC arcana
-    PRIVATE libcurl)
+if(ANDROID)
+    target_link_libraries(BabylonNativeUtils
+        PUBLIC arcana)
+else()
+    target_link_libraries(BabylonNativeUtils
+        PUBLIC arcana
+        PRIVATE libcurl)
+endif()
+

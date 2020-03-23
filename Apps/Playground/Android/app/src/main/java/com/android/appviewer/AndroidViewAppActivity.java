@@ -2,6 +2,7 @@ package com.android.appviewer;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.view.View;
 import BabylonNative.BabylonView;
 
@@ -12,6 +13,11 @@ public class AndroidViewAppActivity extends Activity implements BabylonView.View
     @Override protected void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
+
+        // Grant thread all allowed permissions
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         mView = new BabylonView(getApplication(), this);
         setContentView(mView);
     }
@@ -39,6 +45,7 @@ public class AndroidViewAppActivity extends Activity implements BabylonView.View
 
     @Override public void onViewReady()
     {
-        mView.loadScript("Scripts/experience.js");
+        mView.loadScript("Scripts/marble.js");
+        mView.loadScript("Scripts/playground_runner.js");
     }
 }

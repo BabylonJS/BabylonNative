@@ -150,6 +150,10 @@ namespace Babylon
         {
             return LoadTextAsync(m_url).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const std::string& data) {
                 m_runtime.Dispatch([this, data = data](Napi::Env) {
+#if(ANDROID)
+                    // Charset conversion is handled by the Java Network class
+                    m_responseText = std::move(data);
+#else
                     // check UTF-8 BOM encoding
                     if (data.size() >= 3 && data[0] == '\xEF' && data[1] == '\xBB' && data[2] == '\xBF')
                     {
@@ -160,7 +164,7 @@ namespace Babylon
                         // UTF8 encoding
                         m_responseText = std::move(data);
                     }
-
+#endif
                     m_status = HTTPStatusCode::Ok;
                     SetReadyState(ReadyState::Done);
                 });

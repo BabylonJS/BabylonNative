@@ -35,6 +35,7 @@ add_subdirectory(${BABYLON_NATIVE_TESTAPP_DIR}/../../Plugins/ ${BABYLON_NATIVE_T
 
 add_library(BabylonNativeJNI SHARED
             src/main/cpp/BabylonNativeJNI.cpp
+            src/main/cpp/BabylonNativeNetwork.cpp
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Dependencies/napi/source/js_native_api_v8.cc
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Dependencies/napi/source/env_v8.cc
             ${BABYLON_NATIVE_TESTAPP_DIR}/../../Dependencies/napi/source/env.cc

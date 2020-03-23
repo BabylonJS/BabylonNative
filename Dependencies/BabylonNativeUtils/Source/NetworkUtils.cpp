@@ -1,27 +1,42 @@
 #include "NetworkUtils.h"
 
-#include <curl/curl.h>
-
-// TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
 #if (ANDROID)
-#include <android/asset_manager.h>
-extern AAssetManager* g_assetMgrNative;
+namespace Babylon
+{
+    void AndroidLoadURLFunction(const std::string& url, std::function<void(const std::string& content)> func);
+    void AndroidLoadURLFunction(const std::string& url, std::function<void(const std::vector<uint8_t>& content)> contentHandler);
+    std::string AndroidGetAbsoluteUrl(const std::string& url, const std::string& rootUrl);
+}
+#else
+#include <curl/curl.h>
 #endif
 
 namespace Babylon
 {
+#if (ANDROID)
     std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
     {
-        // TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
-#if (ANDROID)
-        AAsset* asset = AAssetManager_open(g_assetMgrNative, url.c_str(),
-            AASSET_MODE_UNKNOWN);
-        if (asset)
-        {
-            return url;
-        }
-#endif
+        return AndroidGetAbsoluteUrl(url, rootUrl);
+    }
 
+    template<typename DataT>
+    arcana::task<DataT, std::exception_ptr> LoadUrlAsync(std::string url)
+    {
+        arcana::task_completion_source<DataT, std::exception_ptr> taskCompletionSource{};
+        std::thread{[taskCompletionSource, url = std::move(url)] () mutable
+        {
+            AndroidLoadURLFunction(url, [taskCompletionSource](const DataT& content) mutable
+               {
+                   taskCompletionSource.complete(std::move(content));
+               }
+            );
+        }}.detach();
+
+        return taskCompletionSource.as_task();
+    }
+#else
+    std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
+    {
         auto curl = curl_url();
 
         auto code = curl_url_set(curl, CURLUPART_URL, url.data(), 0);
@@ -62,21 +77,6 @@ namespace Babylon
         {
             DataT data{};
 
-            // TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
-#if (ANDROID)
-            AAsset* asset = AAssetManager_open(g_assetMgrNative, url.c_str(),
-                AASSET_MODE_UNKNOWN);
-            if (asset)
-            {
-                size_t size = AAsset_getLength64(asset);
-                data.resize(size);
-                AAsset_read(asset, data.data(), size);
-                AAsset_close(asset);
-                taskCompletionSource.complete(std::move(data));
-                return;
-            }
-#endif
-
             auto curl = curl_easy_init();
             if (curl)
             {
@@ -92,15 +92,6 @@ namespace Babylon
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
-#if (ANDROID)
-                /*
-                * /!\ warning! this is a security issue
-                * https://github.com/BabylonJS/BabylonNative/issues/96
-                */
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-#endif
-
                 auto result = curl_easy_perform(curl);
                 if (result != CURLE_OK)
                 {
@@ -115,6 +106,7 @@ namespace Babylon
 
         return taskCompletionSource.as_task();
     }
+#endif
 
     arcana::task<std::string, std::exception_ptr> LoadTextAsync(std::string url)
     {

@@ -102,21 +102,23 @@ endif()
 
 # -------------------------------- curl --------------------------------
 # Dependencies: openssl (indirect), 
-if(APPLE OR ANDROID)
-    set(CURL_CA_BUNDLE "none" CACHE FILEPATH "Path to SSL CA Certificate Bundle")
-    set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
-endif()
+if(NOT ANDROID)
+    if(APPLE)
+        set(CURL_CA_BUNDLE "none" CACHE FILEPATH "Path to SSL CA Certificate Bundle")
+        set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
+    endif()
 
-if(APPLE)
-    set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
-elseif(WIN32 OR WINDOWS_STORE)
-    set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
-else()
-    set(CMAKE_USE_WINSSL OFF CACHE BOOL "Set cURL to use WinSSL by default.")
-endif()
+    if(APPLE)
+        set(CMAKE_USE_SECTRANSP ON CACHE BOOL "enable Apple OS native SSL/TLS")
+    elseif(WIN32 OR WINDOWS_STORE)
+        set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
+    else()
+        set(CMAKE_USE_WINSSL OFF CACHE BOOL "Set cURL to use WinSSL by default.")
+    endif()
 
-add_subdirectory(curl)
-set_property(TARGET libcurl PROPERTY FOLDER Dependencies)
+    add_subdirectory(curl)
+    set_property(TARGET libcurl PROPERTY FOLDER Dependencies)
+endif()
 
 # TODO: Certain parts of cURL's functionality are gated behind WINAPI checks
 # that cause the functionality to become unavailable in UWP. Find a better way 

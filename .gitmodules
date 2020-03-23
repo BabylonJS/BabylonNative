@@ -22,6 +22,3 @@
 [submodule "Library/Dependencies/xr/Dependencies/OpenXR-SDK"]
 	path = Dependencies/xr/Dependencies/OpenXR-SDK
 	url = https://github.com/KhronosGroup/OpenXR-SDK
-[submodule "Library/Dependencies/openssl/openssl"]
-	path = Dependencies/openssl/openssl
-	url = https://github.com/openssl/openssl.git

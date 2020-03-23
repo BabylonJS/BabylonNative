@@ -7,6 +7,7 @@
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
+#include <android/looper.h>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Console.h>
@@ -18,6 +19,7 @@
 
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <iostream>
 
 extern "C" {
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetMgr, jobject appContext);
@@ -34,8 +36,8 @@ extern "C" {
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 std::unique_ptr<Babylon::ScriptLoader> loader{};
-
-AAssetManager *g_assetMgrNative = nullptr;
+AAssetManager* g_assetMgrNative{};
+ALooper* g_mainThreadLooper{};
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
@@ -43,6 +45,8 @@ Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
 {
     auto asset_manager = AAssetManager_fromJava(env, assetMgr);
     g_assetMgrNative = asset_manager;
+    g_mainThreadLooper = ALooper_forThread();
+    assert(g_mainThreadLooper != nullptr);
 }
 
 JNIEXPORT void JNICALL

@@ -1008,7 +1008,7 @@ namespace Babylon
     {
         const auto textureData = info[0].As<Napi::External<TextureData>>().Data();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
-        const auto generateMips = info[2].As<Napi::Boolean>().Value();
+        const auto generateMips = false;//info[2].As<Napi::Boolean>().Value();
         const auto invertY = info[3].As<Napi::Boolean>().Value();
 
         bimg::ImageContainer* image = bimg::imageParse(&m_allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength()));
@@ -1021,7 +1021,7 @@ namespace Babylon
     {
         const auto textureData = info[0].As<Napi::External<TextureData>>().Data();
         const auto imageDataArray = info[1].As<Napi::Array>();
-        const auto generateMips = info[2].As<Napi::Boolean>().Value();
+        const auto generateMips = false;//info[2].As<Napi::Boolean>().Value();
 
         // Load images and generate mips if requested.
         uint32_t totalSize = 0;
