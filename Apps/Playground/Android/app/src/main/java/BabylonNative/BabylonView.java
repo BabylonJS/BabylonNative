@@ -10,13 +10,13 @@ import android.view.View;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
+public class BabylonView extends SurfaceView implements SurfaceHolder.Callback, View.OnTouchListener {
     private static final String TAG = "BabylonView";
     private boolean mViewReady = false;
     private ViewDelegate mViewDelegate;
     private Context mContext;
 
-    public BabylonView(SurfaceView xrView, Context context, ViewDelegate viewDelegate) {
+    public BabylonView(Context context, ViewDelegate viewDelegate) {
         super(context);
 
         mContext = context;
@@ -25,10 +25,6 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
         holder.addCallback(this);
         setOnTouchListener(this);
         this.mViewDelegate = viewDelegate;
-
-
-        SurfaceHolder xrHolder = xrView.getHolder();
-        xrHolder.addCallback(this);
 
         BabylonNative.Wrapper.initEngine(context.getResources().getAssets());
     }
@@ -55,12 +51,10 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        if (holder == this.getHolder()) {
-            BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), mContext);
-            if (!this.mViewReady) {
-                mViewDelegate.onViewReady();
-                mViewReady = true;
-            }
+        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), mContext);
+        if (!this.mViewReady) {
+            mViewDelegate.onViewReady();
+            mViewReady = true;
         }
     }
 
@@ -76,11 +70,7 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        if (holder == this.getHolder()) {
-            BabylonNative.Wrapper.surfaceChanged(w, h, getHolder().getSurface());
-        } else {
-            BabylonNative.Wrapper.xrSurfaceChanged(w, h, getHolder().getSurface());
-        }
+        BabylonNative.Wrapper.surfaceChanged(w, h, getHolder().getSurface());
     }
 
     public interface ViewDelegate {
@@ -88,14 +78,11 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     }
 
     @Override
-    public boolean onTouch(View v, MotionEvent event)
-    {
+    public boolean onTouch(View v, MotionEvent event) {
         float mX = event.getX();
         float mY = event.getY();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
-                break;
             case MotionEvent.ACTION_MOVE:
                 BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
                 break;
@@ -109,15 +96,5 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     @Override
     protected void finalize() throws Throwable {
         BabylonNative.Wrapper.finishEngine();
-    }
-
-    /**
-     * This method is part of the SurfaceHolder.Callback2 interface, and is
-     * not normally called or subclassed by clients of BabylonView.
-     */
-    @Deprecated
-    @Override
-    public void surfaceRedrawNeeded(SurfaceHolder holder) {
-        // Redraw happens in the bgfx thread. No need to handle it here.
     }
 }

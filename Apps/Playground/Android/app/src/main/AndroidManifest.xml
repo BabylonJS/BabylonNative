@@ -15,15 +15,13 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.android.testapp">
-  <uses-feature android:name="android.hardware.camera.ar" android:required="true"/>
-  <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+          package="com.android.babylonnative.playground">
   <application
       android:allowBackup="false"
       android:fullBackupContent="false"
       android:icon="@mipmap/ic_launcher"
-      android:label="@string/testapp_activity">
-    <activity android:name="AndroidViewAppActivity"
+      android:label="@string/playground_activity">
+    <activity android:name="PlaygroundActivity"
               android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
               android:launchMode="singleTask"
               android:configChanges="orientation|keyboardHidden|screenSize">
@@ -45,12 +43,12 @@
         <data android:pathPattern=".*\\.glb" />
       </intent-filter>
     </activity>
-    <meta-data android:name="com.google.ar.core" android:value="required" />
+    <meta-data android:name="com.google.ar.core" android:value="optional" />
   </application>
+  <uses-feature android:glEsVersion="0x00030000" android:required="true" />
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
   <uses-permission android:name="android.permission.READ_INTERNAL_STORAGE" />
-  <uses-permission android:name="android.permission.SET_DEBUG_APP" />
 </manifest>
