@@ -45,7 +45,6 @@ public class AndroidViewAppActivity extends Activity implements BabylonView.View
 
     @Override public void onViewReady()
     {
-        mView.loadScript("Scripts/marble.js");
-        mView.loadScript("Scripts/playground_runner.js");
+        mView.loadScript("Scripts/experience.js");
     }
 }
