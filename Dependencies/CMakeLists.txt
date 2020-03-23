@@ -56,22 +56,6 @@ set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 
-# -------------------------------- openssl --------------------------------
-# Dependencies: none
-if(ANDROID)
-    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl")
-    set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/include")
-    set(OPENSSL_CRYPTO_LIBRARY crypto.a)
-    set(OPENSSL_SSL_LIBRARY ssl.a)
-    set(OPENSSL_USE_STATIC_LIBS TRUE)
-    add_subdirectory(openssl)
-
-    set_property(TARGET SSL PROPERTY FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/openssl")
-    set_property(TARGET Crypto PROPERTY FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/openssl")
-    set(OpenSSLStatic_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openssl")
-    find_package(OpenSSLStatic)
-endif()
-
 # -------------------------------- ios-cmake --------------------------------
 # Nothing to do here.
 
