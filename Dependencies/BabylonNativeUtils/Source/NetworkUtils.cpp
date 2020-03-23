@@ -75,7 +75,9 @@ namespace Babylon
 
         std::thread{[taskCompletionSource, url = std::move(url)] () mutable
         {
-            DataT data{};
+            try
+            {
+                DataT data{};
 
             auto curl = curl_easy_init();
             if (curl)
@@ -83,14 +85,14 @@ namespace Babylon
                 curl_easy_setopt(curl, CURLOPT_URL, url.data());
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-                curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData) {
-                    auto& data = *static_cast<DataT*>(userData);
-                    data.insert(data.end(), buffer, buffer + nitems);
-                    return nitems;
-                };
+                    curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData) {
+                        auto& data = *static_cast<DataT*>(userData);
+                        data.insert(data.end(), buffer, buffer + nitems);
+                        return nitems;
+                    };
 
-                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+                    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+                    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
                 auto result = curl_easy_perform(curl);
                 if (result != CURLE_OK)
@@ -98,9 +100,14 @@ namespace Babylon
                     throw std::exception();
                 }
 
-                curl_easy_cleanup(curl);
+                    curl_easy_cleanup(curl);
 
-                taskCompletionSource.complete(std::move(data));
+                    taskCompletionSource.complete(std::move(data));
+                }
+            }
+            catch (...)
+            {
+                taskCompletionSource.complete(arcana::make_unexpected(std::current_exception()));
             }
         } }.detach();
 
