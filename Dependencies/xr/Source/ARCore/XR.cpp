@@ -33,7 +33,7 @@ namespace xr
 
         bool IsInitialized() const
         {
-            return true;
+            return (m_env != nullptr && m_appContext != nullptr);
         }
 
         bool TryInitialize(JNIEnv* env, jobject appContext)
