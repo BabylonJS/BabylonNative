@@ -221,9 +221,9 @@ namespace Babylon
             bgfx::TextureFormat::RGBA8,
             bgfx::TextureFormat::RGBA32F};
 
-        static_assert(bimg::TextureFormat::Count == bgfx::TextureFormat::Count);
-        static_assert(bimg::TextureFormat::RGBA8 == bgfx::TextureFormat::RGBA8);
-        static_assert(bimg::TextureFormat::RGB8 == bgfx::TextureFormat::RGB8);
+        static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
+        static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
+        static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGB8) == bgfx::TextureFormat::RGB8);
 
         bgfx::TextureFormat::Enum Cast(bimg::TextureFormat::Enum format)
         {
@@ -260,6 +260,8 @@ namespace Babylon
 
         void CreateTextureFromImage(bx::AllocatorI* allocator, TextureData* textureData, bimg::ImageContainer* image, bool invertY, bool generateMips)
         {
+            generateMips = false;
+
             if (invertY)
             {
                 FlipYInImageBytes(gsl::make_span(static_cast<uint8_t*>(image->m_data), image->m_size), image->m_height, image->m_size / image->m_height);
