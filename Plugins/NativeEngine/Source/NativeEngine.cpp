@@ -260,8 +260,6 @@ namespace Babylon
 
         void CreateTextureFromImage(bx::AllocatorI* allocator, TextureData* textureData, bimg::ImageContainer* image, bool invertY, bool generateMips)
         {
-            generateMips = false;
-
             if (invertY)
             {
                 FlipYInImageBytes(gsl::make_span(static_cast<uint8_t*>(image->m_data), image->m_size), image->m_height, image->m_size / image->m_height);
