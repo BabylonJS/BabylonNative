@@ -1,19 +1,25 @@
-set(SOURCES
-    "Include/Babylon/NetworkUtils.h"
-    "Include/Babylon/TicketedCollection.h"
-    "Source/NetworkUtils.cpp")
+if(APPLE)
+    set(SOURCES
+        "Include/Babylon/NetworkUtils.h"
+        "Include/Babylon/TicketedCollection.h"
+        "Source/NetworkUtils.mm")
+else()
+    set(SOURCES
+        "Include/Babylon/NetworkUtils.h"
+        "Include/Babylon/TicketedCollection.h"
+        "Source/NetworkUtils.cpp")
+endif()
 
 add_library(BabylonNativeUtils ${SOURCES})
 
 target_include_directories(BabylonNativeUtils PRIVATE "Include/Babylon")
 target_include_directories(BabylonNativeUtils INTERFACE "Include")
 
-if(ANDROID)
-    target_link_libraries(BabylonNativeUtils
-        PUBLIC arcana)
-else()
+if(WIN32 OR WINDOWS_STORE)
     target_link_libraries(BabylonNativeUtils
         PUBLIC arcana
         PRIVATE libcurl)
+else()
+    target_link_libraries(BabylonNativeUtils
+        PUBLIC arcana)
 endif()
-
