@@ -1,40 +1,10 @@
 #include "NetworkUtils.h"
 
-#if (ANDROID)
-namespace Babylon
-{
-    void AndroidLoadURLFunction(const std::string& url, std::function<void(const std::string& content)> func);
-    void AndroidLoadURLFunction(const std::string& url, std::function<void(const std::vector<uint8_t>& content)> contentHandler);
-    std::string AndroidGetAbsoluteUrl(const std::string& url, const std::string& rootUrl);
-}
-#else
+#ifndef ANDROID
 #include <curl/curl.h>
-#endif
 
 namespace Babylon
 {
-#if (ANDROID)
-    std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
-    {
-        return AndroidGetAbsoluteUrl(url, rootUrl);
-    }
-
-    template<typename DataT>
-    arcana::task<DataT, std::exception_ptr> LoadUrlAsync(std::string url)
-    {
-        arcana::task_completion_source<DataT, std::exception_ptr> taskCompletionSource{};
-        std::thread{[taskCompletionSource, url = std::move(url)] () mutable
-        {
-            AndroidLoadURLFunction(url, [taskCompletionSource](const DataT& content) mutable
-               {
-                   taskCompletionSource.complete(std::move(content));
-               }
-            );
-        }}.detach();
-
-        return taskCompletionSource.as_task();
-    }
-#else
     std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
     {
         auto curl = curl_url();
@@ -113,7 +83,6 @@ namespace Babylon
 
         return taskCompletionSource.as_task();
     }
-#endif
 
     arcana::task<std::string, std::exception_ptr> LoadTextAsync(std::string url)
     {
@@ -125,3 +94,4 @@ namespace Babylon
         return LoadUrlAsync<std::vector<uint8_t>>(std::move(url));
     }
 }
+#endif

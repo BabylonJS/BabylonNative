@@ -8,6 +8,9 @@
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 
+#include <arcana/threading/task.h>
+#include <arcana/threading/task_schedulers.h>
+
 #include <Babylon/AppRuntime.h>
 #include <iostream>
 #include "BabylonNativeLooper.h"
@@ -18,10 +21,13 @@ jmethodID loadURLBufferMethod{};
 JavaVM* g_jvm{};
 
 extern AAssetManager* g_assetMgrNative;
-extern ALooper* g_mainThreadLooper;
+
+std::unique_ptr<arcana::looper_scheduler> g_looperScheduler;
 
 extern "C" jint JNI_OnLoad(JavaVM* jvm, void *reserved)
 {
+    g_looperScheduler = std::make_unique<arcana::looper_scheduler>(arcana::looper_scheduler::get_for_current_thread());
+
     JNIEnv* env;
     if (jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK)
     {
@@ -76,10 +82,9 @@ namespace
 
 namespace Babylon
 {
-    std::string AndroidGetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
+    std::string GetAbsoluteUrl(const std::string& url, const std::string& rootUrl)
     {
-        AAsset* asset = AAssetManager_open(g_assetMgrNative, url.c_str(),
-            AASSET_MODE_UNKNOWN);
+        AAsset* asset = AAssetManager_open(g_assetMgrNative, url.c_str(), AASSET_MODE_UNKNOWN);
         if (asset)
         {
             AAsset_close(asset);
@@ -92,48 +97,49 @@ namespace Babylon
         return url;
     }
 
-    void AndroidLoadURLFunction(const std::string& url, std::function<void(const std::string& content)> contentHandler)
+    arcana::task<std::string, std::exception_ptr> LoadTextAsync(const std::string url)
     {
         std::string content;
         if (AndroidLoadAsset(url, content))
         {
-            contentHandler(content);
+            return arcana::task_from_result<std::exception_ptr>(std::move(content));
         }
         else
         {
-            DispatchLooperFunction<DispatchPayloadDirect>(g_mainThreadLooper, [url, contentHandler = std::move(contentHandler)](){
-                JNIEnv * env = AcquireEnvFromJVM(g_jvm);
+            return arcana::make_task(*g_looperScheduler, arcana::cancellation::none(), [url{ std::move(url) }]
+            {
+                JNIEnv* env = AcquireEnvFromJVM(g_jvm);
                 assert(env);
                 auto urlString = env->NewStringUTF(url.c_str());
                 jstring javaString = (jstring)env->CallStaticObjectMethod(networkClass, loadURLStringMethod, urlString);
-                const char *nativeString = env->GetStringUTFChars(javaString, 0);
-                std::string content(nativeString);
-                contentHandler(content);
+                const char* nativeString = env->GetStringUTFChars(javaString, 0);
+                std::string content{ nativeString };
                 env->ReleaseStringUTFChars(javaString, nativeString);
+                return std::move(content);
             });
         }
     }
 
-    void AndroidLoadURLFunction(const std::string& url, std::function<void(const std::vector<uint8_t>& content)> contentHandler)
+    arcana::task<std::vector<uint8_t>, std::exception_ptr> LoadBinaryAsync(const std::string url)
     {
         std::vector<uint8_t> content;
         if (AndroidLoadAsset(url, content))
         {
-            contentHandler(content);
+            return arcana::task_from_result<std::exception_ptr>(std::move(content));
         }
         else
         {
-            DispatchLooperFunction<DispatchPayloadDirect>(g_mainThreadLooper, [url, contentHandler = std::move(contentHandler)](){
-                JNIEnv * env = AcquireEnvFromJVM(g_jvm);
+            return arcana::make_task(*g_looperScheduler, arcana::cancellation::none(), [url{ std::move(url) }]
+            {
+                JNIEnv* env = AcquireEnvFromJVM(g_jvm);
                 assert(env);
                 auto urlString = env->NewStringUTF(url.c_str());
                 jbyteArray javaByteArray = (jbyteArray)env->CallStaticObjectMethod(networkClass, loadURLBufferMethod, urlString);
                 int contentLength = env->GetArrayLength(javaByteArray);
-                jboolean isCopy;
-                jbyte* bytes = env->GetByteArrayElements(javaByteArray, &isCopy);
-                std::vector<uint8_t> content((uint8_t*)bytes, (uint8_t*)bytes + contentLength);
-                contentHandler(content);
+                jbyte* bytes = env->GetByteArrayElements(javaByteArray, nullptr);
+                std::vector<uint8_t> content{ (uint8_t*)bytes, (uint8_t*)bytes + contentLength };
                 env->ReleaseByteArrayElements(javaByteArray, bytes, 0);
+                return std::move(content);
             });
         }
     }

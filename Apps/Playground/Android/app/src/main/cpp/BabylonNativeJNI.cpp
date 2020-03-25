@@ -7,7 +7,6 @@
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
-#include <android/looper.h>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Console.h>
@@ -37,7 +36,6 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 std::unique_ptr<Babylon::ScriptLoader> loader{};
 AAssetManager* g_assetMgrNative{};
-ALooper* g_mainThreadLooper{};
 
 JNIEXPORT void JNICALL
 Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
@@ -45,8 +43,6 @@ Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj,
 {
     auto asset_manager = AAssetManager_fromJava(env, assetMgr);
     g_assetMgrNative = asset_manager;
-    g_mainThreadLooper = ALooper_forThread();
-    assert(g_mainThreadLooper != nullptr);
 }
 
 JNIEXPORT void JNICALL
@@ -124,8 +120,7 @@ Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jobject obj, jstring path)
 {
     if (loader)
     {
-        jboolean iscopy;
-        loader->LoadScript(env->GetStringUTFChars(path, &iscopy));
+        loader->LoadScript(env->GetStringUTFChars(path, nullptr));
     }
 }
 
@@ -134,9 +129,8 @@ Java_BabylonNative_Wrapper_eval(JNIEnv* env, jobject obj, jstring source, jstrin
 {
     if (runtime)
     {
-        jboolean iscopy;
-        std::string url = env->GetStringUTFChars(sourceURL, &iscopy);
-        std::string src = env->GetStringUTFChars(source, &iscopy);
+        std::string url{ env->GetStringUTFChars(sourceURL, nullptr) };
+        std::string src{ env->GetStringUTFChars(source, nullptr) };
         loader->Eval(std::move(src), std::move(url));
     }
 }
