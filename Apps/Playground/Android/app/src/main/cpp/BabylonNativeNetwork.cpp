@@ -22,11 +22,12 @@ JavaVM* g_jvm{};
 
 extern AAssetManager* g_assetMgrNative;
 
-std::unique_ptr<arcana::looper_scheduler> g_looperScheduler;
+using looper_scheduler_t = arcana::looper_scheduler<sizeof(std::string)>;
+std::unique_ptr<looper_scheduler_t> g_looperScheduler;
 
 extern "C" jint JNI_OnLoad(JavaVM* jvm, void *reserved)
 {
-    g_looperScheduler = std::make_unique<arcana::looper_scheduler>(arcana::looper_scheduler::get_for_current_thread());
+    g_looperScheduler = std::make_unique<looper_scheduler_t>(looper_scheduler_t::get_for_current_thread());
 
     JNIEnv* env;
     if (jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK)

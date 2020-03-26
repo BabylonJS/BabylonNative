@@ -215,3 +215,4 @@ jobs:
         publishJUnitResults: false
         tasks: 'assembleDebug'
     displayName: 'Build androidJNI'
+    
