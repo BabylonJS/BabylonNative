@@ -22,11 +22,11 @@ JavaVM* g_jvm{};
 
 extern AAssetManager* g_assetMgrNative;
 
-std::unique_ptr<arcana::looper_scheduler> g_looper_scheduler;
+std::unique_ptr<arcana::looper_scheduler> g_looperScheduler;
 
 extern "C" jint JNI_OnLoad(JavaVM* jvm, void *reserved)
 {
-    g_looper_scheduler = std::make_unique<arcana::looper_scheduler>(arcana::looper_scheduler::get_for_current_thread());
+    g_looperScheduler = std::make_unique<arcana::looper_scheduler>(arcana::looper_scheduler::get_for_current_thread());
 
     JNIEnv* env;
     if (jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK)
@@ -106,7 +106,7 @@ namespace Babylon
         }
         else
         {
-            return arcana::make_task(*g_looper_scheduler, arcana::cancellation::none(), [url{ std::move(url) }]
+            return arcana::make_task(*g_looperScheduler, arcana::cancellation::none(), [url{ std::move(url) }]
             {
                 JNIEnv* env = AcquireEnvFromJVM(g_jvm);
                 assert(env);
@@ -129,7 +129,7 @@ namespace Babylon
         }
         else
         {
-            return arcana::make_task(*g_looper_scheduler, arcana::cancellation::none(), [url{ std::move(url) }]
+            return arcana::make_task(*g_looperScheduler, arcana::cancellation::none(), [url{ std::move(url) }]
             {
                 JNIEnv* env = AcquireEnvFromJVM(g_jvm);
                 assert(env);
