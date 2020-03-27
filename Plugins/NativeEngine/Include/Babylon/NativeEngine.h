@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
+#include <napi/env.h>
 
 namespace Babylon
 {

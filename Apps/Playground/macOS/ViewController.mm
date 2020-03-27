@@ -44,7 +44,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     
         Babylon::InitializeNativeEngine(env);
         
-        InitializeXMLHttpRequest(env, runtime->RootUrl());
+        InitializeXMLHttpRequest(env);
 
         auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
