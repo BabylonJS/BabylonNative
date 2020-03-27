@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
+#include <Napi/env.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -10,7 +11,8 @@ namespace Babylon
     class ScriptLoader
     {
     public:
-        ScriptLoader(JsRuntime&, std::string rootUrl);
+        using DispatchFunctionT = std::function<void(std::function<void(Napi::Env)>)>;
+        ScriptLoader(DispatchFunctionT dispatchFunction, std::string rootUrl);
         ~ScriptLoader();
 
         void LoadScript(std::string url);

@@ -93,7 +93,7 @@ namespace
         runtime = std::make_unique<Babylon::AppRuntime>(scripts.empty() ? moduleRootUrl : GetUrlFromPath(std::filesystem::path{scripts.back()}.parent_path()));
 
         // Initialize console plugin.
-        runtime->Dispatch([rect, hWnd, moduleRootUrl = std::move(moduleRootUrl), scripts = std::move(scripts)](Napi::Env env) {
+        runtime->Dispatch([rect, hWnd](Napi::Env env) {
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
             Babylon::Console::CreateInstance(env, [](const char* message, auto) {
@@ -113,29 +113,29 @@ namespace
 
             inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
             InputManager::Initialize(jsRuntime, *inputBuffer);
-
-            Babylon::ScriptLoader loader{jsRuntime, runtime->RootUrl()};
-            loader.Eval("document = {}", "");
-            loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
-            loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
-            loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
-            loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
-            loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
-
-            if (scripts.empty())
-            {
-                loader.LoadScript("Scripts/experience.js");
-            }
-            else
-            {
-                for (const auto& script : scripts)
-                {
-                    loader.LoadScript(GetUrlFromPath(script));
-                }
-
-                loader.LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
-            }
         });
+
+        Babylon::ScriptLoader loader{[](auto func) { runtime->Dispatch(std::move(func)); }, runtime->RootUrl()};
+        loader.Eval("document = {}", "");
+        loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
+
+        if (scripts.empty())
+        {
+            loader.LoadScript("Scripts/experience.js");
+        }
+        else
+        {
+            for (const auto& script : scripts)
+            {
+                loader.LoadScript(GetUrlFromPath(script));
+            }
+
+            loader.LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
+        }
     }
 
     void UpdateWindowSize(float width, float height)
