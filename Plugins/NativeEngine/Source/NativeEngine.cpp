@@ -4,6 +4,7 @@
 #include <arcana/threading/task_schedulers.h>
 
 #include <napi/env.h>
+#include <napi/napi-shared-reference.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -302,29 +303,6 @@ namespace Babylon
             texture->Width = width;
             texture->Height = height;
         }
-
-        template<typename T>
-        inline napi_ref DetachRef(Napi::Reference<T>& ref)
-        {
-            ref.SuppressDestruct();
-            return static_cast<napi_ref>(ref);
-        }
-
-        inline napi_ref DetachFunctionRef(Napi::FunctionReference& ref)
-        {
-            return DetachRef(ref);
-        }
-
-        template<typename T>
-        inline Napi::Reference<T> AttachRef(napi_env env, napi_ref ref)
-        {
-            return Napi::Reference<T>{env, ref};
-        }
-
-        inline Napi::FunctionReference AttachFunctionRef(napi_env env, napi_ref ref)
-        {
-            return Napi::FunctionReference{env, ref};
-        }
     }
 
     void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
@@ -491,10 +469,9 @@ namespace Babylon
 
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
-        auto callback = Napi::Persistent(info[0].As<Napi::Function>());
-
-        m_runtime.Dispatch([this, callbackRaw = DetachFunctionRef(callback)](Napi::Env) {
-            AttachFunctionRef(Env(), callbackRaw).Call({});
+        auto callback = info[0].As<Napi::Function>();
+        m_runtime.Dispatch([this, callbackRef = Napi::Shared(callback)](Napi::Env) {
+            callbackRef.Value().Call({});
             EndFrame();
         });
     }
@@ -1069,15 +1046,10 @@ namespace Babylon
         const auto onSuccess = info[4].As<Napi::Function>();
         const auto onError = info[5].As<Napi::Function>();
 
-        auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
-
-        auto dataRef = Napi::Persistent(data);
-        auto onSuccessRef = Napi::Persistent(onSuccess);
-        auto onErrorRef = Napi::Persistent(onError);
+        const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, dataRefRaw = DetachRef(dataRef), generateMips, invertY]() {
-                const auto dataRef = AttachRef<Napi::ArrayBuffer>(Env(), dataRefRaw);
+            [this, dataSpan, generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), dataSpan.size());
                 if (invertY)
                 {
@@ -1089,18 +1061,16 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(m_runtimeScheduler, m_cancelSource, [this, texture](bimg::ImageContainer* image) {
+            .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRef = Napi::Shared(data)](bimg::ImageContainer* image) {
                 CreateTextureFromImage(&m_allocator, texture, image);
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRefRaw = DetachFunctionRef(onSuccessRef)]() {
-                const auto onSuccessRef = AttachFunctionRef(Env(), onSuccessRefRaw);
-                onSuccessRef.Call({Napi::Value::From(Env(), true)});
+            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess)]() {
+                onSuccessRef.Value().Call({Napi::Value::From(Env(), true)});
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRefRaw = DetachFunctionRef(onErrorRef)](arcana::expected<void, std::exception_ptr> result) {
-                const auto onErrorRef = AttachFunctionRef(Env(), onErrorRefRaw);
+            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Shared(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    onErrorRef.Call({Napi::Value::From(Env(), true)});
+                    onErrorRef.Value().Call({Napi::Value::From(Env(), true)});
                 }
             });
     }
@@ -1112,10 +1082,6 @@ namespace Babylon
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
         const auto onSuccess = info[3].As<Napi::Function>();
         const auto onError = info[4].As<Napi::Function>();
-
-        auto dataRef = Napi::Persistent(data);
-        auto onSuccessRef = Napi::Persistent(onSuccess);
-        auto onErrorRef = Napi::Persistent(onError);
 
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
         for (uint32_t face = 0; face < data.Length(); face++)
@@ -1134,19 +1100,16 @@ namespace Babylon
 
         arcana::when_all(gsl::make_span(tasks))
             .then(m_runtimeScheduler, m_cancelSource,
-                [this, texture, dataRefRaw = DetachRef(dataRef), generateMips](const std::vector<bimg::ImageContainer*>& images) {
-                    const auto dataRef = AttachRef<Napi::Array>(Env(), dataRefRaw);
+                [this, texture, dataRef = Napi::Shared(data), generateMips](const std::vector<bimg::ImageContainer*>& images) {
                     CreateCubeTextureFromImages(texture, images, generateMips);
                 })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRefRaw = DetachFunctionRef(onSuccessRef)]() {
-                auto onSuccessRef = AttachFunctionRef(Env(), onSuccessRefRaw);
-                onSuccessRef.Call({Napi::Value::From(Env(), true)});
+            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess)]() {
+                onSuccessRef.Value().Call({Napi::Value::From(Env(), true)});
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRefRaw = DetachFunctionRef(onErrorRef)](arcana::expected<void, std::exception_ptr> result) {
-                auto onErrorRef = AttachFunctionRef(Env(), onErrorRefRaw);
+            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Shared(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    onErrorRef.Call({Napi::Value::From(Env(), true)});
+                    onErrorRef.Value().Call({Napi::Value::From(Env(), true)});
                 }
             });
     }
@@ -1157,10 +1120,6 @@ namespace Babylon
         const auto data = info[1].As<Napi::Array>();
         const auto onSuccess = info[2].As<Napi::Function>();
         const auto onError = info[3].As<Napi::Function>();
-
-        auto dataRef = Napi::Persistent(data);
-        auto onSuccessRef = Napi::Persistent(onSuccess);
-        auto onErrorRef = Napi::Persistent(onError);
 
         const auto numMips = data.Length();
         std::vector<arcana::task<bimg::ImageContainer*, std::exception_ptr>> tasks(6 * numMips);
@@ -1180,19 +1139,16 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRefRaw = DetachRef(dataRef)](std::vector<bimg::ImageContainer*> images) {
-                const auto dataRef = AttachRef<Napi::Array>(Env(), dataRefRaw);
+            .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRef = Napi::Shared(data)](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, true);
             })
-            .then(m_runtimeScheduler, m_cancelSource, [this, onSuccessRefRaw = DetachFunctionRef(onSuccessRef)]() {
-                auto onSuccessRef = AttachFunctionRef(Env(), onSuccessRefRaw);
-                onSuccessRef.Call({Napi::Value::From(Env(), true)});
+            .then(m_runtimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess)]() {
+                onSuccessRef.Value().Call({Napi::Value::From(Env(), true)});
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRefRaw = DetachFunctionRef(onErrorRef)](arcana::expected<void, std::exception_ptr> result) {
-                auto onErrorRef = AttachFunctionRef(Env(), onErrorRefRaw);
+            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Shared(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    onErrorRef.Call({Napi::Value::From(Env(), true)});
+                    onErrorRef.Value().Call({Napi::Value::From(Env(), true)});
                 }
             });
     }
