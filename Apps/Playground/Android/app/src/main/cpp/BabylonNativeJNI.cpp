@@ -60,7 +60,10 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
     {
         runtime = std::make_unique<Babylon::AppRuntime>("");
 
-        runtime->Dispatch([](Napi::Env env)
+        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
+        int32_t width  = ANativeWindow_getWidth(window);
+        int32_t height = ANativeWindow_getHeight(window);
+        runtime->Dispatch([window, width, height](Napi::Env env)
         {
             Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
             {
@@ -77,13 +80,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                     break;
                 }
             });
-        });
 
-        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-        int32_t width  = ANativeWindow_getWidth(window);
-        int32_t height = ANativeWindow_getHeight(window);
-        runtime->Dispatch([window, width, height](Napi::Env env)
-        {
             Babylon::NativeWindow::Initialize(env, window, width, height);
 
             Babylon::InitializeNativeEngine(env);
