@@ -90,7 +90,7 @@ namespace Napi
 
         Napi::Env Env() const
         {
-            return Napi::Env(_env);
+            return Napi::Env(m_env);
         }
 
     protected:
