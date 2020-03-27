@@ -181,13 +181,13 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         Babylon::InitializeNativeEngine(jsRuntime, windowPtr, width, height);
 
         // Initialize XMLHttpRequest plugin.
-        Babylon::InitializeXMLHttpRequest(jsRuntime, runtime->RootUrl());
+        Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
         inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-        InputManager::Initialize(jsRuntime, *inputBuffer);    
+        InputManager::Initialize(jsRuntime, *inputBuffer);
     });
 
-    Babylon::ScriptLoader loader{[& runtime = m_runtime](auto func) { runtime->Dispatch(std::move(func)); }, m_runtime->RootUrl()};
+    Babylon::ScriptLoader loader{*m_runtime, m_runtime->RootUrl()};
     loader.Eval("document = {}", "");
     loader.LoadScript(appUrl + "/Scripts/ammo.js");
     loader.LoadScript(appUrl + "/Scripts/recast.js");

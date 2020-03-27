@@ -109,13 +109,13 @@ namespace
             Babylon::InitializeNativeEngine(jsRuntime, hWnd, width, height);
 
             // Initialize XMLHttpRequest plugin.
-            Babylon::InitializeXMLHttpRequest(jsRuntime, runtime->RootUrl());
+            Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
             inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
             InputManager::Initialize(jsRuntime, *inputBuffer);
         });
 
-        Babylon::ScriptLoader loader{[](auto func) { runtime->Dispatch(std::move(func)); }, runtime->RootUrl()};
+        Babylon::ScriptLoader loader{*runtime, runtime->RootUrl()};
         loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
