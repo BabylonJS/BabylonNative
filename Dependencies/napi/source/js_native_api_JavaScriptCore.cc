@@ -220,7 +220,8 @@ napi_status napi_get_value_string_utf8(napi_env env,
   }
   size_t size = JSStringGetUTF8CString(stringRef, buf, bufsize);
   if (result) {
-    *result = size;
+    // JSStringGetUTF8CString returns size with null terminator.
+    *result = size - 1;
   }
   JSStringRelease(stringRef);
   return napi_ok;
