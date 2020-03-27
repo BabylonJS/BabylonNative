@@ -178,7 +178,8 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
         
         // Initialize NativeEngine plugin.
-        Babylon::InitializeNativeEngine(jsRuntime, windowPtr, width, height);
+        Babylon::InitializeGraphics(windowPtr, width, height);
+        Babylon::InitializeNativeEngine(env);
 
         // Initialize XMLHttpRequest plugin.
         Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());

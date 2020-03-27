@@ -106,7 +106,8 @@ namespace
             Babylon::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::InitializeNativeEngine(jsRuntime, hWnd, width, height);
+            Babylon::InitializeGraphics(hWnd, width, height);
+            Babylon::InitializeNativeEngine(env);
 
             // Initialize XMLHttpRequest plugin.
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
