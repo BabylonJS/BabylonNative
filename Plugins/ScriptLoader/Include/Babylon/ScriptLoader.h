@@ -17,7 +17,8 @@ namespace Babylon
         
         template<typename T>
         ScriptLoader(T& dispatcher, std::string rootUrl)
-            : ScriptLoader([&dispatcher](auto func) { dispatcher.Dispatch(std::move(func)); }, std::move(rootUrl))
+            : ScriptLoader([&dispatcher](auto func) { dispatcher.Dispatch(std::move(func)); }
+            , std::move(rootUrl))
         {
         }
 
