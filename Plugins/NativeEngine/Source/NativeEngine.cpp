@@ -427,10 +427,7 @@ namespace Babylon
 
     NativeEngine::~NativeEngine()
     {
-        // This collection contains bgfx data, so it must be cleared before bgfx::shutdown is called.
-        m_programDataCollection.Clear();
-
-        bgfx::shutdown();
+        Dispose();
     }
 
     void NativeEngine::UpdateSize(size_t width, size_t height)
@@ -456,9 +453,19 @@ namespace Babylon
         return m_frameBufferManager;
     }
 
-    void NativeEngine::Dispose(const Napi::CallbackInfo& info)
+    void NativeEngine::Dispose()
     {
         m_cancelSource.cancel();
+
+        // This collection contains bgfx data, so it must be cleared before bgfx::shutdown is called.
+        m_programDataCollection.Clear();
+
+        bgfx::shutdown();
+    }
+
+    void NativeEngine::Dispose(const Napi::CallbackInfo& info)
+    {
+        Dispose();
     }
 
     // NativeEngine definitions
