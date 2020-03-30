@@ -1,12 +1,12 @@
 #pragma once
 
-#include <Babylon/NativeWindow.h>
 #include "ShaderCompiler.h"
 #include "BgfxCallback.h"
-#include <Babylon/TicketedCollection.h>
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
+#include <Babylon/NativeWindow.h>
+#include <Babylon/TicketedCollection.h>
 
 #include <napi/napi.h>
 

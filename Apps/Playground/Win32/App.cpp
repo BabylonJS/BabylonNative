@@ -10,10 +10,10 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Console.h>
+#include <Babylon/ConsolePolyfill.h>
 #include <Babylon/NativeEngine.h>
-#include <Babylon/NativeWindow.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/WindowPolyfill.h>
 #include <Babylon/XMLHttpRequest.h>
 
 #define MAX_LOADSTRING 100
@@ -96,14 +96,14 @@ namespace
         runtime->Dispatch([rect, hWnd](Napi::Env env) {
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
-            Babylon::Console::CreateInstance(env, [](const char* message, auto) {
+            Babylon::ConsolePolyfill::InitializeAndCreateInstance(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
 
             // Initialize NativeWindow plugin.
             auto width = static_cast<float>(rect.right - rect.left);
             auto height = static_cast<float>(rect.bottom - rect.top);
-            Babylon::NativeWindow::Initialize(env, hWnd, width, height);
+            Babylon::WindowPolyfill::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
             Babylon::InitializeGraphics(hWnd, width, height);
@@ -142,8 +142,7 @@ namespace
     void UpdateWindowSize(float width, float height)
     {
         runtime->Dispatch([width, height](Napi::Env env) {
-            auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
-            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+            Babylon::WindowPolyfill::UpdateSize(env, width, height);
         });
     }
 }

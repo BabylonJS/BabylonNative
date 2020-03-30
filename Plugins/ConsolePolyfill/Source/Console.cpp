@@ -1,9 +1,15 @@
-#include <Babylon/Console.h>
+#include "Console.h"
+
 #include <functional>
 #include <sstream>
 
-namespace Babylon
+namespace Babylon::ConsolePolyfill
 {
+    void InitializeAndCreateInstance(Napi::Env env, CallbackT callback)
+    {
+        Console::CreateInstance(env, std::move(callback));
+    }
+
     void Console::CreateInstance(Napi::Env env, CallbackT callback)
     {
         Napi::HandleScope scope{env};

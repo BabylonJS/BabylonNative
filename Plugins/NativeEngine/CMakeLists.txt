@@ -43,7 +43,7 @@ target_link_to_dependencies(NativeEngine
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE NativeWindow)
+    PRIVATE WindowPolyfillImplementation)
 
 if(XR)
     target_link_to_dependencies(NativeEngine

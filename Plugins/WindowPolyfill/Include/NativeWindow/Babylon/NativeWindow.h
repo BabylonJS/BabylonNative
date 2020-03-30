@@ -1,11 +1,7 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-#include <Babylon/TicketedCollection.h> // TODO: Having this publicly exposed and be in BabylonNativeUtils causes arcana to be publicly exposed. Consider alternatives.
-
-#include <napi/napi.h>
-
-#include <chrono>
+#include <Babylon/TicketedCollection.h>
 
 namespace Babylon
 {

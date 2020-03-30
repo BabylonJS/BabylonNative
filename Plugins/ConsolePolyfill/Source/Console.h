@@ -1,26 +1,15 @@
 #pragma once
 
-#include <napi/env.h>
+#include <Babylon/ConsolePolyfill.h>
 
-namespace Babylon
+namespace Babylon::ConsolePolyfill
 {
     class Console final : public Napi::ObjectWrap<Console>
     {
     public:
         static inline constexpr char* JS_INSTANCE_NAME{"console"};
 
-        /**
-         * Importance level of messages sent via logging callbacks.
-         */
-        enum class LogLevel
-        {
-            Log,
-            Warn,
-            Error,
-        };
-
         using ParentT = Napi::ObjectWrap<Console>;
-        using CallbackT = std::function<void(const char*, LogLevel)>;
 
         static void CreateInstance(Napi::Env env, CallbackT callback);
 
