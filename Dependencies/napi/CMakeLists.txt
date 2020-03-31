@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.12)
 
 project(napi)
 
-# Set per-platform defaults.
+# Set per-platform defaults if no JS engine is set.
 if (WIN32)
     set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
 elseif (ANDROID)
-    set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for N-API.")
+    # engine is selected in native build cmakelists.txt
 elseif (APPLE)
     set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for N-API.")
 else()
@@ -25,6 +25,7 @@ set(SOURCES
     "include/napi/js_native_api_types.h"
     "include/napi/napi.h"
     "include/napi/napi-inl.h"
+    "include/napi/napi-shared-reference.h"
     "source/env.cc"
     "source/env_${NAPI_JAVASCRIPT_ENGINE}.cc"
     "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}.cc"
@@ -41,11 +42,6 @@ target_compile_definitions(napi PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
     target_compile_definitions(napi PUBLIC USE_EDGEMODE_JSRT)
-endif()
-
-# V8 android build until we figured out how to deal with custom V8 nugget
-if (ANDROID)
-    target_include_directories(napi PUBLIC "../v8/include")
 endif()
 
 target_include_directories(napi PUBLIC "include")
