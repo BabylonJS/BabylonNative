@@ -1,4 +1,4 @@
-#include <Babylon/NativeEngine.h>
+#include <Babylon/NativeEnginePlugin.h>
 #include "NativeEngine.h"
 
 #include <Babylon/NativeWindow.h>
@@ -7,14 +7,14 @@
 #include "NativeXr.h"
 #endif
 
-namespace Babylon
+namespace Babylon::NativeEnginePlugin
 {
     void InitializeGraphics(void* windowPtr, size_t width, size_t height)
     {
         NativeEngine::InitializeWindow(windowPtr, width, height);
     }
 
-    void InitializeNativeEngine(Napi::Env env)
+    void Initialize(Napi::Env env)
     {
         NativeEngine::Initialize(env);
 #ifdef NATIVE_ENGINE_XR
@@ -22,7 +22,7 @@ namespace Babylon
 #endif
     }
 
-    void ReinitializeNativeEngine(Napi::Env env, void* windowPtr, size_t width, size_t height)
+    void Reinitialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
     {
         bgfx::PlatformData pd;
         pd.ndt = nullptr;

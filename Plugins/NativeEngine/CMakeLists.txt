@@ -12,10 +12,10 @@ else()
 endif()
 
 set(SOURCES
-    "Include/Babylon/NativeEngine.h"
+    "Include/Babylon/NativeEnginePlugin.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
-    "Source/InitializeNativeEngine.cpp"
+    "Source/NativeEnginePlugin.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/ResourceLimits.cpp"

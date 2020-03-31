@@ -14,7 +14,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ConsolePolyfill.h>
-#include <Babylon/NativeEngine.h>
+#include <Babylon/NativeEnginePlugin.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
 #include <Babylon/WindowPolyfill.h>
@@ -78,11 +78,9 @@ namespace
             auto height = static_cast<float>(rect.bottom - rect.top);
             Babylon::WindowPolyfill::Initialize(env, hWnd, width, height);
 
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-
             // Initialize NativeEngine plugin.
-            Babylon::InitializeGraphics(hWnd, width, height);
-            Babylon::InitializeNativeEngine(env);
+            Babylon::NativeEnginePlugin::InitializeGraphics(hWnd, width, height);
+            Babylon::NativeEnginePlugin::Initialize(env);
 
             // Initialize XMLHttpRequest plugin.
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());

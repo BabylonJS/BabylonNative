@@ -11,7 +11,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ConsolePolyfill.h>
-#include <Babylon/NativeEngine.h>
+#include <Babylon/NativeEnginePlugin.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/WindowPolyfill.h>
 #include <Babylon/XMLHttpRequest.h>
@@ -94,7 +94,6 @@ namespace
 
         // Initialize console plugin.
         runtime->Dispatch([rect, hWnd](Napi::Env env) {
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
             Babylon::ConsolePolyfill::InitializeAndCreateInstance(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
@@ -106,12 +105,13 @@ namespace
             Babylon::WindowPolyfill::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::InitializeGraphics(hWnd, width, height);
-            Babylon::InitializeNativeEngine(env);
+            Babylon::NativeEnginePlugin::InitializeGraphics(hWnd, width, height);
+            Babylon::NativeEnginePlugin::Initialize(env);
 
             // Initialize XMLHttpRequest plugin.
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
+            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
             inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
             InputManager::Initialize(jsRuntime, *inputBuffer);
         });
