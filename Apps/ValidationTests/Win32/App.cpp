@@ -68,7 +68,7 @@ namespace
         // Initialize console plugin.
         runtime->Dispatch([rect, hWnd](Napi::Env env)
         {
-            Babylon::ConsolePolyfill::InitializeAndCreateInstance(env, [](const char* message, auto)
+            Babylon::ConsolePolyfill::Initialize(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
             });

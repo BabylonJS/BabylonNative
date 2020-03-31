@@ -30,11 +30,11 @@ if(XR)
         "Source/NativeXr.h")
 endif()
 
-add_library(NativeEngine ${SOURCES})
+add_library(NativeEnginePlugin ${SOURCES})
 
-target_include_directories(NativeEngine PUBLIC "Include")
+target_include_directories(NativeEnginePlugin PUBLIC "Include")
 
-target_link_to_dependencies(NativeEngine
+target_link_to_dependencies(NativeEnginePlugin
     PUBLIC JsRuntime
     PRIVATE arcana
     PRIVATE bgfx
@@ -46,22 +46,22 @@ target_link_to_dependencies(NativeEngine
     PRIVATE WindowPolyfillImplementation)
 
 if(XR)
-    target_link_to_dependencies(NativeEngine
+    target_link_to_dependencies(NativeEnginePlugin
         PRIVATE xr)
-    target_compile_definitions(NativeEngine PRIVATE NATIVE_ENGINE_XR)
+    target_compile_definitions(NativeEnginePlugin PRIVATE NATIVE_ENGINE_XR)
 endif()
 
 if(APPLE)
-    target_link_to_dependencies(NativeEngine
+    target_link_to_dependencies(NativeEnginePlugin
         PRIVATE spirv-cross-msl)
 elseif(ANDROID)
     # Nothing to do.
 elseif(WIN32)
-    target_link_to_dependencies(NativeEngine
+    target_link_to_dependencies(NativeEnginePlugin
         PRIVATE "d3dcompiler.lib")
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics linking could not be performed")
 endif()
 
-set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
+set_property(TARGET NativeEnginePlugin PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

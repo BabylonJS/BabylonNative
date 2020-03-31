@@ -5,11 +5,6 @@
 
 namespace Babylon::ConsolePolyfill
 {
-    void InitializeAndCreateInstance(Napi::Env env, CallbackT callback)
-    {
-        Console::CreateInstance(env, std::move(callback));
-    }
-
     void Console::CreateInstance(Napi::Env env, CallbackT callback)
     {
         Napi::HandleScope scope{env};
@@ -61,5 +56,13 @@ namespace Babylon::ConsolePolyfill
         }
         ss << std::endl;
         m_callback(ss.str().c_str(), logLevel);
+    }
+    
+    namespace ConsolePolyfill
+    {
+        void Initialize(Napi::Env env, CallbackT callback)
+        {
+            Console::CreateInstance(env, std::move(callback));
+        }
     }
 }

@@ -16,5 +16,5 @@ namespace Babylon::ConsolePolyfill
 
     using CallbackT = std::function<void(const char*, LogLevel)>;
 
-    void InitializeAndCreateInstance(Napi::Env env, CallbackT callback);
+    void Initialize(Napi::Env env, CallbackT callback);
 }

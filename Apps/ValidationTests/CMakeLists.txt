@@ -34,7 +34,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE bx
     PRIVATE AppRuntime
     PRIVATE ConsolePolyfill
-    PRIVATE NativeEngine
+    PRIVATE NativeEnginePlugin
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
     PRIVATE WindowPolyfill)

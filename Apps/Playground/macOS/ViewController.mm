@@ -1,13 +1,13 @@
 #import "ViewController.h"
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/Console.h>
-#import <Babylon/NativeEngine.h>
-#import <Babylon/NativeWindow.h>
+#import <Babylon/NativeEnginePlugin.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/XMLHttpRequest.h>
+#import <Babylon/WindowPolyfill.h>
 #import <Shared/InputManager.h>
 #import "Babylon/XMLHttpRequestApple.h"
+
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
@@ -36,18 +36,17 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     float height = size.height;
     NSWindow* nativeWindow = [[self view] window];
     void* windowPtr = (__bridge void*)nativeWindow;
-    Babylon::InitializeGraphics(windowPtr, width, height);
+    Babylon::NativeEnginePlugin::InitializeGraphics(windowPtr, width, height);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
-        Babylon::NativeWindow::Initialize(env, windowPtr, width, height);
+        Babylon::WindowPolyfill::Initialize(env, windowPtr, width, height);
     
-        Babylon::InitializeNativeEngine(env);
+        Babylon::NativeEnginePlugin::Initialize(env);
         
         InitializeXMLHttpRequest(env);
 
         auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-
         inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
         InputManager::Initialize(jsRuntime, *inputBuffer);
     });

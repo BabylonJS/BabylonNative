@@ -1,10 +1,10 @@
 #include "App.h"
 
-#include <Babylon/Console.h>
-#include <Babylon/NativeEngine.h>
-#include <Babylon/NativeWindow.h>
+#include <Babylon/ConsolePolyfill.h>
+#include <Babylon/NativeEnginePlugin.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
+#include <Babylon/WindowPolyfill.h>
 
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
@@ -156,15 +156,6 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     // Ensure this is properly uninitialized since it depends on state of the runtime.
     m_inputBuffer.reset();
 
-    // Create the console plugin.
-    m_runtime->Dispatch([](Napi::Env env)
-    {
-        Babylon::Console::CreateInstance(env, [](const char* message, auto)
-        {
-            OutputDebugStringA(message);
-        });
-    });
-
     // Initialize NativeWindow plugin.
     DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
@@ -173,17 +164,21 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
     m_runtime->Dispatch([&runtime = m_runtime, &inputBuffer = m_inputBuffer, windowPtr, width, height](Napi::Env env)
     {
-        Babylon::NativeWindow::Initialize(env, windowPtr, width, height);
+        Babylon::ConsolePolyfill::Initialize(env, [](const char* message, auto)
+        {
+            OutputDebugStringA(message);
+        });
 
-        auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-        
+        Babylon::WindowPolyfill::Initialize(env, windowPtr, width, height);
+
         // Initialize NativeEngine plugin.
-        Babylon::InitializeGraphics(windowPtr, width, height);
-        Babylon::InitializeNativeEngine(env);
+        Babylon::NativeEnginePlugin::InitializeGraphics(windowPtr, width, height);
+        Babylon::NativeEnginePlugin::Initialize(env);
 
         // Initialize XMLHttpRequest plugin.
         Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
+        auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
         inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
         InputManager::Initialize(jsRuntime, *inputBuffer);
     });

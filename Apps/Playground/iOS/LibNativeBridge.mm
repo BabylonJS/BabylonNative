@@ -1,11 +1,10 @@
 #include "LibNativeBridge.h"
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/Console.h>
-#import <Babylon/NativeEngine.h>
-#import <Babylon/NativeWindow.h>
+#import <Babylon/NativeEnginePlugin.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/XMLHttpRequest.h>
+#import <Babylon/WindowPolyfill.h>
 #import <Shared/InputManager.h>
 #import "Babylon/XMLHttpRequestApple.h"
 
@@ -40,17 +39,16 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     float width = inWidth;
     float height = inHeight;
     void* windowPtr = CALayerPtr;
-    Babylon::InitializeGraphics(windowPtr, width, height);
+    Babylon::NativeEnginePlugin::InitializeGraphics(windowPtr, width, height);
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
-        Babylon::NativeWindow::Initialize(env, windowPtr, width, height);
+        Babylon::WindowPolyfill::Initialize(env, windowPtr, width, height);
     
-        Babylon::InitializeNativeEngine(env);
+        Babylon::NativeEnginePlugin::Initialize(env);
         
         InitializeXMLHttpRequest(env);
 
         auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-
         inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
         InputManager::Initialize(jsRuntime, *inputBuffer);
     });
@@ -87,4 +85,3 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 }
 
 @end
-

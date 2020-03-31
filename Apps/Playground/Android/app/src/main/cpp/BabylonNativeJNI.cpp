@@ -9,11 +9,11 @@
 #include <android/log.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Console.h>
-#include <Babylon/NativeEngine.h>
-#include <Babylon/NativeWindow.h>
+#include <Babylon/ConsolePolyfill.h>
+#include <Babylon/NativeEnginePlugin.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
+#include <Babylon/WindowPolyfill.h>
 #include <InputManager.h>
 
 #include <android/asset_manager.h>
@@ -65,7 +65,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         int32_t height = ANativeWindow_getHeight(window);
         runtime->Dispatch([window, width, height](Napi::Env env)
         {
-            Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
+            Babylon::ConsolePolyfill::Initialize(env, [](const char* message, Babylon::Console::LogLevel level)
             {
                 switch (level)
                 {
@@ -81,15 +81,14 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                 }
             });
 
-            Babylon::NativeWindow::Initialize(env, window, width, height);
+            Babylon::WindowPolyfill::Initialize(env, window, width, height);
 
-            Babylon::InitializeNativeEngine(env);
+            Babylon::NativeEnginePlugin::InitializeGraphics(window, width, height);
+            Babylon::NativeEnginePlugin::Initialize(env);
 
-            Babylon::InitializeGraphics(window, width, height);
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-
             inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
             InputManager::Initialize(jsRuntime, *inputBuffer);
         });

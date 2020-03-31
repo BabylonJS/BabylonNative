@@ -46,11 +46,11 @@ target_link_libraries(BabylonNativeJNI
         log
         -lz
         AppRuntime
-        Console
-        NativeEngine
-        NativeWindow
+        ConsolePolyfill
+        NativeEnginePlugin
         ScriptLoader
         XMLHttpRequest
+        WindowPolyfill
         ${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libv8.so)
 
 configure_file(
