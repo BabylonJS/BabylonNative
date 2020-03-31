@@ -308,6 +308,7 @@ namespace Babylon
         ~NativeEngine();
 
         static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
+        static void DeinitializeWindow();
         static void Initialize(Napi::Env);
 
         FrameBufferManager& GetFrameBufferManager();
