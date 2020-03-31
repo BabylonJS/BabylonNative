@@ -111,7 +111,7 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
         runtime->Dispatch([window, width, height](Napi::Env env)
         {
-            Babylon::WindowPolyfill::Reinitialize(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
+            Babylon::NativeEnginePlugin::Reinitialize(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
 }
