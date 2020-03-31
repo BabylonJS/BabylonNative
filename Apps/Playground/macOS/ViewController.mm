@@ -76,8 +76,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
         float height = size.height;
         runtime->Dispatch([width, height](Napi::Env env)
         {
-            auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
-            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+            Babylon::WindowPolyfill::UpdateSize(env, static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
 }

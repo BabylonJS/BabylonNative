@@ -2,7 +2,7 @@
 
 #include <Babylon/ConsolePolyfill.h>
 
-namespace Babylon::ConsolePolyfill
+namespace Babylon
 {
     class Console final : public Napi::ObjectWrap<Console>
     {
@@ -11,7 +11,7 @@ namespace Babylon::ConsolePolyfill
 
         using ParentT = Napi::ObjectWrap<Console>;
 
-        static void CreateInstance(Napi::Env env, CallbackT callback);
+        static void CreateInstance(Napi::Env env, ConsolePolyfill::CallbackT callback);
 
         explicit Console(const Napi::CallbackInfo& info);
 
@@ -19,8 +19,8 @@ namespace Babylon::ConsolePolyfill
         void Log(const Napi::CallbackInfo& info);
         void Warn(const Napi::CallbackInfo& info);
         void Error(const Napi::CallbackInfo& info);
-        void InvokeCallback(const Napi::CallbackInfo& info, LogLevel logLevel) const;
+        void InvokeCallback(const Napi::CallbackInfo& info, ConsolePolyfill::LogLevel logLevel) const;
 
-        CallbackT m_callback{};
+        ConsolePolyfill::CallbackT m_callback{};
     };
 }

@@ -3,9 +3,9 @@
 #include <functional>
 #include <sstream>
 
-namespace Babylon::ConsolePolyfill
+namespace Babylon
 {
-    void Console::CreateInstance(Napi::Env env, CallbackT callback)
+    void Console::CreateInstance(Napi::Env env, ConsolePolyfill::CallbackT callback)
     {
         Napi::HandleScope scope{env};
 
@@ -18,32 +18,32 @@ namespace Babylon::ConsolePolyfill
                 ParentT::InstanceMethod("error", &Console::Error),
             });
 
-        Napi::Object console = func.New({Napi::External<CallbackT>::New(env, new CallbackT(std::move(callback)))});
+        Napi::Object console = func.New({Napi::External<ConsolePolyfill::CallbackT>::New(env, new ConsolePolyfill::CallbackT(std::move(callback)))});
         env.Global().Set(JS_INSTANCE_NAME, console);
     }
 
     Console::Console(const Napi::CallbackInfo& info)
         : ParentT{info}
-        , m_callback{*info[0].As<Napi::External<CallbackT>>().Data()}
+        , m_callback{*info[0].As<Napi::External<ConsolePolyfill::CallbackT>>().Data()}
     {
     }
 
     void Console::Log(const Napi::CallbackInfo& info)
     {
-        InvokeCallback(info, LogLevel::Log);
+        InvokeCallback(info, ConsolePolyfill::LogLevel::Log);
     }
 
     void Console::Warn(const Napi::CallbackInfo& info)
     {
-        InvokeCallback(info, LogLevel::Warn);
+        InvokeCallback(info, ConsolePolyfill::LogLevel::Warn);
     }
 
     void Console::Error(const Napi::CallbackInfo& info)
     {
-        InvokeCallback(info, LogLevel::Error);
+        InvokeCallback(info, ConsolePolyfill::LogLevel::Error);
     }
 
-    void Console::InvokeCallback(const Napi::CallbackInfo& info, LogLevel logLevel) const
+    void Console::InvokeCallback(const Napi::CallbackInfo& info, ConsolePolyfill::LogLevel logLevel) const
     {
         std::stringstream ss{};
         for (unsigned int index = 0; index < info.Length(); index++)

@@ -237,8 +237,7 @@ void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs
     size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
     m_runtime->Dispatch([width, height](Napi::Env env)
     {
-        auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
-        window.Resize(width, height);
+        Babylon::WindowPolyfill::UpdateSize(env, width, height);
     });
 }
 

@@ -65,17 +65,17 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         int32_t height = ANativeWindow_getHeight(window);
         runtime->Dispatch([window, width, height](Napi::Env env)
         {
-            Babylon::ConsolePolyfill::Initialize(env, [](const char* message, Babylon::Console::LogLevel level)
+            Babylon::ConsolePolyfill::Initialize(env, [](const char* message, Babylon::ConsolePolyfill::LogLevel level)
             {
                 switch (level)
                 {
-                case Babylon::Console::LogLevel::Log:
+                case Babylon::ConsolePolyfill::LogLevel::Log:
                     __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
                     break;
-                case Babylon::Console::LogLevel::Warn:
+                case Babylon::ConsolePolyfill::LogLevel::Warn:
                     __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
                     break;
-                case Babylon::Console::LogLevel::Error:
+                case Babylon::ConsolePolyfill::LogLevel::Error:
                     __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
                     break;
                 }
