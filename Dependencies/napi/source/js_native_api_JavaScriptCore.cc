@@ -1,11 +1,14 @@
 #include <napi/js_native_api.h>
 #include <napi/js_native_api_types.h>
-#include "JavaScriptCore/JavaScriptCore.h"
+#include "JavaScriptCore/JavaScript.h"
 #include "js_native_api_JavaScriptCore.h"
 #include <string>
 #include <vector>
 #include <map>
 #include <napi/napi.h>
+
+#include <algorithm>
+#include <cassert>
 
 struct FunctionTableEntry {
   napi_callback cb;
@@ -49,7 +52,7 @@ struct RefInfo {
 std::map<JSObjectRef, ClassTable*> constructorCB;
 std::map<JSValueRef, FunctionTable*> FunctionTables;
 
-void dumpException(napi_env env, JSValueRef exception) {
+void DumpException(napi_env env, JSValueRef exception) {
   char errorStr[1024];
   size_t errorStrSize{ 0 };
 
@@ -63,6 +66,14 @@ void dumpException(napi_env env, JSValueRef exception) {
       napi_get_value_string_utf8(env, reinterpret_cast<napi_value>(exceptionValue), errorStr, sizeof(errorStr), &errorStrSize);
     }
   }
+}
+
+std::string GetUTF8String(JSStringRef string) {
+  size_t maxSize = JSStringGetMaximumUTF8CStringSize(string);
+  std::string str(maxSize - 1, '\0');
+  size_t size = JSStringGetUTF8CString(string, str.data(), maxSize);
+  str.resize(size - 1);
+  return std::move(str);
 }
 
 napi_status napi_get_value_bool(napi_env env, napi_value v, bool* result) {
@@ -113,19 +124,43 @@ napi_status napi_create_reference(napi_env env,
                   uint32_t initial_refcount,
                   napi_ref* result) {
   auto value = reinterpret_cast<JSValueRef>(v);
-  auto info = new RefInfo
+  auto info = new RefInfo{ value, initial_refcount };
+  if (info->count != 0)
   {
-    value,
-    initial_refcount
-  };
-  
+    JSValueProtect(env->m_globalContext, value);
+  }
   *result = reinterpret_cast<napi_ref>(info);
   return napi_ok;
 }
 
 napi_status napi_delete_reference(napi_env env, napi_ref ref) {
   auto info = reinterpret_cast<RefInfo*>(ref);
+  if (info->count != 0) {
+    JSValueUnprotect(env->m_globalContext, info->value);
+  }
   delete info;
+  return napi_ok;
+}
+
+napi_status napi_reference_ref(napi_env env, napi_ref ref, uint32_t* result) {
+  auto info = reinterpret_cast<RefInfo*>(ref);
+  if (info->count++ == 0) {
+    JSValueProtect(env->m_globalContext, info->value);
+  }
+  if (result != nullptr) {
+    *result = info->count;
+  }
+  return napi_ok;
+}
+
+napi_status napi_reference_unref(napi_env env, napi_ref ref, uint32_t* result) {
+  auto info = reinterpret_cast<RefInfo*>(ref);
+  if (--info->count == 0) {
+    JSValueUnprotect(env->m_globalContext, info->value);
+  }
+  if (result != nullptr) {
+    *result = info->count;
+  }
   return napi_ok;
 }
 
@@ -203,14 +238,14 @@ napi_status napi_get_value_string_utf8(napi_env env,
                      size_t bufsize,
                      size_t* result) {
   JSStringRef stringRef = JSValueToStringCopy(env->m_globalContext, reinterpret_cast<JSValueRef>(value), nullptr);
-  if (!buf && result) {
-    // get only string length
-    *result = JSStringGetLength(stringRef);
+  if (!buf) {
+    *result = GetUTF8String(stringRef).size();
     return napi_ok;
   }
-  size_t length = JSStringGetUTF8CString(stringRef, buf, bufsize);
+  size_t size = JSStringGetUTF8CString(stringRef, buf, bufsize);
   if (result) {
-    *result = length;
+    // JSStringGetUTF8CString returns size with null terminator.
+    *result = size - 1;
   }
   JSStringRelease(stringRef);
   return napi_ok;
@@ -459,12 +494,8 @@ bool JSCSetProperty(JSContextRef ctx, JSObjectRef object, JSStringRef propertyNa
   if (iter == FunctionTables.end()) {
     return RaiseException(ctx, exception, "JavaScriptCore : object not found in function table.");
   }
-      
-  size_t stringSize = JSStringGetMaximumUTF8CStringSize(propertyName);
-  std::unique_ptr<char> cstr = std::make_unique<char>(stringSize);
-  JSStringGetUTF8CString(propertyName, cstr.get(), stringSize);
-    
-  auto propertyIter = iter->second->properties.find(std::string(cstr.get()));
+
+  auto propertyIter = iter->second->properties.find(GetUTF8String(propertyName));
   if (propertyIter == iter->second->properties.end()) {
      return RaiseException(ctx, exception, "JavaScriptCore : property not found in function table.");
   }
@@ -492,18 +523,14 @@ JSValueRef JSCGetProperty(JSContextRef ctx, JSObjectRef object, JSStringRef prop
   if (iter == FunctionTables.end()) {
       return RaiseException(ctx, exception, "JavaScriptCore : object not found in function table.");
   }
-    
-  size_t stringSize = JSStringGetMaximumUTF8CStringSize(propertyName);
-  std::unique_ptr<char> cstr = std::make_unique<char>(stringSize);
-  JSStringGetUTF8CString(propertyName, cstr.get(), stringSize);
-  
-  auto propertyIter = iter->second->properties.find(std::string(cstr.get()));
+
+  auto propertyIter = iter->second->properties.find(GetUTF8String(propertyName));
   if (propertyIter == iter->second->properties.end()) {
     return RaiseException(ctx, exception, "JavaScriptCore : property not found for object in function table.");
   }
-      
+
   auto prop = propertyIter->second;
-  
+
   if (!prop.getter) {
     return RaiseException(ctx, exception, "JavaScriptCore : getter function is null for the object.");
   }
@@ -809,7 +836,7 @@ napi_status napi_get_typedarray_info(napi_env env,
   JSObjectRef typedObject = JSObjectGetTypedArrayBuffer(context, array, nullptr);
   void* arrayData = JSObjectGetArrayBufferBytesPtr(context, typedObject, &exception); // temporary
   if (!arrayData) {
-    dumpException(env, exception);
+    DumpException(env, exception);
   }
   
   size_t arrayByteOffset = JSObjectGetTypedArrayByteOffset(context, array, nullptr);
@@ -876,7 +903,7 @@ napi_status napi_run_script(napi_env env,
   JSValueRef exception;
   OpaqueJSValue *retValue = const_cast<OpaqueJSValue*>(JSEvaluateScript(env->m_globalContext, statement, nullptr, JSStringCreateWithUTF8CString(sourceUrl), 1, &exception));
   if (!retValue) {
-    dumpException(env, exception);
+    DumpException(env, exception);
   }
   *result = reinterpret_cast<napi_value>(retValue);
   return napi_ok;

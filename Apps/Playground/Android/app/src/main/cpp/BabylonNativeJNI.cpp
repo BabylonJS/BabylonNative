@@ -65,7 +65,20 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
     {
         g_runtime = std::make_unique<Babylon::AppRuntime>("");
 
-        g_runtime->Dispatch([](Napi::Env env)
+        JavaVM* javaVM{};
+        if (env->GetJavaVM(&javaVM) != JNI_OK)
+        {
+            throw std::runtime_error("Failed to get Java VM");
+        }
+
+        // TODO: This should be cleaned up via env->DeleteGlobalRef
+        //appContext = env->NewGlobalRef(appContext);
+
+        ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
+        int32_t width  = ANativeWindow_getWidth(window);
+        int32_t height = ANativeWindow_getHeight(window);
+
+        g_runtime->Dispatch([javaVM, appContext, window, width, height](Napi::Env env)
         {
             Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
             {
@@ -82,31 +95,21 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                     break;
                 }
             });
-        });
 
-        JavaVM* javaVM{};
-        if (env->GetJavaVM(&javaVM) != JNI_OK)
-        {
-            throw std::runtime_error("Failed to get Java VM");
-        }
+            Babylon::Platform::Initialize(env, javaVM, appContext);
 
-        Babylon::Platform::Initialize(*g_runtime, javaVM, env->NewGlobalRef(appContext));
-
-        ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
-        int32_t width  = ANativeWindow_getWidth(window);
-        int32_t height = ANativeWindow_getHeight(window);
-        g_runtime->Dispatch([window, width, height](Napi::Env env)
-        {
             Babylon::NativeWindow::Initialize(env, window, width, height);
+
+            Babylon::InitializeNativeEngine(env);
+
+            Babylon::InitializeGraphics(window, width, height);
+            Babylon::InitializeXMLHttpRequest(env, g_runtime->RootUrl());
+
+            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
+
+            g_inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
+            InputManager::Initialize(jsRuntime, *g_inputBuffer);
         });
-
-        Babylon::InitializeNativeEngine(*g_runtime, window, width, height);
-
-        // Initialize XMLHttpRequest plugin.
-        Babylon::InitializeXMLHttpRequest(*g_runtime, g_runtime->RootUrl());
-
-        g_inputBuffer = std::make_unique<InputManager::InputBuffer>(*g_runtime);
-        InputManager::Initialize(*g_runtime, *g_inputBuffer);
 
         g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime, g_runtime->RootUrl());
         g_scriptLoader->Eval("document = {}", "");
@@ -123,8 +126,11 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
 {
     if (g_runtime)
     {
-        ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
-        Babylon::ReinitializeNativeEngine(*g_runtime, window, static_cast<size_t>(width), static_cast<size_t>(height));
+        ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
+        g_runtime->Dispatch([window, width, height](Napi::Env env)
+        {
+            Babylon::ReinitializeNativeEngine(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
+        });
     }
 }
 

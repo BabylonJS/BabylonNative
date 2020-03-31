@@ -1,7 +1,6 @@
 package BabylonNative;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -10,7 +9,7 @@ import android.view.View;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-public class BabylonView extends SurfaceView implements SurfaceHolder.Callback, View.OnTouchListener {
+public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
     private static final String TAG = "BabylonView";
     private boolean mViewReady = false;
     private ViewDelegate mViewDelegate;
@@ -96,5 +95,15 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback, 
     @Override
     protected void finalize() throws Throwable {
         BabylonNative.Wrapper.finishEngine();
+    }
+
+    /**
+     * This method is part of the SurfaceHolder.Callback2 interface, and is
+     * not normally called or subclassed by clients of BabylonView.
+     */
+    @Deprecated
+    @Override
+    public void surfaceRedrawNeeded(SurfaceHolder holder) {
+        // Redraw happens in the bgfx thread. No need to handle it here.
     }
 }

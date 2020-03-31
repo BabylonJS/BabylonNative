@@ -1,6 +1,6 @@
 #include <napi/env.h>
 #include <napi/js_native_api_types.h>
-#include "JavaScriptCore/JavaScriptCore.h"
+#include "JavaScriptCore/JavaScript.h"
 #include "js_native_api_JavaScriptCore.h"
 
 namespace Napi
@@ -17,4 +17,11 @@ namespace Napi
     {
         delete env.operator napi_env();
     }
+
+    template<> JSGlobalContextRef GetContext(Napi::Env env)
+    {
+        napi_env napienv = env;
+        return napienv->m_globalContext;
+    }
 }
+

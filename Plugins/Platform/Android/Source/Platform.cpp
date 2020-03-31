@@ -36,11 +36,9 @@ namespace Babylon
         }
     }
 
-    void Platform::Initialize(JsRuntime& runtime, JavaVM* javaVM, jobject appContext)
+    void Platform::Initialize(Napi::Env env, JavaVM* javaVM, jobject appContext)
     {
-        runtime.Dispatch([javaVM, appContext](Napi::Env env) {
-            new Platform(env, javaVM, appContext);
-        });
+        new Platform(env, javaVM, appContext);
     }
 
     Platform& Platform::GetFromJavaScript(Napi::Env env)

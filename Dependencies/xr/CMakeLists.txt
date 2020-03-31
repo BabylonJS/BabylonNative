@@ -14,10 +14,10 @@ else()
         "Source/OpenXR/XR.cpp"
         "Source/OpenXR/XrPlatformCommon.h")
 
-    if(WIN32 OR WINDOWS_STORE)
+    if(WIN32)
         set(SOURCES ${SOURCES} "Source/OpenXR/Windows/XrPlatform.h")
     else()
-        message(FATAL_ERROR "OpenXR support not available for platform ${BABYLON_NATIVE_PLATFORM}")
+        message(FATAL_ERROR "OpenXR support not available for platform ${CMAKE_SYSTEM_NAME}")
     endif()
 endif()
 
@@ -36,7 +36,7 @@ if (ANDROID)
 
     target_link_libraries(xr PRIVATE glm arcore)
 else()
-    if(WIN32 OR WINDOWS_STORE)
+    if(WIN32)
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")
     endif()
 
@@ -47,3 +47,5 @@ else()
 endif()
 
 target_include_directories(xr PUBLIC "Include")
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

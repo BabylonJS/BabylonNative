@@ -11,7 +11,7 @@ namespace Babylon
         Platform(Napi::Env env, JavaVM* javaVM, jobject appContext);
         ~Platform();
 
-        static void Initialize(JsRuntime& runtime, JavaVM* javaVM, jobject appContext);
+        static void Initialize(Napi::Env env, JavaVM* javaVM, jobject appContext);
 
         static Platform& GetFromJavaScript(Napi::Env env);
 

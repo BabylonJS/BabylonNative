@@ -1,11 +1,11 @@
-if(WIN32 OR WINDOWS_STORE)
-    set(GRAPHICS_API "D3D")
-    set(XR ON)
-elseif(APPLE)
+if(APPLE)
     set(GRAPHICS_API "Metal")
     set(XR OFF)
 elseif(ANDROID)
     set(GRAPHICS_API "OpenGL")
+    set(XR ON)
+elseif(WIN32)
+    set(GRAPHICS_API "D3D")
     set(XR ON)
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
@@ -34,7 +34,7 @@ add_library(NativeEngine ${SOURCES})
 
 target_include_directories(NativeEngine PUBLIC "Include")
 
-target_link_libraries(NativeEngine
+target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
     PRIVATE arcana
     PRIVATE bgfx
@@ -46,22 +46,23 @@ target_link_libraries(NativeEngine
     PRIVATE NativeWindow)
 
 if(XR)
-    target_link_libraries(NativeEngine
+    target_link_to_dependencies(NativeEngine
         PRIVATE xr)
     target_compile_definitions(NativeEngine PRIVATE NATIVE_ENGINE_XR)
 endif()
 
-if(WIN32 OR WINDOWS_STORE)
-    target_link_libraries(NativeEngine
-        PRIVATE "d3dcompiler.lib")
-elseif(APPLE)
-    target_link_libraries(NativeEngine
+if(APPLE)
+    target_link_to_dependencies(NativeEngine
         PRIVATE spirv-cross-msl)
 elseif(ANDROID)
     target_link_libraries(NativeEngine
         PRIVATE Platform)
+elseif(WIN32)
+    target_link_to_dependencies(NativeEngine
+        PRIVATE "d3dcompiler.lib")
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics linking could not be performed")
 endif()
 
-set_property(TARGET NativeEngine PROPERTY FOLDER Plugins/Babylon)
+set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
