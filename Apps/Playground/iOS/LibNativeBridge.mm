@@ -69,7 +69,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     {
         runtime->Dispatch([inWidth, inHeight](Napi::Env env)
         {
-            Babylon::WindowPolyfill::UpdateSize(env, static_cast<size_t>(width), static_cast<size_t>(height));
+            Babylon::WindowPolyfill::UpdateSize(env, static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
         });
     }
 }
