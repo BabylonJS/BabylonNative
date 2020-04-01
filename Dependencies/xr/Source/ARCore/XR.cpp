@@ -58,7 +58,7 @@ namespace xr
 
     namespace
     {
-        const GLfloat kVertices[] = { -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f, };
+        const GLfloat vertexPositions[] = {-1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f, };
 
         constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
             precision highp float;
@@ -169,11 +169,6 @@ namespace xr
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool SessionEnded{ false };
 
-        EGLContext OriginalContext{};
-        EGLContext RenderContext{};
-        EGLDisplay Display{};
-        EGLSurface Surface{};
-
         GLuint shader_program_;
         GLint attribute_vertices_;
         GLint attribute_uvs_;
@@ -193,80 +188,86 @@ namespace xr
         Impl(System::Impl& hmdImpl, void* graphicsContext)
             : HmdImpl{ hmdImpl }
         {
-            
-            // graphicsContext is an EGLContext
-            // grab and store the ANativeWindow pointer (the drawing surface)
-            OriginalContext = graphicsContext;
-            Display = eglGetCurrentDisplay();
-            Surface = eglGetCurrentSurface(EGL_DRAW);
+            // Note: graphicsContext is an EGLContext
+
+            // Get the width and height of the current surface
             size_t width, height;
             {
+                EGLDisplay display = eglGetCurrentDisplay();
+                EGLSurface surface = eglGetCurrentSurface(EGL_DRAW);
                 EGLint _width, _height;
-                eglQuerySurface(eglGetDisplay(EGL_DEFAULT_DISPLAY), Surface, EGL_WIDTH, &_width);
-                eglQuerySurface(eglGetDisplay(EGL_DEFAULT_DISPLAY), Surface, EGL_HEIGHT, &_height);
+                eglQuerySurface(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, EGL_WIDTH, &_width);
+                eglQuerySurface(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, EGL_HEIGHT, &_height);
                 width = static_cast<size_t>(_width);
                 height = static_cast<size_t >(_height);
             }
 
-            EGLint attributes[] =
+            // Allocate and store the render texture
             {
-                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-                EGL_DEPTH_SIZE, 16,
-                EGL_STENCIL_SIZE, 8,
-                EGL_NONE
-            };
-/*
-            TODO cg: create a shared context, bind it for resources creation and bind original context before leaving function
-            EGLConfig config;
-            EGLint numConfig = 0;
-            bool success;
-            auto success = eglChooseConfig(Display, attributes, &config, 1, &numConfig);
-            RenderContext = eglCreateContext(Display, config, OriginalContext, nullptr);
-            success = eglMakeCurrent(Display, Surface, Surface, RenderContext);
-            success = eglMakeCurrent(Display, Surface, Surface, OriginalContext);
-*/
-            // Allocate and store the render texture and camera texture
-            GLuint colorTextureId;
-            glGenTextures(1, &colorTextureId);
-            glBindTexture(GL_TEXTURE_2D, colorTextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void*>(colorTextureId);
-            ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
-            ActiveFrameViews[0].ColorTextureSize = {width, height};
+                GLuint colorTextureId;
+                glGenTextures(1, &colorTextureId);
+                glBindTexture(GL_TEXTURE_2D, colorTextureId);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(colorTextureId);
+                ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
+                ActiveFrameViews[0].ColorTextureSize = {width, height};
+            }
 
-            GLuint depthTextureId;
-            glGenTextures(1, &depthTextureId);
-            glBindTexture(GL_TEXTURE_2D, depthTextureId);
-            //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
-            //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24_OES, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_OES, width, height, 0, GL_DEPTH_STENCIL_OES, GL_UNSIGNED_INT_24_8_OES, nullptr);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(depthTextureId);
-            ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
-            ActiveFrameViews[0].DepthTextureSize = {width, height};
+            // Allocate and store the depth texture
+            {
+                GLuint depthTextureId;
+                glGenTextures(1, &depthTextureId);
+                glBindTexture(GL_TEXTURE_2D, depthTextureId);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_OES, width, height, 0, GL_DEPTH_STENCIL_OES, GL_UNSIGNED_INT_24_8_OES, nullptr);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(depthTextureId);
+                ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
+                ActiveFrameViews[0].DepthTextureSize = {width, height};
+            }
 
-            glGenTextures(1, &cameraTextureId);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+            // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
+            {
+                glGenTextures(1, &cameraTextureId);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+                glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+            }
 
+            // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
             shader_program_ = CreateShaderProgram();
 
-            // Call ArCoreApk_requestInstall, and possibly throw an exception if the user declines ArCore installation
-            // Call ArSession_create and ArFrame_create and ArSession_setDisplayGeometry, and probably ArSession_resume
+            // Create the ARCore ArSession
+            {
+                ArStatus status = ArSession_create(hmdImpl.Env(), hmdImpl.AppContext(), &session);
+                if (status != ArStatus::AR_SUCCESS)
+                {
+                    throw std::runtime_error{ "Failed to create ArSession with status " + status };
+                }
+            }
 
-            ArStatus status = ArSession_create(hmdImpl.Env(), hmdImpl.AppContext(), &session);
+            // Create the ARCore ArFrame (this gets reused each time we query for the latest frame)
             ArFrame_create(session, &frame);
+
+            // Create the ARCore ArPose (this gets reused for each frame as well)
             ArPose_create(session, nullptr, &pose);
+
+            // Initialize the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
             ArSession_setDisplayGeometry(session, 0, static_cast<int32_t>(width), static_cast<int32_t>(height));
-            status = ArSession_resume(session);
-            int x = 5;
+
+            // Start the ArSession
+            {
+                ArStatus status = ArSession_resume(session);
+                if (status != ArStatus::AR_SUCCESS)
+                {
+                    throw std::runtime_error{ "Failed to start ArSession with status: " + status };
+                }
+            }
         }
 
         ~Impl()
@@ -366,7 +367,7 @@ namespace xr
             {
                 ArFrame_transformCoordinates2d(
                         sessionImpl.session, sessionImpl.frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                        4, kVertices, AR_COORDINATES_2D_TEXTURE_NORMALIZED,
+                        4, vertexPositions, AR_COORDINATES_2D_TEXTURE_NORMALIZED,
                         sessionImpl.transformed_uvs);
                 sessionImpl.uvs_initialized = true;
             }
@@ -422,7 +423,7 @@ namespace xr
             glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_sessionImpl.cameraTextureId);
 
             auto uniform_positions = glGetUniformLocation(m_sessionImpl.shader_program_, "vertexPositions");
-            glUniform2fv(uniform_positions, 4, kVertices);
+            glUniform2fv(uniform_positions, 4, vertexPositions);
 
             auto uniform_uvs = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraFrameUVs");
             glUniform2fv(uniform_uvs, 4, m_sessionImpl.transformed_uvs);
