@@ -56,6 +56,7 @@ Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj)
     g_scriptLoader.reset();
     g_inputBuffer.reset();
     g_runtime.reset();
+    Babylon::DeinitializeGraphics();
 }
 
 JNIEXPORT void JNICALL
