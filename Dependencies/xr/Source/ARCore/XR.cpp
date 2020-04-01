@@ -19,10 +19,6 @@
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
 
-extern ANativeWindow* xrWindow;
-extern uint32_t xrWindowWidth;
-extern uint32_t xrWindowHeight;
-
 namespace xr
 {
     class System::Impl
@@ -63,42 +59,32 @@ namespace xr
     namespace
     {
         const GLfloat kVertices[] = { -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f, };
-        const GLfloat kUVs[] =      { +0.0f, +0.0f, +1.0f, +0.0f, +0.0f, +1.0f, +1.0f, +1.0f, };
 
         constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
             precision highp float;
-            uniform vec2 cameraTexCoord[4];
-            out vec2 v_CameraTexCoord;
-            out vec2 v_BabylonTexCoord;
+            uniform vec2 vertexPositions[4];
+            uniform vec2 cameraFrameUVs[4];
+            out vec2 cameraFrameUV;
+            out vec2 babylonUV;
             void main() {
-                const vec2 positions[4] = vec2[](
-                    vec2(-1, -1),
-                    vec2(+1, -1),
-                    vec2(-1, +1),
-                    vec2(+1, +1)
-                );
-                gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
-                //v_CameraTexCoord = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
-                v_CameraTexCoord = cameraTexCoord[gl_VertexID];
-                v_BabylonTexCoord = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
+                gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
+                cameraFrameUV = cameraFrameUVs[gl_VertexID];
+                babylonUV = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
             }
         )";
 
-        const char QUAD_FRAG_SHADER[] = R"(#version 300 es
+        constexpr char QUAD_FRAG_SHADER[] = R"(#version 300 es
             #extension GL_OES_EGL_image_external_essl3 : require
             precision mediump float;
-            in vec2 v_CameraTexCoord;
-            in vec2 v_BabylonTexCoord;
-            uniform samplerExternalOES texture_camera;
-            uniform sampler2D texture_babylon;
+            in vec2 cameraFrameUV;
+            in vec2 babylonUV;
+            uniform samplerExternalOES cameraTexture;
+            uniform sampler2D babylonTexture;
             out vec4 oFragColor;
             void main() {
-                vec4 cameraTexColor = texture(texture_camera, v_CameraTexCoord);
-                vec4 babylonTexColor = texture(texture_babylon, v_BabylonTexCoord);
-                //oFragColor = cameraTexColor;
-                oFragColor = mix(cameraTexColor, babylonTexColor, babylonTexColor.a);
-                //oFragColor = vec4(1.0,1.0,1.0,1.0) - cameraTexColor;
-                //oFragColor = vec4(v_CameraTexCoord.x, v_CameraTexCoord.y, 0.0, 1.0);
+                vec4 cameraColor = texture(cameraTexture, cameraFrameUV);
+                vec4 babylonColor = texture(babylonTexture, babylonUV);
+                oFragColor = mix(cameraColor, babylonColor, babylonColor.a);
             }
         )";
 
@@ -428,17 +414,20 @@ namespace xr
             glUseProgram(m_sessionImpl.shader_program_);
             glDepthMask(GL_FALSE);
 
-            auto uniform_texture_ = glGetUniformLocation(m_sessionImpl.shader_program_, "texture_camera");
+            auto uniform_texture_ = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraTexture");
             glUniform1i(uniform_texture_, 0);
             glActiveTexture(GL_TEXTURE0);
             GLint old_texture0Binding;
             glGetIntegerv(GL_TEXTURE_BINDING_EXTERNAL_OES, &old_texture0Binding);
             glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_sessionImpl.cameraTextureId);
 
-            auto uniform_uvs = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraTexCoord");
+            auto uniform_positions = glGetUniformLocation(m_sessionImpl.shader_program_, "vertexPositions");
+            glUniform2fv(uniform_positions, 4, kVertices);
+
+            auto uniform_uvs = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraFrameUVs");
             glUniform2fv(uniform_uvs, 4, m_sessionImpl.transformed_uvs);
 
-            auto uniform_texture_babylon = glGetUniformLocation(m_sessionImpl.shader_program_, "texture_babylon");
+            auto uniform_texture_babylon = glGetUniformLocation(m_sessionImpl.shader_program_, "babylonTexture");
             if (uniform_texture_babylon >= 0)
             {
                 glUniform1i(uniform_texture_babylon, 1);
