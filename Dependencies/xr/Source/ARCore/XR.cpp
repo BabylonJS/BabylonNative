@@ -91,34 +91,31 @@ namespace xr
         GLuint LoadShader(GLenum shader_type, const char* shader_source)
         {
             GLuint shader = glCreateShader(shader_type);
-            if (!shader) {
-                return shader;
+            if (!shader)
+            {
+                throw std::runtime_error{ "Failed to create shader" };
             }
 
             glShaderSource(shader, 1, &shader_source, nullptr);
             glCompileShader(shader);
-            GLint compiled = 0;
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+            GLint compileStatus = GL_FALSE;
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
 
-            if (!compiled) {
-                GLint info_len = 0;
+            if (compileStatus != GL_TRUE)
+            {
+                GLint infoLogLength = 0;
 
-                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_len);
-                if (!info_len) {
-                    return shader;
+                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+                if (!infoLogLength)
+                {
+                    throw std::runtime_error{ "Unknown error compiling shader" };
                 }
 
-                char* buf = reinterpret_cast<char*>(malloc(static_cast<size_t>(info_len)));
-                if (!buf) {
-                    return shader;
-                }
-
-                glGetShaderInfoLog(shader, info_len, nullptr, buf);
-                __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", buf);
-                // TODO: Throw exception
-                free(buf);
+                std::string infoLog;
+                infoLog.resize(static_cast<size_t>(infoLogLength));
+                glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.data());
                 glDeleteShader(shader);
-                shader = 0;
+                throw std::runtime_error("Error compiling shader: " + infoLog);
             }
 
             return shader;
@@ -130,31 +127,34 @@ namespace xr
             GLuint fragShader = LoadShader(GL_FRAGMENT_SHADER, QUAD_FRAG_SHADER);
 
             GLuint program = glCreateProgram();
-            if (program)
+            if (!program)
             {
-                glAttachShader(program, vertShader);
-                glAttachShader(program, fragShader);
-
-                glLinkProgram(program);
-                GLint link_status = GL_FALSE;
-                glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-
-                if (link_status != GL_TRUE)
-                {
-                    GLint buf_length = 0;
-                    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &buf_length);
-                    if (buf_length) {
-                        char* buf = reinterpret_cast<char*>(malloc(static_cast<size_t>(buf_length)));
-                        if (buf) {
-                            glGetProgramInfoLog(program, buf_length, nullptr, buf);
-                            // TODO: Throw exception
-                            free(buf);
-                        }
-                    }
-                    glDeleteProgram(program);
-                    program = 0;
-                }
+                throw std::runtime_error{ "Failed to create shader program" };
             }
+
+            glAttachShader(program, vertShader);
+            glAttachShader(program, fragShader);
+
+            glLinkProgram(program);
+            GLint linkStatus = GL_FALSE;
+            glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+
+            if (linkStatus != GL_TRUE)
+            {
+                GLint infoLogLength = 0;
+                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
+                if (!infoLogLength)
+                {
+                    throw std::runtime_error{ "Unknown error linking shader program" };
+                }
+
+                std::string infoLog;
+                infoLog.resize(static_cast<size_t>(infoLogLength));
+                glGetProgramInfoLog(program, infoLogLength, nullptr, infoLog.data());
+                glDeleteProgram(program);
+                throw std::runtime_error("Error linking shader program: " + infoLog);
+            }
+
             return program;
         }
     }
