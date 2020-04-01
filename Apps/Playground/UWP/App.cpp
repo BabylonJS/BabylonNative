@@ -162,9 +162,6 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         m_runtime = std::make_unique<Babylon::AppRuntime>(std::move(rootUrl));
     }
 
-    // Ensure this is properly uninitialized since it depends on state of the runtime.
-    m_inputBuffer.reset();
-
     // Create the console plugin.
     m_runtime->Dispatch([](Napi::Env env)
     {
