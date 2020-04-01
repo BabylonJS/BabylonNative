@@ -63,6 +63,7 @@ namespace
         }
 
         runtime.reset();
+        Babylon::NativeEnginePlugin::DeinitializeGraphics();
         runtime = std::make_unique<Babylon::AppRuntime>(GetUrlFromPath(GetModulePath().parent_path().parent_path()));
 
         // Initialize console plugin.
@@ -239,6 +240,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             runtime.reset();
+            Babylon::NativeEnginePlugin::DeinitializeGraphics();
             PostQuitMessage(0);
             break;
         }

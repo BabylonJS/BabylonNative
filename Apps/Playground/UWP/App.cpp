@@ -112,6 +112,16 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
+    if (m_inputBuffer)
+    {
+        m_inputBuffer.reset();
+    }
+
+    if (m_runtime)
+    {
+        m_runtime.reset();
+        Babylon::NativeEnginePlugin::DeinitializeGraphics();
+    }
 }
 
 // Application lifecycle event handlers.
@@ -135,8 +145,7 @@ void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^
 
 concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bounds)
 {
-    m_inputBuffer.reset();
-    m_runtime.reset();
+    Uninitialize();
 
     std::string appUrl{ "file:///" + std::filesystem::current_path().generic_string() };
 

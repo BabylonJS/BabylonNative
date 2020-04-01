@@ -57,7 +57,7 @@ target_link_libraries(BabylonNativeJNI
         EGL
         log
         -lz
-        JsRuntime
+        AppRuntime
         ConsolePolyfill
         NativeEnginePlugin
         ScriptLoader
