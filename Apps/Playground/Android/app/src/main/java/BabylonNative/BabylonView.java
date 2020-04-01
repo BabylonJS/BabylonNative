@@ -13,12 +13,9 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     private static final String TAG = "BabylonView";
     private boolean mViewReady = false;
     private ViewDelegate mViewDelegate;
-    private Context mContext;
 
     public BabylonView(Context context, ViewDelegate viewDelegate) {
         super(context);
-
-        mContext = context;
 
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
@@ -50,7 +47,7 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), mContext);
+        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), this.getContext());
         if (!this.mViewReady) {
             mViewDelegate.onViewReady();
             mViewReady = true;

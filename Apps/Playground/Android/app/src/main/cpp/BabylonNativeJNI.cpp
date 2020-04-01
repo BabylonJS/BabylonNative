@@ -72,13 +72,13 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         }
 
         // TODO: This should be cleaned up via env->DeleteGlobalRef
-        //appContext = env->NewGlobalRef(appContext);
+        auto globalAppContext = env->NewGlobalRef(appContext);
 
         ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
         int32_t width  = ANativeWindow_getWidth(window);
         int32_t height = ANativeWindow_getHeight(window);
 
-        g_runtime->Dispatch([javaVM, appContext, window, width, height](Napi::Env env)
+        g_runtime->Dispatch([javaVM, globalAppContext, window, width, height](Napi::Env env)
         {
             Babylon::Console::CreateInstance(env, [](const char* message, Babylon::Console::LogLevel level)
             {
@@ -96,7 +96,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                 }
             });
 
-            Babylon::Platform::Initialize(env, javaVM, appContext);
+            Babylon::Platform::Initialize(env, javaVM, globalAppContext);
 
             Babylon::NativeWindow::Initialize(env, window, width, height);
 
