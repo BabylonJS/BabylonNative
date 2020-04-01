@@ -6,9 +6,6 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-
 public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2, View.OnTouchListener {
     private static final String TAG = "BabylonView";
     private boolean mViewReady = false;
