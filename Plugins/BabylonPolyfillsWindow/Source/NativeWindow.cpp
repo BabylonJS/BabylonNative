@@ -4,7 +4,7 @@
 
 #include <chrono>
 
-namespace Babylon
+namespace Babylon::Polyfills::Internal
 {
     namespace
     {
@@ -141,18 +141,20 @@ namespace Babylon
             });
         }
     }
+}
 
-    namespace Polyfills::Window
+namespace Babylon::Polyfills::Window
+{
+    using NativeWindow = Babylon::Polyfills::Internal::NativeWindow;
+
+    void Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
     {
-        void Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
-        {
-            NativeWindow::Initialize(env, windowPtr, width, height);
-        }
+        NativeWindow::Initialize(env, windowPtr, width, height);
+    }
 
-        void UpdateSize(Napi::Env env, size_t width, size_t height)
-        {
-            auto& window = NativeWindow::GetFromJavaScript(env);
-            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
-        }
+    void UpdateSize(Napi::Env env, size_t width, size_t height)
+    {
+        auto& window = NativeWindow::GetFromJavaScript(env);
+        window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
     }
 }

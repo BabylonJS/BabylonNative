@@ -3,7 +3,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/TicketedCollection.h>
 
-namespace Babylon
+namespace Babylon::Polyfills::Internal
 {
     class NativeWindow : public Napi::ObjectWrap<NativeWindow>
     {
