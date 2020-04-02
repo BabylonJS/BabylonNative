@@ -142,7 +142,7 @@ namespace Babylon
         }
     }
 
-    namespace WindowPolyfill
+    namespace Polyfills::Window
     {
         void Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
         {

@@ -1,7 +1,7 @@
 #include <Babylon/NativeEnginePlugin.h>
 #include "NativeEngine.h"
 
-#include <Babylon/NativeWindow.h>
+#include <NativeWindow.h>
 
 #ifdef NATIVE_ENGINE_XR
 #include "NativeXr.h"

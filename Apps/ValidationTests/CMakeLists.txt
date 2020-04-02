@@ -33,11 +33,11 @@ target_link_to_dependencies(ValidationTests
     PRIVATE bimg
     PRIVATE bx
     PRIVATE AppRuntime
-    PRIVATE ConsolePolyfill
+    PRIVATE BabylonPolyfillsConsole
+    PRIVATE BabylonPolyfillsWindow
     PRIVATE NativeEnginePlugin
     PRIVATE ScriptLoader
-    PRIVATE XMLHttpRequest
-    PRIVATE WindowPolyfill)
+    PRIVATE XMLHttpRequest)
 
 foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
     get_filename_component(SCRIPT_NAME "${script}" NAME)

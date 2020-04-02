@@ -1,10 +1,10 @@
 #include "App.h"
 
-#include <Babylon/ConsolePolyfill.h>
 #include <Babylon/NativeEnginePlugin.h>
+#include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
-#include <Babylon/WindowPolyfill.h>
 
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
@@ -173,12 +173,12 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
     auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
     m_runtime->Dispatch([&runtime = m_runtime, &inputBuffer = m_inputBuffer, windowPtr, width, height](Napi::Env env)
     {
-        Babylon::ConsolePolyfill::Initialize(env, [](const char* message, auto)
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
         {
             OutputDebugStringA(message);
         });
 
-        Babylon::WindowPolyfill::Initialize(env, windowPtr, width, height);
+        Babylon::Polyfills::Window::Initialize(env, windowPtr, width, height);
 
         // Initialize NativeEngine plugin.
         Babylon::NativeEnginePlugin::InitializeGraphics(windowPtr, width, height);
@@ -246,7 +246,7 @@ void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs
     size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
     m_runtime->Dispatch([width, height](Napi::Env env)
     {
-        Babylon::WindowPolyfill::UpdateSize(env, width, height);
+        Babylon::Polyfills::Window::UpdateSize(env, width, height);
     });
 }
 

@@ -2,7 +2,7 @@
 
 #include <napi/env.h>
 
-namespace Babylon::WindowPolyfill
+namespace Babylon::Polyfills::Window
 {
     void Initialize(Napi::Env env, void* windowPtr, size_t width, size_t height);
 

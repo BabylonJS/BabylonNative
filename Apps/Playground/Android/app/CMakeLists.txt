@@ -58,11 +58,11 @@ target_link_libraries(BabylonNativeJNI
         log
         -lz
         AppRuntime
-        ConsolePolyfill
+        BabylonPolyfillsConsole
+        BabylonPolyfillsWindow
         NativeEnginePlugin
         ScriptLoader
-        XMLHttpRequest
-        WindowPolyfill)
+        XMLHttpRequest)
 
 configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"

@@ -2,7 +2,7 @@
 
 #include <napi/env.h>
 
-namespace Babylon::ConsolePolyfill
+namespace Babylon::Polyfills::Console
 {
     /**
      * Importance level of messages sent via logging callbacks.

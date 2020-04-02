@@ -9,11 +9,11 @@
 #include <android/log.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/ConsolePolyfill.h>
 #include <Babylon/NativeEnginePlugin.h>
+#include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
-#include <Babylon/WindowPolyfill.h>
 #include <InputManager.h>
 
 #include <android/asset_manager.h>
@@ -66,23 +66,23 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         int32_t height = ANativeWindow_getHeight(window);
         runtime->Dispatch([window, width, height](Napi::Env env)
         {
-            Babylon::ConsolePolyfill::Initialize(env, [](const char* message, Babylon::ConsolePolyfill::LogLevel level)
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
             {
                 switch (level)
                 {
-                case Babylon::ConsolePolyfill::LogLevel::Log:
+                case Babylon::Polyfills::Console::LogLevel::Log:
                     __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
                     break;
-                case Babylon::ConsolePolyfill::LogLevel::Warn:
+                case Babylon::Polyfills::Console::LogLevel::Warn:
                     __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
                     break;
-                case Babylon::ConsolePolyfill::LogLevel::Error:
+                case Babylon::Polyfills::Console::LogLevel::Error:
                     __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
                     break;
                 }
             });
 
-            Babylon::WindowPolyfill::Initialize(env, window, width, height);
+            Babylon::Polyfills::Window::Initialize(env, window, width, height);
 
             Babylon::NativeEnginePlugin::InitializeGraphics(window, width, height);
             Babylon::NativeEnginePlugin::Initialize(env);

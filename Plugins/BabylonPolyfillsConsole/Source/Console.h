@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/ConsolePolyfill.h>
+#include <Babylon/Polyfills/Console.h>
 
 namespace Babylon
 {
@@ -11,7 +11,7 @@ namespace Babylon
 
         using ParentT = Napi::ObjectWrap<Console>;
 
-        static void CreateInstance(Napi::Env env, ConsolePolyfill::CallbackT callback);
+        static void CreateInstance(Napi::Env env, Polyfills::Console::CallbackT callback);
 
         explicit Console(const Napi::CallbackInfo& info);
 
@@ -19,8 +19,8 @@ namespace Babylon
         void Log(const Napi::CallbackInfo& info);
         void Warn(const Napi::CallbackInfo& info);
         void Error(const Napi::CallbackInfo& info);
-        void InvokeCallback(const Napi::CallbackInfo& info, ConsolePolyfill::LogLevel logLevel) const;
+        void InvokeCallback(const Napi::CallbackInfo& info, Polyfills::Console::LogLevel logLevel) const;
 
-        ConsolePolyfill::CallbackT m_callback{};
+        Polyfills::Console::CallbackT m_callback{};
     };
 }

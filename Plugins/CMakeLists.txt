@@ -1,8 +1,8 @@
-add_subdirectory(ConsolePolyfill)
-add_subdirectory(WindowPolyfill)
+add_subdirectory(BabylonPolyfillsConsole)
+add_subdirectory(BabylonPolyfillsWindow)
 add_subdirectory(ScriptLoader)
 add_subdirectory(XMLHttpRequest)
 
-# Add NativeEnginePlugin
-# Dependencies: WindowPolyfill
-add_subdirectory(NativeEnginePlugin)
+# Add BabylonPluginsNativeEngine
+# Dependencies: BabylonPolyfillsWindow
+add_subdirectory(BabylonPluginsNativeEngine)

@@ -43,7 +43,7 @@ target_link_to_dependencies(NativeEnginePlugin
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE WindowPolyfillImplementation)
+    PRIVATE BabylonPolyfillsWindowInternal)
 
 if(XR)
     target_link_to_dependencies(NativeEnginePlugin

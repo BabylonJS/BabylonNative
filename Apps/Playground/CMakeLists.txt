@@ -101,10 +101,10 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
-    PRIVATE ConsolePolyfill
+    PRIVATE BabylonPolyfillsConsole
     PRIVATE NativeEnginePlugin
     PRIVATE ScriptLoader
-    PRIVATE WindowPolyfill
+    PRIVATE BabylonPolyfillsWindow
     PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES})
 

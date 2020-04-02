@@ -5,8 +5,9 @@
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
-#include <Babylon/NativeWindow.h>
 #include <Babylon/TicketedCollection.h>
+
+#include <NativeWindow.h>
 
 #include <napi/napi.h>
 
