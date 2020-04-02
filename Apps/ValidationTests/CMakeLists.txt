@@ -33,9 +33,9 @@ target_link_to_dependencies(ValidationTests
     PRIVATE bimg
     PRIVATE bx
     PRIVATE AppRuntime
-    PRIVATE BabylonPluginsNativeEngine
-    PRIVATE BabylonPolyfillsConsole
-    PRIVATE BabylonPolyfillsWindow
+    PRIVATE NativeEngine
+    PRIVATE Console
+    PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest)
 

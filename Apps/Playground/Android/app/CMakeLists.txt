@@ -58,9 +58,9 @@ target_link_libraries(BabylonNativeJNI
         log
         -lz
         AppRuntime
-        BabylonPluginsNativeEngine
-        BabylonPolyfillsConsole
-        BabylonPolyfillsWindow
+        NativeEngine
+        Console
+        Window
         ScriptLoader
         XMLHttpRequest)
 
