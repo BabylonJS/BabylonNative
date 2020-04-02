@@ -61,7 +61,8 @@ namespace xr
 
     namespace
     {
-        const GLfloat VERTEX_POSITIONS[] = {-1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f, };
+        constexpr GLfloat VERTEX_POSITIONS[]{ -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f };
+        constexpr size_t VERTEX_COUNT{ std::size(VERTEX_POSITIONS) / 2 };
 
         constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
             precision highp float;
@@ -223,21 +224,15 @@ namespace xr
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool SessionEnded{ false };
 
-        GLuint shader_program_;
-        GLint attribute_vertices_;
-        GLint attribute_uvs_;
-        GLint uniform_texture_;
-        GLuint vertexArray;
-        GLuint vertexBuffer;
-
+        GLuint shaderProgramId{};
         GLuint cameraTextureId{};
 
         ArSession* session{};
         ArFrame* frame{};
         ArPose* pose{};
 
-        float transformed_uvs[8];
-        bool uvs_initialized{false};
+        float cameraFrameUVs[VERTEX_COUNT * 2];
+        bool cameraFrameUVsInitialized{false};
 
         Impl(System::Impl& hmdImpl, void* graphicsContext)
             : HmdImpl{ hmdImpl }
@@ -294,7 +289,7 @@ namespace xr
             }
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
-            shader_program_ = CreateShaderProgram();
+            shaderProgramId = CreateShaderProgram();
 
             // Create the ARCore ArSession
             {
@@ -411,15 +406,15 @@ namespace xr
         {
             int32_t geometryChanged{ 0 };
             ArFrame_getDisplayGeometryChanged(sessionImpl.session, sessionImpl.frame, &geometryChanged);
-            if (geometryChanged || !sessionImpl.uvs_initialized)
+            if (geometryChanged || !sessionImpl.cameraFrameUVsInitialized)
             {
                 // Transform the UVs for the vertex positions given the current display size
                 ArFrame_transformCoordinates2d(
                     sessionImpl.session, sessionImpl.frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                    4, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, sessionImpl.transformed_uvs);
+                    VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, sessionImpl.cameraFrameUVs);
 
                 // Note that the UVs have been initialized (we don't need to do this again unless the display geometry changes)
-                sessionImpl.uvs_initialized = true;
+                sessionImpl.cameraFrameUVsInitialized = true;
             }
         }
 
@@ -443,31 +438,31 @@ namespace xr
             auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             glViewport(0, 0, Views[0].ColorTextureSize.Width, Views[0].ColorTextureSize.Height);
-            glUseProgram(m_sessionImpl.shader_program_);
+            glUseProgram(m_sessionImpl.shaderProgramId);
 
             // Configure the quad vertex positions
-            auto vertexPositionsUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "vertexPositions");
-            glUniform2fv(vertexPositionsUniformLocation, 4, VERTEX_POSITIONS);
+            auto vertexPositionsUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "vertexPositions");
+            glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
             // Configure the camera texture
-            auto cameraTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraTexture");
+            auto cameraTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "cameraTexture");
             glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_sessionImpl.cameraTextureId);
 
             // Configure the camera frame UVs
-            auto cameraFrameUVsUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraFrameUVs");
-            glUniform2fv(cameraFrameUVsUniformLocation, 4, m_sessionImpl.transformed_uvs);
+            auto cameraFrameUVsUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "cameraFrameUVs");
+            glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, m_sessionImpl.cameraFrameUVs);
 
             // Configure the babylon render texture
-            auto babylonTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "babylonTexture");
+            auto babylonTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "babylonTexture");
             glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
             glActiveTexture(GL_TEXTURE1);
             auto babylonTextureId = (GLuint)(size_t)Views[0].ColorTexturePointer;
             glBindTexture(GL_TEXTURE_2D, babylonTextureId);
 
             // Draw the quad
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
             glUseProgram(0);
         }
     }
