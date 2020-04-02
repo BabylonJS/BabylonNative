@@ -357,10 +357,20 @@ namespace xr
         }
     };
 
+    struct System::Session::Frame::Impl
+    {
+        Impl(Session::Impl& sessionImpl)
+            : sessionImpl{sessionImpl}
+        {
+        }
+
+        Session::Impl& sessionImpl;
+    };
+
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
-        , m_sessionImpl{ sessionImpl }
         , InputSources{ sessionImpl.InputSources}
+        , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
@@ -427,7 +437,7 @@ namespace xr
         // This is to avoid drawing possible leftover data from previous sessions if
         // the texture is reused.
         int64_t frameTimestamp{};
-        ArFrame_getTimestamp(m_sessionImpl.session, m_sessionImpl.frame, &frameTimestamp);
+        ArFrame_getTimestamp(m_impl->sessionImpl.session, m_impl->sessionImpl.frame, &frameTimestamp);
         if (frameTimestamp)
         {
             auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(0);
@@ -438,24 +448,24 @@ namespace xr
             auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             glViewport(0, 0, Views[0].ColorTextureSize.Width, Views[0].ColorTextureSize.Height);
-            glUseProgram(m_sessionImpl.shaderProgramId);
+            glUseProgram(m_impl->sessionImpl.shaderProgramId);
 
             // Configure the quad vertex positions
-            auto vertexPositionsUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "vertexPositions");
+            auto vertexPositionsUniformLocation = glGetUniformLocation(m_impl->sessionImpl.shaderProgramId, "vertexPositions");
             glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
             // Configure the camera texture
-            auto cameraTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "cameraTexture");
+            auto cameraTextureUniformLocation = glGetUniformLocation(m_impl->sessionImpl.shaderProgramId, "cameraTexture");
             glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_sessionImpl.cameraTextureId);
+            glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_impl->sessionImpl.cameraTextureId);
 
             // Configure the camera frame UVs
-            auto cameraFrameUVsUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "cameraFrameUVs");
-            glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, m_sessionImpl.cameraFrameUVs);
+            auto cameraFrameUVsUniformLocation = glGetUniformLocation(m_impl->sessionImpl.shaderProgramId, "cameraFrameUVs");
+            glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, m_impl->sessionImpl.cameraFrameUVs);
 
             // Configure the babylon render texture
-            auto babylonTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shaderProgramId, "babylonTexture");
+            auto babylonTextureUniformLocation = glGetUniformLocation(m_impl->sessionImpl.shaderProgramId, "babylonTexture");
             glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
             glActiveTexture(GL_TEXTURE1);
             auto babylonTextureId = (GLuint)(size_t)Views[0].ColorTexturePointer;
