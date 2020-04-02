@@ -107,9 +107,8 @@ namespace xr
                 ~Frame();
 
             private:
-                Session::Impl& m_sessionImpl;
-                bool m_shouldRender{};
-                int64_t m_displayTime{};
+                class Impl;
+                std::unique_ptr<Impl> m_impl{};
             };
 
             Session(System& system, void* graphicsDevice);
