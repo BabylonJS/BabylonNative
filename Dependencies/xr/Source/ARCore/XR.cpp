@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <optional>
+#include <sstream>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -11,6 +12,8 @@
 #include <android/native_window.h>
 #include <android/log.h>
 #include <arcore_c_api.h>
+
+#include <gsl/gsl>
 
 #define GLM_FORCE_RADIANS 1
 #define GLM_ENABLE_EXPERIMENTAL
@@ -58,7 +61,7 @@ namespace xr
 
     namespace
     {
-        const GLfloat vertexPositions[] = {-1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f, };
+        const GLfloat VERTEX_POSITIONS[] = {-1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f, };
 
         constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
             precision highp float;
@@ -157,6 +160,57 @@ namespace xr
 
             return program;
         }
+
+        constexpr GLint GetTextureUnit(GLenum texture)
+        {
+            return texture - GL_TEXTURE0;
+        }
+
+        namespace GLTransactions
+        {
+            auto SetCapability(GLenum capability, bool isEnabled)
+            {
+                const auto setCapability = [capability](bool isEnabled)
+                {
+                    if (isEnabled)
+                    {
+                        glEnable(capability);
+                    }
+                    else
+                    {
+                        glDisable(capability);
+                    }
+                };
+
+                const auto wasEnabled = glIsEnabled(capability);
+                setCapability(isEnabled);
+                return gsl::finally([wasEnabled, setCapability]() { setCapability(wasEnabled); });
+            }
+
+            auto BindFrameBuffer(GLuint frameBufferId)
+            {
+                GLint previousFrameBufferId;
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFrameBufferId);
+                glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId);
+                return gsl::finally([previousFrameBufferId]() { glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFrameBufferId)); });
+            }
+
+            auto DepthMask(GLboolean depthMask)
+            {
+                GLboolean previousDepthMask;
+                glGetBooleanv(GL_DEPTH_WRITEMASK, &previousDepthMask);
+                glDepthMask(depthMask);
+                return gsl::finally([previousDepthMask]() { glDepthMask(previousDepthMask); });
+            }
+
+            auto BlendFunc(GLenum blendFuncName, GLenum blendFuncSFactor, GLenum blendFuncTFactor)
+            {
+                GLint previousBlendFuncTFactor;
+                glGetIntegerv(blendFuncName, &previousBlendFuncTFactor);
+                glBlendFunc(blendFuncSFactor, blendFuncTFactor);
+                return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() { glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor)); });
+            }
+        }
     }
 
     class System::Session::Impl
@@ -247,7 +301,9 @@ namespace xr
                 ArStatus status = ArSession_create(hmdImpl.Env(), hmdImpl.AppContext(), &session);
                 if (status != ArStatus::AR_SUCCESS)
                 {
-                    throw std::runtime_error{ "Failed to create ArSession with status " + status };
+                    std::ostringstream message;
+                    message << "Failed to create ArSession with status: " << status;
+                    throw std::runtime_error{ message.str() };
                 }
             }
 
@@ -265,7 +321,9 @@ namespace xr
                 ArStatus status = ArSession_resume(session);
                 if (status != ArStatus::AR_SUCCESS)
                 {
-                    throw std::runtime_error{ "Failed to start ArSession with status: " + status };
+                    std::ostringstream message;
+                    message << "Failed to start ArSession with status: " << status;
+                    throw std::runtime_error{ message.str() };
                 }
             }
         }
@@ -358,7 +416,7 @@ namespace xr
                 // Transform the UVs for the vertex positions given the current display size
                 ArFrame_transformCoordinates2d(
                     sessionImpl.session, sessionImpl.frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                    4, vertexPositions, AR_COORDINATES_2D_TEXTURE_NORMALIZED, sessionImpl.transformed_uvs);
+                    4, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, sessionImpl.transformed_uvs);
 
                 // Note that the UVs have been initialized (we don't need to do this again unless the display geometry changes)
                 sessionImpl.uvs_initialized = true;
@@ -373,88 +431,44 @@ namespace xr
         // Suppress rendering if the camera did not produce the first frame yet.
         // This is to avoid drawing possible leftover data from previous sessions if
         // the texture is reused.
-        int64_t frame_timestamp;
-        ArFrame_getTimestamp(m_sessionImpl.session, m_sessionImpl.frame, &frame_timestamp);
-        if (frame_timestamp != 0)
+        int64_t frameTimestamp{};
+        ArFrame_getTimestamp(m_sessionImpl.session, m_sessionImpl.frame, &frameTimestamp);
+        if (frameTimestamp)
         {
-/*
-            TODO cg: bind gl context used for rendering
-            auto success = eglMakeCurrent(m_sessionImpl.Display, m_sessionImpl.Surface, m_sessionImpl.Surface, m_sessionImpl.RenderContext);
-*/
-            GLint drawFboId;
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING, &drawFboId);
-            GLfloat old_clearColor[4];
-            glGetFloatv(GL_COLOR_CLEAR_VALUE, old_clearColor);
-            GLboolean old_glCullFace = glIsEnabled(GL_CULL_FACE);
-            GLboolean old_glDepthTest = glIsEnabled(GL_DEPTH_TEST);
-            GLboolean old_glBlend = glIsEnabled(GL_BLEND);
-            GLboolean old_glDepthMask;
-            glGetBooleanv(GL_DEPTH_WRITEMASK, &old_glDepthMask);
-            GLint old_glBlendFunc;
-            glGetIntegerv(GL_BLEND_SRC_ALPHA, &old_glBlendFunc);
+            auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(0);
+            auto cullFaceTransaction = GLTransactions::SetCapability(GL_CULL_FACE, false);
+            auto depthTestTransaction = GLTransactions::SetCapability(GL_DEPTH_TEST, false);
+            auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
+            auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
+            auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glViewport(0, 0, Views[0].ColorTextureSize.Width, Views[0].ColorTextureSize.Height);
-
-            glClearColor(0, 1, 0, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            glDisable(GL_CULL_FACE);
-            glDisable(GL_DEPTH_TEST);
-            glDisable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
             glUseProgram(m_sessionImpl.shader_program_);
-            glDepthMask(GL_FALSE);
 
-            auto uniform_texture_ = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraTexture");
-            glUniform1i(uniform_texture_, 0);
+            // Configure the quad vertex positions
+            auto vertexPositionsUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "vertexPositions");
+            glUniform2fv(vertexPositionsUniformLocation, 4, VERTEX_POSITIONS);
+
+            // Configure the camera texture
+            auto cameraTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraTexture");
+            glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
             glActiveTexture(GL_TEXTURE0);
-            GLint old_texture0Binding;
-            glGetIntegerv(GL_TEXTURE_BINDING_EXTERNAL_OES, &old_texture0Binding);
             glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_sessionImpl.cameraTextureId);
 
-            auto uniform_positions = glGetUniformLocation(m_sessionImpl.shader_program_, "vertexPositions");
-            glUniform2fv(uniform_positions, 4, vertexPositions);
+            // Configure the camera frame UVs
+            auto cameraFrameUVsUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraFrameUVs");
+            glUniform2fv(cameraFrameUVsUniformLocation, 4, m_sessionImpl.transformed_uvs);
 
-            auto uniform_uvs = glGetUniformLocation(m_sessionImpl.shader_program_, "cameraFrameUVs");
-            glUniform2fv(uniform_uvs, 4, m_sessionImpl.transformed_uvs);
+            // Configure the babylon render texture
+            auto babylonTextureUniformLocation = glGetUniformLocation(m_sessionImpl.shader_program_, "babylonTexture");
+            glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
+            glActiveTexture(GL_TEXTURE1);
+            auto babylonTextureId = (GLuint)(size_t)Views[0].ColorTexturePointer;
+            glBindTexture(GL_TEXTURE_2D, babylonTextureId);
 
-            auto uniform_texture_babylon = glGetUniformLocation(m_sessionImpl.shader_program_, "babylonTexture");
-            if (uniform_texture_babylon >= 0)
-            {
-                glUniform1i(uniform_texture_babylon, 1);
-                glActiveTexture(GL_TEXTURE1);
-                auto texId = (GLuint) (size_t) Views[0].ColorTexturePointer;
-                GLint old_texture1Binding;
-                glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_texture1Binding);
-                glBindTexture(GL_TEXTURE_2D, texId);
-            }
-
+            // Draw the quad
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-        //eglSwapBuffers(m_sessionImpl.Display, m_sessionImpl.Surface);
-
             glUseProgram(0);
-            //glDepthMask(GL_TRUE);
-            glClearColor(old_clearColor[0], old_clearColor[1], old_clearColor[2], old_clearColor[3]);
-            old_glCullFace ?
-            glEnable(GL_CULL_FACE) :
-            glDisable(GL_CULL_FACE);
-            old_glDepthTest ?
-            glEnable(GL_DEPTH_TEST) :
-            glDisable(GL_DEPTH_TEST);
-            old_glBlend ?
-            glEnable(GL_BLEND) :
-            glDisable(GL_BLEND);
-            old_glDepthMask ?
-            glDepthMask(GL_TRUE) :
-            glDepthMask(GL_FALSE);
-            glBlendFunc(GL_SRC_ALPHA, old_glBlendFunc);
-            glBindFramebuffer(GL_FRAMEBUFFER, drawFboId);
-
-
-            /* TODO CG: set back original gl context with eglMakeCurrent*/
         }
     }
 

@@ -11,6 +11,10 @@ if(WINDOWS_STORE)
     set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 endif()
 
+# -------------------------------- GSL -----------------------------------
+# Dependencies: none
+add_subdirectory(arcana.cpp/Source/Submodules/GSL)
+
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
