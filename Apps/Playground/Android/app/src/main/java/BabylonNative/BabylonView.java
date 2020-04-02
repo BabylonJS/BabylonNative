@@ -46,8 +46,8 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     public void surfaceCreated(SurfaceHolder holder) {
         BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), this.getContext());
         if (!this.mViewReady) {
-            mViewDelegate.onViewReady();
-            mViewReady = true;
+            this.mViewDelegate.onViewReady();
+            this.mViewReady = true;
         }
     }
 
