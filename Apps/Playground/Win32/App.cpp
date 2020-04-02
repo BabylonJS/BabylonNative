@@ -11,7 +11,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Polyfills/Console.h>
-#include <Babylon/NativeEnginePlugin.h>
+#include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/XMLHttpRequest.h>
@@ -105,8 +105,8 @@ namespace
             Babylon::Polyfills::Window::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::NativeEnginePlugin::InitializeGraphics(hWnd, width, height);
-            Babylon::NativeEnginePlugin::Initialize(env);
+            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize XMLHttpRequest plugin.
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());

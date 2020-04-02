@@ -12,10 +12,10 @@ else()
 endif()
 
 set(SOURCES
-    "Include/Babylon/NativeEnginePlugin.h"
+    "Include/Babylon/Plugins/NativeEngine.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
-    "Source/NativeEnginePlugin.cpp"
+    "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/ResourceLimits.cpp"
@@ -30,11 +30,11 @@ if(XR)
         "Source/NativeXr.h")
 endif()
 
-add_library(NativeEnginePlugin ${SOURCES})
+add_library(BabylonPluginsNativeEngine ${SOURCES})
 
-target_include_directories(NativeEnginePlugin PUBLIC "Include")
+target_include_directories(BabylonPluginsNativeEngine PUBLIC "Include")
 
-target_link_to_dependencies(NativeEnginePlugin
+target_link_to_dependencies(BabylonPluginsNativeEngine
     PUBLIC JsRuntime
     PRIVATE arcana
     PRIVATE bgfx
@@ -46,22 +46,22 @@ target_link_to_dependencies(NativeEnginePlugin
     PRIVATE BabylonPolyfillsWindowInternal)
 
 if(XR)
-    target_link_to_dependencies(NativeEnginePlugin
+    target_link_to_dependencies(BabylonPluginsNativeEngine
         PRIVATE xr)
-    target_compile_definitions(NativeEnginePlugin PRIVATE NATIVE_ENGINE_XR)
+    target_compile_definitions(BabylonPluginsNativeEngine PRIVATE NATIVE_ENGINE_XR)
 endif()
 
 if(APPLE)
-    target_link_to_dependencies(NativeEnginePlugin
+    target_link_to_dependencies(BabylonPluginsNativeEngine
         PRIVATE spirv-cross-msl)
 elseif(ANDROID)
     # Nothing to do.
 elseif(WIN32)
-    target_link_to_dependencies(NativeEnginePlugin
+    target_link_to_dependencies(BabylonPluginsNativeEngine
         PRIVATE "d3dcompiler.lib")
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics linking could not be performed")
 endif()
 
-set_property(TARGET NativeEnginePlugin PROPERTY FOLDER Plugins)
+set_property(TARGET BabylonPluginsNativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

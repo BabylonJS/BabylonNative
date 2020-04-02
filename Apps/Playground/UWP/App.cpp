@@ -1,6 +1,6 @@
 #include "App.h"
 
-#include <Babylon/NativeEnginePlugin.h>
+#include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
@@ -120,7 +120,7 @@ void App::Uninitialize()
     if (m_runtime)
     {
         m_runtime.reset();
-        Babylon::NativeEnginePlugin::DeinitializeGraphics();
+        Babylon::Plugins::NativeEngine::DeinitializeGraphics();
     }
 }
 
@@ -181,8 +181,8 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         Babylon::Polyfills::Window::Initialize(env, windowPtr, width, height);
 
         // Initialize NativeEngine plugin.
-        Babylon::NativeEnginePlugin::InitializeGraphics(windowPtr, width, height);
-        Babylon::NativeEnginePlugin::Initialize(env);
+        Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+        Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize XMLHttpRequest plugin.
         Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());

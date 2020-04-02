@@ -1,7 +1,7 @@
 #import "ViewController.h"
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/NativeEnginePlugin.h>
+#import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/XMLHttpRequest.h>
@@ -35,13 +35,13 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     float height = size.height;
     NSWindow* nativeWindow = [[self view] window];
     void* windowPtr = (__bridge void*)nativeWindow;
-    Babylon::NativeEnginePlugin::InitializeGraphics(windowPtr, width, height);
+    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
         Babylon::Polyfills::Window::Initialize(env, windowPtr, width, height);
     
-        Babylon::NativeEnginePlugin::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env);
         
         InitializeXMLHttpRequest(env);
 
@@ -65,7 +65,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
     inputBuffer.reset();
     runtime.reset();
-    Babylon::NativeEnginePlugin::DeinitializeGraphics();
+    Babylon::Plugins::NativeEngine::DeinitializeGraphics();
 }
 
 - (void)setRepresentedObject:(id)representedObject {

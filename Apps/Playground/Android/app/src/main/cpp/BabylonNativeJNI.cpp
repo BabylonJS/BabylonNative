@@ -9,7 +9,7 @@
 #include <android/log.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/NativeEnginePlugin.h>
+#include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
@@ -51,7 +51,7 @@ Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj)
     loader.reset();
     inputBuffer.reset();
     runtime.reset();
-    Babylon::NativeEnginePlugin::DeinitializeGraphics();
+    Babylon::Plugins::NativeEngine::DeinitializeGraphics();
 }
 
 JNIEXPORT void JNICALL
@@ -84,8 +84,8 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
 
             Babylon::Polyfills::Window::Initialize(env, window, width, height);
 
-            Babylon::NativeEnginePlugin::InitializeGraphics(window, width, height);
-            Babylon::NativeEnginePlugin::Initialize(env);
+            Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
@@ -112,7 +112,7 @@ Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jobject obj, jint width, 
         ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
         runtime->Dispatch([window, width, height](Napi::Env env)
         {
-            Babylon::NativeEnginePlugin::Reinitialize(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
+            Babylon::Plugins::NativeEngine::Reinitialize(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
         });
     }
 }
