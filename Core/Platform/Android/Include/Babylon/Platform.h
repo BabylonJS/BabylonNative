@@ -3,7 +3,7 @@
 #include <Babylon/JsRuntime.h>
 #include <jni.h>
 
-namespace Babylon::Plugins
+namespace Babylon
 {
     class Platform final
     {

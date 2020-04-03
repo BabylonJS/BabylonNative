@@ -107,12 +107,12 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
 
             Babylon::Polyfills::Window::Initialize(env);
 
-            Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
+            Babylon::InitializeXMLHttpRequest(env, g_runtime->RootUrl());
 
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
             g_inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-            InputManager::Initialize(jsRuntime, *inputBuffer);
+            InputManager::Initialize(jsRuntime, *g_inputBuffer);
         });
 
         g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime, g_runtime->RootUrl());

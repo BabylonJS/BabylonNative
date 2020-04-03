@@ -1,6 +1,6 @@
 #include <Babylon/Platform.h>
 
-namespace Babylon::Plugins
+namespace Babylon
 {
     namespace
     {
