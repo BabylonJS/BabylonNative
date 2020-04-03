@@ -181,7 +181,7 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
 
         Babylon::Polyfills::Window::Initialize(env);
 
-        Babylon::Plugins::NativeWindow(env, windowPtr, width, height);
+        Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
 
         // Initialize NativeEngine plugin.
         Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);

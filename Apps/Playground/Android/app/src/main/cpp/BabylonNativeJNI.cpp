@@ -85,7 +85,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
 
             Babylon::Polyfills::Window::Initialize(env);
 
-            Babylon::Polyfills::NativeWindow::Initialize(env, window, width, height);
+            Babylon::Plugins::NativeWindow::Initialize(env, window, width, height);
             Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
