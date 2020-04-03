@@ -5,7 +5,7 @@
 Welcome! Babylon Native is a collection of technologies intended to bring 
 the power and flexibility of Babylon.js to cross-platform applications beyond the 
 browser. The goal of this project is to allow the same JavaScript that powers Babylon.js 
-apps on the Web to work identically in native apps on Windows, Android, macOS, and iOS.
+apps on the Web to work identically in native apps on Windows, macOS, iOS, Android, and Linux.
 
 Check out [the project's announcement](https://medium.com/@babylonjs/babylon-native-821f1694fffc) 
 and [home page](https://aka.ms/Bnative) for more information.
@@ -87,6 +87,13 @@ Native's `.gitignore` file is already set up to ignore this `Build` directory).
 mkdir Build
 cd Build
 ```
+
+**NOTE:** CMake considers what are sometimes called "build flavors" (Win32 x86 versus 
+Win32 x64 versus UWP x64, etc.) to be entirely different build targets which should have
+separate build folders. For cross-platform development, we commonly use multiple 
+subfolders inside the Build folder, such as `Build/win32_x86` and `Build/uwp_x64`, to 
+house the builds for different platforms, with each subfolder treated just like the
+`Build` folder in the instructions below.
 
 ### **Building on Windows 10, Targeting Windows Desktop (Win32)**
 
