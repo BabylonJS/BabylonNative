@@ -2,6 +2,7 @@
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeWindow.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/XMLHttpRequest.h>
@@ -42,8 +43,9 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
-        Babylon::Polyfills::Window::Initialize(env, windowPtr, width, height);
-    
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
         Babylon::Plugins::NativeEngine::Initialize(env);
         
         InitializeXMLHttpRequest(env);
@@ -69,7 +71,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     {
         runtime->Dispatch([inWidth, inHeight](Napi::Env env)
         {
-            Babylon::Polyfills::Window::UpdateSize(env, static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+            Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
         });
     }
 }

@@ -10,6 +10,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
@@ -82,8 +83,9 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                 }
             });
 
-            Babylon::Polyfills::Window::Initialize(env, window, width, height);
+            Babylon::Polyfills::Window::Initialize(env);
 
+            Babylon::Polyfills::NativeWindow::Initialize(env, window, width, height);
             Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
 

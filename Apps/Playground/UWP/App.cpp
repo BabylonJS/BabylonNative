@@ -1,6 +1,7 @@
 #include "App.h"
 
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
@@ -178,7 +179,9 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
             OutputDebugStringA(message);
         });
 
-        Babylon::Polyfills::Window::Initialize(env, windowPtr, width, height);
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Plugins::NativeWindow(env, windowPtr, width, height);
 
         // Initialize NativeEngine plugin.
         Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
@@ -246,7 +249,7 @@ void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs
     size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
     m_runtime->Dispatch([width, height](Napi::Env env)
     {
-        Babylon::Polyfills::Window::UpdateSize(env, width, height);
+        Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
     });
 }
 

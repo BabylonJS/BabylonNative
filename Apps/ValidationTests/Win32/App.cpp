@@ -15,6 +15,7 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
@@ -74,10 +75,12 @@ namespace
                 OutputDebugStringA(message);
             });
 
+            Babylon::Polyfills::Window::Initialize(env);
+
             // Initialize NativeWindow plugin.
             auto width = static_cast<float>(rect.right - rect.left);
             auto height = static_cast<float>(rect.bottom - rect.top);
-            Babylon::Polyfills::Window::Initialize(env, hWnd, width, height);
+            Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
             Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
@@ -232,7 +235,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 size_t height = static_cast<size_t>(HIWORD(lParam));
                 runtime->Dispatch([width, height](Napi::Env env)
                 {
-                    Babylon::Polyfills::Window::UpdateSize(env, width, height);
+                    Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
                 });
             }
             break;

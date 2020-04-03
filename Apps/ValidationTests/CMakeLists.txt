@@ -34,6 +34,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE bx
     PRIVATE AppRuntime
     PRIVATE NativeEngine
+    PRIVATE NativeWindow
     PRIVATE Console
     PRIVATE Window
     PRIVATE ScriptLoader

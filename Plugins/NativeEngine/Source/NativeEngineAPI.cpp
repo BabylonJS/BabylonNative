@@ -33,7 +33,7 @@ namespace Babylon::Plugins::NativeEngine
         bgfx::setPlatformData(pd);
         bgfx::reset(width, height);
 
-        auto& window = Polyfills::Internal::NativeWindow::GetFromJavaScript(env);
+        auto& window = Plugins::Internal::NativeWindow::GetFromJavaScript(env);
         window.Resize(width, height);
     }
 

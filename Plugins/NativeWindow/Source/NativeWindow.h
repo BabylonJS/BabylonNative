@@ -3,7 +3,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/TicketedCollection.h>
 
-namespace Babylon::Polyfills::Internal
+namespace Babylon::Plugins::Internal
 {
     class NativeWindow : public Napi::ObjectWrap<NativeWindow>
     {
@@ -32,12 +32,5 @@ namespace Babylon::Polyfills::Internal
         size_t m_height{};
 
         TicketedCollection<OnResizeCallback> m_onResizeCallbacks{};
-
-        static void SetTimeout(const Napi::CallbackInfo& info);
-        static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
-        static void AddEventListener(const Napi::CallbackInfo& info);
-        static void RemoveEventListener(const Napi::CallbackInfo& info);
-
-        void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
     };
 }

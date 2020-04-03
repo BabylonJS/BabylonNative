@@ -59,6 +59,7 @@ target_link_libraries(BabylonNativeJNI
         -lz
         AppRuntime
         NativeEngine
+        NativeWindow
         Console
         Window
         ScriptLoader
