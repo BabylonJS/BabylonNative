@@ -242,6 +242,7 @@ the selected Babylon Native demo app.
 [Android Studio](https://developer.android.com/studio), [Nodejs](https://nodejs.org/en/download/)
 
 The minimal requirement target is Android 5.0 with an OpenGL ES 3.0 compatible GPU.
+
 Only building with AndroidStudio is supported. CMake is not used directly. Instead, 
 Gradle is used for building and CMake is automatically invocated for building the native part.
 An .apk that can be executed on your device or simulator is the output.
