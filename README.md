@@ -204,6 +204,7 @@ the selected Babylon Native demo app.
 [Python 3.0](https://www.python.org/) or newer (required by dependencies)
 
 This has been tested on MacOS Catalina (10.15) and iOS 13.
+
 For macOS development, CMake by default will generate a Makefile. It may be possible
 to build Babylon Native for macOS using this approach, but at present only the Xcode
 method is supported. To generate an Xcode project using CMake, you must specify the
