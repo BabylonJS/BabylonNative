@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "react": "16.9.0",
-    "react-native": "0.61.5"
+    "react-native": "0.61.5",
+    "react-native-babylon": "./node_modules/react-native-babylon"
   },
   "devDependencies": {
     "@babel/core": "^7.6.2",
