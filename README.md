@@ -5,7 +5,8 @@
 Welcome! Babylon Native is a collection of technologies intended to bring 
 the power and flexibility of Babylon.js to cross-platform applications beyond the 
 browser. The goal of this project is to allow the same JavaScript that powers Babylon.js 
-apps on the Web to work identically in native apps on Windows, macOS, iOS, Android, and Linux.
+apps on the Web to work identically in native apps on Windows, macOS, iOS, Android, and 
+Linux.
 
 Check out [the project's announcement](https://medium.com/@babylonjs/babylon-native-821f1694fffc) 
 and [home page](https://aka.ms/Bnative) for more information.
@@ -51,7 +52,15 @@ but are expected to be supported in the future. Note that this list is not exhau
 This section will be updated frequently. If you have any questions, please reach out
 to us on [the Babylon forum](https://forum.babylonjs.com).
 
-## Getting Started
+## Build System and Extensions
+
+The Babylon Native build system strives for simplicity, modularity, and scalability
+using a lateral dependency management strategy founded on Git Submodules and CMake 
+targets. For specifics, please read our detailed documentation on
+[The Babylon Native Build System](Documentation/BuildSystem.md) and
+[Extending Babylon Native](Documentation/Extending.md).
+
+## Quick Start Guide
 
 This quick overview will help you get started developing in the Babylon Native 
 repository. We support development on Windows and macOS. (It is also possible, 
@@ -245,8 +254,8 @@ the selected Babylon Native demo app.
 [Android Studio](https://developer.android.com/studio), [Nodejs](https://nodejs.org/en/download/)
 
 Only building with AndroidStudio is supported. CMake is not used directly. Instead, 
-Gradle is used for building and CMake is automatically invocated for building the native part.
-An .apk that can be executed on your device or simulator is the output.
+Gradle is used for building and CMake is automatically invocated for building the native 
+part. An .apk that can be executed on your device or simulator is the output.
 First step is to install the Javascript engines dependencies. This is done by nodejs npm 
 package system.
 
@@ -255,19 +264,19 @@ cd Apps\Playground\Android
 npm install
 ```
 
-Babylon Native on Android supports two Javascript engines: V8 and JavaScriptCore. V8 is used 
-by default if no engine is specified. To change the engine to JavaScriptCore, open the file 
-*Apps\Playground\Android\gradle.properties* and add the following line:
+Babylon Native on Android supports two Javascript engines: V8 and JavaScriptCore. V8 is 
+used  by default if no engine is specified. To change the engine to JavaScriptCore, open 
+the file *Apps\Playground\Android\gradle.properties* and add the following line:
 
 ```
 JSEngine=jsc
 ```
 
-Once the npm packages are installed, with AndroidStudio, open the project located at *Apps\Playground\Android*.
-Then in the menu, select Run->Run 'app'.
-If you don't have an Android device plugged in or no Android image in the Android simulator,
-that option will be greyed and inaccessible.
-Instructions and tips on how to install the simulator are [available here](Documentation/AndroidSimulator.md).
+Once the npm packages are installed, with AndroidStudio, open the project located at 
+*Apps\Playground\Android*. Then in the menu, select Run->Run 'app'. If you don't have an 
+Android device plugged in or no Android image in the Android simulator, that option will 
+be greyed and inaccessible. Instructions and tips on how to install the simulator are
+[available here](Documentation/AndroidSimulator.md).
 
 ## Development Notes
 
