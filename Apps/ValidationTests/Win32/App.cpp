@@ -13,9 +13,10 @@
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Console.h>
-#include <Babylon/NativeWindow.h>
-#include <Babylon/NativeEngine.h>
+#include <Babylon/Polyfills/Console.h>
+#include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeWindow.h>
+#include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
 
@@ -63,28 +64,43 @@ namespace
         }
 
         runtime.reset();
+/*<<<<<<< HEAD
+=======
+        Babylon::Plugins::NativeEngine::DeinitializeGraphics();
+>>>>>>> 1ad839f2df709e375a35861104b3b4818226dba3
+*/
         runtime = std::make_unique<Babylon::AppRuntime>(GetUrlFromPath(GetModulePath().parent_path().parent_path()));
 
         // Initialize console plugin.
         runtime->Dispatch([rect, hWnd](Napi::Env env)
         {
-            Babylon::Console::CreateInstance(env, [](const char* message, auto)
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
             });
 
+//<<<<<<< HEAD
+            Babylon::Polyfills::Window::Initialize(env);
             // Initialize NativeWindow plugin to the test size.
             // TODO: TestUtils::UpdateSize should do it properly but the client size
             // is not forwarded correctly to the rendering. Find why.
-            auto width = 600;
-            auto height = 400;
-            Babylon::NativeWindow::Initialize(env, hWnd, width, height);
+            auto width = 600;//static_cast<float>(rect.right - rect.left);
+            auto height = 400;//static_cast<float>(rect.bottom - rect.top);
+            Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
+            /*auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
+=======
+            
 
+            // Initialize NativeWindow plugin.
+            auto width = static_cast<float>(rect.right - rect.left);
+            auto height = static_cast<float>(rect.bottom - rect.top);
+            Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
+>>>>>>> 1ad839f2df709e375a35861104b3b4818226dba3
+*/
             // Initialize NativeEngine plugin.
-            Babylon::InitializeGraphics(hWnd, width, height);
-            Babylon::InitializeNativeEngine(env);
+            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize XMLHttpRequest plugin.
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
@@ -236,8 +252,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 size_t height = static_cast<size_t>(HIWORD(lParam));
                 runtime->Dispatch([width, height](Napi::Env env)
                 {
-                    auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
-                    window.Resize(width, height);
+                    Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
                 });
             }
             break;
@@ -247,6 +262,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             short exitCode = LOWORD(wParam);
             runtime.reset();
             PostQuitMessage(exitCode);
+            //Babylon::Plugins::NativeEngine::DeinitializeGraphics();
             break;
         }
         case WM_KEYDOWN:
