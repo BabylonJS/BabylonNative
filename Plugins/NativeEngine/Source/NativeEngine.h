@@ -373,6 +373,7 @@ namespace Babylon
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
         void SetTexture(const Napi::CallbackInfo& info);
         void DeleteTexture(const Napi::CallbackInfo& info);
+        void UpdateRawTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         void DeleteFrameBuffer(const Napi::CallbackInfo& info);
         void BindFrameBuffer(const Napi::CallbackInfo& info);
@@ -389,10 +390,6 @@ namespace Babylon
         Napi::Value GetFramebufferData(const Napi::CallbackInfo& info);
 
         void UpdateSize(size_t width, size_t height);
-
-        Napi::Value DecodeImage(const Napi::CallbackInfo& info);
-        Napi::Value GetImageData(const Napi::CallbackInfo& info);
-        Napi::Value EncodeImage(const Napi::CallbackInfo& info);
 
         arcana::cancellation_source m_cancelSource{};
 

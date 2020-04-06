@@ -265,6 +265,10 @@ namespace Babylon
 
         void CreateTextureFromImage(bx::AllocatorI* allocator, TextureData* texture, bimg::ImageContainer* image)
         {
+            if (image == nullptr)
+            {
+                return;
+            }
             auto releaseFn = [](void* ptr, void* userData) {
                 bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
             };
@@ -391,6 +395,7 @@ namespace Babylon
                 InstanceMethod("setTextureWrapMode", &NativeEngine::SetTextureWrapMode),
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 InstanceMethod("setTexture", &NativeEngine::SetTexture),
+                InstanceMethod("updateRawTexture", &NativeEngine::UpdateRawTexture),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("createFramebuffer", &NativeEngine::CreateFrameBuffer),
                 InstanceMethod("deleteFramebuffer", &NativeEngine::DeleteFrameBuffer),
@@ -406,9 +411,6 @@ namespace Babylon
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
-                InstanceMethod("decodeImage", &NativeEngine::DecodeImage),
-                InstanceMethod("getImageData", &NativeEngine::GetImageData),
-                InstanceMethod("encodeImage", &NativeEngine::EncodeImage),
             });
 
         env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
@@ -1002,51 +1004,6 @@ namespace Babylon
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
     }
 
-    Napi::Value NativeEngine::DecodeImage(const Napi::CallbackInfo& info)
-    {
-        auto imageData = new ImageData();
-        const auto buffer = info[0].As<Napi::ArrayBuffer>();
-
-        imageData->Image.reset(bimg::imageParse(&m_allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength())));
-
-        return Napi::External<ImageData>::New(info.Env(), imageData);
-    }
-
-    Napi::Value NativeEngine::GetImageData(const Napi::CallbackInfo& info)
-    {
-        const auto imageData = info[0].As<Napi::External<ImageData>>().Data();
-
-        if (!imageData->Image || !imageData->Image->m_size)
-        {
-            return info.Env().Undefined();
-        }
-
-        auto data = Napi::Uint8Array::New(info.Env(), imageData->Image->m_size);
-        const auto ptr = static_cast<uint8_t*>(imageData->Image->m_data);
-        memcpy(data.Data(), ptr, imageData->Image->m_size);
-
-        return data;
-    }
-
-    Napi::Value NativeEngine::EncodeImage(const Napi::CallbackInfo& info)
-    {
-        const auto imageData = info[0].As<Napi::External<ImageData>>().Data();
-        if (!imageData->Image || !imageData->Image->m_size)
-        {
-            return info.Env().Undefined();
-        }
-
-        const auto image = imageData->Image.get();
-        bx::MemoryBlock mb(&m_allocator);
-        bx::MemoryWriter writer(&mb);
-        bimg::imageWritePng(&writer, image->m_width, image->m_height, image->m_size / image->m_height, image->m_data, image->m_format, false);
-
-        auto data = Napi::Uint8Array::New(info.Env(), mb.getSize());
-        memcpy(data.Data(), static_cast<uint8_t*>(mb.more()), imageData->Image->m_size);
-
-        return data;
-    }
-
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
@@ -1059,15 +1016,19 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, generateMips, invertY]() {
+            [this, dataSpan, generateMips, invertY, onErrorRef = Napi::Shared(onError)]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), dataSpan.size());
-                if (invertY)
+                // trying to parse something that is not an image will return null
+                if (image)
                 {
-                    FlipY(image);
-                }
-                if (generateMips)
-                {
-                    GenerateMips(&m_allocator, &image);
+                    if (invertY)
+                    {
+                        FlipY(image);
+                    }
+                    if (generateMips)
+                    {
+                        GenerateMips(&m_allocator, &image);
+                    }
                 }
                 return image;
             })
@@ -1250,6 +1211,47 @@ namespace Babylon
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         delete texture;
+    }
+
+    void NativeEngine::UpdateRawTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto data = info[1].As<Napi::TypedArray>();
+        uint16_t width = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        uint16_t height = static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value());
+
+
+        const auto generateMips = info[5].As<Napi::Boolean>().Value();
+        const auto invertY = info[6].As<Napi::Boolean>().Value();
+
+        const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
+        /*
+        arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
+            [this, dataSpan, generateMips, invertY]() {
+                bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), dataSpan.size());
+                if (invertY)
+                {
+                    FlipY(image);
+                }
+                if (generateMips)
+                {
+                    GenerateMips(&m_allocator, &image);
+                }
+                return image;
+            })
+            .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRef = Napi::Shared(data)](bimg::ImageContainer* image) {
+                CreateTextureFromImage(&m_allocator, texture, image);
+            })
+                .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess)]() {
+                onSuccessRef.Value().Call({ Napi::Value::From(Env(), true) });
+            })
+                .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Shared(onError)](arcana::expected<void, std::exception_ptr> result) {
+                if (result.has_error())
+                {
+                    onErrorRef.Value().Call({ Napi::Value::From(Env(), true) });
+                }
+            });
+            */
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)

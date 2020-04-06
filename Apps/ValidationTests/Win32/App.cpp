@@ -63,7 +63,6 @@ namespace
         }
 
         runtime.reset();
-        Babylon::DeinitializeGraphics();
         runtime = std::make_unique<Babylon::AppRuntime>(GetUrlFromPath(GetModulePath().parent_path().parent_path()));
 
         // Initialize console plugin.
@@ -74,9 +73,11 @@ namespace
                 OutputDebugStringA(message);
             });
 
-            // Initialize NativeWindow plugin.
-            auto width = static_cast<float>(rect.right - rect.left);
-            auto height = static_cast<float>(rect.bottom - rect.top);
+            // Initialize NativeWindow plugin to the test size.
+            // TODO: TestUtils::UpdateSize should do it properly but the client size
+            // is not forwarded correctly to the rendering. Find why.
+            auto width = 600;
+            auto height = 400;
             Babylon::NativeWindow::Initialize(env, hWnd, width, height);
 
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
@@ -92,6 +93,7 @@ namespace
         });
 
         Babylon::ScriptLoader loader{*runtime, runtime->RootUrl()};
+        loader.Eval("localStorage = { setItem: function(a, b) { }, removeItem(a) { }}", "def");
         loader.LoadScript("Scripts/babylon.max.js");
         loader.LoadScript("Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript("Scripts/babylonjs.materials.js");
@@ -242,9 +244,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_DESTROY:
         {
+            short exitCode = LOWORD(wParam);
             runtime.reset();
-            Babylon::DeinitializeGraphics();
-            PostQuitMessage(0);
+            PostQuitMessage(exitCode);
             break;
         }
         case WM_KEYDOWN:
