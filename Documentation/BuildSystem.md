@@ -104,9 +104,90 @@ In summary, lateral dependency management allows the dependency structure of a r
 to scale *out* instead of *up*. It does this by treating submodule dependencies not as 
 independent, self-contained libraries, but as modular components intended to function as 
 part of an assemblage, the implementation of which is the responsibility of the root-level
-repository. The following sections describe how this idea is implemented within the Babylon
-Native build system.
+repository. The following sections describe how this idea is implemented within the 
+Babylon Native build system.
 
-## Components as Submodules
+## Babylon Native Components
+
+As a concept, lateral dependency management lends itself particularly well to highly
+moduler, componentized architectures. The Babylon Native build system is designed to 
+leverage this strength, providing virtually all of its capabilities as modular components
+that can be assembled, recombined, excluded, and/or replaced with relative ease. These
+components fall into four principle categories, which are reflected in the top-level
+structure of the repository.
+
+- [**`Dependencies`**](https://github.com/BabylonJS/BabylonNative/tree/master/Dependencies): 
+As mentioned in a prior section, it is not always possible to get every dependency to 
+conform to the laterally-focused patterns used in Babylon Native, particularly when the 
+dependency is on external and/or pre-existing code. Dependencies of this description are
+contained in the `Dependencies` folder, along with "adapter" mechanisms to allow the
+dependency to be consumed by other components that do follow the lateral dependency
+management pattern. An example of this can be seen in the 
+[adapter code for `base-n`](https://github.com/BabylonJS/BabylonNative/blob/345d5bbffc8245f41d4fbd23efc13c0161b15244/Dependencies/CMakeLists.txt#L14-L17); 
+because the `base-n` dependency does not provide a CMake target for other components to 
+link to by name, we simply add one for it from outside the submodule so that this name
+can be consumed by other components like the 
+[`Window` polyfill](https://github.com/BabylonJS/BabylonNative/blob/74878d6ce9f3568b334029094fe100aa8834eca0/Polyfills/Window/CMakeLists.txt#L13).
+- [**`Core`**](https://github.com/BabylonJS/BabylonNative/tree/master/Core): Components in
+the `Core` folder are the most foundational of all Babylon Native components. The most 
+prominent among these is 
+[`JsRuntime`](https://github.com/BabylonJS/BabylonNative/tree/master/Core/JsRuntime), 
+which is unique in its centrality (nearly every other Babylon Native component is expected 
+to depend on it), but other miscellaneous fundamental components also reside within this 
+folder. `Core` components have two distinguishing characteristics: (1) they must be 
+extremely fundamental Babylon Native components with no dependencies outside the `Core` and 
+`Dependencies` folders; and (2) **their primary focus should be to expose functionality to 
+the native (C++) layer**. `JsRuntime` is the archetypical `Core` component: it is 
+foundational, it has few dependencies, and it provides the primary mechanism with which 
+other C++ components can interact with the JavaScript layer.
+- [**`Plugins`**](https://github.com/BabylonJS/BabylonNative/tree/master/Plugins): Components
+in the `Plugins` folder differ from those in `Core` on both of the latter group's 
+distinguishing axes. Firstly, `Plugins` are not expected to be foundational and can have 
+many dependencies on other components from the `Plugins`, `Core`, and `Dependencies` 
+folders. More importantly, however, `Plugins` differ from `Core` components in that 
+**their primary focus should be to expose functionality to the JavaScript layer**. 
+Often, but not always, `Plugins` expose functionality by exposing *new types* to 
+JavaScript; it is common (though not  required) for these new types to be implemented as C++
+types exposed to JavaScript through `N-API`. 
+[`NativeEngine`](https://github.com/BabylonJS/BabylonNative/tree/master/Plugins/NativeEngine)
+is by far the most important and sophisticated `Plugins` component provided by the Babylon 
+Native repository.
+- [**`Polyfills`**](https://github.com/BabylonJS/BabylonNative/tree/master/Polyfills): 
+As the name implies, components in the `Polyfills` folder exist to "polyfill" common 
+capabilities needed by JavaScript libraries.
+[`Console`](https://github.com/BabylonJS/BabylonNative/tree/master/Polyfills/Console), for
+example, polyfills the `console.log()` capability frequently used in JavaScript. Because 
+they have few dependency constraints and are intended to expose functionality to
+JavaScript, `Polyfills` are very similar to `Plugins`, but with two important differences.
+Firstly, whereas `Plugins` often expose functionality by exposing *new* JavaScript types, 
+**`Polyfills` *must* expose their functionality by providing implementations for 
+well-known, pre-existing JavaScript capabilities** such as browser features. Secondly,
+whereas `Plugins` can be a dependency for another component and can even depend on other
+`Plugins`, **no Babylon Native component can ever depend on a `Polyfill`**. Note that this
+second restriction does not extend into JavaScript; the fact that the capability is 
+polyfilled is an implementation detail of the native layer and should not affect 
+implementations in JavaScript. Only native, C++ components are explicitly disallowed from
+depending on `Polyfills`.
+
+Babylon Native components from all four of these categories are all intended to be combined 
+and reassembled in different ways for different projects. They are also all designed to 
+follow the same lateral dependency management pattern 
+[described in more detail below](#connecting-it-all-with-cmake). (The exception, of 
+course, is the `Dependencies` folder, where there are a number of external dependencies 
+that do not conform to Babylon Native's conventions.) For this reason, every Babylon Native 
+component can be thought of "philosophically" as a Git submodule. Note that not every 
+component actually *is* a submodule; so far, we have not found it worthwhile to carry the 
+concept to that extreme since most of the provided components are lightweight and/or 
+co-occur in almost every consumption scenario. However, every Babylon Native component 
+*could* be separated out into its own repository; its place in the Babylon Native repo 
+would subsequently be filled by the new repository as a submodule. This idea -- that 
+components are submodules, in concept even when not in fact -- is the cornerstone principle 
+of Babylon Native's lateral dependency management architecture. The benefits of this 
+architecture are explored further in the documentation on 
+[extending Babylon Native](Extending.md).
 
 ## Connecting It All With CMake
+
+The work table metaphor...
+
+Lorem ipsum dolor sit amet...
