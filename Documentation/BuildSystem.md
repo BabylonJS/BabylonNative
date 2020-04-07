@@ -188,6 +188,64 @@ architecture are explored further in the documentation on
 
 ## Connecting It All With CMake
 
-The work table metaphor...
+The implementation of the Babylon Native build system is based on the use of CMake targets
+to allow the lateral dependency management strategy described above to function. The 
+high-level workflow of the build is to process all the component folders -- `Dependencies`,
+`Core`, `Plugins`, and `Polyfills`, respectively -- in order to "discover" all the CMake
+targets, which become addressable by name as they are "discovered." Finally, the `Apps` 
+folder is processed, whereupon the provided demo applications (notably the 
+[Playground](https://github.com/BabylonJS/BabylonNative/tree/master/Apps/Playground))
+assemble their dependencies with a small amount of 
+[glue code](https://github.com/BabylonJS/BabylonNative/blob/74878d6ce9f3568b334029094fe100aa8834eca0/Apps/Playground/Win32/App.cpp#L96-L120)
+into the final executable program.
 
-Lorem ipsum dolor sit amet...
+This build process, in which different side-by-side folders are processed in order to 
+"discover" the CMake targets they expose, can be thought as a sort of metaphorical 
+craftsman's table on which we will try to make our app. When we begin, there is nothing
+on our craftsman's table; we have no tools yet, so we can only process things that have
+no dependencies. In the example from the diagram near the beginning of this document, 
+the components that have no dependencies are `Dependency A.1/B.1`, `Dependency A.2`, 
+`Dependency C.1`, and `Dependency C.2`. Because these do not depend on each other, the
+order in which they are processed does not matter, so we arbitrarily choose to process
+them in the order listed. As each of these folders is processed, it "leaves behind" the 
+named CMake target(s) it exposes: `dependency-x-1`, `dependency-a-2`, and so on. Each of
+these named targets can be thought of as a new tool which has been put on our metaphorical
+craftsman's table; and now that we have these tools, we can use them to make *more* tools: 
+`Dependency A`, `Dependency B`, `Dependency C`, and finally the `Root Project` itself.
+
+As this metaphor illustrates, the relative locations of the different components used in a
+build do not matter because components never interact with each other directly. This system
+is also indifferent to version numbers and even API-compatible implementation 
+substitutions. The only requirement in order for a build such as this to succeed is that,
+at the time a component is "put on the table" to be processed, all the tools (CMake target
+names) on which it depends must already be available. Consequently, the implementation of
+the Babylon Native build system must simply enforce (1) that all the required dependencies
+are available and (2) that they are processed in the correct order.
+
+Because order matters, the order in which the component folders are processed also enforces
+constraints on the dependencies of the various components. No component can depend on 
+another component which is processed after it. Consequently, `Dependencies` can only
+depend on other `Dependencies`; `Core` components can depend on other `Core` components as
+well as `Dependencies`; `Plugins` can depend on components in `Plugins`, `Core`, or 
+`Dependencies`; and `Polyfills` can depend on components in any of the four folders. Note
+that this build system is incapable of describing a circular dependency.
+
+In summary, the Babylon Native build system functions by traversing a laterally organized
+list of components organized into component folders distinguished by category: 
+`Dependencies`, `Core`, `Plugins`, and `Polyfills`. The build invokes each of these folders
+in turn. Each component folder contains its own `CMakeLists.txt` which determines the order
+in which components are processed. (In the case of `Dependencies`, this `CMakeLists.txt` 
+also provides adaptation mechanisms for some external libraries.) This causes the build
+to invoke each of the components in turn. Each component contains a `CMakeLists.txt` that
+provides for its own build instructions, links to its dependencies by name, and exposes
+its own named CMake target to be linked to by other components or applications later in 
+the build. In this way, the list of available CMake targets grows over time as the build
+traverses the list of components from beginning to end. Finally, when all components have
+been processed, the build system invokes the `Apps` folder, which creates the final targets
+that consume and assemble the various Babylon Native components to build the final
+executable program.
+
+This concludes the description of how the Babylon Native build system works within itself.
+For further discussion of how this can be modified, extended, or externally consumed,
+please refer to the documentation page about 
+[Extending Babylon Native](Extending.md).
