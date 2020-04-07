@@ -14,7 +14,7 @@ endif()
 set(SOURCES
     "Include/UrlLib/UrlLib.h"
     "Source/Shared/UrlRequest.h"
-    "Source/${PLATFORM}/UrlRequest.cpp")
+    "Source/${PLATFORM}/UrlLib.cpp")
 
 add_library(UrlLib ${SOURCES})
 
