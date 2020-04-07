@@ -53,27 +53,12 @@ set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Enables building of SPVRemapper")
 set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-remap")
 set(ENABLE_HLSL OFF CACHE BOOL "Enables HLSL input support")
 set(ENABLE_OPT OFF CACHE BOOL "Enables spirv-opt capability if present")
+set(BUILD_EXTERNAL OFF CACHE BOOL "Build external dependencies in /External")
 add_subdirectory(glslang)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
-
-# -------------------------------- openssl --------------------------------
-# Dependencies: none
-if(ANDROID)
-    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl")
-    set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openssl/openssl/include")
-    set(OPENSSL_CRYPTO_LIBRARY crypto.a)
-    set(OPENSSL_SSL_LIBRARY ssl.a)
-    set(OPENSSL_USE_STATIC_LIBS TRUE)
-    add_subdirectory(openssl)
-
-    set_property(TARGET SSL PROPERTY FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/openssl")
-    set_property(TARGET Crypto PROPERTY FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/openssl")
-    set(OpenSSLStatic_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openssl")
-    find_package(OpenSSLStatic)
-endif()
 
 # -------------------------------- ios-cmake --------------------------------
 # Nothing to do here.
@@ -85,6 +70,7 @@ set_property(TARGET napi PROPERTY FOLDER Dependencies)
 
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Enable SPIRV-Cross tests.")
 add_subdirectory(SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
@@ -100,31 +86,6 @@ if(WIN32 OR WINDOWS_STORE)
     set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
     set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
     set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-endif()
-
-# -------------------------------- curl --------------------------------
-# Dependencies: openssl (indirect), 
-if(NOT APPLE)
-    if(ANDROID)
-        set(CURL_CA_BUNDLE "none" CACHE FILEPATH "Path to SSL CA Certificate Bundle")
-        set(CURL_CA_PATH "none" CACHE PATH "Path to SSL CA Certificate Directory")
-    endif()
-
-    if(WIN32)
-        set(CMAKE_USE_WINSSL ON CACHE BOOL "Set cURL to use WinSSL by default.")
-    else()
-        set(CMAKE_USE_WINSSL OFF CACHE BOOL "Set cURL to use WinSSL by default.")
-    endif()
-
-    add_subdirectory(curl)
-    set_property(TARGET libcurl PROPERTY FOLDER Dependencies)
-
-    # TODO: Certain parts of cURL's functionality are gated behind WINAPI checks
-    # that cause the functionality to become unavailable in UWP. Find a better way 
-    # to ensure that functionality is enabled, then remove the following workaround.
-    if(WINDOWS_STORE)
-        target_compile_definitions(libcurl PRIVATE "WINAPI_PARTITION_DESKTOP=1")
-    endif()
 endif()
 
 # -------------------------------- BabylonNativeUtils --------------------------------
