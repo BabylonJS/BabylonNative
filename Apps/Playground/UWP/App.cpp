@@ -188,7 +188,7 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
         InputManager::Initialize(jsRuntime, *inputBuffer);
     });
 
-    Babylon::ScriptLoader loader{*m_runtime, m_runtime->RootUrl()};
+    Babylon::ScriptLoader loader{*m_runtime};
     loader.Eval("document = {}", "");
     loader.LoadScript(appUrl + "/Scripts/ammo.js");
     loader.LoadScript(appUrl + "/Scripts/recast.js");
@@ -198,7 +198,7 @@ concurrency::task<void> App::RestartRuntimeAsync(Windows::Foundation::Rect bound
 
     if (m_fileActivatedArgs == nullptr)
     {
-        loader.LoadScript("Scripts/experience.js");
+        loader.LoadScript(appUrl + "/Scripts/experience.js");
     }
     else
     {

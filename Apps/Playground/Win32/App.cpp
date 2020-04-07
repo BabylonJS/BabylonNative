@@ -116,7 +116,7 @@ namespace
             InputManager::Initialize(jsRuntime, *inputBuffer);
         });
 
-        Babylon::ScriptLoader loader{*runtime, runtime->RootUrl()};
+        Babylon::ScriptLoader loader{*runtime};
         loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
@@ -126,7 +126,7 @@ namespace
 
         if (scripts.empty())
         {
-            loader.LoadScript("Scripts/experience.js");
+            loader.LoadScript(moduleRootUrl + "/Scripts/experience.js");
         }
         else
         {

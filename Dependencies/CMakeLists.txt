@@ -7,7 +7,7 @@ add_subdirectory(BabylonNativeCMakeFunctions)
 # -------------------------------- arcana --------------------------------
 # Dependencies: none
 add_subdirectory(arcana.cpp)
-if(WINDOWS_STORE)
+if(WIN32)
     set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 endif()
 
@@ -89,7 +89,10 @@ if(WIN32 OR WINDOWS_STORE)
 endif()
 
 # -------------------------------- BabylonNativeUtils --------------------------------
-# Dependencies: arcana, curl (not for Apple)
-
+# Dependencies: none
 add_subdirectory(BabylonNativeUtils)
-set_property(TARGET BabylonNativeUtils PROPERTY FOLDER Dependencies)
+
+# -------------------------------- UrlLib --------------------------------
+# Dependencies: arcana
+add_subdirectory(UrlLib)
+set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)

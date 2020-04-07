@@ -7,7 +7,7 @@ namespace Babylon
     class Console final : public Napi::ObjectWrap<Console>
     {
     public:
-        static inline constexpr char* JS_INSTANCE_NAME{"console"};
+        static inline constexpr const char* JS_INSTANCE_NAME{"console"};
 
         /**
          * Importance level of messages sent via logging callbacks.
