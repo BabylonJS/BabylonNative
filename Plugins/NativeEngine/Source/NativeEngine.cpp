@@ -326,6 +326,11 @@ namespace Babylon
         bgfx::touch(0);
     }
 
+    void NativeEngine::DeinitializeWindow()
+    {
+        bgfx::shutdown();
+    }
+
     void NativeEngine::Initialize(Napi::Env env)
     {
         // Initialize the JavaScript side.
@@ -410,11 +415,11 @@ namespace Babylon
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
-        : NativeEngine(info, NativeWindow::GetFromJavaScript(info.Env()))
+        : NativeEngine(info, Plugins::Internal::NativeWindow::GetFromJavaScript(info.Env()))
     {
     }
 
-    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, NativeWindow& nativeWindow)
+    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, Plugins::Internal::NativeWindow& nativeWindow)
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
@@ -459,8 +464,6 @@ namespace Babylon
 
         // This collection contains bgfx data, so it must be cleared before bgfx::shutdown is called.
         m_programDataCollection.Clear();
-
-        bgfx::shutdown();
     }
 
     void NativeEngine::Dispose(const Napi::CallbackInfo& info)
