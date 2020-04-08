@@ -76,7 +76,7 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
             currentScene.activeCamera.useAutoRotationBehavior = false;
         }
         engine.runRenderLoop(function() {
-            //try {
+            try {
                 currentScene.render();
                 renderCount--;
 
@@ -84,11 +84,11 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
                     engine.stopRenderLoop();
                     evaluate(test, resultCanvas, result, renderImage, index, waitRing, done);
                 }
-            /*}
+            }
             catch (e) {
                 console.error(e);
                 done(false);
-            }*/
+            }
         });
     });
 }
@@ -268,8 +268,6 @@ function runTest(index, done) {
     BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
 }
 
-
-
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 var canvas = window;
@@ -305,9 +303,7 @@ document = {
     }
 }
 
-
 var xhr = new XMLHttpRequest();
-
 xhr.open("GET", "Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
