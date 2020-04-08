@@ -274,9 +274,12 @@ var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 var canvas = window;
 
-
 engine.getRenderingCanvas = function () {
     return window;
+}
+
+engine.getInputElement = function () {
+    return 0;
 }
 
 OffscreenCanvas = function(width, height) {
@@ -290,7 +293,6 @@ OffscreenCanvas = function(width, height) {
                 , fillText: function(text, x, y) { }
             };
         }
-
     };
 }
 
@@ -333,7 +335,7 @@ xhr.addEventListener("readystatechange", function() {
     }
 }, false);
 
-_native.RootUrl = "https://playground.babylonjs.com/";
+_native.RootUrl = "https://playground.babylonjs.com";
 console.log("Starting");
 TestUtils.setTitle("Starting Native Validation Tests");
 TestUtils.updateSize(testWidth, testHeight);

@@ -239,7 +239,7 @@ namespace Babylon
 
     struct ImageData final
     {
-        ~ImageData()
+        virtual ~ImageData()
         {
             if (Image)
             {
