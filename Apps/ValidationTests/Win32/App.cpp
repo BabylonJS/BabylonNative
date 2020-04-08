@@ -64,11 +64,6 @@ namespace
         }
 
         runtime.reset();
-/*<<<<<<< HEAD
-=======
-        Babylon::Plugins::NativeEngine::DeinitializeGraphics();
->>>>>>> 1ad839f2df709e375a35861104b3b4818226dba3
-*/
         runtime = std::make_unique<Babylon::AppRuntime>(GetUrlFromPath(GetModulePath().parent_path().parent_path()));
 
         // Initialize console plugin.
@@ -79,7 +74,7 @@ namespace
                 OutputDebugStringA(message);
             });
 
-//<<<<<<< HEAD
+
             Babylon::Polyfills::Window::Initialize(env);
             // Initialize NativeWindow plugin to the test size.
             // TODO: TestUtils::UpdateSize should do it properly but the client size
@@ -88,16 +83,6 @@ namespace
             auto height = 400;//static_cast<float>(rect.bottom - rect.top);
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
-            /*auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-=======
-            
-
-            // Initialize NativeWindow plugin.
-            auto width = static_cast<float>(rect.right - rect.left);
-            auto height = static_cast<float>(rect.bottom - rect.top);
-            Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
->>>>>>> 1ad839f2df709e375a35861104b3b4818226dba3
-*/
             // Initialize NativeEngine plugin.
             Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
@@ -109,7 +94,6 @@ namespace
         });
 
         Babylon::ScriptLoader loader{*runtime, runtime->RootUrl()};
-        loader.Eval("localStorage = { setItem: function(a, b) { }, removeItem(a) { }}", "def");
         loader.LoadScript("Scripts/babylon.max.js");
         loader.LoadScript("Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript("Scripts/babylonjs.materials.js");
@@ -262,7 +246,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             short exitCode = LOWORD(wParam);
             runtime.reset();
             PostQuitMessage(exitCode);
-            //Babylon::Plugins::NativeEngine::DeinitializeGraphics();
             break;
         }
         case WM_KEYDOWN:

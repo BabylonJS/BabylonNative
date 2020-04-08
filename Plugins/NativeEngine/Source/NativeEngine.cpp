@@ -265,10 +265,6 @@ namespace Babylon
 
         void CreateTextureFromImage(bx::AllocatorI* allocator, TextureData* texture, bimg::ImageContainer* image)
         {
-            if (image == nullptr)
-            {
-                return;
-            }
             auto releaseFn = [](void* ptr, void* userData) {
                 bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
             };
@@ -1016,19 +1012,17 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, generateMips, invertY, onErrorRef = Napi::Shared(onError)]() {
+            [this, dataSpan, generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), dataSpan.size());
-                // trying to parse something that is not an image will return null
-                //if (image)
+                // todo: bimg::imageParse will return nullptr when trying to load a texture with an url that is not a valid texture
+                // Like a 404 html page.
+                if (invertY)
                 {
-                    if (invertY)
-                    {
-                        FlipY(image);
-                    }
-                    if (generateMips)
-                    {
-                        GenerateMips(&m_allocator, &image);
-                    }
+                    FlipY(image);
+                }
+                if (generateMips)
+                {
+                    GenerateMips(&m_allocator, &image);
                 }
                 return image;
             })
