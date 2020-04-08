@@ -69,10 +69,10 @@ namespace Babylon
         {
             const int32_t width = info[0].As<Napi::Number>().Int32Value();
             const int32_t height = info[1].As<Napi::Number>().Int32Value();
-            
+
 #ifdef WIN32
             HWND hwnd = (HWND)_nativeWindowPtr;
-            RECT rc {0, 0, width, height};
+            RECT rc{ 0, 0, width, height };
             AdjustWindowRectEx(&rc, GetWindowStyle(hwnd), GetMenu(hwnd) != NULL, GetWindowExStyle(hwnd));
             SetWindowPos(hwnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOMOVE | SWP_NOZORDER);
 #else
@@ -97,7 +97,7 @@ namespace Babylon
             const auto height = info[2].As<Napi::Number>().Uint32Value();
             const auto filename = info[3].As<Napi::String>().Utf8Value();
 
-            if(buffer.ByteLength() < (width * height * 4))
+            if (buffer.ByteLength() < (width * height * 4))
             {
                 return;
             }
@@ -119,43 +119,43 @@ namespace Babylon
 
         struct Image
         {
-          Image() = default;
-          ~Image() 
-          {
-            if (m_Image)
+            Image() = default;
+            ~Image()
             {
-              bimg::imageFree(m_Image.get());
+                if (m_Image)
+                {
+                    bimg::imageFree(m_Image.get());
+                }
             }
-          }
-          std::unique_ptr<bimg::ImageContainer> m_Image;
+            std::unique_ptr<bimg::ImageContainer> m_Image;
         };
-        
+
         static Napi::Value DecodeImage(const Napi::CallbackInfo& info)
         {
-          Image* image = new Image;
-          const auto buffer = info[0].As<Napi::ArrayBuffer>();
+            Image* image = new Image;
+            const auto buffer = info[0].As<Napi::ArrayBuffer>();
 
-          bx::DefaultAllocator allocator;
-          bimg::ImageContainer* imageContainer = bimg::imageParse(&allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength()));
-          image->m_Image.reset(imageContainer);
+            bx::DefaultAllocator allocator;
+            bimg::ImageContainer* imageContainer = bimg::imageParse(&allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength()));
+            image->m_Image.reset(imageContainer);
 
-          return Napi::External<Image>::New(info.Env(), image);
+            return Napi::External<Image>::New(info.Env(), image);
         }
 
         static Napi::Value GetImageData(const Napi::CallbackInfo& info)
         {
-          const auto imageData = info[0].As<Napi::External<Image>>().Data();
+            const auto imageData = info[0].As<Napi::External<Image>>().Data();
 
-          if (!imageData || !imageData->m_Image->m_size)
-          {
-              return info.Env().Undefined();
-          }
+            if (!imageData || !imageData->m_Image->m_size)
+            {
+                return info.Env().Undefined();
+            }
 
-          auto data = Napi::Uint8Array::New(info.Env(), imageData->m_Image->m_size);
-          const auto ptr = static_cast<uint8_t*>(imageData->m_Image->m_data);
-          memcpy(data.Data(), ptr, imageData->m_Image->m_size);
+            auto data = Napi::Uint8Array::New(info.Env(), imageData->m_Image->m_size);
+            const auto ptr = static_cast<uint8_t*>(imageData->m_Image->m_data);
+            memcpy(data.Data(), ptr, imageData->m_Image->m_size);
 
-          return Napi::Value::From(info.Env(), data); 
+            return Napi::Value::From(info.Env(), data);
         }
 
         inline static void* _nativeWindowPtr{};
