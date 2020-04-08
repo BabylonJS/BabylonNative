@@ -1,0 +1,3 @@
+[submodule "Core/react-native-babylon/submodules/BabylonNative"]
+	path = Apps/Playground/node_modules/react-native-babylon/submodules/BabylonNative
+	url = https://github.com/BabylonJS/BabylonNative.git
