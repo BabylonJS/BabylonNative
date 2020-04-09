@@ -163,7 +163,7 @@ subfolder within the repository of your application project, moving that folder 
 own repository and including it as a submodule later when the component is ready to share.
 
 However, if your intent is to create a component to enable functionality without an 
-app to consume it (either because you simply intend to make functionality availbale or
+app to consume it (either because you simply intend to make functionality available or
 because your intended consuming app isn't under development yet), then we recommend 
 adopting the first of the two approaches outlined in the section above: build your
 component in its own repository from the start, incorporating it into a modified Babylon
