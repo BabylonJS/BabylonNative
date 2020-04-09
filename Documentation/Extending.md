@@ -1,12 +1,12 @@
 # Extending Babylon Native
 
-There are several different ways to create a program using Babylon Native that includes
-features that Babylon Native does not provide out-of-the-box. An extremely straightforward
-example might be to create an application that uses Babylon Native to render a 3D scene and
-uses a completely seperate library such as [ImGUI](https://github.com/ocornut/imgui) to 
-render a user interface. This kind of "extension" is not the focus of this document. 
-This document's focus is on extending Babylon Native by adding features within the 
-framework of Babylon Native itself.
+There are several different ways to create a program that uses Babylon Native but also 
+includes features that Babylon Native does not provide out-of-the-box. An extremely 
+straightforward example might be to create an application that uses Babylon Native to 
+render a 3D scene and uses a completely seperate library such as 
+[ImGUI](https://github.com/ocornut/imgui) to render a user interface. This kind of 
+"extension" is not the focus of this document. This document's focus is on extending
+Babylon Native by adding features within the framework of Babylon Native itself.
 
 Babylon Native's component-based architecture (discussed in detail in the 
 [Babylon Native build system](BuildSystem.md) documentation) is designed for extensibility. 
@@ -27,10 +27,10 @@ should not be exposed there.) To illustrate this, let's consider the integration
 of the `NativeEngine` component as it appeared on 4/7/2020.
 
 `NativeEngine` was chosen for this example because it is by far the most complex of the
-provided components, but its integration surface is nevertheless reasonably constrained.
+provided components, yet its integration surface is nevertheless reasonably constrained.
 The integration surface of any component has three layers: its 
 [dependencies](#dependencies), its 
-[integration using CMake](#cmake-integration), and it's [C++ API](#c++-api).
+[integration using CMake](#cmake-integration), and its [C++ API](#c\+\+-api).
 
 ### Dependencies
 
@@ -40,9 +40,9 @@ dependencies should be supplied by the consuming build system and that component
 should not "bring their own," but there is no mechanism in place to streamline this 
 process. No mechanism is currently planned for this purpose, either; as designed, the 
 consuming build system "just has to know" what dependencies to supply. The potential for 
-frustration with this mechanism can likely be mitigated by having a disciplined convention 
-for component dependency documentation: i.e., every component should maintain an up-to-date
-list of what they depend on and how it can be provided.
+frustration with this expectation can likely be mitigated by having a disciplined 
+convention for component dependency documentation: i.e., all components should maintain an 
+up-to-date list of what they depend on and how those dependencies can be provided.
 
 `NativeEngine`, due to its complexity, has an unusually large number of dependencies:
 `Arcana`, the `bgfx` technology family, `glslang`, `SPIRV-Cross`, and multiple other
@@ -70,7 +70,7 @@ circumstances, integrating a Babylon Native component using CMake should be as
 [calling `add_subdirectory()` on the component's root folder](https://github.com/BabylonJS/BabylonNative/blob/e2a39405185933fd9a7e211b59734d65059c7c07/Plugins/CMakeLists.txt#L7).
 Components must also expose
 [at least one CMake library target](https://github.com/BabylonJS/BabylonNative/blob/e2a39405185933fd9a7e211b59734d65059c7c07/Plugins/NativeEngine/CMakeLists.txt#L33) for 
-other components and consuming apps to link to in order to make use of the component.
+other components and consuming apps to link to in order to depend on the component.
 
 `NativeEngine` follows the described paradigm exactly, as illustrated by the links in the
 paragraph above. As a consequence, the surface area of the `NativeEngine` CMake 
@@ -82,13 +82,13 @@ line linked to above that calls `add_subdirectory()` on the `NativeEngine` plugi
 
 The final integration layer for a Babylon Native component is the C++ API it exposes which
 allows the library to actually be used. Differing functionality will necessitate 
-differences among the APIs of various components; however, as a rule, these APIs should be
-designed to be as minimalistic and self-explanatory as possible. This is particularly true
+differences among the APIs of various components; however, as a rule, these APIs should 
+strive to be as minimalistic and self-explanatory as possible. This is particularly true
 of plugins and polyfills, which are primarily intended to expose functionality to the 
 JavaScript and thus, when possible, should avoid being directly manipulated by native 
 code.
 
-As just such a `Plugin`, `NativeEngine`'s C++ API is extremely minimal (though it is still
+As just such a plugin, `NativeEngine`'s C++ API is extremely minimal (though it is still
 a work in progress and subject to change). For most platforms, integrating the 
 `NativeEngine` plugin only requires 
 [calling two initialization functions](https://github.com/BabylonJS/BabylonNative/blob/e2a39405185933fd9a7e211b59734d65059c7c07/Apps/Playground/Win32/App.cpp#L111-L112)
@@ -104,11 +104,11 @@ possible. Adding a new component to a project is as simple as fulfilling the req
 outlined in the sections above, and removing a component simply requires reversing those 
 operations. For example, removing the `NativeEngine` plugin from the Win32 `Playground`
 project would require the deletion of only three lines of C++ code and two lines of CMake 
-code. The only variable that has not been discussed is where, with respect to the Babylon
-Native repository, an added component might be placed.
+code. With this resolved, the only variable that has not been discussed yet is where, with 
+respect to the Babylon Native repository, an added component might be placed.
 
 There are, at present, two ways to build Babylon Native such that you can extend its 
-functionality. the first and more straightforward of these approaches is to simply fork
+functionality. The first and more straightforward of these approaches is to simply fork
 the Babylon Native repository and modify it. This will allow you to add new components 
 right alongside the provided ones. For example, a new `ComputeShaders` plugin could be
 placed in the `Plugins` folder, following the same pattern as `NativeEngine`. That 
@@ -134,18 +134,18 @@ ConsumingProject
      -> ConsumingApplication (folder)
 ```
 
-The integration logic of the root-level `CMakeLists.txt` for such a repository might as 
+The integration logic of the root-level `CMakeLists.txt` for such a repository might be as 
 follows:
 
 ```
 add_subdirectory(BabylonNative)
 
-# NOTE: To match Babylon Native patterns, the following 
-# should really be done from Extensions/CMakeLists.txt
+# NOTE: To match Babylon Native patterns, the following technically should be 
+# done from by CMakeLists.txt files in folders, i.e. Extensions/CMakeLists.txt
 add_subdirectory(Extensions/NewComponent1)
 add_subdirectory(Extensions/NewComponent2)
 
-add_subdirectory(Apps)
+add_subdirectory(Apps/ConsumingApplication)
 ```
 
 Both of these approaches have advantages and disadvantages: the first is simpler and 
@@ -162,7 +162,7 @@ on an app that needs it -- it may be prudent to create that component simply as 
 subfolder within the repository of your application project, moving that folder to its
 own repository and including it as a submodule later when the component is ready to share.
 
-However, if your intent is to create a component to enable functionality without an 
+However, if your intent is to create a new component and you do not already have an
 app to consume it (either because you simply intend to make functionality available or
 because your intended consuming app isn't under development yet), then we recommend 
 adopting the first of the two approaches outlined in the section above: build your
@@ -175,7 +175,7 @@ The following steps show an example of how to quickly get started developing in 
 this component will be called `ComponentName`.
 3. Decide where your component should be placed within the Babylon Native repository.
 Depending on what it is, it might make sense to place it in the `Plugins` or `Polyfills`
-folder. For the purposes of these notes, however, we will assume you decide to create
+folders. For the purposes of these notes, however, we will assume you decide to create
 a new folder called `Extensions` and to add your `ComponentName` repo as a submodule
 located at `Extensions/ComponentName`.
 4. Add a `Source` folder inside your `ComponentName` submodule. Add a placeholder C++ file
@@ -198,13 +198,13 @@ and push them up to your `ComponentName` repository.
 containing only the following line: **`add_subdirectory(ComponentName)`**. Note that,
 if you placed your submodule in an existing folder like `Plugins` or `Polyfills`, you will
 simply add this line to the existing `CMakeLists.txt` in the correct folder.
-9. In your Babylon Native fork's root-level `CMakeLists`, add a line to call 
+9. In your Babylon Native fork's root-level `CMakeLists.txt`, add a line to call 
 **`add_subdirectory(Extensions)`** at the appropriate point. Where this should be done
 will vary based on the dependencies of `ComponentName`. Most likely, processing your new
 folder should be the last thing that happens before the `Apps` folder is processed, so 
 your new line should appear as the last of the `add_subdirectory(...)` calls before
 `add_subdirectory(Apps)`. Note that if you placed your submodule in an existing folder
-like `Plugins` or `Polyfills`, modifying the root-level `CMakeLists.txt` is unnecessary.
+like `Plugins` or `Polyfills`, modifying the root-level `CMakeLists.txt` is not necessary.
 10. In `Apps/Playground/CMakeLists.txt`, modify the `target_link_to_dependencies(...)` 
 call to include a link to `ComponentName`.
 ```

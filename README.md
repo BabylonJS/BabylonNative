@@ -57,8 +57,8 @@ to us on [the Babylon forum](https://forum.babylonjs.com).
 The Babylon Native build system strives for simplicity, modularity, and scalability
 using a lateral dependency management strategy founded on Git Submodules and CMake 
 targets. For specifics, please read our detailed documentation on
-[The Babylon Native Build System](Documentation/BuildSystem.md) and
-[Extending Babylon Native](Documentation/Extending.md).
+[the Babylon Native build system](Documentation/BuildSystem.md) and
+[extending Babylon Native](Documentation/Extending.md).
 
 ## Quick Start Guide
 

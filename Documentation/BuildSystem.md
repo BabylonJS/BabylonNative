@@ -23,13 +23,13 @@ this discussion, we'll call this approach *vertical dependency management*.
 ![VerticalDependencyManagement](Images/VerticalDependencyManagement.jpg)
 
 As illustrated in the diagram above, vertical dependency management can result in rather
-clunky and confusing repository structures that do not very well as the number of 
-dependencies rises. More problematic, however, is the difficulty that arises if two or more
+clunky and confusing repository structures that do nots scale very well as the number of 
+dependencies grows. More problematic, however, is the difficulty that arises if two or more
 "first tier" dependencies actually share a dependency of their own, or if they depend on 
 each other. For example, consider what would happen if `Dependency A.1` and `Dependency B.1`
 were actually the same library. Because `Dependency A` and `Dependency B` were developed
 as independent standalone repositories, they each "bring along" their own copy of the 
-shared dependency (and they even bring along different versions), causing that dependency 
+shared dependency (and might even bring along different versions), causing that dependency 
 to essentially be incorporated twice into `Root Project`, which will cause problems.
 
 The Babylon Native build system's strategy of *lateral dependency management* was 
@@ -51,7 +51,7 @@ then attempt to link to by name. A more detailed description of this is provided
 
 This approach has several advantages when contrasted with vertical dependency management.
 
-- The structure of the project is substantially simplified.
+- The structure of the project is dramatically simplified.
 - It is now possible for multiple submodules to share a dependency without including 
 redundant copies of the dependency.
 - The root-level repository now has substantially more control. Because the `Root Project`
@@ -92,7 +92,7 @@ happens, then the two or more dependencies in question are fundamentally incompa
 submodules; the problem cannot be solved by either lateral or vertical dependency 
 management, and it is likely that another approach, such as the modification of one or more
 of the repositories, will be necessary in order to allow these submodules to work together.
-- Assigning the responsibility for supplying *all* dependencies to the `Root Project` 
+- Making the `Root Project` responsible for the satisfaction of *all* dependencies
 makes each dependency submodule less of a "black box" because the `Root Project` must now
 know about the submodule's dependencies so that it can supply them. In practice, this tends 
 to be a small cost, as adding additional submodules is not difficult and makes the 
@@ -227,11 +227,13 @@ constraints on the dependencies of the various components. No component can depe
 another component which is processed after it. Consequently, `Dependencies` can only
 depend on other `Dependencies`; `Core` components can depend on other `Core` components as
 well as `Dependencies`; `Plugins` can depend on components in `Plugins`, `Core`, or 
-`Dependencies`; and `Polyfills` can depend on components in any of the four folders. Note
+`Dependencies`; and `Polyfills` can depend on components in any of they other three 
+folders. (Theoretically, `Polyfills` could also take a dependency on other `Polyfills`,
+but as was described above, natively depending on a polyfill is not allowed.) Note
 that this build system is incapable of describing a circular dependency.
 
 In summary, the Babylon Native build system functions by traversing a laterally organized
-list of components organized into component folders distinguished by category: 
+list of components grouped into component folders distinguished by category: 
 `Dependencies`, `Core`, `Plugins`, and `Polyfills`. The build invokes each of these folders
 in turn. Each component folder contains its own `CMakeLists.txt` which determines the order
 in which components are processed. (In the case of `Dependencies`, this `CMakeLists.txt` 
