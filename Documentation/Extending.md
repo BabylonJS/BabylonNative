@@ -30,7 +30,7 @@ of the `NativeEngine` component as it appeared on 4/7/2020.
 provided components, yet its integration surface is nevertheless reasonably constrained.
 The integration surface of any component has three layers: its 
 [dependencies](#dependencies), its 
-[integration using CMake](#cmake-integration), and its [C++ API](#c\+\+-api).
+[integration using CMake](#cmake-integration), and its [Native API](#native-api).
 
 ### Dependencies
 
@@ -78,7 +78,7 @@ integration outside of the plugin itself is only two lines per consuming project
 line linked to above that calls `add_subdirectory()` on the `NativeEngine` plugin's main folder, and another line 
 [linking to the plugin from the consuming project](https://github.com/BabylonJS/BabylonNative/blob/e2a39405185933fd9a7e211b59734d65059c7c07/Apps/Playground/CMakeLists.txt#L105).
 
-### C++ API
+### Native API
 
 The final integration layer for a Babylon Native component is the C++ API it exposes which
 allows the library to actually be used. Differing functionality will necessitate 
