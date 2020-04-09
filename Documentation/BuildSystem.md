@@ -23,7 +23,7 @@ this discussion, we'll call this approach *vertical dependency management*.
 ![VerticalDependencyManagement](Images/VerticalDependencyManagement.jpg)
 
 As illustrated in the diagram above, vertical dependency management can result in rather
-clunky and confusing repository structures that do nots scale very well as the number of 
+clunky and confusing repository structures that do not scale very well as the number of 
 dependencies grows. More problematic, however, is the difficulty that arises if two or more
 "first tier" dependencies actually share a dependency of their own, or if they depend on 
 each other. For example, consider what would happen if `Dependency A.1` and `Dependency B.1`
