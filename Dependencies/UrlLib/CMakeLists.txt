@@ -1,5 +1,6 @@
 if(ANDROID)
     set(PLATFORM "Android")
+    set(ADDITIONAL_LIBRARIES PRIVATE AndroidExtensions)
 elseif(APPLE)
     set(PLATFORM "Apple")
 elseif(WIN32)
@@ -14,7 +15,8 @@ endif()
 set(SOURCES
     "Include/UrlLib/UrlLib.h"
     "Source/Shared/UrlRequest.h"
-    "Source/${PLATFORM}/UrlLib.cpp")
+    "Source/${PLATFORM}/UrlRequest.cpp"
+    ${ADDITIONAL_SOURCES})
 
 add_library(UrlLib ${SOURCES})
 

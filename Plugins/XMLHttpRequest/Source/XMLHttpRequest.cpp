@@ -96,7 +96,7 @@ namespace Babylon
 
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
-        return Napi::ArrayBuffer::New(Env(), m_request.ResponseBuffer().data(), m_request.ResponseBuffer().size());
+        return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(m_request.ResponseBuffer().data()), m_request.ResponseBuffer().size());
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)

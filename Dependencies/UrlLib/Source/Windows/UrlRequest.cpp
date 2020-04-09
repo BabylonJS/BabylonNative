@@ -59,16 +59,10 @@ namespace UrlLib
 
             if (url.SchemeName() == L"file")
             {
-                std::wstring_view path{ Foundation::Uri::UnescapeComponent(url.Path()) };
-                if (path[0] != L'/')
-                {
-                    throw std::runtime_error("Invalid file url");
-                }
+                std::wstring path{std::wstring_view{Foundation::Uri::UnescapeComponent(url.Path())}.substr(1)};
+                std::replace(path.begin(), path.end(), '/', '\\');
 
-                std::wstring localPath{ path.substr(1) };
-                std::replace(localPath.begin(), localPath.end(), '/', '\\');
-
-                return arcana::create_task<std::exception_ptr>(Storage::StorageFile::GetFileFromPathAsync(localPath))
+                return arcana::create_task<std::exception_ptr>(Storage::StorageFile::GetFileFromPathAsync(path))
                     .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::StorageFile file) {
                         switch (m_responseType)
                         {
@@ -153,7 +147,7 @@ namespace UrlLib
             return m_responseString;
         }
 
-        gsl::span<std::byte> ResponseBuffer() const
+        gsl::span<const std::byte> ResponseBuffer() const
         {
             std::byte* bytes;
             auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();

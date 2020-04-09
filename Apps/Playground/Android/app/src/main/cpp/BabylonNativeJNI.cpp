@@ -8,7 +8,7 @@
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
 
-#include <Babylon/Platform.h>
+#include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -76,6 +76,8 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         // TODO: This should be cleaned up via env->DeleteGlobalRef
         auto globalAppContext = env->NewGlobalRef(appContext);
 
+        AndroidExtensions::Globals::Initialize(javaVM, globalAppContext);
+
         ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
         int32_t width  = ANativeWindow_getWidth(window);
         int32_t height = ANativeWindow_getHeight(window);
@@ -98,8 +100,6 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
                 }
             });
 
-            Babylon::Platform::Initialize(env, javaVM, globalAppContext);
-
             Babylon::Plugins::NativeWindow::Initialize(env, window, width, height);
 
             Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height);
@@ -115,13 +115,13 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
             InputManager::Initialize(jsRuntime, *g_inputBuffer);
         });
 
-        g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime, g_runtime->RootUrl());
+        g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);
         g_scriptLoader->Eval("document = {}", "");
-        g_scriptLoader->LoadScript("Scripts/ammo.js");
-        g_scriptLoader->LoadScript("Scripts/recast.js");
-        g_scriptLoader->LoadScript("Scripts/babylon.max.js");
-        g_scriptLoader->LoadScript("Scripts/babylon.glTF2FileLoader.js");
-        g_scriptLoader->LoadScript("Scripts/babylonjs.materials.js");
+        g_scriptLoader->LoadScript("app:///Scripts/ammo.js");
+        g_scriptLoader->LoadScript("app:///Scripts/recast.js");
+        g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
+        g_scriptLoader->LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+        g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
     }
 }
 

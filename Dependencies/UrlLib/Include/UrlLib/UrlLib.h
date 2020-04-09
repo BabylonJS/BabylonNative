@@ -49,7 +49,7 @@ namespace UrlLib
 
         gsl::cstring_span<> ResponseString() const;
 
-        gsl::span<std::byte> ResponseBuffer() const;
+        gsl::span<const std::byte> ResponseBuffer() const;
 
     private:
         class Impl;

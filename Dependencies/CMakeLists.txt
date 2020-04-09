@@ -97,7 +97,13 @@ endif()
 # Dependencies: none
 add_subdirectory(BabylonNativeUtils)
 
+# -------------------------------- JNIExtensions --------------------------------
+# Dependencies: none
+if(ANDROID)
+    add_subdirectory(AndroidExtensions)
+endif()
+
 # -------------------------------- UrlLib --------------------------------
-# Dependencies: arcana
+# Dependencies: arcana, JNIExtensions
 add_subdirectory(UrlLib)
 set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)

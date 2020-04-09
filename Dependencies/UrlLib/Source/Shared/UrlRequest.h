@@ -53,7 +53,7 @@ namespace UrlLib
         return m_impl->ResponseString();
     }
 
-    gsl::span<std::byte> UrlRequest::ResponseBuffer() const
+    gsl::span<const std::byte> UrlRequest::ResponseBuffer() const
     {
         return m_impl->ResponseBuffer();
     }
