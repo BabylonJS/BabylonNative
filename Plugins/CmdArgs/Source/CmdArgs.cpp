@@ -8,13 +8,13 @@ namespace Babylon
     public:
         static inline constexpr char* JS_INSTANCE_NAME{ "CmdArgs" };
 
-        static void Initialize(Napi::Env env, int argc, char** argv)
+        static void Initialize(Napi::Env env, const std::vector<std::string>& args)
         {
             Napi::HandleScope scope{ env };
-            Napi::Object cmdArgs = Napi::Array::New(env, argc);
-            for (int index = 0; index < argc; index++)
+            Napi::Object cmdArgs = Napi::Array::New(env, args.size());
+            for (int index = 0; index < args.size(); index++)
             {
-                cmdArgs[index] = Napi::String::New(env, argv[index]);
+                cmdArgs[index] = Napi::String::New(env, args[index]);
             }
             env.Global().Set(JS_INSTANCE_NAME, cmdArgs);
         }
@@ -25,8 +25,8 @@ namespace Babylon
         }
     };
 
-    void InitializeCmdArgs(Napi::Env env, int argc, char** argv)
+    void InitializeCmdArgs(Napi::Env env, const std::vector<std::string>& args)
     {
-        CmdArgs::Initialize(env, argc, argv);
+        CmdArgs::Initialize(env, args);
     }
 }

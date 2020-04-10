@@ -56,19 +56,19 @@ namespace
         return { url };
     }
 
-    std::vector<char*> GetCommandLineArguments()
+    std::vector<std::string> GetCommandLineArguments()
     {
         LPWSTR cmdLine = GetCommandLineW();
         int argc;
         LPWSTR* wargv = CommandLineToArgvW(cmdLine, &argc);
-        std::vector<char*> argv(argc);
+        std::vector<std::string> args(argc);
         for (int index = 0; index < argc; index++)
         {
             int length = WideCharToMultiByte(CP_UTF8, 0, wargv[index], -1, 0, 0, NULL, NULL);
-            argv[index] = new char[length]; // life time of application
-            WideCharToMultiByte(CP_UTF8, 0, wargv[index], -1, argv[index], length, NULL, NULL);
+            args[index].resize(length);
+            WideCharToMultiByte(CP_UTF8, 0, wargv[index], -1, args[index].data(), length, NULL, NULL);
         }
-        return argv;
+        return args;
     }
 
     void RefreshBabylon(HWND hWnd)
@@ -106,7 +106,7 @@ namespace
 
             // Command line arguments
             auto args = GetCommandLineArguments();
-            Babylon::InitializeCmdArgs(env, args.size(), args.data());
+            Babylon::InitializeCmdArgs(env, args);
 
             Babylon::TestUtils::CreateInstance(env, hWnd);
         });
