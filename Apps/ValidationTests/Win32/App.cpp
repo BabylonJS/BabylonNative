@@ -19,6 +19,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/XMLHttpRequest.h>
+#include <Babylon/CmdArgs.h>
 
 #define MAX_LOADSTRING 100
 
@@ -55,6 +56,21 @@ namespace
         return { url };
     }
 
+    std::vector<char*> GetCommandLineArguments()
+    {
+        LPWSTR cmdLine = GetCommandLineW();
+        int argc;
+        LPWSTR* wargv = CommandLineToArgvW(cmdLine, &argc);
+        std::vector<char*> argv(argc);
+        for (int index = 0; index < argc; index++)
+        {
+            int length = WideCharToMultiByte(CP_UTF8, 0, wargv[index], -1, 0, 0, NULL, NULL);
+            argv[index] = new char[length]; // life time of application
+            WideCharToMultiByte(CP_UTF8, 0, wargv[index], -1, argv[index], length, NULL, NULL);
+        }
+        return argv;
+    }
+
     void RefreshBabylon(HWND hWnd)
     {
         RECT rect;
@@ -64,7 +80,6 @@ namespace
         }
 
         runtime.reset();
-        Babylon::Plugins::NativeEngine::DeinitializeGraphics();
         runtime = std::make_unique<Babylon::AppRuntime>(GetUrlFromPath(GetModulePath().parent_path().parent_path()));
 
         // Initialize console plugin.
@@ -88,6 +103,10 @@ namespace
 
             // Initialize XMLHttpRequest plugin.
             Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
+
+            // Command line arguments
+            auto args = GetCommandLineArguments();
+            Babylon::InitializeCmdArgs(env, args.size(), args.data());
 
             Babylon::TestUtils::CreateInstance(env, hWnd);
         });

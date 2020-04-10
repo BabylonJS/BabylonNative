@@ -38,7 +38,8 @@ target_link_to_dependencies(ValidationTests
     PRIVATE Console
     PRIVATE Window
     PRIVATE ScriptLoader
-    PRIVATE XMLHttpRequest)
+    PRIVATE XMLHttpRequest
+    PRIVATE CmdArgs)
 
 foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
     get_filename_component(SCRIPT_NAME "${script}" NAME)
