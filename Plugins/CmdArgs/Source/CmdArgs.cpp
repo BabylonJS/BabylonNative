@@ -12,7 +12,7 @@ namespace Babylon
         {
             Napi::HandleScope scope{ env };
             Napi::Object cmdArgs = Napi::Array::New(env, args.size());
-            for (int index = 0; index < args.size(); index++)
+            for (uint32_t index = 0; index < args.size(); index++)
             {
                 cmdArgs[index] = Napi::String::New(env, args[index]);
             }
