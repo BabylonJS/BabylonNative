@@ -76,7 +76,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
         // TODO: This should be cleaned up via env->DeleteGlobalRef
         auto globalAppContext = env->NewGlobalRef(appContext);
 
-        AndroidExtensions::Globals::Initialize(javaVM, globalAppContext);
+        android::global::Initialize(javaVM, globalAppContext);
 
         ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
         int32_t width  = ANativeWindow_getWidth(window);

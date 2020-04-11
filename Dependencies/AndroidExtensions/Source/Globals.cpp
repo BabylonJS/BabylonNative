@@ -1,7 +1,7 @@
 #include <AndroidExtensions/Globals.h>
 #include <stdexcept>
 
-namespace AndroidExtensions::Globals
+namespace android::global
 {
     namespace
     {

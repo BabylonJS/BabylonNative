@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <android/asset_manager.h>
 
 // --------------------
 // Forward Declarations
@@ -171,6 +172,8 @@ namespace android::content::res
     {
     public:
         AssetManager(jobject object);
+
+        operator AAssetManager*() const;
     };
 }
 

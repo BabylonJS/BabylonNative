@@ -24,7 +24,7 @@
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
 
-using namespace AndroidExtensions::Globals;
+using namespace android::global;
 
 namespace xr
 {

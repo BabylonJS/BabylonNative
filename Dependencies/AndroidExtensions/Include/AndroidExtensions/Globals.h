@@ -3,7 +3,7 @@
 #include <jni.h>
 #include "JavaWrappers.h"
 
-namespace AndroidExtensions::Globals
+namespace android::global
 {
     void Initialize(JavaVM* javaVM, jobject appContext);
 

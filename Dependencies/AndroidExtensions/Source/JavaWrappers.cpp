@@ -1,7 +1,8 @@
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/Globals.h>
+#include <android/asset_manager_jni.h>
 
-using namespace AndroidExtensions::Globals;
+using namespace android::global;
 
 namespace java::lang
 {
@@ -181,6 +182,11 @@ namespace android::content::res
     AssetManager::AssetManager(jobject object)
         : Object("android/content/res/AssetManager", object)
     {
+    }
+
+    AssetManager::operator AAssetManager*() const
+    {
+        return AAssetManager_fromJava(m_env, m_object);
     }
 }
 

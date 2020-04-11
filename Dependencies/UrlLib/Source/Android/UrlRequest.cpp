@@ -2,11 +2,10 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <android/asset_manager.h>
-#include <android/asset_manager_jni.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
 
-using namespace AndroidExtensions::Globals;
+using namespace android::global;
 using namespace android::net;
 using namespace java::lang;
 using namespace java::io;
@@ -67,14 +66,16 @@ namespace UrlLib
                 std::string scheme{uri.getScheme()};
                 if (scheme == "app") {
                     std::string path{std::string{uri.getPath()}.substr(1)};
-                    AAssetManager* assetsManager = AAssetManager_fromJava(GetEnvForCurrentThread(), GetAppContext().getAssets());
+                    AAssetManager* assetsManager{GetAppContext().getAssets()};
 
                     switch (m_responseType) {
-                        case UrlResponseType::String: {
+                        case UrlResponseType::String:
+                        {
                             LoadAsset(assetsManager, path.data(), m_responseString);
                             break;
                         }
-                        case UrlResponseType::Buffer: {
+                        case UrlResponseType::Buffer:
+                        {
                             LoadAsset(assetsManager, path.data(), m_responseBuffer);
                             break;
                         }
@@ -94,17 +95,21 @@ namespace UrlLib
 
                     ByteArray byteArray{4096};
                     int bytesRead{};
-                    while ((bytesRead = inputStream.Read(byteArray)) != -1) {
+                    while ((bytesRead = inputStream.Read(byteArray)) != -1)
+                    {
                         byteArrayOutputStream.Write(byteArray, 0, bytesRead);
                     }
 
-                    switch (m_responseType) {
-                        case UrlResponseType::String: {
+                    switch (m_responseType)
+                    {
+                        case UrlResponseType::String:
+                        {
                             // TODO: use the charset from the content type?
                             m_responseString = byteArrayOutputStream.ToString("UTF-8");
                             break;
                         }
-                        case UrlResponseType::Buffer: {
+                        case UrlResponseType::Buffer:
+                        {
                             m_responseBuffer = byteArrayOutputStream.ToByteArray();
                             break;
                         }
