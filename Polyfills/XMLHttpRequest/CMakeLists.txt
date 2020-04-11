@@ -12,5 +12,5 @@ target_link_to_dependencies(XMLHttpRequest
     PRIVATE arcana
     PRIVATE UrlLib)
 
-set_property(TARGET XMLHttpRequest PROPERTY FOLDER Plugins)
+set_property(TARGET XMLHttpRequest PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

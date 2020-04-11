@@ -2,7 +2,7 @@
 #include <Babylon/XMLHttpRequest.h>
 #include <Babylon/JsRuntime.h>
 
-namespace Babylon
+namespace Babylon::Polyfills::Internal
 {
     namespace
     {
@@ -49,12 +49,7 @@ namespace Babylon
         }
     }
 
-    void InitializeXMLHttpRequest(Napi::Env env, std::string rootUrl)
-    {
-        XMLHttpRequest::Initialize(env, rootUrl.data());
-    }
-
-    void XMLHttpRequest::Initialize(Napi::Env env, const char* rootUrl)
+    void XMLHttpRequest::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
@@ -197,5 +192,13 @@ namespace Babylon
                 eventHandlerRef.Call({});
             }
         }
+    }
+}
+
+namespace Babylon::Polyfills::XMLHttpRequest
+{
+    void Initialize(Napi::Env env)
+    {
+        Internal::XMLHttpRequest::Initialize(env);
     }
 }

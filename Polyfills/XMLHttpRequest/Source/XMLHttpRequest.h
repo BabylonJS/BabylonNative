@@ -8,14 +8,14 @@
 
 #include <unordered_map>
 
-namespace Babylon
+namespace Babylon::Polyfills::Internal
 {
     class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest>
     {
         static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
 
     public:
-        static void Initialize(Napi::Env env, const char* rootUrl);
+        static void Initialize(Napi::Env env);
 
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
