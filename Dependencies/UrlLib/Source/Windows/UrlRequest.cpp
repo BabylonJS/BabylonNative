@@ -144,7 +144,7 @@ namespace UrlLib
             std::byte* bytes;
             auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
             winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
-            return {bytes, m_responseBuffer.Length()};
+            return {bytes, gsl::narrow_cast<std::ptrdiff_t>(m_responseBuffer.Length())};
         }
 
     private:
