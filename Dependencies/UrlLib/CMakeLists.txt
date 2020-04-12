@@ -1,12 +1,17 @@
 if(ANDROID)
-    set(PLATFORM "Android")
-    set(ADDITIONAL_LIBRARIES PRIVATE AndroidExtensions)
+    set(ADDITIONAL_SOURCES
+        "Source/Android/UrlRequest.cpp")
+    set(ADDITIONAL_LIBRARIES
+        PRIVATE AndroidExtensions)
 elseif(APPLE)
-    set(PLATFORM "Apple")
+    set(ADDITIONAL_SOURCES
+        "Source/Apple/UrlRequest.mm")
 elseif(WIN32)
-    set(PLATFORM "Windows")
+    set(ADDITIONAL_SOURCES
+        "Source/Windows/UrlRequest.cpp")
     if(NOT WINDOWS_STORE)
-        set(ADDITIONAL_LIBRARIES PUBLIC onecoreuap.lib)
+        set(ADDITIONAL_LIBRARIES
+            PUBLIC onecoreuap.lib)
     endif()
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
@@ -15,7 +20,6 @@ endif()
 set(SOURCES
     "Include/UrlLib/UrlLib.h"
     "Source/Shared/UrlRequest.h"
-    "Source/${PLATFORM}/UrlRequest.cpp"
     ${ADDITIONAL_SOURCES})
 
 add_library(UrlLib ${SOURCES})

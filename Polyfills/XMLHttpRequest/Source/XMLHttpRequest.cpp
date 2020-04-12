@@ -1,5 +1,5 @@
 #include "XMLHttpRequest.h"
-#include <Babylon/XMLHttpRequest.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/JsRuntime.h>
 
 namespace Babylon::Polyfills::Internal
@@ -91,7 +91,14 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
-        return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(m_request.ResponseBuffer().data()), m_request.ResponseBuffer().size());
+        gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
+
+        // TODO: put this back once JSC NAPI is implemented properly
+        //return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(responseBuffer.data()), responseBuffer.size());
+
+        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
+        return arrayBuffer;
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
