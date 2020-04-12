@@ -1,6 +1,6 @@
 #include "XMLHttpRequest.h"
-#include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/JsRuntime.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 
 namespace Babylon::Polyfills::Internal
 {

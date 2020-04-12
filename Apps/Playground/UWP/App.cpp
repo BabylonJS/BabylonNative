@@ -1,11 +1,11 @@
 #include "App.h"
 
+#include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
-#include <Babylon/ScriptLoader.h>
-#include <Babylon/XMLHttpRequest.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>

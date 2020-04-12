@@ -12,7 +12,7 @@ public class Wrapper {
         System.loadLibrary("BabylonNativeJNI");
     }
 
-    public static native void initEngine(AssetManager assetManager);
+    public static native void initEngine();
 
     public static native void finishEngine();
 

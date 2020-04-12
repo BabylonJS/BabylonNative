@@ -1,5 +1,5 @@
 set(SOURCES 
-    "Include/Babylon/XMLHttpRequest.h"
+    "Include/Babylon/Polyfills/XMLHttpRequest.h"
     "Source/XMLHttpRequest.cpp"
     "Source/XMLHttpRequest.h")
 

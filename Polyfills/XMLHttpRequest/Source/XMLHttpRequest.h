@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
 #include <napi/napi.h>

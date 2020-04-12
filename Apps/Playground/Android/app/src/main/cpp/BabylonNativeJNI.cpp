@@ -10,12 +10,12 @@
 
 #include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
+#include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
-#include <Babylon/ScriptLoader.h>
-#include <Babylon/XMLHttpRequest.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <InputManager.h>
 
 #include <android/asset_manager.h>
@@ -23,7 +23,7 @@
 
 extern "C"
 {
-    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetManager);
+    JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jobject obj);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surface, jobject appContext);
     JNIEXPORT void JNICALL Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env);
@@ -41,14 +41,9 @@ namespace
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
 
-// TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
-AAssetManager* g_assetManager = nullptr;
-
 JNIEXPORT void JNICALL
-Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj, jobject assetManager)
+Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jobject obj)
 {
-    // TODO : this is a workaround for asset loading on Android. To remove when the plugin system is in place.
-    g_assetManager = AAssetManager_fromJava(env, assetManager);
 }
 
 JNIEXPORT void JNICALL
@@ -65,7 +60,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
 {
     if (!g_runtime)
     {
-        g_runtime = std::make_unique<Babylon::AppRuntime>("");
+        g_runtime = std::make_unique<Babylon::AppRuntime>();
 
         JavaVM* javaVM{};
         if (env->GetJavaVM(&javaVM) != JNI_OK)
@@ -106,8 +101,7 @@ Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jobject obj, jobject surf
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             Babylon::Polyfills::Window::Initialize(env);
-
-            Babylon::InitializeXMLHttpRequest(env, g_runtime->RootUrl());
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
