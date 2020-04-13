@@ -1,10 +1,7 @@
 package BabylonNative;
 
 import android.content.Context;
-import android.content.res.AssetManager;
 import android.view.Surface;
-
-import java.nio.ByteBuffer;
 
 public class Wrapper {
     // JNI interface
