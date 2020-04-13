@@ -151,8 +151,7 @@ extern "C"
     {
         if (g_scriptLoader)
         {
-            jboolean iscopy;
-            g_scriptLoader->LoadScript(env->GetStringUTFChars(path, &iscopy));
+            g_scriptLoader->LoadScript(env->GetStringUTFChars(path, nullptr));
         }
     }
 
@@ -161,9 +160,8 @@ extern "C"
     {
         if (g_runtime)
         {
-            jboolean iscopy;
-            std::string url = env->GetStringUTFChars(sourceURL, &iscopy);
-            std::string src = env->GetStringUTFChars(source, &iscopy);
+            std::string url = env->GetStringUTFChars(sourceURL, nullptr);
+            std::string src = env->GetStringUTFChars(source, nullptr);
             g_scriptLoader->Eval(std::move(src), std::move(url));
         }
     }
