@@ -20,7 +20,7 @@ namespace Babylon
             request.Open(UrlLib::UrlMethod::Get, url);
             request.ResponseType(UrlLib::UrlResponseType::String);
             m_task = arcana::when_all(m_task, request.SendAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction{m_dispatchFunction}, request{std::move(request)}, url{std::move(url)}](auto) {
-                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource;
+                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
                 dispatchFunction([taskCompletionSource, request{std::move(request)}, url{std::move(url)}](Napi::Env env) mutable {
                     Napi::Eval(env, request.ResponseString().data(), url.data());
                     taskCompletionSource.complete();
@@ -32,7 +32,7 @@ namespace Babylon
         void Eval(std::string source, std::string url)
         {
             m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction{m_dispatchFunction}, source{std::move(source)}, url{std::move(url)}](auto) {
-                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource;
+                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
                 dispatchFunction([taskCompletionSource, source{std::move(source)}, url{std::move(url)}](Napi::Env env) mutable {
                     Napi::Eval(env, source.data(), url.data());
                     taskCompletionSource.complete();
@@ -42,7 +42,7 @@ namespace Babylon
         }
 
     private:
-        DispatchFunctionT m_dispatchFunction;
+        DispatchFunctionT m_dispatchFunction{};
         arcana::task<void, std::exception_ptr> m_task{};
     };
 

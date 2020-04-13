@@ -24,9 +24,8 @@ set(SOURCES
 
 add_library(UrlLib ${SOURCES})
 
-target_include_directories(UrlLib PRIVATE "Include")
+target_include_directories(UrlLib PUBLIC "Include")
 target_include_directories(UrlLib PRIVATE "Source")
-target_include_directories(UrlLib INTERFACE "Include")
 
 target_link_libraries(UrlLib
     PUBLIC arcana

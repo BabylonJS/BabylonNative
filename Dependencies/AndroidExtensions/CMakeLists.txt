@@ -6,5 +6,4 @@ set(SOURCES
 
 add_library(AndroidExtensions ${SOURCES})
 
-target_include_directories(AndroidExtensions PRIVATE "Include")
-target_include_directories(AndroidExtensions INTERFACE "Include")
+target_include_directories(AndroidExtensions PUBLIC "Include")
