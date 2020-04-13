@@ -13,8 +13,10 @@ namespace Babylon::Polyfills::Internal
 
             UrlLib::UrlResponseType StringToEnum(const std::string& value)
             {
-                if (value == Text) return UrlLib::UrlResponseType::String;
-                if (value == ArrayBuffer) return UrlLib::UrlResponseType::Buffer;
+                if (value == Text)
+                    return UrlLib::UrlResponseType::String;
+                if (value == ArrayBuffer)
+                    return UrlLib::UrlResponseType::Buffer;
 
                 throw;
             }
@@ -23,8 +25,10 @@ namespace Babylon::Polyfills::Internal
             {
                 switch (value)
                 {
-                    case UrlLib::UrlResponseType::String: return Text;
-                    case UrlLib::UrlResponseType::Buffer: return ArrayBuffer;
+                    case UrlLib::UrlResponseType::String:
+                        return Text;
+                    case UrlLib::UrlResponseType::Buffer:
+                        return ArrayBuffer;
                 }
 
                 throw;
@@ -37,7 +41,8 @@ namespace Babylon::Polyfills::Internal
 
             UrlLib::UrlMethod StringToEnum(const std::string& value)
             {
-                if (value == Get) return UrlLib::UrlMethod::Get;
+                if (value == Get)
+                    return UrlLib::UrlMethod::Get;
 
                 throw;
             }
@@ -175,15 +180,9 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_request.SendAsync()
-            .then(m_runtimeScheduler, arcana::cancellation::none(), [this](arcana::expected<void, std::exception_ptr> result) {
-                if (result.has_error())
-                {
-                    throw result.error();
-                }
-
-                SetReadyState(ReadyState::Done);
-            });
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
+            SetReadyState(ReadyState::Done);
+        });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
