@@ -54,7 +54,7 @@ namespace
 
         // Separately call reset and make_unique to ensure prior runtime is destroyed before new one is created.
         runtime.reset();
-        runtime = std::make_unique<Babylon::AppRuntime>(scripts.empty() ? moduleRootUrl : GetUrlFromPath(std::filesystem::path{scripts.back()}.parent_path()));
+        runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
         runtime->Dispatch([width, height, window](Napi::Env env) {
