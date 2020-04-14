@@ -291,7 +291,7 @@ be greyed and inaccessible. Instructions and tips on how to install the simulato
 **Required Tools:** 
 [Clang](https://clang.llvm.org/)
 
-The minimal requirement target is an OpenGL 3.3 compatible GPU.
+The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 8+ is required for building.
 
 First step is to install packages mandatory for building. For example, with Clang-8 toolchain:
 
