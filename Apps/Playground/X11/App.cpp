@@ -61,17 +61,17 @@ namespace
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                printf(message);
+                printf("%s", message);
             });
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            
+
             // Initialize NativeWindow plugin.
-            Babylon::NativeWindow::Initialize(env, (void*)window, width, height);
+            Babylon::Plugins::NativeWindow::Initialize(env, (void*)window, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)window, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize XMLHttpRequest plugin.
@@ -107,10 +107,8 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        runtime->Dispatch([width, height](Napi::Env env)
-        {
-            auto& window = Babylon::NativeWindow::GetFromJavaScript(env);
-            window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+        runtime->Dispatch([width, height](Napi::Env env) {
+            Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
     }
 }
