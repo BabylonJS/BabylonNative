@@ -240,14 +240,18 @@ jobs:
   pool:
     vmImage: 'ubuntu-latest'
 
+  variables:
+    CC: clang-7
+    CXX: clang++-7
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
-      sudo apt-get remove gcc
       sudo apt-get update
-      sudo apt-get install nodejs libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang
+      sudo apt-get install 
+      sudo apt-get install nodejs libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-7 libc++-7-dev libc++abi-7-dev lld-7 ninja-build python3
     displayName: 'Install packages'
   - script: |
       mkdir build
