@@ -7,14 +7,16 @@
 #include <unistd.h> // syscall
 #undef None
 #include <filesystem>
+
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Console.h>
-#include <Babylon/NativeEngine.h>
-#include <Babylon/NativeWindow.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/XMLHttpRequest.h>
+#include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeWindow.h>
+#include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Window.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
@@ -58,20 +60,23 @@ namespace
         runtime->Dispatch([width, height, window](Napi::Env env) {
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
 
-            Babylon::Console::CreateInstance(env, [](const char* message, auto) {
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf(message);
             });
 
+            Babylon::Polyfills::Window::Initialize(env);
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            
             // Initialize NativeWindow plugin.
             Babylon::NativeWindow::Initialize(env, (void*)window, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::InitializeGraphics((void*)window, width, height);
-            Babylon::InitializeNativeEngine(env);
+            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize XMLHttpRequest plugin.
-            Babylon::InitializeXMLHttpRequest(env, runtime->RootUrl());
 
+            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
             inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
             InputManager::Initialize(jsRuntime, *inputBuffer);
         });
