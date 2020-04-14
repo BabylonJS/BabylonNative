@@ -46,6 +46,8 @@ endif()
 
 if (UNIX AND NOT ANDROID AND NOT APPLE)
     target_include_directories(napi PUBLIC "/usr/include/webkitgtk-4.0")
+    find_library(JSCORE_LIBRARY JavaScriptCore)
+    target_link_to_dependencies(napi PUBLIC ${JSCORE_LIBRARY})
 endif()
 
 target_include_directories(napi PUBLIC "include")
