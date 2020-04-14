@@ -15,13 +15,11 @@ target_include_directories(AppRuntime INTERFACE "Include")
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     target_include_directories(AppRuntime INTERFACE "/usr/include/webkitgtk-4.0/")
-    find_library(JSCORE_LIBRARY JavaScriptCore)
 endif()
 
 target_link_to_dependencies(AppRuntime
     PRIVATE arcana
-    PUBLIC JsRuntime
-    PUBLIC ${JSCORE_LIBRARY})
+    PUBLIC JsRuntime)
 
 target_compile_definitions(AppRuntime
     PRIVATE NOMINMAX)
