@@ -58,8 +58,6 @@ namespace
 
         // Initialize console plugin.
         runtime->Dispatch([width, height, window](Napi::Env env) {
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
@@ -82,7 +80,7 @@ namespace
         });
 
 
-        Babylon::ScriptLoader loader{ *runtime, runtime->RootUrl() };
+        Babylon::ScriptLoader loader{*runtime};
         loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
