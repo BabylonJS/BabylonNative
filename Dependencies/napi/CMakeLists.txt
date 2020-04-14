@@ -7,7 +7,7 @@ if (WIN32)
     set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
 elseif (ANDROID)
     # engine is selected in native build cmakelists.txt
-elseif (APPLE)
+elseif (APPLE OR UNIX)
     set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for N-API.")
 else()
     message(FATAL_ERROR "Unable to select N-API JavaScript engine for platform.")
@@ -42,6 +42,10 @@ target_compile_definitions(napi PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
     target_compile_definitions(napi PUBLIC USE_EDGEMODE_JSRT)
+endif()
+
+if (UNIX AND NOT ANDROID AND NOT APPLE)
+    target_include_directories(napi PUBLIC "/usr/include/webkitgtk-4.0")
 endif()
 
 target_include_directories(napi PUBLIC "include")

@@ -235,3 +235,22 @@ jobs:
         publishJUnitResults: false
         tasks: 'assembleDebug'
     displayName: 'Build androidJSC'
+
+- job: Ubuntu
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      sudo apt-get update
+      sudo apt-get install nodejs libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang
+    displayName: 'Install packages'
+  - script: |
+      mkdir build
+      cd build
+      cmake .. -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+      make
+    displayName: 'Build X11'

@@ -5,6 +5,7 @@
 #include <bx/debug.h>
 #include <stdarg.h>
 #include <bgfx/bgfx.h>
+#include <memory.h> // memcpy
 
 namespace Babylon
 {

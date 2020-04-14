@@ -312,7 +312,7 @@ namespace Babylon
 
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                fbPtr->ViewClearState.UpdateColor(0.f, 0.f, 0.f, 0.f);
+                fbPtr->viewClearState.UpdateColor(0.f, 0.f, 0.f, 0.f);
                 m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{fbPtr};
 
                 m_activeFrameBuffers.push_back(fbPtr);

@@ -1,7 +1,7 @@
 if(APPLE)
     set(GRAPHICS_API "Metal")
     set(XR OFF)
-elseif(ANDROID)
+elseif(ANDROID OR UNIX)
     set(GRAPHICS_API "OpenGL")
     set(XR ON)
 elseif(WIN32)

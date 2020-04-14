@@ -125,7 +125,7 @@ namespace Babylon
         FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, uint16_t width, uint16_t height)
             : FrameBuffer{frameBuffer}
             , ViewId{viewId}
-            , ViewClearState{ViewId}
+            , viewClearState{ViewId}
             , Width{width}
             , Height{height}
         {
@@ -142,20 +142,20 @@ namespace Babylon
         void UseViewId(uint16_t viewId)
         {
             ViewId = viewId;
-            ViewClearState.UpdateViewId(ViewId);
+            viewClearState.UpdateViewId(ViewId);
         }
 
         void SetUpView(uint16_t viewId)
         {
             UseViewId(viewId);
             bgfx::setViewFrameBuffer(ViewId, FrameBuffer);
-            ViewClearState.Update();
+            viewClearState.Update();
             bgfx::setViewRect(ViewId, 0, 0, Width, Height);
         }
 
         bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
         bgfx::ViewId ViewId{};
-        ViewClearState ViewClearState;
+        ViewClearState viewClearState;
         uint16_t Width{};
         uint16_t Height{};
     };
