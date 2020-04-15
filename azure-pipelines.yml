@@ -28,10 +28,8 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
       ninja
     displayName: 'Build X11'
-  - script: |
-      export DISPLAY=:99
-      Xvfb :99 -screen 0 1600x900x24 &
-      sleep 3
-      cd build/Apps/Playground
-      ./Playground
-    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Rendered Pictures'
+      pathtoPublish: 'testArtefact/*'
+    displayName: 'Publish Tests Results'
