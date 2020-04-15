@@ -31,5 +31,5 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Rendered Pictures'
-      pathtoPublish: 'testArtefact/setParent.png'
+      pathtoPublish: 'testArtefact'
     displayName: 'Publish Tests Results'
