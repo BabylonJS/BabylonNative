@@ -6,7 +6,6 @@
 #include <vector>
 #include <map>
 #include <napi/napi.h>
-#include <assert.h>
 
 #include <algorithm>
 #include <cassert>
