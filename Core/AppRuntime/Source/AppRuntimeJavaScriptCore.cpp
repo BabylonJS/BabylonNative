@@ -1,4 +1,3 @@
-#include "WorkQueue.h"
 #include "AppRuntime.h"
 
 #include <JavaScriptCore/JavaScript.h>

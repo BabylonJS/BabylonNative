@@ -34,7 +34,7 @@ namespace {
     void* data;
     JSClassRef classRef;
     napi_env env;
-    FunctionTable functionTable;
+    FunctionTable FunctionTable;
   };
 
   struct CallbackInfo {
@@ -520,7 +520,7 @@ JSObjectRef JSCCallAsConstructor(JSContextRef ctx, JSObjectRef constructor, size
   OpaqueJSValue* jsValue = const_cast<OpaqueJSValue*>(JSObjectMake(ctx, cbInfo->classRef, nullptr));
   napi_value value = reinterpret_cast<napi_value>(jsValue);
   
-  FunctionTables[jsValue] = &cbInfo->functionTable;
+  FunctionTables[jsValue] = &cbInfo->FunctionTable;
   
   // callback will wrap the pointer itself
   CallbackInfo callbackInfo;
@@ -1104,7 +1104,7 @@ napi_status napi_new_instance(napi_env env,
   assert(JSObjectIsConstructor(env->m_globalContext, ctor));
   OpaqueJSValue* jsValue = const_cast<OpaqueJSValue*>(JSObjectCallAsConstructor(env->m_globalContext, ctor, argc, reinterpret_cast<const JSValueRef*>(argv), nullptr));
   napi_value value = reinterpret_cast<napi_value>(jsValue);
-  FunctionTables[jsValue] = &iter->second->functionTable;
+  FunctionTables[jsValue] = &iter->second->FunctionTable;
   *result = value;
   return napi_ok;
 }

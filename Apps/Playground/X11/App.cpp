@@ -41,7 +41,7 @@ namespace
 
     std::string GetUrlFromPath(const std::filesystem::path path)
     {
-        return std::string("file://") + path.u8string();
+        return std::string("file:///") + path.generic_string();
     }
     
     void InitBabylon(int32_t window, int width, int height, int argc, const char* const* argv)

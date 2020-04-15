@@ -1354,22 +1354,22 @@ namespace Babylon
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().viewClearState.UpdateFlags(info);
+        m_frameBufferManager.GetBound().ViewClearState.UpdateFlags(info);
     }
 
     void NativeEngine::ClearColor(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().viewClearState.UpdateColor(info);
+        m_frameBufferManager.GetBound().ViewClearState.UpdateColor(info);
     }
 
     void NativeEngine::ClearStencil(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().viewClearState.UpdateStencil(info);
+        m_frameBufferManager.GetBound().ViewClearState.UpdateStencil(info);
     }
 
     void NativeEngine::ClearDepth(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().viewClearState.UpdateDepth(info);
+        m_frameBufferManager.GetBound().ViewClearState.UpdateDepth(info);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)

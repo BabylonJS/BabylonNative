@@ -10,7 +10,7 @@ elseif(UNIX)
     set(ADDITIONAL_SOURCES
         "Source/Unix/UrlRequest.cpp")
     set(ADDITIONAL_LIBRARIES
-        PUBLIC "curl")
+        PRIVATE curl)
 elseif(WIN32)
     set(ADDITIONAL_SOURCES
         "Source/Windows/UrlRequest.cpp")
