@@ -41,7 +41,7 @@ namespace
 
     std::string GetUrlFromPath(const std::filesystem::path path)
     {
-        return std::string("file:///") + path.generic_string();
+        return std::string("file://") + path.generic_string();
     }
     
     void InitBabylon(int32_t window, int width, int height, int argc, const char* const* argv)
@@ -72,8 +72,6 @@ namespace
             Babylon::Plugins::NativeEngine::InitializeGraphics((void*)window, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
-            // Initialize XMLHttpRequest plugin.
-
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
             inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
             InputManager::Initialize(jsRuntime, *inputBuffer);
@@ -90,7 +88,7 @@ namespace
 
         if (scripts.empty())
         {
-            loader.LoadScript("Scripts/experience.js");
+            loader.LoadScript(moduleRootUrl + "/Scripts/experience.js");
         }
         else
         {

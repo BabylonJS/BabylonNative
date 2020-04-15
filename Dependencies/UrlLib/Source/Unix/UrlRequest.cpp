@@ -1,10 +1,13 @@
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/task.h>
+#include <arcana/threading/task_schedulers.h>
+#include <curl/curl.h>
 
 namespace UrlLib
 {
     class UrlRequest::Impl
     {
+        using ByteArray = std::vector<std::byte>;
     public:
         ~Impl()
         {
@@ -34,7 +37,22 @@ namespace UrlLib
 
         arcana::task<void, std::exception_ptr> SendAsync()
         {
-            throw std::runtime_error{"Not impemented"};
+            return arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, [this]()
+            {
+                switch (m_responseType)
+                {
+                    case UrlResponseType::String:
+                    {
+                        LoadFile(m_responseString);
+                        break;
+                    }
+                    case UrlResponseType::Buffer:
+                    {
+                        LoadFile(m_responseBuffer);
+                        break;
+                    }
+                }
+            });
         }
 
         UrlStatusCode StatusCode() const
@@ -54,10 +72,49 @@ namespace UrlLib
 
         gsl::span<const std::byte> ResponseBuffer() const
         {
-            throw std::runtime_error{"Not impemented"};
+            return m_responseBuffer;
         }
 
     private:
+
+        static void Append(std::string& string, char* buffer, size_t nitems)
+        {
+            string.insert(string.end(), buffer, buffer + nitems);
+        }
+
+        static void Append(ByteArray& byteArray, char* buffer, size_t nitems)
+        {
+            auto bytes = reinterpret_cast<std::byte const*>(buffer);
+            byteArray.insert(byteArray.end(), bytes, bytes + nitems);   
+        }
+
+        template<typename DataT> void LoadFile(DataT& data)
+        {
+            auto curl = curl_easy_init();
+            if (curl)
+            {
+                data.clear();
+                curl_easy_setopt(curl, CURLOPT_URL, m_url.data());
+                curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+                curl_write_callback callback = [](char* buffer, size_t size, size_t nitems, void* userData) {
+                    auto& data = *static_cast<DataT*>(userData);
+                    Append(data, buffer, nitems);
+                    return nitems;
+                };
+
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+
+                auto result = curl_easy_perform(curl);
+                if (result != CURLE_OK)
+                {
+                    throw std::exception();
+                }
+
+                curl_easy_cleanup(curl);
+            }
+        }
 
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
@@ -66,6 +123,7 @@ namespace UrlLib
         std::string m_url{};
         std::string m_responseUrl{};
         std::string m_responseString{};
+        ByteArray m_responseBuffer{};
     };
 }
 
