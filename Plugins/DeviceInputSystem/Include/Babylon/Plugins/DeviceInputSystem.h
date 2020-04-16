@@ -19,8 +19,8 @@ namespace Babylon::Plugins
         static DeviceInputSystem& CreateForJavaScript(Napi::Env);
         static DeviceInputSystem& GetFromJavaScript(Napi::Env);
 
-        void PointerDown(uint32_t pointerId, uint32_t buttonIndex);
-        void PointerUp(uint32_t pointerId, uint32_t buttonIndex);
+        void PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
+        void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
         void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y);
 
         DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);
@@ -33,7 +33,7 @@ namespace Babylon::Plugins
 
     private:
         DeviceInputSystem(Napi::Env);
-        std::vector<int32_t>& GetOrCreateInputMap(const std::string& deviceId, uint32_t inputIndex);
+        std::vector<int32_t>& GetOrCreateInputMap(const std::string& deviceId, std::vector<uint32_t> inputIndices);
         void RemoveInputMap(const std::string& deviceId);
 
     private:

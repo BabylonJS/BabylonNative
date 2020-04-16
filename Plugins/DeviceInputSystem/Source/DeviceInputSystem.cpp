@@ -47,24 +47,40 @@ namespace Babylon::Plugins
         return *env.Global().Get(JS_DEVICE_INPUT_SYSTEM_NAME).As<Napi::External<DeviceInputSystem>>().Data();
     }
 
-    void DeviceInputSystem::PointerDown(uint32_t pointerId, uint32_t buttonIndex)
+    void DeviceInputSystem::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         const std::string deviceId{GetPointerDeviceId(pointerId)};
         const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, inputIndex)};
-        deviceInputs[buttonIndex] = 1;
+        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+        deviceInputs[inputIndex] = 1;
+        deviceInputs[POINTER_X_INPUT_INDEX] = x;
+        deviceInputs[POINTER_Y_INPUT_INDEX] = y;
     }
 
-    void DeviceInputSystem::PointerUp(uint32_t pointerId, uint32_t buttonIndex)
+    void DeviceInputSystem::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         const std::string deviceId{GetPointerDeviceId(pointerId)};
+        const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
+        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+        deviceInputs[inputIndex] = 0;
+        deviceInputs[POINTER_X_INPUT_INDEX] = x;
+        deviceInputs[POINTER_Y_INPUT_INDEX] = y;
+
+        for (int32_t index = 0; index < deviceInputs.size(); index++)
+        {
+            if (index != POINTER_X_INPUT_INDEX && index != POINTER_Y_INPUT_INDEX && deviceInputs[index] > 0)
+            {
+                return;
+            }
+        }
+
         RemoveInputMap(deviceId);
     }
 
     void DeviceInputSystem::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
     {
         const std::string deviceId{GetPointerDeviceId(pointerId)};
-        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, std::max(POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX))};
+        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
         deviceInputs[POINTER_X_INPUT_INDEX] = x;
         deviceInputs[POINTER_Y_INPUT_INDEX] = y;
     }
@@ -108,8 +124,10 @@ namespace Babylon::Plugins
         }
     }
 
-    std::vector<int32_t>& DeviceInputSystem::GetOrCreateInputMap(const std::string& deviceId, uint32_t inputIndex)
+    std::vector<int32_t>& DeviceInputSystem::GetOrCreateInputMap(const std::string& deviceId, std::vector<uint32_t> inputIndices)
     {
+        uint32_t inputIndex = *std::max_element(inputIndices.begin(), inputIndices.end());
+
         auto previousSize = m_inputs.size();
         std::vector<int32_t>& deviceInputs{m_inputs[deviceId]};
 
@@ -120,7 +138,7 @@ namespace Babylon::Plugins
             });
         }
 
-        deviceInputs.resize(std::max(deviceInputs.size(), static_cast<size_t>(inputIndex)));
+        deviceInputs.resize(std::max(deviceInputs.size(), static_cast<size_t>(inputIndex + 1)));
 
         return deviceInputs;
     }
@@ -161,17 +179,17 @@ namespace Babylon::Plugins::Internal
         : Napi::ObjectWrap<DeviceInputSystem>{info}
         , m_deviceInputSystem{Babylon::Plugins::DeviceInputSystem::GetFromJavaScript(info.Env())}
         , m_deviceConnectedTicket{m_deviceInputSystem.AddDeviceConnectedCallback([this](const std::string& deviceId) {
-            if (m_onDeviceConnected.Value().IsFunction())
+            if (!m_onDeviceConnected.IsEmpty())
             {
                 Napi::Value napiDeviceId = Napi::String::New(Env(), deviceId);
-                m_onDeviceConnected.Call({napiDeviceId});
+                m_onDeviceConnected({napiDeviceId});
             }
         })}
         , m_deviceDisconnectedTicket{m_deviceInputSystem.AddDeviceDisconnectedCallback([this](const std::string& deviceId) {
-            if (m_onDeviceDisconnected.Value().IsFunction())
+            if (!m_onDeviceDisconnected.IsEmpty())
             {
                 Napi::Value napiDeviceId = Napi::String::New(Env(), deviceId);
-                m_onDeviceDisconnected.Call({napiDeviceId});
+                m_onDeviceDisconnected({napiDeviceId});
             }
         })}
     {
@@ -201,7 +219,15 @@ namespace Babylon::Plugins::Internal
     {
         std::string deviceName = info[0].As<Napi::String>().Utf8Value();
         uint32_t inputIndex = info[1].As<Napi::Number>().Uint32Value();
-        std::optional<int32_t> inputValue = m_deviceInputSystem.PollInput(deviceName, inputIndex);
-        return inputValue ? Napi::Value::From(Env(), *inputValue) : Env().Null();
+        try
+        {
+            std::optional<int32_t> inputValue = m_deviceInputSystem.PollInput(deviceName, inputIndex);
+            return inputValue ? Napi::Value::From(Env(), *inputValue) : Env().Null();
+        }
+        catch (const std::runtime_error& exception)
+        {
+            return Napi::Value::From(Env(), -1);
+            //throw Napi::Error::New(Env(), exception.what());
+        }
     }
 }
