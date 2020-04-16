@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/Polyfills/DeviceInputSystem.h>
+#include <Babylon/Plugins/DeviceInputSystem.h>
 
 #include <napi/napi.h>
 

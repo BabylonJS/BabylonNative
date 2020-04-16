@@ -1,3 +1,4 @@
+add_subdirectory(DeviceInputSystem)
 add_subdirectory(NativeWindow)
 add_subdirectory(ScriptLoader)
 

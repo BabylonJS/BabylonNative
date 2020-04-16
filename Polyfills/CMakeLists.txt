@@ -1,4 +1,3 @@
 add_subdirectory(Console)
-add_subdirectory(DeviceInputSystem)
 add_subdirectory(Window)
 add_subdirectory(XMLHttpRequest)

@@ -1,6 +1,6 @@
 #include "DeviceInputSystem.h"
 #include <Babylon/JsRuntime.h>
-#include <Babylon/Polyfills/DeviceInputSystem.h>
+#include <Babylon/Plugins/DeviceInputSystem.h>
 
 #include <sstream>
 
