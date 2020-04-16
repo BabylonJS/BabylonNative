@@ -23,6 +23,7 @@ jobs:
       sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
     displayName: 'Install packages'
   - script: |
+      mkdir emptyDir
       mkdir build
       cd build
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
@@ -33,3 +34,8 @@ jobs:
       artifactName: 'Rendered Pictures'
       pathtoPublish: 'testArtefact'
     displayName: 'Publish Tests Results'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Error Pictures'
+      pathtoPublish: 'emptyDir'
+    displayName: 'Publish Errors Results'
