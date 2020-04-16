@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/TicketedCollection.h>
 
 #include <optional>
@@ -38,7 +37,6 @@ namespace Babylon::Plugins
         void RemoveInputMap(const std::string& deviceId);
 
     private:
-        JsRuntimeScheduler m_runtimeScheduler;
         std::unordered_map<std::string, std::vector<int32_t>> m_inputs{};
         TicketedCollection<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
         TicketedCollection<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};

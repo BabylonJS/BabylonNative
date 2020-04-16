@@ -30,7 +30,6 @@ namespace Babylon::Plugins
     }
 
     DeviceInputSystem::DeviceInputSystem(Napi::Env env)
-        : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
     {
         Napi::Value deviceInputSystem = Napi::External<DeviceInputSystem>::New(env, this, [](Napi::Env, DeviceInputSystem* deviceInputSystem) { delete deviceInputSystem; });
         env.Global().Set(JS_DEVICE_INPUT_SYSTEM_NAME, deviceInputSystem);
@@ -50,31 +49,24 @@ namespace Babylon::Plugins
 
     void DeviceInputSystem::PointerDown(uint32_t pointerId, uint32_t buttonIndex)
     {
-        // TODO: Don't dispatch within this class, require the caller to do it (just like we do with Window::Resize)
-        m_runtimeScheduler([pointerId, buttonIndex, this]() {
-            const std::string deviceId{GetPointerDeviceId(pointerId)};
-            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, inputIndex)};
-            deviceInputs[buttonIndex] = 1;
-        });
+        const std::string deviceId{GetPointerDeviceId(pointerId)};
+        const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
+        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, inputIndex)};
+        deviceInputs[buttonIndex] = 1;
     }
 
     void DeviceInputSystem::PointerUp(uint32_t pointerId, uint32_t buttonIndex)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, this]() {
-            const std::string deviceId{GetPointerDeviceId(pointerId)};
-            RemoveInputMap(deviceId);
-        });
+        const std::string deviceId{GetPointerDeviceId(pointerId)};
+        RemoveInputMap(deviceId);
     }
 
     void DeviceInputSystem::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
     {
-        m_runtimeScheduler([pointerId, x, y, this]() {
-            const std::string deviceId{GetPointerDeviceId(pointerId)};
-            std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, std::max(POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX))};
-            deviceInputs[POINTER_X_INPUT_INDEX] = x;
-            deviceInputs[POINTER_Y_INPUT_INDEX] = y;
-        });
+        const std::string deviceId{GetPointerDeviceId(pointerId)};
+        std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, std::max(POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX))};
+        deviceInputs[POINTER_X_INPUT_INDEX] = x;
+        deviceInputs[POINTER_Y_INPUT_INDEX] = y;
     }
 
     DeviceInputSystem::DeviceStatusChangedCallbackTicket DeviceInputSystem::AddDeviceConnectedCallback(DeviceInputSystem::DeviceStatusChangedCallback&& callback)
