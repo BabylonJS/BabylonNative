@@ -1,12 +1,10 @@
 #pragma once
 
-#include <Babylon/JsRuntimeScheduler.h>
+#include <Babylon/Polyfills/DeviceInputSystem.h>
 
 #include <napi/napi.h>
 
-#include <unordered_map>
-
-namespace Babylon::Polyfills::Internal
+namespace Babylon::Plugins::Internal
 {
     class DeviceInputSystem final : public Napi::ObjectWrap<DeviceInputSystem>
     {
@@ -16,19 +14,18 @@ namespace Babylon::Polyfills::Internal
         static void Initialize(Napi::Env env);
 
         explicit DeviceInputSystem(const Napi::CallbackInfo& info);
-        ~DeviceInputSystem();
-
-        void PointerDown(int pointerId, int buttonIndex);
-        void PointerUp(int pointerId, int buttonIndex);
-        void PointerMove(int pointerId, int x, int y);
 
     private:
         Napi::Value GetOnDeviceConnected(const Napi::CallbackInfo& info);
         void SetOnDeviceConnected(const Napi::CallbackInfo& info, const Napi::Value& value);
+        Napi::Value GetOnDeviceDisconnected(const Napi::CallbackInfo& info);
+        void SetOnDeviceDisconnected(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value PollInput(const Napi::CallbackInfo& info);
 
-        JsRuntimeScheduler m_runtimeScheduler;
-        std::unordered_map<std::string, std::vector<int>> m_inputs;
+        Babylon::Plugins::DeviceInputSystem& m_deviceInputSystem;
         Napi::FunctionReference m_onDeviceConnected;
+        Napi::FunctionReference m_onDeviceDisconnected;
+        Babylon::Plugins::DeviceInputSystem::DeviceStatusChangedCallbackTicket m_deviceConnectedTicket;
+        Babylon::Plugins::DeviceInputSystem::DeviceStatusChangedCallbackTicket m_deviceDisconnectedTicket;
     };
 }
