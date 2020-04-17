@@ -10,15 +10,15 @@
 
 namespace Babylon::Plugins
 {
-    class DeviceInputSystem
+    class NativeInput
     {
     public:
         using DeviceStatusChangedCallback = std::function<void(const std::string&)>;
         using DeviceStatusChangedCallbackTicket = TicketedCollection<DeviceStatusChangedCallback>::Ticket;
 
         // TODO: Ideally instances of these should be scoped to individual views within an env, but we don't yet support multi-view.
-        static DeviceInputSystem& CreateForJavaScript(Napi::Env);
-        static DeviceInputSystem& GetFromJavaScript(Napi::Env);
+        static NativeInput& CreateForJavaScript(Napi::Env);
+        static NativeInput& GetFromJavaScript(Napi::Env);
 
         void PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
         void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
@@ -29,11 +29,11 @@ namespace Babylon::Plugins
         std::optional<int32_t> PollInput(const std::string& deviceName, uint32_t inputIndex);
 
     protected:
-        DeviceInputSystem(const DeviceInputSystem&) = delete;
-        DeviceInputSystem(DeviceInputSystem&&) = delete;
+        NativeInput(const NativeInput&) = delete;
+        NativeInput(NativeInput&&) = delete;
 
     private:
-        DeviceInputSystem(Napi::Env);
+        NativeInput(Napi::Env);
         std::vector<int32_t>& GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices);
         void RemoveInputMap(const std::string& deviceId);
 

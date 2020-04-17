@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/Plugins/DeviceInputSystem.h>
+#include <Babylon/Plugins/NativeInput.h>
 
 #include <napi/napi.h>
 
@@ -22,10 +22,10 @@ namespace Babylon::Plugins::Internal
         void SetOnDeviceDisconnected(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value PollInput(const Napi::CallbackInfo& info);
 
-        Babylon::Plugins::DeviceInputSystem& m_deviceInputSystem;
+        Babylon::Plugins::NativeInput& m_nativeInput;
         Napi::FunctionReference m_onDeviceConnected;
         Napi::FunctionReference m_onDeviceDisconnected;
-        Babylon::Plugins::DeviceInputSystem::DeviceStatusChangedCallbackTicket m_deviceConnectedTicket;
-        Babylon::Plugins::DeviceInputSystem::DeviceStatusChangedCallbackTicket m_deviceDisconnectedTicket;
+        Babylon::Plugins::NativeInput::DeviceStatusChangedCallbackTicket m_deviceConnectedTicket;
+        Babylon::Plugins::NativeInput::DeviceStatusChangedCallbackTicket m_deviceDisconnectedTicket;
     };
 }
