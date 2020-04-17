@@ -124,7 +124,7 @@ namespace Babylon::Plugins
         }
     }
 
-    std::vector<int32_t>& DeviceInputSystem::GetOrCreateInputMap(const std::string& deviceId, std::vector<uint32_t> inputIndices)
+    std::vector<int32_t>& DeviceInputSystem::GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices)
     {
         uint32_t inputIndex = *std::max_element(inputIndices.begin(), inputIndices.end());
 

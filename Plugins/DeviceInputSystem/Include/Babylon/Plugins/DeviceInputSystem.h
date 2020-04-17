@@ -33,7 +33,7 @@ namespace Babylon::Plugins
 
     private:
         DeviceInputSystem(Napi::Env);
-        std::vector<int32_t>& GetOrCreateInputMap(const std::string& deviceId, std::vector<uint32_t> inputIndices);
+        std::vector<int32_t>& GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices);
         void RemoveInputMap(const std::string& deviceId);
 
     private:
