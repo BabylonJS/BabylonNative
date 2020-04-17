@@ -113,6 +113,7 @@ namespace UrlLib
                 }
 
                 curl_easy_cleanup(curl);
+                m_statusCode = UrlStatusCode::None;
             }
         }
 
