@@ -87,9 +87,12 @@ namespace
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-            // Initialize NativeWindow plugin.
-            auto width = static_cast<float>(rect.right - rect.left);
-            auto height = static_cast<float>(rect.bottom - rect.top);
+            Babylon::Polyfills::Window::Initialize(env);
+            // Initialize NativeWindow plugin to the test size.
+            // TODO: TestUtils::UpdateSize should do it properly but the client size
+            // is not forwarded correctly to the rendering. Find why.
+            auto width = 600;//static_cast<float>(rect.right - rect.left);
+            auto height = 400;//static_cast<float>(rect.bottom - rect.top);
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
@@ -253,8 +256,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_DESTROY:
         {
+            short exitCode = LOWORD(wParam);
             Uninitialize();
-            PostQuitMessage(0);
+            PostQuitMessage(exitCode);
             break;
         }
         case WM_KEYDOWN:
