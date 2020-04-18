@@ -29,26 +29,46 @@ namespace Babylon::Plugins
         }
     }
 
-    NativeInput::NativeInput(Napi::Env env)
+    NativeInput::Impl::Impl(Napi::Env env)
         : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
     {
-        Napi::Value nativeInput = Napi::External<NativeInput>::New(env, this, [](Napi::Env, NativeInput* nativeInput) { delete nativeInput; });
+        Babylon::Plugins::NativeInput::Impl::DeviceInputSystem::Initialize(env);
+        Napi::Value nativeInput = Napi::External<NativeInput::Impl>::New(env, this, [](Napi::Env, NativeInput::Impl* nativeInput) { delete nativeInput; }); // TODO: This needs to be in NativeInput otherwise we leak NativeInput
         env.Global().Set(JS_NATIVE_INPUT_NAME, nativeInput);
+    }
+
+    NativeInput::NativeInput(Napi::Env env)
+        : m_impl{ std::make_unique<Impl>(env) }
+    {
     }
 
     NativeInput& NativeInput::CreateForJavaScript(Napi::Env env)
     {
-        Babylon::Plugins::Internal::DeviceInputSystem::Initialize(env);
         auto* nativeInput = new NativeInput(env);
         return *nativeInput;
     }
 
-    NativeInput& NativeInput::GetFromJavaScript(Napi::Env env)
+    void NativeInput::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
-        return *env.Global().Get(JS_NATIVE_INPUT_NAME).As<Napi::External<NativeInput>>().Data();
+        m_impl->PointerDown(pointerId, buttonIndex, x, y);
     }
 
-    void NativeInput::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    {
+        m_impl->PointerUp(pointerId, buttonIndex, x, y);
+    }
+
+    void NativeInput::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        m_impl->PointerMove(pointerId, x, y);
+    }
+
+    NativeInput::Impl& NativeInput::Impl::GetFromJavaScript(Napi::Env env)
+    {
+        return *env.Global().Get(JS_NATIVE_INPUT_NAME).As<Napi::External<NativeInput::Impl>>().Data();
+    }
+
+    void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
             const std::string deviceId{GetPointerDeviceId(pointerId)};
@@ -60,7 +80,7 @@ namespace Babylon::Plugins
         });
     }
 
-    void NativeInput::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
             const std::string deviceId{GetPointerDeviceId(pointerId)};
@@ -82,7 +102,7 @@ namespace Babylon::Plugins
         });
     }
 
-    void NativeInput::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, x, y, this]() {
             const std::string deviceId{GetPointerDeviceId(pointerId)};
@@ -92,17 +112,17 @@ namespace Babylon::Plugins
         });
     }
 
-    NativeInput::DeviceStatusChangedCallbackTicket NativeInput::AddDeviceConnectedCallback(NativeInput::DeviceStatusChangedCallback&& callback)
+    NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceConnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
     {
         return m_deviceConnectedCallbacks.Insert(std::move(callback));
     }
 
-    NativeInput::DeviceStatusChangedCallbackTicket NativeInput::AddDeviceDisconnectedCallback(NativeInput::DeviceStatusChangedCallback&& callback)
+    NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceDisconnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
     {
         return m_deviceDisconnectedCallbacks.Insert(std::move(callback));
     }
 
-    std::optional<int32_t> NativeInput::PollInput(const std::string& deviceName, uint32_t inputIndex)
+    std::optional<int32_t> NativeInput::Impl::PollInput(const std::string& deviceName, uint32_t inputIndex)
     {
         auto it = m_inputs.find(deviceName);
         if (it == m_inputs.end())
@@ -131,7 +151,7 @@ namespace Babylon::Plugins
         }
     }
 
-    std::vector<int32_t>& NativeInput::GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices)
+    std::vector<int32_t>& NativeInput::Impl::GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices)
     {
         uint32_t inputIndex = *std::max_element(inputIndices.begin(), inputIndices.end());
 
@@ -151,7 +171,7 @@ namespace Babylon::Plugins
         return deviceInputs;
     }
 
-    void NativeInput::RemoveInputMap(const std::string& deviceId)
+    void NativeInput::Impl::RemoveInputMap(const std::string& deviceId)
     {
         if (m_inputs.erase(deviceId))
         {
@@ -162,9 +182,9 @@ namespace Babylon::Plugins
     }
 }
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins
 {
-    void DeviceInputSystem::Initialize(Napi::Env env)
+    void NativeInput::Impl::DeviceInputSystem::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
@@ -183,9 +203,9 @@ namespace Babylon::Plugins::Internal
         env.Global().Set(JS_CONSTRUCTOR_NAME, func);
     }
 
-    DeviceInputSystem::DeviceInputSystem(const Napi::CallbackInfo& info)
+    NativeInput::Impl::DeviceInputSystem::DeviceInputSystem(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<DeviceInputSystem>{info}
-        , m_nativeInput{Babylon::Plugins::NativeInput::GetFromJavaScript(info.Env())}
+        , m_nativeInput{Babylon::Plugins::NativeInput::Impl::GetFromJavaScript(info.Env())}
         , m_deviceConnectedTicket{m_nativeInput.AddDeviceConnectedCallback([this](const std::string& deviceId) {
             if (!m_onDeviceConnected.IsEmpty())
             {
@@ -203,27 +223,27 @@ namespace Babylon::Plugins::Internal
     {
     }
 
-    Napi::Value DeviceInputSystem::GetOnDeviceConnected(const Napi::CallbackInfo&)
+    Napi::Value NativeInput::Impl::DeviceInputSystem::GetOnDeviceConnected(const Napi::CallbackInfo&)
     {
         return m_onDeviceConnected.Value();
     }
 
-    void DeviceInputSystem::SetOnDeviceConnected(const Napi::CallbackInfo&, const Napi::Value& value)
+    void NativeInput::Impl::DeviceInputSystem::SetOnDeviceConnected(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         m_onDeviceConnected = Napi::Persistent(value.As<Napi::Function>());
     }
 
-    Napi::Value DeviceInputSystem::GetOnDeviceDisconnected(const Napi::CallbackInfo&)
+    Napi::Value NativeInput::Impl::DeviceInputSystem::GetOnDeviceDisconnected(const Napi::CallbackInfo&)
     {
         return m_onDeviceDisconnected.Value();
     }
 
-    void DeviceInputSystem::SetOnDeviceDisconnected(const Napi::CallbackInfo&, const Napi::Value& value)
+    void NativeInput::Impl::DeviceInputSystem::SetOnDeviceDisconnected(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         m_onDeviceDisconnected = Napi::Persistent(value.As<Napi::Function>());
     }
 
-    Napi::Value DeviceInputSystem::PollInput(const Napi::CallbackInfo& info)
+    Napi::Value NativeInput::Impl::DeviceInputSystem::PollInput(const Napi::CallbackInfo& info)
     {
         std::string deviceName = info[0].As<Napi::String>().Utf8Value();
         uint32_t inputIndex = info[1].As<Napi::Number>().Uint32Value();

@@ -1,11 +1,5 @@
 #pragma once
 
-#include <Babylon/TicketedCollection.h>
-#include <Babylon/JsRuntimeScheduler.h>
-
-#include <optional>
-#include <unordered_map>
-
 #include <napi/env.h>
 
 namespace Babylon::Plugins
@@ -13,20 +7,12 @@ namespace Babylon::Plugins
     class NativeInput
     {
     public:
-        using DeviceStatusChangedCallback = std::function<void(const std::string&)>;
-        using DeviceStatusChangedCallbackTicket = TicketedCollection<DeviceStatusChangedCallback>::Ticket;
-
         // TODO: Ideally instances of these should be scoped to individual views within an env, but we don't yet support multi-view.
         static NativeInput& CreateForJavaScript(Napi::Env);
-        static NativeInput& GetFromJavaScript(Napi::Env);
 
         void PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
         void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
         void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y);
-
-        DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);
-        DeviceStatusChangedCallbackTicket AddDeviceDisconnectedCallback(DeviceStatusChangedCallback&& callback);
-        std::optional<int32_t> PollInput(const std::string& deviceName, uint32_t inputIndex);
 
     protected:
         NativeInput(const NativeInput&) = delete;
@@ -34,13 +20,9 @@ namespace Babylon::Plugins
 
     private:
         NativeInput(Napi::Env);
-        std::vector<int32_t>& GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices);
-        void RemoveInputMap(const std::string& deviceId);
+        class Impl;
+        std::unique_ptr<Impl> m_impl{};
 
     private:
-        JsRuntimeScheduler m_runtimeScheduler;
-        std::unordered_map<std::string, std::vector<int32_t>> m_inputs{};
-        TicketedCollection<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
-        TicketedCollection<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};
     };
 }
