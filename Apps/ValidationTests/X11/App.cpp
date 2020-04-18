@@ -7,6 +7,10 @@
 #undef None
 #include <filesystem>
 
+
+bool exitPending{};
+int exitErrorCode{};
+
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
@@ -156,8 +160,8 @@ int main(int _argc, const char* const* _argv)
     InitBabylon(window, width, height, _argc, _argv);
     UpdateWindowSize(width, height);
 
-    bool exit{};
-    while (!exit)
+    
+    while (!exitPending)
     {
         XEvent event;
         XNextEvent(display, &event);
@@ -168,7 +172,7 @@ int main(int _argc, const char* const* _argv)
             case ClientMessage:
                 if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
                 {
-                    exit = true;
+                    exitPending = true;
                 }
                 break;
             case ConfigureNotify:
@@ -184,5 +188,5 @@ int main(int _argc, const char* const* _argv)
 
     XUnmapWindow(display, window);
     XDestroyWindow(display, window);
-    return 0;
+    return exitErrorCode;
 }

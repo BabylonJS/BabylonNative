@@ -64,7 +64,16 @@ namespace Babylon
 #ifdef WIN32
             PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
 #elif __linux__
-            exit(exitCode);
+            Display* display = XOpenDisplay(NULL);
+            exitPending = true;
+            exitErrorCode = exitCode;
+            XClientMessageEvent dummyEvent;
+            memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
+            dummyEvent.type = ClientMessage;
+            dummyEvent.window = (Window)_nativeWindowPtr;
+            dummyEvent.format = 32;
+            XSendEvent(display, (Window)_nativeWindowPtr, 0, 0, (XEvent*)&dummyEvent);
+            XFlush(display);
 #else
             // TODO: handle exit for other platforms
 #endif
