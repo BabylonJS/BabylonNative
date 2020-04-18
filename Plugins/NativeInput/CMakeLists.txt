@@ -1,7 +1,9 @@
 set(SOURCES 
     "Include/Babylon/Plugins/NativeInput.h"
     "Source/NativeInput.cpp"
-    "Source/NativeInput.h")
+    "Source/NativeInput.h"
+    "Source/DeviceInputSystem.cpp"
+    "Source/DeviceInputSystem.h")
 
 add_library(NativeInput ${SOURCES})
 
