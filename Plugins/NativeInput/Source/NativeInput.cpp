@@ -64,7 +64,7 @@ namespace Babylon::Plugins
     }
 
     NativeInput::Impl::Impl(Napi::Env env)
-            : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
+        : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
     {
         NativeInput::Impl::DeviceInputSystem::Initialize(env);
     }
