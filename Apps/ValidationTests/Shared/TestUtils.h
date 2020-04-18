@@ -14,13 +14,19 @@
 
 #include <functional>
 #include <sstream>
+#include <Babylon/JsRuntime.h>
+
+namespace
+{
+    std::filesystem::path GetModulePath();
+}
 
 namespace Babylon
 {
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
-        static inline constexpr char* JS_INSTANCE_NAME{ "testUtils" };
+        static inline constexpr char* JS_INSTANCE_NAME{ "TestUtils" };
 
         using ParentT = Napi::ObjectWrap<TestUtils>;
 
@@ -31,20 +37,17 @@ namespace Babylon
 
             Napi::Function func = ParentT::DefineClass(
                 env,
-                "TestUtils",
+                "TestUtilsClass",
                 {
-                    ParentT::StaticMethod("exit", &TestUtils::Exit),
-                    ParentT::StaticMethod("updateSize", &TestUtils::UpdateSize),
-                    ParentT::StaticMethod("setTitle", &TestUtils::SetTitle),
-                    ParentT::StaticMethod("writePNG", &TestUtils::WritePNG),
-                    ParentT::StaticMethod("decodeImage", &TestUtils::DecodeImage),
-                    ParentT::StaticMethod("getImageData", &TestUtils::GetImageData),
+                    ParentT::InstanceMethod("exit", &TestUtils::Exit),
+                    ParentT::InstanceMethod("updateSize", &TestUtils::UpdateSize),
+                    ParentT::InstanceMethod("setTitle", &TestUtils::SetTitle),
+                    ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
+                    ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
+                    ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
+                    ParentT::InstanceMethod("getWorkingDirectory", &TestUtils::GetWorkingDirectory),
                 });
-
-            constructor = Napi::Persistent(func);
-            constructor.SuppressDestruct();
-
-            env.Global().Set("TestUtils", func);
+            env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
 
         explicit TestUtils(const Napi::CallbackInfo& info)
@@ -55,17 +58,19 @@ namespace Babylon
     private:
         static inline Napi::FunctionReference constructor{};
 
-        static void Exit(const Napi::CallbackInfo& info)
+        void Exit(const Napi::CallbackInfo& info)
         {
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
 #ifdef WIN32
             PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
+#elif __linux__
+            exit(exitCode);
 #else
             // TODO: handle exit for other platforms
 #endif
         }
 
-        static void UpdateSize(const Napi::CallbackInfo& info)
+        void UpdateSize(const Napi::CallbackInfo& info)
         {
             const int32_t width = info[0].As<Napi::Number>().Int32Value();
             const int32_t height = info[1].As<Napi::Number>().Int32Value();
@@ -80,17 +85,20 @@ namespace Babylon
 #endif
         }
 
-        static void SetTitle(const Napi::CallbackInfo& info)
+        void SetTitle(const Napi::CallbackInfo& info)
         {
             const auto title = info[0].As<Napi::String>().Utf8Value();
 #ifdef WIN32
             SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
+#elif __linux__
+            Display* display = XOpenDisplay(NULL);
+            XStoreName(display, (Window)_nativeWindowPtr, title.c_str());
 #else
             // TODO: handle title for other platforms
 #endif
         }
 
-        static void WritePNG(const Napi::CallbackInfo& info)
+        void WritePNG(const Napi::CallbackInfo& info)
         {
             const auto buffer = info[0].As<Napi::Uint8Array>();
             const auto width = info[1].As<Napi::Number>().Uint32Value();
@@ -101,7 +109,6 @@ namespace Babylon
             {
                 return;
             }
-#ifdef WIN32
             bx::DefaultAllocator allocator;
             bx::MemoryBlock mb(&allocator);
             bx::FileWriter writer;
@@ -112,9 +119,6 @@ namespace Babylon
                 bimg::imageWritePng(&writer, width, height, width * 4, buffer.Data(), bimg::TextureFormat::RGBA8, false);
                 writer.close();
             }
-#else
-            // TODO: handle title for other platforms
-#endif
         }
 
         struct Image
@@ -130,7 +134,7 @@ namespace Babylon
             bimg::ImageContainer* m_Image{};
         };
 
-        static Napi::Value DecodeImage(const Napi::CallbackInfo& info)
+        Napi::Value DecodeImage(const Napi::CallbackInfo& info)
         {
             Image* image = new Image;
             const auto buffer = info[0].As<Napi::ArrayBuffer>();
@@ -141,7 +145,7 @@ namespace Babylon
             return Napi::External<Image>::New(info.Env(), image);
         }
 
-        static Napi::Value GetImageData(const Napi::CallbackInfo& info)
+        Napi::Value GetImageData(const Napi::CallbackInfo& info)
         {
             const auto imageData = info[0].As<Napi::External<Image>>().Data();
 
@@ -156,6 +160,13 @@ namespace Babylon
 
             return Napi::Value::From(info.Env(), data);
         }
+
+        Napi::Value GetWorkingDirectory(const Napi::CallbackInfo& info)
+        {
+            auto path = GetModulePath().parent_path().generic_string();
+            return Napi::Value::From(info.Env(), path);
+        }
+        
 
         inline static void* _nativeWindowPtr{};
     };

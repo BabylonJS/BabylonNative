@@ -3,10 +3,11 @@
 #include <X11/keysymdef.h>
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
 #include <X11/Xutil.h>
-//#include <bgfx/platform.h>
 #include <unistd.h> // syscall
 #undef None
 #include <filesystem>
+
+#include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
@@ -16,8 +17,8 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
-static const char* s_applicationName  = "BabylonNative Playground";
-static const char* s_applicationClass = "Playground";
+static const char* s_applicationName  = "BabylonNative Validation Tests";
+static const char* s_applicationClass = "Validation Tests";
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 
@@ -43,7 +44,6 @@ namespace
     
     void InitBabylon(int32_t window, int width, int height, int argc, const char* const* argv)
     {
-        std::vector<std::string> scripts(argv + 1, argv + argc);
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         // Separately call reset and make_unique to ensure prior runtime is destroyed before new one is created.
@@ -55,6 +55,8 @@ namespace
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
+
+            Babylon::TestUtils::CreateInstance(env, (void*)window);
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -70,25 +72,10 @@ namespace
 
         Babylon::ScriptLoader loader{*runtime};
         loader.Eval("document = {}", "");
-        loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
-
-        if (scripts.empty())
-        {
-            loader.LoadScript(moduleRootUrl + "/Scripts/experience.js");
-        }
-        else
-        {
-            for (const auto& script : scripts)
-            {
-                loader.LoadScript(GetUrlFromPath(script));
-            }
-
-            loader.LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
-        }
+        loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
     }
 
     void UpdateWindowSize(float width, float height)
@@ -108,8 +95,8 @@ int main(int _argc, const char* const* _argv)
     int32_t depth  = DefaultDepth(display, screen);
     Visual* visual = DefaultVisual(display, screen);
     Window root   = RootWindow(display, screen);
-    const int width = 640;
-    const int height = 480;
+    const int width = 600;
+    const int height = 400;
 
     XSetWindowAttributes windowAttrs{0};
     windowAttrs.background_pixmap = 0;

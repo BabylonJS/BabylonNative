@@ -42,7 +42,7 @@ if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries
     # Resulting in crash at runtime for std::filesystem
     # https://stackoverflow.com/questions/56738708/c-stdbad-alloc-on-stdfilesystempath-append
-    target_link_libraries(Playground 
+    target_link_libraries(ValidationTests 
         PRIVATE stdc++fs)
 endif()
 

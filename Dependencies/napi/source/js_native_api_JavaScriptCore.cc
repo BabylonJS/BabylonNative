@@ -448,7 +448,61 @@ napi_status napi_create_typedarray(napi_env env,
                                    napi_value arraybuffer,
                                    size_t byte_offset,
                                    napi_value* result) {
-  assert(0);
+  JSTypedArrayType jsType;
+  switch (type) {
+    case napi_int8_array:
+      jsType = kJSTypedArrayTypeInt8Array;
+      break;
+    case napi_uint8_array:
+      jsType = kJSTypedArrayTypeUint8Array;
+      break;
+    case napi_uint8_clamped_array:
+      jsType = kJSTypedArrayTypeUint8ClampedArray;
+      break;
+    case napi_int16_array:
+      jsType = kJSTypedArrayTypeInt16Array;
+      break;
+    case napi_uint16_array:
+      jsType = kJSTypedArrayTypeUint16Array;
+      break;
+    case napi_int32_array:
+      jsType = kJSTypedArrayTypeInt32Array;
+      break;
+    case napi_uint32_array:
+      jsType = kJSTypedArrayTypeUint32Array;
+      break;
+    case napi_float32_array:
+      jsType = kJSTypedArrayTypeFloat32Array;
+      break;
+    case napi_float64_array:
+      jsType = kJSTypedArrayTypeFloat64Array;
+      break;
+    default:
+      assert(0);
+  }
+/*
+  void *data;
+  size_t dataSize;
+  auto res = api_get_arraybuffer_info(env,
+                    arraybuffer,
+                    &data,
+                    &byte_length)
+  assert(res == napi_ok);
+  */
+  JSObjectRef array = reinterpret_cast<JSObjectRef>(arraybuffer);
+  JSObjectRef obj = JSObjectMakeTypedArrayWithArrayBuffer(env->m_globalContext, jsType, array, nullptr);
+
+  *result = reinterpret_cast<napi_value>(obj);
+/*
+  JsValueRef jsArrayBuffer = reinterpret_cast<JsValueRef>(arraybuffer);
+
+  CHECK_JSRT(env, JsCreateTypedArray(
+    jsType,
+    jsArrayBuffer,
+    static_cast<unsigned int>(byte_offset),
+    static_cast<unsigned int>(length),
+    reinterpret_cast<JsValueRef*>(result)));
+    */
   return napi_ok;
 }
 

@@ -2,7 +2,7 @@ var engine;
 var currentScene;
 var config;
 var justOnce;
-var threshold = 25;
+var threshold = 2500;
 var errorRatio = 2.5;
 var saveResult = true;
 var testWidth = 600;
@@ -38,10 +38,10 @@ function compare(test, canvasImageData, referenceImage) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, "Error " + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getWorkingDirectory()+"/Errors/" + test.title + ".png");
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, "Result " + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getWorkingDirectory()+"/Results/" + test.title + ".png");
     }
     return error;
 }
@@ -304,12 +304,11 @@ document = {
 }
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", "app:Scripts/config.json", true);
+xhr.open("GET", "file://"+TestUtils.getWorkingDirectory()+"/Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
     if (xhr.status === 200) {
         config = JSON.parse(xhr.responseText);
-
         // Run tests
         var index = 0;
         var recursiveRunTest = function(i) {

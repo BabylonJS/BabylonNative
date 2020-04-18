@@ -79,7 +79,14 @@ namespace UrlLib
 
         static void Append(std::string& string, char* buffer, size_t nitems)
         {
-            string.insert(string.end(), buffer, buffer + nitems);
+            if (nitems >= 3 && buffer[0] == '\xEF' && buffer[1] == '\xBB' && buffer[2] == '\xBF')
+            {
+                string.insert(string.end(), buffer + 3, buffer + nitems);
+            }
+            else
+            {
+                string.insert(string.end(), buffer, buffer + nitems);
+            }
         }
 
         static void Append(ByteArray& byteArray, char* buffer, size_t nitems)
@@ -109,10 +116,12 @@ namespace UrlLib
                 auto result = curl_easy_perform(curl);
                 if (result != CURLE_OK)
                 {
+                    printf("exception!!!\n");
                     throw std::exception();
                 }
 
                 curl_easy_cleanup(curl);
+                m_statusCode = UrlStatusCode::Ok;
             }
         }
 

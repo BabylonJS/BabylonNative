@@ -41,12 +41,11 @@ namespace Babylon
             compiler->build_combined_image_samplers();
 
             spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
-
-#ifdef ANDROID
+#if defined(ANDROID)  //|| defined(__linux__) 
             options.version = 300;
             options.es = true;
 #else
-            options.version = 430;
+            options.version = 140;
             options.es = false;
 #endif
             compiler->set_common_options(options);
@@ -126,7 +125,7 @@ namespace Babylon
                 }
             }
 
-#ifdef ANDROID
+#if defined(ANDROID) //|| defined(__linux__) 
             glsl = compiled.substr(strlen("#version 300 es\n"));
 
             // frag def
@@ -145,8 +144,164 @@ namespace Babylon
                 glsl.replace(pos, fragColor.size(), "gl_FragColor");
             }
 #else
+{
+const std::string version = "#version 140";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "");
+            }
             glsl = compiled;
+}
+{
+const std::string version = "layout(binding = 0";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "/*layout(binding = 0");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _22;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _22;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _17;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _17;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _205;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _205;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _292;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _292;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _28;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _28;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _97;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _97;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _664;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _664;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _210;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _210;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _513;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _210;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _25;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _210;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _575;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _210;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _33;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _210;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "} _680;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _210;*/");
+            }
+            glsl = compiled;
+}
+{
+const std::string version = "#extension";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "//#extension");
+            }
+            glsl = compiled;
+}
+
+
+   {
+const std::string version = "} _69;";
+            size_t posv = compiled.find(version);
+            if (posv != std::string::npos)
+            {
+                compiled.replace(posv, version.size(), "} _69;*/");
+            }
+            glsl = compiled;
+}     
+
 #endif
+//printf("%s\n", glsl.c_str());
             return std::move(compiler);
         }
     }
