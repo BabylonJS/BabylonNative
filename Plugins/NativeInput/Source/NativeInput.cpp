@@ -115,12 +115,12 @@ namespace Babylon::Plugins
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceConnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
     {
-        return m_deviceConnectedCallbacks.Insert(std::move(callback));
+        return m_deviceConnectedCallbacks.insert(std::move(callback));
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceDisconnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
     {
-        return m_deviceDisconnectedCallbacks.Insert(std::move(callback));
+        return m_deviceDisconnectedCallbacks.insert(std::move(callback));
     }
 
     std::optional<int32_t> NativeInput::Impl::PollInput(const std::string& deviceName, uint32_t inputIndex)
@@ -162,7 +162,7 @@ namespace Babylon::Plugins
 
         if (newSize != previousSize)
         {
-            m_deviceConnectedCallbacks.ApplyToAll([deviceId](auto& callback) {
+            m_deviceConnectedCallbacks.apply_to_all([deviceId](auto& callback) {
                 callback(deviceId);
             });
         }
@@ -176,7 +176,7 @@ namespace Babylon::Plugins
     {
         if (m_inputs.erase(deviceId))
         {
-            m_deviceDisconnectedCallbacks.ApplyToAll([deviceId](auto& callback){
+            m_deviceDisconnectedCallbacks.apply_to_all([deviceId](auto& callback){
                callback(deviceId);
             });
         }

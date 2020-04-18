@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Babylon/TicketedCollection.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Plugins/NativeInput.h>
+#include <arcana/containers/weak_table.h>
 
 #include <optional>
 #include <unordered_map>
@@ -13,7 +13,7 @@ namespace Babylon::Plugins
     {
     public:
         using DeviceStatusChangedCallback = std::function<void(const std::string&)>;
-        using DeviceStatusChangedCallbackTicket = TicketedCollection<DeviceStatusChangedCallback>::Ticket;
+        using DeviceStatusChangedCallbackTicket = arcana::weak_table<DeviceStatusChangedCallback>::ticket;
 
         Impl(Napi::Env);
 
@@ -31,8 +31,8 @@ namespace Babylon::Plugins
 
         JsRuntimeScheduler m_runtimeScheduler;
         std::unordered_map<std::string, std::vector<int32_t>> m_inputs{};
-        TicketedCollection<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
-        TicketedCollection<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};
+        arcana::weak_table<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
+        arcana::weak_table<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};
 
         class DeviceInputSystem;
     };

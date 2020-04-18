@@ -11,7 +11,7 @@ target_include_directories(NativeInput PUBLIC "Include")
 
 target_link_to_dependencies(NativeInput
     PUBLIC JsRuntime
-    PRIVATE BabylonNativeUtils)
+    PRIVATE arcana)
 
 set_property(TARGET NativeInput PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
