@@ -8,6 +8,7 @@ namespace Babylon::Plugins
     {
     public:
         // TODO: Ideally instances of these should be scoped to individual views within an env, but we don't yet support multi-view.
+        // See https://github.com/BabylonJS/BabylonNative/issues/147
         static NativeInput& CreateForJavaScript(Napi::Env);
         static NativeInput& GetFromJavaScript(Napi::Env);
 
