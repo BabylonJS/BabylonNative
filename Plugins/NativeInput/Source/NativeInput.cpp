@@ -11,7 +11,7 @@ namespace Babylon::Plugins
     {
         constexpr auto JS_NATIVE_INPUT_NAME = "_nativeInput";
 
-        const std::string POINTER_BASE_DEVICE_ID{"Pointer"};
+        constexpr auto POINTER_BASE_DEVICE_ID = "Pointer";
 
         constexpr uint32_t POINTER_X_INPUT_INDEX{0};
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
