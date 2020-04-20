@@ -9,7 +9,7 @@ namespace Babylon
         auto contextGroup = JSContextGroupCreate();
         auto globalContext = JSGlobalContextCreateInGroup(contextGroup, nullptr);
 
-        Napi::Env env = Napi::Attach(globalContext);
+        Napi::Env env = Napi::Attach<JSContextRef>(globalContext);
         Run(env);
         Napi::Detach(env);
 

@@ -6,10 +6,10 @@
 namespace Napi
 {
     template<>
-    Napi::Env Attach<JSGlobalContextRef>(JSGlobalContextRef globalContext)
+    Napi::Env Attach<JSContextRef>(JSContextRef context)
     {
         auto envPtr = new napi_env__();
-        envPtr->m_globalContext = globalContext;
+        envPtr->context = context;
         return{ envPtr };
     }
 
@@ -18,10 +18,9 @@ namespace Napi
         delete env.operator napi_env();
     }
 
-    template<> JSGlobalContextRef GetContext(Napi::Env env)
+    template<> JSContextRef GetContext(Napi::Env env)
     {
         napi_env napienv = env;
-        return napienv->m_globalContext;
+        return napienv->context;
     }
 }
-
