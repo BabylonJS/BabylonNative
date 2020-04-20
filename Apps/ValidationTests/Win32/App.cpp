@@ -19,6 +19,7 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <iostream>
 
 #define MAX_LOADSTRING 100
 
@@ -82,7 +83,7 @@ namespace
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
-                printf("%s\n", message);
+                std::cout << message << std::endl;
             });
 
             Babylon::Polyfills::Window::Initialize(env);
@@ -115,13 +116,15 @@ namespace
     }
 }
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+/*int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
+                     */
+int main(int argc, char* argv)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+    //UNREFERENCED_PARAMETER(hPrevInstance);
+    //UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
     /*
@@ -131,7 +134,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
     */
     // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
+    if (!InitInstance (0, 0))
     {
         return FALSE;
     }

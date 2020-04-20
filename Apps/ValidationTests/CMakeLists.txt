@@ -22,8 +22,8 @@ if(WIN32)
         "Win32/small.ico"
         "Win32/targetver.h")
     
-    set(WIN32_EXECUTABLE TRUE)
-    add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
+    #set(WIN32_EXECUTABLE TRUE)
+    add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
