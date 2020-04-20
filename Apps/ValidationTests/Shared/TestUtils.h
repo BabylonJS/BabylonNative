@@ -173,6 +173,9 @@ namespace Babylon
         Napi::Value GetWorkingDirectory(const Napi::CallbackInfo& info)
         {
             auto path = GetModulePath().parent_path().generic_string();
+#ifdef WIN32
+            path+= "/..";
+#endif
             return Napi::Value::From(info.Env(), path);
         }
         

@@ -69,15 +69,15 @@ namespace
         Uninitialize();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
-
+        /*
         RECT rect;
         if (!GetWindowRect(hWnd, &rect))
         {
             return;
         }
-
+        */
         // Initialize console plugin.
-        runtime->Dispatch([rect, hWnd](Napi::Env env)
+        runtime->Dispatch([hWnd](Napi::Env env)
         {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
             {
@@ -123,17 +123,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
-
+    /*
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_VALIDATIONTESTSWIN32, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
-
+    */
     // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow))
     {
         return FALSE;
     }
+
+    while(1) {};
+    /*
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VALIDATIONTESTSWIN32));
 
@@ -150,6 +153,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     return (int) msg.wParam;
+    */
+    return 0;
 }
 
 //
@@ -191,7 +196,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
-
+   /*
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
@@ -202,8 +207,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-
-   RefreshBabylon(hWnd);
+   */
+   RefreshBabylon(0);
 
    return TRUE;
 }
