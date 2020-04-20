@@ -24,10 +24,10 @@ jobs:
     inputs:
       solution: 'buildWin32_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'Debug'
     displayName: 'Build WIN32_x64'
   - script: |
-      cd buildWin32_x64\Apps\ValidationTests\Release
+      cd buildWin32_x64\Apps\ValidationTests\Debug
       ValidationTests
     displayName: 'Test on CI'
     
