@@ -7,7 +7,7 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
-
+#import <Metal/Metal.h>
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
