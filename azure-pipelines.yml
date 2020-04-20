@@ -35,14 +35,14 @@ jobs:
     displayName: 'Test on CI'
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'Rendered Pictures'
+      artifactName: 'Win32_x64 Rendered Pictures'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Win32 Results'
+    displayName: 'Publish Tests Win32_x64 Results'
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'Rendered Pictures with errors'
+      artifactName: 'Win32_x64 Rendered Pictures with errors'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
-    displayName: 'Publish Error Win32 Results'
+    displayName: 'Publish Error Win32_x64 Results'
 
 - job: Ubuntu
   timeoutInMinutes: 5
@@ -78,11 +78,11 @@ jobs:
     displayName: 'Test on CI'
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'Rendered Pictures'
+      artifactName: 'Ubuntu Rendered Pictures'
       pathtoPublish: 'build/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Results'
+    displayName: 'Publish Tests Ubuntu Results'
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'Rendered Pictures with errors'
+      artifactName: 'Ubuntu Rendered Pictures with errors'
       pathtoPublish: 'build/Apps/ValidationTests/Errors'
-    displayName: 'Publish Error Results'
+    displayName: 'Publish Error Ubuntu Results'

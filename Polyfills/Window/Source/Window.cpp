@@ -1,7 +1,9 @@
 #include "Window.h"
 #include <basen.hpp>
 #include <chrono>
+#ifdef WIN32
 #include <windows.h>
+#endif
 namespace Babylon::Polyfills::Internal
 {
     namespace
@@ -92,7 +94,9 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<Napi::FunctionReference> function,
         std::chrono::system_clock::time_point whenToRun)
     {
+#ifdef WIN32
         Sleep(1000);
+#endif
         if (std::chrono::system_clock::now() >= whenToRun)
         {
             function->Call({});
