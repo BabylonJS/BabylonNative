@@ -1322,7 +1322,7 @@ napi_status napi_get_value_double(napi_env env, napi_value value, double* result
 
 napi_status napi_get_value_int32(napi_env env, napi_value v, int32_t* result) {
   CHECK_ENV(env);
-  CHECK_ARG(env, value);
+  CHECK_ARG(env, v);
   CHECK_ARG(env, result);
   JsValueRef value = reinterpret_cast<JsValueRef>(v);
   int valueInt;
