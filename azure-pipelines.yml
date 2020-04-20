@@ -6,7 +6,7 @@ pr:
 
 jobs:
 - job: win32_x64   
-  timeoutInMinutes: 6 
+  timeoutInMinutes: 12
   pool:
     vmImage: 'windows-latest'
 
