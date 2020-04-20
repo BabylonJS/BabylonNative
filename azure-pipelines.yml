@@ -5,8 +5,42 @@ pr:
 - master
 
 jobs:
+- job: macOS
+  timeoutInMinutes: 5
+  pool:
+    vmImage: 'macOS-10.14'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+    
+  - script: |
+      cmake --version
+    displayName: 'CMake version'
+  - script: |
+      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
+    displayName: 'Select XCode 11.3.1'
+    
+  - script: |
+      mkdir buildmacOS
+      cd buildmacOS
+      cmake .. -GXcode
+    displayName: 'Generate macOS solution'
+      
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+      scheme: 'Playground'
+      sdk: 'macosx'
+      useXcpretty: false
+    displayName: 'Build macOS'
+  - script: |
+      buildmacOS/Apps/Playground/Debug/Playground.app/Contents/MacOS/Playground
+    displayName: 'Test MacOS'
+    
 - job: Ubuntu
-  timeoutInMinutes: 4
+  timeoutInMinutes: 5
   pool:
     vmImage: 'ubuntu-latest'
 
