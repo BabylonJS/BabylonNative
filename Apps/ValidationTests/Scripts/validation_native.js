@@ -307,11 +307,8 @@ var xhr = new XMLHttpRequest();
 xhr.open("GET", "file://"+TestUtils.getWorkingDirectory()+"/Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function () {
-    console.log(xhr.status);
     if (xhr.status === 200) {
-        console.log("A");
         config = JSON.parse(xhr.responseText);
-        console.log("B");
         // Run tests
         var index = 0;
         var recursiveRunTest = function(i) {

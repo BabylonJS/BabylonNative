@@ -46,4 +46,9 @@ namespace Babylon
         std::scoped_lock lock{m_mutex};
         m_dispatchFunction(std::move(function));
     }
+
+    JsRuntime::~JsRuntime()
+    {
+        printf("Des\n");
+    }
 }

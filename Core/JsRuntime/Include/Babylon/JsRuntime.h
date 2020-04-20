@@ -22,6 +22,7 @@ namespace Babylon
         static JsRuntime& GetFromJavaScript(Napi::Env);
         void Dispatch(std::function<void(Napi::Env)>);
 
+        virtual ~JsRuntime();
     protected:
         JsRuntime(const JsRuntime&) = delete;
         JsRuntime(JsRuntime&&) = delete;

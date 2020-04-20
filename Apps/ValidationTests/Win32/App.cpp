@@ -83,7 +83,7 @@ namespace
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
-                std::cout << message << std::endl;
+                printf("%s", message);
             });
 
             Babylon::Polyfills::Window::Initialize(env);
@@ -113,6 +113,11 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
+
+        runtime->Dispatch([](Napi::Env env)
+            {
+                Babylon::Plugins::NativeWindow::UpdateSize(env, 600, 400);
+            });
     }
 }
 
@@ -138,8 +143,9 @@ int main(int argc, char* argv)
     {
         return FALSE;
     }
-
-    while(1) {};
+    while(1) 
+    {
+    };
     /*
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VALIDATIONTESTSWIN32));
@@ -212,7 +218,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
    */
-   RefreshBabylon(0);
+   RefreshBabylon((HWND)1);
 
    return TRUE;
 }
