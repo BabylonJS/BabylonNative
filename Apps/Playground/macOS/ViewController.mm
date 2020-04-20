@@ -15,6 +15,11 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    auto device = MTLCreateSystemDefaultDevice();
+auto name = device.name;
+NSLog(@"-----------");
+NSLog(name);
+exit(0);
 }
 
 - (void)refreshBabylon {
