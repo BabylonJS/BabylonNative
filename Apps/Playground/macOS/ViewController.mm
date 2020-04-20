@@ -7,7 +7,7 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
-
+#import <Metal/Metal.h>
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
@@ -15,6 +15,11 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    auto device = MTLCreateSystemDefaultDevice();
+auto name = device.name;
+NSLog(@"-----------");
+NSLog(name);
+exit(0);
 }
 
 - (void)refreshBabylon {
