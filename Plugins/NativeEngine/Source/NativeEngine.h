@@ -399,7 +399,7 @@ namespace Babylon
 
         ShaderCompiler m_shaderCompiler;
 
-        ProgramData* m_currentProgram;
+        ProgramData* m_currentProgram{nullptr};
         TicketedCollection<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;
