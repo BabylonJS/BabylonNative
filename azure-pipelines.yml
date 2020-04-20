@@ -35,9 +35,6 @@ jobs:
       sdk: 'macosx'
       useXcpretty: false
     displayName: 'Build macOS'
-  - script: |
-      buildmacOS/Apps/Playground/Debug/Playground.app/Contents/MacOS/Playground
-    displayName: 'Test MacOS'
     
 - job: Ubuntu
   timeoutInMinutes: 5
