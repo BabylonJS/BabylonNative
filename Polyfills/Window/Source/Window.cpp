@@ -28,8 +28,14 @@ namespace Babylon::Polyfills::Internal
         auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
         auto jsWindow = constructor.New({});
 
-        jsNative.Set(JS_WINDOW_NAME, jsWindow);
+        napi_ref result;
+        napi_create_reference(env,
+            jsWindow,
+            10,
+            &result);
 
+        jsNative.Set(JS_WINDOW_NAME, jsWindow);
+        
         if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined())
         {
             global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &Window::SetTimeout, JS_SET_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
@@ -95,7 +101,7 @@ namespace Babylon::Polyfills::Internal
         std::chrono::system_clock::time_point whenToRun)
     {
 #ifdef WIN32
-        Sleep(1000);
+        //Sleep(1000);
 #endif
         if (std::chrono::system_clock::now() >= whenToRun)
         {
@@ -107,6 +113,10 @@ namespace Babylon::Polyfills::Internal
                 RecursiveWaitOrCall(std::move(function), whenToRun);
             });
         }
+    }
+
+    Window::~Window()
+    {
     }
 }
 
