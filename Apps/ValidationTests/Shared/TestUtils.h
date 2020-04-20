@@ -62,6 +62,8 @@ namespace Babylon
         {
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
 #ifdef WIN32
+            doExit = true;
+            //exit(exitCode);
             //PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
 #elif __linux__
             Display* display = XOpenDisplay(NULL);

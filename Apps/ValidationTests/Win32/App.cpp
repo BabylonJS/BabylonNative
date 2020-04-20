@@ -10,6 +10,7 @@
 #include <Shlwapi.h>
 #include <filesystem>
 
+bool doExit = false;
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
@@ -143,7 +144,7 @@ int main(int argc, char* argv)
     {
         return FALSE;
     }
-    while(1) 
+    while(!doExit)
     {
     };
     /*

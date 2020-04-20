@@ -27,10 +27,23 @@ jobs:
       configuration: 'Debug'
     displayName: 'Build WIN32_x64'
   - script: |
-      cd buildWin32_x64\Apps\ValidationTests\Debug
+      cd buildWin32_x64\Apps\ValidationTests
+      mkdir Results
+      mkdir Errors
+      cd Debug
       ValidationTests
     displayName: 'Test on CI'
-    
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Rendered Pictures'
+      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Win32 Results'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Rendered Pictures with errors'
+      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
+    displayName: 'Publish Error Win32 Results'
+
 - job: Ubuntu
   timeoutInMinutes: 5
   pool:
