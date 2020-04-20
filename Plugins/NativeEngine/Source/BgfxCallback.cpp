@@ -7,7 +7,6 @@
 #include <bgfx/bgfx.h>
 #include <iostream>
 
-
 namespace Babylon
 {
     void BgfxCallback::trace(const char* _filePath, uint16_t _line, const char* _format, ...)
@@ -52,6 +51,7 @@ namespace Babylon
         bx::debugOutput(out);
 
         printf("%s : %d %s\n", filePath, (int)line, out);
+        std::cout << out << std::endl;
         //std::cout<< out << std::endl;
     }
 
