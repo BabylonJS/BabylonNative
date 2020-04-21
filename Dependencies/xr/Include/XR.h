@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <list>
 
 namespace xr
 {
@@ -18,6 +19,25 @@ namespace xr
         size_t Width{};
         size_t Height{};
     };
+
+    struct Pose
+    {
+        struct
+        {
+            float X{};
+            float Y{};
+            float Z{};
+        } Position;
+
+        struct
+        {
+            float X{};
+            float Y{};
+            float Z{};
+            float W{};
+        } Orientation;
+    };
+
 
     class System
     {
@@ -36,20 +56,7 @@ namespace xr
             public:
                 struct Space
                 {
-                    struct
-                    {
-                        float X{};
-                        float Y{};
-                        float Z{};
-                    } Position;
-
-                    struct
-                    {
-                        float X{};
-                        float Y{};
-                        float Z{};
-                        float W{};
-                    } Orientation;
+                    Pose Pose;
                 };
 
                 struct View
@@ -101,6 +108,8 @@ namespace xr
 
                 Frame(System::Session::Impl&);
                 ~Frame();
+
+                void GetHitTestResults(std::list<Pose>&) const;
 
             private:
                 class Impl;

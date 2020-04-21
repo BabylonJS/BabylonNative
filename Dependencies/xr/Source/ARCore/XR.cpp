@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <optional>
 #include <sstream>
+#include <list>
+#include <string>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -23,8 +25,11 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
+#include <forward_list>
 
 using namespace android::global;
+
+#define APPNAME "BabylonXR"
 
 namespace xr
 {
@@ -218,6 +223,9 @@ namespace xr
         ArSession* session{};
         ArFrame* frame{};
         ArPose* pose{};
+        ArPose* hitResultPose{};
+        ArHitResultList* hitResultList{};
+        ArHitResult* hitResult{};
 
         float cameraFrameUVs[VERTEX_COUNT * 2];
         bool cameraFrameUVsInitialized{false};
@@ -293,8 +301,15 @@ namespace xr
             // Create the ARCore ArFrame (this gets reused each time we query for the latest frame)
             ArFrame_create(session, &frame);
 
-            // Create the ARCore ArPose (this gets reused for each frame as well)
+            // Create the ARCore ArPose that tracks camera position
             ArPose_create(session, nullptr, &pose);
+
+            // Create the hit result list, and hit result.
+            ArHitResultList_create(session, &hitResultList);
+            ArHitResult_create(session, &hitResult);
+
+            // Create the ARCore arPose that tracks the current hit test result
+            ArPose_create(session, nullptr, &hitResultPose);
 
             // Initialize the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
             ArSession_setDisplayGeometry(session, 0, static_cast<int32_t>(width), static_cast<int32_t>(height));
@@ -360,29 +375,30 @@ namespace xr
         , InputSources{ sessionImpl.InputSources}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
+        ArSession* session = sessionImpl.session;
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
 
         ArCamera* camera{};
-        ArFrame_acquireCamera(sessionImpl.session, sessionImpl.frame, &camera);
+        ArFrame_acquireCamera(session, sessionImpl.frame, &camera);
 
         {
             // Get the current pose of the device
-            ArCamera_getDisplayOrientedPose(sessionImpl.session, camera, sessionImpl.pose);
+            ArCamera_getDisplayOrientedPose(session, camera, sessionImpl.pose);
 
             // The raw pose is exactly 7 floats: 4 for the orientation quaternion, and 3 for the position vector
             float rawPose[7];
-            ArPose_getPoseRaw(sessionImpl.session, sessionImpl.pose, rawPose);
+            ArPose_getPoseRaw(session, sessionImpl.pose, rawPose);
 
             // Set the orientation and position
-            Views[0].Space.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
-            Views[0].Space.Position = {rawPose[4], rawPose[5], rawPose[6]};
+            Views[0].Space.Pose.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
+            Views[0].Space.Pose.Position = {rawPose[4], rawPose[5], rawPose[6]};
         }
 
         {
             // Get the current projection matrix
             glm::mat4 projectionMatrix{};
-            ArCamera_getProjectionMatrix(sessionImpl.session, camera, Views[0].DepthNearZ, Views[0].DepthFarZ, glm::value_ptr(projectionMatrix));
+            ArCamera_getProjectionMatrix(session, camera, Views[0].DepthNearZ, Views[0].DepthFarZ, glm::value_ptr(projectionMatrix));
 
             // Calculate the aspect ratio and field of view
             float a = projectionMatrix[0][0];
@@ -398,17 +414,17 @@ namespace xr
 
         // Get the tracking state
         ArTrackingState trackingState{};
-        ArCamera_getTrackingState(sessionImpl.session, camera, &trackingState);
+        ArCamera_getTrackingState(session, camera, &trackingState);
 
         if (trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING)
         {
             int32_t geometryChanged{ 0 };
-            ArFrame_getDisplayGeometryChanged(sessionImpl.session, sessionImpl.frame, &geometryChanged);
+            ArFrame_getDisplayGeometryChanged(session, sessionImpl.frame, &geometryChanged);
             if (geometryChanged || !sessionImpl.cameraFrameUVsInitialized)
             {
                 // Transform the UVs for the vertex positions given the current display size
                 ArFrame_transformCoordinates2d(
-                    sessionImpl.session, sessionImpl.frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
+                    session, sessionImpl.frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
                     VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, sessionImpl.cameraFrameUVs);
 
                 // Note that the UVs have been initialized (we don't need to do this again unless the display geometry changes)
@@ -417,6 +433,76 @@ namespace xr
         }
 
         ArCamera_release(camera);
+    }
+
+    void System::Session::Frame::GetHitTestResults(std::list<Pose>& filteredResults) const {
+        ArSession* session = m_impl->sessionImpl.session;
+        ArCamera* camera{};
+        ArFrame_acquireCamera(session, m_impl->sessionImpl.frame, &camera);
+
+        // Get the tracking state
+        ArTrackingState trackingState{};
+        ArCamera_getTrackingState(session, camera, &trackingState);
+
+        // If not tracking, back out and return.
+        if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING) {
+            return;
+        }
+
+        glm::quat cameraOrientationQuaternion;
+        cameraOrientationQuaternion.x = Views[0].Space.Pose.Orientation.X;
+        cameraOrientationQuaternion.y = Views[0].Space.Pose.Orientation.Y;
+        cameraOrientationQuaternion.z = Views[0].Space.Pose.Orientation.Z;
+        cameraOrientationQuaternion.w = Views[0].Space.Pose.Orientation.W;
+
+        glm::vec3 forward;
+        forward.x = 0;
+        forward.y = 0;
+        forward.z = -1;
+
+        glm::vec3 cameraForward = cameraOrientationQuaternion * forward;
+
+        float cameraPosition[3] = { Views[0].Space.Pose.Position.X,  Views[0].Space.Pose.Position.Y, Views[0].Space.Pose.Position.Z };
+
+        // Perform a hit test and process the results.
+        float cameraForwardArray[3] = { cameraForward.x, cameraForward.y, cameraForward.z };
+
+        ArFrame_hitTestRay(session, m_impl->sessionImpl.frame, cameraPosition, cameraForwardArray, m_impl->sessionImpl.hitResultList);
+
+        // Clean up the last hit test results.
+        int32_t size;
+        ArHitResultList_getSize(session, m_impl->sessionImpl.hitResultList, &size);
+
+        for (int i = 0; i < size; i++) {
+            ArHitResult* hitResult = m_impl->sessionImpl.hitResult;
+            ArTrackableType trackableType;
+            ArTrackable* trackable;
+
+            ArHitResultList_getItem(session, m_impl->sessionImpl.hitResultList, i, hitResult);
+            ArHitResult_acquireTrackable(session, hitResult, &trackable);
+            ArTrackable_getType(session, trackable, &trackableType);
+            if (trackableType == AR_TRACKABLE_PLANE) {
+                int32_t isPoseInPolygon;
+
+                ArHitResult_getHitPose(session, hitResult, m_impl->sessionImpl.hitResultPose);
+                ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, m_impl->sessionImpl.hitResultPose, &isPoseInPolygon);
+
+                if (isPoseInPolygon != 0) {
+                    float rawPose[7];
+                    ArPose_getPoseRaw(session, m_impl->sessionImpl.hitResultPose, rawPose);
+                    Pose pose{};
+                    pose.Orientation.X = rawPose[0];
+                    pose.Orientation.Y = rawPose[1];
+                    pose.Orientation.Z = rawPose[2];
+                    pose.Orientation.W = rawPose[3];
+                    pose.Position.X = rawPose[4];
+                    pose.Position.Y = rawPose[5];
+                    pose.Position.Z = rawPose[6];
+
+                    filteredResults.push_back(pose);
+                }
+            }
+        }
     }
 
     System::Session::Frame::~Frame()
