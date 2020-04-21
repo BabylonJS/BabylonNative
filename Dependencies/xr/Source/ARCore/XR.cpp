@@ -329,6 +329,9 @@ namespace xr
         ~Impl()
         {
             ArPose_destroy(pose);
+            ArPose_destroy(hitResultPose);
+            ArHitResult_destroy(hitResult);
+            ArHitResultList_destroy(hitResultList);
             ArFrame_destroy(frame);
             ArSession_destroy(session);
         }
@@ -449,30 +452,30 @@ namespace xr
             return;
         }
 
+        // Pull out the camera position into a float array.
+        float cameraPosition[3] = { Views[0].Space.Pose.Position.X,  Views[0].Space.Pose.Position.Y, Views[0].Space.Pose.Position.Z };
+
+        // Push the camera orientation into a glm quaternion.
         glm::quat cameraOrientationQuaternion;
         cameraOrientationQuaternion.x = Views[0].Space.Pose.Orientation.X;
         cameraOrientationQuaternion.y = Views[0].Space.Pose.Orientation.Y;
         cameraOrientationQuaternion.z = Views[0].Space.Pose.Orientation.Z;
         cameraOrientationQuaternion.w = Views[0].Space.Pose.Orientation.W;
 
-        glm::vec3 forward;
-        forward.x = 0;
-        forward.y = 0;
-        forward.z = -1;
+        // ArCamera_getDisplayOrientedPose gives us a pose where -z points in the direction the camera is facing
+        // so we need to actually use the backwards unit vector when calculating cameraForward.
+        const glm::vec3 backward = { 0, 0, -1};
 
-        glm::vec3 cameraForward = cameraOrientationQuaternion * forward;
-
-        float cameraPosition[3] = { Views[0].Space.Pose.Position.X,  Views[0].Space.Pose.Position.Y, Views[0].Space.Pose.Position.Z };
-
-        // Perform a hit test and process the results.
+        // Multiply the camera rotation quaternion by the backward vector to calculate the camera forward vector.
+        glm::vec3 cameraForward = cameraOrientationQuaternion * backward;
         float cameraForwardArray[3] = { cameraForward.x, cameraForward.y, cameraForward.z };
 
+        // Perform a hit test and process the results.
         ArFrame_hitTestRay(session, m_impl->sessionImpl.frame, cameraPosition, cameraForwardArray, m_impl->sessionImpl.hitResultList);
 
-        // Clean up the last hit test results.
+        // Iterate over the results and pull out only those that match the desired TrackableType (just Planes for now)
         int32_t size;
         ArHitResultList_getSize(session, m_impl->sessionImpl.hitResultList, &size);
-
         for (int i = 0; i < size; i++) {
             ArHitResult* hitResult = m_impl->sessionImpl.hitResult;
             ArTrackableType trackableType;
