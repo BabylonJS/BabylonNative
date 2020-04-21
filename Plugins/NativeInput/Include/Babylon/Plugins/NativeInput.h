@@ -16,11 +16,9 @@ namespace Babylon::Plugins
         void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
         void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y);
 
-    protected:
+    private:
         NativeInput(const NativeInput&) = delete;
         NativeInput(NativeInput&&) = delete;
-
-    private:
         NativeInput(Napi::Env);
         class Impl;
         std::unique_ptr<Impl> m_impl{};

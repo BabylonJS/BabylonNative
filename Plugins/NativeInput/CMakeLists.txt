@@ -13,5 +13,5 @@ target_link_to_dependencies(NativeInput
     PUBLIC JsRuntime
     PRIVATE arcana)
 
-set_property(TARGET NativeInput PROPERTY FOLDER Polyfills)
+set_property(TARGET NativeInput PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
