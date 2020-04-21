@@ -48,7 +48,7 @@ namespace
         return std::string("file://") + path.generic_string();
     }
     
-    void InitBabylon(int32_t window, int argc, const char* const* argv)
+    void InitBabylon(int32_t window)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
@@ -157,7 +157,7 @@ int main(int _argc, const char* const* _argv)
             , NULL
             );
 
-    InitBabylon(window, width, height, _argc, _argv);
+    InitBabylon(window);
     UpdateWindowSize(width, height);
 
     
