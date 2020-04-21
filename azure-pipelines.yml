@@ -5,6 +5,68 @@ pr:
 - master
 
 jobs:
+- job: macOS
+  pool:
+    vmImage: 'macOS-10.14'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+    
+  - script: |
+      cmake --version
+    displayName: 'CMake version'
+
+  - script: |
+      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
+    displayName: 'Select XCode 11.3.1'
+    
+  - script: |
+      mkdir buildmacOS
+      cd buildmacOS
+      cmake .. -GXcode
+    displayName: 'Generate macOS solution'
+      
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+      scheme: 'Playground'
+      sdk: 'macosx'
+      useXcpretty: false
+    displayName: 'Build macOS'
+    
+- job: iOS
+  pool:
+    vmImage: 'macOS-10.14'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+      
+  - script: |
+      cmake --version
+    displayName: 'CMake version'
+
+  - script: |
+      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
+    displayName: 'Select XCode 11.3.1'
+
+  - script: |
+      mkdir buildiOS
+      cd buildiOS
+      cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
+    displayName: 'Generate iOS solution'
+
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+      scheme: 'Playground'
+      sdk: 'iphoneos'
+      useXcpretty: false
+    displayName: 'Build iOS'
+    
 - job: win32_x64   
   timeoutInMinutes: 12
   pool:
@@ -24,13 +86,13 @@ jobs:
     inputs:
       solution: 'buildWin32_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Debug'
+      configuration: 'Release'
     displayName: 'Build WIN32_x64'
   - script: |
       cd buildWin32_x64\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Debug
+      cd Release
       ValidationTests -NoWindow
     displayName: 'Test on CI'
   - task: PublishBuildArtifacts@1
@@ -43,6 +105,153 @@ jobs:
       artifactName: 'Win32_x64 Rendered Pictures with errors'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
     displayName: 'Publish Error Win32_x64 Results'
+    
+- job: win32_x86    
+  pool:
+    vmImage: 'windows-latest'
+
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+
+  - script: |
+      mkdir buildWin32_x86
+      cd buildWin32_x86
+      cmake .. -G "Visual Studio 16 2019" -A Win32
+    displayName: 'Generate Win32_x86 solution'
+    
+  - task: MSBuild@1
+    inputs:
+      solution: 'buildWin32_x86/BabylonNative.sln'
+      maximumCpuCount: true
+      configuration: 'Release'
+    displayName: 'Build WIN32_x86'
+    
+- job: uwp_x64    
+  pool:
+    vmImage: 'windows-latest'  
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+    
+  - script: |
+      mkdir buildUWP_x64
+      cd buildUWP_x64
+      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
+    displayName: 'Generate UWP_x64 solution'
+  
+  - task: VSBuild@1
+    inputs:
+      solution: 'buildUWP_x64/BabylonNative.sln'
+      maximumCpuCount: true
+      configuration: 'Release'
+      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
+    displayName: 'Build UWP_x64'
+
+- job: uwp_arm64    
+  pool:
+    vmImage: 'windows-latest'  
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+    
+  - script: |
+      mkdir buildUWP_arm64
+      cd buildUWP_arm64
+      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A arm64
+    displayName: 'Generate UWP_arm64 solution'
+  
+  - task: VSBuild@1
+    inputs:
+      solution: 'buildUWP_arm64/BabylonNative.sln'
+      maximumCpuCount: true
+      configuration: 'Release'
+      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
+    displayName: 'Build UWP_arm64'
+
+- job: uwp_x86
+  pool:
+    vmImage: 'windows-latest'  
+
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+
+  - script: |
+      mkdir buildUWP_x86
+      cd buildUWP_x86
+      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -G "Visual Studio 16 2019" -A Win32
+    displayName: 'Generate UWP_x86 solution'
+
+  - task: VSBuild@1
+    inputs:
+      solution: 'buildUWP_x86/BabylonNative.sln'
+      maximumCpuCount: true
+      configuration: 'Release'
+      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
+    displayName: 'Build UWP_x86'
+
+- job: androidV8
+  pool:
+    vmImage: 'macOS-10.14'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      set -eu
+      curl -Ls https://github.com/ninja-build/ninja/releases/download/v1.9.0/ninja-mac.zip -o ninja-mac.zip
+      unzip ninja-mac.zip
+      sudo cp -v ninja /usr/local/bin/
+    displayName: 'Install Ninja'
+  - script: |
+      cd Apps/Playground/Android
+      npm install
+    displayName: 'Install JS engine NPMs'    
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/Playground/Android'
+        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleDebug'
+    displayName: 'Build androidV8'
+
+- job: androidJSC
+  pool:
+    vmImage: 'macOS-10.14'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      set -eu
+      curl -Ls https://github.com/ninja-build/ninja/releases/download/v1.9.0/ninja-mac.zip -o ninja-mac.zip
+      unzip ninja-mac.zip
+      sudo cp -v ninja /usr/local/bin/
+    displayName: 'Install Ninja'
+  - script: |
+      cd Apps/Playground/Android
+      npm install
+    displayName: 'Install JS engine NPMs'    
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/Playground/Android'
+        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleDebug'
+    displayName: 'Build androidJSC'
 
 - job: Ubuntu
   timeoutInMinutes: 5
