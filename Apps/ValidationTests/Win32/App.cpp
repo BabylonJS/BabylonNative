@@ -253,49 +253,49 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_SYSCOMMAND:
-    {
-        if ((wParam & 0xFFF0) == SC_MINIMIZE)
+        case WM_SYSCOMMAND:
         {
-            runtime->Suspend();
+            if ((wParam & 0xFFF0) == SC_MINIMIZE)
+            {
+                runtime->Suspend();
+            }
+            else if ((wParam & 0xFFF0) == SC_RESTORE)
+            {
+                runtime->Resume();
+            }
+            DefWindowProc(hWnd, message, wParam, lParam);
+            break;
         }
-        else if ((wParam & 0xFFF0) == SC_RESTORE)
+        case WM_PAINT:
         {
-            runtime->Resume();
+            PAINTSTRUCT ps;
+            BeginPaint(hWnd, &ps);
+            EndPaint(hWnd, &ps);
+            break;
         }
-        DefWindowProc(hWnd, message, wParam, lParam);
-        break;
-    }
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        BeginPaint(hWnd, &ps);
-        EndPaint(hWnd, &ps);
-        break;
-    }
-    case WM_SIZE:
-    {
-        if (runtime != nullptr) {
-            size_t width = static_cast<size_t>(LOWORD(lParam));
-            size_t height = static_cast<size_t>(HIWORD(lParam));
-            runtime->Dispatch([width, height](Napi::Env env)
-                {
-                    Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-                });
+        case WM_SIZE:
+        {
+            if (runtime != nullptr) {
+                size_t width = static_cast<size_t>(LOWORD(lParam));
+                size_t height = static_cast<size_t>(HIWORD(lParam));
+                runtime->Dispatch([width, height](Napi::Env env)
+                    {
+                        Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
+                    });
+            }
+            break;
         }
-        break;
-    }
-    case WM_DESTROY:
-    {
-        short exitCode = LOWORD(wParam);
-        Uninitialize();
-        PostQuitMessage(exitCode);
-        break;
-    }
-    default:
-    {
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
+        case WM_DESTROY:
+        {
+            short exitCode = LOWORD(wParam);
+            Uninitialize();
+            PostQuitMessage(exitCode);
+            break;
+        }
+        default:
+        {
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
     }
     return 0;
 }
