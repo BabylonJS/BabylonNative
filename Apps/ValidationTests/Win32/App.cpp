@@ -9,8 +9,10 @@
 #include <Windowsx.h>
 #include <Shlwapi.h>
 #include <filesystem>
+#include <algorithm>
 
 bool doExit = false;
+int errorCode{};
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
@@ -29,6 +31,10 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+bool _NoWindow{};                               // No window for CI
+
+static const int TEST_WIDTH = 600;
+static const int TEST_HEIGHT = 400;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -57,6 +63,27 @@ namespace
         return { url };
     }
 
+    std::vector<std::string> GetCommandLineArguments()
+    {
+        int argc;
+        auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+        std::vector<std::string> arguments{};
+        arguments.reserve(argc);
+
+        for (int idx = 1; idx < argc; idx++)
+        {
+            std::wstring hstr{ argv[idx] };
+            int bytesRequired = ::WideCharToMultiByte(CP_UTF8, 0, &hstr[0], static_cast<int>(hstr.size()), nullptr, 0, nullptr, nullptr);
+            arguments.push_back(std::string(bytesRequired, 0));
+            ::WideCharToMultiByte(CP_UTF8, 0, hstr.data(), static_cast<int>(hstr.size()), arguments.back().data(), bytesRequired, nullptr, nullptr);
+        }
+
+        LocalFree(argv);
+
+        return arguments;
+    }
+
     void Uninitialize()
     {
         if (runtime)
@@ -66,21 +93,15 @@ namespace
         }
     }
 
-    void RefreshBabylon(HWND hWnd)
+    void Initialize(HWND hWnd)
     {
-        Uninitialize();
-
         runtime = std::make_unique<Babylon::AppRuntime>();
-        /*
-        RECT rect;
-        if (!GetWindowRect(hWnd, &rect))
-        {
-            return;
-        }
-        */
         // Initialize console plugin.
         runtime->Dispatch([hWnd](Napi::Env env)
         {
+            const int width = TEST_WIDTH;
+            const int height = TEST_HEIGHT;
+
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
             {
                 OutputDebugStringA(message);
@@ -94,8 +115,6 @@ namespace
             // Initialize NativeWindow plugin to the test size.
             // TODO: TestUtils::UpdateSize should do it properly but the client size
             // is not forwarded correctly to the rendering. Find why.
-            auto width = 600;//static_cast<float>(rect.right - rect.left);
-            auto height = 400;//static_cast<float>(rect.bottom - rect.top);
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
@@ -103,6 +122,7 @@ namespace
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             Babylon::TestUtils::CreateInstance(env, hWnd);
+            Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
 
         // Scripts are copied to the parent of the executable due to CMake issues.
@@ -114,41 +134,40 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
-
-        runtime->Dispatch([](Napi::Env env)
-            {
-                Babylon::Plugins::NativeWindow::UpdateSize(env, 600, 400);
-            });
     }
 }
 
-/*int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
-                     */
-int main(int argc, char* argv)
 {
-    //UNREFERENCED_PARAMETER(hPrevInstance);
-    //UNREFERENCED_PARAMETER(lpCmdLine);
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
-    /*
+    std::vector<std::string> args = GetCommandLineArguments();
+    if (std::find(args.begin(), args.end(), "-NoWindow") != args.end())
+    {
+        // 600, 400 mandatory size for CI test
+        Initialize((HWND)1);
+        while (!doExit)
+        {
+        };
+        Uninitialize();
+        return errorCode;
+    }
+
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_VALIDATIONTESTSWIN32, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
-    */
+
     // Perform application initialization:
-    if (!InitInstance (0, 0))
+    if (!InitInstance (hInstance, nCmdShow))
     {
         return FALSE;
     }
-    while(!doExit)
-    {
-    };
-    /*
-
+    
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VALIDATIONTESTSWIN32));
 
     MSG msg;
@@ -164,8 +183,6 @@ int main(int argc, char* argv)
     }
 
     return (int) msg.wParam;
-    */
-    return 0;
 }
 
 //
@@ -207,9 +224,8 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
-   /*
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, CW_USEDEFAULT, TEST_WIDTH, TEST_HEIGHT, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -218,8 +234,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-   */
-   RefreshBabylon((HWND)1);
+   Initialize(hWnd);
 
    return TRUE;
 }
@@ -275,14 +290,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             short exitCode = LOWORD(wParam);
             Uninitialize();
             PostQuitMessage(exitCode);
-            break;
-        }
-        case WM_KEYDOWN:
-        {
-            if (wParam == 'R')
-            {
-                RefreshBabylon(hWnd);
-            }
             break;
         }
         default:

@@ -13,7 +13,6 @@ namespace Babylon::Polyfills::Internal
         static Window& GetFromJavaScript(Napi::Env);
 
         Window(const Napi::CallbackInfo& info);
-        virtual ~Window();
     private:
         JsRuntime& m_runtime;
 

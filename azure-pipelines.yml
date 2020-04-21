@@ -31,7 +31,7 @@ jobs:
       mkdir Results
       mkdir Errors
       cd Debug
-      ValidationTests
+      ValidationTests -NoWindow
     displayName: 'Test on CI'
   - task: PublishBuildArtifacts@1
     inputs:

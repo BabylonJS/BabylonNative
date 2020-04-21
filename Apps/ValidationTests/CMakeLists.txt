@@ -22,15 +22,14 @@ if(WIN32)
         "Win32/small.ico"
         "Win32/targetver.h")
     
-    #set(WIN32_EXECUTABLE TRUE)
-    add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
+    set(WIN32_EXECUTABLE TRUE)
+    add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
     add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 endif()
-
 
 target_compile_definitions(ValidationTests PRIVATE UNICODE)
 target_compile_definitions(ValidationTests PRIVATE _UNICODE)

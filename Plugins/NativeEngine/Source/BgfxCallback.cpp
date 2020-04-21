@@ -15,6 +15,7 @@ namespace Babylon
         va_start(argList, _format);
 
         traceVargs(_filePath, _line, _format, argList);
+
         va_end(argList);
     }
 
@@ -49,8 +50,6 @@ namespace Babylon
         }
         out[total] = '\0';
         bx::debugOutput(out);
-
-        std::cout << out << std::endl;
     }
 
     void BgfxCallback::profilerBegin(const char* name, uint32_t abgr, const char* filePath, uint16_t line)

@@ -63,8 +63,8 @@ namespace Babylon
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
 #ifdef WIN32
             doExit = true;
-            //exit(exitCode);
-            //PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
+            errorCode = exitCode;
+            PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
             exitPending = true;
@@ -87,10 +87,10 @@ namespace Babylon
             const int32_t height = info[1].As<Napi::Number>().Int32Value();
 
 #ifdef WIN32
-            /*HWND hwnd = (HWND)_nativeWindowPtr;
+            HWND hwnd = (HWND)_nativeWindowPtr;
             RECT rc{ 0, 0, width, height };
             AdjustWindowRectEx(&rc, GetWindowStyle(hwnd), GetMenu(hwnd) != NULL, GetWindowExStyle(hwnd));
-            SetWindowPos(hwnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOMOVE | SWP_NOZORDER);*/
+            SetWindowPos(hwnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOMOVE | SWP_NOZORDER);
 #else
             // TODO: handle resize for other platforms
 #endif
@@ -100,7 +100,7 @@ namespace Babylon
         {
             const auto title = info[0].As<Napi::String>().Utf8Value();
 #ifdef WIN32
-            //SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
+            SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
             XStoreName(display, (Window)_nativeWindowPtr, title.c_str());
