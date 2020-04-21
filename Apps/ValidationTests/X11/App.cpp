@@ -57,7 +57,7 @@ namespace
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
-        runtime->Dispatch([width, height, window](Napi::Env env) {
+        runtime->Dispatch([window](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
