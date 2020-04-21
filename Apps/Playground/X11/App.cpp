@@ -3,7 +3,6 @@
 #include <X11/keysymdef.h>
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
 #include <X11/Xutil.h>
-//#include <bgfx/platform.h>
 #include <unistd.h> // syscall
 #undef None
 #include <filesystem>

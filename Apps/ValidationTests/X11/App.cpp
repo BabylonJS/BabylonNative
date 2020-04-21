@@ -7,7 +7,6 @@
 #undef None
 #include <filesystem>
 
-
 bool exitPending{};
 int exitErrorCode{};
 
@@ -25,6 +24,9 @@ static const char* s_applicationName  = "BabylonNative Validation Tests";
 static const char* s_applicationClass = "Validation Tests";
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+
+static const int width = 600;
+static const int height = 400;
 
 namespace
 {
@@ -46,7 +48,7 @@ namespace
         return std::string("file://") + path.generic_string();
     }
     
-    void InitBabylon(int32_t window, int width, int height, int argc, const char* const* argv)
+    void InitBabylon(int32_t window, int argc, const char* const* argv)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
@@ -99,8 +101,6 @@ int main(int _argc, const char* const* _argv)
     int32_t depth  = DefaultDepth(display, screen);
     Visual* visual = DefaultVisual(display, screen);
     Window root   = RootWindow(display, screen);
-    const int width = 600;
-    const int height = 400;
 
     XSetWindowAttributes windowAttrs{0};
     windowAttrs.background_pixmap = 0;
