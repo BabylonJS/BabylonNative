@@ -10,6 +10,8 @@ namespace Napi
     {
         auto envPtr = new napi_env__();
         envPtr->context = context;
+        envPtr->last_exception = nullptr;
+        envPtr->last_error = { nullptr, nullptr, 0, napi_ok };
         return{ envPtr };
     }
 

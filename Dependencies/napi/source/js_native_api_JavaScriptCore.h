@@ -5,9 +5,9 @@
 #include <JavaScriptCore/JavaScript.h>
 
 struct napi_env__ {
-  JSContextRef context = nullptr;
-  JSValueRef last_exception = nullptr;
-  napi_extended_error_info last_error{ nullptr, nullptr, 0, napi_ok };
+  JSContextRef context;
+  JSValueRef last_exception;
+  napi_extended_error_info last_error;
 };
 
 #define RETURN_STATUS_IF_FALSE(env, condition, status)                  \
