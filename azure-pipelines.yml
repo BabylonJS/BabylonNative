@@ -55,4 +55,11 @@ jobs:
       adb shell am start -n com.android.babylonnative.playground/com.android.babylonnative.playground.PlaygroundActivity
       sleep 15
       adb logcat -t 5000
+      mkdir Captures
+      adb exec-out screencap -p > Captures/screen.png
     displayName: 'Install and run APK'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Android Rendered Pictures'
+      pathtoPublish: 'Apps/Playground/Android/Captures'
+    displayName: 'Publish Tests Android Results'
