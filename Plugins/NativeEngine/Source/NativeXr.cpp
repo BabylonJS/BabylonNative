@@ -890,44 +890,6 @@ namespace Babylon
             }
         };
 
-        // Implementation of the XRTransientInputHitTestSource interface: https://immersive-web.github.io/hit-test/#transient-input-hit-test-source-interface
-        class XRTransientInputHitTestSource : public Napi::ObjectWrap<XRTransientInputHitTestSource>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRTransientInputHitTestSource";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                        env,
-                        JS_CLASS_NAME,
-                        {
-                                InstanceMethod("cancel", &XRTransientInputHitTestSource::Cancel),
-                        });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRTransientInputHitTestSource(const Napi::CallbackInfo& info)
-                    : Napi::ObjectWrap<XRTransientInputHitTestSource>{info}
-            {
-                /** no-op for now this has no member variables yet */
-            }
-
-        private:
-            void Cancel(const Napi::CallbackInfo& info)
-            {
-                // no-op for now this should clean up the hit test source subscription on the XRSession.
-            }
-        };
-
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
         class XRHitTestResult : public Napi::ObjectWrap<XRHitTestResult>
         {
@@ -978,56 +940,6 @@ namespace Babylon
             xr::Pose hitPose;
         };
 
-        // Implementation of the XRTransientInputHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-transient-input-hit-test-result-interface
-        class XRTransientInputHitTestResult : public Napi::ObjectWrap<XRTransientInputHitTestResult>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRTransientInputHitTestResult";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                        env,
-                        JS_CLASS_NAME,
-                        {
-                                InstanceMethod("getPose", &XRTransientInputHitTestResult::GetPose),
-                        });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRTransientInputHitTestResult(const Napi::CallbackInfo &info)
-                    : Napi::ObjectWrap<XRTransientInputHitTestResult>{info}
-            {
-                // No-op for now, will need to fill in info to pull in TransientInputSource eventually.
-            }
-
-            // Sets the value of the hit pose in AR core space via struct copy.
-            void SetPose(const xr::Pose& inputPose) {
-                hitPose = inputPose;
-            }
-
-        private:
-            Napi::Value GetPose(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiPose = XRPose::New(info);
-                XRPose* pose = XRPose::Unwrap(napiPose);
-                pose->Update(info, hitPose);
-
-                return napiPose;
-            }
-
-            // The hit pose in default ARCore space.
-            xr::Pose hitPose;
-        };
-
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -1044,7 +956,6 @@ namespace Babylon
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
                         InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
-                        InstanceMethod("getHitTestResultsForTransientInput", &XRFrame::GetHitTestResultsForTransientInput),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1123,26 +1034,6 @@ namespace Babylon
 
                 return results;
             }
-
-            Napi::Value GetHitTestResultsForTransientInput(const Napi::CallbackInfo& info)
-            {
-                // Get the native results
-                std::list<xr::Pose> nativeHitResults;
-                m_frame->GetHitTestResults(nativeHitResults);
-
-                // Translate those results into a napi array.
-                Napi::Array results = Napi::Array::New(info.Env(), nativeHitResults.size());
-                uint32_t i = 0;
-                for (std::list<xr::Pose>::iterator it = nativeHitResults.begin(); it != nativeHitResults.end(); ++it)
-                {
-                    Napi::Object currentResult = XRHitTestResult::New(info);
-                    XRHitTestResult xrResult = *XRHitTestResult::Unwrap(currentResult);
-                    xrResult.SetPose(*it);
-                    results[i++] = currentResult;
-                }
-
-                return results;
-            }
         };
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
@@ -1168,7 +1059,6 @@ namespace Babylon
                         InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
-                        InstanceMethod("requestHitTestSourceForTransientInput", &XRSession::RequestHitTestSourceForTransientInput),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1399,13 +1289,6 @@ namespace Babylon
                 deferred.Resolve(XRHitTestSource::New(info));
                 return deferred.Promise();
             }
-
-            Napi::Value RequestHitTestSourceForTransientInput(const Napi::CallbackInfo& info)
-            {
-                auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(XRTransientInputHitTestSource::New(info));
-                return deferred.Promise();
-            }
         };
 
         class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget>
@@ -1604,9 +1487,7 @@ namespace Babylon
         XRReferenceSpace::Initialize(env);
         XRFrame::Initialize(env);
         XRHitTestSource::Initialize(env);
-        XRTransientInputHitTestSource::Initialize(env);
         XRHitTestResult::Initialize(env);
-        XRTransientInputHitTestResult::Initialize(env);
         XRRay::Initialize(env);
         XRSession::Initialize(env);
         NativeWebXRRenderTarget::Initialize(env);
