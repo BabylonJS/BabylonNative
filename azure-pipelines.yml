@@ -52,6 +52,7 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       adb install -t app/build/outputs/apk/debug/app-debug.apk
+      adb shell pm grant com.android.babylonnative.playground android.permission.CAMERA
       adb shell am start -n com.android.babylonnative.playground/com.android.babylonnative.playground.PlaygroundActivity
       sleep 15
       adb logcat -t 5000
