@@ -53,6 +53,6 @@ jobs:
       cd Apps/Playground/Android
       adb install -t app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.playground/com.android.babylonnative.playground.PlaygroundActivity
-      sleep 60
-      adb logcat -t 1000
+      sleep 15
+      adb logcat -t 5000
     displayName: 'Install and run APK'
