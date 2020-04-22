@@ -37,6 +37,7 @@ jobs:
 # list already installed Android packages : $ANDROID_HOME/tools/bin/sdkmanager --list
 # stop activity : adb shell am force-stop com.android.babylonnative.playground
 # test activity is running : adb shell pidof com.android.babylonnative.playground
+#$ANDROID_HOME/platform-tools/adb devices
   - bash: |
       echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
     displayName: 'Install Android image'
@@ -46,9 +47,7 @@ jobs:
       $ANDROID_HOME/emulator/emulator -list-avds
     displayName: 'Create AVD'
   - script: |
-#$ANDROID_HOME/platform-tools/adb devices
       nohup $ANDROID_HOME/emulator/emulator -avd test_android_emulator -no-snapshot > /dev/null 2>&1 & $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
-##$ANDROID_HOME/platform-tools/adb devices
     displayName: 'Start Android emulator'
   - script: |
       cd Apps/Playground/Android
