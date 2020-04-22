@@ -36,6 +36,7 @@ jobs:
 #  - bash: |
 #      $ANDROID_HOME/tools/bin/sdkmanager --list
 #    displayName: 'list already installed Android packages'
+# stop activity : adb shell am force-stop com.android.babylonnative.playground
   - bash: |
       echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
     displayName: 'Install Android image'
@@ -53,4 +54,6 @@ jobs:
       cd Apps/Playground/Android
       adb install -t app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.playground/com.android.babylonnative.playground.PlaygroundActivity
+      sleep 60
+      adb logcat -t 1000
     displayName: 'Install and run APK'
