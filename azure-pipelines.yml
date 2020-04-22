@@ -55,6 +55,8 @@ jobs:
       adb install -t -g app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.playground/com.android.babylonnative.playground.PlaygroundActivity
       sleep 15
+      adb shell content insert --uri content://settings/system --bind name:s:accelerometer_rotation --bind value:i:0
+      adb shell content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:1
       adb logcat -t 5000
       mkdir Captures
       adb exec-out screencap -p > Captures/screen.png
