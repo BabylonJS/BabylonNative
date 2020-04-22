@@ -44,7 +44,7 @@ jobs:
     displayName: 'Install Android image'
   - script: |
       $ANDROID_HOME/emulator/emulator -list-avds
-      echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd -n test_android_emulator -k 'system-images;android-27;google_apis;x86' --force
+      echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd -n test_android_emulator -k 'system-images;android-27;google_apis;x86' -skin 400x600 --force
       $ANDROID_HOME/emulator/emulator -list-avds
     displayName: 'Create AVD'
   - script: |
