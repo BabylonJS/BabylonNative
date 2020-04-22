@@ -39,6 +39,9 @@ jobs:
 # test activity is running : adb shell pidof com.android.babylonnative.playground
 #$ANDROID_HOME/platform-tools/adb devices
 # adb shell pm grant com.android.babylonnative.playground android.permission.CAMERA
+# rotate screen
+# adb shell content insert --uri content://settings/system --bind name:s:accelerometer_rotation --bind value:i:0
+# adb shell content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:1
   - bash: |
       echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
     displayName: 'Install Android image'
@@ -48,15 +51,13 @@ jobs:
       $ANDROID_HOME/emulator/emulator -list-avds
     displayName: 'Create AVD'
   - script: |
-      nohup $ANDROID_HOME/emulator/emulator -avd test_android_emulator -no-snapshot -skin 400x600 > /dev/null 2>&1 & $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
+      nohup $ANDROID_HOME/emulator/emulator -avd test_android_emulator -no-snapshot -skin 600x400 > /dev/null 2>&1 & $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
     displayName: 'Start Android emulator'
   - script: |
       cd Apps/Playground/Android
       adb install -t -g app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.playground/com.android.babylonnative.playground.PlaygroundActivity
       sleep 15
-      adb shell content insert --uri content://settings/system --bind name:s:accelerometer_rotation --bind value:i:0
-      adb shell content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:1
       adb logcat -t 5000
       mkdir Captures
       adb exec-out screencap -p > Captures/screen.png
