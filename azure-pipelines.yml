@@ -39,7 +39,7 @@ jobs:
       mkdir Results
       xcrun simctl list
       echo " **** booting ..."
-      xcrun simctl boot A73F7BD9-4151-48AF-B290-0B054DCB5286
+      xcrun simctl boot 05B3A0D4-92F5-4B18-BBB7-8EDD88C5172C
       echo " **** starting log ..."
       xcrun simctl spawn booted log stream > Results/log.txt &
       echo " **** installing ..."
