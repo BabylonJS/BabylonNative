@@ -38,7 +38,6 @@ namespace xr
         } Orientation;
     };
 
-
     class System
     {
     public:

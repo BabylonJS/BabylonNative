@@ -735,6 +735,10 @@ namespace xr
         }
     }
 
+    void System::Session::Frame::GetHitTestResults(std::list<Pose>& filteredResults) const {
+        // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
+    }
+
     System::Session::Frame::~Frame()
     {
         // EndFrame can submit mutiple layers, but we only support one at the moment.

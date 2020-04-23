@@ -778,6 +778,16 @@ namespace Babylon
             {
             }
 
+            Napi::Object GetOrigin()
+            {
+                return m_origin.Value();
+            }
+
+            Napi::Object GetDirection()
+            {
+                return m_direction.Value();
+            }
+
         private:
             Napi::ObjectReference m_origin{};
             Napi::ObjectReference m_direction{};
@@ -785,12 +795,12 @@ namespace Babylon
 
             Napi::Value Origin(const Napi::CallbackInfo&)
             {
-                return m_origin.Value();
+                return GetOrigin();
             }
 
             Napi::Value Direction(const Napi::CallbackInfo&)
             {
-                return m_direction.Value();
+                return GetDirection();
             }
 
             Napi::Value Matrix(const Napi::CallbackInfo&)
@@ -798,7 +808,6 @@ namespace Babylon
                 return m_matrix.Value();
             }
         };
-
 
         // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
         class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
@@ -874,13 +883,39 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
             XRHitTestSource(const Napi::CallbackInfo& info)
                     : Napi::ObjectWrap<XRHitTestSource>{info}
             {
-                /** no-op for now this has no member variables yet */
+                Napi::Object options = info[0].As<Napi::Object>();
+
+                if (options.HasOwnProperty("space"))
+                {
+                    Napi::Value spaceValue = options.Get("space");
+
+                    if (spaceValue.IsObject()) {
+                        m_space = Napi::Persistent(spaceValue.As<Napi::Object>());
+                        hasSpace = true;
+                    }
+                }
+
+                if (options.HasOwnProperty("offsetRay"))
+                {
+                    m_offsetRay = Napi::Persistent(options.Get("offsetRay").As<Napi::Object>());
+                    hasOffsetRay = true;
+                }
+            }
+            
+            XRRay* OffsetRay()
+            {
+                return hasOffsetRay ? XRRay::Unwrap(m_offsetRay.Value()) : nullptr;
+            }
+
+            XRReferenceSpace* Space()
+            {
+                return hasSpace ? XRReferenceSpace::Unwrap(m_space.Value()) : nullptr;
             }
 
         private:
@@ -888,6 +923,12 @@ namespace Babylon
             {
                 // no-op for now this should clean up the hit test source subscription on the XRSession.
             }
+
+            bool hasSpace = false;
+            Napi::ObjectReference m_space;
+
+            bool hasOffsetRay = false;
+            Napi::ObjectReference m_offsetRay;
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
@@ -923,7 +964,7 @@ namespace Babylon
 
             // Sets the value of the hit pose in AR core space via struct copy.
             void SetPose(const xr::Pose& inputPose) {
-                hitPose = inputPose;
+                m_hitPose = inputPose;
             }
 
         private:
@@ -931,13 +972,13 @@ namespace Babylon
             {
                 Napi::Object napiPose = XRPose::New(info);
                 XRPose* pose = XRPose::Unwrap(napiPose);
-                pose->Update(info, hitPose);
+                pose->Update(info, m_hitPose);
 
                 return napiPose;
             }
 
             // The hit pose in default ARCore space.
-            xr::Pose hitPose;
+            xr::Pose m_hitPose;
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
@@ -1016,6 +1057,14 @@ namespace Babylon
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
             {
+                XRHitTestSource* hitTestSource = XRHitTestSource::Unwrap(info[0].As<Napi::Object>());
+                XRRay* offsetRay = hitTestSource->OffsetRay();
+                if (offsetRay != nullptr)
+                {
+                    Napi::Object originObject = offsetRay->GetOrigin();
+                    bool hasX = originObject.HasOwnProperty("X");
+                }
+
                 // Get the native results
                 std::list<xr::Pose> nativeHitResults;
                 m_frame->GetHitTestResults(nativeHitResults);
@@ -1473,7 +1522,6 @@ namespace Babylon
             }
         };
     }
-
 
     void InitializeNativeXr(Napi::Env env)
     {
