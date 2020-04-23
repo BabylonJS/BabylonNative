@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <optional>
 #include <sstream>
+#include <chrono>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -49,6 +50,34 @@ namespace xr
 
     namespace
     {
+        void log(const char* message)
+        {
+            __android_log_print(ANDROID_LOG_VERBOSE, __FILE__, "%s", message);
+        }
+
+        template<typename TTimeUnit>
+        class DiagnosticTimer final
+        {
+        public:
+            DiagnosticTimer()
+                : m_lastCheckpoint{std::chrono::high_resolution_clock::now()}
+            {
+            }
+
+            void LogCheckpoint(const char* message)
+            {
+                auto now = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> duration = now - m_lastCheckpoint;
+                m_lastCheckpoint = now;
+                std::ostringstream fullMessage;
+                fullMessage << message << ": " << std::chrono::duration_cast<TTimeUnit>(duration).count();
+                log(fullMessage.str().c_str());
+            }
+
+        private:
+            std::chrono::high_resolution_clock::time_point m_lastCheckpoint;
+        };
+
         constexpr GLfloat VERTEX_POSITIONS[]{ -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f };
         constexpr size_t VERTEX_COUNT{ std::size(VERTEX_POSITIONS) / 2 };
 
@@ -130,6 +159,11 @@ namespace xr
             glLinkProgram(program);
             GLint linkStatus = GL_FALSE;
             glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+
+            glDetachShader(program, vertShader);
+            glDeleteShader(vertShader);
+            glDetachShader(program, fragShader);
+            glDeleteShader(fragShader);
 
             if (linkStatus != GL_TRUE)
             {
@@ -227,46 +261,6 @@ namespace xr
         {
             // Note: graphicsContext is an EGLContext
 
-            // Get the width and height of the current surface
-            size_t width{}, height{};
-            {
-                EGLDisplay display = eglGetCurrentDisplay();
-                EGLSurface surface = eglGetCurrentSurface(EGL_DRAW);
-                EGLint _width{}, _height{};
-                eglQuerySurface(display, surface, EGL_WIDTH, &_width);
-                eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
-                width = static_cast<size_t>(_width);
-                height = static_cast<size_t >(_height);
-            }
-
-            // Allocate and store the render texture
-            {
-                GLuint colorTextureId{};
-                glGenTextures(1, &colorTextureId);
-                glBindTexture(GL_TEXTURE_2D, colorTextureId);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glBindTexture(GL_TEXTURE_2D, 0);
-                ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(colorTextureId);
-                ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
-                ActiveFrameViews[0].ColorTextureSize = {width, height};
-            }
-
-            // Allocate and store the depth texture
-            {
-                GLuint depthTextureId{};
-                glGenTextures(1, &depthTextureId);
-                glBindTexture(GL_TEXTURE_2D, depthTextureId);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_OES, width, height, 0, GL_DEPTH_STENCIL_OES, GL_UNSIGNED_INT_24_8_OES, nullptr);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glBindTexture(GL_TEXTURE_2D, 0);
-                ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(depthTextureId);
-                ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
-                ActiveFrameViews[0].DepthTextureSize = {width, height};
-            }
-
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
                 glGenTextures(1, &CameraTextureId);
@@ -296,9 +290,6 @@ namespace xr
             // Create the ARCore ArPose (this gets reused for each frame as well)
             ArPose_create(Session, nullptr, &Pose);
 
-            // Initialize the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
-            ArSession_setDisplayGeometry(Session, 0, static_cast<int32_t>(width), static_cast<int32_t>(height));
-
             // Set the texture ID that should be used for the camera frame
             ArSession_setCameraTextureName(Session, static_cast<uint32_t>(CameraTextureId));
 
@@ -319,12 +310,21 @@ namespace xr
             ArPose_destroy(Pose);
             ArFrame_destroy(Frame);
             ArSession_destroy(Session);
+
+            glDeleteTextures(1, &CameraTextureId);
+            glDeleteProgram(ShaderProgramId);
+
+            DestroyDisplayResources();
         }
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
             shouldEndSession = SessionEnded;
             shouldRestartSession = false;
+
+            // Probably move most of the logic from Session::Impl constructor and Frame constructor here, and then reduce access to most of the members of Session::Impl
+            // Get the width and height of the current surface
+            CreateDisplayResources();
 
             // Update the ArSession to get a new frame
             ArSession_update(Session, Frame);
@@ -342,6 +342,80 @@ namespace xr
         {
             // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
             return {1,1};
+        }
+
+    private:
+        void CreateDisplayResources()
+        {
+            size_t width{}, height{};
+            {
+                EGLDisplay display = eglGetCurrentDisplay();
+                EGLSurface surface = eglGetCurrentSurface(EGL_DRAW);
+                EGLint _width{}, _height{};
+                //DiagnosticTimer<std::chrono::microseconds> timer;
+                eglQuerySurface(display, surface, EGL_WIDTH, &_width);
+                eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
+                //timer.LogCheckpoint("eglQuerySurface");
+                width = static_cast<size_t>(_width);
+                height = static_cast<size_t>(_height);
+            }
+
+            if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
+            {
+                DestroyDisplayResources();
+
+                //auto windowManager_ = GetAppContext().getSystemService<android::view::WindowManager>();
+                android::view::WindowManager windowManager(GetAppContext().getSystemService(android::view::WindowManager::ServiceName));
+                int rotation = windowManager.getDefaultDisplay().getRotation();
+
+                // Update the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
+                ArSession_setDisplayGeometry(Session, rotation, static_cast<int32_t>(width), static_cast<int32_t>(height));
+
+                // Allocate and store the render texture
+                {
+                    GLuint colorTextureId{};
+                    glGenTextures(1, &colorTextureId);
+                    glBindTexture(GL_TEXTURE_2D, colorTextureId);
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                    ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(colorTextureId);
+                    ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
+                    ActiveFrameViews[0].ColorTextureSize = {width, height};
+                }
+
+                // Allocate and store the depth texture
+                {
+                    GLuint depthTextureId{};
+                    glGenTextures(1, &depthTextureId);
+                    glBindTexture(GL_TEXTURE_2D, depthTextureId);
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_OES, width, height, 0, GL_DEPTH_STENCIL_OES, GL_UNSIGNED_INT_24_8_OES, nullptr);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(depthTextureId);
+                    ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
+                    ActiveFrameViews[0].DepthTextureSize = {width, height};
+                }
+            }
+        }
+
+        void DestroyDisplayResources()
+        {
+            if (ActiveFrameViews[0].ColorTexturePointer)
+            {
+                auto colorTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer));
+                glDeleteTextures(1, &colorTextureId);
+            }
+
+            if (ActiveFrameViews[0].DepthTexturePointer)
+            {
+                auto depthTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer));
+                glDeleteTextures(1, &depthTextureId);
+            }
+
+            ActiveFrameViews[0] = {};
         }
     };
 
@@ -487,7 +561,6 @@ namespace xr
 
     System::Session::~Session()
     {
-        // Free textures
     }
 
     std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
