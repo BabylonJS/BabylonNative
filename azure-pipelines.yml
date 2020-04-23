@@ -40,11 +40,13 @@ jobs:
       xcrun simctl list
       echo " **** booting ..."
       xcrun simctl boot A73F7BD9-4151-48AF-B290-0B054DCB5286
+      echo " **** starting log ..."
+      xcrun simctl spawn booted log stream > Results/log.txt &
       echo " **** installing ..."
       xcrun simctl install booted buildiOS/Apps/Playground/Debug-iphonesimulator/Playground.app
       echo " **** Launching ..."
       xcrun simctl launch booted com.BabylonNative.Playground.iOS
-      sleep 10
+      sleep 30
       xcrun simctl io booted screenshot Results/screen.png
     displayName: 'Test iOS Simulator'
   - task: PublishBuildArtifacts@1
