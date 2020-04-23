@@ -39,7 +39,7 @@ jobs:
       mkdir Results
       xcrun simctl list
       xcrun simctl boot A73F7BD9-4151-48AF-B290-0B054DCB5286
-      xcrun simctl install booted buildiOS/Apps/Playground/Debug/Playground.app
+      xcrun simctl install booted buildiOS/Apps/Playground/Debug-iphoneos/Playground.app
       xcrun simctl launch booted Playground
       sleep 10
       xcrun simctl io booted screenshot Results/screen.png
