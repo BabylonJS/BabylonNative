@@ -36,4 +36,3 @@ if(hasParent)
 else()
     add_subdirectory(Apps)
 endif()
-
