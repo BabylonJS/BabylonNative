@@ -46,8 +46,9 @@ jobs:
       xcrun simctl install booted buildiOS/Apps/Playground/Debug-iphonesimulator/Playground.app
       echo " **** Launching ..."
       xcrun simctl launch booted com.BabylonNative.Playground.iOS
-      sleep 30
-      xcrun simctl io booted screenshot Results/screen.png
+      xcrun simctl io booted screenshot Results/screen0.png
+      sleep 1
+      xcrun simctl io booted screenshot Results/screen1.png
     displayName: 'Test iOS Simulator'
   - task: PublishBuildArtifacts@1
     inputs:
