@@ -49,6 +49,12 @@ jobs:
       xcrun simctl io booted screenshot Results/screen0.png
       sleep 1
       xcrun simctl io booted screenshot Results/screen1.png
+      sleep 1
+      xcrun simctl io booted screenshot Results/screen2.png
+      sleep 1
+      xcrun simctl io booted screenshot Results/screen3.png
+      sleep 10
+      xcrun simctl io booted screenshot Results/screen4.png
     displayName: 'Test iOS Simulator'
   - task: PublishBuildArtifacts@1
     inputs:
