@@ -7,6 +7,7 @@
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
+#import <Metal/Metal.h>
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
@@ -25,6 +26,23 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 - (void)init:(void*)CALayerPtr width:(int)inWidth height:(int)inHeight
 {
+    NSLog(@"***************************************************************************");
+    NSLog(@"Init BabylonNative");
+    
+    
+    auto device = MTLCreateSystemDefaultDevice();
+
+        if (NULL == device)
+        {
+            NSLog(@"Device is NULL");
+            
+        }
+        else
+        {
+            NSLog(@"Device is Valid");
+        }
+            
+            
     runtime.reset();
     inputBuffer.reset();
 
