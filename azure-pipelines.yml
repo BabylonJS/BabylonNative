@@ -25,7 +25,7 @@ jobs:
   - script: |
       mkdir buildiOS
       cd buildiOS
-      cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=13 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
+      cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=SIMULATOR64 -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=13 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
     displayName: 'Generate iOS solution'
 
   - task: Xcode@5
@@ -43,7 +43,7 @@ jobs:
       echo " **** installing ..."
       xcrun simctl install booted buildiOS/Apps/Playground/Debug-iphonesimulator/Playground.app
       echo " **** Launching ..."
-      xcrun simctl launch booted Playground
+      xcrun simctl launch booted com.BabylonNative.Playground.iOS
       sleep 10
       xcrun simctl io booted screenshot Results/screen.png
     displayName: 'Test iOS Simulator'
