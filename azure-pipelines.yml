@@ -36,6 +36,6 @@ jobs:
       useXcpretty: false
     displayName: 'Build iOS'
   - script: |
-        xcrun simctl list
-        xcrun simctl create My-iphone com.apple.CoreSimulator.SimDeviceType.iPhone-11 com.apple.CoreSimulator.SimRuntime.iOS-13–0
-      displayName: 'Test iOS Simulator'
+      xcrun simctl list
+      xcrun simctl create My-iphone com.apple.CoreSimulator.SimDeviceType.iPhone-11 com.apple.CoreSimulator.SimRuntime.iOS-13–0
+    displayName: 'Test iOS Simulator'
