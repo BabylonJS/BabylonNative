@@ -36,6 +36,17 @@ jobs:
       useXcpretty: false
     displayName: 'Build iOS'
   - script: |
+      mkdir Results
       xcrun simctl list
-      xcrun simctl create My-iphone com.apple.CoreSimulator.SimDeviceType.iPhone-11 com.apple.CoreSimulator.SimRuntime.iOS-13–0
+      xcrun simctl boot A73F7BD9-4151-48AF-B290-0B054DCB5286
+      xcrun simctl install booted buildiOS/Apps/Playground/Debug/Playground.app
+      xcrun simctl launch booted Playground
+      sleep 10
+      xcrun simctl io booted screenshot Results/screen.png
     displayName: 'Test iOS Simulator'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'iOS Rendered Pictures'
+      pathtoPublish: 'Results'
+    displayName: 'Publish Tests iOS Results'
+#xcrun simctl create My-iphone com.apple.CoreSimulator.SimDeviceType.iPhone-11 com.apple.CoreSimulator.SimRuntime.iOS-13–0
