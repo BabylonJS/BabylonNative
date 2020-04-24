@@ -7,8 +7,9 @@ var xr = false;
 var xrHitTest = false;
 
 function CreateBoxAsync() {
-    return Promise.resolve(BABYLON.Mesh.CreateBox("box1", 0.2));
-}
+    BABYLON.Mesh.CreateBox("box1", 0.2);
+    return Promise.resolve();
+    }
 
 function CreateSpheresAsync() {
     var size = 12;
@@ -49,7 +50,7 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function (targetMesh) {
+CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -137,7 +138,7 @@ CreateBoxAsync().then(function (targetMesh) {
                     scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                 }, 5000);
 
-                if (xrHitTest && typeof targetMesh !== 'undefined') {
+                if (xrHitTest) {
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HIT_TEST,
                         "latest",
@@ -145,9 +146,9 @@ CreateBoxAsync().then(function (targetMesh) {
 
                     xrHitTestModule.onHitTestResultObservable.add((results) => {
                         if (results.length) {
-                            targetMesh.position.x = results[0].position.x;
-                            targetMesh.position.y = results[0].position.y;
-                            targetMesh.position.z = results[0].position.z;
+                            scene.meshes[0].position.x = results[0].position.x;
+                            scene.meshes[0].position.y = results[0].position.y;
+                            scene.meshes[0].position.z = results[0].position.z;
                             }
                     });
                 }
