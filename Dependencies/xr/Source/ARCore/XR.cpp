@@ -244,17 +244,6 @@ namespace xr
         std::vector<Frame::InputSource> InputSources;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
-        bool SessionEnded{ false };
-
-        GLuint ShaderProgramId{};
-        GLuint CameraTextureId{};
-
-        ArSession* Session{};
-        ArFrame* Frame{};
-        ArPose* Pose{};
-
-        float CameraFrameUVs[VERTEX_COUNT * 2];
-        bool CameraFrameUVsInitialized{ false };
 
         Impl(System::Impl& systemImpl, void* graphicsContext)
             : SystemImpl{ systemImpl }
@@ -263,19 +252,19 @@ namespace xr
 
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
-                glGenTextures(1, &CameraTextureId);
-                glBindTexture(GL_TEXTURE_EXTERNAL_OES, CameraTextureId);
+                glGenTextures(1, &cameraTextureId);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
                 glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
             }
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
-            ShaderProgramId = CreateShaderProgram();
+            shaderProgramId = CreateShaderProgram();
 
             // Create the ARCore ArSession
             {
-                ArStatus status = ArSession_create(GetEnvForCurrentThread(), GetAppContext(), &Session);
+                ArStatus status = ArSession_create(GetEnvForCurrentThread(), GetAppContext(), &session);
                 if (status != ArStatus::AR_SUCCESS)
                 {
                     std::ostringstream message;
@@ -285,17 +274,17 @@ namespace xr
             }
 
             // Create the ARCore ArFrame (this gets reused each time we query for the latest frame)
-            ArFrame_create(Session, &Frame);
+            ArFrame_create(session, &frame);
 
             // Create the ARCore ArPose (this gets reused for each frame as well)
-            ArPose_create(Session, nullptr, &Pose);
+            ArPose_create(session, nullptr, &pose);
 
             // Set the texture ID that should be used for the camera frame
-            ArSession_setCameraTextureName(Session, static_cast<uint32_t>(CameraTextureId));
+            ArSession_setCameraTextureName(session, static_cast<uint32_t>(cameraTextureId));
 
             // Start the ArSession
             {
-                ArStatus status = ArSession_resume(Session);
+                ArStatus status = ArSession_resume(session);
                 if (status != ArStatus::AR_SUCCESS)
                 {
                     std::ostringstream message;
@@ -307,23 +296,23 @@ namespace xr
 
         ~Impl()
         {
-            ArPose_destroy(Pose);
-            ArFrame_destroy(Frame);
-            ArSession_destroy(Session);
+            ArPose_destroy(pose);
+            ArFrame_destroy(frame);
+            ArSession_destroy(session);
 
-            glDeleteTextures(1, &CameraTextureId);
-            glDeleteProgram(ShaderProgramId);
+            glDeleteTextures(1, &cameraTextureId);
+            glDeleteProgram(shaderProgramId);
 
             DestroyDisplayResources();
         }
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
-            shouldEndSession = SessionEnded;
+            shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
             // Update the ArSession to get a new frame
-            ArSession_update(Session, Frame);
+            ArSession_update(session, frame);
 
             // TODO: Probably move most of the logic from Session::Impl constructor and Frame constructor here, and then reduce access to most of the members of Session::Impl
             // TODO: 4) Add a DrawFrame function that is called from ~Frame
@@ -331,15 +320,15 @@ namespace xr
             // Update the display resources as needed (e.g. changes to render surface)
 
             ArCamera* camera{};
-            ArFrame_acquireCamera(Session, Frame, &camera);
+            ArFrame_acquireCamera(session, frame, &camera);
 
             {
                 // Get the current pose of the device
-                ArCamera_getDisplayOrientedPose(Session, camera, Pose);
+                ArCamera_getDisplayOrientedPose(session, camera, pose);
 
                 // The raw pose is exactly 7 floats: 4 for the orientation quaternion, and 3 for the position vector
                 float rawPose[7];
-                ArPose_getPoseRaw(Session, Pose, rawPose);
+                ArPose_getPoseRaw(session, pose, rawPose);
 
                 // Set the orientation and position
                 ActiveFrameViews[0].Space.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
@@ -368,7 +357,7 @@ namespace xr
                 int rotation = windowManager.getDefaultDisplay().getRotation();
 
                 // Update the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
-                ArSession_setDisplayGeometry(Session, rotation, static_cast<int32_t>(width), static_cast<int32_t>(height));
+                ArSession_setDisplayGeometry(session, rotation, static_cast<int32_t>(width), static_cast<int32_t>(height));
 
                 // Allocate and store the render texture
                 {
@@ -400,14 +389,14 @@ namespace xr
             }
 
             int32_t geometryChanged{0};
-            ArFrame_getDisplayGeometryChanged(Session, Frame, &geometryChanged);
+            ArFrame_getDisplayGeometryChanged(session, frame, &geometryChanged);
 
             // Check whether the projection matrix needs to be updated
             if (geometryChanged || ActiveFrameViews[0].DepthNearZ != DepthNearZ || ActiveFrameViews[0].DepthFarZ != DepthFarZ)
             {
                 // Get the current projection matrix
                 glm::mat4 projectionMatrix{};
-                ArCamera_getProjectionMatrix(Session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
+                ArCamera_getProjectionMatrix(session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
 
                 // Calculate the aspect ratio and field of view
                 float a = projectionMatrix[0][0];
@@ -428,8 +417,8 @@ namespace xr
             {
                 // Transform the UVs for the vertex positions given the current display size
                 ArFrame_transformCoordinates2d(
-                    Session, Frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                    VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
+                        session, frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
+                        VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
             }
 
             ArCamera_release(camera);
@@ -440,7 +429,7 @@ namespace xr
         void RequestEndSession()
         {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
-            SessionEnded = true;
+            sessionEnded = true;
         }
 
         Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
@@ -449,7 +438,64 @@ namespace xr
             return {1,1};
         }
 
+        void DrawFrame()
+        {
+            // Suppress rendering if the camera did not produce the first frame yet.
+            // This is to avoid drawing possible leftover data from previous sessions if
+            // the texture is reused.
+            int64_t frameTimestamp{};
+            ArFrame_getTimestamp(session, frame, &frameTimestamp);
+            if (frameTimestamp)
+            {
+                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(0);
+                auto cullFaceTransaction = GLTransactions::SetCapability(GL_CULL_FACE, false);
+                auto depthTestTransaction = GLTransactions::SetCapability(GL_DEPTH_TEST, false);
+                auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
+                auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
+                auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+                glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
+                glUseProgram(shaderProgramId);
+
+                // Configure the quad vertex positions
+                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
+                glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
+
+                // Configure the camera texture
+                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
+                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+
+                // Configure the camera frame UVs
+                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
+                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
+
+                // Configure the babylon render texture
+                auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId, "babylonTexture");
+                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
+                glActiveTexture(GL_TEXTURE1);
+                auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
+                glBindTexture(GL_TEXTURE_2D, babylonTextureId);
+
+                // Draw the quad
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
+                glUseProgram(0);
+            }
+        }
+
     private:
+        bool sessionEnded{false};
+
+        GLuint shaderProgramId{};
+        GLuint cameraTextureId{};
+
+        ArSession* session{};
+        ArFrame* frame{};
+        ArPose* pose{};
+
+        float CameraFrameUVs[VERTEX_COUNT * 2];
+
         void DestroyDisplayResources()
         {
             if (ActiveFrameViews[0].ColorTexturePointer)
@@ -487,48 +533,7 @@ namespace xr
 
     System::Session::Frame::~Frame()
     {
-        // Suppress rendering if the camera did not produce the first frame yet.
-        // This is to avoid drawing possible leftover data from previous sessions if
-        // the texture is reused.
-        int64_t frameTimestamp{};
-        ArFrame_getTimestamp(m_impl->sessionImpl.Session, m_impl->sessionImpl.Frame, &frameTimestamp);
-        if (frameTimestamp)
-        {
-            auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(0);
-            auto cullFaceTransaction = GLTransactions::SetCapability(GL_CULL_FACE, false);
-            auto depthTestTransaction = GLTransactions::SetCapability(GL_DEPTH_TEST, false);
-            auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
-            auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
-            auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-            glViewport(0, 0, Views[0].ColorTextureSize.Width, Views[0].ColorTextureSize.Height);
-            glUseProgram(m_impl->sessionImpl.ShaderProgramId);
-
-            // Configure the quad vertex positions
-            auto vertexPositionsUniformLocation = glGetUniformLocation(m_impl->sessionImpl.ShaderProgramId, "vertexPositions");
-            glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
-
-            // Configure the camera texture
-            auto cameraTextureUniformLocation = glGetUniformLocation(m_impl->sessionImpl.ShaderProgramId, "cameraTexture");
-            glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_impl->sessionImpl.CameraTextureId);
-
-            // Configure the camera frame UVs
-            auto cameraFrameUVsUniformLocation = glGetUniformLocation(m_impl->sessionImpl.ShaderProgramId, "cameraFrameUVs");
-            glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, m_impl->sessionImpl.CameraFrameUVs);
-
-            // Configure the babylon render texture
-            auto babylonTextureUniformLocation = glGetUniformLocation(m_impl->sessionImpl.ShaderProgramId, "babylonTexture");
-            glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
-            glActiveTexture(GL_TEXTURE1);
-            auto babylonTextureId = (GLuint)(size_t)Views[0].ColorTexturePointer;
-            glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-
-            // Draw the quad
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
-            glUseProgram(0);
-        }
+        m_impl->sessionImpl.DrawFrame();
     }
 
     System::System(const char* appName)
