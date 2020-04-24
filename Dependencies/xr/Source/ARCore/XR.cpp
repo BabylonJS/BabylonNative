@@ -322,12 +322,75 @@ namespace xr
             shouldEndSession = SessionEnded;
             shouldRestartSession = false;
 
-            // Probably move most of the logic from Session::Impl constructor and Frame constructor here, and then reduce access to most of the members of Session::Impl
-            // Get the width and height of the current surface
-            CreateDisplayResources();
-
             // Update the ArSession to get a new frame
             ArSession_update(Session, Frame);
+
+            // TODO: Probably move most of the logic from Session::Impl constructor and Frame constructor here, and then reduce access to most of the members of Session::Impl
+            // TODO: 1) Get rid of the UpdateDisplayResources function and move its contents to this function
+            //       2) Do the above stuff after having acquired the camera and pulled the pose
+            //       3) Conditionally call ArCamera_getProjectionMatrix and ArFrame_transformCoordinates2d (same conditions, width/height have changed)
+            //       4) Add a DrawFrame function that is called from ~Frame
+            //       5) Make a bunch of public stuff in Session::Impl private
+            // Update the display resources as needed (e.g. changes to render surface)
+            UpdateDisplayResources();
+
+            ActiveFrameViews[0].DepthNearZ = DepthNearZ;
+            ActiveFrameViews[0].DepthFarZ = DepthFarZ;
+
+            ArCamera* camera{};
+            ArFrame_acquireCamera(Session, Frame, &camera);
+
+            {
+                // Get the current pose of the device
+                ArCamera_getDisplayOrientedPose(Session, camera, Pose);
+
+                // The raw pose is exactly 7 floats: 4 for the orientation quaternion, and 3 for the position vector
+                float rawPose[7];
+                ArPose_getPoseRaw(Session, Pose, rawPose);
+
+                // Set the orientation and position
+                ActiveFrameViews[0].Space.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
+                ActiveFrameViews[0].Space.Position = {rawPose[4], rawPose[5], rawPose[6]};
+            }
+
+            {
+                // Get the current projection matrix
+                glm::mat4 projectionMatrix{};
+                ArCamera_getProjectionMatrix(Session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
+
+                // Calculate the aspect ratio and field of view
+                float a = projectionMatrix[0][0];
+                float b = projectionMatrix[1][1];
+
+                float aspectRatio = b / a;
+                float fieldOfView = std::atan(1.0f / b);
+
+                // Set the horizontal and vertical field of view
+                ActiveFrameViews[0].FieldOfView.AngleDown = -(ActiveFrameViews[0].FieldOfView.AngleUp = fieldOfView);
+                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
+            }
+
+            // Get the tracking state
+            ArTrackingState trackingState{};
+            ArCamera_getTrackingState(Session, camera, &trackingState);
+
+            if (trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING)
+            {
+                int32_t geometryChanged{ 0 };
+                ArFrame_getDisplayGeometryChanged(Session, Frame, &geometryChanged);
+                if (geometryChanged || !CameraFrameUVsInitialized)
+                {
+                    // Transform the UVs for the vertex positions given the current display size
+                    ArFrame_transformCoordinates2d(
+                        Session, Frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
+                        VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
+
+                    // Note that the UVs have been initialized (we don't need to do this again unless the display geometry changes)
+                    CameraFrameUVsInitialized = true;
+                }
+            }
+
+            ArCamera_release(camera);
 
             return std::make_unique<Session::Frame>(*this);
         }
@@ -345,7 +408,7 @@ namespace xr
         }
 
     private:
-        void CreateDisplayResources()
+        void UpdateDisplayResources()
         {
             size_t width{}, height{};
             {
@@ -434,63 +497,6 @@ namespace xr
         , InputSources{ sessionImpl.InputSources}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
-        Views[0].DepthNearZ = sessionImpl.DepthNearZ;
-        Views[0].DepthFarZ = sessionImpl.DepthFarZ;
-
-        ArCamera* camera{};
-        ArFrame_acquireCamera(sessionImpl.Session, sessionImpl.Frame, &camera);
-
-        {
-            // Get the current pose of the device
-            ArCamera_getDisplayOrientedPose(sessionImpl.Session, camera, sessionImpl.Pose);
-
-            // The raw pose is exactly 7 floats: 4 for the orientation quaternion, and 3 for the position vector
-            float rawPose[7];
-            ArPose_getPoseRaw(sessionImpl.Session, sessionImpl.Pose, rawPose);
-
-            // Set the orientation and position
-            Views[0].Space.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
-            Views[0].Space.Position = {rawPose[4], rawPose[5], rawPose[6]};
-        }
-
-        {
-            // Get the current projection matrix
-            glm::mat4 projectionMatrix{};
-            ArCamera_getProjectionMatrix(sessionImpl.Session, camera, Views[0].DepthNearZ, Views[0].DepthFarZ, glm::value_ptr(projectionMatrix));
-
-            // Calculate the aspect ratio and field of view
-            float a = projectionMatrix[0][0];
-            float b = projectionMatrix[1][1];
-
-            float aspectRatio = b / a;
-            float fieldOfView = std::atan(1.0f / b);
-
-            // Set the horizontal and vertical field of view
-            Views[0].FieldOfView.AngleDown = -(Views[0].FieldOfView.AngleUp = fieldOfView);
-            Views[0].FieldOfView.AngleLeft = -(Views[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
-        }
-
-        // Get the tracking state
-        ArTrackingState trackingState{};
-        ArCamera_getTrackingState(sessionImpl.Session, camera, &trackingState);
-
-        if (trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING)
-        {
-            int32_t geometryChanged{ 0 };
-            ArFrame_getDisplayGeometryChanged(sessionImpl.Session, sessionImpl.Frame, &geometryChanged);
-            if (geometryChanged || !sessionImpl.CameraFrameUVsInitialized)
-            {
-                // Transform the UVs for the vertex positions given the current display size
-                ArFrame_transformCoordinates2d(
-                    sessionImpl.Session, sessionImpl.Frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                    VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, sessionImpl.CameraFrameUVs);
-
-                // Note that the UVs have been initialized (we don't need to do this again unless the display geometry changes)
-                sessionImpl.CameraFrameUVsInitialized = true;
-            }
-        }
-
-        ArCamera_release(camera);
     }
 
     System::Session::Frame::~Frame()
