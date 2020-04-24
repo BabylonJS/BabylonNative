@@ -438,7 +438,7 @@ namespace xr
         ArCamera_release(camera);
     }
 
-    void System::Session::Frame::GetHitTestResults(std::list<Pose>& filteredResults) const {
+    void System::Session::Frame::GetHitTestResults(std::list<Pose>& filteredResults, xr::Ray offsetRay) const {
         ArSession* session = m_impl->sessionImpl.session;
         ArCamera* camera{};
         ArFrame_acquireCamera(session, m_impl->sessionImpl.frame, &camera);
@@ -452,9 +452,6 @@ namespace xr
             return;
         }
 
-        // Pull out the camera position into a float array.
-        float cameraPosition[3] = { Views[0].Space.Pose.Position.X,  Views[0].Space.Pose.Position.Y, Views[0].Space.Pose.Position.Z };
-
         // Push the camera orientation into a glm quaternion.
         glm::quat cameraOrientationQuaternion;
         cameraOrientationQuaternion.x = Views[0].Space.Pose.Orientation.X;
@@ -462,16 +459,27 @@ namespace xr
         cameraOrientationQuaternion.z = Views[0].Space.Pose.Orientation.Z;
         cameraOrientationQuaternion.w = Views[0].Space.Pose.Orientation.W;
 
-        // ArCamera_getDisplayOrientedPose gives us a pose where -z points in the direction the camera is facing
-        // so we need to actually use the backwards unit vector when calculating cameraForward.
-        const glm::vec3 backward = { 0, 0, -1};
+        // Pull out the direction from the offset ray into a GLM Vector3.
+        glm::vec3 direction = { offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z};
 
-        // Multiply the camera rotation quaternion by the backward vector to calculate the camera forward vector.
-        glm::vec3 cameraForward = cameraOrientationQuaternion * backward;
-        float cameraForwardArray[3] = { cameraForward.x, cameraForward.y, cameraForward.z };
+        // Multiply the camera rotation quaternion by the direction vector to calculate the direction vector in viewer space.
+        glm::vec3 cameraOrientedDirection = cameraOrientationQuaternion * glm::normalize(direction);
+        float cameraOrientedDirectionArray[3] = { cameraOrientedDirection.x, cameraOrientedDirection.y, cameraOrientedDirection.z };
+
+        // Convert the origin to camera space by multiplying the origin by the rotation quaternion, then adding that to the
+        // position of the camera.
+        glm::vec3 offsetOrigin = { offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z};
+        offsetOrigin = cameraOrientationQuaternion * offsetOrigin;
+
+        // Pull out the origin composited from the offsetRay and camera position into a float array.
+        float hitTestOrigin[3] = {
+                Views[0].Space.Pose.Position.X + offsetOrigin.x,
+                Views[0].Space.Pose.Position.Y + offsetOrigin.y,
+                Views[0].Space.Pose.Position.Z + offsetOrigin.z
+        };
 
         // Perform a hit test and process the results.
-        ArFrame_hitTestRay(session, m_impl->sessionImpl.frame, cameraPosition, cameraForwardArray, m_impl->sessionImpl.hitResultList);
+        ArFrame_hitTestRay(session, m_impl->sessionImpl.frame, hitTestOrigin, cameraOrientedDirectionArray, m_impl->sessionImpl.hitResultList);
 
         // Iterate over the results and pull out only those that match the desired TrackableType (just Planes for now)
         int32_t size;

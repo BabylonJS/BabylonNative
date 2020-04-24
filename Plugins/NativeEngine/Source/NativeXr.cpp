@@ -767,15 +767,42 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
             XRRay(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRay>{info}
-                , m_origin{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_direction{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
+                bool originSet = false;
+                bool directionSet = false;
+                if (info[0].IsObject())
+                {
+                    Napi::Object argumentObject = info[0].As<Napi::Object>();
+                    Napi::Value originValue = argumentObject.Get("origin");
+                    if (originValue.IsObject())
+                    {
+                        originSet = true;
+                        m_origin = Napi::Persistent(originValue.As<Napi::Object>());
+                    }
+
+                    Napi::Value directionValue = argumentObject.Get("direction");
+                    if (directionValue.IsObject())
+                    {
+                        directionSet = true;
+                        m_direction = Napi::Persistent(directionValue.As<Napi::Object>());
+                    }
+                }
+
+                if (!originSet)
+                {
+                    m_origin = Napi::Persistent(Napi::Object::New(info.Env()));
+                }
+
+                if (!directionSet)
+                {
+                    m_direction = Napi::Persistent(Napi::Object::New(info.Env()));
+                }
             }
 
             Napi::Object GetOrigin()
@@ -786,6 +813,44 @@ namespace Babylon
             Napi::Object GetDirection()
             {
                 return m_direction.Value();
+            }
+
+            xr::Ray GetNativeRay()
+            {
+                xr::Ray nativeRay = {{0, 0, 0}, {0, 0, -1}};
+                Napi::Object originObject = GetOrigin();
+                if (originObject.HasOwnProperty("x"))
+                {
+                    nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
+                }
+
+                if (originObject.HasOwnProperty("y"))
+                {
+                    nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
+                }
+
+                if (originObject.HasOwnProperty("z"))
+                {
+                    nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
+                }
+
+                Napi::Object directionObject = GetDirection();
+                if (directionObject.HasOwnProperty("x"))
+                {
+                    nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
+                }
+
+                if (directionObject.HasOwnProperty("y"))
+                {
+                    nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
+                }
+
+                if (directionObject.HasOwnProperty("z"))
+                {
+                    nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
+                }
+
+                return nativeRay;
             }
 
         private:
@@ -1059,15 +1124,19 @@ namespace Babylon
             {
                 XRHitTestSource* hitTestSource = XRHitTestSource::Unwrap(info[0].As<Napi::Object>());
                 XRRay* offsetRay = hitTestSource->OffsetRay();
+                xr::Ray nativeRay;
                 if (offsetRay != nullptr)
                 {
-                    Napi::Object originObject = offsetRay->GetOrigin();
-                    bool hasX = originObject.HasOwnProperty("X");
+                    nativeRay = offsetRay->GetNativeRay();
+                }
+                else
+                {
+                     nativeRay = {{0, 0, 0}, {0, 0, -1}};
                 }
 
                 // Get the native results
                 std::list<xr::Pose> nativeHitResults;
-                m_frame->GetHitTestResults(nativeHitResults);
+                m_frame->GetHitTestResults(nativeHitResults, nativeRay);
 
                 // Translate those results into a napi array.
                 Napi::Array results = Napi::Array::New(info.Env(), nativeHitResults.size());

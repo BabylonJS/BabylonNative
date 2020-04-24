@@ -38,6 +38,23 @@ namespace xr
         } Orientation;
     };
 
+    struct Ray
+    {
+        struct
+        {
+            float X{};
+            float Y{};
+            float Z{};
+        } Origin;
+
+        struct
+        {
+            float X{};
+            float Y{};
+            float Z{};
+        } Direction;
+    };
+
     class System
     {
     public:
@@ -108,7 +125,7 @@ namespace xr
                 Frame(System::Session::Impl&);
                 ~Frame();
 
-                void GetHitTestResults(std::list<Pose>&) const;
+                void GetHitTestResults(std::list<Pose>&, Ray) const;
 
             private:
                 class Impl;
