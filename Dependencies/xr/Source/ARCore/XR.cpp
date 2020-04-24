@@ -314,11 +314,6 @@ namespace xr
             // Update the ArSession to get a new frame
             ArSession_update(session, frame);
 
-            // TODO: Probably move most of the logic from Session::Impl constructor and Frame constructor here, and then reduce access to most of the members of Session::Impl
-            // TODO: 4) Add a DrawFrame function that is called from ~Frame
-            //       5) Make a bunch of public stuff in Session::Impl private
-            // Update the display resources as needed (e.g. changes to render surface)
-
             ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
 
@@ -417,8 +412,8 @@ namespace xr
             {
                 // Transform the UVs for the vertex positions given the current display size
                 ArFrame_transformCoordinates2d(
-                        session, frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                        VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
+                    session, frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
+                    VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
             }
 
             ArCamera_release(camera);
