@@ -347,9 +347,7 @@ namespace xr
             {
                 DestroyDisplayResources();
 
-                //auto windowManager_ = GetAppContext().getSystemService<android::view::WindowManager>();
-                android::view::WindowManager windowManager(GetAppContext().getSystemService(android::view::WindowManager::ServiceName));
-                int rotation = windowManager.getDefaultDisplay().getRotation();
+                int rotation = GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation();
 
                 // Update the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
                 ArSession_setDisplayGeometry(session, rotation, static_cast<int32_t>(width), static_cast<int32_t>(height));

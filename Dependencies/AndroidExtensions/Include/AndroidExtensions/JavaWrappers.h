@@ -165,7 +165,10 @@ namespace android::content
         res::AssetManager getAssets() const;
 
         template<typename ServiceT>
-        ServiceT getSystemService();
+        ServiceT getSystemService()
+        {
+            return {getSystemService(ServiceT::ServiceName)};
+        };
 
         jobject getSystemService(const char* serviceName);
     };

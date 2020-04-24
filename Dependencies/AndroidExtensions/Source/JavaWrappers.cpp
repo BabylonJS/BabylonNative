@@ -176,12 +176,6 @@ namespace android::content
         return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getAssets", "()Landroid/content/res/AssetManager;"))};
     }
 
-    template<typename ServiceT>
-    ServiceT Context::getSystemService()
-    {
-        return {getSystemService(ServiceT::ServiceName)};
-    }
-
     jobject Context::getSystemService(const char* serviceName)
     {
         return m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
