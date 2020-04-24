@@ -326,16 +326,9 @@ namespace xr
             ArSession_update(Session, Frame);
 
             // TODO: Probably move most of the logic from Session::Impl constructor and Frame constructor here, and then reduce access to most of the members of Session::Impl
-            // TODO: 1) Get rid of the UpdateDisplayResources function and move its contents to this function
-            //       2) Do the above stuff after having acquired the camera and pulled the pose
-            //       3) Conditionally call ArCamera_getProjectionMatrix and ArFrame_transformCoordinates2d (same conditions, width/height have changed)
-            //       4) Add a DrawFrame function that is called from ~Frame
+            // TODO: 4) Add a DrawFrame function that is called from ~Frame
             //       5) Make a bunch of public stuff in Session::Impl private
             // Update the display resources as needed (e.g. changes to render surface)
-            UpdateDisplayResources();
-
-            ActiveFrameViews[0].DepthNearZ = DepthNearZ;
-            ActiveFrameViews[0].DepthFarZ = DepthFarZ;
 
             ArCamera* camera{};
             ArFrame_acquireCamera(Session, Frame, &camera);
@@ -353,76 +346,19 @@ namespace xr
                 ActiveFrameViews[0].Space.Position = {rawPose[4], rawPose[5], rawPose[6]};
             }
 
-            {
-                // Get the current projection matrix
-                glm::mat4 projectionMatrix{};
-                ArCamera_getProjectionMatrix(Session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
-
-                // Calculate the aspect ratio and field of view
-                float a = projectionMatrix[0][0];
-                float b = projectionMatrix[1][1];
-
-                float aspectRatio = b / a;
-                float fieldOfView = std::atan(1.0f / b);
-
-                // Set the horizontal and vertical field of view
-                ActiveFrameViews[0].FieldOfView.AngleDown = -(ActiveFrameViews[0].FieldOfView.AngleUp = fieldOfView);
-                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
-            }
-
-            // Get the tracking state
-            ArTrackingState trackingState{};
-            ArCamera_getTrackingState(Session, camera, &trackingState);
-
-            if (trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING)
-            {
-                int32_t geometryChanged{ 0 };
-                ArFrame_getDisplayGeometryChanged(Session, Frame, &geometryChanged);
-                if (geometryChanged || !CameraFrameUVsInitialized)
-                {
-                    // Transform the UVs for the vertex positions given the current display size
-                    ArFrame_transformCoordinates2d(
-                        Session, Frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                        VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
-
-                    // Note that the UVs have been initialized (we don't need to do this again unless the display geometry changes)
-                    CameraFrameUVsInitialized = true;
-                }
-            }
-
-            ArCamera_release(camera);
-
-            return std::make_unique<Session::Frame>(*this);
-        }
-
-        void RequestEndSession()
-        {
-            // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
-            SessionEnded = true;
-        }
-
-        Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
-        {
-            // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
-            return {1,1};
-        }
-
-    private:
-        void UpdateDisplayResources()
-        {
+            // Get the current surface dimensions
             size_t width{}, height{};
             {
                 EGLDisplay display = eglGetCurrentDisplay();
                 EGLSurface surface = eglGetCurrentSurface(EGL_DRAW);
                 EGLint _width{}, _height{};
-                //DiagnosticTimer<std::chrono::microseconds> timer;
                 eglQuerySurface(display, surface, EGL_WIDTH, &_width);
                 eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
-                //timer.LogCheckpoint("eglQuerySurface");
                 width = static_cast<size_t>(_width);
                 height = static_cast<size_t>(_height);
             }
 
+            // Check whether the dimensions have changed
             if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
             {
                 DestroyDisplayResources();
@@ -462,8 +398,58 @@ namespace xr
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
             }
+
+            int32_t geometryChanged{0};
+            ArFrame_getDisplayGeometryChanged(Session, Frame, &geometryChanged);
+
+            // Check whether the projection matrix needs to be updated
+            if (geometryChanged || ActiveFrameViews[0].DepthNearZ != DepthNearZ || ActiveFrameViews[0].DepthFarZ != DepthFarZ)
+            {
+                // Get the current projection matrix
+                glm::mat4 projectionMatrix{};
+                ArCamera_getProjectionMatrix(Session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
+
+                // Calculate the aspect ratio and field of view
+                float a = projectionMatrix[0][0];
+                float b = projectionMatrix[1][1];
+
+                float aspectRatio = b / a;
+                float fieldOfView = std::atan(1.0f / b);
+
+                // Set the horizontal and vertical field of view
+                ActiveFrameViews[0].FieldOfView.AngleDown = -(ActiveFrameViews[0].FieldOfView.AngleUp = fieldOfView);
+                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
+            }
+
+            ActiveFrameViews[0].DepthNearZ = DepthNearZ;
+            ActiveFrameViews[0].DepthFarZ = DepthFarZ;
+
+            if (geometryChanged)
+            {
+                // Transform the UVs for the vertex positions given the current display size
+                ArFrame_transformCoordinates2d(
+                    Session, Frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
+                    VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
+            }
+
+            ArCamera_release(camera);
+
+            return std::make_unique<Session::Frame>(*this);
         }
 
+        void RequestEndSession()
+        {
+            // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
+            SessionEnded = true;
+        }
+
+        Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        {
+            // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
+            return {1,1};
+        }
+
+    private:
         void DestroyDisplayResources()
         {
             if (ActiveFrameViews[0].ColorTexturePointer)
