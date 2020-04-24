@@ -4,10 +4,10 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var xr = false;
+var xrHitTest = false;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.7);
-    return Promise.resolve();
+    return Promise.resolve(BABYLON.Mesh.CreateBox("box1", 0.2));
 }
 
 function CreateSpheresAsync() {
@@ -49,7 +49,7 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function () {
+CreateBoxAsync().then(function (boxMesh) {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -136,7 +136,22 @@ CreateBoxAsync().then(function () {
                     scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
                     scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                 }, 5000);
-                return xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
+
+                if (xrHitTest && typeof boxMesh !== 'undefined') {
+                    const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
+                        BABYLON.WebXRFeatureName.HIT_TEST,
+                        "latest",
+                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}});
+                    xrHitTestModule.onHitTestResultObservable.add((results) => {
+                        if (results.length) {
+                            boxMesh.position.x = results[0].position.x;
+                            boxMesh.position.y = results[0].position.y;
+                            boxMesh.position.z = results[0].position.z;
+                            }
+                    });
+                }
+
+                xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
             });
         }, 5000);
     }
