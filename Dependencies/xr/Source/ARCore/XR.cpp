@@ -29,8 +29,6 @@
 
 using namespace android::global;
 
-#define APPNAME "BabylonXR"
-
 namespace xr
 {
     class System::Impl
@@ -308,7 +306,7 @@ namespace xr
             ArHitResultList_create(session, &hitResultList);
             ArHitResult_create(session, &hitResult);
 
-            // Create the ARCore arPose that tracks the current hit test result
+            // Create the ARCore ArPose that tracks the current hit test result
             ArPose_create(session, nullptr, &hitResultPose);
 
             // Initialize the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
