@@ -453,11 +453,13 @@ namespace xr
         }
 
         // Push the camera orientation into a glm quaternion.
-        glm::quat cameraOrientationQuaternion{};
-        cameraOrientationQuaternion.x = Views[0].Space.Pose.Orientation.X;
-        cameraOrientationQuaternion.y = Views[0].Space.Pose.Orientation.Y;
-        cameraOrientationQuaternion.z = Views[0].Space.Pose.Orientation.Z;
-        cameraOrientationQuaternion.w = Views[0].Space.Pose.Orientation.W;
+        glm::quat cameraOrientationQuaternion
+        {
+            Views[0].Space.Pose.Orientation.W,
+            Views[0].Space.Pose.Orientation.X,
+            Views[0].Space.Pose.Orientation.Y,
+            Views[0].Space.Pose.Orientation.Z
+        };
 
         // Pull out the direction from the offset ray into a GLM Vector3.
         glm::vec3 direction{ offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z };
