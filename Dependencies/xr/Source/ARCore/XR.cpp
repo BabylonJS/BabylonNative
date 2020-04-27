@@ -43,41 +43,12 @@ namespace xr
 
         bool TryInitialize()
         {
-            // Perhaps call eglGetCurrentSurface to get the render surface *before* XR render loop starts and changes to rendering to an FBO?
             return true;
         }
     };
 
     namespace
     {
-        void log(const char* message)
-        {
-            __android_log_print(ANDROID_LOG_VERBOSE, __FILE__, "%s", message);
-        }
-
-        template<typename TTimeUnit>
-        class DiagnosticTimer final
-        {
-        public:
-            DiagnosticTimer()
-                : m_lastCheckpoint{std::chrono::high_resolution_clock::now()}
-            {
-            }
-
-            void LogCheckpoint(const char* message)
-            {
-                auto now = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> duration = now - m_lastCheckpoint;
-                m_lastCheckpoint = now;
-                std::ostringstream fullMessage;
-                fullMessage << message << ": " << std::chrono::duration_cast<TTimeUnit>(duration).count();
-                log(fullMessage.str().c_str());
-            }
-
-        private:
-            std::chrono::high_resolution_clock::time_point m_lastCheckpoint;
-        };
-
         constexpr GLfloat VERTEX_POSITIONS[]{ -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f };
         constexpr size_t VERTEX_COUNT{ std::size(VERTEX_POSITIONS) / 2 };
 
