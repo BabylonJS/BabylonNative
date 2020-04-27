@@ -148,7 +148,7 @@ namespace Babylon
         ~NativeXr();
 
         void BeginSession(Napi::Env env); // TODO: Make this asynchronous.
-        void EndSession();   // TODO: Make this asynchronous.
+        void EndSession();                // TODO: Make this asynchronous.
 
         auto ActiveFrameBuffers() const
         {
@@ -939,11 +939,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                        env,
-                        JS_CLASS_NAME,
-                        {
-                                InstanceMethod("cancel", &XRHitTestSource::Cancel),
-                        });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("cancel", &XRHitTestSource::Cancel),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -954,7 +954,7 @@ namespace Babylon
             }
 
             XRHitTestSource(const Napi::CallbackInfo& info)
-                    : Napi::ObjectWrap<XRHitTestSource>{info}
+                : Napi::ObjectWrap<XRHitTestSource>{info}
             {
                 auto options = info[0].As<Napi::Object>();
 
@@ -962,7 +962,8 @@ namespace Babylon
                 {
                     auto spaceValue = options.Get("space");
 
-                    if (spaceValue.IsObject()) {
+                    if (spaceValue.IsObject())
+                    {
                         m_space = Napi::Persistent(spaceValue.As<Napi::Object>());
                         hasSpace = true;
                     }
@@ -974,7 +975,7 @@ namespace Babylon
                     hasOffsetRay = true;
                 }
             }
-            
+
             XRRay* OffsetRay()
             {
                 return hasOffsetRay ? XRRay::Unwrap(m_offsetRay.Value()) : nullptr;
@@ -1009,11 +1010,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                        env,
-                        JS_CLASS_NAME,
-                        {
-                                InstanceMethod("getPose", &XRHitTestResult::GetPose),
-                        });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getPose", &XRHitTestResult::GetPose),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1024,12 +1025,13 @@ namespace Babylon
             }
 
             XRHitTestResult(const Napi::CallbackInfo& info)
-                    : Napi::ObjectWrap<XRHitTestResult>{info}
+                : Napi::ObjectWrap<XRHitTestResult>{info}
             {
             }
 
             // Sets the value of the hit pose in AR core space via struct copy.
-            void SetPose(const xr::Pose& inputPose) {
+            void SetPose(const xr::Pose& inputPose)
+            {
                 m_hitPose = inputPose;
             }
 
@@ -1133,7 +1135,7 @@ namespace Babylon
                 }
                 else
                 {
-                     nativeRay = {{0, 0, 0}, {0, 0, -1}};
+                    nativeRay = {{0, 0, 0}, {0, 0, -1}};
                 }
 
                 // Get the native results
@@ -1145,11 +1147,11 @@ namespace Babylon
                 uint32_t i{0};
                 for (std::vector<xr::Pose>::iterator it = nativeHitResults.begin(); it != nativeHitResults.end(); ++it)
                 {
-                      Napi::Object currentResult = XRHitTestResult::New(info);
-                      XRHitTestResult* xrResult = XRHitTestResult::Unwrap(currentResult);
-                      xrResult->SetPose(*it);
+                    Napi::Object currentResult = XRHitTestResult::New(info);
+                    XRHitTestResult* xrResult = XRHitTestResult::Unwrap(currentResult);
+                    xrResult->SetPose(*it);
 
-                      results[i++] = currentResult;
+                    results[i++] = currentResult;
                 }
 
                 return results;
@@ -1202,9 +1204,8 @@ namespace Babylon
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
-                // Support both immersive VR and immersive AR is supported.	
-                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR
-                || info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);	
+                // Support both immersive VR and immersive AR is supported.
+                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR || info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void SetEngine(Napi::Object jsEngine)

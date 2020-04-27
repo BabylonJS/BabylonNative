@@ -9,7 +9,7 @@ var xrHitTest = false;
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
-    }
+}
 
 function CreateSpheresAsync() {
     var size = 12;
@@ -144,7 +144,7 @@ CreateBoxAsync().then(function () {
                             scene.meshes[0].position.x = results[0].position.x;
                             scene.meshes[0].position.y = results[0].position.y;
                             scene.meshes[0].position.z = results[0].position.z;
-                            }
+                        }
                     });
                 }
                 else {
