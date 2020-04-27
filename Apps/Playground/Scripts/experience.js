@@ -133,11 +133,6 @@ CreateBoxAsync().then(function () {
     if (xr) {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
-                setTimeout(function () {
-                    scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
-                    scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
-                }, 5000);
-
                 if (xrHitTest) {
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HIT_TEST,
@@ -151,6 +146,12 @@ CreateBoxAsync().then(function () {
                             scene.meshes[0].position.z = results[0].position.z;
                             }
                     });
+                }
+                else {
+                    setTimeout(function () {
+                        scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
+                        scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
+                    }, 5000);
                 }
 
                 xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);

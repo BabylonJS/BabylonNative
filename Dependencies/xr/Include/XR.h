@@ -125,7 +125,7 @@ namespace xr
                 Frame(System::Session::Impl&);
                 ~Frame();
 
-                void GetHitTestResults(std::list<Pose>&, Ray) const;
+                void GetHitTestResults(std::vector<Pose>&, Ray) const;
 
             private:
                 class Impl;
