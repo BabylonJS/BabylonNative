@@ -465,7 +465,7 @@ namespace xr
         glm::vec3 direction{ offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z };
 
         // Multiply the camera rotation quaternion by the direction vector to calculate the direction vector in viewer space.
-        glm::vec3 cameraOrientedDirection = cameraOrientationQuaternion * glm::normalize(direction);
+        glm::vec3 cameraOrientedDirection{cameraOrientationQuaternion * glm::normalize(direction)};
         float cameraOrientedDirectionArray[3]{ cameraOrientedDirection.x, cameraOrientedDirection.y, cameraOrientedDirection.z };
 
         // Convert the origin to camera space by multiplying the origin by the rotation quaternion, then adding that to the
