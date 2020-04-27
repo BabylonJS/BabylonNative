@@ -476,9 +476,9 @@ namespace xr
         // Pull out the origin composited from the offsetRay and camera position into a float array.
         float hitTestOrigin[3]
         {
-                Views[0].Space.Pose.Position.X + offsetOrigin.x,
-                Views[0].Space.Pose.Position.Y + offsetOrigin.y,
-                Views[0].Space.Pose.Position.Z + offsetOrigin.z
+            Views[0].Space.Pose.Position.X + offsetOrigin.x,
+            Views[0].Space.Pose.Position.Y + offsetOrigin.y,
+            Views[0].Space.Pose.Position.Z + offsetOrigin.z
         };
 
         // Perform a hit test and process the results.
@@ -490,7 +490,7 @@ namespace xr
         for (int i = 0; i < size; i++)
         {
             ArHitResult* hitResult = m_impl->sessionImpl.hitResult;
-            ArTrackableType trackableType;
+            ArTrackableType trackableType{};
             ArTrackable* trackable;
 
             ArHitResultList_getItem(session, m_impl->sessionImpl.hitResultList, i, hitResult);
@@ -498,8 +498,7 @@ namespace xr
             ArTrackable_getType(session, trackable, &trackableType);
             if (trackableType == AR_TRACKABLE_PLANE)
             {
-                int32_t isPoseInPolygon;
-
+                int32_t isPoseInPolygon{};
                 ArHitResult_getHitPose(session, hitResult, m_impl->sessionImpl.hitResultPose);
                 ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, m_impl->sessionImpl.hitResultPose, &isPoseInPolygon);
 
