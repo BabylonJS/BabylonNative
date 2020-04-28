@@ -99,6 +99,9 @@ if( BGFX_INSTALL )
 		install( TARGETS geometryc
 			EXPORT bgfx-config
 			DESTINATION bin )
+    install( TARGETS geometryv
+			EXPORT bgfx-config
+			DESTINATION bin )
 		install( TARGETS texturec
 			EXPORT bgfx-config
 			DESTINATION bin )
