@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <list>
 
 namespace xr
 {

@@ -24,7 +24,6 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
-#include <forward_list>
 
 using namespace android::global;
 
@@ -216,9 +215,6 @@ namespace xr
         std::vector<Frame::InputSource> InputSources;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
-        ArPose* hitResultPose{};
-        ArHitResultList* hitResultList{};
-        ArHitResult* hitResult{};
 
         Impl(System::Impl& systemImpl, void* graphicsContext)
             : SystemImpl{ systemImpl }
@@ -462,14 +458,91 @@ namespace xr
             }
         }
 
-        ArFrame* GetFrame()
+        void GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
         {
-            return frame;
-        }
+            ArCamera* camera{};
+            ArFrame_acquireCamera(session, frame, &camera);
 
-        ArSession* GetSession()
-        {
-            return session;
+            // Get the tracking state
+            ArTrackingState trackingState{};
+            ArCamera_getTrackingState(session, camera, &trackingState);
+
+            // If not tracking, back out and return.
+            if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING)
+            {
+                return;
+            }
+
+            // Push the camera orientation into a glm quaternion.
+            glm::quat cameraOrientationQuaternion
+            {
+                ActiveFrameViews[0].Space.Pose.Orientation.W,
+                ActiveFrameViews[0].Space.Pose.Orientation.X,
+                ActiveFrameViews[0].Space.Pose.Orientation.Y,
+                ActiveFrameViews[0].Space.Pose.Orientation.Z
+            };
+
+            // Pull out the direction from the offset ray into a GLM Vector3.
+            glm::vec3 direction{ offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z };
+
+            // Multiply the camera rotation quaternion by the direction vector to calculate the direction vector in viewer space.
+            glm::vec3 cameraOrientedDirection{cameraOrientationQuaternion * glm::normalize(direction)};
+            float cameraOrientedDirectionArray[3]{ cameraOrientedDirection.x, cameraOrientedDirection.y, cameraOrientedDirection.z };
+
+            // Convert the origin to camera space by multiplying the origin by the rotation quaternion, then adding that to the
+            // position of the camera.
+            glm::vec3 offsetOrigin{ offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z };
+            offsetOrigin = cameraOrientationQuaternion * offsetOrigin;
+
+            // Pull out the origin composited from the offsetRay and camera position into a float array.
+            float hitTestOrigin[3]
+            {
+                ActiveFrameViews[0].Space.Pose.Position.X + offsetOrigin.x,
+                ActiveFrameViews[0].Space.Pose.Position.Y + offsetOrigin.y,
+                ActiveFrameViews[0].Space.Pose.Position.Z + offsetOrigin.z
+            };
+
+            // Perform a hit test and process the results.
+            ArFrame_hitTestRay(session, frame, hitTestOrigin, cameraOrientedDirectionArray, hitResultList);
+
+            // Iterate over the results and pull out only those that match the desired TrackableType.  For now we are limiting results to
+            // just hits against the Plane, and further scoping that to Poses that are contained in the polygon of the detected mesh.
+            // This is equivalent to XRHitTestTrackableType.mesh (https://immersive-web.github.io/hit-test/#hit-test-trackable-type-enum).
+            int32_t size{};
+            ArHitResultList_getSize(session, hitResultList, &size);
+            for (int i = 0; i < size; i++)
+            {
+                ArTrackableType trackableType{};
+                ArTrackable* trackable;
+
+                ArHitResultList_getItem(session, hitResultList, i, hitResult);
+                ArHitResult_acquireTrackable(session, hitResult, &trackable);
+                ArTrackable_getType(session, trackable, &trackableType);
+                if (trackableType == AR_TRACKABLE_PLANE)
+                {
+                    int32_t isPoseInPolygon{};
+                    ArHitResult_getHitPose(session, hitResult, hitResultPose);
+                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, hitResultPose, &isPoseInPolygon);
+
+                    if (isPoseInPolygon != 0)
+                    {
+                        float rawPose[7]{};
+                        ArPose_getPoseRaw(session, hitResultPose, rawPose);
+                        Pose pose{};
+                        pose.Orientation.X = rawPose[0];
+                        pose.Orientation.Y = rawPose[1];
+                        pose.Orientation.Z = rawPose[2];
+                        pose.Orientation.W = rawPose[3];
+                        pose.Position.X = rawPose[4];
+                        pose.Position.Y = rawPose[5];
+                        pose.Position.Z = rawPose[6];
+
+                        filteredResults.push_back(pose);
+                    }
+                }
+
+                ArTrackable_release(trackable);
+            }
         }
 
     private:
@@ -481,6 +554,9 @@ namespace xr
         ArSession* session{};
         ArFrame* frame{};
         ArPose* cameraPose{};
+        ArPose* hitResultPose{};
+        ArHitResultList* hitResultList{};
+        ArHitResult* hitResult{};
 
         float CameraFrameUVs[VERTEX_COUNT * 2];
 
@@ -521,89 +597,7 @@ namespace xr
 
     void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
     {
-        ArSession* session = m_impl->sessionImpl.GetSession();
-        ArCamera* camera{};
-        ArFrame_acquireCamera(session, m_impl->sessionImpl.GetFrame(), &camera);
-
-        // Get the tracking state
-        ArTrackingState trackingState{};
-        ArCamera_getTrackingState(session, camera, &trackingState);
-
-        // If not tracking, back out and return.
-        if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING)
-        {
-            return;
-        }
-
-        // Push the camera orientation into a glm quaternion.
-        glm::quat cameraOrientationQuaternion
-        {
-            Views[0].Space.Pose.Orientation.W,
-            Views[0].Space.Pose.Orientation.X,
-            Views[0].Space.Pose.Orientation.Y,
-            Views[0].Space.Pose.Orientation.Z
-        };
-
-        // Pull out the direction from the offset ray into a GLM Vector3.
-        glm::vec3 direction{ offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z };
-
-        // Multiply the camera rotation quaternion by the direction vector to calculate the direction vector in viewer space.
-        glm::vec3 cameraOrientedDirection{cameraOrientationQuaternion * glm::normalize(direction)};
-        float cameraOrientedDirectionArray[3]{ cameraOrientedDirection.x, cameraOrientedDirection.y, cameraOrientedDirection.z };
-
-        // Convert the origin to camera space by multiplying the origin by the rotation quaternion, then adding that to the
-        // position of the camera.
-        glm::vec3 offsetOrigin{ offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z };
-        offsetOrigin = cameraOrientationQuaternion * offsetOrigin;
-
-        // Pull out the origin composited from the offsetRay and camera position into a float array.
-        float hitTestOrigin[3]
-        {
-            Views[0].Space.Pose.Position.X + offsetOrigin.x,
-            Views[0].Space.Pose.Position.Y + offsetOrigin.y,
-            Views[0].Space.Pose.Position.Z + offsetOrigin.z
-        };
-
-        // Perform a hit test and process the results.
-        ArFrame_hitTestRay(session, m_impl->sessionImpl.GetFrame(), hitTestOrigin, cameraOrientedDirectionArray, m_impl->sessionImpl.hitResultList);
-
-        // Iterate over the results and pull out only those that match the desired TrackableType (just Planes for now)
-        int32_t size{};
-        ArHitResultList_getSize(session, m_impl->sessionImpl.hitResultList, &size);
-        for (int i = 0; i < size; i++)
-        {
-            ArHitResult* hitResult = m_impl->sessionImpl.hitResult;
-            ArTrackableType trackableType{};
-            ArTrackable* trackable;
-
-            ArHitResultList_getItem(session, m_impl->sessionImpl.hitResultList, i, hitResult);
-            ArHitResult_acquireTrackable(session, hitResult, &trackable);
-            ArTrackable_getType(session, trackable, &trackableType);
-            if (trackableType == AR_TRACKABLE_PLANE)
-            {
-                int32_t isPoseInPolygon{};
-                ArHitResult_getHitPose(session, hitResult, m_impl->sessionImpl.hitResultPose);
-                ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, m_impl->sessionImpl.hitResultPose, &isPoseInPolygon);
-
-                if (isPoseInPolygon != 0)
-                {
-                    float rawPose[7]{};
-                    ArPose_getPoseRaw(session, m_impl->sessionImpl.hitResultPose, rawPose);
-                    Pose pose{};
-                    pose.Orientation.X = rawPose[0];
-                    pose.Orientation.Y = rawPose[1];
-                    pose.Orientation.Z = rawPose[2];
-                    pose.Orientation.W = rawPose[3];
-                    pose.Position.X = rawPose[4];
-                    pose.Position.Y = rawPose[5];
-                    pose.Position.Z = rawPose[6];
-
-                    filteredResults.push_back(pose);
-                }
-            }
-
-            ArTrackable_release(trackable);
-        }
+        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
     System::Session::Frame::~Frame()
