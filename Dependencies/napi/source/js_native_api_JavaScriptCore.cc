@@ -110,7 +110,8 @@ namespace {
     return reinterpret_cast<const JSValueRef*>(values);
   }
 
-  JSObjectRef ToJSObject(const napi_value value) {
+  JSObjectRef ToJSObject(napi_env env, const napi_value value) {
+    assert(value == nullptr || JSValueIsObject(env->context, reinterpret_cast<JSValueRef>(value)));
     return reinterpret_cast<JSObjectRef>(value);
   }
 
@@ -182,7 +183,7 @@ namespace {
       cbInfo.data = ctor->_data;
 
       napi_value result = ctor->_cb(ctor->_env, reinterpret_cast<napi_callback_info>(&cbInfo));
-      return ToJSObject(result);
+      return ToJSObject(ctor->_env, result);
     }
 
     // JSObjectFinalizeCallback
@@ -489,7 +490,7 @@ napi_status napi_set_property(napi_env env,
   JSValueRef exception = nullptr;
   JSObjectSetPropertyForKey(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     ToJSValue(key),
     ToJSValue(value),
     kJSPropertyAttributeNone,
@@ -513,7 +514,7 @@ napi_status napi_has_property(napi_env env,
 
   *result = JSObjectHasProperty(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     key_str);
   return napi_ok;
 }
@@ -529,7 +530,7 @@ napi_status napi_get_property(napi_env env,
   JSValueRef exception = nullptr;
   *result = ToNapi(JSObjectGetPropertyForKey(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     ToJSValue(key),
     &exception));
   CHECK_JSC(env, exception);
@@ -550,7 +551,7 @@ napi_status napi_delete_property(napi_env env,
 
   *result = JSObjectDeleteProperty(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     key_str,
     &exception);
   CHECK_JSC(env, exception);
@@ -585,7 +586,7 @@ napi_status napi_set_named_property(napi_env env,
   JSValueRef exception = nullptr;
   JSObjectSetProperty(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     JSString(utf8name),
     ToJSValue(value),
     kJSPropertyAttributeNone,
@@ -604,7 +605,7 @@ napi_status napi_has_named_property(napi_env env,
 
   *result = JSObjectHasProperty(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     JSString(utf8name));
 
   return napi_ok;
@@ -620,7 +621,7 @@ napi_status napi_get_named_property(napi_env env,
   JSValueRef exception = nullptr;
   *result = ToNapi(JSObjectGetProperty(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     JSString(utf8name),
     &exception));
   CHECK_JSC(env, exception);
@@ -638,7 +639,7 @@ napi_status napi_set_element(napi_env env,
   JSValueRef exception = nullptr;
   JSObjectSetPropertyAtIndex(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     index,
     ToJSValue(value),
     &exception);
@@ -657,7 +658,7 @@ napi_status napi_has_element(napi_env env,
   JSValueRef exception = nullptr;
   JSValueRef value = JSObjectGetPropertyAtIndex(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     index,
     &exception);
   CHECK_JSC(env, exception);
@@ -676,7 +677,7 @@ napi_status napi_get_element(napi_env env,
   JSValueRef exception = nullptr;
   *result = ToNapi(JSObjectGetPropertyAtIndex(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     index,
     &exception));
   CHECK_JSC(env, exception);
@@ -694,7 +695,7 @@ napi_status napi_delete_element(napi_env env,
   JSValueRef exception = nullptr;
   *result = JSObjectDeletePropertyForKey(
     env->context,
-    ToJSObject(object),
+    ToJSObject(env, object),
     JSValueMakeNumber(env->context, static_cast<double>(index)),
     &exception);
   CHECK_JSC(env, exception);
@@ -791,7 +792,7 @@ napi_status napi_get_array_length(napi_env env,
   JSValueRef exception = nullptr;
   JSValueRef length = JSObjectGetProperty(
     env->context,
-    ToJSObject(value),
+    ToJSObject(env, value),
     JSString("length"),
     &exception);
   CHECK_JSC(env, exception);
@@ -824,7 +825,7 @@ napi_status napi_get_prototype(napi_env env,
   CHECK_ARG(env, result);
   *result = ToNapi(JSObjectGetPrototype(
     env->context,
-    ToJSObject(object)));
+    ToJSObject(env, object)));
   return napi_ok;
 }
 
@@ -1037,7 +1038,7 @@ napi_status napi_typeof(napi_env env, napi_value value, napi_valuetype* result) 
     case kJSTypeString: *result = napi_string; break;
     case kJSTypeSymbol: *result = napi_symbol; break;
     default:
-      JSObjectRef object = ToJSObject(value);
+      JSObjectRef object = ToJSObject(env, value);
       if (JSObjectIsFunction(env->context, object)) {
         *result = napi_function;
       } else if (JSObjectGetPrivate(object) == nullptr) {
@@ -1131,12 +1132,12 @@ napi_status napi_call_function(napi_env env,
   if (argc > 0) {
     CHECK_ARG(env, argv);
   }
-
+  
   JSValueRef exception = nullptr;
   JSValueRef return_value = JSObjectCallAsFunction(
     env->context,
-    ToJSObject(func),
-    ToJSObject(recv),
+    ToJSObject(env, func),
+    JSValueIsUndefined(env->context, ToJSValue(recv)) ? nullptr : ToJSObject(env, recv),
     argc,
     ToJSValues(argv),
     &exception);
@@ -1445,7 +1446,7 @@ napi_status napi_wrap(napi_env env,
   JSValueRef exception = nullptr;
   JSObjectSetProperty(
     env->context,
-    ToJSObject(js_object),
+    ToJSObject(env, js_object),
     JSString("__native__"),
     ToJSValue(external),
     kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum,
@@ -1466,7 +1467,7 @@ napi_status napi_unwrap(napi_env env, napi_value js_object, void** result) {
   JSValueRef exception = nullptr;
   napi_value external = ToNapi(JSObjectGetProperty(
     env->context,
-    ToJSObject(js_object),
+    ToJSObject(env, js_object),
     JSString("__native__"),
     &exception));
   CHECK_JSC(env, exception);
@@ -1484,7 +1485,7 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
   JSValueRef exception = nullptr;
   JSObjectDeleteProperty(
     env->context,
-    ToJSObject(js_object),
+    ToJSObject(env, js_object),
     JSString("__native__"),
     &exception);
   CHECK_JSC(env, exception);
@@ -1514,7 +1515,7 @@ napi_status napi_get_value_external(napi_env env, napi_value value, void** resul
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
 
-  External* external = reinterpret_cast<External*>(JSObjectGetPrivate(ToJSObject(value)));
+  External* external = reinterpret_cast<External*>(JSObjectGetPrivate(ToJSObject(env, value)));
   *result = (external == nullptr ? nullptr : external->Data());
   return napi_ok;
 }
@@ -1678,7 +1679,7 @@ napi_status napi_new_instance(napi_env env,
   JSValueRef exception = nullptr;
   *result = ToNapi(JSObjectCallAsConstructor(
     env->context,
-    ToJSObject(constructor),
+    ToJSObject(env, constructor),
     argc,
     ToJSValues(argv),
     &exception));
@@ -1699,7 +1700,7 @@ napi_status napi_instanceof(napi_env env,
   *result = JSValueIsInstanceOfConstructor(
     env->context,
     ToJSValue(object),
-    ToJSObject(constructor),
+    ToJSObject(env, constructor),
     &exception);
   CHECK_JSC(env, exception);
 
@@ -1802,12 +1803,12 @@ napi_status napi_get_arraybuffer_info(napi_env env,
   JSValueRef exception = nullptr;
 
   if (data != nullptr) {
-    *data = JSObjectGetArrayBufferBytesPtr(env->context, ToJSObject(arraybuffer), &exception);
+    *data = JSObjectGetArrayBufferBytesPtr(env->context, ToJSObject(env, arraybuffer), &exception);
     CHECK_JSC(env, exception);
   }
 
   if (byte_length != nullptr) {
-    *byte_length = JSObjectGetArrayBufferByteLength(env->context, ToJSObject(arraybuffer), &exception);
+    *byte_length = JSObjectGetArrayBufferByteLength(env->context, ToJSObject(env, arraybuffer), &exception);
     CHECK_JSC(env, exception);
   }
 
@@ -1874,7 +1875,7 @@ napi_status napi_create_typedarray(napi_env env,
   *result = ToNapi(JSObjectMakeTypedArrayWithArrayBufferAndOffset(
     env->context,
     jsType,
-    ToJSObject(arraybuffer),
+    ToJSObject(env, arraybuffer),
     byte_offset,
     length,
     &exception));
@@ -1895,7 +1896,7 @@ napi_status napi_get_typedarray_info(napi_env env,
 
   JSValueRef exception = nullptr;
 
-  JSObjectRef object = ToJSObject(typedarray);
+  JSObjectRef object = ToJSObject(env, typedarray);
 
   if (type != nullptr) {
     JSTypedArrayType typedArrayType = JSValueGetTypedArrayType(env->context, object, &exception);
