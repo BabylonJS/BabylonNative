@@ -8,6 +8,11 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
+# To prevent this warning: https://cmake.org/cmake/help/git-stage/policy/CMP0072.html
+if(POLICY CMP0072)
+  cmake_policy(SET CMP0072 NEW)
+endif()
+
 # Ensure the directory exists
 if( NOT IS_DIRECTORY ${BGFX_DIR} )
 	message( SEND_ERROR "Could not load bgfx, directory does not exist. ${BGFX_DIR}" )
