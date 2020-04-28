@@ -230,16 +230,10 @@ function( shaderc_parse ARG_OUT )
 
 	# -i
 	if( ARG_INCLUDES )
-		list( APPEND CLI "-i" )
-		set( INCLUDES "" )
 		foreach( INCLUDE ${ARG_INCLUDES} )
-			if( NOT "${INCLUDES}" STREQUAL "" )
-				set( INCLUDES "${INCLUDES}\\\\;${INCLUDE}" )
-			else()
-				set( INCLUDES "${INCLUDE}" )
-			endif()
+			list( APPEND CLI "-i" )
+			list( APPEND CLI "${INCLUDE}" )			
 		endforeach()
-		list( APPEND CLI "${INCLUDES}" )
 	endif()
 
 	# -o
