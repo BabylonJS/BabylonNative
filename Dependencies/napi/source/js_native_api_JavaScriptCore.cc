@@ -70,11 +70,11 @@ namespace {
 
   class JSString {
    public:
-    JSString(JSString&&) = delete;
     JSString(const JSString&) = delete;
 
-    JSString(JSStringRef string)
-      : _string(string) {
+    JSString(JSString&& other) {
+      _string = other._string;
+      other._string = nullptr;
     }
 
     JSString(const char* string, size_t length = NAPI_AUTO_LENGTH)
@@ -89,6 +89,16 @@ namespace {
       if (_string != nullptr) {
         JSStringRelease(_string);
       }
+    }
+
+    static JSString Attach(JSStringRef string) {
+      return {string};
+    }
+
+    static JSString FromNumber(JSContextRef ctx, double number, JSValueRef* exception) {
+        JSValueRef numberValueRef = JSValueMakeNumber(ctx, number);
+        JSStringRef numberStringRef = JSValueToStringCopy(ctx, numberValueRef, exception);
+        return Attach(numberStringRef);
     }
 
     operator JSStringRef() const {
@@ -142,6 +152,10 @@ namespace {
     }
 
    private:
+    JSString(JSStringRef string)
+            : _string(string) {
+    }
+
     JSStringRef _string;
   };
 
@@ -530,7 +544,7 @@ napi_status napi_set_property(napi_env env,
   CHECK_ARG(env, value);
 
   JSValueRef exception = nullptr;
-  JSString key_str(ToJSString(env, key, &exception));
+  JSString key_str{JSString::Attach(ToJSString(env, key, &exception))};
   CHECK_JSC(env, exception);
 
   JSObjectSetProperty(
@@ -554,7 +568,7 @@ napi_status napi_has_property(napi_env env,
   CHECK_ARG(env, key);
 
   JSValueRef exception = nullptr;
-  JSString key_str(ToJSString(env, key, &exception));
+  JSString key_str{JSString::Attach(ToJSString(env, key, &exception))};
   CHECK_JSC(env, exception);
 
   *result = JSObjectHasProperty(
@@ -573,7 +587,7 @@ napi_status napi_get_property(napi_env env,
   CHECK_ARG(env, result);
 
   JSValueRef exception = nullptr;
-  JSString key_str(ToJSString(env, key, &exception));
+  JSString key_str{JSString::Attach(ToJSString(env, key, &exception))};
   CHECK_JSC(env, exception);
 
   *result = ToNapi(JSObjectGetProperty(
@@ -594,7 +608,7 @@ napi_status napi_delete_property(napi_env env,
   CHECK_ARG(env, result);
 
   JSValueRef exception = nullptr;
-  JSString key_str(ToJSString(env, key, &exception));
+  JSString key_str{JSString::Attach(ToJSString(env, key, &exception))};
   CHECK_JSC(env, exception);
 
   *result = JSObjectDeleteProperty(
@@ -741,14 +755,14 @@ napi_status napi_delete_element(napi_env env,
   CHECK_ARG(env, result);
 
   JSValueRef exception = nullptr;
-  auto propertyNames = JSObjectCopyPropertyNames(env->context, ToJSObject(object));
-  auto propertyName = JSPropertyNameArrayGetNameAtIndex(propertyNames, index);
+  JSString propertyName{JSString::FromNumber(env->context, static_cast<double>(index), &exception)};
+  CHECK_JSC(env, exception);
+
   *result = JSObjectDeleteProperty(
     env->context,
     ToJSObject(object),
     propertyName,
     &exception);
-  JSPropertyNameArrayRelease(propertyNames);
   CHECK_JSC(env, exception);
 
   return napi_ok;
@@ -767,8 +781,6 @@ napi_status napi_define_properties(napi_env env,
     const napi_property_descriptor* p = properties + i;
 
     const char* propertyName = p->utf8name;
-    if (!propertyName)
-        break;
 
     napi_value descriptor;
     CHECK_NAPI(napi_create_object(env, &descriptor));
@@ -1013,12 +1025,11 @@ napi_status napi_create_symbol(napi_env env,
   CHECK_ENV(env);
   CHECK_ARG(env, result);
 
-  JSValueRef exception = nullptr;
-  JSString description_str(ToJSString(env, description, &exception));
-  CHECK_JSC(env, exception);
-
-  *result = nullptr;
-  //*result = ToNapi(JSValueMakeSymbol(env->context, description_str));
+  napi_value global, symbol_func;
+  CHECK_NAPI(napi_get_global(env, &global));
+  CHECK_NAPI(napi_get_named_property(env, global, "Symbol", &symbol_func));
+  napi_value args[] = { description };
+  CHECK_NAPI(napi_call_function(env, global, symbol_func, 1, args, result));
   return napi_ok;
 }
 
@@ -1357,7 +1368,7 @@ napi_status napi_get_value_string_latin1(napi_env env,
   CHECK_ARG(env, value);
 
   JSValueRef exception = nullptr;
-  JSString string(ToJSString(env, value, &exception));
+  JSString string{JSString::Attach(ToJSString(env, value, &exception))};
   CHECK_JSC(env, exception);
 
   if (buf == nullptr) {
@@ -1386,7 +1397,7 @@ napi_status napi_get_value_string_utf8(napi_env env,
   CHECK_ARG(env, value);
 
   JSValueRef exception = nullptr;
-  JSString string(ToJSString(env, value, &exception));
+  JSString string{JSString::Attach(ToJSString(env, value, &exception))};
   CHECK_JSC(env, exception);
 
   if (buf == nullptr) {
@@ -1415,7 +1426,7 @@ napi_status napi_get_value_string_utf16(napi_env env,
   CHECK_ARG(env, value);
 
   JSValueRef exception = nullptr;
-  JSString string(ToJSString(env, value, &exception));
+  JSString string{JSString::Attach(ToJSString(env, value, &exception))};
   CHECK_JSC(env, exception);
 
   if (buf == nullptr) {
@@ -1474,7 +1485,7 @@ napi_status napi_coerce_to_string(napi_env env,
   CHECK_ARG(env, result);
 
   JSValueRef exception = nullptr;
-  JSString string(ToJSString(env, value, &exception));
+  JSString string{JSString::Attach(ToJSString(env, value, &exception))};
   CHECK_JSC(env, exception);
 
   *result = ToNapi(JSValueMakeString(env->context, string));
@@ -2179,7 +2190,7 @@ napi_status napi_run_script(napi_env env,
 
   JSValueRef exception = nullptr;
 
-  JSString script_str(ToJSString(env, script, &exception));
+  JSString script_str{JSString::Attach(ToJSString(env, script, &exception))};
   CHECK_JSC(env, exception);
 
   *result = ToNapi(JSEvaluateScript(
@@ -2198,7 +2209,7 @@ napi_status napi_run_script(napi_env env,
 
   JSValueRef exception = nullptr;
 
-  JSString script_str(ToJSString(env, script, &exception));
+  JSString script_str{JSString::Attach(ToJSString(env, script, &exception))};
   CHECK_JSC(env, exception);
 
   JSValueRef return_value = JSEvaluateScript(
