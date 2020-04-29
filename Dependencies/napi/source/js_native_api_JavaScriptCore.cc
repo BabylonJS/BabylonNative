@@ -453,8 +453,17 @@ napi_status napi_create_function(napi_env env,
   if (function == nullptr) {
     return napi_set_last_error(env, napi_generic_failure);
   }
+  
+  JSObjectRef instance = JSObjectMake(env->context, function->Class(), function);
 
-  *result = ToNapi(JSObjectMake(env->context, function->Class(), function));
+  napi_value global, function_ctor, function_proto;
+  CHECK_NAPI(napi_get_global(env, &global));
+  CHECK_NAPI(napi_get_named_property(env, global, "Function", &function_ctor));
+  CHECK_NAPI(napi_get_prototype(env, function_ctor, &function_proto));
+
+  JSObjectSetPrototype(env->context, instance, ToJSValue(function_proto));
+ 
+  *result = ToNapi(instance);
   return napi_ok;
 }
 
