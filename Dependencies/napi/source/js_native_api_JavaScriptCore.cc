@@ -6,48 +6,6 @@
 #include <vector>
 
 namespace {
-  void CreatePromise(JSContextRef context, JSObjectRef* promise, JSObjectRef* resolve, JSObjectRef* reject)
-  {
-    JSObjectRef global = JSContextGetGlobalObject(context);
-
-    JSStringRef propertyName = JSStringCreateWithUTF8CString("Promise");
-    JSObjectRef constructor = JSValueToObject(context, JSObjectGetProperty(context, global, propertyName, nullptr), nullptr);
-    JSStringRelease(propertyName);
-
-    struct CallbackStruct {
-        static JSValueRef Callback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
-          CallbackStruct& cbs = *reinterpret_cast<CallbackStruct*>(JSObjectGetPrivate(function));
-          *cbs.resolve = JSValueToObject(context, arguments[0], nullptr);
-          *cbs.reject = JSValueToObject(context, arguments[1], nullptr);
-        }
-
-        JSObjectRef* resolve{};
-        JSObjectRef* reject{};
-    } cbs{ resolve, reject };
-
-    JSObjectRef executor = JSObjectMakeFunctionWithCallback(context, nullptr, &CallbackStruct::Callback);
-    JSObjectSetPrivate(executor, &cbs);
-
-    JSValueRef args[] = { executor };
-    *promise = JSObjectCallAsConstructor(context, constructor, 2, args, nullptr);
-  }
-
-  void DumpException(napi_env env, JSValueRef exception) {
-    char errorStr[1024];
-    size_t errorStrSize{ 0 };
-
-    if (!JSValueIsNull(env->context, exception)) {
-      // Getting error string
-      if (JSValueIsString(env->context, exception)) {
-        OpaqueJSValue* ncstr = const_cast<OpaqueJSValue*>(exception);
-        /*size_t length =*/ JSStringGetUTF8CString(reinterpret_cast<JSStringRef>(ncstr), errorStr, sizeof(errorStr));
-      } else {
-        OpaqueJSValue *exceptionValue = const_cast<OpaqueJSValue*>(exception);
-        napi_get_value_string_utf8(env, reinterpret_cast<napi_value>(exceptionValue), errorStr, sizeof(errorStr), &errorStrSize);
-      }
-    }
-  }
-
   napi_status napi_clear_last_error(napi_env env) {
     env->last_error.error_code = napi_ok;
     env->last_error.engine_error_code = 0;
@@ -63,7 +21,6 @@ namespace {
   }
 
   napi_status napi_set_exception(napi_env env, JSValueRef exception) {
-    DumpException(env, exception);
     env->last_exception = exception;
     return napi_set_last_error(env, napi_pending_exception);
   }
@@ -153,7 +110,7 @@ namespace {
 
    private:
     JSString(JSStringRef string)
-            : _string(string) {
+        : _string(string) {
     }
 
     JSStringRef _string;
@@ -372,11 +329,6 @@ namespace {
   struct RefInfo {
     JSValueRef value;
     uint32_t count;
-  };
-
-  struct DeferredInfo {
-    JSObjectRef resolve;
-    JSObjectRef reject;
   };
 
   napi_status napi_set_error_code(napi_env env,
@@ -1685,7 +1637,7 @@ napi_status napi_get_reference_value(napi_env env,
   if (info->count == 0) {
     *result = nullptr;
   } else {
-    *result = reinterpret_cast<napi_value>(const_cast<OpaqueJSValue*>(info->value));
+    *result = ToNapi(info->value);
   }
 
   return napi_ok;
@@ -2116,20 +2068,39 @@ napi_status napi_get_version(napi_env env, uint32_t* result) {
 napi_status napi_create_promise(napi_env env,
                                 napi_deferred* deferred,
                                 napi_value* promise) {
-  JSContextRef context = env->context;
+  CHECK_ENV(env);
+  CHECK_ARG(env, deferred);
+  CHECK_ARG(env, promise);
 
-  JSObjectRef js_promise;
-  JSObjectRef resolve;
-  JSObjectRef reject;
-  CreatePromise(context, &js_promise, &resolve, &reject);
-  *promise = reinterpret_cast<napi_value>(js_promise);
+  napi_value global, promise_ctor;
+  CHECK_NAPI(napi_get_global(env, &global));
+  CHECK_NAPI(napi_get_named_property(env, global, "Promise", &promise_ctor));
 
-  napi_ref ref;
-  napi_value js_deferred = reinterpret_cast<napi_value>(JSObjectMake(context, nullptr, nullptr));
-  CHECK_NAPI(napi_set_named_property(env, js_deferred, "resolve", reinterpret_cast<napi_value>(resolve)));
-  CHECK_NAPI(napi_set_named_property(env, js_deferred, "reject", reinterpret_cast<napi_value>(reject)));
-  CHECK_NAPI(napi_create_reference(env, js_deferred, 1, &ref));
-  *deferred = reinterpret_cast<napi_deferred>(ref);
+  struct Wrapper {
+    napi_value resolve{};
+    napi_value reject{};
+
+    static napi_value Callback(napi_env env, napi_callback_info info) {
+      CallbackInfo* callbackInfo = reinterpret_cast<CallbackInfo*>(info);
+      Wrapper* wrapper = reinterpret_cast<Wrapper*>(callbackInfo->data);
+      wrapper->resolve = callbackInfo->argv[0];
+      wrapper->reject = callbackInfo->argv[1];
+      return nullptr;
+    }
+  } wrapper;
+
+  napi_value executor;
+  CHECK_NAPI(napi_create_function(env, "executor", NAPI_AUTO_LENGTH, Wrapper::Callback, &wrapper, &executor));
+  CHECK_NAPI(napi_new_instance(env, promise_ctor, 1, &executor, promise));
+
+  napi_value deferred_value;
+  CHECK_NAPI(napi_create_object(env, &deferred_value));
+  CHECK_NAPI(napi_set_named_property(env, deferred_value, "resolve", wrapper.resolve));
+  CHECK_NAPI(napi_set_named_property(env, deferred_value, "reject", wrapper.reject));
+
+  napi_ref deferred_ref;
+  CHECK_NAPI(napi_create_reference(env, deferred_value, 1, &deferred_ref));
+  *deferred = reinterpret_cast<napi_deferred>(deferred_ref);
 
   return napi_ok;
 }
@@ -2140,19 +2111,14 @@ napi_status napi_resolve_deferred(napi_env env,
   CHECK_ENV(env);
   CHECK_ARG(env, deferred);
 
-  JSValueRef exception = nullptr;
-  DeferredInfo* info = reinterpret_cast<DeferredInfo*>(deferred);
-  JSValueRef args[] = { ToJSValue(resolution) };
-  JSObjectCallAsFunction(
-    env->context,
-    info->resolve,
-    nullptr,
-    1,
-    args,
-    &exception);
-  CHECK_JSC(env, exception);
+  napi_ref deferred_ref = reinterpret_cast<napi_ref>(deferred);
+  napi_value deferred_value, resolve, undefined;
+  CHECK_NAPI(napi_get_reference_value(env, deferred_ref, &deferred_value));
+  CHECK_NAPI(napi_get_named_property(env, deferred_value, "resolve", &resolve));
+  CHECK_NAPI(napi_get_undefined(env, &undefined));
+  CHECK_NAPI(napi_call_function(env, undefined, resolve, 1, &resolution, nullptr));
+  CHECK_NAPI(napi_delete_reference(env, deferred_ref));
 
-  delete info;
   return napi_ok;
 }
 
@@ -2162,19 +2128,14 @@ napi_status napi_reject_deferred(napi_env env,
   CHECK_ENV(env);
   CHECK_ARG(env, deferred);
 
-  JSValueRef exception = nullptr;
-  DeferredInfo* info = reinterpret_cast<DeferredInfo*>(deferred);
-  JSValueRef args[] = { ToJSValue(rejection) };
-  JSObjectCallAsFunction(
-    env->context,
-    reinterpret_cast<DeferredInfo*>(deferred)->reject,
-    nullptr,
-    1,
-    args,
-    &exception);
-  CHECK_JSC(env, exception);
+  napi_ref deferred_ref = reinterpret_cast<napi_ref>(deferred);
+  napi_value deferred_value, reject, undefined;
+  CHECK_NAPI(napi_get_reference_value(env, deferred_ref, &deferred_value));
+  CHECK_NAPI(napi_get_named_property(env, deferred_value, "reject", &reject));
+  CHECK_NAPI(napi_get_undefined(env, &undefined));
+  CHECK_NAPI(napi_call_function(env, undefined, reject, 1, &rejection, nullptr));
+  CHECK_NAPI(napi_delete_reference(env, deferred_ref));
 
-  delete info;
   return napi_ok;
 }
 
