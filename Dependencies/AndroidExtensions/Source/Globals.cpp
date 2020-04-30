@@ -20,6 +20,11 @@ namespace android::global
 
             bool m_attached{};
         } g_env{};
+
+        std::mutex g_pauseMutex{};
+        arcana::ticketed_collection<std::function<void()>> g_pauseHandlers{};
+        std::mutex g_resumeMutex{};
+        arcana::ticketed_collection<std::function<void()>> g_resumeHandlers{};
     }
 
     void Initialize(JavaVM* javaVM, jobject appContext)
@@ -47,5 +52,35 @@ namespace android::global
     android::content::Context GetAppContext()
     {
         return {g_appContext};
+    }
+
+    void Pause()
+    {
+        std::lock_guard<std::mutex> guard{g_pauseMutex};
+        for (auto& onPaused : g_pauseHandlers)
+        {
+            onPaused();
+        }
+    }
+
+    AppStateChangedCallbackTicket AddPausedCallback(std::function<void()>&& onPaused)
+    {
+        std::lock_guard<std::mutex> guard{g_pauseMutex};
+        return g_pauseHandlers.insert(onPaused, g_pauseMutex);
+    }
+
+    void Resume()
+    {
+        std::lock_guard<std::mutex> guard{g_resumeMutex};
+        for (auto& onResumed : g_resumeHandlers)
+        {
+            onResumed();
+        }
+    }
+
+    AppStateChangedCallbackTicket AddResumedCallback(std::function<void()>&& onResumed)
+    {
+        std::lock_guard<std::mutex> guard{g_resumeMutex};
+        return g_resumeHandlers.insert(onResumed, g_resumeMutex);
     }
 }

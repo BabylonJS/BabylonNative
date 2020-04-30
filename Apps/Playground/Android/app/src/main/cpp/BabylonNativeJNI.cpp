@@ -124,6 +124,7 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)
     {
+        android::global::Pause();
         if (g_runtime)
         {
             g_runtime->Suspend();
@@ -137,6 +138,7 @@ extern "C"
         {
             g_runtime->Resume();
         }
+        android::global::Resume();
     }
 
     JNIEXPORT void JNICALL
