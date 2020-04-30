@@ -23,9 +23,8 @@ namespace Babylon
 
         std::mutex m_appendMutex{};
         std::mutex m_blockingTickMutex{};
-        std::mutex m_suspendMutex{};
-        std::condition_variable m_suspendConditionVariable{};
-        bool m_suspended{false};
+
+        std::unique_ptr<std::scoped_lock<std::mutex>> m_suspensionLock{};
 
         arcana::cancellation_source m_cancelSource{};
         arcana::task<void, std::exception_ptr> m_task = arcana::task_from_result<std::exception_ptr>();

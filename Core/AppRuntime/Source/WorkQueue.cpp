@@ -9,7 +9,7 @@ namespace Babylon
 
     WorkQueue::~WorkQueue()
     {
-        if (m_suspended)
+        if (m_suspensionLock != nullptr)
         {
             Resume();
         }
@@ -30,19 +30,17 @@ namespace Babylon
 
     void WorkQueue::Suspend()
     {
-        // Lock m_blockingTickMutex as well as m_suspendMutex to ensure we do not
-        // accidentally suspend in the middle of a blocking tick.
-        std::scoped_lock<std::mutex> lockTicking(m_blockingTickMutex);
-        std::scoped_lock<std::mutex> lockSuspension(m_suspendMutex);
-        m_suspended = true;
-        m_suspendConditionVariable.notify_one();
+        auto suspensionMutex = new std::mutex();
+        m_suspensionLock = std::make_unique<std::scoped_lock<std::mutex>>(*suspensionMutex);
+        Append([suspensionMutex](Napi::Env) {
+            std::scoped_lock{*suspensionMutex};
+            delete suspensionMutex;
+        });
     }
 
     void WorkQueue::Resume()
     {
-        std::scoped_lock<std::mutex> lock(m_suspendMutex);
-        m_suspended = false;
-        m_suspendConditionVariable.notify_one();
+        m_suspensionLock.reset();
     }
 
     void WorkQueue::Run(Napi::Env env)
@@ -52,10 +50,6 @@ namespace Babylon
 
         while (!m_cancelSource.cancelled())
         {
-            {
-                std::unique_lock<std::mutex> lock{m_suspendMutex};
-                m_suspendConditionVariable.wait(lock, [this]() { return !m_suspended; });
-            }
             {
                 std::scoped_lock<std::mutex> lock{m_blockingTickMutex};
                 m_dispatcher.blocking_tick(m_cancelSource);
