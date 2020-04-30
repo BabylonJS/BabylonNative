@@ -88,6 +88,7 @@ namespace Babylon
             bgfx::setViewClear(m_viewId, m_flags, Color(), m_depth, m_stencil);
             // discard any previous set state
             bgfx::discard();
+            bgfx::touch(0);
             bgfx::touch(m_viewId);
         }
 

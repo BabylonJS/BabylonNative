@@ -7,6 +7,10 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
         if appDelegate != nil {
             mtkView = MTKView()
@@ -26,22 +30,24 @@ class ViewController: UIViewController {
 
             let rawMetalLayerPtr: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView.layer).toOpaque()
 
-            let screenBounds = UIScreen.main.bounds
-            let width = screenBounds.size.width
-            let height = screenBounds.size.height
+            let width = view.bounds.size.width
+            let height = view.bounds.size.height
 
             appDelegate!._bridge!.init(rawMetalLayerPtr, width:Int32(width), height:Int32(height))
         }
     }
 
     override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
+        if mtkView == nil {
+            return
+        }
         if appDelegate != nil {
-            let screenBounds = UIScreen.main.bounds
-            let width = screenBounds.size.width
-            let height = screenBounds.size.height
+            let width = view.bounds.size.width
+            let height = view.bounds.size.height
 
-            appDelegate!._bridge!.resize(Int32(width), height: Int32(height))
+            appDelegate!._bridge!.resize(Int32(width + 1), height: Int32(height + 1))
         }
     }
 
