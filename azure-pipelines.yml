@@ -88,6 +88,23 @@ jobs:
       maximumCpuCount: true
       configuration: 'Release'
     displayName: 'Build WIN32_x64'
+  - script: |
+      cd buildWin32_x64\Apps\ValidationTests
+      mkdir Results
+      mkdir Errors
+      cd Release
+      ValidationTests -NoWindow
+    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x64 Rendered Pictures'
+      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Win32_x64 Results'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x64 Rendered Pictures with errors'
+      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
+    displayName: 'Publish Error Win32_x64 Results'
     
 - job: win32_x86    
   pool:
