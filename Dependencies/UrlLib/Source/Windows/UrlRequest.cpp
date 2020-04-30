@@ -159,6 +159,7 @@ namespace UrlLib
                     return arcana::create_task<std::exception_ptr>(Storage::FileIO::ReadTextAsync(file))
                         .then(arcana::inline_scheduler, m_cancellationSource, [this](winrt::hstring text) {
                             m_responseString = winrt::to_string(text);
+                            m_statusCode = UrlStatusCode::Ok;
                         });
                 }
                 case UrlResponseType::Buffer:
@@ -166,6 +167,7 @@ namespace UrlLib
                     return arcana::create_task<std::exception_ptr>(Storage::FileIO::ReadBufferAsync(file))
                         .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::Streams::IBuffer buffer) {
                             m_responseBuffer = std::move(buffer);
+                            m_statusCode = UrlStatusCode::Ok;
                         });
                 }
                 default:
