@@ -64,14 +64,12 @@ namespace Babylon
         void Exit(const Napi::CallbackInfo& info)
         {
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
-#ifdef WIN32
             doExit = true;
             errorCode = exitCode;
+#ifdef WIN32
             PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
-            exitPending = true;
-            exitErrorCode = exitCode;
             XClientMessageEvent dummyEvent;
             memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
             dummyEvent.type = ClientMessage;
