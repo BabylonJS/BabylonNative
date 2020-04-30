@@ -17,7 +17,7 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
     @Override
     protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-        mView = new BabylonView(getApplication(), this);
+        mView = new BabylonView(getApplication(), this, this);
         setContentView(mView);
     }
 
@@ -30,12 +30,6 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
     @Override
     protected void onResume() {
         super.onResume();
-
-        // For now, the consuming app will need to check for and request camera permissions
-        if (!(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 0);
-        }
-
         mView.onResume();
     }
 

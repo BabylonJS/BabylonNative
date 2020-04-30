@@ -13,6 +13,14 @@ namespace xr
         D24S8
     };
 
+    enum class SessionType
+    {
+        IMMERSIVE_VR,
+        IMMERSIVE_AR,
+        INLINE,
+        INVALID
+    };
+
     struct Size
     {
         size_t Width{};
@@ -132,6 +140,7 @@ namespace xr
 
         bool IsInitialized() const;
         bool TryInitialize();
+        static bool IsSessionSupported(SessionType);
 
     private:
         class Impl;

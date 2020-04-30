@@ -5,9 +5,11 @@
 
 namespace android::global
 {
-    void Initialize(JavaVM* javaVM, jobject appContext);
+    void Initialize(JavaVM* javaVM, jobject appContext, jobject mainActivity);
 
     JNIEnv* GetEnvForCurrentThread();
 
     android::content::Context GetAppContext();
+
+    android::app::Activity GetMainActivity();
 }

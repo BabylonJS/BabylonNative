@@ -24,6 +24,8 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
+#include <thread>
+#include <chrono>
 
 using namespace android::global;
 
@@ -232,6 +234,41 @@ namespace xr
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
             shaderProgramId = CreateShaderProgram();
+
+            // Request to install the ARCore apk if not installed yet.
+            {
+                ArInstallStatus install_status;
+                ArStatus installStatus = ArCoreApk_requestInstall(
+                        GetEnvForCurrentThread(), GetMainActivity(), false, &install_status);
+                if (installStatus != AR_SUCCESS)
+                {
+                    std::ostringstream message;
+                    message << "Failed to create ArSession with status: " << installStatus;
+                    throw std::runtime_error{message.str()};
+                }
+            }
+
+            // Check and request camera permissions
+            // Wait up to 30 seconds for user to grant permissions.
+            {
+                if (!GetAppContext().checkPermission("CAMERA", true))
+                {
+                    for (int retryCount = 0; retryCount < 300; retryCount++)
+                    {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        if (GetAppContext().checkPermission("CAMERA", false))
+                        {
+                            break;
+                        }
+                        else if (retryCount == 299)
+                        {
+                            std::ostringstream message;
+                            message << "Camera permission not acquired successfully";
+                            throw std::runtime_error{message.str()};
+                        }
+                    }
+                }
+            }
 
             // Create the ARCore ArSession
             {
@@ -514,6 +551,36 @@ namespace xr
     bool System::TryInitialize()
     {
         return m_impl->TryInitialize();
+    }
+
+    bool System::IsSessionSupported(SessionType sessionType)
+    {
+        // Query ARCore to check if AR sessions are supported.
+        // If uninstalled then retry up to 5 times over 2.5 seconds
+        if (sessionType == SessionType::IMMERSIVE_AR)
+        {
+            for (int retryCount = 0; retryCount < 5; retryCount++)
+            {
+                ArAvailability arAvailability{};
+                ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(), &arAvailability);
+
+                switch (arAvailability)
+                {
+                    case AR_AVAILABILITY_SUPPORTED_APK_TOO_OLD:
+                    case AR_AVAILABILITY_SUPPORTED_INSTALLED:
+                    case AR_AVAILABILITY_SUPPORTED_NOT_INSTALLED:
+                        return true;
+                    case AR_AVAILABILITY_UNKNOWN_CHECKING:
+                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                        continue;
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        // VR and inline sessions are not supported at this time.
+        return false;
     }
 
     System::Session::Session(System& system, void* graphicsDevice)

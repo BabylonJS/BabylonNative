@@ -42,7 +42,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject appContext)
+    Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject appContext, jobject mainActivity)
     {
         if (!g_runtime)
         {
@@ -56,8 +56,9 @@ extern "C"
 
             // TODO: This should be cleaned up via env->DeleteGlobalRef
             auto globalAppContext = env->NewGlobalRef(appContext);
+            auto globalMainActivity = env->NewGlobalRef(mainActivity);
 
-            android::global::Initialize(javaVM, globalAppContext);
+            android::global::Initialize(javaVM, globalAppContext, globalMainActivity);
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);

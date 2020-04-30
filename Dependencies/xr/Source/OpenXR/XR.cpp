@@ -811,6 +811,12 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
+    static bool System::IsSessionSupported(SessionType sessionType) const
+    {
+        // Only immersive_VR is supported for now.
+        return sessionType == SessionType::IMMERSIVE_VR;
+    }
+
     System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
         : m_impl{ std::make_unique<System::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}

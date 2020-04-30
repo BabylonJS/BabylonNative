@@ -7,6 +7,7 @@ namespace android::global
     {
         JavaVM* g_javaVM{};
         jobject g_appContext{};
+        jobject g_mainActivity{};
 
         thread_local struct Env
         {
@@ -22,10 +23,11 @@ namespace android::global
         } g_env{};
     }
 
-    void Initialize(JavaVM* javaVM, jobject appContext)
+    void Initialize(JavaVM* javaVM, jobject appContext, jobject mainActivity)
     {
         g_javaVM = javaVM;
         g_appContext = appContext;
+        g_mainActivity = mainActivity;
     }
 
     JNIEnv* GetEnvForCurrentThread()
@@ -47,5 +49,10 @@ namespace android::global
     android::content::Context GetAppContext()
     {
         return {g_appContext};
+    }
+    
+    android::app::Activity GetMainActivity()
+    {
+        return {g_mainActivity};
     }
 }

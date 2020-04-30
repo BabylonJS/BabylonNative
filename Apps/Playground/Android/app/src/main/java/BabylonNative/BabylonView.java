@@ -1,5 +1,6 @@
 package BabylonNative;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -10,10 +11,16 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     private static final String TAG = "BabylonView";
     private boolean mViewReady = false;
     private ViewDelegate mViewDelegate;
+    private Activity mMainActivity;
 
-    public BabylonView(Context context, ViewDelegate viewDelegate) {
+    public BabylonView(Activity mainActivity, ViewDelegate viewDelegate) {
+        this(mainActivity, viewDelegate, mainActivity);
+    }
+
+    public BabylonView(Context context, ViewDelegate viewDelegate, Activity mainActivity) {
         super(context);
 
+        this.mMainActivity = mainActivity;
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
         setOnTouchListener(this);
@@ -44,7 +51,7 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), this.getContext());
+        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), this.getContext(), this.mMainActivity);
         if (!this.mViewReady) {
             this.mViewDelegate.onViewReady();
             this.mViewReady = true;

@@ -342,8 +342,8 @@ namespace Babylon
         struct XRSessionType
         {
             static constexpr auto IMMERSIVE_VR{"immersive-vr"};
-            static constexpr auto IMMERSIVE_AR{"immersive-vr"};
-            static constexpr auto IMMERSIVE_INLINE{"inline"};
+            static constexpr auto IMMERSIVE_AR{"immersive-ar"};
+            static constexpr auto INLINE{"inline"};
         };
 
         struct XRReferenceSpaceType
@@ -858,8 +858,9 @@ namespace Babylon
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
-                // Currently only immersive VR is supported.
-                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR);
+                // Currently only immersive VR and immersive AR are supported.
+                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
+                    info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void SetEngine(Napi::Object jsEngine)
@@ -1214,16 +1215,25 @@ namespace Babylon
         private:
             Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
             {
-                auto sessionType = info[0].As<Napi::String>().Utf8Value();
+                std::string sessionTypeString = info[0].As<Napi::String>().Utf8Value();
+                xr::SessionType sessionType{xr::SessionType::INVALID};
                 bool isSupported = false;
 
-                if (sessionType == XRSessionType::IMMERSIVE_VR)
+                if (sessionTypeString == XRSessionType::IMMERSIVE_VR)
                 {
-                    isSupported = true;
+                    sessionType = xr::SessionType::IMMERSIVE_VR;
+                }
+                else if (sessionTypeString == XRSessionType::IMMERSIVE_AR)
+                {
+                    sessionType = xr::SessionType::IMMERSIVE_AR;
+                }
+                else if (sessionTypeString == XRSessionType::INLINE)
+                {
+                    sessionType = xr::SessionType::INLINE;
                 }
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(Napi::Boolean::New(info.Env(), isSupported));
+                deferred.Resolve(Napi::Boolean::New(info.Env(), xr::System::IsSessionSupported(sessionType)));
                 return deferred.Promise();
             }
 

@@ -30,6 +30,11 @@ namespace java::net
     class URLConnection;
 }
 
+namespace android::app
+{
+    class Activity;
+}
+
 namespace android::content
 {
     class Context;
@@ -155,6 +160,17 @@ namespace java::net
     };
 }
 
+namespace android::app
+{
+    class Activity : public java::lang::Object
+    {
+    public:
+        Activity(jobject object);
+
+        void requestPermission(java::lang::String systemPermissionName);
+    };
+}
+
 namespace android::content
 {
     class Context : public java::lang::Object
@@ -171,6 +187,8 @@ namespace android::content
         };
 
         jobject getSystemService(const char* serviceName);
+
+        bool checkPermission(const char* permissionName, bool requestIfInvalid);
     };
 }
 
