@@ -19,6 +19,7 @@ endif()
 
 target_link_to_dependencies(AppRuntime
     PRIVATE arcana
+    PRIVATE AppLifeCycle
     PUBLIC JsRuntime)
 
 target_compile_definitions(AppRuntime

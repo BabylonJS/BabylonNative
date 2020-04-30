@@ -1,3 +1,4 @@
 add_subdirectory(JsRuntime)
+add_subdirectory(AppLifeCycle)
 add_subdirectory(AppRuntime)
 add_subdirectory(ScriptLoader)

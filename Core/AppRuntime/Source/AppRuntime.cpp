@@ -2,6 +2,8 @@
 
 #include "WorkQueue.h"
 
+#include <Babylon/AppLifeCycle.h>
+
 namespace Babylon
 {
     AppRuntime::AppRuntime()
@@ -9,6 +11,7 @@ namespace Babylon
     {
         Dispatch([this](Napi::Env env) {
             JsRuntime::CreateForJavaScript(env, [this](auto func) { m_workQueue->Append(std::move(func)); });
+            AppLifeCycle::CreateForJavaScript(env);
         });
     }
 
@@ -23,11 +26,17 @@ namespace Babylon
 
     void AppRuntime::Suspend()
     {
+        Dispatch([](auto env) {
+            AppLifeCycle::GetFromJavaScript(env).Suspend();
+        });
         m_workQueue->Suspend();
     }
 
     void AppRuntime::Resume()
     {
+        Dispatch([](auto env) {
+            AppLifeCycle::GetFromJavaScript(env).Resume();
+        });
         m_workQueue->Resume();
     }
 
