@@ -11,8 +11,6 @@
 #include <filesystem>
 #include <algorithm>
 
-volatile bool doExit = false;
-int errorCode{};
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>

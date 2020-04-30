@@ -15,10 +15,13 @@
 #include <functional>
 #include <sstream>
 #include <Babylon/JsRuntime.h>
+#include <atomic>
 
 namespace
 {
     std::filesystem::path GetModulePath();
+    std::atomic<bool> doExit{};
+    int errorCode{};
 }
 
 namespace Babylon
