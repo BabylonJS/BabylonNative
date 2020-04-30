@@ -21,10 +21,34 @@ namespace android::global
             bool m_attached{};
         } g_env{};
 
-        std::mutex g_pauseMutex{};
-        arcana::ticketed_collection<std::function<void()>> g_pauseHandlers{};
-        std::mutex g_resumeMutex{};
-        arcana::ticketed_collection<std::function<void()>> g_resumeHandlers{};
+        template<typename ... Args>
+        class Event
+        {
+            using Handler = std::function<void(Args ...)>;
+
+        public:
+            typename arcana::ticketed_collection<Handler>::ticket AddHandler(Handler&& handler)
+            {
+                std::lock_guard<std::mutex> guard{m_mutex};
+                return m_handlers.insert(handler, m_mutex);
+            }
+
+            void Fire(Args ... args)
+            {
+                std::lock_guard<std::mutex> guard{m_mutex};
+                for (auto& handler : m_handlers)
+                {
+                    handler(args ...);
+                }
+            }
+
+        private:
+            std::mutex m_mutex;
+            arcana::ticketed_collection<Handler> m_handlers{};
+        };
+
+        Event g_pausedEvent{};
+        Event g_resumedEvent{};
     }
 
     void Initialize(JavaVM* javaVM, jobject appContext)
@@ -56,31 +80,21 @@ namespace android::global
 
     void Pause()
     {
-        std::lock_guard<std::mutex> guard{g_pauseMutex};
-        for (auto& onPaused : g_pauseHandlers)
-        {
-            onPaused();
-        }
+        g_pausedEvent.Fire();
     }
 
     AppStateChangedCallbackTicket AddPausedCallback(std::function<void()>&& onPaused)
     {
-        std::lock_guard<std::mutex> guard{g_pauseMutex};
-        return g_pauseHandlers.insert(onPaused, g_pauseMutex);
+        return g_pausedEvent.AddHandler(std::move(onPaused));
     }
 
     void Resume()
     {
-        std::lock_guard<std::mutex> guard{g_resumeMutex};
-        for (auto& onResumed : g_resumeHandlers)
-        {
-            onResumed();
-        }
+        g_resumedEvent.Fire();
     }
 
     AppStateChangedCallbackTicket AddResumedCallback(std::function<void()>&& onResumed)
     {
-        std::lock_guard<std::mutex> guard{g_resumeMutex};
-        return g_resumeHandlers.insert(onResumed, g_resumeMutex);
+        return g_resumedEvent.AddHandler(std::move(onResumed));
     }
 }
