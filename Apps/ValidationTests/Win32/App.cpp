@@ -103,11 +103,10 @@ namespace
                 const int width = TEST_WIDTH;
                 const int height = TEST_HEIGHT;
 
-                Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
-                    {
-                        OutputDebugStringA(message);
-                        printf("%s", message);
-                    });
+                Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                    OutputDebugStringA(message);
+                    printf("%s", message);
+                });
 
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -278,10 +277,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (runtime != nullptr) {
                 size_t width = static_cast<size_t>(LOWORD(lParam));
                 size_t height = static_cast<size_t>(HIWORD(lParam));
-                runtime->Dispatch([width, height](Napi::Env env)
-                    {
-                        Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-                    });
+                runtime->Dispatch([width, height](Napi::Env env) {
+                    Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
+                });
             }
             break;
         }
