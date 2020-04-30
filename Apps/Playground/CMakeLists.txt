@@ -70,7 +70,7 @@ elseif(WINDOWS_STORE)
         ${APPX_ASSETS}
         "UWP/App.cpp"
         "UWP/App.h")
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeXr)
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
 elseif(WIN32)
     set(SOURCES
         ${SOURCES}
@@ -81,7 +81,7 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeXr)
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
 endif()
 
 if(WIN32)
