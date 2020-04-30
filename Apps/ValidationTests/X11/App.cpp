@@ -169,7 +169,7 @@ int main(int _argc, const char* const* _argv)
             case ClientMessage:
                 if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
                 {
-                    exitPending = true;
+                    doExit = true;
                 }
                 break;
             case ConfigureNotify:
