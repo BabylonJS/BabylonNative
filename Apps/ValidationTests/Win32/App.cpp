@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <algorithm>
 
-bool doExit = false;
+volatile bool doExit = false;
 int errorCode{};
 #include <Shared/TestUtils.h>
 

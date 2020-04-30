@@ -86,13 +86,13 @@ jobs:
     inputs:
       solution: 'buildWin32_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Debug'
+      configuration: 'Release'
     displayName: 'Build WIN32_x64'
   - script: |
       cd buildWin32_x64\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Debug
+      cd Release
       ValidationTests -NoWindow
     displayName: 'Test on CI'
   - task: PublishBuildArtifacts@1
