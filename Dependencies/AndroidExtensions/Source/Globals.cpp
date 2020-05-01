@@ -24,10 +24,10 @@ namespace android::global
         template<typename ... Args>
         class Event
         {
-            using Handler = std::function<void(Args ...)>;
-
         public:
-            typename arcana::ticketed_collection<Handler>::ticket AddHandler(Handler&& handler)
+            using Handler = std::function<void(Args ...)>;
+            using Ticket = typename arcana::ticketed_collection<Handler>::ticket;
+            Ticket AddHandler(Handler&& handler)
             {
                 std::lock_guard<std::mutex> guard{m_mutex};
                 return m_handlers.insert(handler, m_mutex);
@@ -47,10 +47,12 @@ namespace android::global
             arcana::ticketed_collection<Handler> m_handlers{};
         };
 
-        Event g_pauseEvent{};
-        Event g_resumeEvent{};
+        using AppStateChangedEvent = Event<>;
+        AppStateChangedEvent g_pauseEvent{};
+        AppStateChangedEvent g_resumeEvent{};
 
-        Event<int32_t, const std::vector<std::string>&, const std::vector<int32_t>&> g_requestPermissionsResultEvent{};
+        using RequestPermissionsResultEvent = Event<int32_t, const std::vector<std::string>&, const std::vector<int32_t>&>;
+        RequestPermissionsResultEvent g_requestPermissionsResultEvent{};
     }
 
     void Initialize(JavaVM* javaVM, jobject appContext)
@@ -85,7 +87,7 @@ namespace android::global
         g_pauseEvent.Fire();
     }
 
-    AppStateChangedCallbackTicket AddPauseCallback(std::function<void()>&& onPause)
+    AppStateChangedEvent::Ticket AddPauseCallback(AppStateChangedEvent::Handler&& onPause)
     {
         return g_pauseEvent.AddHandler(std::move(onPause));
     }
@@ -95,7 +97,7 @@ namespace android::global
         g_resumeEvent.Fire();
     }
 
-    AppStateChangedCallbackTicket AddResumeCallback(std::function<void()>&& onResume)
+    AppStateChangedEvent::Ticket AddResumeCallback(AppStateChangedEvent::Handler&& onResume)
     {
         return g_resumeEvent.AddHandler(std::move(onResume));
     }
@@ -105,7 +107,7 @@ namespace android::global
         g_requestPermissionsResultEvent.Fire(requestCode, permissions, grantResults);
     }
 
-    RequestPermissionsResultCallbackTicket AddRequestPermissionsResultCallback(std::function<void(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&)>&& onAddRequestPermissionsResult)
+    RequestPermissionsResultEvent::Ticket AddRequestPermissionsResultCallback(RequestPermissionsResultEvent::Handler&& onAddRequestPermissionsResult)
     {
         return g_requestPermissionsResultEvent.AddHandler(std::move(onAddRequestPermissionsResult));
     }

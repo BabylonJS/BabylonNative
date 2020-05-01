@@ -12,7 +12,8 @@ namespace android::global
 
     android::content::Context GetAppContext();
 
-    using AppStateChangedCallbackTicket = arcana::ticketed_collection<std::function<void()>>::ticket;
+    using AppStateChangedCallback = std::function<void()>;
+    using AppStateChangedCallbackTicket = arcana::ticketed_collection<AppStateChangedCallback>::ticket;
 
     void Pause();
     AppStateChangedCallbackTicket AddPauseCallback(std::function<void()>&&);
@@ -20,8 +21,9 @@ namespace android::global
     void Resume();
     AppStateChangedCallbackTicket AddResumeCallback(std::function<void()>&&);
 
-    using RequestPermissionsResultCallbackTicket = arcana::ticketed_collection<std::function<void(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&)>>::ticket;
+    using RequestPermissionsResultCallback = std::function<void(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&)>;
+    using RequestPermissionsResultCallbackTicket = arcana::ticketed_collection<RequestPermissionsResultCallback>::ticket;
 
     void RequestPermissionsResult(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&);
-    RequestPermissionsResultCallbackTicket AddRequestPermissionsResultCallback(std::function<void(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&)>&&);
+    RequestPermissionsResultCallbackTicket AddRequestPermissionsResultCallback(RequestPermissionsResultCallback&&);
 }
