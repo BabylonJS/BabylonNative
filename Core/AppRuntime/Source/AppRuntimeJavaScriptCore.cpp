@@ -6,14 +6,10 @@ namespace Babylon
 {
     void AppRuntime::RunEnvironmentTier()
     {
-        auto contextGroup = JSContextGroupCreate();
-        auto globalContext = JSGlobalContextCreateInGroup(contextGroup, nullptr);
-
+        auto globalContext = JSGlobalContextCreateInGroup(nullptr, nullptr);
         Napi::Env env = Napi::Attach<JSContextRef>(globalContext);
         Run(env);
-        Napi::Detach(env);
-
         JSGlobalContextRelease(globalContext);
-        JSContextGroupRelease(contextGroup);
+        Napi::Detach(env);
     }
 }

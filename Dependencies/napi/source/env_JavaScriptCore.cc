@@ -8,21 +8,22 @@ namespace Napi
     template<>
     Napi::Env Attach<JSContextRef>(JSContextRef context)
     {
-        auto envPtr = new napi_env__();
-        envPtr->context = context;
-        envPtr->last_exception = nullptr;
-        envPtr->last_error = { nullptr, nullptr, 0, napi_ok };
-        return{ envPtr };
+        napi_env__* env_ptr{new napi_env__()};
+        env_ptr->context = context;
+        env_ptr->last_exception = nullptr;
+        env_ptr->last_error = { nullptr, nullptr, 0, napi_ok };
+        return {env_ptr};
     }
 
     void Detach(Napi::Env env)
     {
-        delete env.operator napi_env();
+        napi_env__* env_ptr{env};
+        delete env_ptr;
     }
 
     template<> JSContextRef GetContext(Napi::Env env)
     {
-        napi_env napienv = env;
-        return napienv->context;
+        napi_env__* env_ptr{env};
+        return env_ptr->context;
     }
 }

@@ -5,26 +5,20 @@
 #include <string>
 #include <vector>
 
+struct napi_callback_info__ {
+  napi_value newTarget;
+  napi_value thisArg;
+  napi_value* argv;
+  void* data;
+  uint16_t argc;
+};
+
+struct napi_ref__ {
+  JSValueRef value;
+  uint32_t count;
+};
+
 namespace {
-  napi_status napi_clear_last_error(napi_env env) {
-    env->last_error.error_code = napi_ok;
-    env->last_error.engine_error_code = 0;
-    env->last_error.engine_reserved = nullptr;
-    return napi_ok;
-  }
-
-  napi_status napi_set_last_error(napi_env env, napi_status error_code, uint32_t engine_error_code = 0, void* engine_reserved = nullptr) {
-    env->last_error.error_code = error_code;
-    env->last_error.engine_error_code = engine_error_code;
-    env->last_error.engine_reserved = engine_reserved;
-    return error_code;
-  }
-
-  napi_status napi_set_exception(napi_env env, JSValueRef exception) {
-    env->last_exception = exception;
-    return napi_set_last_error(env, napi_pending_exception);
-  }
-
   class JSString {
    public:
     JSString(const JSString&) = delete;
@@ -50,12 +44,6 @@ namespace {
 
     static JSString Attach(JSStringRef string) {
       return {string};
-    }
-
-    static JSString FromNumber(JSContextRef ctx, double number, JSValueRef* exception) {
-        JSValueRef numberValueRef = JSValueMakeNumber(ctx, number);
-        JSStringRef numberStringRef = JSValueToStringCopy(ctx, numberValueRef, exception);
-        return Attach(numberStringRef);
     }
 
     operator JSStringRef() const {
@@ -141,195 +129,30 @@ namespace {
     return reinterpret_cast<napi_value*>(const_cast<OpaqueJSValue**>(values));
   }
 
-  struct CallbackInfo {
-    napi_value newTarget;
-    napi_value thisArg;
-    napi_value* argv;
-    void* data;
-    uint16_t argc;
-  };
+  napi_status napi_clear_last_error(napi_env env) {
+    env->last_error.error_code = napi_ok;
+    env->last_error.engine_error_code = 0;
+    env->last_error.engine_reserved = nullptr;
+    return napi_ok;
+  }
 
-  class Constructor {
-   public:
-    Constructor(napi_env env, const char* name, size_t length, napi_callback cb, void* data)
-      : _env{env}
-      , _name{name, (length == NAPI_AUTO_LENGTH ? strlen(name) : length)}
-      , _cb{cb}
-      , _data{data} {
-      JSClassDefinition definition = kJSClassDefinitionEmpty;
-      definition.className = _name.data();
-      _instanceClass = JSClassCreate(&definition);
-      definition.callAsConstructor = Constructor::Callback;
-      definition.finalize = Constructor::Finalize;
-      _class = JSClassCreate(&definition);;
-    }
+  napi_status napi_set_last_error(napi_env env, napi_status error_code, uint32_t engine_error_code = 0, void* engine_reserved = nullptr) {
+    env->last_error.error_code = error_code;
+    env->last_error.engine_error_code = engine_error_code;
+    env->last_error.engine_reserved = engine_reserved;
+    return error_code;
+  }
 
-    ~Constructor() {
-      JSClassRelease(_instanceClass);
-      JSClassRelease(_class);
-    }
-
-    JSClassRef Class() const {
-      return _class;
-    }
-
-   private:
-    // JSObjectCallAsConstructorCallback
-    static JSObjectRef Callback(JSContextRef ctx,
-                                JSObjectRef constructor,
-                                size_t argumentCount,
-                                const JSValueRef arguments[],
-                                JSValueRef* exception) {
-      Constructor* ctor{reinterpret_cast<Constructor*>(JSObjectGetPrivate(constructor))};
-
-      // Make sure any errors encountered last time we were in N-API are gone.
-      napi_clear_last_error(ctor->_env);
-
-      JSObjectRef instance{JSObjectMake(ctx, ctor->_instanceClass, nullptr)};
-      JSValueRef prototype{JSObjectGetPrototype(ctx, constructor)};
-      JSObjectSetPrototype(ctx, instance, prototype);
-
-      CallbackInfo cbInfo;
-      cbInfo.thisArg = ToNapi(instance);
-      cbInfo.newTarget = ToNapi(constructor);
-      cbInfo.argc = argumentCount;
-      cbInfo.argv = ToNapi(arguments);
-      cbInfo.data = ctor->_data;
-
-      napi_value result = ctor->_cb(ctor->_env, reinterpret_cast<napi_callback_info>(&cbInfo));
-      return ToJSObject(ctor->_env, result);
-    }
-
-    // JSObjectFinalizeCallback
-    static void Finalize(JSObjectRef object) {
-      Constructor* ctor{reinterpret_cast<Constructor*>(JSObjectGetPrivate(object))};
-      delete ctor;
-    }
-
-    napi_env _env;
-    std::string _name;
-    napi_callback _cb;
-    void* _data;
-    JSClassRef _class;
-    JSClassRef _instanceClass;
-  };
-
-  class Function {
-   public:
-    Function(napi_env env, const char* name, size_t length, napi_callback cb, void* data)
-      : _env{env}
-      , _name{name, (length == NAPI_AUTO_LENGTH ? strlen(name) : length)}
-      , _cb{cb}
-      , _data{data} {
-      JSClassDefinition definition = kJSClassDefinitionEmpty;
-      definition.className = _name.data();
-      definition.attributes = kJSClassAttributeNoAutomaticPrototype;
-      definition.callAsFunction = Function::Callback;
-      definition.finalize = Function::Finalize;
-      _class = JSClassCreate(&definition);
-    }
-
-    ~Function() {
-      JSClassRelease(_class);
-    }
-
-    JSClassRef Class() const {
-      return _class;
-    }
-
-   private:
-    // JSObjectCallAsFunctionCallback
-    static JSValueRef Callback(JSContextRef ctx,
-                               JSObjectRef function,
-                               JSObjectRef thisObject,
-                               size_t argumentCount,
-                               const JSValueRef arguments[],
-                               JSValueRef* exception) {
-      Function* func{reinterpret_cast<Function*>(JSObjectGetPrivate(function))};
-
-      // Make sure any errors encountered last time we were in N-API are gone.
-      napi_clear_last_error(func->_env);
-
-      CallbackInfo cbInfo;
-      cbInfo.thisArg = ToNapi(thisObject);
-      cbInfo.newTarget = nullptr;
-      cbInfo.argc = argumentCount;
-      cbInfo.argv = ToNapi(arguments);
-      cbInfo.data = func->_data;
-
-      napi_value result = func->_cb(func->_env, reinterpret_cast<napi_callback_info>(&cbInfo));
-      return ToJSValue(result);
-    }
-
-    // JSObjectFinalizeCallback
-    static void Finalize(JSObjectRef object) {
-      Function* info{reinterpret_cast<Function*>(JSObjectGetPrivate(object))};
-      delete info;
-    }
-
-    napi_env _env;
-    std::string _name;
-    napi_callback _cb;
-    void* _data;
-    JSClassRef _class;
-  };
-
-  class External {
-   public:
-    External(napi_env env, void* data, napi_finalize finalize_cb, void* hint)
-      : _env{env}
-      , _data{data}
-      , _cb{finalize_cb}
-      , _hint{hint} {
-      JSClassDefinition definition = kJSClassDefinitionEmpty;
-      definition.attributes = kJSClassAttributeNoAutomaticPrototype;
-      definition.className = "External";
-      definition.finalize = External::Finalize;
-      _class = JSClassCreate(&definition);
-    }
-
-    ~External() {
-      JSClassRelease(_class);
-    }
-
-    JSClassRef Class() const {
-      return _class;
-    }
-
-    void* Data() const {
-      return _data;
-    }
-
-    // JSTypedArrayBytesDeallocator
-    static void Finalize(void* bytes, void* deallocatorContext) {
-      External* external{reinterpret_cast<External*>(deallocatorContext)};
-      if (external->_cb != nullptr) {
-        external->_cb(external->_env, external->_data, external->_hint);
-      }
-      delete external;
-    }
-
-   private:
-    // JSObjectFinalizeCallback
-    static void Finalize(JSObjectRef object) {
-      External* external{reinterpret_cast<External*>(JSObjectGetPrivate(object))};
-      if (external->_cb != nullptr) {
-        external->_cb(external->_env, external->_data, external->_hint);
-      }
-      delete external;
-    }
-
-    napi_env _env;
-    void* _data;
-    napi_finalize _cb;
-    void* _hint;
-    JSClassRef _class;
-  };
-
-  struct RefInfo {
-    JSValueRef value;
-    uint32_t count;
-  };
+  napi_status napi_set_exception(napi_env env, JSValueRef exception) {
+    JSStringRef string_ref{JSValueToStringCopy(env->context, exception, nullptr)};
+    std::string string{};
+    string.resize(JSStringGetMaximumUTF8CStringSize(string_ref));
+    size_t size{JSStringGetUTF8CString(string_ref, string.data(), string.size())};
+    string.resize(size - 1);
+    
+    env->last_exception = exception;
+    return napi_set_last_error(env, napi_pending_exception);
+  }
 
   napi_status napi_set_error_code(napi_env env,
                                   napi_value error,
@@ -345,6 +168,300 @@ namespace {
     CHECK_NAPI(napi_set_named_property(env, error, "code", code_value));
     return napi_ok;
   }
+  
+  enum NativeType {
+    Constructor,
+    Function,
+    External
+  };
+  
+  class NativeInfo {
+   public:
+    NativeType Type() const {
+      return _type;
+    }
+
+   protected:
+    NativeInfo(NativeType type)
+      : _type{type} {
+    }
+    
+   private:
+    NativeType _type;
+  };
+
+  class ConstructorInfo : public NativeInfo {
+   public:
+    static napi_status Create(napi_env env,
+                              const char* utf8name,
+                              size_t length,
+                              napi_callback cb,
+                              void* data,
+                              napi_value* result) {
+      ConstructorInfo* info{new ConstructorInfo(env, utf8name, length, cb, data)};
+      if (info == nullptr) {
+        return napi_set_last_error(env, napi_generic_failure);
+      }
+
+      JSObjectRef constructor{JSObjectMakeConstructor(env->context, info->_class, CallAsConstructor)};
+      JSObjectRef prototype{JSObjectMake(env->context, info->_prototypeClass, info)};
+      JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, constructor));
+      JSObjectSetPrototype(env->context, constructor, prototype);
+      
+      *result = ToNapi(constructor);
+      return napi_ok;
+    }
+   
+   private:
+    ConstructorInfo(napi_env env, const char* name, size_t length, napi_callback cb, void* data)
+      : NativeInfo{NativeType::Constructor}
+      , _env{env}
+      , _name{name, (length == NAPI_AUTO_LENGTH ? strlen(name) : length)}
+      , _cb{cb}
+      , _data{data} {
+      JSClassDefinition definition{kJSClassDefinitionEmpty};
+      definition.className = _name.data();
+      _class = JSClassCreate(&definition);
+
+      JSClassDefinition prototypeDefinition{kJSClassDefinitionEmpty};
+      prototypeDefinition.className = _name.data();
+      prototypeDefinition.finalize = Finalize;
+      _prototypeClass = JSClassCreate(&prototypeDefinition);
+    }
+
+    ~ConstructorInfo() {
+      JSClassRelease(_prototypeClass);
+      JSClassRelease(_class);
+    }
+
+    // JSObjectCallAsConstructorCallback
+    static JSObjectRef CallAsConstructor(JSContextRef ctx,
+                                         JSObjectRef constructor,
+                                         size_t argumentCount,
+                                         const JSValueRef arguments[],
+                                         JSValueRef* exception) {
+      JSObjectRef prototype{JSValueToObject(ctx, JSObjectGetPrototype(ctx, constructor), exception)};
+      if (*exception != nullptr) {
+        return nullptr;
+      }
+
+      ConstructorInfo* info{reinterpret_cast<ConstructorInfo*>(JSObjectGetPrivate(prototype))};
+      assert(info->Type() == NativeType::Constructor);
+
+      // Make sure any errors encountered last time we were in N-API are gone.
+      napi_clear_last_error(info->_env);
+
+      JSObjectRef instance{JSObjectMake(ctx, info->_class, nullptr)};
+      JSObjectSetPrototype(ctx, instance, JSObjectGetPrototype(ctx, constructor));
+
+      napi_callback_info__ cbinfo{};
+      cbinfo.thisArg = ToNapi(instance);
+      cbinfo.newTarget = ToNapi(constructor);
+      cbinfo.argc = argumentCount;
+      cbinfo.argv = ToNapi(arguments);
+      cbinfo.data = info->_data;
+
+      napi_value result = info->_cb(info->_env, &cbinfo);
+      return ToJSObject(info->_env, result);
+    }
+
+    // JSObjectFinalizeCallback
+    static void Finalize(JSObjectRef object) {
+      ConstructorInfo* info{reinterpret_cast<ConstructorInfo*>(JSObjectGetPrivate(object))};
+      assert(info->Type() == NativeType::Constructor);
+      delete info;
+    }
+
+   private:
+    napi_env _env;
+    std::string _name;
+    napi_callback _cb;
+    void* _data;
+    JSClassRef _class;
+    JSClassRef _prototypeClass;
+  };
+
+  class FunctionInfo : public NativeInfo {
+   public:
+    static napi_status Create(napi_env env,
+                              const char* utf8name,
+                              size_t length,
+                              napi_callback cb,
+                              void* data,
+                              napi_value* result) {
+      FunctionInfo* info{new FunctionInfo(env, cb, data)};
+      if (info == nullptr) {
+        return napi_set_last_error(env, napi_generic_failure);
+      }
+
+      JSObjectRef function{JSObjectMakeFunctionWithCallback(env->context, JSString(utf8name), CallAsFunction)};
+      JSObjectRef prototype{JSObjectMake(env->context, info->_class, info)};
+      JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, function));
+      JSObjectSetPrototype(env->context, function, prototype);
+      
+      *result = ToNapi(function);
+      return napi_ok;
+    }
+      
+   private:
+    FunctionInfo(napi_env env, napi_callback cb, void* data)
+      : NativeInfo{NativeType::Function}
+      , _env{env}
+      , _cb{cb}
+      , _data{data} {
+      JSClassDefinition definition{kJSClassDefinitionEmpty};
+      definition.finalize = Finalize;
+      _class = JSClassCreate(&definition);
+    }
+
+    ~FunctionInfo() {
+      JSClassRelease(_class);
+    }
+
+    // JSObjectCallAsFunctionCallback
+    static JSValueRef CallAsFunction(JSContextRef ctx,
+                                     JSObjectRef function,
+                                     JSObjectRef thisObject,
+                                     size_t argumentCount,
+                                     const JSValueRef arguments[],
+                                     JSValueRef* exception) {
+      JSObjectRef prototype{JSValueToObject(ctx, JSObjectGetPrototype(ctx, function), exception)};
+      if (*exception != nullptr) {
+        return nullptr;
+      }
+
+      FunctionInfo* info{reinterpret_cast<FunctionInfo*>(JSObjectGetPrivate(prototype))};
+      assert(info->Type() == NativeType::Function);
+
+      // Make sure any errors encountered last time we were in N-API are gone.
+      napi_clear_last_error(info->_env);
+
+      napi_callback_info__ cbinfo{};
+      cbinfo.thisArg = ToNapi(thisObject);
+      cbinfo.newTarget = nullptr;
+      cbinfo.argc = argumentCount;
+      cbinfo.argv = ToNapi(arguments);
+      cbinfo.data = info->_data;
+
+      napi_value result = info->_cb(info->_env, &cbinfo);
+      return ToJSValue(result);
+    }
+
+    // JSObjectFinalizeCallback
+    static void Finalize(JSObjectRef object) {
+      FunctionInfo* info{reinterpret_cast<FunctionInfo*>(JSObjectGetPrivate(object))};
+      assert(info->Type() == NativeType::Function);
+      delete info;
+    }
+
+    napi_env _env;
+    napi_callback _cb;
+    void* _data;
+    JSClassRef _class;
+  };
+
+  class ExternalInfo : public NativeInfo {
+   public:
+    static napi_status Create(napi_env env,
+                              const char* className,
+                              void* data,
+                              napi_finalize finalize_cb,
+                              void* finalize_hint,
+                              napi_value* result) {
+      ExternalInfo* external{new ExternalInfo(env, className, data, finalize_cb, finalize_hint)};
+      if (external == nullptr) {
+        return napi_set_last_error(env, napi_generic_failure);
+      }
+
+      *result = ToNapi(JSObjectMake(env->context, external->_class, external));
+      return napi_ok;
+    }
+
+    ~ExternalInfo() {
+      JSClassRelease(_class);
+    }
+
+    void* Data() const {
+      return _data;
+    }
+    
+  private:
+    ExternalInfo(napi_env env, const char* className, void* data, napi_finalize finalize_cb, void* hint)
+      : NativeInfo{NativeType::External}
+      , _env{env}
+      , _data{data}
+      , _cb{finalize_cb}
+      , _hint{hint} {
+      JSClassDefinition definition{kJSClassDefinitionEmpty};
+      definition.className = className;
+      definition.finalize = Finalize;
+      _class = JSClassCreate(&definition);
+    }
+
+   private:
+    // JSObjectFinalizeCallback
+    static void Finalize(JSObjectRef object) {
+      ExternalInfo* info{reinterpret_cast<ExternalInfo*>(JSObjectGetPrivate(object))};
+      assert(info->Type() == NativeType::External);
+      if (info->_cb != nullptr) {
+        info->_cb(info->_env, info->_data, info->_hint);
+      }
+      delete info;
+    }
+
+    napi_env _env;
+    void* _data;
+    napi_finalize _cb;
+    void* _hint;
+    JSClassRef _class;
+  };
+
+  class ExternalArrayBufferInfo {
+   public:
+    static napi_status Create(napi_env env,
+                              void* external_data,
+                              size_t byte_length,
+                              napi_finalize finalize_cb,
+                              void* finalize_hint,
+                              napi_value* result) {
+      ExternalArrayBufferInfo* info{new ExternalArrayBufferInfo(env, finalize_cb, finalize_hint)};
+      if (info == nullptr) {
+        return napi_set_last_error(env, napi_generic_failure);
+      }
+
+      JSValueRef exception{};
+      *result = ToNapi(JSObjectMakeArrayBufferWithBytesNoCopy(
+        env->context,
+        external_data,
+        byte_length,
+        BytesDeallocator,
+        info,
+        &exception));
+      CHECK_JSC(env, exception);
+      
+      return napi_ok;
+    }
+
+   private:
+    ExternalArrayBufferInfo(napi_env env, napi_finalize finalize_cb, void* hint)
+      : _env{env}
+      , _cb{finalize_cb}
+      , _hint{hint} {
+    }
+
+    // JSTypedArrayBytesDeallocator
+    static void BytesDeallocator(void* bytes, void* deallocatorContext) {
+      ExternalArrayBufferInfo* info{reinterpret_cast<ExternalArrayBufferInfo*>(deallocatorContext)};
+      if (info->_cb != nullptr) {
+        info->_cb(info->_env, bytes, info->_hint);
+      }
+      delete info;
+    }
+
+    napi_env _env;
+    napi_finalize _cb;
+    void* _hint;
+  };
 }
 
 // Warning: Keep in-sync with napi_status enum
@@ -400,22 +517,8 @@ napi_status napi_create_function(napi_env env,
                                  napi_value* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, result);
-
-  Function* function{new Function(env, utf8name, length, cb, callback_data)};
-  if (function == nullptr) {
-    return napi_set_last_error(env, napi_generic_failure);
-  }
   
-  JSObjectRef instance{JSObjectMake(env->context, function->Class(), function)};
-
-  napi_value global{}, function_ctor{}, function_proto{};
-  CHECK_NAPI(napi_get_global(env, &global));
-  CHECK_NAPI(napi_get_named_property(env, global, "Function", &function_ctor));
-  CHECK_NAPI(napi_get_prototype(env, function_ctor, &function_proto));
-
-  JSObjectSetPrototype(env->context, instance, ToJSValue(function_proto));
- 
-  *result = ToNapi(instance);
+  CHECK_NAPI(FunctionInfo::Create(env, utf8name, length, cb, callback_data, result));
   return napi_ok;
 }
 
@@ -430,16 +533,8 @@ napi_status napi_define_class(napi_env env,
   CHECK_ENV(env);
   CHECK_ARG(env, result);
 
-  Constructor* ctor{new Constructor(env, utf8name, length, cb, data)};
-  if (ctor == nullptr) {
-    return napi_set_last_error(env, napi_generic_failure);
-  }
-
-  napi_value constructor{ToNapi(JSObjectMake(env->context, ctor->Class(), ctor))};
-
-  napi_value prototype{};
-  CHECK_NAPI(napi_get_prototype(env, constructor, &prototype));
-  CHECK_NAPI(napi_set_named_property(env, prototype, "constructor", constructor));
+  napi_value constructor{};
+  CHECK_NAPI(ConstructorInfo::Create(env, utf8name, length, cb, data, &constructor));
 
   int instancePropertyCount{0};
   int staticPropertyCount{0};
@@ -472,6 +567,9 @@ napi_status napi_define_class(napi_env env,
   }
 
   if (instancePropertyCount > 0) {
+    napi_value prototype{};
+    CHECK_NAPI(napi_get_prototype(env, constructor, &prototype));
+
     CHECK_NAPI(napi_define_properties(env,
                                       prototype,
                                       instanceDescriptors.size(),
@@ -715,15 +813,17 @@ napi_status napi_delete_element(napi_env env,
                                 bool* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, result);
+  
+  napi_value index_value{ToNapi(JSValueMakeNumber(env->context, index))};
 
   JSValueRef exception{};
-  JSString propertyName{JSString::FromNumber(env->context, static_cast<double>(index), &exception)};
+  JSString index_str{ToJSString(env, index_value, &exception)};
   CHECK_JSC(env, exception);
 
   *result = JSObjectDeleteProperty(
     env->context,
     ToJSObject(env, object),
-    propertyName,
+    index_str,
     &exception);
   CHECK_JSC(env, exception);
 
@@ -782,7 +882,7 @@ napi_status napi_define_properties(napi_env env,
     if (p->utf8name == nullptr) {
       propertyName = p->name;
     } else {
-      napi_create_string_utf8(env, p->utf8name, NAPI_AUTO_LENGTH, &propertyName);
+      CHECK_NAPI(napi_create_string_utf8(env, p->utf8name, NAPI_AUTO_LENGTH, &propertyName));
     }
 
     napi_value global{}, object_ctor{}, function{};
@@ -989,8 +1089,7 @@ napi_status napi_create_symbol(napi_env env,
   napi_value global{}, symbol_func{};
   CHECK_NAPI(napi_get_global(env, &global));
   CHECK_NAPI(napi_get_named_property(env, global, "Symbol", &symbol_func));
-  napi_value args[] = { description };
-  CHECK_NAPI(napi_call_function(env, global, symbol_func, 1, args, result));
+  CHECK_NAPI(napi_call_function(env, global, symbol_func, 1, &description, result));
   return napi_ok;
 }
 
@@ -1067,10 +1166,13 @@ napi_status napi_typeof(napi_env env, napi_value value, napi_valuetype* result) 
       JSObjectRef object{ToJSObject(env, value)};
       if (JSObjectIsFunction(env->context, object)) {
         *result = napi_function;
-      } else if (JSObjectGetPrivate(object) == nullptr) {
-        *result = napi_object;
       } else {
-        *result = napi_external;
+        NativeInfo* info{reinterpret_cast<NativeInfo*>(JSObjectGetPrivate(object))};
+        if (info != nullptr && info->Type() == NativeType::External) {
+          *result = napi_external;
+        } else {
+          *result = napi_object;
+        }
       }
       break;
   }
@@ -1101,16 +1203,15 @@ napi_status napi_get_cb_info(napi_env env,              // [in] NAPI environment
                              void** data) {             // [out] Receives the data pointer for the callback.
   CHECK_ENV(env);
   CHECK_ARG(env, cbinfo);
-  const CallbackInfo* info{reinterpret_cast<CallbackInfo*>(cbinfo)};
 
   if (argv != nullptr) {
     CHECK_ARG(env, argc);
 
     size_t i{0};
-    size_t min{std::min(*argc, static_cast<size_t>(info->argc))};
+    size_t min{std::min(*argc, static_cast<size_t>(cbinfo->argc))};
 
     for (; i < min; i++) {
-      argv[i] = info->argv[i];
+      argv[i] = cbinfo->argv[i];
     }
 
     if (i < *argc) {
@@ -1121,15 +1222,15 @@ napi_status napi_get_cb_info(napi_env env,              // [in] NAPI environment
   }
 
   if (argc != nullptr) {
-    *argc = info->argc;
+    *argc = cbinfo->argc;
   }
 
   if (this_arg != nullptr) {
-    *this_arg = info->thisArg;
+    *this_arg = cbinfo->thisArg;
   }
 
   if (data != nullptr) {
-    *data = info->data;
+    *data = cbinfo->data;
   }
 
   return napi_ok;
@@ -1142,8 +1243,7 @@ napi_status napi_get_new_target(napi_env env,
   CHECK_ARG(env, cbinfo);
   CHECK_ARG(env, result);
 
-  const CallbackInfo* info{reinterpret_cast<CallbackInfo*>(cbinfo)};
-  *result = info->newTarget;
+  *result = cbinfo->newTarget;
   return napi_ok;
 }
 
@@ -1186,21 +1286,15 @@ napi_status napi_get_global(napi_env env, napi_value* result) {
 napi_status napi_throw(napi_env env, napi_value error) {
   CHECK_ENV(env);
 
-  napi_value global{}, throw_error_func{};
-  CHECK_NAPI(napi_get_global(env, &global));
-  CHECK_NAPI(napi_get_named_property(env, global, "__throwError__", &throw_error_func));
-
-  if (JSValueIsUndefined(env->context, ToJSValue(throw_error_func))) {
-    napi_value script{};
-    CHECK_NAPI(napi_create_string_utf16(
-      env,
-      u"globalThis.__throwError__ = function (error) { throw error; }",
-      NAPI_AUTO_LENGTH,
-      &script));
-    CHECK_NAPI(napi_run_script(env, script, nullptr, &throw_error_func));
-  }
-
-  napi_call_function(env, nullptr, throw_error_func, 1, &error, nullptr);
+  static JSValueRef error_value{};
+  error_value = ToJSValue(error);
+  JSObjectRef throw_func{JSObjectMakeFunctionWithCallback(env->context, nullptr,
+    [](JSContextRef, JSObjectRef, JSObjectRef, size_t, const JSValueRef[], JSValueRef* exception) -> JSValueRef {
+      *exception = error_value;
+      return nullptr;
+    })};
+    
+  JSObjectCallAsFunction(env->context, throw_func, nullptr, 0, nullptr, nullptr);
   return napi_clear_last_error(env);
 }
 
@@ -1461,26 +1555,21 @@ napi_status napi_wrap(napi_env env,
                       napi_ref* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, js_object);
+  if (result != nullptr) {
+    CHECK_ARG(env, finalize_cb);
+  }
 
   void* data{};
   CHECK_NAPI(napi_get_value_external(env, js_object, &data));
   RETURN_STATUS_IF_FALSE(env, data == nullptr, napi_invalid_arg);
 
-  napi_value external{};
-  CHECK_NAPI(napi_create_external(env, native_object, finalize_cb, finalize_hint, &external));
-
-  JSValueRef exception{};
-  JSObjectSetProperty(
-    env->context,
-    ToJSObject(env, js_object),
-    JSString("__native__"),
-    ToJSValue(external),
-    kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum,
-    &exception);
-  CHECK_JSC(env, exception);
+  napi_value prototype{};
+  CHECK_NAPI(ExternalInfo::Create(env, "Wrapper", native_object, finalize_cb, finalize_hint, &prototype));
+  JSObjectSetPrototype(env->context, ToJSObject(env, prototype), JSObjectGetPrototype(env->context, ToJSObject(env, js_object)));
+  JSObjectSetPrototype(env->context, ToJSObject(env, js_object), ToJSObject(env, prototype));
 
   if (result != nullptr) {
-    CHECK_NAPI(napi_create_reference(env, external, 0, result));
+    CHECK_NAPI(napi_create_reference(env, js_object, 0, result));
   }
 
   return napi_ok;
@@ -1489,16 +1578,15 @@ napi_status napi_wrap(napi_env env,
 napi_status napi_unwrap(napi_env env, napi_value js_object, void** result) {
   CHECK_ENV(env);
   CHECK_ARG(env, js_object);
+  
+  napi_value prototype{};
+  CHECK_NAPI(napi_get_prototype(env, js_object, &prototype));
+  
+  void* native_object;
+  CHECK_NAPI(napi_get_value_external(env, prototype, &native_object));
+  RETURN_STATUS_IF_FALSE(env, native_object != nullptr, napi_invalid_arg);
 
-  JSValueRef exception{};
-  napi_value external{ToNapi(JSObjectGetProperty(
-    env->context,
-    ToJSObject(env, js_object),
-    JSString("__native__"),
-    &exception))};
-  CHECK_JSC(env, exception);
-
-  CHECK_NAPI(napi_get_value_external(env, external, result));
+  *result = native_object;
   return napi_ok;
 }
 
@@ -1506,17 +1594,18 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
   CHECK_ENV(env);
   CHECK_ARG(env, js_object);
 
-  CHECK_NAPI(napi_unwrap(env, js_object, result));
-
-  JSValueRef exception{};
-  JSObjectDeleteProperty(
-    env->context,
-    ToJSObject(env, js_object),
-    JSString("__native__"),
-    &exception);
-  CHECK_JSC(env, exception);
-
-  return napi_ok;
+//  CHECK_NAPI(napi_unwrap(env, js_object, result));
+//
+//  JSValueRef exception{};
+//  JSObjectDeleteProperty(
+//    env->context,
+//    ToJSObject(env, js_object),
+//    JSString("__native__"),
+//    &exception);
+//  CHECK_JSC(env, exception);
+//
+//  return napi_ok;
+  throw std::runtime_error{"not impl"};
 }
 
 napi_status napi_create_external(napi_env env,
@@ -1527,12 +1616,7 @@ napi_status napi_create_external(napi_env env,
   CHECK_ENV(env);
   CHECK_ARG(env, result);
 
-  External* external{new External(env, data, finalize_cb, finalize_hint)};
-  if (external == nullptr) {
-    return napi_set_last_error(env, napi_generic_failure);
-  }
-
-  *result = ToNapi(JSObjectMake(env->context, external->Class(), external));
+  CHECK_NAPI(ExternalInfo::Create(env, "External", data, finalize_cb, finalize_hint, result));
   return napi_ok;
 }
 
@@ -1541,8 +1625,8 @@ napi_status napi_get_value_external(napi_env env, napi_value value, void** resul
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
 
-  External* external{reinterpret_cast<External*>(JSObjectGetPrivate(ToJSObject(env, value)))};
-  *result = (external == nullptr ? nullptr : external->Data());
+  ExternalInfo* info{reinterpret_cast<ExternalInfo*>(JSObjectGetPrivate(ToJSObject(env, value)))};
+  *result = (info != nullptr && info->Type() == NativeType::External) ? info->Data() : nullptr;
   return napi_ok;
 }
 
@@ -1555,12 +1639,12 @@ napi_status napi_create_reference(napi_env env,
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
 
-  RefInfo* info{new RefInfo{ToJSValue(value), initial_refcount}};
-  if (info->count != 0) {
-    JSValueProtect(env->context, info->value);
+  napi_ref__* ref{new napi_ref__{ToJSValue(value), initial_refcount}};
+  if (ref->count != 0) {
+    JSValueProtect(env->context, ref->value);
   }
 
-  *result = reinterpret_cast<napi_ref>(info);
+  *result = ref;
   return napi_ok;
 }
 
@@ -1570,12 +1654,11 @@ napi_status napi_delete_reference(napi_env env, napi_ref ref) {
   CHECK_ENV(env);
   CHECK_ARG(env, ref);
 
-  RefInfo* info{reinterpret_cast<RefInfo*>(ref)};
-  if (info->count != 0) {
-    JSValueUnprotect(env->context, info->value);
+  if (ref->count != 0) {
+    JSValueUnprotect(env->context, ref->value);
   }
 
-  delete info;
+  delete ref;
   return napi_ok;
 }
 
@@ -1587,13 +1670,12 @@ napi_status napi_reference_ref(napi_env env, napi_ref ref, uint32_t* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, ref);
 
-  RefInfo* info{reinterpret_cast<RefInfo*>(ref)};
-  if (info->count++ == 0) {
-    JSValueProtect(env->context, info->value);
+  if (ref->count++ == 0) {
+    JSValueProtect(env->context, ref->value);
   }
 
   if (result != nullptr) {
-    *result = info->count;
+    *result = ref->count;
   }
 
   return napi_ok;
@@ -1607,13 +1689,12 @@ napi_status napi_reference_unref(napi_env env, napi_ref ref, uint32_t* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, ref);
 
-  RefInfo* info{reinterpret_cast<RefInfo*>(ref)};
-  if (--info->count == 0) {
-    JSValueUnprotect(env->context, info->value);
+  if (--ref->count == 0) {
+    JSValueUnprotect(env->context, ref->value);
   }
 
   if (result != nullptr) {
-    *result = info->count;
+    *result = ref->count;
   }
 
   return napi_ok;
@@ -1629,12 +1710,10 @@ napi_status napi_get_reference_value(napi_env env,
   CHECK_ARG(env, ref);
   CHECK_ARG(env, result);
 
-  RefInfo* info{reinterpret_cast<RefInfo*>(ref)};
-
-  if (info->count == 0) {
+  if (ref->count == 0) {
     *result = nullptr;
   } else {
-    *result = ToNapi(info->value);
+    *result = ToNapi(ref->value);
   }
 
   return napi_ok;
@@ -1799,21 +1878,7 @@ napi_status napi_create_external_arraybuffer(napi_env env,
   CHECK_ENV(env);
   CHECK_ARG(env, result);
 
-  External* info{new External(env, external_data, finalize_cb, finalize_hint)};
-  if (info == nullptr) {
-    return napi_set_last_error(env, napi_generic_failure);
-  }
-
-  JSValueRef exception{};
-  *result = ToNapi(JSObjectMakeArrayBufferWithBytesNoCopy(
-    env->context,
-    external_data,
-    byte_length,
-    External::Finalize,
-    info,
-    &exception));
-  CHECK_JSC(env, exception);
-
+  CHECK_NAPI(ExternalArrayBufferInfo::Create(env, external_data, byte_length, finalize_cb, finalize_hint, result));
   return napi_ok;
 }
 
@@ -1960,22 +2025,26 @@ napi_status napi_get_typedarray_info(napi_env env,
   }
 
   if (length != nullptr) {
-    *length = JSObjectGetTypedArrayByteLength(env->context, object, &exception);
+    *length = JSObjectGetTypedArrayLength(env->context, object, &exception);
     CHECK_JSC(env, exception);
   }
 
-  if (data != nullptr) {
-    *data = JSObjectGetTypedArrayBytesPtr(env->context, object, &exception);
+  if (data != nullptr || byte_offset != nullptr) {
+    size_t data_byte_offset{JSObjectGetTypedArrayByteOffset(env->context, object, &exception)};
     CHECK_JSC(env, exception);
+    
+    if (data != nullptr) {
+      *data = static_cast<uint8_t*>(JSObjectGetTypedArrayBytesPtr(env->context, object, &exception)) + data_byte_offset;
+      CHECK_JSC(env, exception);
+    }
+    
+    if (byte_offset != nullptr) {
+      *byte_offset = data_byte_offset;
+    }
   }
 
   if (arraybuffer != nullptr) {
     *arraybuffer = ToNapi(JSObjectGetTypedArrayBuffer(env->context, object, &exception));
-    CHECK_JSC(env, exception);
-  }
-
-  if (byte_offset != nullptr) {
-    *byte_offset = JSObjectGetTypedArrayByteOffset(env->context, object, &exception);
     CHECK_JSC(env, exception);
   }
 
@@ -2077,11 +2146,10 @@ napi_status napi_create_promise(napi_env env,
     napi_value resolve{};
     napi_value reject{};
 
-    static napi_value Callback(napi_env env, napi_callback_info info) {
-      CallbackInfo* callbackInfo = reinterpret_cast<CallbackInfo*>(info);
-      Wrapper* wrapper = reinterpret_cast<Wrapper*>(callbackInfo->data);
-      wrapper->resolve = callbackInfo->argv[0];
-      wrapper->reject = callbackInfo->argv[1];
+    static napi_value Callback(napi_env env, napi_callback_info cbinfo) {
+      Wrapper* wrapper = reinterpret_cast<Wrapper*>(cbinfo->data);
+      wrapper->resolve = cbinfo->argv[0];
+      wrapper->reject = cbinfo->argv[1];
       return nullptr;
     }
   } wrapper;
