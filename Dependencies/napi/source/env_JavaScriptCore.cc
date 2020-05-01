@@ -8,7 +8,7 @@ namespace Napi
     template<>
     Napi::Env Attach<JSContextRef>(JSContextRef context)
     {
-        napi_env env_ptr{new napi_env__()};
+        napi_env env_ptr{new napi_env__};
         env_ptr->context = context;
         env_ptr->last_exception = nullptr;
         env_ptr->last_error = { nullptr, nullptr, 0, napi_ok };
