@@ -43,12 +43,14 @@ namespace android::global
             }
 
         private:
-            std::mutex m_mutex;
+            std::mutex m_mutex{};
             arcana::ticketed_collection<Handler> m_handlers{};
         };
 
         Event g_pausedEvent{};
         Event g_resumedEvent{};
+
+        Event<int32_t, const std::vector<std::string>&, const std::vector<int32_t>&> g_requestPermissionsResultEvent{};
     }
 
     void Initialize(JavaVM* javaVM, jobject appContext)
@@ -96,5 +98,15 @@ namespace android::global
     AppStateChangedCallbackTicket AddResumedCallback(std::function<void()>&& onResumed)
     {
         return g_resumedEvent.AddHandler(std::move(onResumed));
+    }
+
+    void RequestPermissionsResult(int32_t requestCode, const std::vector<std::string>& permissions, const std::vector<int32_t>& grantResults)
+    {
+        g_requestPermissionsResultEvent.Fire(requestCode, permissions, grantResults);
+    }
+
+    RequestPermissionsResultCallbackTicket AddRequestPermissionsResultCallback(std::function<void(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&)>&& onAddRequestPermissionsResult)
+    {
+        return g_requestPermissionsResultEvent.AddHandler(std::move(onAddRequestPermissionsResult));
     }
 }
