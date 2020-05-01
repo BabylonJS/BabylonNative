@@ -218,8 +218,8 @@ namespace xr
 
         Impl(System::Impl& systemImpl, void* graphicsContext)
             : SystemImpl{ systemImpl }
-            , pausedTicket{AddPausedCallback([this]() { this->PauseSession(); }) }
-            , resumedTicket{ AddResumedCallback([this]() { this->ResumeSession(); }) }
+            , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
+            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
         {
             // Note: graphicsContext is an EGLContext
 
@@ -462,8 +462,8 @@ namespace xr
 
         float CameraFrameUVs[VERTEX_COUNT * 2]{};
 
-        AppStateChangedCallbackTicket pausedTicket;
-        AppStateChangedCallbackTicket resumedTicket;
+        AppStateChangedCallbackTicket pauseTicket;
+        AppStateChangedCallbackTicket resumeTicket;
 
         void PauseSession()
         {

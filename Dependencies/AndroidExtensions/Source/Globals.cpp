@@ -47,8 +47,8 @@ namespace android::global
             arcana::ticketed_collection<Handler> m_handlers{};
         };
 
-        Event g_pausedEvent{};
-        Event g_resumedEvent{};
+        Event g_pauseEvent{};
+        Event g_resumeEvent{};
 
         Event<int32_t, const std::vector<std::string>&, const std::vector<int32_t>&> g_requestPermissionsResultEvent{};
     }
@@ -82,22 +82,22 @@ namespace android::global
 
     void Pause()
     {
-        g_pausedEvent.Fire();
+        g_pauseEvent.Fire();
     }
 
-    AppStateChangedCallbackTicket AddPausedCallback(std::function<void()>&& onPaused)
+    AppStateChangedCallbackTicket AddPauseCallback(std::function<void()>&& onPause)
     {
-        return g_pausedEvent.AddHandler(std::move(onPaused));
+        return g_pauseEvent.AddHandler(std::move(onPause));
     }
 
     void Resume()
     {
-        g_resumedEvent.Fire();
+        g_resumeEvent.Fire();
     }
 
-    AppStateChangedCallbackTicket AddResumedCallback(std::function<void()>&& onResumed)
+    AppStateChangedCallbackTicket AddResumeCallback(std::function<void()>&& onResume)
     {
-        return g_resumedEvent.AddHandler(std::move(onResumed));
+        return g_resumeEvent.AddHandler(std::move(onResume));
     }
 
     void RequestPermissionsResult(int32_t requestCode, const std::vector<std::string>& permissions, const std::vector<int32_t>& grantResults)

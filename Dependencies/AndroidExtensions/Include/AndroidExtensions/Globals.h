@@ -15,10 +15,10 @@ namespace android::global
     using AppStateChangedCallbackTicket = arcana::ticketed_collection<std::function<void()>>::ticket;
 
     void Pause();
-    AppStateChangedCallbackTicket AddPausedCallback(std::function<void()>&&);
+    AppStateChangedCallbackTicket AddPauseCallback(std::function<void()>&&);
 
     void Resume();
-    AppStateChangedCallbackTicket AddResumedCallback(std::function<void()>&&);
+    AppStateChangedCallbackTicket AddResumeCallback(std::function<void()>&&);
 
     using RequestPermissionsResultCallbackTicket = arcana::ticketed_collection<std::function<void(int32_t, const std::vector<std::string>&, const std::vector<int32_t>&)>>::ticket;
 
