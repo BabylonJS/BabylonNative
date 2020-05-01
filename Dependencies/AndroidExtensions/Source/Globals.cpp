@@ -8,7 +8,7 @@ namespace android::global
         JavaVM* g_javaVM{};
         jobject g_appContext{};
 
-        thread_local struct Env
+        thread_local struct Env final
         {
             ~Env()
             {
@@ -22,7 +22,7 @@ namespace android::global
         } g_env{};
 
         template<typename ... Args>
-        class Event
+        class Event final
         {
         public:
             using Handler = std::function<void(Args ...)>;
