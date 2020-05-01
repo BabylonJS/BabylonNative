@@ -2,6 +2,7 @@
 
 #include <Babylon/JsRuntime.h>
 
+#include <future>
 #include <memory>
 #include <string>
 
@@ -15,7 +16,7 @@ namespace Babylon
         AppRuntime();
         ~AppRuntime();
 
-        void Suspend();
+        std::future<void> Suspend();
         void Resume();
 
         void Dispatch(std::function<void(Napi::Env)> callback);

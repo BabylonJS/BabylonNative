@@ -5,6 +5,8 @@
 #include <arcana/threading/task.h>
 #include <napi/env.h>
 
+#include <future>
+
 namespace Babylon
 {
     class WorkQueue
@@ -13,8 +15,16 @@ namespace Babylon
         WorkQueue(std::function<void()> threadProcedure);
         ~WorkQueue();
 
-        void Append(std::function<void(Napi::Env)>);
-        void Suspend();
+        template<typename CallableT>
+        void Append(CallableT callable)
+        {
+            std::scoped_lock lock{m_appendMutex};
+            m_task = m_task.then(m_dispatcher, m_cancelSource, [this, callable = std::move(callable)]() mutable {
+                callable(m_env.value());
+            });
+        }
+
+        std::future<void> Suspend();
         void Resume();
         void Run(Napi::Env);
 
@@ -22,8 +32,7 @@ namespace Babylon
         std::optional<Napi::Env> m_env{};
 
         std::mutex m_appendMutex{};
-        std::mutex m_blockingTickMutex{};
-
+        
         std::unique_ptr<std::scoped_lock<std::mutex>> m_suspensionLock{};
 
         arcana::cancellation_source m_cancelSource{};

@@ -20,22 +20,19 @@ namespace Babylon
         m_thread.join();
     }
 
-    void WorkQueue::Append(std::function<void(Napi::Env)> callable)
+    std::future<void> WorkQueue::Suspend()
     {
-        std::scoped_lock lock{m_appendMutex};
-        m_task = m_task.then(m_dispatcher, m_cancelSource, [this, callable = std::move(callable)] {
-            callable(m_env.value());
-        });
-    }
+        std::promise<void> promise{};
+        std::future<void> future = promise.get_future();
 
-    void WorkQueue::Suspend()
-    {
-        auto suspensionMutex = new std::mutex();
+        auto suspensionMutex = std::make_unique<std::mutex>();
         m_suspensionLock = std::make_unique<std::scoped_lock<std::mutex>>(*suspensionMutex);
-        Append([suspensionMutex](Napi::Env) {
-            std::scoped_lock{*suspensionMutex};
-            delete suspensionMutex;
+        Append([suspensionMutex = std::move(suspensionMutex), promise = std::move(promise)](Napi::Env) mutable {
+            promise.set_value();
+            std::scoped_lock lock{*suspensionMutex};
         });
+
+        return future;
     }
 
     void WorkQueue::Resume()
@@ -50,10 +47,7 @@ namespace Babylon
 
         while (!m_cancelSource.cancelled())
         {
-            {
-                std::scoped_lock<std::mutex> lock{m_blockingTickMutex};
-                m_dispatcher.blocking_tick(m_cancelSource);
-            }
+            m_dispatcher.blocking_tick(m_cancelSource);
         }
 
         m_dispatcher.clear();
