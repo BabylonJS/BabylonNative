@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -216,7 +217,7 @@ namespace {
     ConstructorInfo(napi_env env, const char* name, size_t length, napi_callback cb, void* data)
       : NativeInfo{NativeType::Constructor}
       , _env{env}
-      , _name{name, (length == NAPI_AUTO_LENGTH ? strlen(name) : length)}
+      , _name{name, (length == NAPI_AUTO_LENGTH ? std::strlen(name) : length)}
       , _cb{cb}
       , _data{data} {
       JSClassDefinition definition{kJSClassDefinitionEmpty};
@@ -949,9 +950,12 @@ napi_status napi_get_prototype(napi_env env,
                                napi_value* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, result);
-  *result = ToNapi(JSObjectGetPrototype(
-    env->context,
-    ToJSObject(env, object)));
+
+  JSValueRef exception{};
+  JSObjectRef prototype{JSValueToObject(env->context, JSObjectGetPrototype(env->context, ToJSObject(env, object)), &exception)};
+  CHECK_JSC(env, exception);
+
+  *result = ToNapi(prototype);
   return napi_ok;
 }
 
@@ -1594,18 +1598,19 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
   CHECK_ENV(env);
   CHECK_ARG(env, js_object);
 
-//  CHECK_NAPI(napi_unwrap(env, js_object, result));
-//
-//  JSValueRef exception{};
-//  JSObjectDeleteProperty(
-//    env->context,
-//    ToJSObject(env, js_object),
-//    JSString("__native__"),
-//    &exception);
-//  CHECK_JSC(env, exception);
-//
-//  return napi_ok;
-  throw std::runtime_error{"not impl"};
+  napi_value prototype{};
+  CHECK_NAPI(napi_get_prototype(env, js_object, &prototype));
+
+  void* native_object{};
+  CHECK_NAPI(napi_get_value_external(env, prototype, &native_object));
+  RETURN_STATUS_IF_FALSE(env, native_object != nullptr, napi_invalid_arg);
+
+  napi_value child_prototype{};
+  CHECK_NAPI(napi_get_prototype(env, prototype, &child_prototype));
+  JSObjectSetPrototype(env->context, ToJSObject(env, js_object), ToJSObject(env, child_prototype));
+
+  *result = native_object;
+  return napi_ok;
 }
 
 napi_status napi_create_external(napi_env env,
@@ -2265,7 +2270,7 @@ napi_status napi_add_finalizer(napi_env env,
                                napi_finalize finalize_cb,
                                void* finalize_hint,
                                napi_ref* result) {
-  return napi_ok;
+  throw std::runtime_error("not impl");
 }
 
 napi_status napi_adjust_external_memory(napi_env env,
