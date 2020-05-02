@@ -203,6 +203,10 @@ namespace {
       JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, constructor));
       JSObjectSetPrototype(env->context, constructor, prototype);
       
+      JSValueRef exception{};
+      JSObjectSetProperty(env->context, prototype, JSString("constructor"), constructor, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete, &exception);
+      CHECK_JSC(env, exception);
+      
       *result = ToNapi(constructor);
       return napi_ok;
     }
