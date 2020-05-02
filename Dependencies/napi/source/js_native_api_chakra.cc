@@ -1707,7 +1707,7 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
 
   if (externalData != nullptr) {
     *result = externalData->Data();
-    delete externalData; // TODO: this seems wrong, confirm
+    delete externalData;
   } else {
     *result = nullptr;
   }
