@@ -145,12 +145,6 @@ namespace {
   }
 
   napi_status napi_set_exception(napi_env env, JSValueRef exception) {
-    JSStringRef string_ref{JSValueToStringCopy(env->context, exception, nullptr)};
-    std::string string{};
-    string.resize(JSStringGetMaximumUTF8CStringSize(string_ref));
-    size_t size{JSStringGetUTF8CString(string_ref, string.data(), string.size())};
-    string.resize(size - 1);
-    
     env->last_exception = exception;
     return napi_set_last_error(env, napi_pending_exception);
   }
