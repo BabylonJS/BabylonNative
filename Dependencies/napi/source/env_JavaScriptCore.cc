@@ -17,7 +17,7 @@ namespace Napi
 
     void Detach(Napi::Env env)
     {
-        napi_env__* env_ptr{env};
+        napi_env env_ptr{env};
         delete env_ptr;
     }
 
