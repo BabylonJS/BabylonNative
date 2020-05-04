@@ -49,7 +49,11 @@ if(BGFX_CONFIG_DEBUG)
 endif()
 
 if( NOT ${BGFX_OPENGL_VERSION} STREQUAL "" )
-	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGL=${BGFX_OPENGL_VERSION})
+	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION=${BGFX_OPENGL_VERSION} )
+endif()
+
+if( NOT ${BGFX_OPENGLES_VERSION} STREQUAL "" )
+	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION=${BGFX_OPENGLES_VERSION} )
 endif()
 
 # Special Visual Studio Flags
