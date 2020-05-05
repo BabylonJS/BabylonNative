@@ -26,14 +26,15 @@ class ViewController: UIViewController {
             mtkView.depthStencilPixelFormat = .depth32Float
             
             let gesture = UIPanGestureRecognizer(target: self, action:  #selector(self.panGesture))
-            self.mtkView.addGestureRecognizer(gesture)
+            mtkView.addGestureRecognizer(gesture)
 
             let rawMetalLayerPtr: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView.layer).toOpaque()
-
+            
+            let scale = UIScreen.main.scale
             let width = view.bounds.size.width
             let height = view.bounds.size.height
-
-            appDelegate!._bridge!.init(rawMetalLayerPtr, width:Int32(width), height:Int32(height))
+            
+            appDelegate!._bridge!.init(rawMetalLayerPtr, width:Int32(width * scale), height:Int32(height * scale))
         }
     }
 
@@ -44,10 +45,11 @@ class ViewController: UIViewController {
             return
         }
         if appDelegate != nil {
+            let scale = UIScreen.main.scale
             let width = view.bounds.size.width
             let height = view.bounds.size.height
 
-            appDelegate!._bridge!.resize(Int32(width + 1), height: Int32(height + 1))
+            appDelegate!._bridge!.resize(Int32(width * scale), height: Int32(height * scale))
         }
     }
 
