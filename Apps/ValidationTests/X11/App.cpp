@@ -7,7 +7,7 @@
 #undef None
 #include <filesystem>
 
-bool exitPending{};
+volatile bool exitPending{};
 int exitErrorCode{};
 
 #include <Shared/TestUtils.h>
