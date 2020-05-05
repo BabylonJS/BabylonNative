@@ -391,15 +391,11 @@ namespace Babylon
 
         void UpdateSize(size_t width, size_t height);
 
-        Napi::Value DecodeImage(const Napi::CallbackInfo& info);
-        Napi::Value GetImageData(const Napi::CallbackInfo& info);
-        Napi::Value EncodeImage(const Napi::CallbackInfo& info);
-
         arcana::cancellation_source m_cancelSource{};
 
         ShaderCompiler m_shaderCompiler;
 
-        ProgramData* m_currentProgram;
+        ProgramData* m_currentProgram{nullptr};
         arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;

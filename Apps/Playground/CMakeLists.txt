@@ -51,6 +51,10 @@ if(APPLE)
         "${CMAKE_CURRENT_LIST_DIR}/Scripts/experience.js"
         "${CMAKE_CURRENT_LIST_DIR}/Scripts/playground_runner.js")
     set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT})
+elseif(UNIX)
+    set(SOURCES
+        ${SOURCES}
+        "X11/App.cpp")
 elseif(WINDOWS_STORE)
     set(APPX_FILES "UWP/Package.appxmanifest" "UWP/TemporaryKey.pfx")
     set_property(SOURCE ${APPX_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
@@ -70,6 +74,7 @@ elseif(WINDOWS_STORE)
         ${APPX_ASSETS}
         "UWP/App.cpp"
         "UWP/App.h")
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
 elseif(WIN32)
     set(SOURCES
         ${SOURCES}
@@ -80,6 +85,7 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
 endif()
 
 if(WIN32)
@@ -112,6 +118,14 @@ target_link_to_dependencies(Playground
 if(WIN32)
     target_link_to_dependencies(Playground
         PRIVATE "shlwapi.lib")
+endif()
+
+if (UNIX AND NOT APPLE AND NOT ANDROID)
+    # Ubuntu mixes old experimental header and new runtime libraries
+    # Resulting in crash at runtime for std::filesystem
+    # https://stackoverflow.com/questions/56738708/c-stdbad-alloc-on-stdfilesystempath-append
+    target_link_libraries(Playground 
+        PRIVATE stdc++fs)
 endif()
 
 if(APPLE)

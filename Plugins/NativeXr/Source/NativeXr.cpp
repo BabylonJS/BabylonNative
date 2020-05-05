@@ -1598,23 +1598,26 @@ namespace Babylon
         };
     }
 
-    void InitializeNativeXr(Napi::Env env)
+    namespace Plugins::NativeXr
     {
-        PointerEvent::Initialize(env);
+        void Initialize(Napi::Env env)
+        {
+            PointerEvent::Initialize(env);
 
-        XRWebGLLayer::Initialize(env);
-        XRRigidTransform::Initialize(env);
-        XRView::Initialize(env);
-        XRViewerPose::Initialize(env);
-        XRPose::Initialize(env);
-        XRReferenceSpace::Initialize(env);
-        XRFrame::Initialize(env);
-        XRHitTestSource::Initialize(env);
-        XRHitTestResult::Initialize(env);
-        XRRay::Initialize(env);
-        XRSession::Initialize(env);
-        NativeWebXRRenderTarget::Initialize(env);
-        NativeRenderTargetProvider::Initialize(env);
-        XR::Initialize(env);
+            XRWebGLLayer::Initialize(env);
+            XRRigidTransform::Initialize(env);
+            XRView::Initialize(env);
+            XRViewerPose::Initialize(env);
+            XRPose::Initialize(env);
+            XRReferenceSpace::Initialize(env);
+            XRFrame::Initialize(env);
+            XRHitTestSource::Initialize(env);
+            XRHitTestResult::Initialize(env);
+            XRRay::Initialize(env);
+            XRSession::Initialize(env);
+            NativeWebXRRenderTarget::Initialize(env);
+            NativeRenderTargetProvider::Initialize(env);
+            XR::Initialize(env);
+        }
     }
 }

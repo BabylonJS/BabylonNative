@@ -216,11 +216,6 @@ namespace Babylon
             return static_cast<bgfx::TextureFormat::Enum>(format);
         }
 
-        bimg::TextureFormat::Enum Cast(bgfx::TextureFormat::Enum format)
-        {
-            return static_cast<bimg::TextureFormat::Enum>(format);
-        }
-
         void FlipY(bimg::ImageContainer* image)
         {
             uint8_t* bytes = static_cast<uint8_t*>(image->m_data);
@@ -406,9 +401,6 @@ namespace Babylon
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
-                InstanceMethod("decodeImage", &NativeEngine::DecodeImage),
-                InstanceMethod("getImageData", &NativeEngine::GetImageData),
-                InstanceMethod("encodeImage", &NativeEngine::EncodeImage),
             });
 
         env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
@@ -423,7 +415,6 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
-        , m_currentProgram{nullptr}
         , m_engineState{BGFX_STATE_DEFAULT}
         , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
@@ -784,12 +775,12 @@ namespace Babylon
         }
 
         // TODO: zOffset
-        const auto zOffset = info[1].As<Napi::Number>().FloatValue();
+        //const auto zOffset = info[1].As<Napi::Number>().FloatValue();
     }
 
     void NativeEngine::SetZOffset(const Napi::CallbackInfo& info)
     {
-        const auto zOffset = info[0].As<Napi::Number>().FloatValue();
+        //const auto zOffset = info[0].As<Napi::Number>().FloatValue();
 
         // STUB: Stub.
     }
@@ -1002,51 +993,6 @@ namespace Babylon
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
     }
 
-    Napi::Value NativeEngine::DecodeImage(const Napi::CallbackInfo& info)
-    {
-        auto imageData = new ImageData();
-        const auto buffer = info[0].As<Napi::ArrayBuffer>();
-
-        imageData->Image.reset(bimg::imageParse(&m_allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength())));
-
-        return Napi::External<ImageData>::New(info.Env(), imageData);
-    }
-
-    Napi::Value NativeEngine::GetImageData(const Napi::CallbackInfo& info)
-    {
-        const auto imageData = info[0].As<Napi::External<ImageData>>().Data();
-
-        if (!imageData->Image || !imageData->Image->m_size)
-        {
-            return info.Env().Undefined();
-        }
-
-        auto data = Napi::Uint8Array::New(info.Env(), imageData->Image->m_size);
-        const auto ptr = static_cast<uint8_t*>(imageData->Image->m_data);
-        memcpy(data.Data(), ptr, imageData->Image->m_size);
-
-        return data;
-    }
-
-    Napi::Value NativeEngine::EncodeImage(const Napi::CallbackInfo& info)
-    {
-        const auto imageData = info[0].As<Napi::External<ImageData>>().Data();
-        if (!imageData->Image || !imageData->Image->m_size)
-        {
-            return info.Env().Undefined();
-        }
-
-        const auto image = imageData->Image.get();
-        bx::MemoryBlock mb(&m_allocator);
-        bx::MemoryWriter writer(&mb);
-        bimg::imageWritePng(&writer, image->m_width, image->m_height, image->m_size / image->m_height, image->m_data, image->m_format, false);
-
-        auto data = Napi::Uint8Array::New(info.Env(), mb.getSize());
-        memcpy(data.Data(), static_cast<uint8_t*>(mb.more()), imageData->Image->m_size);
-
-        return data;
-    }
-
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
@@ -1061,6 +1007,8 @@ namespace Babylon
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
             [this, dataSpan, generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), dataSpan.size());
+                // todo: bimg::imageParse will return nullptr when trying to load a texture with an url that is not a valid texture
+                // Like a 404 html page.
                 if (invertY)
                 {
                     FlipY(image);
@@ -1074,7 +1022,7 @@ namespace Babylon
             .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRef = Napi::Shared(data)](bimg::ImageContainer* image) {
                 CreateTextureFromImage(&m_allocator, texture, image);
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess), onErrorRef = Napi::Shared(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(arcana::inline_scheduler, m_cancelSource, [onSuccessRef = Napi::Shared(onSuccess), onErrorRef = Napi::Shared(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Value().Call({});
@@ -1111,7 +1059,7 @@ namespace Babylon
 
         arcana::when_all(gsl::make_span(tasks))
             .then(m_runtimeScheduler, m_cancelSource,
-                [this, texture, dataRef = Napi::Shared(data), generateMips](const std::vector<bimg::ImageContainer*>& images) {
+                [texture, dataRef = Napi::Shared(data), generateMips](const std::vector<bimg::ImageContainer*>& images) {
                     CreateCubeTextureFromImages(texture, images, generateMips);
                 })
             .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess)]() {
@@ -1150,7 +1098,7 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRef = Napi::Shared(data)](std::vector<bimg::ImageContainer*> images) {
+            .then(m_runtimeScheduler, m_cancelSource, [texture, dataRef = Napi::Shared(data)](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, true);
             })
             .then(m_runtimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Shared(onSuccess)]() {
@@ -1259,7 +1207,7 @@ namespace Babylon
         uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         uint32_t formatIndex = info[3].As<Napi::Number>().Uint32Value();
-        int samplingMode = info[4].As<Napi::Number>().Uint32Value();
+        //int samplingMode = info[4].As<Napi::Number>().Uint32Value();
         bool generateStencilBuffer = info[5].As<Napi::Boolean>();
         bool generateDepth = info[6].As<Napi::Boolean>();
         bool generateMips = info[7].As<Napi::Boolean>();
@@ -1320,9 +1268,9 @@ namespace Babylon
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto elementStart = info[1].As<Napi::Number>().Int32Value();
-        const auto elementCount = info[2].As<Napi::Number>().Int32Value();
+        //const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+        //const auto elementStart = info[1].As<Napi::Number>().Int32Value();
+        //const auto elementCount = info[2].As<Napi::Number>().Int32Value();
 
         // TODO: handle viewport
 
@@ -1343,9 +1291,9 @@ namespace Babylon
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto elementStart = info[1].As<Napi::Number>().Int32Value();
-        const auto elementCount = info[2].As<Napi::Number>().Int32Value();
+        //const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+        //const auto elementStart = info[1].As<Napi::Number>().Int32Value();
+        //const auto elementCount = info[2].As<Napi::Number>().Int32Value();
 
         // STUB: Stub.
         // bgfx::submit(), right?  Which means we have to preserve here the state of
@@ -1418,14 +1366,14 @@ namespace Babylon
         const uint32_t height = info[3].As<Napi::Number>().Uint32Value();
 
         auto imageData = new ImageData();
-        const auto buffer = info[0].As<Napi::ArrayBuffer>();
+        //const auto buffer = info[0].As<Napi::ArrayBuffer>();
 
         imageData->Image.reset(bimg::imageAlloc(&m_allocator, bimg::TextureFormat::RGBA8, width, height, 1, 1, false, false));
 
         auto bitmap = static_cast<uint8_t*>(imageData->Image->m_data);
 
         uint32_t sourceWidth = bgfx::getStats()->width;
-        uint32_t sourceHeight = bgfx::getStats()->height;
+        //uint32_t sourceHeight = bgfx::getStats()->height;
 
         for (auto py = y; py < (y + height); py++)
         {
