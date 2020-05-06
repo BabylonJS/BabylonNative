@@ -1,6 +1,6 @@
 bgfx.cmake
 ===================
-[![Build Status](https://travis-ci.org/JoshuaBrookover/bgfx.cmake.svg?branch=master)](https://travis-ci.org/JoshuaBrookover/bgfx.cmake)
+[![Build Status](https://travis-ci.org/widberg/bgfx.cmake.svg?branch=master)](https://travis-ci.org/widberg/bgfx.cmake)
 
 This repo contains a bunch of cmake files that can be used to build bgfx with CMake.
 
@@ -8,7 +8,7 @@ Building
 -------------
 
 ```
-git clone https://github.com/JoshuaBrookover/bgfx.cmake.git
+git clone https://github.com/widberg/bgfx.cmake.git
 cd bgfx.cmake
 git submodule init
 git submodule update
@@ -18,10 +18,6 @@ cmake ..
 ```
 
 If downloading via zip (instead of using git submodules) manually download bx, bimg and bgfx and copy them into the root directory, or locate them via BX_DIR, BIMG_DIR and BGFX_DIR CMake variables.
-
-Note
--------------
-I try to maintain this repo when I can, but I have a full time job which makes it a bit difficult. I will gladly accept any pull requests updating to the latest bgfx, fixing bugs, improving support, etc.
 
 How To Use
 -------------
@@ -40,9 +36,8 @@ Probably! This project needs to be updated if a dependency is added or the bgfx 
 
 Todo
 -------------
-* Support Android.
 * Support Native Client.
 * Support Windows Phone.
-* More configuration. [#12](https://github.com/JoshuaBrookover/bgfx.cmake/issues/12)
+* More configuration. [#12](https://github.com/widberg/bgfx.cmake/issues/12)
 * Add varying.def.sc files as shader dependencies.
 * Combined examples.
