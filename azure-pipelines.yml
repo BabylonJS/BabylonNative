@@ -224,7 +224,11 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs Playground'
+  - script: |
+      cd Apps/ValidationTests/Android
+      npm install
+    displayName: 'Install JS engine NPMs ValidationTests'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
