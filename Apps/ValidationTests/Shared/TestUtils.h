@@ -19,7 +19,9 @@
 
 namespace
 {
+#ifndef ANDROID
     std::filesystem::path GetModulePath();
+#endif
     std::atomic<bool> doExit{};
     int errorCode{};
 }
@@ -66,6 +68,8 @@ namespace Babylon
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
             doExit = true;
             errorCode = exitCode;
+#ifdef ANDROID
+#else
 #ifdef WIN32
             PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
 #elif __linux__
@@ -80,6 +84,7 @@ namespace Babylon
 #else
             // TODO: handle exit for other platforms
 #endif
+#endif // ANDROID
         }
 
         void UpdateSize(const Napi::CallbackInfo& info)
@@ -100,6 +105,8 @@ namespace Babylon
         void SetTitle(const Napi::CallbackInfo& info)
         {
             const auto title = info[0].As<Napi::String>().Utf8Value();
+#ifdef ANDROID
+#else
 #ifdef WIN32
             SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
 #elif __linux__
@@ -108,6 +115,7 @@ namespace Babylon
 #else
             // TODO: handle title for other platforms
 #endif
+#endif // ANDROID
         }
 
         void WritePNG(const Napi::CallbackInfo& info)
@@ -175,9 +183,13 @@ namespace Babylon
 
         Napi::Value GetWorkingDirectory(const Napi::CallbackInfo& info)
         {
+#if ANDROID
+            auto path = "";
+#else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
             path += "/..";
+#endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }

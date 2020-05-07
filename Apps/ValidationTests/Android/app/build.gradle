@@ -1,0 +1,192 @@
+apply plugin: 'com.android.application'
+
+// When no project property is set for Gradle ('-PJSEngine=')
+// default JS engine is set to v8android
+// JSEngine property can be:
+// - jsc for JavaScriptCore
+// - v8android for V8
+
+def jsEngineBaseDir = "${buildDir}/JS"
+def jsEngineIncDir = "${jsEngineBaseDir}/include/V8"
+def jsEngineLibDir = "${rootDir}/app/src/main/jniLibs"
+
+def jsEngineLibName = "v8android"
+if (project.hasProperty("JSEngine")) {
+    jsEngineLibName = project.property("JSEngine")
+    if ("${jsEngineLibName}" == "jsc" ) {
+        jsEngineIncDir = "${jsEngineBaseDir}/include"
+    }
+}
+
+def platformVersion = 21
+def arcore_libpath = "${buildDir}/arcore-native"
+
+configurations { natives }
+
+android {
+    compileSdkVersion 28
+
+    defaultConfig {
+        applicationId 'com.android.babylonnative.validationtests'
+        minSdkVersion "${platformVersion}"
+        targetSdkVersion 28
+        externalNativeBuild {
+            cmake {
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+                arguments '-DANDROID_STL=c++_static',
+                        '-DENABLE_GLSLANG_BINARIES=OFF',
+                        '-DSPIRV_CROSS_CLI=OFF',
+                        "-DARCORE_LIBPATH=${arcore_libpath}/jni",
+                        "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
+                        "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",
+                        "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}"
+            }
+        }
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'),
+                          'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            version '3.13.2+'
+            path 'CMakeLists.txt'
+        }
+    }
+}
+
+dependencies {
+    // ARCore library
+    implementation 'com.google.ar:core:1.14.0'
+    natives 'com.google.ar:core:1.14.0'
+
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:design:27.1.1'
+}
+
+// Extracts the shared libraries from aars in the natives configuration.
+// This is done so that NDK builds can access these libraries.
+task extractNativeLibraries() {
+    // Always extract, this insures the native libs are updated if the version changes.
+    outputs.upToDateWhen { false }
+    doFirst {
+        configurations.natives.files.each { f ->
+            copy {
+                from zipTree(f)
+                into arcore_libpath
+                include "jni/**/*"
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("external") && !task.name.contains("Clean")) {
+        task.dependsOn(extractNativeLibraries)
+    }
+}
+
+task copyFiles {
+    copy
+    {
+        from '../../../BabylonScripts'
+        include "*.js"
+        into 'src/main/assets/Scripts'
+    }
+    copy
+    {
+        from '../../Scripts'
+        include "*.js"
+        into 'src/main/assets/Scripts'
+    }
+    copy
+    {
+        from '../../Scripts'
+        include "*.json"
+        into 'src/main/assets/Scripts'
+    }
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        // Android JSC is installed from npm
+        url "$rootDir/node_modules/jsc-android/dist"
+    }
+    maven {
+        // Android V8 is installed from npm
+        url "$rootDir/node_modules/v8-android/dist"
+    }
+    google()
+    jcenter()
+}
+
+configurations 
+{ 
+    jscAndroid
+    v8Android 
+}
+
+dependencies {
+    jscAndroid 'org.webkit:android-jsc:+'
+    v8Android 'org.chromium:v8-android:+'
+}
+
+// Extracts the shared libraries from aars in the natives configuration.
+// This is done so that NDK builds can access these libraries.
+task extractJSEngineLibraries() {
+    // Always extract, this insures the native libs are updated if the version changes.
+    outputs.upToDateWhen { false }
+    def jsconfig
+    if ("${jsEngineLibName}" == "jsc" ) {
+        jsconfig = configurations.jscAndroid
+    } else {
+        jsconfig = configurations.v8Android
+    }
+    doFirst {
+        jsconfig.files.each { f ->
+            copy {
+                from zipTree(f)
+                into jsEngineLibDir
+                include "jni/**/*"
+                // remove 'jni/'
+                eachFile { fcd ->
+                    fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))  
+                }
+                includeEmptyDirs = false
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("external") && !task.name.contains("Clean")) {
+        task.dependsOn(extractJSEngineLibraries)
+    }
+}
+
+task copyFilesJSHeaders {
+    copy
+    {
+        from "${rootDir}/node_modules/jsc-android/dist/include"
+        include "*"
+        into "${jsEngineBaseDir}/include/JavaScriptCore"
+    }
+    copy
+    {
+        from "${rootDir}/node_modules/v8-android/dist/include"
+        include "**/*"
+        into "${jsEngineIncDir}"
+    }
+}
+
+preBuild.dependsOn(copyFiles)
+preBuild.dependsOn(copyFilesJSHeaders)

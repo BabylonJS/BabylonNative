@@ -207,6 +207,7 @@ jobs:
     displayName: 'Build UWP_x86'
 
 - job: androidV8
+  timeoutInMinutes: 25
   pool:
     vmImage: 'macOS-10.14'
     
@@ -232,7 +233,35 @@ jobs:
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
         tasks: 'assembleDebug'
-    displayName: 'Build androidV8'
+    displayName: 'Build androidV8 Playground'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleDebug'
+    displayName: 'Build androidV8 Validation Tests'
+  - script: |
+      echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
+    displayName: 'Install Android image'
+  - script: |
+      $ANDROID_HOME/emulator/emulator -list-avds
+      echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd -n test_android_emulator -k 'system-images;android-27;google_apis;x86' --force
+      $ANDROID_HOME/emulator/emulator -list-avds
+    displayName: 'Create AVD'
+  - script: |
+      nohup $ANDROID_HOME/emulator/emulator -avd test_android_emulator -no-snapshot -skin 600x400 > /dev/null 2>&1 & $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
+    displayName: 'Start Android emulator'
+  - script: |
+      adb install -t -g app/build/outputs/apk/debug/app-debug.apk
+      adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
+      sleep 15
+      adb logcat -t 5000
+      mkdir Captures
+      adb exec-out screencap -p > Captures/screen.png
+    displayName: 'Install and run APK'
 
 - job: androidJSC
   pool:
