@@ -7,6 +7,9 @@ set(SOURCES "Include/XR.h")
 if (ANDROID)
     set(SOURCES ${SOURCES}
         "Source/ARCore/XR.cpp")
+elseif (IOS)
+    set(SOURCES ${SOURCES}
+        "Source/ARKit/XR.mm")
 else()
     add_subdirectory(Dependencies/OpenXR-SDK)
 
@@ -35,6 +38,8 @@ if (ANDROID)
     set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/arcore-android-sdk/libraries/glm)
 
     target_link_libraries(xr PRIVATE glm arcore GSL AndroidExtensions)
+elseif (IOS)    
+    target_link_libraries(xr PRIVATE "-framework ARKit")
 else()
     if(WIN32)
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")
