@@ -22,6 +22,8 @@
 #include <arcana/containers/weak_table.h>
 #include <arcana/threading/cancellation.h>
 
+#include <variant>
+
 namespace Babylon
 {
     class ViewClearState final
@@ -286,19 +288,19 @@ namespace Babylon
     {
         struct IndexBuffer
         {
-            bgfx::IndexBufferHandle handle;
+            std::variant<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle> handle{};
         };
 
-        IndexBuffer indexBuffer;
+        IndexBuffer indexBuffer{};
 
         struct VertexBuffer
         {
-            bgfx::VertexBufferHandle handle;
-            uint32_t startVertex;
-            bgfx::VertexLayoutHandle vertexLayoutHandle;
+            std::variant<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle> handle{};
+            uint32_t startVertex{};
+            bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
 
-        std::vector<VertexBuffer> vertexBuffers;
+        std::vector<VertexBuffer> vertexBuffers{};
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
@@ -331,9 +333,11 @@ namespace Babylon
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
         void DeleteIndexBuffer(const Napi::CallbackInfo& info);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
+        void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
         void DeleteVertexBuffer(const Napi::CallbackInfo& info);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
+        void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
