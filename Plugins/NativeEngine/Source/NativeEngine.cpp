@@ -470,12 +470,12 @@ namespace Babylon
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         auto callback = info[0].As<Napi::Function>();
-        
+
         if (m_requestAnimationFrameCalback.IsEmpty() ||
             m_requestAnimationFrameCalback.Value() != callback) {
             m_requestAnimationFrameCalback = Napi::Persistent(callback);
         }
-        
+
         arcana::make_task(m_runtimeScheduler, m_cancelSource, [this]() {
             try
             {
