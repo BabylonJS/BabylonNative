@@ -15,11 +15,6 @@ struct napi_callback_info__ {
   uint16_t argc;
 };
 
-struct napi_ref__ {
-  napi_value value;
-  uint32_t count;
-};
-
 namespace {
   class JSString {
    public:
@@ -513,6 +508,85 @@ namespace {
     CHECK_NAPI(ExternalInfo::Wrap(env, value, &info));
     info->AddFinalizer(finalizer);
     return napi_ok;
+  }
+
+}
+
+struct napi_ref__ {
+  napi_ref__(napi_value value, uint32_t count)
+    : _value{value}
+    , _count{count} {
+  }
+  
+  napi_status init(napi_env env) {
+    // track the ref values to support weak refs
+    auto pair{env->active_ref_values.insert(_value)};
+    if (pair.second) {
+      CHECK_NAPI(napi_add_finalizer(env, _value, [iter{pair.first}](ExternalInfo* info) {
+        info->Env()->active_ref_values.erase(iter);
+      }));
+    }
+    
+    if (_count != 0) {
+      protect(env);
+    }
+
+    return napi_ok;
+  }
+  
+  void deinit(napi_env env) {
+    if (_count != 0) {
+      unprotect(env);
+    }
+
+    _value = nullptr;
+    _count = 0;
+  }
+  
+  void ref(napi_env env) {
+    if (_count++ == 0) {
+      protect(env);
+    }
+  }
+  
+  void unref(napi_env env) {
+    if (--_count == 0) {
+      unprotect(env);
+    }
+  }
+  
+  uint32_t count() const {
+    return _count;
+  }
+  
+  napi_value value(napi_env env) const {
+    if (env->active_ref_values.find(_value) == env->active_ref_values.end()) {
+      return nullptr;
+    }
+    
+    return _value;
+  }
+  
+ private:
+  void protect(napi_env env) {
+    _iter = env->strong_refs.insert(env->strong_refs.end(), this);
+    JSValueProtect(env->context, ToJSValue(_value));
+  }
+  
+  void unprotect(napi_env env) {
+    env->strong_refs.erase(_iter);
+    JSValueUnprotect(env->context, ToJSValue(_value));
+  }
+  
+  napi_value _value{};
+  uint32_t _count{};
+  std::list<napi_ref>::iterator _iter{};
+};
+
+void napi_env__::deinit_refs() {
+  while (!strong_refs.empty()) {
+    napi_ref ref{strong_refs.front()};
+    ref->deinit(this);
   }
 }
 
@@ -1701,19 +1775,10 @@ napi_status napi_create_reference(napi_env env,
   if (ref == nullptr) {
     return napi_set_last_error(env, napi_generic_failure);
   }
-
-  auto pair{env->active_refs.insert(value)};
-  if (pair.second) {
-    CHECK_NAPI(napi_add_finalizer(env, value, [iter{pair.first}](ExternalInfo* info) {
-      info->Env()->active_refs.erase(iter);
-    }));
-  }
-
-  if (ref->count != 0) {
-    JSValueProtect(env->context, ToJSValue(ref->value));
-  }
-
+  
+  ref->init(env);
   *result = ref;
+
   return napi_ok;
 }
 
@@ -1723,11 +1788,9 @@ napi_status napi_delete_reference(napi_env env, napi_ref ref) {
   CHECK_ENV(env);
   CHECK_ARG(env, ref);
   
-  if (ref->count != 0) {
-    JSValueUnprotect(env->context, ToJSValue(ref->value));
-  }
-  
+  ref->deinit(env);
   delete ref;
+
   return napi_ok;
 }
 
@@ -1738,13 +1801,10 @@ napi_status napi_delete_reference(napi_env env, napi_ref ref) {
 napi_status napi_reference_ref(napi_env env, napi_ref ref, uint32_t* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, ref);
-
-  if (ref->count++ == 0) {
-    JSValueProtect(env->context, ToJSValue(ref->value));
-  }
-
+  
+  ref->ref(env);
   if (result != nullptr) {
-    *result = ref->count;
+    *result = ref->count();
   }
 
   return napi_ok;
@@ -1758,12 +1818,9 @@ napi_status napi_reference_unref(napi_env env, napi_ref ref, uint32_t* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, ref);
 
-  if (--ref->count == 0) {
-    JSValueUnprotect(env->context, ToJSValue(ref->value));
-  }
-
+  ref->unref(env);
   if (result != nullptr) {
-    *result = ref->count;
+    *result = ref->count();
   }
 
   return napi_ok;
@@ -1779,12 +1836,7 @@ napi_status napi_get_reference_value(napi_env env,
   CHECK_ARG(env, ref);
   CHECK_ARG(env, result);
 
-  if (env->active_refs.find(ref->value) == env->active_refs.end()) {
-    *result = nullptr;
-  } else {
-    *result = ref->value;
-  }
-
+  *result = ref->value(env);
   return napi_ok;
 }
 
