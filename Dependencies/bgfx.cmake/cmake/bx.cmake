@@ -35,20 +35,31 @@ if( WIN32 )
 	target_link_libraries( bx PUBLIC psapi )
 endif()
 
+include(GNUInstallDirs)
+
 # Add include directory of bx
 target_include_directories( bx
 	PUBLIC
 		$<BUILD_INTERFACE:${BX_DIR}/include>
 		$<BUILD_INTERFACE:${BX_DIR}/3rdparty>
-		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> )
 
 # Build system specific configurations
 if( MSVC )
-	target_include_directories( bx PUBLIC $<BUILD_INTERFACE:${BX_DIR}/include/compat/msvc> )
+	target_include_directories( bx
+		PUBLIC
+			$<BUILD_INTERFACE:${BX_DIR}/include/compat/msvc>
+			$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/msvc> )
 elseif( MINGW )
-	target_include_directories( bx PUBLIC $<BUILD_INTERFACE:${BX_DIR}/include/compat/mingw> )
+	target_include_directories( bx
+		PUBLIC
+		    $<BUILD_INTERFACE:${BX_DIR}/include/compat/mingw>
+		    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/mingw> )
 elseif( APPLE )
-	target_include_directories( bx PUBLIC $<BUILD_INTERFACE:${BX_DIR}/include/compat/osx> )
+	target_include_directories( bx
+		PUBLIC
+		    $<BUILD_INTERFACE:${BX_DIR}/include/compat/osx>
+		    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/osx> )
 endif()
 
 # All configurations
