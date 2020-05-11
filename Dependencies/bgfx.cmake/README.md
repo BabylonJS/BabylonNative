@@ -38,6 +38,7 @@ Todo
 -------------
 * Support Native Client.
 * Support Windows Phone.
+* Fix Android and iOS builds. [#85](https://github.com/widberg/bgfx.cmake/issues/85)
 * More configuration. [#12](https://github.com/widberg/bgfx.cmake/issues/12)
 * Add varying.def.sc files as shader dependencies.
 * Combined examples.
