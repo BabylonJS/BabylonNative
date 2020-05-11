@@ -344,11 +344,7 @@ namespace Babylon
         {
             static constexpr auto IMMERSIVE_VR{"immersive-vr"};
             static constexpr auto IMMERSIVE_AR{"immersive-ar"};
-<<<<<<< HEAD
             static constexpr auto INLINE{"inline"};
-=======
-            static constexpr auto IMMERSIVE_INLINE{"inline"};
->>>>>>> master
         };
 
         struct XRReferenceSpaceType
@@ -1208,14 +1204,9 @@ namespace Babylon
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
-<<<<<<< HEAD
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
                     info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
-=======
-                // Support both immersive VR and immersive AR is supported.
-                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR || info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
->>>>>>> master
             }
 
             void SetEngine(Napi::Object jsEngine)
@@ -1581,12 +1572,7 @@ namespace Babylon
                 xr::SessionType sessionType{xr::SessionType::INVALID};
                 bool isSupported = false;
 
-<<<<<<< HEAD
                 if (sessionTypeString == XRSessionType::IMMERSIVE_VR)
-=======
-                if (sessionType == XRSessionType::IMMERSIVE_VR ||
-                    sessionType == XRSessionType::IMMERSIVE_AR)
->>>>>>> master
                 {
                     sessionType = xr::SessionType::IMMERSIVE_VR;
                 }
