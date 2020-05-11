@@ -42,6 +42,16 @@ endif()
 # Create the bgfx target
 add_library( bgfx ${BGFX_SOURCES} )
 
+if(BGFX_CONFIG_RENDERER_WEBGPU)
+    include(cmake/3rdparty/webgpu.cmake)
+    target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_WEBGPU=1)
+    if (EMSCRIPTEN)
+        target_link_options(bgfx PRIVATE "-s USE_WEBGPU=1")
+    else()
+        target_link_libraries(bgfx PRIVATE webgpu)
+    endif()
+endif()
+
 # Enable BGFX_CONFIG_DEBUG in Debug configuration
 target_compile_definitions( bgfx PRIVATE "$<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>" )
 if(BGFX_CONFIG_DEBUG)

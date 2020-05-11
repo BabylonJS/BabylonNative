@@ -24,7 +24,6 @@ target_compile_definitions( spirv-cross PRIVATE SPIRV_CROSS_EXCEPTIONS_TO_ASSERT
 target_include_directories( spirv-cross PUBLIC
 	${BGFX_DIR}/3rdparty/spirv-cross
 	${BGFX_DIR}/3rdparty/spirv-cross/include
-	${BGFX_DIR}/3rdparty/webgpu/include
 )
 
 if( MSVC )

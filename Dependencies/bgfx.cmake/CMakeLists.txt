@@ -33,6 +33,7 @@ option( BGFX_USE_OVR          "Build with OVR support."                       OF
 option( BGFX_AMALGAMATED      "Amalgamated bgfx build for faster compilation" OFF )
 option( BX_AMALGAMATED        "Amalgamated bx build for faster compilation"   OFF )
 option( BGFX_CONFIG_DEBUG     "Enables debug configuration on all builds"     OFF )
+option( BGFX_CONFIG_RENDERER_WEBGPU     "Enables the webgpu renderer"         OFF )
 set( BGFX_OPENGL_VERSION   "" CACHE STRING "Specify minimum OpenGL version" )
 set( BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version" )
 
@@ -108,7 +109,7 @@ if( BGFX_INSTALL )
 	install(FILES ${BGFX_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
 	install(FILES readme.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-	install( TARGETS bgfx bimg bx astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc
+	install( TARGETS bgfx bimg bx astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc webgpu
 			 EXPORT "${TARGETS_EXPORT_NAME}"
 			 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 			 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
