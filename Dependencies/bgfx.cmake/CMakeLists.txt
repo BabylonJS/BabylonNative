@@ -9,7 +9,10 @@
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 cmake_minimum_required( VERSION 3.0 )
-project( bgfx )
+project(bgfx)
+
+# sets project version from api ver / git rev
+include( cmake/version.cmake )
 
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 set(CMAKE_CXX_STANDARD 14)
