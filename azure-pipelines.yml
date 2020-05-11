@@ -229,15 +229,15 @@ jobs:
       cd Apps/ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs ValidationTests'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=v8android'
-        publishJUnitResults: false
-        tasks: 'assembleDebug'
-    displayName: 'Build androidV8 Playground'
+#  - task: Gradle@2
+#    inputs:
+#        workingDirectory: 'Apps/Playground/Android'
+#        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+#        gradleOptions: '-Xmx1536m'
+#        options: '-PJSEngine=v8android'
+#        publishJUnitResults: false
+#        tasks: 'assembleDebug'
+#    displayName: 'Build androidV8 Playground'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/ValidationTests/Android'
@@ -259,13 +259,19 @@ jobs:
       nohup $ANDROID_HOME/emulator/emulator -avd test_android_emulator -no-snapshot -skin 600x400 > /dev/null 2>&1 & $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
     displayName: 'Start Android emulator'
   - script: |
-      adb install -t -g app/build/outputs/apk/debug/app-debug.apk
+      adb install -t -g Apps/ValidationTests/Android/app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
       sleep 15
+      while [[ adb shell pidof com.android.babylonnative.validationtests ]]; do sleep 1 done
       adb logcat -t 5000
       mkdir Captures
-      adb exec-out screencap -p > Captures/screen.png
+      adb exec-out run-as com.android.babylonnative.validationtests tar c cache/ > Captures/cache.tar
     displayName: 'Install and run APK'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'androidV8 Rendered Pictures'
+      pathtoPublish: 'Captures'
+    displayName: 'Publish Tests androidV8 Results'
 
 - job: androidJSC
   pool:

@@ -3,7 +3,7 @@ var currentScene;
 var config;
 var justOnce;
 var threshold = 25;
-var errorRatio = 2.5;
+var errorRatio = 10000;//2.5;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
@@ -38,10 +38,10 @@ function compare(test, canvasImageData, referenceImage) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getWorkingDirectory() + "/Errors/" + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getImageOutputDirectory() + "/" + test.title + ".png");
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getWorkingDirectory() + "/Results/" + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getImageOutputDirectory() + "/" + test.title + ".png");
     }
     return error;
 }
@@ -304,7 +304,7 @@ document = {
 }
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", "file://" + TestUtils.getWorkingDirectory() + "/Scripts/config.json", true);
+xhr.open("GET", "app://" + TestUtils.getWorkingDirectory() + "/Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
     if (xhr.status === 200) {

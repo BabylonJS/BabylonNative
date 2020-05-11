@@ -80,6 +80,7 @@ namespace UrlLib
                             break;
                         }
                     }
+                    m_statusCode = UrlStatusCode::Ok;
                 }
                 else
                 {

@@ -51,6 +51,7 @@ namespace Babylon
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
                     ParentT::InstanceMethod("getWorkingDirectory", &TestUtils::GetWorkingDirectory),
+                    ParentT::InstanceMethod("getImageOutputDirectory", &TestUtils::GetImageOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
@@ -69,6 +70,7 @@ namespace Babylon
             doExit = true;
             errorCode = exitCode;
 #ifdef ANDROID
+            std::terminate();
 #else
 #ifdef WIN32
             PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
@@ -193,7 +195,15 @@ namespace Babylon
 #endif
             return Napi::Value::From(info.Env(), path);
         }
-
+        Napi::Value GetImageOutputDirectory(const Napi::CallbackInfo& info)
+        {
+#if ANDROID
+            auto path = "/data/data/com.android.babylonnative.validationtests/cache";
+            return Napi::Value::From(info.Env(), path);
+#else
+            return GetWorkingDirectory(info);
+#endif
+        }
 
         inline static void* _nativeWindowPtr{};
     };
