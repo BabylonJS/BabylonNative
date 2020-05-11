@@ -509,7 +509,6 @@ namespace {
     info->AddFinalizer(finalizer);
     return napi_ok;
   }
-
 }
 
 struct napi_ref__ {
