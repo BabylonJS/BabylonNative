@@ -1,7 +1,5 @@
 #include "AppRuntime.h"
 
-#include "Common.h"
-
 #include <v8.h>
 #include <libplatform/libplatform.h>
 
