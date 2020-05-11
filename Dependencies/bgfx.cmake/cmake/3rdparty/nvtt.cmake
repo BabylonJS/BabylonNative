@@ -34,11 +34,3 @@ target_include_directories( nvtt
 		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/nvtt> )
 set_target_properties( nvtt PROPERTIES FOLDER "bgfx/3rdparty" )
 target_link_libraries( nvtt PUBLIC bx )
-
-if( BGFX_INSTALL )
-	include(GNUInstallDirs)
-	install(
-		TARGETS nvtt
-		EXPORT bgfx-config
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()

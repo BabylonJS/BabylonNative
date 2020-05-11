@@ -17,11 +17,3 @@ file( GLOB SQUISH_SOURCES ${BIMG_DIR}/3rdparty/libsquish/*.cpp ${BIMG_DIR}/3rdpa
 add_library( squish STATIC ${SQUISH_SOURCES} )
 target_include_directories( squish PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty> )
 set_target_properties( squish PROPERTIES FOLDER "bgfx/3rdparty" )
-
-if( BGFX_INSTALL )
-	include(GNUInstallDirs)
-	install(
-		TARGETS squish
-		EXPORT bgfx-config
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()

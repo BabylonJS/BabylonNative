@@ -68,47 +68,79 @@ include( cmake/examples.cmake )
 if( BGFX_INSTALL )
 	include(GNUInstallDirs)
 
-	# install bx
-	install( TARGETS bx
-		EXPORT bgfx-config
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-	install( DIRECTORY ${BX_DIR}/include DESTINATION . )
+	# Layout. This works for all platforms:
+	#   * <prefix>/lib*/cmake/<PROJECT-NAME>
+	#   * <prefix>/lib*/
+	#   * <prefix>/include/
+	set(config_install_dir "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+	set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-	# install bimg
-	install( TARGETS bimg
-		EXPORT bgfx-config
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-	install( DIRECTORY ${BIMG_DIR}/include DESTINATION . )
+	# Configuration
+	set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+	set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+	set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+	set(namespace "${PROJECT_NAME}::")
 
-	# install bgfx
-	install( TARGETS bgfx
-		EXPORT bgfx-config
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-	install( DIRECTORY ${BGFX_DIR}/include DESTINATION . )
+	# Include module with fuction 'write_basic_package_version_file'
+	include(CMakePackageConfigHelpers)
 
-	# install export
-	install(
-		EXPORT bgfx-config
-		NAMESPACE bgfx::
-		DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bgfx)
+	# Configure '<PROJECT-NAME>ConfigVersion.cmake'
+	# Use:
+	#   * PROJECT_VERSION
+	write_basic_package_version_file(
+		"${version_config}"
+		VERSION ${PROJECT_VERSION}
+		COMPATIBILITY SameMinorVersion
+	)
+
+	# Configure '<PROJECT-NAME>Config.cmake'
+	# Use variables:
+	#   * TARGETS_EXPORT_NAME
+	#   * PROJECT_NAME
+	configure_package_config_file(
+		"cmake/Config.cmake.in"
+		"${project_config}"
+		INSTALL_DESTINATION "${config_install_dir}"
+	)
+
+	install(FILES ${BGFX_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
+	install(FILES readme.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+	install( TARGETS bgfx bimg bx astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc
+			 EXPORT "${TARGETS_EXPORT_NAME}"
+			 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+			 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+			 RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+			 INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+	)
+
+	# install headers (this should be done as a target probably... ^)
+	install( DIRECTORY ${BX_DIR}/include/bx ${BX_DIR}/include/compat ${BX_DIR}/include/tinystl DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+	install( DIRECTORY ${BIMG_DIR}/include/bimg DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+	install( DIRECTORY ${BGFX_DIR}/include/bgfx DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+	# header required for shader compilation
+	install( FILES ${BGFX_DIR}/src/bgfx_shader.sh ${BGFX_DIR}/src/bgfx_compute.sh
+		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bgfx"
+	)
 
 	# install tools
 	if( BGFX_BUILD_TOOLS )
 		install( TARGETS shaderc
-			EXPORT bgfx-config
-			DESTINATION bin )
+			EXPORT "${TARGETS_EXPORT_NAME}"
+			DESTINATION "${CMAKE_INSTALL_BINDIR}" )
 		install( TARGETS geometryc
-			EXPORT bgfx-config
-			DESTINATION bin )
-    install( TARGETS geometryv
-			EXPORT bgfx-config
-			DESTINATION bin )
+			EXPORT "${TARGETS_EXPORT_NAME}"
+			DESTINATION "${CMAKE_INSTALL_BINDIR}" )
+    	install( TARGETS geometryv
+			EXPORT "${TARGETS_EXPORT_NAME}"
+			DESTINATION "${CMAKE_INSTALL_BINDIR}" )
 		install( TARGETS texturec
-			EXPORT bgfx-config
-			DESTINATION bin )
+			EXPORT "${TARGETS_EXPORT_NAME}"
+			DESTINATION "${CMAKE_INSTALL_BINDIR}" )
 		install( TARGETS texturev
-			EXPORT bgfx-config
-			DESTINATION bin )
+			EXPORT "${TARGETS_EXPORT_NAME}"
+			DESTINATION "${CMAKE_INSTALL_BINDIR}" )
 	endif()
 
 	# install examples
@@ -118,4 +150,20 @@ if( BGFX_INSTALL )
 			install( TARGETS example-${EXAMPLE} DESTINATION examples )
 		endforeach()
 	endif()
+
+	# Config
+	#   * <prefix>/lib/cmake/bgfx/bgfxConfig.cmake
+	#   * <prefix>/lib/cmake/bgfx/bgfxConfigVersion.cmake
+	install(
+		FILES "${project_config}" "${version_config}"
+		DESTINATION "${config_install_dir}"
+	)
+
+	# Config
+	#   * <prefix>/lib/cmake/bgfx/bgfxTargets.cmake
+	install(
+		EXPORT "${TARGETS_EXPORT_NAME}"
+		NAMESPACE "${namespace}"
+		DESTINATION "${config_install_dir}"
+	)
 endif()
