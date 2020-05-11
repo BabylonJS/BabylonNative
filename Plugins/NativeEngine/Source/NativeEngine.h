@@ -155,7 +155,7 @@ namespace Babylon
 
         bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
         bgfx::ViewId ViewId{};
-        ViewClearState ViewClearState;
+        Babylon::ViewClearState ViewClearState;
         uint16_t Width{};
         uint16_t Height{};
     };
@@ -395,7 +395,7 @@ namespace Babylon
 
         ShaderCompiler m_shaderCompiler;
 
-        ProgramData* m_currentProgram;
+        ProgramData* m_currentProgram{nullptr};
         arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;

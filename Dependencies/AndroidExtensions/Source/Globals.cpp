@@ -56,10 +56,10 @@ namespace android::global
         RequestPermissionsResultEvent g_requestPermissionsResultEvent{};
     }
 
-    void Initialize(JavaVM* javaVM, jobject appContext, jobject mainActivity)
+    void Initialize(JavaVM* javaVM, jobject context, jobject mainActivity)
     {
         g_javaVM = javaVM;
-        g_appContext = appContext;
+        g_appContext = GetEnvForCurrentThread()->NewGlobalRef(android::content::Context{context}.getApplicationContext());
         g_mainActivity = mainActivity;
     }
 
@@ -87,6 +87,7 @@ namespace android::global
     android::app::Activity GetMainActivity()
     {
         return {g_mainActivity};
+    }
 
     void Pause()
     {
