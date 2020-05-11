@@ -109,13 +109,22 @@ if( BGFX_INSTALL )
 	install(FILES ${BGFX_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
 	install(FILES readme.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-	install( TARGETS bgfx bimg bx astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc webgpu
+	install( TARGETS bgfx bimg bx astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc
 			 EXPORT "${TARGETS_EXPORT_NAME}"
 			 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 			 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 			 RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 			 INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 	)
+    if (BGFX_CONFIG_RENDERER_WEBGPU)
+		install( TARGETS webgpu
+				 EXPORT "${TARGETS_EXPORT_NAME}"
+				 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+				 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+				 RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+				 INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+		)
+    endif()
 
 	# install headers (this should be done as a target probably... ^)
 	install( DIRECTORY ${BX_DIR}/include/bx ${BX_DIR}/include/compat ${BX_DIR}/include/tinystl DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
