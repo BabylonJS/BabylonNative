@@ -298,6 +298,87 @@ namespace Babylon
             texture->Width = width;
             texture->Height = height;
         }
+
+        class VertexBufferData
+        {
+        public:
+            VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
+                : Dynamic{dynamic}
+                , m_handleIndex{bgfx::kInvalidHandle}
+                , m_bytes{bytes.Data(), bytes.Data() + bytes.ByteLength()}
+            {
+            }
+
+            ~VertexBufferData()
+            {
+                if (m_handleIndex != bgfx::kInvalidHandle)
+                {
+                    if (Dynamic)
+                    {
+                        bgfx::destroy(bgfx::DynamicVertexBufferHandle{m_handleIndex});
+                    }
+                    else
+                    {
+                        bgfx::destroy(bgfx::VertexBufferHandle{m_handleIndex});
+                    }
+                }
+            }
+
+            void EnsureFinalized(Napi::Env env, const bgfx::VertexLayout& layout)
+            {
+                if (m_handleIndex != bgfx::kInvalidHandle)
+                {
+                    return;
+                }
+
+                const bgfx::Memory* bytes = bgfx::copy(m_bytes.data(), static_cast<uint32_t>(m_bytes.size()));
+                m_bytes.clear();
+
+                if (Dynamic)
+                {
+                    m_handleIndex = bgfx::createDynamicVertexBuffer(bytes, layout).idx;
+                }
+                else
+                {
+                    m_handleIndex = bgfx::createVertexBuffer(bytes, layout).idx;
+                }
+            }
+
+            std::variant<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle> Handle() const
+            {
+                if (Dynamic)
+                {
+                    return bgfx::DynamicVertexBufferHandle{m_handleIndex};
+                }
+                else
+                {
+                    return bgfx::VertexBufferHandle{m_handleIndex};
+                }
+            }
+
+            void Update(const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
+            {
+                assert(Dynamic);
+
+                if (m_handleIndex == bgfx::kInvalidHandle)
+                {
+                    // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
+                    m_bytes = {bytes.Data() + offset, bytes.Data() + offset + byteLength};
+                }
+                else
+                {
+                    // Buffer was already created, do a real update operation.
+                    const bgfx::Memory* memory = bgfx::copy(bytes.Data() + offset, byteLength);
+                    bgfx::update(bgfx::DynamicVertexBufferHandle{m_handleIndex}, 0, memory);
+                }
+            }
+
+            const bool Dynamic{};
+
+        private:
+            uint16_t m_handleIndex{};
+            std::vector<uint8_t> m_bytes{};
+        };
     }
 
     void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
@@ -588,90 +669,43 @@ namespace Babylon
         const Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
         const bool dynamic = info[1].As<Napi::Boolean>().Value();
 
-        // HACK: Create an empty valid vertex decl which will never be used. Consider fixing in bgfx.
-        bgfx::VertexLayout vertexLayout;
-        vertexLayout.begin();
-        vertexLayout.m_stride = 1;
-        vertexLayout.end();
-
-        const bgfx::Memory* ref = bgfx::copy(data.Data(), static_cast<uint32_t>(data.ByteLength()));
-
-        if (dynamic)
-        {
-            const bgfx::DynamicVertexBufferHandle handle = bgfx::createDynamicVertexBuffer(ref, vertexLayout);
-            return Napi::Value::From(info.Env(), static_cast<uint32_t>(handle.idx));
-        }
-        else
-        {
-            const bgfx::VertexBufferHandle handle = bgfx::createVertexBuffer(ref, vertexLayout);
-            return Napi::Value::From(info.Env(), static_cast<uint32_t>(handle.idx));
-        }
+        return Napi::External<VertexBufferData>::New(info.Env(), new VertexBufferData(data, dynamic));
     }
 
     void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& info)
     {
-        const bool dynamic = info[1].As<Napi::Boolean>().Value();
-        if (dynamic)
-        {
-            const bgfx::DynamicVertexBufferHandle handle{static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value())};
-            bgfx::destroy(handle);
-        }
-        else
-        {
-            const bgfx::VertexBufferHandle handle{static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value())};
-            bgfx::destroy(handle);
-        }
+        auto* vertexBufferData = info[0].As<Napi::External<VertexBufferData>>().Data();
+        delete vertexBufferData;
     }
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
         VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
-        const bool dynamic = info[2].As<Napi::Boolean>().Value();
-        if (dynamic)
-        {
-            const bgfx::DynamicVertexBufferHandle handle{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
-            const uint32_t location = info[3].As<Napi::Number>().Uint32Value();
-            const uint32_t byteOffset = info[4].As<Napi::Number>().Uint32Value();
-            const uint32_t byteStride = info[5].As<Napi::Number>().Uint32Value();
-            const uint32_t numElements = info[6].As<Napi::Number>().Uint32Value();
-            const uint32_t type = info[7].As<Napi::Number>().Uint32Value();
-            const bool normalized = info[8].As<Napi::Boolean>().Value();
+        VertexBufferData& vertexBufferData = *(info[1].As<Napi::External<VertexBufferData>>().Data());
 
-            bgfx::VertexLayout vertexLayout;
-            vertexLayout.begin();
-            const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-            const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
-            vertexLayout.add(attrib, numElements, attribType, normalized);
-            vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
-            vertexLayout.end();
+        const uint32_t location = info[3].As<Napi::Number>().Uint32Value();
+        const uint32_t byteOffset = info[4].As<Napi::Number>().Uint32Value();
+        const uint32_t byteStride = info[5].As<Napi::Number>().Uint32Value();
+        const uint32_t numElements = info[6].As<Napi::Number>().Uint32Value();
+        const uint32_t type = info[7].As<Napi::Number>().Uint32Value();
+        const bool normalized = info[8].As<Napi::Boolean>().Value();
 
-            vertexArray.vertexBuffers.push_back({std::move(handle), byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
-        }
-        else
-        {
-            const bgfx::VertexBufferHandle handle{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
-            const uint32_t location = info[3].As<Napi::Number>().Uint32Value();
-            const uint32_t byteOffset = info[4].As<Napi::Number>().Uint32Value();
-            const uint32_t byteStride = info[5].As<Napi::Number>().Uint32Value();
-            const uint32_t numElements = info[6].As<Napi::Number>().Uint32Value();
-            const uint32_t type = info[7].As<Napi::Number>().Uint32Value();
-            const bool normalized = info[8].As<Napi::Boolean>().Value();
+        bgfx::VertexLayout vertexLayout{};
+        vertexLayout.begin();
+        const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
+        const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
+        vertexLayout.add(attrib, numElements, attribType, normalized);
+        vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+        vertexLayout.end();
 
-            bgfx::VertexLayout vertexLayout;
-            vertexLayout.begin();
-            const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-            const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
-            vertexLayout.add(attrib, numElements, attribType, normalized);
-            vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
-            vertexLayout.end();
+        vertexBufferData.EnsureFinalized(info.Env(), vertexLayout);
 
-            vertexArray.vertexBuffers.push_back({std::move(handle), byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
-        }
+        vertexArray.vertexBuffers.push_back({vertexBufferData.Handle(), byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
     {
-        const bgfx::DynamicVertexBufferHandle handle{static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value())};
+        VertexBufferData& vertexBufferData = *(info[0].As<Napi::External<VertexBufferData>>().Data());
         const Napi::Uint8Array data = info[1].As<Napi::Uint8Array>();
         const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
 
@@ -681,9 +715,7 @@ namespace Babylon
             byteLength = static_cast<uint32_t>(data.ByteLength());
         }
 
-        const bgfx::Memory* ref = bgfx::copy(data.Data() + byteOffset, byteLength);
-
-        bgfx::update(handle, 0, ref);
+        vertexBufferData.Update(data, byteOffset, byteLength);
     }
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
