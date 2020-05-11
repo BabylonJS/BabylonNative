@@ -1,6 +1,7 @@
 #include "XMLHttpRequest.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <cassert>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -18,10 +19,10 @@ namespace Babylon::Polyfills::Internal
                 if (value == ArrayBuffer)
                     return UrlLib::UrlResponseType::Buffer;
 
-                throw;
+                assert(false);
             }
 
-            constexpr const char* EnumToString(UrlLib::UrlResponseType value)
+            const char* EnumToString(UrlLib::UrlResponseType value)
             {
                 switch (value)
                 {
@@ -31,7 +32,7 @@ namespace Babylon::Polyfills::Internal
                         return ArrayBuffer;
                 }
 
-                throw;
+                assert(false);
             }
         }
 
