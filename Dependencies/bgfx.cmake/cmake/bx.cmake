@@ -88,8 +88,3 @@ endif()
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties( bx PROPERTIES FOLDER "bgfx" )
-
-# Export debug build as "bxd"
-if( BGFX_USE_DEBUG_SUFFIX )
-	set_target_properties( bx PROPERTIES OUTPUT_NAME_DEBUG "bxd" )
-endif()

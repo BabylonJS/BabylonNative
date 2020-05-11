@@ -33,7 +33,6 @@ option( BGFX_USE_OVR          "Build with OVR support."                       OF
 option( BGFX_AMALGAMATED      "Amalgamated bgfx build for faster compilation" OFF )
 option( BX_AMALGAMATED        "Amalgamated bx build for faster compilation"   OFF )
 option( BGFX_CONFIG_DEBUG     "Enables debug configuration on all builds"     OFF )
-option( BGFX_USE_DEBUG_SUFFIX "Add 'd' suffix to debug output targets"        ON  )
 set( BGFX_OPENGL_VERSION   "" CACHE STRING "Specify minimum OpenGL version" )
 set( BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version" )
 
