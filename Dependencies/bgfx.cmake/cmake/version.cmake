@@ -13,17 +13,17 @@
 find_package(Git QUIET)
 
 execute_process(COMMAND "${GIT_EXECUTABLE}" -C bgfx log --pretty=format:'%h' -n 1
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_REV
                 ERROR_QUIET)
 
 execute_process(COMMAND "${GIT_EXECUTABLE}" -C bgfx rev-list --count HEAD
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_REV_COUNT
                 ERROR_QUIET)
 
 # read version(100) from bgfx.idl
-file(READ "${CMAKE_SOURCE_DIR}/bgfx/scripts/bgfx.idl" BGFX_IDL)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/bgfx/scripts/bgfx.idl" BGFX_IDL)
 string(REGEX MATCH "version\\(([^\)]+)\\)"
        BGFX_API_VERSION ${BGFX_IDL})
 set(BGFX_API_VERSION ${CMAKE_MATCH_1})
