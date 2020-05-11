@@ -299,12 +299,65 @@ namespace Babylon
             texture->Height = height;
         }
 
+        class IndexBufferData
+        {
+        public:
+            IndexBufferData(Napi::TypedArray bytes, uint16_t flags, bool dynamic)
+                : Dynamic{dynamic}
+            {
+                const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), bytes.ByteLength());
+
+                if (Dynamic)
+                {
+                    m_handleIndex = bgfx::createDynamicIndexBuffer(memory, flags).idx;
+                }
+                else
+                {
+                    m_handleIndex = bgfx::createIndexBuffer(memory, flags).idx;
+                }
+            }
+
+            ~IndexBufferData()
+            {
+                if (Dynamic)
+                {
+                    bgfx::destroy(bgfx::DynamicIndexBufferHandle{m_handleIndex});
+                }
+                else
+                {
+                    bgfx::destroy(bgfx::IndexBufferHandle{m_handleIndex});
+                }
+            }
+
+            void Update(Napi::TypedArray bytes, uint32_t startingIdx)
+            {
+                const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
+                bgfx::update(bgfx::DynamicIndexBufferHandle{m_handleIndex}, startingIdx, memory);
+            }
+
+            std::variant<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle> Handle() const
+            {
+                if (Dynamic)
+                {
+                    return bgfx::DynamicIndexBufferHandle{m_handleIndex};
+                }
+                else
+                {
+                    return bgfx::IndexBufferHandle{m_handleIndex};
+                }
+            }
+
+            const bool Dynamic{};
+
+        private:
+            uint16_t m_handleIndex{bgfx::kInvalidHandle};
+        };
+
         class VertexBufferData
         {
         public:
             VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
                 : Dynamic{dynamic}
-                , m_handleIndex{bgfx::kInvalidHandle}
                 , m_bytes{bytes.Data(), bytes.Data() + bytes.ByteLength()}
             {
             }
@@ -376,7 +429,7 @@ namespace Babylon
             const bool Dynamic{};
 
         private:
-            uint16_t m_handleIndex{};
+            uint16_t m_handleIndex{bgfx::kInvalidHandle};
             std::vector<uint8_t> m_bytes{};
         };
     }
@@ -608,60 +661,33 @@ namespace Babylon
         const Napi::TypedArray data = info[0].As<Napi::TypedArray>();
         const bool dynamic = info[1].As<Napi::Boolean>().Value();
 
-        const bgfx::Memory* ref = bgfx::copy(data.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(data.ByteLength()));
         const uint16_t flags = data.TypedArrayType() == napi_typedarray_type::napi_uint16_array ? 0 : BGFX_BUFFER_INDEX32;
-        if (dynamic)
-        {
-            const bgfx::DynamicIndexBufferHandle handle = bgfx::createDynamicIndexBuffer(ref, flags);
-            return Napi::Value::From(info.Env(), static_cast<uint32_t>(handle.idx));
-        }
-        else
-        {
-            const bgfx::IndexBufferHandle handle = bgfx::createIndexBuffer(ref, flags);
-            return Napi::Value::From(info.Env(), static_cast<uint32_t>(handle.idx));
-        }
+        
+        return Napi::External<IndexBufferData>::New(info.Env(), new IndexBufferData(data, flags, dynamic));
     }
 
     void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const bool dynamic = info[1].As<Napi::Boolean>().Value();
-        if (dynamic)
-        {
-            const bgfx::DynamicIndexBufferHandle handle{static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value())};
-            bgfx::destroy(handle);
-        }
-        else
-        {
-            const bgfx::IndexBufferHandle handle{static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value())};
-            bgfx::destroy(handle);
-        }
+        IndexBufferData* indexBufferData = info[0].As<Napi::External<IndexBufferData>>().Data();
+        delete indexBufferData;
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
         VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
-        const bool dynamic = info[2].As<Napi::Boolean>().Value();
-        if (dynamic)
-        {
-            const bgfx::DynamicIndexBufferHandle handle{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
-            vertexArray.indexBuffer.handle = handle;
-        }
-        else
-        {
-            const bgfx::IndexBufferHandle handle{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
-            vertexArray.indexBuffer.handle = handle;
-        }
+        const IndexBufferData* indexBufferData = info[1].As<Napi::External<IndexBufferData>>().Data();
+        
+        vertexArray.indexBuffer.handle = indexBufferData->Handle();
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const bgfx::DynamicIndexBufferHandle handle{static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value())};
+        IndexBufferData& indexBufferData = *(info[0].As<Napi::External<IndexBufferData>>().Data());
+
         const Napi::TypedArray data = info[1].As<Napi::TypedArray>();
         const uint32_t startingIdx = info[2].As<Napi::Number>().Uint32Value();
-
-        const bgfx::Memory* ref = bgfx::copy(data.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(data.ByteLength()));
         
-        bgfx::update(handle, startingIdx, ref);
+        indexBufferData.Update(data, startingIdx);
     }
 
     Napi::Value NativeEngine::CreateVertexBuffer(const Napi::CallbackInfo& info)
@@ -683,12 +709,12 @@ namespace Babylon
         VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
         VertexBufferData& vertexBufferData = *(info[1].As<Napi::External<VertexBufferData>>().Data());
 
-        const uint32_t location = info[3].As<Napi::Number>().Uint32Value();
-        const uint32_t byteOffset = info[4].As<Napi::Number>().Uint32Value();
-        const uint32_t byteStride = info[5].As<Napi::Number>().Uint32Value();
-        const uint32_t numElements = info[6].As<Napi::Number>().Uint32Value();
-        const uint32_t type = info[7].As<Napi::Number>().Uint32Value();
-        const bool normalized = info[8].As<Napi::Boolean>().Value();
+        const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
+        const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value();
+        const uint32_t byteStride = info[4].As<Napi::Number>().Uint32Value();
+        const uint32_t numElements = info[5].As<Napi::Number>().Uint32Value();
+        const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
+        const bool normalized = info[7].As<Napi::Boolean>().Value();
 
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
