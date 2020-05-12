@@ -299,7 +299,40 @@ jobs:
         publishJUnitResults: false
         tasks: 'assembleDebug'
     displayName: 'Build androidJSC'
-
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleDebug'
+    displayName: 'Build androidJSC Validation Tests'
+  - script: |
+      echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
+    displayName: 'Install Android image'
+  - script: |
+      $ANDROID_HOME/emulator/emulator -list-avds
+      echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd -n test_android_emulator -k 'system-images;android-27;google_apis;x86' --force
+      $ANDROID_HOME/emulator/emulator -list-avds
+    displayName: 'Create AVD'
+  - script: |
+      nohup $ANDROID_HOME/emulator/emulator -avd test_android_emulator -no-snapshot -skin 600x400 > /dev/null 2>&1 & $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
+    displayName: 'Start Android emulator'
+  - script: |
+      adb install -t -g Apps/ValidationTests/Android/app/build/outputs/apk/debug/app-debug.apk
+      adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
+      sleep 300
+      adb logcat -t 5000
+      mkdir Captures
+      adb exec-out run-as com.android.babylonnative.validationtests tar c cache/ > Captures/cache.tar
+    displayName: 'Install and run APK'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'AndroidJSC Rendered Pictures'
+      pathtoPublish: 'Captures'
+    displayName: 'Publish Tests AndroidJSC Results'
+    
 - job: Ubuntu
   pool:
     vmImage: 'ubuntu-latest'
