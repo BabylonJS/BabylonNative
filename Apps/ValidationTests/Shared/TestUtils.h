@@ -51,7 +51,8 @@ namespace Babylon
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
                     ParentT::InstanceMethod("getWorkingDirectory", &TestUtils::GetWorkingDirectory),
-                    ParentT::InstanceMethod("getImageOutputDirectory", &TestUtils::GetImageOutputDirectory),
+                    ParentT::InstanceMethod("getImageResultOutputDirectory", &TestUtils::GetImageResultOutputDirectory),
+                    ParentT::InstanceMethod("getImageErrorOutputDirectory", &TestUtils::GetImageErrorOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
@@ -186,23 +187,38 @@ namespace Babylon
         Napi::Value GetWorkingDirectory(const Napi::CallbackInfo& info)
         {
 #if ANDROID
-            auto path = "";
+            auto path = "app://";
 #else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
-            path += "/..";
+            path = "file://.." + path;
 #endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }
-        Napi::Value GetImageOutputDirectory(const Napi::CallbackInfo& info)
+
+        std::string GetOutputDirectory(const std::string& suffix)
         {
 #if ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-            return Napi::Value::From(info.Env(), path);
 #else
-            return GetWorkingDirectory(info);
+            auto path = GetModulePath().parent_path().generic_string();
+#ifdef WIN32
+            path = "file://.." + path;
 #endif
+            path += suffix;
+#endif
+            return path;
+        }
+
+        Napi::Value GetImageResultOutputDirectory(const Napi::CallbackInfo& info)
+        {
+            return Napi::Value::From(info.Env(), GetOutputDirectory("/Results"));
+        }
+
+        Napi::Value GetImageErrorOutputDirectory(const Napi::CallbackInfo& info)
+        {
+            return Napi::Value::From(info.Env(), GetOutputDirectory("/Errors"));
         }
 
         inline static void* _nativeWindowPtr{};
