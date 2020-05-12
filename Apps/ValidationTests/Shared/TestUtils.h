@@ -191,7 +191,7 @@ namespace Babylon
 #else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
-            path = "file://.." + path;
+            path = "file://" + path + "/..";
 #endif
 #endif
             return Napi::Value::From(info.Env(), path);
@@ -204,7 +204,7 @@ namespace Babylon
 #else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
-            path = "file://.." + path;
+            path += "/..";
 #endif
             path += suffix;
 #endif

@@ -38,10 +38,10 @@ function compare(test, canvasImageData, referenceImage) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.GetImageResultOutputDirectory() + "/" + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getImageResultOutputDirectory() + "/" + test.title + ".png");
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.GetImageResultOutputDirectory() + "/" + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getImageResultOutputDirectory() + "/" + test.title + ".png");
     }
     return error;
 }
