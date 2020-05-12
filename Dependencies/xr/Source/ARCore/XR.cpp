@@ -253,12 +253,14 @@ namespace xr
             // Check and request camera permissions
             // Wait up to 30 seconds for user to grant permissions.
             {
-                if (!GetAppContext().checkPermission("CAMERA", true))
+                if (!GetAppContext().checkSelfPermission("CAMERA"))
                 {
+                    GetMainActivity().requestPermissions("CAMERA", PERMISSION_REQUEST_ID);
+
                     for (int retryCount = 0; retryCount < 300; retryCount++)
                     {
                         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                        if (GetAppContext().checkPermission("CAMERA", false))
+                        if (GetAppContext().checkSelfPermission("CAMERA"))
                         {
                             break;
                         }
@@ -585,6 +587,7 @@ namespace xr
         }
 
     private:
+        const int PERMISSION_REQUEST_ID = 8435;
         bool sessionEnded{false};
 
         GLuint shaderProgramId{};

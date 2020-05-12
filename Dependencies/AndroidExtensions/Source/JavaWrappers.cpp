@@ -171,13 +171,17 @@ namespace android::app
     {
     }
 
-    void Activity::requestPermission(java::lang::String systemPermissionName)
+    void Activity::requestPermissions(const char* permissionName, int permissionRequestID)
     {
+        jclass cls{m_env->FindClass("android/Manifest$permission")};
+        jfieldID permId{m_env->GetStaticFieldID(cls, permissionName, "Ljava/lang/String;")};
+        jstring systemPermissionName{(jstring)m_env->GetStaticObjectField(cls, permId)};
+
         jobjectArray permissionArray{m_env->NewObjectArray(
             1,
             m_env->FindClass("java/lang/String"),
             systemPermissionName)};
-        m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "requestPermissions", "([Ljava/lang/String;I)V"), permissionArray);
+        m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "requestPermissions", "([Ljava/lang/String;I)V"), permissionArray, permissionRequestID);
     }
 }
 
@@ -203,7 +207,7 @@ namespace android::content
         return m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
     }
 
-    bool Context::checkPermission(const char* permissionName, bool requestIfInvalid)
+    bool Context::checkSelfPermission(const char* permissionName)
     {
         jclass cls{m_env->FindClass("android/Manifest$permission")};
         jfieldID permId{m_env->GetStaticFieldID(cls, permissionName, "Ljava/lang/String;")};
@@ -216,17 +220,7 @@ namespace android::content
 
         // Perform the actual permission check by checking against the android context object.
         jint permissionCheckResult{m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "checkSelfPermission", "(Ljava/lang/String;)I"), systemPermissionName)};
-        bool permissionGranted{permissionGrantedValue == permissionCheckResult};
-
-        // If the permission check failed, then attempt to request permissions.
-        if (!permissionGranted && requestIfInvalid)
-        {
-            GetMainActivity().requestPermission({systemPermissionName});
-            return false;
-        }
-
-        // Send back the result.
-        return permissionGranted;
+        return permissionGrantedValue == permissionCheckResult;
     }
 }
 

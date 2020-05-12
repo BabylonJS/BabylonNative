@@ -167,7 +167,7 @@ namespace android::app
     public:
         Activity(jobject object);
 
-        void requestPermission(java::lang::String systemPermissionName);
+        void requestPermissions(const char* permissionName, int permissionRequestID);
     };
 }
 
@@ -190,7 +190,7 @@ namespace android::content
 
         jobject getSystemService(const char* serviceName);
 
-        bool checkPermission(const char* permissionName, bool requestIfInvalid);
+        bool checkSelfPermission(const char* permissionName);
     };
 }
 

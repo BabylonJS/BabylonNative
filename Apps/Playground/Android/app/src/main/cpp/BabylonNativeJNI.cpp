@@ -147,8 +147,9 @@ extern "C"
         for (int i = 0; i < env->GetArrayLength(permissions); i++)
         {
             jstring permission = (jstring)env->GetObjectArrayElement(permissions, i);
-            nativePermissions.push_back({env->GetStringUTFChars(permission, nullptr)});
-            env->ReleaseStringUTFChars(permission, nullptr);
+            const char* utfString{env->GetStringUTFChars(permission, nullptr)};
+            nativePermissions.push_back(utfString);
+            env->ReleaseStringUTFChars(permission, utfString);
         }
 
         auto grantResultElements{env->GetIntArrayElements(grantResults, nullptr)};
