@@ -290,8 +290,8 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   variables:
-    CC: gcc
-    CXX: g++
+    CC: gcc-8
+    CXX: g++-8
 
   steps:
   - script: |
