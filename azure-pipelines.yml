@@ -262,6 +262,7 @@ jobs:
       adb install -t -g Apps/ValidationTests/Android/app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
       sleep 150
+      while [ $(adb shell pidof com.android.babylonnative.validationtests) -ge 1]; do sleep 1; done;
       adb logcat -t 5000
       mkdir Captures
       adb exec-out run-as com.android.babylonnative.validationtests tar c cache/ > Captures/cache.tar
