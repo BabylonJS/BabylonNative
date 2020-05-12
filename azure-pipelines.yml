@@ -229,15 +229,15 @@ jobs:
       cd Apps/ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs ValidationTests'
-#  - task: Gradle@2
-#    inputs:
-#        workingDirectory: 'Apps/Playground/Android'
-#        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-#        gradleOptions: '-Xmx1536m'
-#        options: '-PJSEngine=v8android'
-#        publishJUnitResults: false
-#        tasks: 'assembleDebug'
-#    displayName: 'Build androidV8 Playground'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/Playground/Android'
+        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleDebug'
+    displayName: 'Build androidV8 Playground'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/ValidationTests/Android'
@@ -262,16 +262,16 @@ jobs:
       adb install -t -g Apps/ValidationTests/Android/app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
       sleep 150
-      while [ $(adb shell pidof com.android.babylonnative.validationtests) -ge 1]; do sleep 1; done;
+      while [ $(adb shell pidof com.android.babylonnative.validationtests) -ge 1 ]; do sleep 1; done;
       adb logcat -t 5000
       mkdir Captures
       adb exec-out run-as com.android.babylonnative.validationtests tar c cache/ > Captures/cache.tar
     displayName: 'Install and run APK'
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'androidV8 Rendered Pictures'
+      artifactName: 'AndroidV8 Rendered Pictures'
       pathtoPublish: 'Captures'
-    displayName: 'Publish Tests androidV8 Results'
+    displayName: 'Publish Tests AndroidV8 Results'
 
 - job: androidJSC
   pool:
