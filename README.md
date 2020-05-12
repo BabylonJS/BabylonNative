@@ -318,6 +318,23 @@ or
 make
 ```
 
+You can switch compiler between GCC and Clang by defining shell variables.
+And example for clang
+
+```
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
+```
+
+and GCC
+
+```
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+```
+
+You will have to run CMake again to take changes into account.
+
 ## Development Notes
 
 ### glslang and SPIRV-Cross
