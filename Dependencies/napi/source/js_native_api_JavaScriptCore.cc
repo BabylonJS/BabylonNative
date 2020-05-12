@@ -359,6 +359,8 @@ namespace {
 
   class ExternalInfo : public NativeInfo {
    public:
+    using FinalizerT = std::function<void(ExternalInfo*)>;
+   
     static napi_status Create(napi_env env,
                               void* data,
                               napi_finalize finalize_cb,
@@ -381,15 +383,6 @@ namespace {
       return napi_ok;
     }
 
-    static napi_status Unwrap(napi_env env, napi_value object, ExternalInfo** result) {
-      napi_value prototype{};
-      CHECK_NAPI(napi_get_prototype(env, object, &prototype));
-
-      ExternalInfo* info{reinterpret_cast<ExternalInfo*>(JSObjectGetPrivate(ToJSObject(env, prototype)))};
-      *result = ((info != nullptr && info->Type() == NativeType::External) ? info : nullptr);
-      return napi_ok;
-    }
-    
     static napi_status Wrap(napi_env env, napi_value object, ExternalInfo** result) {
       ExternalInfo* info{};
       CHECK_NAPI(Unwrap(env, object, &info));
@@ -408,6 +401,15 @@ namespace {
       return napi_ok;
     }
 
+    static napi_status Unwrap(napi_env env, napi_value object, ExternalInfo** result) {
+      napi_value prototype{};
+      CHECK_NAPI(napi_get_prototype(env, object, &prototype));
+
+      ExternalInfo* info{reinterpret_cast<ExternalInfo*>(JSObjectGetPrivate(ToJSObject(env, prototype)))};
+      *result = ((info != nullptr && info->Type() == NativeType::External) ? info : nullptr);
+      return napi_ok;
+    }
+    
     ~ExternalInfo() {
       JSClassRelease(_class);
     }
@@ -424,10 +426,8 @@ namespace {
       return _data;
     }
     
-    using Finalizer = std::function<void(ExternalInfo*)>;
-
-    void AddFinalizer(Finalizer finalizer) {
-      return _finalizers.push_back(finalizer);
+    void AddFinalizer(FinalizerT finalizer) {
+      _finalizers.push_back(finalizer);
     }
     
    private:
@@ -444,7 +444,7 @@ namespace {
     static void Finalize(JSObjectRef object) {
       ExternalInfo* info{reinterpret_cast<ExternalInfo*>(JSObjectGetPrivate(object))};
       assert(info->Type() == NativeType::External);
-      for (const Finalizer& finalizer : info->_finalizers) {
+      for (const FinalizerT& finalizer : info->_finalizers) {
         finalizer(info);
       }
       delete info;
@@ -452,7 +452,7 @@ namespace {
 
     napi_env _env;
     void* _data{};
-    std::vector<Finalizer> _finalizers{};
+    std::vector<FinalizerT> _finalizers{};
     JSClassRef _class{};
   };
 
@@ -502,13 +502,6 @@ namespace {
     napi_finalize _cb;
     void* _hint;
   };
-
-  napi_status napi_add_finalizer(napi_env env, napi_value value, ExternalInfo::Finalizer finalizer) {
-    ExternalInfo* info{};
-    CHECK_NAPI(ExternalInfo::Wrap(env, value, &info));
-    info->AddFinalizer(finalizer);
-    return napi_ok;
-  }
 }
 
 struct napi_ref__ {
@@ -521,9 +514,11 @@ struct napi_ref__ {
     // track the ref values to support weak refs
     auto pair{env->active_ref_values.insert(_value)};
     if (pair.second) {
-      CHECK_NAPI(napi_add_finalizer(env, _value, [iter{pair.first}](ExternalInfo* info) {
+      ExternalInfo* info{};
+      CHECK_NAPI(ExternalInfo::Wrap(env, _value, &info));
+      info->AddFinalizer([iter{pair.first}](ExternalInfo* info) {
         info->Env()->active_ref_values.erase(iter);
-      }));
+      });
     }
     
     if (_count != 0) {
@@ -1721,22 +1716,16 @@ napi_status napi_unwrap(napi_env env, napi_value js_object, void** result) {
 napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) {
   CHECK_ENV(env);
   CHECK_ARG(env, js_object);
+  
+  // Once an object is wrapped, it stays wrapped in order to support finalizer callbacks.
+  
+  ExternalInfo* info{};
+  CHECK_NAPI(ExternalInfo::Unwrap(env, js_object, &info));
+  RETURN_STATUS_IF_FALSE(env, info != nullptr && info->Data() != nullptr, napi_invalid_arg);
+  info->Data(nullptr);
 
-  // TODO: implement
-//  napi_value prototype{};
-//  CHECK_NAPI(napi_get_prototype(env, js_object, &prototype));
-//
-//  void* native_object{};
-//  CHECK_NAPI(napi_get_value_external(env, prototype, &native_object));
-//  RETURN_STATUS_IF_FALSE(env, native_object != nullptr, napi_invalid_arg);
-//
-//  napi_value child_prototype{};
-//  CHECK_NAPI(napi_get_prototype(env, prototype, &child_prototype));
-//  JSObjectSetPrototype(env->context, ToJSObject(env, js_object), ToJSObject(env, child_prototype));
-//
-//  *result = native_object;
-//  return napi_ok;
-  throw std::runtime_error("not impl");
+  *result = info->Data();
+  return napi_ok;
 }
 
 napi_status napi_create_external(napi_env env,
