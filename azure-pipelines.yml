@@ -262,7 +262,7 @@ jobs:
         tasks: 'assembleDebug'
     displayName: 'Build androidJSC'
 
-- job: Ubuntu
+- job: Ubuntu_Clang8
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -277,6 +277,29 @@ jobs:
   - script: |
       sudo apt-get update
       sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
+    displayName: 'Install packages'
+  - script: |
+      mkdir build
+      cd build
+      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
+      ninja
+    displayName: 'Build X11'
+    
+- job: Ubuntu_GCC
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  variables:
+    CC: gcc
+    CXX: g++
+
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      sudo apt-get update
+      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev gcc-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
     displayName: 'Install packages'
   - script: |
       mkdir build
