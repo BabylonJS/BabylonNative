@@ -90,10 +90,15 @@ if( BGFX_INSTALL )
 	# Configure '<PROJECT-NAME>ConfigVersion.cmake'
 	# Use:
 	#   * PROJECT_VERSION
+	if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
+		set(BGFX_COMPATIBILITY SameMajorVersion)
+	else()
+		set(BGFX_COMPATIBILITY SameMinorVersion)
+	endif()
 	write_basic_package_version_file(
 		"${version_config}"
 		VERSION ${PROJECT_VERSION}
-		COMPATIBILITY SameMinorVersion
+		COMPATIBILITY ${BGFX_COMPATIBILITY}
 	)
 
 	# Configure '<PROJECT-NAME>Config.cmake'
