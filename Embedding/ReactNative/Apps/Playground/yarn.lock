@@ -690,10 +690,10 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@babylonjs/core@4.2.0-alpha.9":
-  version "4.2.0-alpha.9"
-  resolved "https://registry.yarnpkg.com/@babylonjs/core/-/core-4.2.0-alpha.9.tgz#6e058d2743d3b85202a5b79245b67e40a9d820e4"
-  integrity sha512-kJfFW3IWNmGytmqAZovVCiXVoTGEuUes06v4HgN6JA+MWkhyKlFAbtlsLin/bw4bSRYd/V9Cmqzvrswv9rsRcQ==
+"@babylonjs/core@4.2.0-alpha.16":
+  version "4.2.0-alpha.16"
+  resolved "https://registry.yarnpkg.com/@babylonjs/core/-/core-4.2.0-alpha.16.tgz#a0ec92f647d8e52aacedb605bfcdaa9dc71152ea"
+  integrity sha512-I6WP+u5U99ZtygKanO6wxon0KpYD3qV63oTQx8ZyqlCrQte/F9viB4xyOvb5rSWlZvMeGgcsUV66kJ+9upPihA==
   dependencies:
     tslib "^1.10.0"
 
