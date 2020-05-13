@@ -303,37 +303,50 @@ namespace xr
             }
         }
 
-        arcana::task<void, std::exception_ptr> InitializeAsync()
+        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
         {
-            arcana::task_completion_source<void, std::exception_ptr> initTcs;
-
-            // Request to install the ARCore apk if not installed yet.
-            {
-                ArInstallStatus install_status;
-                ArStatus installStatus = ArCoreApk_requestInstall(
-                        GetEnvForCurrentThread(), GetMainActivity(), false, &install_status);
-                if (installStatus != AR_SUCCESS)
-                {
-                    std::ostringstream message;
-                    message << "Failed to create ArSession with status: " << installStatus;
-                    throw std::runtime_error{message.str()};
-                }
-            }
-
             if (!GetAppContext().checkSelfPermission("CAMERA"))
             {
                 GetMainActivity().requestPermissions("CAMERA", PERMISSION_REQUEST_ID);
-                permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, initTcs]() mutable
+                return permissionTcs.as_task();
+            }
+
+            return arcana::task_from_result<std::exception_ptr>();
+        }
+
+        bool CheckARCoreInstallStatus(bool requestInstall)
+        {
+            ArInstallStatus install_status;
+            ArStatus installStatus = ArCoreApk_requestInstall(
+                    GetEnvForCurrentThread(), GetMainActivity(), requestInstall, &install_status);
+            return install_status == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
+        }
+
+        arcana::task<void, std::exception_ptr> CheckAndInstallARCore()
+        {
+            bool installed = CheckARCoreInstallStatus(true);
+            if (!installed)
+            {
+                pendingInstall = true;
+                return installTcs.as_task();
+            }
+            else
+            {
+                return arcana::task_from_result<std::exception_ptr>();
+            }
+        }
+
+        arcana::task<void, std::exception_ptr> InitializeAsync()
+        {
+            arcana::task_completion_source<void, std::exception_ptr> initTcs;
+            CheckAndInstallARCore().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, initTcs]() mutable
+            {
+                CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, initTcs]() mutable
                 {
                     StartARSession();
                     initTcs.complete();
                 });
-            }
-            else
-            {
-                StartARSession();
-                initTcs.complete();
-            }
+            });
 
             return initTcs.as_task();
         }
@@ -599,6 +612,7 @@ namespace xr
     private:
         const int PERMISSION_REQUEST_ID = 8435;
         bool sessionEnded{false};
+        bool pendingInstall{false};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -616,6 +630,7 @@ namespace xr
         AppStateChangedCallbackTicket resumeTicket;
         RequestPermissionsResultCallbackTicket permissionTicket;
         arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
+        arcana::task_completion_source<void, std::exception_ptr> installTcs;
 
         void PauseSession()
         {
@@ -627,7 +642,16 @@ namespace xr
 
         void ResumeSession()
         {
-            if (session)
+            if (pendingInstall)
+            {
+                if (!CheckARCoreInstallStatus(false))
+                {
+                    std::ostringstream message;
+                    message << "ARCore APK not installed.";
+                    throw std::runtime_error{message.str()};
+                }
+            }
+            else if (session)
             {
                 ArSession_resume(session);
             }
