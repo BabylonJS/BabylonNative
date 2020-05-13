@@ -3,8 +3,8 @@ var turntable = false;
 var logfps = true;
 var ibl = false;
 var rtt = false;
-var xr = false;
-var xrHitTest = false;
+var xr = true;
+var xrHitTest = true;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -154,7 +154,7 @@ CreateBoxAsync().then(function () {
                     }, 5000);
                 }
 
-                xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
+                xr.baseExperience.enterXRAsync("immersive-ar", "unbounded", xr.renderTarget);
             });
         }, 5000);
     }

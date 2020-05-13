@@ -652,6 +652,7 @@ namespace xr
         {
             if (pendingInstall)
             {
+                pendingInstall = false;
                 if (!CheckARCoreInstallStatus(false))
                 {
                     std::ostringstream message;
