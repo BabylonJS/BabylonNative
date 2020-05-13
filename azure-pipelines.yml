@@ -263,7 +263,7 @@ jobs:
     displayName: 'Build androidJSC'
 
 - job: Ubuntu_Clang8_JSC
-  timeoutInMinutes: 10
+  timeoutInMinutes: 20
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -301,6 +301,7 @@ jobs:
     displayName: 'Publish Tests Ubuntu_Clang8_JSC Results'
     
 - job: Ubuntu_GCC9_JSC
+  timeoutInMinutes: 20
   pool:
     vmImage: 'ubuntu-latest'
 
