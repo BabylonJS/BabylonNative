@@ -658,6 +658,10 @@ namespace xr
                     message << "ARCore APK not installed.";
                     throw std::runtime_error{message.str()};
                 }
+                else
+                {
+                    installTcs.complete();
+                }
             }
             else if (session)
             {
