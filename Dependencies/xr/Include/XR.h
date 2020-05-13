@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <arcana/threading/task.h>
 
 namespace xr
 {
@@ -141,6 +142,7 @@ namespace xr
 
             Session(System& system, void* graphicsDevice);
             ~Session();
+            arcana::task<void, std::exception_ptr> InitializeAsync();
 
             Session(Session&) = delete;
             Session& operator=(Session&&) = delete;
@@ -162,7 +164,7 @@ namespace xr
 
         bool IsInitialized() const;
         bool TryInitialize();
-        static bool IsSessionSupported(SessionType);
+        static arcana::task<bool, std::exception_ptr> IsSessionSupportedAsync(SessionType);
 
     private:
         class Impl;

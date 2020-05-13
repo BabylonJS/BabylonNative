@@ -8,6 +8,7 @@
 
 #include <set>
 #include <napi/napi.h>
+#include <arcana/threading/task.h>
 
 namespace
 {
@@ -147,7 +148,7 @@ namespace Babylon
         NativeXr();
         ~NativeXr();
 
-        void BeginSession(Napi::Env env); // TODO: Make this asynchronous.
+        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
         void EndSession();                // TODO: Make this asynchronous.
 
         auto ActiveFrameBuffers() const
@@ -226,7 +227,7 @@ namespace Babylon
     }
 
     // TODO: Make this asynchronous.
-    void NativeXr::BeginSession(Napi::Env env)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -240,6 +241,7 @@ namespace Babylon
         }
 
         m_session = std::make_unique<xr::System::Session>(m_system, bgfx::getInternalData()->context);
+        return m_session->InitializeAsync();
     }
 
     // TODO: Make this asynchronous.
@@ -1191,10 +1193,12 @@ namespace Babylon
                 auto jsSession = info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
                 auto& session = *XRSession::Unwrap(jsSession);
 
-                session.m_xr.BeginSession(info.Env());
-
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(jsSession);
+                session.m_xr.BeginSession(info.Env()).then(arcana::inline_scheduler, arcana::cancellation::none(), [deferred, jsSession]()
+                {
+                    deferred.Resolve(jsSession);
+                });
+
                 return deferred.Promise();
             }
 
@@ -1586,7 +1590,13 @@ namespace Babylon
                 }
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(Napi::Boolean::New(info.Env(), xr::System::IsSessionSupported(sessionType)));
+
+                // Fire off the IsSessionSupported task.
+                xr::System::IsSessionSupportedAsync(sessionType).then(arcana::inline_scheduler, arcana::cancellation::none(), [&](bool result)
+                {
+                    deferred.Resolve(Napi::Boolean::New(info.Env(), result));
+                });
+
                 return deferred.Promise();
             }
 

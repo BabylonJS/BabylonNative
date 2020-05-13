@@ -4,6 +4,7 @@
 #include <optional>
 #include <sstream>
 #include <chrono>
+#include <arcana/threading/task.h>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -26,6 +27,7 @@
 #include <gtx/quaternion.hpp>
 #include <thread>
 #include <chrono>
+#include <arcana/threading/dispatcher.h>
 
 using namespace android::global;
 
@@ -222,6 +224,13 @@ namespace xr
             : SystemImpl{ systemImpl }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
+            , permissionTicket
+            {
+                AddRequestPermissionsResultCallback([this](int32_t requestCode, const std::vector<std::string>& permissionList, const std::vector<int32_t>& results)
+                {
+                    this->CameraPermissionCallback(requestCode, permissionList, results);
+                }
+            )}
         {
             // Note: graphicsContext is an EGLContext
 
@@ -236,44 +245,25 @@ namespace xr
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
             shaderProgramId = CreateShaderProgram();
+        }
 
-            // Request to install the ARCore apk if not installed yet.
-            {
-                ArInstallStatus install_status;
-                ArStatus installStatus = ArCoreApk_requestInstall(
-                        GetEnvForCurrentThread(), GetMainActivity(), false, &install_status);
-                if (installStatus != AR_SUCCESS)
-                {
-                    std::ostringstream message;
-                    message << "Failed to create ArSession with status: " << installStatus;
-                    throw std::runtime_error{message.str()};
-                }
-            }
+        ~Impl()
+        {
+            ArPose_destroy(cameraPose);
+            ArPose_destroy(hitResultPose);
+            ArHitResult_destroy(hitResult);
+            ArHitResultList_destroy(hitResultList);
+            ArFrame_destroy(frame);
+            ArSession_destroy(session);
 
-            // Check and request camera permissions
-            // Wait up to 30 seconds for user to grant permissions.
-            {
-                if (!GetAppContext().checkSelfPermission("CAMERA"))
-                {
-                    GetMainActivity().requestPermissions("CAMERA", PERMISSION_REQUEST_ID);
+            glDeleteTextures(1, &cameraTextureId);
+            glDeleteProgram(shaderProgramId);
 
-                    for (int retryCount = 0; retryCount < 300; retryCount++)
-                    {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                        if (GetAppContext().checkSelfPermission("CAMERA"))
-                        {
-                            break;
-                        }
-                        else if (retryCount == 299)
-                        {
-                            std::ostringstream message;
-                            message << "Camera permission not acquired successfully";
-                            throw std::runtime_error{message.str()};
-                        }
-                    }
-                }
-            }
+            DestroyDisplayResources();
+        }
 
+        void StartARSession()
+        {
             // Create the ARCore ArSession
             {
                 ArStatus status = ArSession_create(GetEnvForCurrentThread(), GetAppContext(), &session);
@@ -313,19 +303,39 @@ namespace xr
             }
         }
 
-        ~Impl()
+        arcana::task<void, std::exception_ptr> InitializeAsync()
         {
-            ArPose_destroy(cameraPose);
-            ArPose_destroy(hitResultPose);
-            ArHitResult_destroy(hitResult);
-            ArHitResultList_destroy(hitResultList);
-            ArFrame_destroy(frame);
-            ArSession_destroy(session);
+            arcana::task_completion_source<void, std::exception_ptr> initTcs;
 
-            glDeleteTextures(1, &cameraTextureId);
-            glDeleteProgram(shaderProgramId);
+            // Request to install the ARCore apk if not installed yet.
+            {
+                ArInstallStatus install_status;
+                ArStatus installStatus = ArCoreApk_requestInstall(
+                        GetEnvForCurrentThread(), GetMainActivity(), false, &install_status);
+                if (installStatus != AR_SUCCESS)
+                {
+                    std::ostringstream message;
+                    message << "Failed to create ArSession with status: " << installStatus;
+                    throw std::runtime_error{message.str()};
+                }
+            }
 
-            DestroyDisplayResources();
+            if (!GetAppContext().checkSelfPermission("CAMERA"))
+            {
+                GetMainActivity().requestPermissions("CAMERA", PERMISSION_REQUEST_ID);
+                permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, initTcs]() mutable
+                {
+                    StartARSession();
+                    initTcs.complete();
+                });
+            }
+            else
+            {
+                StartARSession();
+                initTcs.complete();
+            }
+
+            return initTcs.as_task();
         }
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
@@ -604,6 +614,8 @@ namespace xr
 
         AppStateChangedCallbackTicket pauseTicket;
         AppStateChangedCallbackTicket resumeTicket;
+        RequestPermissionsResultCallbackTicket permissionTicket;
+        arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
 
         void PauseSession()
         {
@@ -618,6 +630,23 @@ namespace xr
             if (session)
             {
                 ArSession_resume(session);
+            }
+        }
+
+        void CameraPermissionCallback(int32_t requestCode, const std::vector<std::string>& permissions, const std::vector<std::int32_t>& results)
+        {
+            if (requestCode == PERMISSION_REQUEST_ID)
+            {
+                if (results[0] == 0)
+                {
+                    permissionTcs.complete();
+                }
+                else
+                {
+                    std::ostringstream message;
+                    message << "Camera permission not acquired successfully";
+                    permissionTcs.complete();
+                }
             }
         }
 
@@ -682,34 +711,55 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    bool System::IsSessionSupported(SessionType sessionType)
+    arcana::background_dispatcher<64> scheduler;
+    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
     {
-        // Query ARCore to check if AR sessions are supported.
-        // If uninstalled then retry up to 5 times over 2.5 seconds
+        // Currently only AR is supported on Android
         if (sessionType == SessionType::IMMERSIVE_AR)
         {
-            for (int retryCount = 0; retryCount < 5; retryCount++)
+            // Spin up a background thread to own the polling check.
+            arcana::task_completion_source<bool, std::exception_ptr> tcs;
+            arcana::make_task(scheduler, arcana::cancellation::none(), [sessionType, tcs]() mutable
             {
-                ArAvailability arAvailability{};
-                ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(), &arAvailability);
-
-                switch (arAvailability)
+                // Query ARCore to check if AR sessions are supported.
+                // If not yet installed then poll supported status up to 100 times over 20 seconds.
+                for (int i = 0; i < 100; i++)
                 {
-                    case AR_AVAILABILITY_SUPPORTED_APK_TOO_OLD:
-                    case AR_AVAILABILITY_SUPPORTED_INSTALLED:
-                    case AR_AVAILABILITY_SUPPORTED_NOT_INSTALLED:
-                        return true;
-                    case AR_AVAILABILITY_UNKNOWN_CHECKING:
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                        continue;
-                    default:
-                        return false;
+                    ArAvailability arAvailability{};
+                    ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(),
+                                                &arAvailability);
+                    switch (arAvailability)
+                    {
+                        case AR_AVAILABILITY_SUPPORTED_APK_TOO_OLD:
+                        case AR_AVAILABILITY_SUPPORTED_INSTALLED:
+                        case AR_AVAILABILITY_SUPPORTED_NOT_INSTALLED:
+                            tcs.complete(true);
+                            break;
+                        case AR_AVAILABILITY_UNKNOWN_CHECKING:
+                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                            break;
+                        default:
+                            tcs.complete(false);
+                            break;
+                    }
+
+                    if (tcs.completed())
+                    {
+                        break;
+                    }
                 }
-            }
+
+                if (!tcs.completed())
+                {
+                    tcs.complete(false);
+                }
+            });
+
+            return tcs.as_task();
         }
 
         // VR and inline sessions are not supported at this time.
-        return false;
+        return arcana::task_from_result<std::exception_ptr, bool>(false);
     }
 
     System::Session::Session(System& system, void* graphicsDevice)
@@ -718,6 +768,13 @@ namespace xr
 
     System::Session::~Session()
     {
+    }
+
+
+
+    arcana::task<void, std::exception_ptr> System::Session::InitializeAsync()
+    {
+        return m_impl->InitializeAsync();
     }
 
     std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)

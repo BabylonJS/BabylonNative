@@ -4,6 +4,8 @@
 
 #include <assert.h>
 #include <optional>
+#include <arcana/threading/task.h>
+#include <arcana/threading/task_conversions.h>
 
 namespace xr
 {
@@ -815,10 +817,10 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    static bool System::IsSessionSupported(SessionType sessionType) const
+    static arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
     {
         // Only immersive_VR is supported for now.
-        return sessionType == SessionType::IMMERSIVE_VR;
+        return arcana::task_from_result<bool, std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
     }
 
     System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
