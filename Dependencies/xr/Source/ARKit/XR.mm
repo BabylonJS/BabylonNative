@@ -8,7 +8,8 @@ extern void* GCALayerPtr;
 
 extern id<MTLDevice> MetalDevice;
 @interface SessionDelegate : NSObject <ARSessionDelegate>
-@property (readonly) id<MTLTexture> cameraTexture;
+@property (readonly) id<MTLTexture> cameraTextureY;
+@property (readonly) id<MTLTexture> cameraTextureCbCr;
 @end
 
 @implementation SessionDelegate
@@ -17,7 +18,8 @@ extern id<MTLDevice> MetalDevice;
     int height;
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
     CVMetalTextureCacheRef textureCache;
-    id<MTLTexture> _cameraTexture;
+    id<MTLTexture> _cameraTextureY;
+    id<MTLTexture> _cameraTextureCbCr;
 }
 
 - (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext
@@ -28,24 +30,23 @@ extern id<MTLDevice> MetalDevice;
     CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, 0, graphicsContext, 0, &textureCache);
     if (err)
     {
-        // TODO: handle error
+        throw std::runtime_error{"Unable to create Texture Cache"};
     }
     
     return self;
 }
 
-- (id<MTLTexture>)updateCapturedTexture:(CVPixelBufferRef)pixelBuffer
+- (id<MTLTexture>)updateCapturedTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex
 {
     CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (ret != kCVReturnSuccess)
     {
         return {};
     }
-    int planeIndex = 0;
     width = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
     height = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
         
-    auto pixelFormat = MTLPixelFormatR8Unorm;
+    auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
     id<MTLTexture> mtlTexture;
     CVMetalTextureRef texture;
     auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, NULL, pixelFormat, width, height, planeIndex, &texture);
@@ -91,7 +92,8 @@ extern id<MTLDevice> MetalDevice;
         return;
     }
     
-    _cameraTexture = [self updateCapturedTexture:pixel_buffer];
+    _cameraTextureY = [self updateCapturedTexture:pixel_buffer plane:0];
+    _cameraTextureCbCr = [self updateCapturedTexture:pixel_buffer plane:1];
     [self updateCamera:frame.camera];
 }
 
@@ -119,12 +121,97 @@ extern id<MTLDevice> MetalDevice;
     
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
-    NSLog(@"Update Camera");
 }
 
 @end
 namespace xr
 {
+    namespace
+    {
+        typedef struct
+        {
+            vector_float2 position;
+            vector_float2 uv;
+        } XRVertex;
+
+        static const XRVertex triangleVertices[] =
+        {
+            // 2D positions,    UV
+            { { -3, -1 }, { -1, 0 } },
+            { {  1,  3 }, {  1, 2 } },
+            { {  1, -1 }, {  1, 0 } },
+        };
+
+        const char* shaderSource = R"(
+            #include <metal_stdlib>
+            #include <simd/simd.h>
+
+            using namespace metal;
+
+            #include <simd/simd.h>
+
+            typedef struct
+            {
+                vector_float2 position;
+                vector_float2 uv;
+            } XRVertex;
+
+            typedef struct
+            {
+                float4 position [[position]];
+                float2 uv;
+            } RasterizerData;
+
+            vertex RasterizerData
+            vertexShader(uint vertexID [[vertex_id]],
+                         constant XRVertex *vertices [[buffer(0)]])
+            {
+                RasterizerData out;
+                out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
+                out.uv = vertices[vertexID].uv;
+                return out;
+            }
+
+            fragment float4 fragmentShader(RasterizerData in [[stage_in]],
+                texture2d<float, access::sample> babylonTexture [[ texture(0) ]],
+                texture2d<float, access::sample> cameraTextureY [[ texture(1) ]],
+                texture2d<float, access::sample> cameraTextureCbCr [[ texture(2) ]])
+            {
+                constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
+
+                const float4 babylonSample = babylonTexture.sample(linearSampler, in.uv);
+                const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.uv);
+                const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.uv);
+
+                const float4x4 ycbcrToRGBTransform = float4x4(
+                    float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
+                    float4(+0.0000f, -0.3441f, +1.7720f, +0.0000f),
+                    float4(+1.4020f, -0.7141f, +0.0000f, +0.0000f),
+                    float4(-0.7010f, +0.5291f, -0.8860f, +1.0000f)
+                );
+
+                float4 ycbcr = float4(cameraSampleY.r, cameraSampleCbCr.rg, 1.0);
+                float4 cameraSample = ycbcrToRGBTransform * ycbcr;
+                cameraSample.a = 1.0;
+
+                const float4 mixed = mix(cameraSample, babylonSample, babylonSample.a);
+
+                return mixed;
+            }
+        )";
+
+        id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source)
+        {
+            NSError* error;
+            id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
+            if(NULL != error)
+            {
+                throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
+            }
+            return lib;
+        }
+    }
+    
     class System::Impl
     {
     public:
@@ -146,23 +233,14 @@ namespace xr
     class System::Session::Impl
     {
     public:
-        const System::Impl& HmdImpl;
+        const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
-        bool SessionEnded{ false };
-        id<MTLDevice> MetalDevice;
-        CAMetalLayer* MetalLayer;
-        ARSession* session{};
-        SessionDelegate* sessionDelegate{};
-        ARWorldTrackingConfiguration* configuration{};
-        id<MTLRenderPipelineState> pipelineState;
-        vector_uint2 viewportSize;
-        id<MTLCommandQueue> commandQueue;
-        
-        Impl(System::Impl& hmdImpl, void* graphicsContext)
-            : HmdImpl{ hmdImpl }
+
+        Impl(System::Impl& systemImpl, void* graphicsContext)
+            : SystemImpl{ systemImpl }
         {
             configuration = [ARWorldTrackingConfiguration new];
             session = [ARSession new];
@@ -176,50 +254,7 @@ namespace xr
             
             // build pipeline
             NSError* error;
-            const char* source = R"(
-                #include <metal_stdlib>
-                #include <simd/simd.h>
-
-                using namespace metal;
-
-                #include <simd/simd.h>
-
-                typedef struct
-                {
-                    vector_float2 position;
-                    vector_float2 uv;
-                } XRVertex;
-
-                typedef struct
-                {
-                    float4 position [[position]];
-                    float2 uv;
-                } RasterizerData;
-
-                vertex RasterizerData
-                vertexShader(uint vertexID [[vertex_id]],
-                             constant XRVertex *vertices [[buffer(0)]])
-                {
-                    RasterizerData out;
-                    out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
-                    out.uv = vertices[vertexID].uv;
-                    return out;
-                }
-
-                fragment float4 fragmentShader(RasterizerData in [[stage_in]],
-                    texture2d<half> babylonTexture [[ texture(0) ]],
-                    texture2d<half> cameraTexture [[ texture(1) ]])
-                {
-                    constexpr sampler linearSampler(mag_filter::linear, min_filter::linear);
-
-                    const half4 babylonSample = babylonTexture.sample(linearSampler, in.uv);
-                    const half4 cameraSample = cameraTexture.sample(linearSampler, in.uv);
-                    const half4 mixed = mix(cameraSample, babylonSample, babylonSample.a);
-                    return vector_float4(mixed);
-                }
-            )";
-            
-            id<MTLLibrary> lib = CompileShader(source);
+            id<MTLLibrary> lib = CompileShader(MetalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
@@ -230,8 +265,7 @@ namespace xr
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
             pipelineStateDescriptor.colorAttachments[0].pixelFormat = MetalLayer.pixelFormat;
 
-            pipelineState = [MetalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor
-                                                                     error:&error];
+            pipelineState = [MetalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
             if (!pipelineState)
             {
                 NSLog(@"Failed to create pipeline state: %@", error);
@@ -248,19 +282,6 @@ namespace xr
             [sessionDelegate release];
             [configuration release];
             [session release];
-        }
-
-        id<MTLLibrary> CompileShader(const char* source)
-        {
-            NSError* error;
-            id<MTLLibrary> lib = [MetalDevice newLibraryWithSource:@(source) options:nil error:&error];
-            if(NULL != error)
-            {
-				NSLog(@"Shader compilation failed: %s"
-				, [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]
-				);
-            }
-            return lib;
         }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
@@ -316,19 +337,6 @@ namespace xr
         
         void DrawFrame()
         {
-            typedef struct
-            {
-                vector_float2 position;
-                vector_float2 uv;
-            } XRVertex;
-
-            static const XRVertex triangleVertices[] =
-            {
-                // 2D positions,    UV
-                { { -3, -1 }, { -1, 0 } },
-                { {  1,  3 }, {  1, 2 } },
-                { {  1, -1 }, {  1, 0 } },
-            };
 
             // Create a new command buffer for each render pass to the current drawable.
             id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
@@ -337,7 +345,6 @@ namespace xr
             id<CAMetalDrawable> drawable = [MetalLayer nextDrawable];
             MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-            
             if(renderPassDescriptor != nil)
             {
                 renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
@@ -355,17 +362,14 @@ namespace xr
                 [renderEncoder setRenderPipelineState:pipelineState];
 
                 // Pass in the parameter data.
-                [renderEncoder setVertexBytes:triangleVertices
-                                       length:sizeof(triangleVertices)
-                                      atIndex:0];
+                [renderEncoder setVertexBytes:triangleVertices length:sizeof(triangleVertices) atIndex:0];
 
                 [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
-                [renderEncoder setFragmentTexture:sessionDelegate.cameraTexture atIndex:1];
+                [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureY atIndex:1];
+                [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureCbCr atIndex:2];
 
                 // Draw the triangle.
-                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-                                  vertexStart:0
-                                  vertexCount:3];
+                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
 
                 [renderEncoder endEncoding];
 
@@ -381,6 +385,17 @@ namespace xr
         {
             // TODO
         }
+        
+        private:
+            bool SessionEnded{ false };
+            id<MTLDevice> MetalDevice;
+            CAMetalLayer* MetalLayer;
+            ARSession* session{};
+            SessionDelegate* sessionDelegate{};
+            ARWorldTrackingConfiguration* configuration{};
+            id<MTLRenderPipelineState> pipelineState;
+            vector_uint2 viewportSize;
+            id<MTLCommandQueue> commandQueue;
 
     };
 
