@@ -249,12 +249,15 @@ namespace xr
 
         ~Impl()
         {
-            ArPose_destroy(cameraPose);
-            ArPose_destroy(hitResultPose);
-            ArHitResult_destroy(hitResult);
-            ArHitResultList_destroy(hitResultList);
-            ArFrame_destroy(frame);
-            ArSession_destroy(session);
+            if (session)
+            {
+                ArPose_destroy(cameraPose);
+                ArPose_destroy(hitResultPose);
+                ArHitResult_destroy(hitResult);
+                ArHitResultList_destroy(hitResultList);
+                ArFrame_destroy(frame);
+                ArSession_destroy(session);
+            }
 
             glDeleteTextures(1, &cameraTextureId);
             glDeleteProgram(shaderProgramId);
@@ -353,6 +356,11 @@ namespace xr
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
+            if (!session)
+            {
+                return nullptr;
+            }
+
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
