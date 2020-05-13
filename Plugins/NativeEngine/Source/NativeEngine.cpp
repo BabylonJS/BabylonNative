@@ -473,7 +473,7 @@ namespace Babylon
             m_requestAnimationFrameCalback = Napi::Persistent(callback);
         }
 
-        arcana::make_task(m_runtimeScheduler, m_cancelSource, [this]() {
+        m_runtime.Dispatch([this](Napi::Env env) {
             try
             {
                 m_requestAnimationFrameCalback.Call({});
@@ -481,7 +481,7 @@ namespace Babylon
             }
             catch (std::exception ex)
             {
-                Napi::Error::New(Env(), ex.what()).ThrowAsJavaScriptException();
+                Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
             }
         });
     }

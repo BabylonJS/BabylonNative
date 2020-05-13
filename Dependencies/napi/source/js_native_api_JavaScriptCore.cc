@@ -517,8 +517,8 @@ struct napi_ref__ {
     if (pair.second) {
       ExternalInfo* info{};
       CHECK_NAPI(ExternalInfo::Wrap(env, _value, &info));
-      info->AddFinalizer([iter{pair.first}](ExternalInfo* info) {
-        info->Env()->active_ref_values.erase(iter);
+      info->AddFinalizer([value{_value}](ExternalInfo* info) {
+        info->Env()->active_ref_values.erase(value);
       });
     }
     
