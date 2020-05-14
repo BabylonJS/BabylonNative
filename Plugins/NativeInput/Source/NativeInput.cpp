@@ -17,13 +17,6 @@ namespace Babylon::Plugins
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
         constexpr uint32_t POINTER_BUTTON_BASE_INDEX{2};
 
-        std::string GetPointerDeviceId(uint32_t pointerId)
-        {
-            std::ostringstream deviceId;
-            deviceId << POINTER_BASE_DEVICE_ID << "-" << pointerId;
-            return deviceId.str();
-        }
-
         constexpr uint32_t GetPointerButtonInputIndex(uint32_t buttonIndex)
         {
             return POINTER_BUTTON_BASE_INDEX + buttonIndex;
@@ -72,9 +65,8 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
-            const std::string deviceId{GetPointerDeviceId(pointerId)};
             const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+            std::vector<int>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
             deviceInputs[inputIndex] = 1;
             deviceInputs[POINTER_X_INPUT_INDEX] = x;
             deviceInputs[POINTER_Y_INPUT_INDEX] = y;
@@ -84,9 +76,8 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
-            const std::string deviceId{GetPointerDeviceId(pointerId)};
             const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+            std::vector<int>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
             deviceInputs[inputIndex] = 0;
             deviceInputs[POINTER_X_INPUT_INDEX] = x;
             deviceInputs[POINTER_Y_INPUT_INDEX] = y;
@@ -99,15 +90,14 @@ namespace Babylon::Plugins
                 }
             }
 
-            RemoveInputMap(deviceId);
+            RemoveInputMap(DeviceType::Touch, pointerId);
         });
     }
 
     void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, x, y, this]() {
-            const std::string deviceId{GetPointerDeviceId(pointerId)};
-            std::vector<int>& deviceInputs{GetOrCreateInputMap(deviceId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+            std::vector<int>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
             deviceInputs[POINTER_X_INPUT_INDEX] = x;
             deviceInputs[POINTER_Y_INPUT_INDEX] = y;
         });
@@ -123,13 +113,13 @@ namespace Babylon::Plugins
         return m_deviceDisconnectedCallbacks.insert(std::move(callback));
     }
 
-    std::optional<int32_t> NativeInput::Impl::PollInput(const std::string& deviceName, uint32_t inputIndex)
+    std::optional<int32_t> NativeInput::Impl::PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex)
     {
-        auto it = m_inputs.find(deviceName);
+        auto it = m_inputs.find({deviceType, deviceSlot});
         if (it == m_inputs.end())
         {
             std::ostringstream message;
-            message << "Unable to find device " + deviceName;
+            message << "Unable to find device of type " << static_cast<uint32_t>(deviceType) << " with slot " << deviceSlot;
             throw std::runtime_error{ message.str() };
         }
 
@@ -137,7 +127,7 @@ namespace Babylon::Plugins
         if (inputIndex >= device.size())
         {
             std::ostringstream message;
-            message << "Unable to find " << inputIndex << " on device " << deviceName;
+            message << "Unable to find " << inputIndex << " on device of type " << static_cast<uint32_t>(deviceType) << " with slot " << deviceSlot;
             throw std::runtime_error{ message.str() };
         }
 
@@ -152,18 +142,18 @@ namespace Babylon::Plugins
         }
     }
 
-    std::vector<int32_t>& NativeInput::Impl::GetOrCreateInputMap(const std::string& deviceId, const std::vector<uint32_t>& inputIndices)
+    std::vector<int32_t>& NativeInput::Impl::GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices)
     {
         uint32_t inputIndex = *std::max_element(inputIndices.begin(), inputIndices.end());
 
         auto previousSize = m_inputs.size();
-        std::vector<int32_t>& deviceInputs{m_inputs[deviceId]};
+        std::vector<int32_t>& deviceInputs{m_inputs[{deviceType, deviceSlot}]};
         auto newSize = m_inputs.size();
 
         if (newSize != previousSize)
         {
-            m_deviceConnectedCallbacks.apply_to_all([deviceId](auto& callback) {
-                callback(deviceId);
+            m_deviceConnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback) {
+                callback(deviceType, deviceSlot);
             });
         }
 
@@ -172,12 +162,12 @@ namespace Babylon::Plugins
         return deviceInputs;
     }
 
-    void NativeInput::Impl::RemoveInputMap(const std::string& deviceId)
+    void NativeInput::Impl::RemoveInputMap(DeviceType deviceType, int32_t deviceSlot)
     {
-        if (m_inputs.erase(deviceId))
+        if (m_inputs.erase({deviceType, deviceSlot}))
         {
-            m_deviceDisconnectedCallbacks.apply_to_all([deviceId](auto& callback){
-               callback(deviceId);
+            m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback){
+                callback(deviceType, deviceSlot);
             });
         }
     }
