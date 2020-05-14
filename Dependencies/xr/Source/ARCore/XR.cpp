@@ -341,17 +341,13 @@ namespace xr
 
         arcana::task<void, std::exception_ptr> InitializeAsync()
         {
-            arcana::task_completion_source<void, std::exception_ptr> initTcs;
-            CheckAndInstallARCore().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, initTcs]() mutable
+            return CheckAndInstallARCore().then(arcana::inline_scheduler, arcana::cancellation::none(), [this]() mutable
             {
-                CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, initTcs]() mutable
-                {
-                    StartARSession();
-                    initTcs.complete();
-                });
+                return CheckCameraPermissionAsync();
+            }).then(arcana::inline_scheduler, arcana::cancellation::none(), [this]() mutable
+            {
+                StartARSession();
             });
-
-            return initTcs.as_task();
         }
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)

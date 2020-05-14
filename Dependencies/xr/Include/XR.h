@@ -142,6 +142,7 @@ namespace xr
 
             Session(System& system, void* graphicsDevice);
             ~Session();
+
             arcana::task<void, std::exception_ptr> InitializeAsync();
 
             Session(Session&) = delete;

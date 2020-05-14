@@ -1,6 +1,7 @@
 #include "NativeXr.h"
 
 #include "NativeEngine.h"
+#include <Babylon/JsRuntimeScheduler.h>
 
 #include <XR.h>
 
@@ -1193,15 +1194,15 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
+            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info, const JsRuntimeScheduler& runtimeScheduler)
             {
-                auto jsSession = info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
-                auto& session = *XRSession::Unwrap(jsSession);
+                auto jsSession = Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}));
+                auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession(info.Env()).then(arcana::inline_scheduler, arcana::cancellation::none(), [deferred, jsSession]()
+                session.m_xr.BeginSession(info.Env()).then(runtimeScheduler, arcana::cancellation::none(), [deferred, jsSession = std::move(jsSession)]()
                 {
-                    deferred.Resolve(jsSession);
+                    deferred.Resolve(jsSession.Value());
                 });
 
                 return deferred.Promise();
@@ -1570,11 +1571,14 @@ namespace Babylon
             }
 
             XR(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XR>{info}
+                : Napi::ObjectWrap<XR>{info},
+                m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
             {
             }
 
         private:
+            JsRuntimeScheduler m_runtimeScheduler;
+
             Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
             {
                 std::string sessionTypeString = info[0].As<Napi::String>().Utf8Value();
@@ -1597,7 +1601,7 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
 
                 // Fire off the IsSessionSupported task.
-                xr::System::IsSessionSupportedAsync(sessionType).then(arcana::inline_scheduler, arcana::cancellation::none(), [deferred, env = info.Env()](bool result)
+                xr::System::IsSessionSupportedAsync(sessionType).then(m_runtimeScheduler, arcana::cancellation::none(), [deferred, env = info.Env()](bool result)
                 {
                     deferred.Resolve(Napi::Boolean::New(env, result));
                 });
@@ -1607,7 +1611,7 @@ namespace Babylon
 
             Napi::Value RequestSession(const Napi::CallbackInfo& info)
             {
-                return XRSession::CreateAsync(info);
+                return XRSession::CreateAsync(info, m_runtimeScheduler);
             }
 
             Napi::Value GetWebXRRenderTarget(const Napi::CallbackInfo& info)
