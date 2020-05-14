@@ -1200,8 +1200,21 @@ namespace Babylon
                 auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession(info.Env()).then(runtimeScheduler, arcana::cancellation::none(), [deferred, jsSession = std::move(jsSession)]()
+                session.m_xr.BeginSession(info.Env()).then(runtimeScheduler, arcana::cancellation::none(), [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result)
                 {
+                    if (result.has_error())
+                    {
+                        try
+                        {
+                            std::rethrow_exception(result.error());
+                        }
+                        catch (const std::exception& e)
+                        {
+                            deferred.Reject(Napi::Error::New(env, e.what()).Value());
+                            throw e;
+                        }
+                    }
+
                     deferred.Resolve(jsSession.Value());
                 });
 

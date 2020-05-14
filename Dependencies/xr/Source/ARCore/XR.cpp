@@ -653,7 +653,7 @@ namespace xr
                 {
                     std::ostringstream message;
                     message << "ARCore APK not installed.";
-                    throw std::runtime_error{message.str()};
+                    installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
                 }
                 else
                 {
@@ -678,7 +678,7 @@ namespace xr
                 {
                     std::ostringstream message;
                     message << "Camera permission not acquired successfully";
-                    permissionTcs.complete();
+                    permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
                 }
             }
         }
@@ -802,8 +802,6 @@ namespace xr
     System::Session::~Session()
     {
     }
-
-
 
     arcana::task<void, std::exception_ptr> System::Session::InitializeAsync()
     {
