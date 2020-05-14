@@ -102,9 +102,7 @@ namespace Babylon::Plugins
         }
         catch (const std::runtime_error& exception)
         {
-            return Napi::Value::From(Env(), -1);
-            // TODO: Re-enable this when exceptions are supported in Napi JSC
-            //throw Napi::Error::New(Env(), exception.what());
+            throw Napi::Error::New(Env(), exception.what());
         }
     }
 }
