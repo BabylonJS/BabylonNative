@@ -308,9 +308,9 @@ namespace xr
 
         arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
         {
-            if (!GetAppContext().checkSelfPermission("CAMERA"))
+            if (!GetAppContext().checkSelfPermission(PERMISSION_NAME))
             {
-                GetMainActivity().requestPermissions("CAMERA", PERMISSION_REQUEST_ID);
+                GetMainActivity().requestPermissions(PERMISSION_NAME, PERMISSION_REQUEST_ID);
                 return permissionTcs.as_task();
             }
 
@@ -614,6 +614,7 @@ namespace xr
         }
 
     private:
+        const char* PERMISSION_NAME{"CAMERA"};
         const int PERMISSION_REQUEST_ID = 8435;
         bool sessionEnded{false};
         bool pendingInstall{false};
@@ -670,16 +671,20 @@ namespace xr
         {
             if (requestCode == PERMISSION_REQUEST_ID)
             {
-                if (results[0] == 0)
+                for (int i = 0; i < permissions.size(); i++)
                 {
-                    permissionTcs.complete();
+                    if (permissions[i].find(PERMISSION_NAME) != std::string::npos)
+                    {
+                        if (results[i] == 0 /* PackageManager.PERMISSION_GRANTED */)
+                        {
+                            permissionTcs.complete();
+                        }
+                    }
                 }
-                else
-                {
-                    std::ostringstream message;
-                    message << "Camera permission not acquired successfully";
-                    permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
-                }
+
+                std::ostringstream message;
+                message << "Camera permission not acquired successfully";
+                permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
             }
         }
 
