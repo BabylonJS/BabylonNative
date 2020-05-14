@@ -55,9 +55,7 @@ extern "C"
                 throw std::runtime_error("Failed to get Java VM");
             }
 
-            auto globalMainActivity = env->NewGlobalRef(mainActivity);
-
-            android::global::Initialize(javaVM, context, globalMainActivity);
+            android::global::Initialize(javaVM, context, mainActivity);
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);

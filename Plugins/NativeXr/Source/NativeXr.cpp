@@ -150,7 +150,7 @@ namespace Babylon
         ~NativeXr();
 
         arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
-        void EndSession();                // TODO: Make this asynchronous.
+        void EndSession(); // TODO: Make this asynchronous.
 
         auto ActiveFrameBuffers() const
         {
@@ -1200,23 +1200,27 @@ namespace Babylon
                 auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession(info.Env()).then(runtimeScheduler, arcana::cancellation::none(), [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result)
-                {
-                    if (result.has_error())
-                    {
-                        try
-                        {
-                            std::rethrow_exception(result.error());
-                        }
-                        catch (const std::exception& e)
-                        {
-                            deferred.Reject(Napi::Error::New(env, e.what()).Value());
-                            throw e;
-                        }
-                    }
-
-                    deferred.Resolve(jsSession.Value());
-                });
+                session.m_xr.BeginSession(info.Env())
+                    .then(runtimeScheduler,
+                        arcana::cancellation::none(),
+                        [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
+                            if (result.has_error())
+                            {
+                                try
+                                {
+                                    std::rethrow_exception(result.error());
+                                }
+                                catch (const std::exception& e)
+                                {
+                                    deferred.Reject(Napi::Error::New(env, e.what()).Value());
+                                    throw e;
+                                }
+                            }
+                            else
+                            {
+                                deferred.Resolve(jsSession.Value());
+                            }
+                        });
 
                 return deferred.Promise();
             }
@@ -1584,8 +1588,8 @@ namespace Babylon
             }
 
             XR(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XR>{info},
-                m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+                : Napi::ObjectWrap<XR>{info}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
             {
             }
 
@@ -1614,10 +1618,12 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
 
                 // Fire off the IsSessionSupported task.
-                xr::System::IsSessionSupportedAsync(sessionType).then(m_runtimeScheduler, arcana::cancellation::none(), [deferred, env = info.Env()](bool result)
-                {
-                    deferred.Resolve(Napi::Boolean::New(env, result));
-                });
+                xr::System::IsSessionSupportedAsync(sessionType)
+                    .then(m_runtimeScheduler,
+                        arcana::cancellation::none(),
+                        [deferred, env = info.Env()](bool result) {
+                            deferred.Resolve(Napi::Boolean::New(env, result));
+                        });
 
                 return deferred.Promise();
             }

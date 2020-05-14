@@ -322,7 +322,7 @@ namespace xr
             ArInstallStatus install_status;
             ArStatus installStatus = ArCoreApk_requestInstall(
                     GetEnvForCurrentThread(), GetMainActivity(), requestInstall, &install_status);
-            return install_status == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
+            return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
         }
 
         arcana::task<void, std::exception_ptr> CheckAndInstallARCore()
@@ -759,8 +759,7 @@ namespace xr
                 for (int i = 0; i < 100; i++)
                 {
                     ArAvailability arAvailability{};
-                    ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(),
-                                                &arAvailability);
+                    ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(), &arAvailability);
                     switch (arAvailability)
                     {
                         case AR_AVAILABILITY_SUPPORTED_APK_TOO_OLD:

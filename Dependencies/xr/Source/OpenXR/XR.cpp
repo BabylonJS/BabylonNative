@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <optional>
 #include <arcana/threading/task.h>
-#include <arcana/threading/task_conversions.h>
 
 namespace xr
 {
@@ -828,6 +827,11 @@ namespace xr
     {}
 
     System::Session::~Session() {}
+
+    arcana::task<void, std::exception_ptr> System::Session::InitializeAsync()
+    {
+        return arcana::task_from_result<void, std::exception_ptr>();
+    }
 
     std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
     {
