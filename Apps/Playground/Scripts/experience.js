@@ -4,6 +4,7 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var xr = false;
+var text = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.7);
@@ -32,7 +33,6 @@ function CreateInputHandling(scene) {
     var priorY = inputManager.pointerY;
     var x = 0;
     var y = 0;
-    scene.activeCamera.radius = 20;
     scene.onBeforeRenderObservable.add(function () {
         x = inputManager.pointerX;
         y = inputManager.pointerY;
@@ -50,7 +50,7 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-//CreateBoxAsync().then(function () {
+CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -59,7 +59,6 @@ var scene = new BABYLON.Scene(engine);
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Sponza/glTF/Sponza.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BrainStem/glTF/BrainStem.gltf").then(function () {
-BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Asset-Generator/master/Output/Positive/Material/Material_00.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF/BoxAnimated.gltf").then(function () {
@@ -143,26 +142,18 @@ BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/
         }, 5000);
     }
 
-    var Writer = BABYLON.MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
-    text1 = new Writer(
-        "Lorem ipsum dolor sit amet...",
-        {
-            "anchor": "center",
-            "letter-height": 5,
-            "color": "#FF0000"
-        }
-    );
-
-    /*var SPS = new BABYLON.SolidParticleSystem("SPS", scene);
-    var sphere = BABYLON.MeshBuilder.CreateSphere("s", {}, scene);
-    var poly = BABYLON.MeshBuilder.CreatePolyhedron("p", { type: 2 }, scene);
-    SPS.addShape(sphere, 20); // 20 spheres
-    SPS.addShape(poly, 120); // 120 polyhedrons
-    SPS.addShape(sphere, 80); // 80 other spheres
-    sphere.dispose();
-    poly.dispose();
-    var mesh = SPS.buildMesh(); // finally builds and displays the real mesh*/
-
+    if (text) {
+        var Writer = BABYLON.MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
+        text1 = new Writer(
+            "Lorem ipsum dolor sit amet...",
+            {
+                "anchor": "center",
+                "letter-height": 5,
+                "color": "#FF0000"
+            }
+        );
+    }
+    
 }, function (ex) {
     console.log(ex.message, ex.stack);
 });
