@@ -5125,6 +5125,11 @@ react-is@^16.12.0, react-is@^16.8.1, react-is@^16.8.4, react-is@^16.9.0:
 react-native-babylon@./node_modules/react-native-babylon:
   version "1.0.0"
 
+react-native-permissions@^2.1.4:
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/react-native-permissions/-/react-native-permissions-2.1.4.tgz#b0663839d28444d8ea6b5302303b2151ea70d2da"
+  integrity sha512-R1mVPGctEJuOlxoeIBlT5270A+DKngP78rWU0dgMxIuETjGYhBRJMKOp1rQUbp6PxcahfU+PjSTSzsbja5FyDw==
+
 react-native@0.62.1:
   version "0.62.1"
   resolved "https://registry.yarnpkg.com/react-native/-/react-native-0.62.1.tgz#fd0324bedf4c3237c928de582c29403f1e46ea80"

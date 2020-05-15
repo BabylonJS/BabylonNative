@@ -5,11 +5,11 @@
  * @format
  */
 
-import React, { useState, FunctionComponent, useEffect } from 'react';
+import React, { useState, FunctionComponent, useEffect, useCallback } from 'react';
 import { SafeAreaView, StatusBar, Button, View, Text, ViewProps } from 'react-native';
 
 import { EngineView, useEngine } from 'react-native-babylon';
-import { Scene, Vector3, Mesh, ArcRotateCamera, Engine, Camera, PBRMetallicRoughnessMaterial, Color3 } from '@babylonjs/core';
+import { Scene, Vector3, Mesh, ArcRotateCamera, Camera, PBRMetallicRoughnessMaterial, Color3, TargetCamera, WebXRSessionManager } from '@babylonjs/core';
 import Slider from '@react-native-community/slider';
 
 const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
@@ -19,11 +19,14 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
   const [toggleView, setToggleView] = useState(false);
   const [camera, setCamera] = useState<Camera>();
   const [box, setBox] = useState<Mesh>();
+  const [scene, setScene] = useState<Scene>();
+  const [xrSession, setXrSession] = useState<WebXRSessionManager>();
   const [scale, setScale] = useState<number>(defaultScale);
 
   useEffect(() => {
     if (engine) {
       const scene = new Scene(engine);
+      setScene(scene);
       scene.createDefaultCamera(true);
       (scene.activeCamera as ArcRotateCamera).beta -= Math.PI / 8;
       setCamera(scene.activeCamera!);
@@ -49,10 +52,28 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
     }
   }, [box, scale]);
 
+  const onToggleXr = useCallback(() => {
+    (async () => {
+      if (xrSession) {
+        await xrSession.exitXRAsync();
+        setXrSession(undefined);
+      } else {
+        if (box !== undefined && scene !== undefined) {
+          const xr = await scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true })
+          const session = await xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
+          setXrSession(session);
+          box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
+          box.rotate(Vector3.Up(), 3.14159);
+        }
+      }
+    })();
+  }, [box, scene, xrSession]);
+
   return (
     <>
       <View style={props.style}>
         <Button title="Toggle EngineView" onPress={() => { setToggleView(!toggleView) }} />
+        <Button title={ xrSession ? "Stop XR" : "Start XR"} onPress={onToggleXr} />
         { !toggleView &&
           <View style={{flex: 1}}>
             <EngineView style={props.style} camera={camera} />
