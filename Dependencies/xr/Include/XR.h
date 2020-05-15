@@ -142,18 +142,14 @@ namespace xr
                 std::unique_ptr<Impl> m_impl{};
             };
 
-            ~Session();
-
             static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice);
-
-            Session(Session&) = delete;
-            Session& operator=(Session&&) = delete;
+            Session(System& system, void* graphicsDevice);
+            ~Session();
 
             std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession);
             void RequestEndSession();
             Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
-            Session(System& system, void* graphicsDevice);
 
         private:
             std::unique_ptr<Impl> m_impl{};
@@ -161,9 +157,6 @@ namespace xr
 
         System(const char* = "OpenXR Experience");
         ~System();
-
-        System(System&) = delete;
-        System& operator=(System&&) = delete;
 
         bool IsInitialized() const;
         bool TryInitialize();

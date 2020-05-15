@@ -5,6 +5,8 @@
 #include <sstream>
 #include <chrono>
 #include <arcana/threading/task.h>
+#include <Babylon/JsRuntimeScheduler.h>
+#include <arcana/threading/dispatcher.h>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -26,9 +28,6 @@
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
 #include <thread>
-#include <chrono>
-#include <arcana/threading/dispatcher.h>
-#include <Babylon/JsRuntimeScheduler.h>
 
 using namespace android::global;
 
@@ -711,7 +710,7 @@ namespace xr
         }
 
         // VR and inline sessions are not supported at this time.
-        return arcana::task_from_result<std::exception_ptr, bool>(false);
+        return arcana::task_from_result<std::exception_ptr>(false);
     }
 
     bool CheckARCoreInstallStatus(bool requestInstall)
@@ -786,7 +785,7 @@ namespace xr
                                 }
                             }
 
-                            // Did not find permission in the list, or it was explicity denied.  Complete the task with an error.
+                            // Did not find permission in the list, or it was explicitly denied.  Complete the task with an error.
                             std::ostringstream message;
                             message << "Camera permission not acquired successfully";
                             permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
@@ -807,7 +806,7 @@ namespace xr
         // First perform the ARCore installation check, request install if not yet installed.
         return CheckAndInstallARCore(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&runtimeScheduler, &system, graphicsDevice]()
         {
-            // Next check for camer permissions, and request if not already requested.
+            // Next check for camera permissions, and request if not already requested.
             return CheckCameraPermissionAsync(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
             {
                 // Finally if the previous two tasks succeed, start the AR session.

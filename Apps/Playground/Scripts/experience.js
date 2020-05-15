@@ -4,8 +4,8 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = true;
-var xrHitTest = true;
+var ar = false;
+var xrHitTest = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);

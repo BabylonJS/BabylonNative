@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <optional>
 #include <arcana/threading/task.h>
+#include <Babylon/JsRuntimeScheduler.h>
 
 namespace xr
 {
@@ -816,10 +817,15 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    static arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
+    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
     {
         // Only immersive_VR is supported for now.
-        return arcana::task_from_result<bool, std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
+        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
+    }
+
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice)
+    {
+        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice));
     }
 
     System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
@@ -827,11 +833,6 @@ namespace xr
     {}
 
     System::Session::~Session() {}
-
-    arcana::task<void, std::exception_ptr> System::Session::InitializeAsync()
-    {
-        return arcana::task_from_result<void, std::exception_ptr>();
-    }
 
     std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
     {
