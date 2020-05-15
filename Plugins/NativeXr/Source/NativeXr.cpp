@@ -149,7 +149,7 @@ namespace Babylon
         NativeXr();
         ~NativeXr();
 
-        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
+        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env, const JsRuntimeScheduler& runtimeScheduler);
         void EndSession(); // TODO: Make this asynchronous.
 
         auto ActiveFrameBuffers() const
@@ -201,7 +201,7 @@ namespace Babylon
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
-        std::unique_ptr<xr::System::Session> m_session{};
+        std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
         NativeEngine* m_engineImpl{};
@@ -228,7 +228,7 @@ namespace Babylon
     }
 
     // TODO: Make this asynchronous.
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env, const JsRuntimeScheduler& runtimeScheduler)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -241,8 +241,10 @@ namespace Babylon
             }
         }
 
-        m_session = std::make_unique<xr::System::Session>(m_system, bgfx::getInternalData()->context);
-        return m_session->InitializeAsync();
+        return xr::System::Session::CreateAsync(runtimeScheduler, m_system, bgfx::getInternalData()->context).then(runtimeScheduler, arcana::cancellation::none(), [this](std::shared_ptr<xr::System::Session> session)
+        {
+            m_session = std::move(session);
+        });
     }
 
     // TODO: Make this asynchronous.
@@ -1200,7 +1202,7 @@ namespace Babylon
                 auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession(info.Env())
+                session.m_xr.BeginSession(info.Env(), runtimeScheduler)
                     .then(runtimeScheduler,
                         arcana::cancellation::none(),
                         [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {

@@ -46,7 +46,9 @@ else()
     target_link_libraries(xr PRIVATE openxr_loader)
 endif()
 
-target_link_libraries(xr PUBLIC arcana)
+target_link_libraries(xr
+    PUBLIC arcana
+    PUBLIC JsRuntime)
 
 target_include_directories(xr PUBLIC "Include")
 

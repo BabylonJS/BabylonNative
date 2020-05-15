@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <arcana/threading/task.h>
+#include <Babylon/JsRuntimeScheduler.h>
+#include "../../../Core/JsRuntime/Include/Babylon/JsRuntimeScheduler.h"
 
 namespace xr
 {
@@ -140,10 +142,9 @@ namespace xr
                 std::unique_ptr<Impl> m_impl{};
             };
 
-            Session(System& system, void* graphicsDevice);
             ~Session();
 
-            arcana::task<void, std::exception_ptr> InitializeAsync();
+            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice);
 
             Session(Session&) = delete;
             Session& operator=(Session&&) = delete;
@@ -152,6 +153,7 @@ namespace xr
             void RequestEndSession();
             Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
+            Session(System& system, void* graphicsDevice);
 
         private:
             std::unique_ptr<Impl> m_impl{};

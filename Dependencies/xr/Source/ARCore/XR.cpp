@@ -28,11 +28,15 @@
 #include <thread>
 #include <chrono>
 #include <arcana/threading/dispatcher.h>
+#include <Babylon/JsRuntimeScheduler.h>
 
 using namespace android::global;
 
 namespace xr
 {
+    const char* PERMISSION_NAME{"CAMERA"};
+    const int PERMISSION_REQUEST_ID = 8435;
+
     class System::Impl
     {
     public:
@@ -224,13 +228,6 @@ namespace xr
             : SystemImpl{ systemImpl }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
-            , permissionTicket
-            {
-                AddRequestPermissionsResultCallback([this](int32_t requestCode, const std::vector<std::string>& permissionList, const std::vector<int32_t>& results)
-                {
-                    this->CameraPermissionCallback(requestCode, permissionList, results);
-                }
-            )}
         {
             // Note: graphicsContext is an EGLContext
 
@@ -245,6 +242,9 @@ namespace xr
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
             shaderProgramId = CreateShaderProgram();
+
+            // Start the AR session.
+            StartARSession();
         }
 
         ~Impl()
@@ -304,50 +304,6 @@ namespace xr
                     throw std::runtime_error{ message.str() };
                 }
             }
-        }
-
-        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
-        {
-            if (!GetAppContext().checkSelfPermission(PERMISSION_NAME))
-            {
-                GetMainActivity().requestPermissions(PERMISSION_NAME, PERMISSION_REQUEST_ID);
-                return permissionTcs.as_task();
-            }
-
-            return arcana::task_from_result<std::exception_ptr>();
-        }
-
-        bool CheckARCoreInstallStatus(bool requestInstall)
-        {
-            ArInstallStatus install_status;
-            ArStatus installStatus = ArCoreApk_requestInstall(
-                    GetEnvForCurrentThread(), GetMainActivity(), requestInstall, &install_status);
-            return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
-        }
-
-        arcana::task<void, std::exception_ptr> CheckAndInstallARCore()
-        {
-            bool installed = CheckARCoreInstallStatus(true);
-            if (!installed)
-            {
-                pendingInstall = true;
-                return installTcs.as_task();
-            }
-            else
-            {
-                return arcana::task_from_result<std::exception_ptr>();
-            }
-        }
-
-        arcana::task<void, std::exception_ptr> InitializeAsync()
-        {
-            return CheckAndInstallARCore().then(arcana::inline_scheduler, arcana::cancellation::none(), [this]() mutable
-            {
-                return CheckCameraPermissionAsync();
-            }).then(arcana::inline_scheduler, arcana::cancellation::none(), [this]() mutable
-            {
-                StartARSession();
-            });
         }
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
@@ -614,10 +570,7 @@ namespace xr
         }
 
     private:
-        const char* PERMISSION_NAME{"CAMERA"};
-        const int PERMISSION_REQUEST_ID = 8435;
         bool sessionEnded{false};
-        bool pendingInstall{false};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -633,9 +586,6 @@ namespace xr
 
         AppStateChangedCallbackTicket pauseTicket;
         AppStateChangedCallbackTicket resumeTicket;
-        RequestPermissionsResultCallbackTicket permissionTicket;
-        arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
-        arcana::task_completion_source<void, std::exception_ptr> installTcs;
 
         void PauseSession()
         {
@@ -647,44 +597,9 @@ namespace xr
 
         void ResumeSession()
         {
-            if (pendingInstall)
-            {
-                pendingInstall = false;
-                if (!CheckARCoreInstallStatus(false))
-                {
-                    std::ostringstream message;
-                    message << "ARCore APK not installed.";
-                    installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
-                }
-                else
-                {
-                    installTcs.complete();
-                }
-            }
-            else if (session)
+            if (session)
             {
                 ArSession_resume(session);
-            }
-        }
-
-        void CameraPermissionCallback(int32_t requestCode, const std::vector<std::string>& permissions, const std::vector<std::int32_t>& results)
-        {
-            if (requestCode == PERMISSION_REQUEST_ID)
-            {
-                for (int i = 0; i < permissions.size(); i++)
-                {
-                    if (permissions[i].find(PERMISSION_NAME) != std::string::npos)
-                    {
-                        if (results[i] == 0 /* PackageManager.PERMISSION_GRANTED */)
-                        {
-                            permissionTcs.complete();
-                        }
-                    }
-                }
-
-                std::ostringstream message;
-                message << "Camera permission not acquired successfully";
-                permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
             }
         }
 
@@ -799,17 +714,114 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr, bool>(false);
     }
 
+    bool CheckARCoreInstallStatus(bool requestInstall)
+    {
+        ArInstallStatus install_status;
+        ArStatus installStatus = ArCoreApk_requestInstall(
+                GetEnvForCurrentThread(), GetMainActivity(), requestInstall, &install_status);
+        return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
+    }
+
+    arcana::task<void, std::exception_ptr> CheckAndInstallARCore(const Babylon::JsRuntimeScheduler& runtimeScheduler)
+    {
+        auto task = arcana::task_from_result<std::exception_ptr>();
+
+        // Check if ARCore is already installed.
+        if (!CheckARCoreInstallStatus(false))
+        {
+            arcana::task_completion_source<void, std::exception_ptr> installTcs{};
+
+            // Add a resume callback, which will check if ARCore has been successfully installed upon app resume.
+            auto resumeTicket{AddResumeCallback([installTcs]() mutable {
+                if (!CheckARCoreInstallStatus(false))
+                {
+                    // ARCore not installed, throw an error.
+                    std::ostringstream message;
+                    message << "ARCore not installed.";
+                    installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                }
+                else
+                {
+                    // ARCore installed successfully, complete the promise.
+                    installTcs.complete();
+                }
+            })};
+
+            // Kick off the install request, and set the task for our caller to wait on.
+            CheckARCoreInstallStatus(true);
+            task = installTcs.as_task().then(runtimeScheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){});
+        }
+
+        return task;
+    }
+
+    arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
+    {
+        auto task = arcana::task_from_result<std::exception_ptr>();
+        
+        // Check if permissions are already granted
+        if (!GetAppContext().checkSelfPermission(PERMISSION_NAME))
+        {
+            // Register for the permission callback request.
+            arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
+            auto permissionTicket
+            {
+                AddRequestPermissionsResultCallback(
+                    [permissionTcs](int32_t requestCode, const std::vector<std::string>& permissionList, const std::vector<int32_t>& results) mutable
+                    {
+                        // Check if this is our permission requeste ID.
+                        if (requestCode == PERMISSION_REQUEST_ID)
+                        {
+                            // Loop over permission request results, and find the entry corresponding to the camera grant/deny.
+                            for (int i = 0; i < permissionList.size(); i++)
+                            {
+                                if (permissionList[i].find(PERMISSION_NAME) != std::string::npos)
+                                {
+                                    // If the permission is found and granted complete the task.
+                                    if (results[i] == 0 /* PackageManager.PERMISSION_GRANTED */)
+                                    {
+                                        permissionTcs.complete();
+                                        return;
+                                    }
+                                }
+                            }
+
+                            // Did not find permission in the list, or it was explicity denied.  Complete the task with an error.
+                            std::ostringstream message;
+                            message << "Camera permission not acquired successfully";
+                            permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                        }
+                    })
+            };
+
+            // Kick off the permission check request, and set the task for our caller to wait on.
+            GetMainActivity().requestPermissions(PERMISSION_NAME, PERMISSION_REQUEST_ID);
+            task = permissionTcs.as_task().then(runtimeScheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){});
+        }
+
+        return task;
+    }
+
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice)
+    {
+        // First perform the ARCore installation check, request install if not yet installed.
+        return CheckAndInstallARCore(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&runtimeScheduler, &system, graphicsDevice]()
+        {
+            // Next check for camer permissions, and request if not already requested.
+            return CheckCameraPermissionAsync(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
+            {
+                // Finally if the previous two tasks succeed, start the AR session.
+                return std::make_shared<System::Session>(system, graphicsDevice);
+            });
+        });
+    }
+
     System::Session::Session(System& system, void* graphicsDevice)
         : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
     {}
 
     System::Session::~Session()
     {
-    }
-
-    arcana::task<void, std::exception_ptr> System::Session::InitializeAsync()
-    {
-        return m_impl->InitializeAsync();
     }
 
     std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
