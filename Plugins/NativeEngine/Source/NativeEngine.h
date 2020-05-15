@@ -157,7 +157,7 @@ namespace Babylon
 
         bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
         bgfx::ViewId ViewId{};
-        ViewClearState ViewClearState;
+        Babylon::ViewClearState ViewClearState;
         uint16_t Width{};
         uint16_t Height{};
     };
@@ -424,5 +424,7 @@ namespace Babylon
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
+        
+        Napi::FunctionReference m_requestAnimationFrameCalback{};
     };
 }
