@@ -483,6 +483,8 @@ namespace xr
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
                 // Present to the screen
+                // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
+                //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
                 eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
 
                 glUseProgram(0);
