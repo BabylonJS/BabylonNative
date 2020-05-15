@@ -13,8 +13,8 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     private ViewDelegate mViewDelegate;
     private Activity mMainActivity;
 
-    public BabylonView(Activity mainActivity, ViewDelegate viewDelegate) {
-        this(mainActivity, viewDelegate, mainActivity);
+    public BabylonView(Context context, ViewDelegate viewDelegate) {
+        this(context, viewDelegate, (Activity)viewDelegate);
     }
 
     public BabylonView(Context context, ViewDelegate viewDelegate, Activity mainActivity) {

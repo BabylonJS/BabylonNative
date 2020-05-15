@@ -227,7 +227,6 @@ namespace Babylon
         }
     }
 
-    // TODO: Make this asynchronous.
     arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env, const JsRuntimeScheduler& runtimeScheduler)
     {
         assert(m_session == nullptr);
@@ -241,8 +240,7 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(runtimeScheduler, m_system, bgfx::getInternalData()->context).then(runtimeScheduler, arcana::cancellation::none(), [this](std::shared_ptr<xr::System::Session> session)
-        {
+        return xr::System::Session::CreateAsync(runtimeScheduler, m_system, bgfx::getInternalData()->context).then(runtimeScheduler, arcana::cancellation::none(), [this](std::shared_ptr<xr::System::Session> session) {
             m_session = std::move(session);
         });
     }
@@ -261,11 +259,6 @@ namespace Babylon
         {
             // Block and burn frames until XR successfully shuts down.
             m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
-            if (!m_frame)
-            {
-                break;
-            }
-
             m_frame.reset();
         } while (!shouldEndSession);
         m_session.reset();

@@ -7,6 +7,7 @@
 #include <arcana/threading/task.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <arcana/threading/dispatcher.h>
+#include <thread>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -27,7 +28,6 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
-#include <thread>
 
 using namespace android::global;
 
@@ -248,15 +248,12 @@ namespace xr
 
         ~Impl()
         {
-            if (session)
-            {
-                ArPose_destroy(cameraPose);
-                ArPose_destroy(hitResultPose);
-                ArHitResult_destroy(hitResult);
-                ArHitResultList_destroy(hitResultList);
-                ArFrame_destroy(frame);
-                ArSession_destroy(session);
-            }
+            ArPose_destroy(cameraPose);
+            ArPose_destroy(hitResultPose);
+            ArHitResult_destroy(hitResult);
+            ArHitResultList_destroy(hitResultList);
+            ArFrame_destroy(frame);
+            ArSession_destroy(session);
 
             glDeleteTextures(1, &cameraTextureId);
             glDeleteProgram(shaderProgramId);
@@ -307,11 +304,6 @@ namespace xr
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
-            if (!session)
-            {
-                return nullptr;
-            }
-
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
@@ -721,7 +713,7 @@ namespace xr
         return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
     }
 
-    arcana::task<void, std::exception_ptr> CheckAndInstallARCore(const Babylon::JsRuntimeScheduler& runtimeScheduler)
+    arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
     {
         auto task = arcana::task_from_result<std::exception_ptr>();
 
@@ -758,7 +750,7 @@ namespace xr
     {
         auto task = arcana::task_from_result<std::exception_ptr>();
         
-        // Check if permissions are already granted
+        // Check if permissions are already granted.
         if (!GetAppContext().checkSelfPermission(PERMISSION_NAME))
         {
             // Register for the permission callback request.
@@ -768,7 +760,7 @@ namespace xr
                 AddRequestPermissionsResultCallback(
                     [permissionTcs](int32_t requestCode, const std::vector<std::string>& permissionList, const std::vector<int32_t>& results) mutable
                     {
-                        // Check if this is our permission requeste ID.
+                        // Check if this is our permission request ID.
                         if (requestCode == PERMISSION_REQUEST_ID)
                         {
                             // Loop over permission request results, and find the entry corresponding to the camera grant/deny.
@@ -804,9 +796,9 @@ namespace xr
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice)
     {
         // First perform the ARCore installation check, request install if not yet installed.
-        return CheckAndInstallARCore(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&runtimeScheduler, &system, graphicsDevice]()
+        return CheckAndInstallARCoreAsync(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&runtimeScheduler, &system, graphicsDevice]()
         {
-            // Next check for camera permissions, and request if not already requested.
+            // Next check for camera permissions, and request if not already granted.
             return CheckCameraPermissionAsync(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
             {
                 // Finally if the previous two tasks succeed, start the AR session.

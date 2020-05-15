@@ -5,7 +5,6 @@
 #include <vector>
 #include <arcana/threading/task.h>
 #include <Babylon/JsRuntimeScheduler.h>
-#include "../../../Core/JsRuntime/Include/Babylon/JsRuntimeScheduler.h"
 
 namespace xr
 {

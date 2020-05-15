@@ -17,7 +17,7 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
     @Override
     protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-        mView = new BabylonView(getApplication(), this, this);
+        mView = new BabylonView(getApplication(), this);
         setContentView(mView);
     }
 
