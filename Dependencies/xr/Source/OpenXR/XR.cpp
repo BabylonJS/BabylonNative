@@ -223,7 +223,7 @@ namespace xr
 
         XrSessionState SessionState{ XR_SESSION_STATE_UNKNOWN };
 
-        Impl(System::Impl& hmdImpl, void* graphicsContext, void* /*window*/)
+        Impl(System::Impl& hmdImpl, void* graphicsContext)
             : HmdImpl{ hmdImpl }
         {
             assert(HmdImpl.IsInitialized());
