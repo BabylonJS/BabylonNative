@@ -14,9 +14,11 @@ public class Wrapper {
 
     public static native void finishEngine();
 
-    public static native void surfaceCreated(Surface surface, Context context, Activity mainActivity);
+    public static native void surfaceCreated(Surface surface, Context context);
 
     public static native void surfaceChanged(int width, int height, Surface surface);
+
+    public static native void setCurrentActivity(Activity currentActivity);
 
     public static native void activityOnPause();
 

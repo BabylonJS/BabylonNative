@@ -7,7 +7,7 @@ namespace android::global
     {
         JavaVM* g_javaVM{};
         jobject g_appContext{};
-        jobject g_mainActivity{};
+        jobject g_currentActivity = nullptr;
 
         thread_local struct Env final
         {
@@ -56,11 +56,10 @@ namespace android::global
         RequestPermissionsResultEvent g_requestPermissionsResultEvent{};
     }
 
-    void Initialize(JavaVM* javaVM, jobject context, jobject mainActivity)
+    void Initialize(JavaVM* javaVM, jobject context)
     {
         g_javaVM = javaVM;
         g_appContext = GetEnvForCurrentThread()->NewGlobalRef(android::content::Context{context}.getApplicationContext());
-        g_mainActivity = GetEnvForCurrentThread()->NewGlobalRef(mainActivity);
     }
 
     JNIEnv* GetEnvForCurrentThread()
@@ -83,10 +82,20 @@ namespace android::global
     {
         return {g_appContext};
     }
-    
-    android::app::Activity GetMainActivity()
+
+    android::app::Activity GetCurrentActivity()
     {
-        return {g_mainActivity};
+        return {g_currentActivity};
+    }
+
+    void SetCurrentActivity(jobject currentActivity)
+    {
+        if (g_currentActivity)
+        {
+            GetEnvForCurrentThread()->DeleteGlobalRef(g_currentActivity);
+        }
+
+        g_currentActivity = GetEnvForCurrentThread()->NewGlobalRef(currentActivity);
     }
 
     void Pause()

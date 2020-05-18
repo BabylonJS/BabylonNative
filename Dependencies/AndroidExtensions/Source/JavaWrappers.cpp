@@ -164,6 +164,17 @@ namespace java::net
     }
 }
 
+namespace android
+{
+    jstring ManifestPermission::getPermissionName(const char* permissionName)
+    {
+        JNIEnv* env{GetEnvForCurrentThread()};
+        jclass cls{env->FindClass("android/Manifest$permission")};
+        jfieldID permId{env->GetStaticFieldID(cls, permissionName, "Ljava/lang/String;")};
+        return (jstring)env->GetStaticObjectField(cls, permId);
+    }
+}
+
 namespace android::app
 {
     Activity::Activity(jobject object)
@@ -173,9 +184,7 @@ namespace android::app
 
     void Activity::requestPermissions(const char* permissionName, int permissionRequestID)
     {
-        jclass cls{m_env->FindClass("android/Manifest$permission")};
-        jfieldID permId{m_env->GetStaticFieldID(cls, permissionName, "Ljava/lang/String;")};
-        jstring systemPermissionName{(jstring)m_env->GetStaticObjectField(cls, permId)};
+        jstring systemPermissionName{ManifestPermission::getPermissionName(permissionName)};
 
         jobjectArray permissionArray{m_env->NewObjectArray(
             1,
@@ -209,9 +218,7 @@ namespace android::content
 
     bool Context::checkSelfPermission(const char* permissionName)
     {
-        jclass cls{m_env->FindClass("android/Manifest$permission")};
-        jfieldID permId{m_env->GetStaticFieldID(cls, permissionName, "Ljava/lang/String;")};
-        jstring systemPermissionName{(jstring)m_env->GetStaticObjectField(cls, permId)};
+        jstring systemPermissionName{ManifestPermission::getPermissionName(permissionName)};
 
         // Get the package manager, and get the value that represents a successful permission grant.
         jclass packageManager{m_env->FindClass("android/content/pm/PackageManager")};

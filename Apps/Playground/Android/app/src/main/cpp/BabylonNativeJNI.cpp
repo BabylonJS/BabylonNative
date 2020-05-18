@@ -43,7 +43,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject context, jobject mainActivity)
+    Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject context)
     {
         if (!g_runtime)
         {
@@ -55,7 +55,7 @@ extern "C"
                 throw std::runtime_error("Failed to get Java VM");
             }
 
-            android::global::Initialize(javaVM, context, mainActivity);
+            android::global::Initialize(javaVM, context);
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
@@ -117,6 +117,12 @@ extern "C"
             });
         }
     }
+
+    JNIEXPORT void JNICALL
+    Java_BabylonNative_Wrapper_setCurrentActivity(JNIEnv* env, jclass clazz, jobject currentActivity)
+    {
+        android::global::SetCurrentActivity(currentActivity);
+    };
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)

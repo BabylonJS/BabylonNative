@@ -30,6 +30,11 @@ namespace java::net
     class URLConnection;
 }
 
+namespace android
+{
+    class ManifestPermission;
+}
+
 namespace android::app
 {
     class Activity;
@@ -157,6 +162,15 @@ namespace java::net
         io::InputStream GetInputStream() const;
 
         explicit operator HttpURLConnection() const;
+    };
+}
+
+namespace android
+{
+    class ManifestPermission
+    {
+    public:
+        static jstring getPermissionName(const char* permissionName);
     };
 }
 

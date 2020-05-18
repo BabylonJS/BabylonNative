@@ -1189,14 +1189,14 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info, const JsRuntimeScheduler& runtimeScheduler)
+            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
             {
                 auto jsSession = Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}));
                 auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession(info.Env(), runtimeScheduler)
-                    .then(runtimeScheduler,
+                session.m_xr.BeginSession(info.Env(), session.m_runtimeScheduler)
+                    .then(session.m_runtimeScheduler,
                         arcana::cancellation::none(),
                         [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
@@ -1208,7 +1208,6 @@ namespace Babylon
                                 catch (const std::exception& e)
                                 {
                                     deferred.Reject(Napi::Error::New(env, e.what()).Value());
-                                    throw e;
                                 }
                             }
                             else
@@ -1225,6 +1224,7 @@ namespace Babylon
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
@@ -1277,6 +1277,7 @@ namespace Babylon
             NativeXr m_xr{};
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
+            JsRuntimeScheduler m_runtimeScheduler;
 
             std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
@@ -1625,7 +1626,7 @@ namespace Babylon
 
             Napi::Value RequestSession(const Napi::CallbackInfo& info)
             {
-                return XRSession::CreateAsync(info, m_runtimeScheduler);
+                return XRSession::CreateAsync(info);
             }
 
             Napi::Value GetWebXRRenderTarget(const Napi::CallbackInfo& info)

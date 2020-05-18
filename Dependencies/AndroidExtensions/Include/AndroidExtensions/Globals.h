@@ -6,13 +6,14 @@
 
 namespace android::global
 {
-    void Initialize(JavaVM* javaVM, jobject appContext, jobject mainActivity);
+    void Initialize(JavaVM* javaVM, jobject appContext);
 
     JNIEnv* GetEnvForCurrentThread();
 
     android::content::Context GetAppContext();
 
-    android::app::Activity GetMainActivity();
+    android::app::Activity GetCurrentActivity();
+    void SetCurrentActivity(jobject currentActivity);
     using AppStateChangedCallback = std::function<void()>;
     using AppStateChangedCallbackTicket = arcana::ticketed_collection<AppStateChangedCallback>::ticket;
 

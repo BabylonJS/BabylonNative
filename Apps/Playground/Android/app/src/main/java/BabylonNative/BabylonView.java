@@ -11,22 +11,30 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     private static final String TAG = "BabylonView";
     private boolean mViewReady = false;
     private ViewDelegate mViewDelegate;
-    private Activity mMainActivity;
+    private Activity mCurrentActivity;
 
     public BabylonView(Context context, ViewDelegate viewDelegate) {
         this(context, viewDelegate, (Activity)viewDelegate);
     }
 
-    public BabylonView(Context context, ViewDelegate viewDelegate, Activity mainActivity) {
+    public BabylonView(Context context, ViewDelegate viewDelegate, Activity currentActivity) {
         super(context);
 
-        this.mMainActivity = mainActivity;
+        this.mCurrentActivity = currentActivity;
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
         setOnTouchListener(this);
         this.mViewDelegate = viewDelegate;
 
         BabylonNative.Wrapper.initEngine();
+    }
+
+    public void setCurrentActivity(Activity currentActivity)
+    {
+        if (currentActivity != this.mCurrentActivity) {
+            this.mCurrentActivity = currentActivity;
+            BabylonNative.Wrapper.setCurrentActivity(this.mCurrentActivity);
+        }
     }
 
     public void loadScript(String path) {
@@ -55,7 +63,8 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), this.getContext(), this.mMainActivity);
+        BabylonNative.Wrapper.surfaceCreated(getHolder().getSurface(), this.getContext());
+        BabylonNative.Wrapper.setCurrentActivity(this.mCurrentActivity);
         if (!this.mViewReady) {
             this.mViewDelegate.onViewReady();
             this.mViewReady = true;
