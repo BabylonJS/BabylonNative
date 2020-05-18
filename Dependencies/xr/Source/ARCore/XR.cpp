@@ -5,7 +5,6 @@
 #include <sstream>
 #include <chrono>
 #include <arcana/threading/task.h>
-#include <Babylon/JsRuntimeScheduler.h>
 #include <arcana/threading/dispatcher.h>
 #include <thread>
 
@@ -28,6 +27,7 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
+#include <arcana/threading/task_schedulers.h>
 
 using namespace android::global;
 
@@ -221,7 +221,7 @@ namespace xr
             return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
         }
 
-        arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
+        arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync()
         {
             auto task = arcana::task_from_result<std::exception_ptr>();
 
@@ -248,13 +248,15 @@ namespace xr
 
                 // Kick off the install request, and set the task for our caller to wait on.
                 CheckARCoreInstallStatus(true);
-                task = installTcs.as_task().then(runtimeScheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){});
+                task = installTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){
+                    return;
+                });
             }
 
             return task;
         }
 
-        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
+        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
         {
             auto task = arcana::task_from_result<std::exception_ptr>();
 
@@ -295,7 +297,9 @@ namespace xr
 
                 // Kick off the permission check request, and set the task for our caller to wait on.
                 GetCurrentActivity().requestPermissions(PERMISSION_NAME, PERMISSION_REQUEST_ID);
-                task = permissionTcs.as_task().then(runtimeScheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){});
+                task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){
+                    return;
+                });
             }
 
             return task;
@@ -314,10 +318,31 @@ namespace xr
         Impl(System::Impl& systemImpl, void* graphicsContext)
             : SystemImpl{ systemImpl }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
-            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
+            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
+        {
+        }
+
+        ~Impl()
+        {
+            if (isInitialized)
+            {
+                ArPose_destroy(cameraPose);
+                ArPose_destroy(hitResultPose);
+                ArHitResult_destroy(hitResult);
+                ArHitResultList_destroy(hitResultList);
+                ArFrame_destroy(frame);
+                ArSession_destroy(session);
+
+                glDeleteTextures(1, &cameraTextureId);
+                glDeleteProgram(shaderProgramId);
+
+                DestroyDisplayResources();
+            }
+        }
+
+        void Initialize()
         {
             // Note: graphicsContext is an EGLContext
-
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
                 glGenTextures(1, &cameraTextureId);
@@ -367,25 +392,17 @@ namespace xr
                     throw std::runtime_error{ message.str() };
                 }
             }
-        }
 
-        ~Impl()
-        {
-            ArPose_destroy(cameraPose);
-            ArPose_destroy(hitResultPose);
-            ArHitResult_destroy(hitResult);
-            ArHitResultList_destroy(hitResultList);
-            ArFrame_destroy(frame);
-            ArSession_destroy(session);
-
-            glDeleteTextures(1, &cameraTextureId);
-            glDeleteProgram(shaderProgramId);
-
-            DestroyDisplayResources();
+            isInitialized = true;
         }
 
         std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
+            if (!isInitialized)
+            {
+                Initialize();
+            }
+
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
@@ -643,6 +660,7 @@ namespace xr
         }
 
     private:
+        bool isInitialized{false};
         bool sessionEnded{false};
 
         GLuint shaderProgramId{};
@@ -786,17 +804,17 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(false);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice)
     {
         // First perform the ARCore installation check, request install if not yet installed.
-        return CheckAndInstallARCoreAsync(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&runtimeScheduler, &system, graphicsDevice]()
+        return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
         {
             // Next check for camera permissions, and request if not already granted.
-            return CheckCameraPermissionAsync(runtimeScheduler).then(runtimeScheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
-            {
-                // Finally if the previous two tasks succeed, start the AR session.
-                return std::make_shared<System::Session>(system, graphicsDevice);
-            });
+            return CheckCameraPermissionAsync();
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
+        {
+            // Finally if the previous two tasks succeed, start the AR session.
+            return std::make_shared<System::Session>(system, graphicsDevice);
         });
     }
 

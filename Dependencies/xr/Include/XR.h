@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #include <arcana/threading/task.h>
-#include <Babylon/JsRuntimeScheduler.h>
 
 namespace xr
 {
@@ -141,9 +140,11 @@ namespace xr
                 std::unique_ptr<Impl> m_impl{};
             };
 
-            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice);
-            Session(System& system, void* graphicsDevice);
+            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(System& system, void* graphicsDevice);
             ~Session();
+
+            // Do not use, call CreateAsync instead.
+            Session(System& system, void* graphicsDevice);
 
             std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession);
             void RequestEndSession();

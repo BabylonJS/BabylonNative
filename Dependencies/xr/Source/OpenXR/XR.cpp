@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <optional>
 #include <arcana/threading/task.h>
-#include <Babylon/JsRuntimeScheduler.h>
 
 namespace xr
 {
@@ -823,7 +822,7 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice)
     {
         return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice));
     }

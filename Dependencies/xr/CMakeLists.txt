@@ -47,8 +47,7 @@ else()
 endif()
 
 target_link_libraries(xr
-    PUBLIC arcana
-    PUBLIC JsRuntime)
+    PUBLIC arcana)
 
 target_include_directories(xr PUBLIC "Include")
 

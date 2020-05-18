@@ -149,7 +149,7 @@ namespace Babylon
         NativeXr();
         ~NativeXr();
 
-        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env, const JsRuntimeScheduler& runtimeScheduler);
+        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
         void EndSession(); // TODO: Make this asynchronous.
 
         auto ActiveFrameBuffers() const
@@ -227,7 +227,7 @@ namespace Babylon
         }
     }
 
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env, const JsRuntimeScheduler& runtimeScheduler)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -240,7 +240,7 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(runtimeScheduler, m_system, bgfx::getInternalData()->context).then(runtimeScheduler, arcana::cancellation::none(), [this](std::shared_ptr<xr::System::Session> session) {
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](std::shared_ptr<xr::System::Session> session) {
             m_session = std::move(session);
         });
     }
@@ -1195,7 +1195,7 @@ namespace Babylon
                 auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession(info.Env(), session.m_runtimeScheduler)
+                session.m_xr.BeginSession(info.Env())
                     .then(session.m_runtimeScheduler,
                         arcana::cancellation::none(),
                         [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
