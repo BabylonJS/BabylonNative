@@ -223,7 +223,7 @@ namespace xr
 
         XrSessionState SessionState{ XR_SESSION_STATE_UNKNOWN };
 
-        Impl(System::Impl& hmdImpl, void* graphicsContext)
+        Impl(System::Impl& hmdImpl, void* graphicsContext, void* /*window*/)
             : HmdImpl{ hmdImpl }
         {
             assert(HmdImpl.IsInitialized());
@@ -815,7 +815,7 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
+    System::Session::Session(System& headMountedDisplay, void* graphicsDevice, void* /*window*/)
         : m_impl{ std::make_unique<System::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}
 
