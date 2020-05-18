@@ -122,7 +122,7 @@ extern "C"
     Java_BabylonNative_Wrapper_setCurrentActivity(JNIEnv* env, jclass clazz, jobject currentActivity)
     {
         android::global::SetCurrentActivity(currentActivity);
-    };
+    }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)

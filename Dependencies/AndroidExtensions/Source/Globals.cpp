@@ -7,7 +7,7 @@ namespace android::global
     {
         JavaVM* g_javaVM{};
         jobject g_appContext{};
-        jobject g_currentActivity = nullptr;
+        jobject g_currentActivity{};
 
         thread_local struct Env final
         {

@@ -170,6 +170,9 @@ namespace android
     class ManifestPermission
     {
     public:
+        static jstring CAMERA();
+
+    private:
         static jstring getPermissionName(const char* permissionName);
     };
 }
@@ -181,7 +184,7 @@ namespace android::app
     public:
         Activity(jobject object);
 
-        void requestPermissions(const char* permissionName, int permissionRequestID);
+        void requestPermissions(jstring systemPermissionName, int permissionRequestID);
     };
 }
 
@@ -204,7 +207,7 @@ namespace android::content
 
         jobject getSystemService(const char* serviceName);
 
-        bool checkSelfPermission(const char* permissionName);
+        bool checkSelfPermission(jstring systemPermissionName);
     };
 }
 

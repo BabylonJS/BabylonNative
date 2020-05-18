@@ -143,15 +143,13 @@ namespace xr
             static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(System& system, void* graphicsDevice);
             ~Session();
 
-            // Do not use, call CreateAsync instead.
-            Session(System& system, void* graphicsDevice);
-
             std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession);
             void RequestEndSession();
             Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
 
         private:
+            Session(System& system, void* graphicsDevice);
             std::unique_ptr<Impl> m_impl{};
         };
 

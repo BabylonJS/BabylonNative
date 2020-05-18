@@ -149,6 +149,7 @@ namespace Babylon
         NativeXr();
         ~NativeXr();
 
+        arcana::cancellation_source& GetCancellationSource();
         arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
         void EndSession(); // TODO: Make this asynchronous.
 
@@ -205,6 +206,7 @@ namespace Babylon
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
         NativeEngine* m_engineImpl{};
+        arcana::cancellation_source m_cancellationSource{};
 
         void BeginFrame();
         void EndFrame();
@@ -216,6 +218,8 @@ namespace Babylon
 
     NativeXr::~NativeXr()
     {
+        m_cancellationSource.cancel();
+
         if (m_session != nullptr)
         {
             if (m_frame != nullptr)
@@ -240,7 +244,7 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, arcana::cancellation::none(), [this](std::shared_ptr<xr::System::Session> session) {
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
             m_session = std::move(session);
         });
     }
@@ -336,6 +340,11 @@ namespace Babylon
         m_activeFrameBuffers.clear();
 
         m_frame.reset();
+    }
+
+    arcana::cancellation_source& NativeXr::GetCancellationSource()
+    {
+        return m_cancellationSource;
     }
 }
 
@@ -1196,8 +1205,7 @@ namespace Babylon
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 session.m_xr.BeginSession(info.Env())
-                    .then(session.m_runtimeScheduler,
-                        arcana::cancellation::none(),
+                    .then(session.m_runtimeScheduler, session.m_xr.GetCancellationSource(),
                         [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {

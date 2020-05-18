@@ -14,6 +14,7 @@
 #include <EGL/egl.h>
 
 #include <AndroidExtensions/Globals.h>
+#include <AndroidExtensions/JavaWrappers.h>
 
 #include <android/native_window.h>
 #include <android/log.h>
@@ -29,11 +30,12 @@
 #include <gtx/quaternion.hpp>
 #include <arcana/threading/task_schedulers.h>
 
+using namespace android;
 using namespace android::global;
 
 namespace xr
 {
-    const char* PERMISSION_NAME{"CAMERA"};
+    // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID = 8435;
 
     class System::Impl
@@ -269,7 +271,7 @@ namespace xr
             auto task = arcana::task_from_result<std::exception_ptr>();
 
             // Check if permissions are already granted.
-            if (!GetAppContext().checkSelfPermission(PERMISSION_NAME))
+            if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA()))
             {
                 // Register for the permission callback request.
                 arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
@@ -281,21 +283,14 @@ namespace xr
                         // Check if this is our permission request ID.
                         if (requestCode == PERMISSION_REQUEST_ID)
                         {
-                            // Loop over permission request results, and find the entry corresponding to the camera grant/deny.
-                            for (int i = 0; i < permissionList.size(); i++)
+                            // If the permission is found and granted complete the task.
+                            if (results[0] == 0 /* PackageManager.PERMISSION_GRANTED */)
                             {
-                                if (permissionList[i].find(PERMISSION_NAME) != std::string::npos)
-                                {
-                                    // If the permission is found and granted complete the task.
-                                    if (results[i] == 0 /* PackageManager.PERMISSION_GRANTED */)
-                                    {
-                                        permissionTcs.complete();
-                                        return;
-                                    }
-                                }
+                                permissionTcs.complete();
+                                return;
                             }
 
-                            // Did not find permission in the list, or it was explicitly denied.  Complete the task with an error.
+                            // Permission was denied.  Complete the task with an error.
                             std::ostringstream message;
                             message << "Camera permission not acquired successfully";
                             permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
@@ -304,7 +299,7 @@ namespace xr
                 };
 
                 // Kick off the permission check request, and set the task for our caller to wait on.
-                GetCurrentActivity().requestPermissions(PERMISSION_NAME, PERMISSION_REQUEST_ID);
+                GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(), PERMISSION_REQUEST_ID);
                 task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){
                     return;
                 });
@@ -846,7 +841,7 @@ namespace xr
         }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
         {
             // Finally if the previous two tasks succeed, start the AR session.
-            return std::make_shared<System::Session>(system, graphicsDevice);
+            return std::shared_ptr<System::Session>(new System::Session(system, graphicsDevice));
         });
     }
 

@@ -166,6 +166,11 @@ namespace java::net
 
 namespace android
 {
+    jstring ManifestPermission::CAMERA()
+    {
+        return getPermissionName("CAMERA");
+    }
+
     jstring ManifestPermission::getPermissionName(const char* permissionName)
     {
         JNIEnv* env{GetEnvForCurrentThread()};
@@ -182,15 +187,14 @@ namespace android::app
     {
     }
 
-    void Activity::requestPermissions(const char* permissionName, int permissionRequestID)
+    void Activity::requestPermissions(jstring systemPermissionName, int permissionRequestID)
     {
-        jstring systemPermissionName{ManifestPermission::getPermissionName(permissionName)};
-
         jobjectArray permissionArray{m_env->NewObjectArray(
             1,
             m_env->FindClass("java/lang/String"),
             systemPermissionName)};
         m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "requestPermissions", "([Ljava/lang/String;I)V"), permissionArray, permissionRequestID);
+        m_env->DeleteLocalRef(permissionArray);
     }
 }
 
@@ -216,10 +220,8 @@ namespace android::content
         return m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
     }
 
-    bool Context::checkSelfPermission(const char* permissionName)
+    bool Context::checkSelfPermission(jstring systemPermissionName)
     {
-        jstring systemPermissionName{ManifestPermission::getPermissionName(permissionName)};
-
         // Get the package manager, and get the value that represents a successful permission grant.
         jclass packageManager{m_env->FindClass("android/content/pm/PackageManager")};
         jfieldID permissionGrantedId{m_env->GetStaticFieldID(packageManager, "PERMISSION_GRANTED", "I")};
