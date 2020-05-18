@@ -221,6 +221,39 @@ namespace xr
             return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
         }
 
+        arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
+        {
+            auto task = arcana::task_from_result<std::exception_ptr>();
+
+            // Check if ARCore is already installed.
+            if (!CheckARCoreInstallStatus(false))
+            {
+                arcana::task_completion_source<void, std::exception_ptr> installTcs{};
+
+                // Add a resume callback, which will check if ARCore has been successfully installed upon app resume.
+                auto resumeTicket{AddResumeCallback([installTcs]() mutable {
+                    if (!CheckARCoreInstallStatus(false))
+                    {
+                        // ARCore not installed, throw an error.
+                        std::ostringstream message;
+                        message << "ARCore not installed.";
+                        installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                    }
+                    else
+                    {
+                        // ARCore installed successfully, complete the promise.
+                        installTcs.complete();
+                    }
+                })};
+
+                // Kick off the install request, and set the task for our caller to wait on.
+                CheckARCoreInstallStatus(true);
+                task = installTcs.as_task().then(runtimeScheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){});
+            }
+
+            return task;
+        }
+
         arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
         {
             auto task = arcana::task_from_result<std::exception_ptr>();
@@ -751,39 +784,6 @@ namespace xr
 
         // VR and inline sessions are not supported at this time.
         return arcana::task_from_result<std::exception_ptr>(false);
-    }
-
-    arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler)
-    {
-        auto task = arcana::task_from_result<std::exception_ptr>();
-
-        // Check if ARCore is already installed.
-        if (!CheckARCoreInstallStatus(false))
-        {
-            arcana::task_completion_source<void, std::exception_ptr> installTcs{};
-
-            // Add a resume callback, which will check if ARCore has been successfully installed upon app resume.
-            auto resumeTicket{AddResumeCallback([installTcs]() mutable {
-                if (!CheckARCoreInstallStatus(false))
-                {
-                    // ARCore not installed, throw an error.
-                    std::ostringstream message;
-                    message << "ARCore not installed.";
-                    installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
-                }
-                else
-                {
-                    // ARCore installed successfully, complete the promise.
-                    installTcs.complete();
-                }
-            })};
-
-            // Kick off the install request, and set the task for our caller to wait on.
-            CheckARCoreInstallStatus(true);
-            task = installTcs.as_task().then(runtimeScheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){});
-        }
-
-        return task;
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(const Babylon::JsRuntimeScheduler& runtimeScheduler, System& system, void* graphicsDevice)
