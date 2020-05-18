@@ -3,10 +3,8 @@
 #import <UIKit/UIKit.h>
 #import <ARKit/ARKit.h>
 #import <ARKit/ARConfiguration.h>
+#import <MetalKit/MetalKit.h>
 
-extern void* GCALayerPtr;
-
-extern id<MTLDevice> MetalDevice;
 @interface SessionDelegate : NSObject <ARSessionDelegate>
 @property (readonly) id<MTLTexture> cameraTextureY;
 @property (readonly) id<MTLTexture> cameraTextureCbCr;
@@ -239,19 +237,33 @@ namespace xr
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
-        Impl(System::Impl& systemImpl, void* graphicsContext)
+        Impl(System::Impl& systemImpl, void* graphicsContext, void* window)
             : SystemImpl{ systemImpl }
         {
+            MetalDevice = id<MTLDevice>(graphicsContext);
+            UIView* MainView = (UIView*)window;
+            
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                xrView = [[MTKView alloc] initWithFrame:[MainView bounds] device:MetalDevice];
+                [MainView addSubview:xrView];
+                xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+                xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+                MetalLayer = (CAMetalLayer *)xrView.layer;
+                MetalLayer.device = MetalDevice;
+                auto scale = UIScreen.mainScreen.scale;
+                viewportSize.x = [MainView bounds].size.width * scale;
+                viewportSize.y = [MainView bounds].size.height * scale;
+            });
+
             configuration = [ARWorldTrackingConfiguration new];
             session = [ARSession new];
-            MetalLayer = (CAMetalLayer*)GCALayerPtr;
             MetalDevice = id<MTLDevice>(graphicsContext);
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:MetalDevice];
             session.delegate = sessionDelegate;
             configuration.planeDetection = ARPlaneDetectionHorizontal;
             configuration.lightEstimationEnabled = false;
             [session runWithConfiguration:configuration];
-            
+
             // build pipeline
             NSError* error;
             id<MTLLibrary> lib = CompileShader(MetalDevice, shaderSource);
@@ -271,10 +283,10 @@ namespace xr
                 NSLog(@"Failed to create pipeline state: %@", error);
             }
             commandQueue = [MetalDevice newCommandQueue];
-            
-            auto scale = UIScreen.mainScreen.scale;
-            viewportSize.x = MetalLayer.visibleRect.size.width * scale;
-            viewportSize.y = MetalLayer.visibleRect.size.height * scale;
+            // default fov values to avoid NaN at startup
+            auto& frameView = ActiveFrameViews[0];
+            frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = 0.5);
+            frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = 0.5);
         }
 
         ~Impl()
@@ -282,6 +294,8 @@ namespace xr
             [sessionDelegate release];
             [configuration release];
             [session release];
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [xrView removeFromSuperview]; });
         }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
@@ -387,6 +401,7 @@ namespace xr
         }
         
         private:
+            MTKView* xrView;
             bool SessionEnded{ false };
             id<MTLDevice> MetalDevice;
             CAMetalLayer* MetalLayer;
@@ -396,7 +411,6 @@ namespace xr
             id<MTLRenderPipelineState> pipelineState;
             vector_uint2 viewportSize;
             id<MTLCommandQueue> commandQueue;
-
     };
 
     class System::Session::Frame::Impl
@@ -445,8 +459,8 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    System::Session::Session(System& system, void* graphicsDevice)
-        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
+    System::Session::Session(System& system, void* graphicsDevice, void* window)
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, window) }
     {}
 
     System::Session::~Session()

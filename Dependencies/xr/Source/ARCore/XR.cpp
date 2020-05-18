@@ -642,7 +642,7 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    System::Session::Session(System& system, void* graphicsDevice)
+    System::Session::Session(System& system, void* graphicsDevice, void* /*window*/)
         : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
     {}
 

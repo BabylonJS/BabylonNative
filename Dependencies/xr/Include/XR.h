@@ -131,7 +131,7 @@ namespace xr
                 std::unique_ptr<Impl> m_impl{};
             };
 
-            Session(System& system, void* graphicsDevice);
+            Session(System& system, void* graphicsDevice, void* window);
             ~Session();
 
             Session(Session&) = delete;

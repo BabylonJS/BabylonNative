@@ -9,6 +9,11 @@
 #include <set>
 #include <napi/napi.h>
 
+namespace bgfx
+{
+    extern PlatformData g_platformData;
+}
+
 namespace
 {
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
@@ -239,7 +244,7 @@ namespace Babylon
             }
         }
 
-        m_session = std::make_unique<xr::System::Session>(m_system, bgfx::getInternalData()->context);
+        m_session = std::make_unique<xr::System::Session>(m_system, bgfx::getInternalData()->context, bgfx::g_platformData.nwh);
     }
 
     // TODO: Make this asynchronous.

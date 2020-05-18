@@ -11,7 +11,7 @@
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
-void* GCALayerPtr{};
+
 @implementation LibNativeBridge
 
 - (instancetype)init
@@ -24,10 +24,8 @@ void* GCALayerPtr{};
 {
 }
 
-- (void)init:(void*)CALayerPtr width:(int)inWidth height:(int)inHeight
+- (void)init:(void*)inView width:(int)inWidth height:(int)inHeight
 {
-    GCALayerPtr = CALayerPtr;
-    
     runtime.reset();
     inputBuffer.reset();
 
@@ -37,7 +35,7 @@ void* GCALayerPtr{};
     // Initialize NativeWindow plugin
     float width = inWidth;
     float height = inHeight;
-    void* windowPtr = CALayerPtr;
+    void* windowPtr = inView;
     Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
