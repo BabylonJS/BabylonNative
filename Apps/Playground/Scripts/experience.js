@@ -162,7 +162,7 @@ CreateBoxAsync().then(function () {
 
     if (text) {
         var Writer = BABYLON.MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
-        text1 = new Writer(
+        new Writer(
             "Lorem ipsum dolor sit amet...",
             {
                 "anchor": "center",

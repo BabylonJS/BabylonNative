@@ -295,7 +295,7 @@ namespace Babylon
             texture->Height = height;
         }
 
-        class IndexBufferData
+        class IndexBufferData final
         {
         public:
             IndexBufferData(Napi::TypedArray bytes, uint16_t flags, bool dynamic)
@@ -349,7 +349,7 @@ namespace Babylon
             uint16_t m_handleIndex{bgfx::kInvalidHandle};
         };
 
-        class VertexBufferData
+        class VertexBufferData final
         {
         public:
             VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
