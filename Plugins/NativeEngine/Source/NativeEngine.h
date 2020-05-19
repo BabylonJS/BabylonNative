@@ -22,8 +22,6 @@
 #include <arcana/containers/weak_table.h>
 #include <arcana/threading/cancellation.h>
 
-#include <variant>
-
 namespace Babylon
 {
     class ViewClearState final
@@ -284,18 +282,21 @@ namespace Babylon
         }
     };
 
+    class IndexBufferData;
+    class VertexBufferData;
+
     struct VertexArray final
     {
         struct IndexBuffer
         {
-            std::variant<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle> handle{};
+            const IndexBufferData* data{};
         };
 
         IndexBuffer indexBuffer{};
 
         struct VertexBuffer
         {
-            std::variant<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle> handle{};
+            const VertexBufferData* data{};
             uint32_t startVertex{};
             bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
