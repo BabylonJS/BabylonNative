@@ -841,7 +841,7 @@ namespace xr
         }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
         {
             // Finally if the previous two tasks succeed, start the AR session.
-            return std::shared_ptr<System::Session>(new System::Session(system, graphicsDevice));
+            return std::make_shared<System::Session>(system, graphicsDevice);
         });
     }
 

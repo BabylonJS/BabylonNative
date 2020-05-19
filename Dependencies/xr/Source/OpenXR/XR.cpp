@@ -824,7 +824,7 @@ namespace xr
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice)
     {
-        return arcana::task_from_result<std::exception_ptr>(std::shared_ptr<System::Session>(new System::Session(system, graphicsDevice)));
+        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice));
     }
 
     System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
