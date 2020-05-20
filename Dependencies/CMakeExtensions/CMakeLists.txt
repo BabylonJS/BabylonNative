@@ -90,7 +90,7 @@ function(warnings_as_errors target)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
       target_compile_options(${target} PRIVATE /W4 /WX)
     else()
-      target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror)
+      target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror -Wc99-extensions)
     endif()
 endfunction()
 

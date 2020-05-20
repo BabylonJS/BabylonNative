@@ -375,7 +375,7 @@ namespace Babylon
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
 
-            static const auto IndexToEye(size_t idx)
+            static auto IndexToEye(size_t idx)
             {
                 switch (idx)
                 {
@@ -388,7 +388,7 @@ namespace Babylon
                 }
             }
 
-            static const auto EyeToIndex(const std::string& eye)
+            static auto EyeToIndex(const std::string& eye)
             {
                 if (eye == LEFT)
                 {
@@ -1233,8 +1233,8 @@ namespace Babylon
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
-                , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+                , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
@@ -1411,7 +1411,7 @@ namespace Babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame) {
+                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
                     m_xrFrame.Update(frame);
