@@ -32,7 +32,7 @@ namespace Babylon
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
-        static const char* JS_INSTANCE_NAME{ "TestUtils" };
+        static inline constexpr const char* JS_INSTANCE_NAME{ "TestUtils" };
 
         using ParentT = Napi::ObjectWrap<TestUtils>;
 
@@ -97,6 +97,7 @@ namespace Babylon
             SetWindowPos(hwnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOMOVE | SWP_NOZORDER);
 #else
             // TODO: handle resize for other platforms
+            (void)info;
 #endif
         }
 

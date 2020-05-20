@@ -99,7 +99,8 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
     Visual* visual = DefaultVisual(display, screen);
     Window root   = RootWindow(display, screen);
 
-    XSetWindowAttributes windowAttrs{0};
+    XSetWindowAttributes windowAttrs;
+    windowAttrs.background_pixel = 0;
     windowAttrs.background_pixmap = 0;
     windowAttrs.border_pixel = 0;
     windowAttrs.event_mask = 0
