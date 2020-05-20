@@ -24,7 +24,6 @@ namespace bgfx
 #include <bimg/encode.h>
 
 #include <bx/math.h>
-#include <bx/readerwriter.h>
 
 #include <queue>
 #include <regex>

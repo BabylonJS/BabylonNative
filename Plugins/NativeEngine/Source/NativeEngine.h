@@ -13,7 +13,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <bimg/bimg.h>
-#include <bx/readerwriter.h>
+#include <bx/allocator.h>
 
 #include <gsl/gsl>
 
@@ -193,7 +193,7 @@ namespace Babylon
         void Unbind(FrameBufferData* data)
         {
             assert(m_boundFrameBuffer == data);
-            _CRT_UNUSED(data);
+            (void)data;
             m_boundFrameBuffer = m_backBuffer;
         }
 
