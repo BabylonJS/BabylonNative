@@ -21,6 +21,7 @@
 
 #include <arcana/containers/weak_table.h>
 #include <arcana/threading/cancellation.h>
+#include <unordered_map>
 
 namespace Babylon
 {
