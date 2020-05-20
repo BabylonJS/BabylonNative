@@ -1029,7 +1029,7 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(m_runtimeScheduler, m_cancelSource, [this, texture, dataRef = Napi::Persistent(data)](bimg::ImageContainer* image) {
+            .then(m_runtimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](bimg::ImageContainer* image) {
                 CreateTextureFromImage(texture, image);
             })
             .then(arcana::inline_scheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
@@ -1246,7 +1246,7 @@ namespace Babylon
                 bgfx::createTexture2D(width, height, generateMips, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT),
                 bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
             std::array<bgfx::Attachment, textures.size()> attachments{};
-            for (int idx = 0; idx < attachments.size(); ++idx)
+            for (auto idx = 0; idx < attachments.size(); ++idx)
             {
                 attachments[idx].init(textures[idx]);
             }
