@@ -59,16 +59,16 @@ namespace
                 printf("%s", message);
             });
 
-            Babylon::TestUtils::CreateInstance(env, (void*)window);
+            Babylon::TestUtils::CreateInstance(env, (void*)(uintptr_t)window);
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeWindow plugin.
-            Babylon::Plugins::NativeWindow::Initialize(env, (void*)window, width, height);
+            Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)window, width, height);
+            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)(uintptr_t)window, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
         });
 
@@ -89,7 +89,7 @@ namespace
     }
 }
 
-int main(int _argc, const char* const* _argv)
+int main(int /*_argc*/, const char* const* /*_argv*/)
 {
     XInitThreads();
     Display* display = XOpenDisplay(NULL);

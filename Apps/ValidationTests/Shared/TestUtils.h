@@ -9,8 +9,6 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
-#include <bx/readerwriter.h>
-
 #if _MSC_VER 
 #pragma warning( disable : 4324 ) // 'bx::DirectoryReader': structure was padded due to alignment specifier
 #endif
@@ -34,7 +32,7 @@ namespace Babylon
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
-        static inline constexpr char* JS_INSTANCE_NAME{ "TestUtils" };
+        static const char* JS_INSTANCE_NAME{ "TestUtils" };
 
         using ParentT = Napi::ObjectWrap<TestUtils>;
 
@@ -89,10 +87,10 @@ namespace Babylon
 
         void UpdateSize(const Napi::CallbackInfo& info)
         {
+#ifdef WIN32
             const int32_t width = info[0].As<Napi::Number>().Int32Value();
             const int32_t height = info[1].As<Napi::Number>().Int32Value();
 
-#ifdef WIN32
             HWND hwnd = (HWND)_nativeWindowPtr;
             RECT rc{ 0, 0, width, height };
             AdjustWindowRectEx(&rc, GetWindowStyle(hwnd), GetMenu(hwnd) != NULL, GetWindowExStyle(hwnd));
