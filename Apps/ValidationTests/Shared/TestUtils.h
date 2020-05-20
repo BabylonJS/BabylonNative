@@ -10,6 +10,11 @@
 #include <bimg/encode.h>
 
 #include <bx/readerwriter.h>
+
+#if _MSC_VER 
+#pragma warning( disable : 4324 ) // 'bx::DirectoryReader': structure was padded due to alignment specifier
+#endif
+
 #include <bx/file.h>
 
 #include <functional>
