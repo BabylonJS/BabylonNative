@@ -112,7 +112,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     }
 }
 
-- (void)mouseDown:(NSEvent *)theEvent {
+- (void)mouseDown:(NSEvent *)__unused theEvent {
     if (inputBuffer)
     {
         inputBuffer->SetPointerDown(true);
@@ -127,14 +127,14 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     }
 }
 
-- (void)mouseUp:(NSEvent *)theEvent {
+- (void)mouseUp:(NSEvent *)__unused theEvent {
     if (inputBuffer)
     {
         inputBuffer->SetPointerDown(false);
     }
 }
 
--(IBAction) refresh:(id)sender
+-(IBAction) refresh:(id)__unused sender
 {
     [self refreshBabylon];
 }

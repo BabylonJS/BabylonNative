@@ -928,7 +928,7 @@ namespace Babylon
                     // TODO: Actually take the offset into account.
                     auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
                     assert(transform != nullptr);
-                    _CRT_UNUSED(transform);
+                    (void)transform;
                 }
             }
 
