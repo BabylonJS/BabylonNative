@@ -6,12 +6,12 @@
 
 @implementation AppDelegate
 
-- (void)applicationDidFinishLaunching:(NSNotification *)aNotification __unused {
+- (void)applicationDidFinishLaunching:(NSNotification *)__unused aNotification {
     // Insert code here to initialize your application
 }
 
 
-- (void)applicationWillTerminate:(NSNotification *)aNotification __unused {
+- (void)applicationWillTerminate:(NSNotification *)__unused aNotification {
     // Insert code here to tear down your application
 }
 
