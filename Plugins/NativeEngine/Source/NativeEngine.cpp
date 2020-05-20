@@ -344,7 +344,7 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void Update(Napi::TypedArray bytes, uint32_t startingIdx)
+        void Update(const Napi::TypedArray& bytes, uint32_t startingIdx)
         {
             const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
 
