@@ -60,7 +60,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
       } else {
         if (box !== undefined && scene !== undefined) {
           const xr = await scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true })
-          const session = await xr.baseExperience.enterXRAsync("immersive-vr", "unbounded", xr.renderTarget);
+          const session = await xr.baseExperience.enterXRAsync("immersive-ar", "unbounded", xr.renderTarget);
           setXrSession(session);
           box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
           box.rotate(Vector3.Up(), 3.14159);
