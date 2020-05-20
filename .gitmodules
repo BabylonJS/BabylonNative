@@ -1,6 +1,6 @@
 [submodule "base-n"]
 	path = Dependencies/base-n
-	url = https://github.com/azawadzki/base-n
+	url = https://github.com/CedricGuillemet/base-n
 [submodule "arcana.cpp"]
 	path = Dependencies/arcana.cpp
 	url = https://github.com/microsoft/arcana.cpp
