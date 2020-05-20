@@ -300,7 +300,7 @@ namespace Babylon
     template<typename Handle1T, typename Handle2T>
     class VariantHandleHolder
     {
-    protected:
+    public:
         std::variant<Handle1T, Handle2T> m_handle{};
 
         template<typename NonDynamicCallableT, typename DynamicCallableT>
@@ -335,19 +335,37 @@ namespace Babylon
 
         ~IndexBufferData()
         {
-            DoForHandleTypes([](auto handle) { bgfx::destroy(handle); }, [](auto handle) { bgfx::destroy(handle); });
+            constexpr auto nonDynamic = [](auto handle) {
+                bgfx::destroy(handle);
+            };
+            constexpr auto dynamic = [](auto handle) {
+                bgfx::destroy(handle);
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
 
         void Update(Napi::TypedArray bytes, uint32_t startingIdx)
         {
             const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
 
-            DoForHandleTypes([](auto) { throw std::runtime_error("Cannot update a non-dynamic index buffer."); }, [memory, startingIdx](auto handle) { bgfx::update(handle, startingIdx, memory); });
+            constexpr auto nonDynamic = [](auto) {
+                throw std::runtime_error("Cannot update a non-dynamic index buffer.");
+            };
+            const auto dynamic = [memory, startingIdx](auto handle) {
+                bgfx::update(handle, startingIdx, memory);
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
 
         void SetBgfxIndexBuffer() const
         {
-            DoForHandleTypes([](auto handle) { bgfx::setIndexBuffer(handle); }, [](auto handle) { bgfx::setIndexBuffer(handle); });
+            constexpr auto nonDynamic = [](auto handle) {
+                bgfx::setIndexBuffer(handle);
+            };
+            constexpr auto dynamic = [](auto handle) {
+                bgfx::setIndexBuffer(handle);
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
     };
 
@@ -369,49 +387,62 @@ namespace Babylon
 
         ~VertexBufferData()
         {
-            DoForHandleTypes([](auto handle) {
+            constexpr auto nonDynamic = [](auto handle) {
                 if (handle.idx != bgfx::kInvalidHandle)
                 {
                     bgfx::destroy(handle);
-                } }, [](auto handle) {
+                }
+            };
+            constexpr auto dynamic = [](auto handle) {
                 if (handle.idx != bgfx::kInvalidHandle)
                 {
                     bgfx::destroy(handle);
-                } });
+                }
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
 
         void EnsureFinalized(Napi::Env env, const bgfx::VertexLayout& layout)
         {
-            DoForHandleTypes([&layout, this](auto handle) {
+            const auto nonDynamic = [&layout, this](auto handle) {
                 if (handle.idx != bgfx::kInvalidHandle)
                 {
                     return;
                 }
 
-                const bgfx::Memory* memory = bgfx::makeRef(m_bytes.data(), m_bytes.size(), [](void*, void* userData)
-                {
-                    auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-                    bytes->clear();
-                }, &m_bytes);
+                const bgfx::Memory* memory = bgfx::makeRef(
+                    m_bytes.data(), m_bytes.size(), [](void*, void* userData) {
+                        auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
+                        bytes->clear();
+                    },
+                    &m_bytes);
 
-                m_handle = bgfx::createVertexBuffer(memory, layout); }, [&layout, this](auto handle) {
+                m_handle = bgfx::createVertexBuffer(memory, layout);
+            };
+            const auto dynamic = [&layout, this](auto handle) {
                 if (handle.idx != bgfx::kInvalidHandle)
                 {
                     return;
                 }
 
-                const bgfx::Memory* memory = bgfx::makeRef(m_bytes.data(), m_bytes.size(), [](void*, void* userData)
-                {
-                    auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-                    bytes->clear();
-                }, &m_bytes);
+                const bgfx::Memory* memory = bgfx::makeRef(
+                    m_bytes.data(), m_bytes.size(), [](void*, void* userData) {
+                        auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
+                        bytes->clear();
+                    },
+                    &m_bytes);
 
-                m_handle = bgfx::createDynamicVertexBuffer(memory, layout); });
+                m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
 
         void Update(const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
         {
-            DoForHandleTypes([](auto) { throw std::runtime_error("Cannot update non-dynamic vertex buffer."); }, [&bytes, offset, byteLength, this](auto handle) {
+            constexpr auto nonDynamic = [](auto) {
+                throw std::runtime_error("Cannot update non-dynamic vertex buffer.");
+            };
+            const auto dynamic = [&bytes, offset, byteLength, this](auto handle) {
                 if (handle.idx == bgfx::kInvalidHandle)
                 {
                     // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
@@ -422,12 +453,20 @@ namespace Babylon
                     // Buffer was already created, do a real update operation.
                     const bgfx::Memory* memory = bgfx::copy(bytes.Data() + offset, byteLength);
                     bgfx::update(handle, 0, memory);
-                } });
+                }
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
 
         void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex, bgfx::VertexLayoutHandle layout) const
         {
-            DoForHandleTypes([index, startVertex, layout](auto handle) { bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout); }, [index, startVertex, layout](auto handle) { bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout); });
+            const auto nonDynamic = [index, startVertex, layout](auto handle) {
+                bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
+            };
+            const auto dynamic = [index, startVertex, layout](auto handle) {
+                bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
+            };
+            DoForHandleTypes(nonDynamic, dynamic);
         }
 
     private:
