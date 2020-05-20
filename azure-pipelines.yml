@@ -267,8 +267,8 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   variables:
-    CC: clang-9
-    CXX: clang++-9
+    CC: clang-8
+    CXX: clang++-8
 
   steps:
   - script: |
@@ -276,7 +276,7 @@ jobs:
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
+      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
     displayName: 'Install packages'
   - script: |
       mkdir build
