@@ -1,5 +1,6 @@
 #include "NativeEngine.h"
-
+#include <spirv_cross.hpp>
+#include "ShaderCompiler.h"
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 

@@ -192,6 +192,7 @@ namespace Babylon
         void Unbind(FrameBufferData* data)
         {
             assert(m_boundFrameBuffer == data);
+            _CRT_UNUSED(data);
             m_boundFrameBuffer = m_backBuffer;
         }
 

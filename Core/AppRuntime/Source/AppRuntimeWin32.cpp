@@ -11,6 +11,7 @@ namespace Babylon
     {
         HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         assert(SUCCEEDED(hr));
+        _CRT_UNUSED(hr);
         auto coInitScopeGuard = gsl::finally([] { CoUninitialize(); });
 
         RunEnvironmentTier();
