@@ -6,6 +6,7 @@
 #include <XR.h>
 
 #include <bx/bx.h>
+#include <bx/math.h>
 
 #include <set>
 #include <napi/napi.h>
