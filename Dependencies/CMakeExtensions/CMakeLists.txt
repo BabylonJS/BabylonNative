@@ -94,7 +94,7 @@ function(warnings_as_errors target)
       target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
     else()
       # c99-extensions and gnu-zero-variadic-macro-arguments coming from included bgfx headers
-      target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-c99-extensions -Wmo-gnu-zero-variadic-macro-arguments)
+      target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-c99-extensions -Wno-gnu-zero-variadic-macro-arguments)
     endif()
 endfunction()
 
