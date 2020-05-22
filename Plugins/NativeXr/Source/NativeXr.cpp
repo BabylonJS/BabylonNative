@@ -362,16 +362,16 @@ namespace Babylon
 
         struct XRReferenceSpaceType
         {
-            static constexpr auto VIEWER{"viewer"};
-            static constexpr auto LOCAL{"local"};
-            static constexpr auto LOCAL_FLOOR{"local-floor"};
-            static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
-            static constexpr auto UNBOUNDED{"unbounded"};
+            // static constexpr auto VIEWER{"viewer"};
+            // static constexpr auto LOCAL{"local"};
+            // static constexpr auto LOCAL_FLOOR{"local-floor"};
+            // static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
+            // static constexpr auto UNBOUNDED{"unbounded"};
         };
 
         struct XREye
         {
-            static constexpr auto NONE{"none"};
+            // static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
 
@@ -470,7 +470,7 @@ namespace Babylon
         class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
         {
             static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
-            static constexpr size_t VECTOR_SIZE = 4;
+            // static constexpr size_t VECTOR_SIZE = 4;
             static constexpr size_t MATRIX_SIZE = 16;
 
         public:
