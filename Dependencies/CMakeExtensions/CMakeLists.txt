@@ -102,7 +102,7 @@ function(disable_warnings target)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
       target_compile_options(${target} PRIVATE /W0)
       # Link warning 4264 : archiving object file compiled with /ZW into a static library; note that when authoring Windows Runtime types it is not recommended to link with a static library that contains Windows Runtime metadata unless /WHOLEARCHIVE is specified to include everything from the static library
-      target_compile_options(${target} PRIVATE /IGNORE:4264)
+      target_link_options(${target} PRIVATE /IGNORE:4264)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(${target} PRIVATE -Wno-cpp)
     else()
