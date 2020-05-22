@@ -93,7 +93,8 @@ function(warnings_as_errors target)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
     else()
-      target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-c99-extensions)
+      # c99-extensions and gnu-zero-variadic-macro-arguments coming from included bgfx headers
+      target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-c99-extensions -Wmo-gnu-zero-variadic-macro-arguments)
     endif()
 endfunction()
 

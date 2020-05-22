@@ -479,7 +479,7 @@ namespace Babylon
                 m_requestAnimationFrameCalback.Call({});
                 EndFrame();
             }
-            catch (std::exception ex)
+            catch (std::exception& ex)
             {
                 Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
             }
