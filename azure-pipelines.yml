@@ -307,3 +307,4 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
       ninja
     displayName: 'Build X11'
+
