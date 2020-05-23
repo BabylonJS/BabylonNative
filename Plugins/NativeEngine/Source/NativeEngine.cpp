@@ -1187,7 +1187,7 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         const auto value = info[1].As<Napi::Number>().Uint32Value();
 
-        texture->AnisotropicLevel = static_cast<uint8_t>(value);
+        texture->AnisotropicLevel = gsl::narrow_cast<uint8_t>(value);
 
         // if Anisotropic is set to 0 after being >1, then set texture flags back to linear
         texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);

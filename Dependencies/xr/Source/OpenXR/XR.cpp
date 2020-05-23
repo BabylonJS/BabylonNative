@@ -352,7 +352,7 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+                actionInfo.countSubactionPaths = gsl::narrow_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
                 actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetGripPoseAction));
                 // For each controller subaction
@@ -379,7 +379,7 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+                actionInfo.countSubactionPaths = gsl::narrow_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
                 actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetAimPoseAction));
                 // For each controller subaction
@@ -551,8 +551,9 @@ namespace xr
         }
     };
 
-    struct System::Session::Frame::Impl
+    class System::Session::Frame::Impl
     {
+    public:
         Impl(Session::Impl& sessionImpl)
             : sessionImpl{sessionImpl}
         {
@@ -736,7 +737,7 @@ namespace xr
         }
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, Ray) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& /*filteredResults*/, Ray) const {
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 
