@@ -155,9 +155,8 @@ namespace xr
         }
     };
 
-    class System::Session::Impl
+    struct System::Session::Impl
     {
-    public:
         const System::Impl& HmdImpl;
         XrSession Session{ XR_NULL_HANDLE };
 

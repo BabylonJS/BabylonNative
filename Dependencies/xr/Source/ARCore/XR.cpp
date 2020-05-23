@@ -38,9 +38,8 @@ namespace xr
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID = 8435;
 
-    class System::Impl
+    struct System::Impl
     {
-    public:
         Impl(const std::string& /*applicationName*/)
         {
         }
@@ -309,9 +308,8 @@ namespace xr
         }
     }
 
-    class System::Session::Impl
+    struct System::Session::Impl
     {
-    public:
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;

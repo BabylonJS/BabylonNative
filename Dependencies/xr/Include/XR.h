@@ -136,7 +136,7 @@ namespace xr
                 void GetHitTestResults(std::vector<Pose>&, Ray) const;
 
             private:
-                class Impl;
+                struct Impl;
                 std::unique_ptr<Impl> m_impl{};
             };
 
