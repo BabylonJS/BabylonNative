@@ -549,9 +549,8 @@ namespace xr
         }
     };
 
-    class System::Session::Frame::Impl
+    struct System::Session::Frame::Impl
     {
-    public:
         Impl(Session::Impl& sessionImpl)
             : sessionImpl{sessionImpl}
         {
