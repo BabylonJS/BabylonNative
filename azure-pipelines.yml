@@ -261,10 +261,11 @@ jobs:
   - script: |
       adb install -t -g Apps/ValidationTests/Android/app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
-      sleep 300
-      adb logcat -t 5000
       mkdir Captures
+      sleep 30
+      while [[ $(adb shell pidof com.android.babylonnative.validationtests) -ge 1 ]]; do sleep 1; done;
       adb exec-out run-as com.android.babylonnative.validationtests tar c cache/ > Captures/cache.tar
+      adb logcat -t 5000
     displayName: 'Install and run APK'
   - task: PublishBuildArtifacts@1
     inputs:
@@ -326,11 +327,11 @@ jobs:
   - script: |
       adb install -t -g Apps/ValidationTests/Android/app/build/outputs/apk/debug/app-debug.apk
       adb shell am start -n com.android.babylonnative.validationtests/com.android.babylonnative.validationtests.ValidationTestsActivity
-      sleep 10
-      while [[ $(adb shell pidof com.android.babylonnative.validationtests) -ge 1 ]]; do sleep 1; done;
-      adb logcat -t 5000
       mkdir Captures
+      sleep 30
+      while [[ $(adb shell pidof com.android.babylonnative.validationtests) -ge 1 ]]; do sleep 1; done;
       adb exec-out run-as com.android.babylonnative.validationtests tar c cache/ > Captures/cache.tar
+      adb logcat -t 5000
     displayName: 'Install and run APK'
   - task: PublishBuildArtifacts@1
     inputs:
