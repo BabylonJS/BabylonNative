@@ -23,7 +23,7 @@ namespace Babylon
 
         ~ScriptLoader();
 
-        void LoadScript(std::string url);
+        void LoadScript(std::string url, Napi::FunctionReference* onSuccess = nullptr, Napi::FunctionReference* onError = nullptr);
         void Eval(std::string source, std::string url);
 
     private:

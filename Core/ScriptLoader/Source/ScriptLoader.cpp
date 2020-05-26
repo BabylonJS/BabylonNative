@@ -13,15 +13,20 @@ namespace Babylon
         {
         }
 
-        void LoadScript(std::string url)
+        void LoadScript(std::string url, Napi::FunctionReference* onSuccess, Napi::FunctionReference* onError)
         {
             UrlLib::UrlRequest request;
             request.Open(UrlLib::UrlMethod::Get, url);
             request.ResponseType(UrlLib::UrlResponseType::String);
-            m_task = arcana::when_all(m_task, request.SendAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction{m_dispatchFunction}, request{std::move(request)}, url{std::move(url)}](auto) {
+            m_task = arcana::when_all(m_task, request.SendAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [onSuccess, dispatchFunction{m_dispatchFunction}, request{std::move(request)}, url{std::move(url)}](auto) {
                 arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
-                dispatchFunction([taskCompletionSource, request{std::move(request)}, url{std::move(url)}](Napi::Env env) mutable {
+                dispatchFunction([onSuccess, taskCompletionSource, request{std::move(request)}, url{std::move(url)}](Napi::Env env) mutable {
                     Napi::Eval(env, request.ResponseString().data(), url.data());
+                    if (onSuccess)
+                    {
+                        onSuccess->Call({});
+                        delete onSuccess;
+                    }
                     taskCompletionSource.complete();
                 });
                 return taskCompletionSource.as_task();
@@ -54,9 +59,9 @@ namespace Babylon
     {
     }
 
-    void ScriptLoader::LoadScript(std::string url)
+    void ScriptLoader::LoadScript(std::string url, Napi::FunctionReference* onSuccess, Napi::FunctionReference* onError)
     {
-        m_impl->LoadScript(std::move(url));
+        m_impl->LoadScript(std::move(url), onSuccess, onError);
     }
 
     void ScriptLoader::Eval(std::string source, std::string url)

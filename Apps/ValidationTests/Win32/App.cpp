@@ -18,6 +18,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Script.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <iostream>
@@ -107,6 +108,7 @@ namespace
 
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+                Babylon::Polyfills::Script::Initialize(env, [](auto func) { runtime->Dispatch(std::move(func)); });
 
                 Babylon::Polyfills::Window::Initialize(env);
                 // Initialize NativeWindow plugin to the test size.

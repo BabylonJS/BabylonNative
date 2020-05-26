@@ -15,6 +15,7 @@
 #include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Script.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
@@ -107,6 +108,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            Babylon::Polyfills::Script::Initialize(env, [](auto func) { runtime->Dispatch(std::move(func)); });
 
             // Initialize NativeWindow plugin.
             auto width = static_cast<float>(rect.right - rect.left);

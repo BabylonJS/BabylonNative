@@ -52,6 +52,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE NativeEngine
     PRIVATE NativeWindow
     PRIVATE Console
+    PRIVATE Script
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest)

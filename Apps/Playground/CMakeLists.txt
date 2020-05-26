@@ -110,6 +110,7 @@ target_link_to_dependencies(Playground
     PRIVATE NativeWindow
     PRIVATE NativeEngine
     PRIVATE Console
+    PRIVATE Script
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
