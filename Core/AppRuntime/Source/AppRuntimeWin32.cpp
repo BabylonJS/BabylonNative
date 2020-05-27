@@ -20,8 +20,9 @@ namespace Babylon
         auto coInitScopeGuard = gsl::finally([] { CoUninitialize(); });
 
         char filename[FILENAME_BUFFER_SIZE];
-        DWORD result = GetModuleFileNameA(nullptr, filename, std::size(filename));
+        auto result = GetModuleFileNameA(nullptr, filename, std::size(filename));
         assert(result != 0);
+        (void)result;
         RunEnvironmentTier(filename);
     }
 }
