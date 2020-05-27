@@ -350,7 +350,7 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = gsl::narrow_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
+                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
                 actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetGripPoseAction));
                 // For each controller subaction
@@ -377,7 +377,7 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = gsl::narrow_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
+                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
                 actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetAimPoseAction));
                 // For each controller subaction
