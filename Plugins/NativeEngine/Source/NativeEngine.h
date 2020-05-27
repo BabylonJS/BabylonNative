@@ -24,22 +24,101 @@
 
 namespace Babylon
 {
+    class ClearState final
+    {
+    public:
+        void UpdateColor(float r, float g, float b, float a)
+        {
+            const bool needToUpdate = r != Red || g != Green || b != Blue || a != Alpha;
+            if (needToUpdate)
+            {
+                Red = r;
+                Green = g;
+                Blue = b;
+                Alpha = a;
+                Update();
+            }
+        }
+
+        void UpdateFlags(const Napi::CallbackInfo& info)
+        {
+            const auto flags = static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value());
+            Flags = flags;
+            Update();
+        }
+
+        void UpdateDepth(const Napi::CallbackInfo& info)
+        {
+            const auto depth = info[0].As<Napi::Number>().FloatValue();
+            const bool needToUpdate = Depth != depth;
+            if (needToUpdate)
+            {
+                Depth = depth;
+                Update();
+            }
+        }
+
+        void UpdateStencil(const Napi::CallbackInfo& info)
+        {
+            const auto stencil = static_cast<uint8_t>(info[0].As<Napi::Number>().Int32Value());
+            const bool needToUpdate = Stencil != stencil;
+            if (needToUpdate)
+            {
+                Stencil = stencil;
+                Update();
+            }
+        }
+
+        arcana::weak_table<std::function<void()>>::ticket AddUpdateCallback(std::function<void()> callback)
+        {
+            return m_callbacks.insert(std::move(callback));
+        }
+
+        void Update()
+        {
+            m_callbacks.apply_to_all([](std::function<void()>& callback) {
+                callback();
+            });
+        }
+
+        uint32_t Color() const
+        {
+            uint32_t color = 0x0;
+            color += static_cast<uint8_t>(Red * std::numeric_limits<uint8_t>::max());
+            color = color << 8;
+            color += static_cast<uint8_t>(Green * std::numeric_limits<uint8_t>::max());
+            color = color << 8;
+            color += static_cast<uint8_t>(Blue * std::numeric_limits<uint8_t>::max());
+            color = color << 8;
+            color += static_cast<uint8_t>(Alpha * std::numeric_limits<uint8_t>::max());
+            return color;
+        }
+
+        float Red{68.f / 255.f};
+        float Green{51.f / 255.f};
+        float Blue{85.f / 255.f};
+        float Alpha{1.f};
+        float Depth{1.f};
+        uint16_t Flags{BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH};
+        uint8_t Stencil{0};
+
+    private:
+        arcana::weak_table<std::function<void()>> m_callbacks{};
+    };
+
     class ViewClearState final
     {
     public:
-        ViewClearState(uint16_t viewId)
-            : ViewClearState{viewId, std::make_shared<Impl>()}
-        {
-        }
-
-        ViewClearState(uint16_t viewId, const ViewClearState& connectedViewClearState)
-            : ViewClearState{viewId, connectedViewClearState.m_impl}
+        ViewClearState(uint16_t viewId, ClearState& clearState)
+            : m_viewId{viewId} 
+            , m_clearState{clearState}
+            , m_callbackTicket{m_clearState.AddUpdateCallback([this]() { Update(); })}
         {
         }
 
         void UpdateColor(float r, float g, float b, float a = 1.f)
         {
-            m_impl->UpdateColor(r, g, b, a);
+            m_clearState.UpdateColor(r, g, b, a);
         }
 
         void UpdateColor(const Napi::CallbackInfo& info)
@@ -48,22 +127,22 @@ namespace Babylon
             const auto g = info[1].As<Napi::Number>().FloatValue();
             const auto b = info[2].As<Napi::Number>().FloatValue();
             const auto a = info[3].IsUndefined() ? 1.f : info[3].As<Napi::Number>().FloatValue();
-            m_impl->UpdateColor(r, g, b, a);
+            m_clearState.UpdateColor(r, g, b, a);
         }
 
         void UpdateFlags(const Napi::CallbackInfo& info)
         {
-            m_impl->UpdateFlags(info);
+            m_clearState.UpdateFlags(info);
         }
 
         void UpdateDepth(const Napi::CallbackInfo& info)
         {
-            m_impl->UpdateDepth(info);
+            m_clearState.UpdateDepth(info);
         }
 
         void UpdateStencil(const Napi::CallbackInfo& info)
         {
-            m_impl->UpdateStencil(info);
+            m_clearState.UpdateStencil(info);
         }
 
         void UpdateViewId(uint16_t viewId)
@@ -76,121 +155,39 @@ namespace Babylon
 
         void Update() const
         {
-            bgfx::setViewClear(m_viewId, m_impl->Flags, m_impl->Color(), m_impl->Depth, m_impl->Stencil);
+            bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
             // discard any previous set state
             bgfx::discard();
             bgfx::touch(m_viewId);
         }
 
-        struct Impl
-        {
-            void UpdateColor(float r, float g, float b, float a)
-            {
-                const bool needToUpdate = r != Red || g != Green || b != Blue || a != Alpha;
-                if (needToUpdate)
-                {
-                    Red = r;
-                    Green = g;
-                    Blue = b;
-                    Alpha = a;
-                    Update();
-                }
-            }
-
-            void UpdateFlags(const Napi::CallbackInfo& info)
-            {
-                const auto flags = static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value());
-                Flags = flags;
-                Update();
-            }
-
-            void UpdateDepth(const Napi::CallbackInfo& info)
-            {
-                const auto depth = info[0].As<Napi::Number>().FloatValue();
-                const bool needToUpdate = Depth != depth;
-                if (needToUpdate)
-                {
-                    Depth = depth;
-                    Update();
-                }
-            }
-
-            void UpdateStencil(const Napi::CallbackInfo& info)
-            {
-                const auto stencil = static_cast<uint8_t>(info[0].As<Napi::Number>().Int32Value());
-                const bool needToUpdate = Stencil != stencil;
-                if (needToUpdate)
-                {
-                    Stencil = stencil;
-                    Update();
-                }
-            }
-
-            arcana::weak_table<std::function<void()>>::ticket AddUpdateCallback(std::function<void()> callback)
-            {
-                return m_callbacks.insert(std::move(callback));
-            }
-
-            void Update()
-            {
-                m_callbacks.apply_to_all([](std::function<void()>& callback) {
-                    callback();
-                });
-            }
-
-            uint32_t Color() const
-            {
-                uint32_t color = 0x0;
-                color += static_cast<uint8_t>(Red * std::numeric_limits<uint8_t>::max());
-                color = color << 8;
-                color += static_cast<uint8_t>(Green * std::numeric_limits<uint8_t>::max());
-                color = color << 8;
-                color += static_cast<uint8_t>(Blue * std::numeric_limits<uint8_t>::max());
-                color = color << 8;
-                color += static_cast<uint8_t>(Alpha * std::numeric_limits<uint8_t>::max());
-                return color;
-            }
-
-            float Red{68.f / 255.f};
-            float Green{51.f / 255.f};
-            float Blue{85.f / 255.f};
-            float Alpha{1.f};
-            float Depth{1.f};
-            uint16_t Flags{BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH};
-            uint8_t Stencil{0};
-
-        private:
-            arcana::weak_table<std::function<void()>> m_callbacks{};
-        };
-
-        ViewClearState(uint16_t viewId, std::shared_ptr<Impl> impl)
-            : m_viewId{viewId}
-            , m_callbackTicket{impl->AddUpdateCallback([this]() { Update(); })}
-            , m_impl{std::move(impl)}
-        {
-        }
-
         uint16_t m_viewId{};
+        ClearState& m_clearState;
         arcana::weak_table<std::function<void()>>::ticket m_callbackTicket;
-        std::shared_ptr<Impl> m_impl{};
     };
 
     struct FrameBufferData final
     {
+    private:
+        std::unique_ptr<ClearState> m_clearState{};
+
+    public:
         FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, uint16_t width, uint16_t height)
-            : FrameBuffer{frameBuffer}
+            : m_clearState{std::make_unique<ClearState>()}
+            , FrameBuffer{frameBuffer}
             , ViewId{viewId}
-            , ViewClearState{ViewId}
+            , ViewClearState{ViewId, *m_clearState}
             , Width{width}
             , Height{height}
         {
             assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
 
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, const ViewClearState& connectedViewClearState, uint16_t width, uint16_t height)
-            : FrameBuffer{frameBuffer}
+        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, ClearState& clearState, uint16_t width, uint16_t height)
+            : m_clearState{}
+            , FrameBuffer{frameBuffer}
             , ViewId{viewId}
-            , ViewClearState{ViewId, connectedViewClearState}
+            , ViewClearState{ViewId, clearState}
             , Width{width}
             , Height{height}
         {
@@ -236,9 +233,9 @@ namespace Babylon
             return new FrameBufferData(frameBufferHandle, GetNewViewId(), width, height);
         }
 
-        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, const ViewClearState& connectedViewClearState, uint16_t width, uint16_t height)
+        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, ClearState& clearState, uint16_t width, uint16_t height)
         {
-            return new FrameBufferData(frameBufferHandle, GetNewViewId(), connectedViewClearState, width, height);
+            return new FrameBufferData(frameBufferHandle, GetNewViewId(), clearState, width, height);
         }
 
         void Bind(FrameBufferData* data)

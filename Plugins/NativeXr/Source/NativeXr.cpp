@@ -204,6 +204,7 @@ namespace Babylon
         xr::System m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
+        ClearState m_clearState{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
         NativeEngine* m_engineImpl{};
         arcana::cancellation_source m_cancellationSource{};
@@ -313,22 +314,11 @@ namespace Babylon
                 attachments[1].init(depthTex);
                 auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                Babylon::FrameBufferData* fbPtr;
-                if (m_texturesToFrameBuffers.size() == 0)
-                {
-                    fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
-                        frameBuffer,
-                        static_cast<uint16_t>(view.ColorTextureSize.Width),
-                        static_cast<uint16_t>(view.ColorTextureSize.Height));
-                }
-                else
-                {
-                    fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
-                        frameBuffer,
-                        m_texturesToFrameBuffers.begin()->second->ViewClearState,
-                        static_cast<uint16_t>(view.ColorTextureSize.Width),
-                        static_cast<uint16_t>(view.ColorTextureSize.Height));
-                }
+                Babylon::FrameBufferData* fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
+                    frameBuffer,
+                    m_clearState,
+                    static_cast<uint16_t>(view.ColorTextureSize.Width),
+                    static_cast<uint16_t>(view.ColorTextureSize.Height));
 
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
