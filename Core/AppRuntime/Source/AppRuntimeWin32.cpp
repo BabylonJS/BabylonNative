@@ -7,6 +7,11 @@
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr size_t FILENAME_BUFFER_SIZE = 1024;
+    }
+
     void AppRuntime::RunPlatformTier()
     {
         HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -14,6 +19,9 @@ namespace Babylon
         _CRT_UNUSED(hr);
         auto coInitScopeGuard = gsl::finally([] { CoUninitialize(); });
 
-        RunEnvironmentTier();
+        char filename[FILENAME_BUFFER_SIZE];
+        DWORD result = GetModuleFileNameA(nullptr, filename, std::size(filename));
+        assert(result != 0);
+        RunEnvironmentTier(filename);
     }
 }
