@@ -1,8 +1,10 @@
 #pragma once
 
+#include <vector>
+#include <mutex>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include <vector>
+#include <napi/napi.h>
 
 namespace Babylon
 {
@@ -10,7 +12,7 @@ namespace Babylon
     {
         virtual ~BgfxCallback() = default;
 
-        std::vector<uint8_t> m_screenShotBitmap;
+        void addScreenShotCallback(Napi::Function callback);
 
     protected:
         void fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str) override;
@@ -26,5 +28,8 @@ namespace Babylon
         void captureEnd() override;
         void captureFrame(const void* _data, uint32_t _size) override;
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
+
+        std::mutex m_ssCallbackAccess;
+        std::vector<Napi::FunctionReference> m_screenshotCallbacks;
     };
 }
