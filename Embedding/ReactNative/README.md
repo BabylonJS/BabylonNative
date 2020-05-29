@@ -13,19 +13,35 @@ Babylon React Native is in the early phase of its development, and has the follo
 
 This quick overview will help you understand the constructs provided by Babylon React Native and how to use them in a React Native application. See the Playground app's [App.tsx](Apps/Playground/App.tsx) for example usage.
 
+### Dependencies
+
+This package has several **peer dependencies**. If these dependencies are unmet, `react-native` will emit warnings. Be sure to add these dependencies to your project.
+
+### C++ Build Requirements
+
+This package includes C++ source, so platform specific tooling to build C++ code must be installed.
+
+### Android Requirements
+
+The minimum Android SDK version is 24. This must be set as `minSdkVersion` in the consuming project's `build.gradle` file.
+
 ### `useEngine`
 
-`useEngine` is a **custom React hook** that manages the lifecycle of a Babylon engine instance in the context of an owning React component. A callback is passed to `useEngine` that receives an engine instance which is used to create and configure scenes. For example:
+`useEngine` is a **custom React hook** that manages the lifecycle of a Babylon engine instance in the context of an owning React component. `useEngine` creates an engine instance **asynchronously** which is used to create and configure scenes. Typically scene initialization code should exist in a `useEffect` triggered by an `engine` state change. For example:
 
 ```tsx
 import { useEngine } from 'react-native-babylon';
 import { Engine, Scene } from '@babylonjs/core';
 
 const MyComponent: FunctionComponent<MyComponentProps> = (props: MyComponentProps) => {
-    useEngine((engine: Engine) => {
-        const scene = new Scene(engine);
-        // Setup the scene!
-    });
+    const engine = useEngine();
+
+    useEffect(() => {
+        if (engine) {
+            const scene = new Scene(engine);
+            // Setup the scene!
+        }
+    }, [engine]);
 
     return (
         <>
@@ -43,16 +59,19 @@ import { useEngine, EngineView } from 'react-native-babylon';
 import { Engine, Scene, Camera } from '@babylonjs/core';
 
 const MyComponent: FunctionComponent<MyComponentProps> = (props: MyComponentProps) => {
+    const engine = useEngine();
     const [camera, setCamera] = useState<Camera>();
 
-    useEngine((engine: Engine) => {
-        const scene = new Scene(engine);
-        scene.createDefaultCamera(true);
-        if (scene.activeCamera) {
-            setCamera(scene.activeCamera);
+    useEffect(() => {
+        if (engine) {
+            const scene = new Scene(engine);
+            scene.createDefaultCamera(true);
+            if (scene.activeCamera) {
+                setCamera(scene.activeCamera);
+            }
+            // Setup the scene!
         }
-        // Setup the scene!
-    });
+    }, [engine]);
 
     return (
         <>
