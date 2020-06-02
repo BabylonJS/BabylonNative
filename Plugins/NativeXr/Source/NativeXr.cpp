@@ -502,6 +502,11 @@ namespace Babylon
             {
             }
 
+            void Update(XRRigidTransform* transform)
+            {
+                Update(transform->GetNativeSpace(), false);
+            }
+
             void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
             {
                 auto position = m_position.Value();
@@ -529,6 +534,15 @@ namespace Babylon
             Napi::ObjectReference m_position{};
             Napi::ObjectReference m_orientation{};
             Napi::Reference<Napi::Float32Array> m_matrix{};
+
+            xr::System::Session::Frame::Space GetNativeSpace()
+            {
+                auto position = m_position.Value();
+                auto orientation = m_orientation.Value();
+
+                return {{{position.Get("x").ToNumber(), position.Get("y").ToNumber(), position.Get("z").ToNumber()},
+                    {orientation.Get("x").ToNumber(), orientation.Get("y").ToNumber(), orientation.Get("z").ToNumber(), orientation.Get("w").ToNumber()}}};
+            }
 
             Napi::Value Position(const Napi::CallbackInfo&)
             {
@@ -744,6 +758,12 @@ namespace Babylon
                 m_transform.Update(pose);
             }
 
+            void Update(XRRigidTransform* transform)
+            {
+                // Update the transform.
+                m_transform.Update(transform);
+            }
+
         private:
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -916,18 +936,34 @@ namespace Babylon
             XRReferenceSpace(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRReferenceSpace>{info}
             {
-                if (info[0].IsString())
+                if (info.Length() > 0)
                 {
-                    // TODO: Actually support the different types of reference spaces.
-                    const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
-                    assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED || referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                    if (info[0].IsString())
+                    {
+                        // TODO: Actually support the different types of reference spaces.
+                        const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
+                        assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
+                            referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                    }
+                    else
+                    {
+                        // TODO: Actually take the offset into account.
+                        auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
+                        assert(transform != nullptr);
+
+                        m_jsTransform = info[0].As<Napi::Object>();
+                    }
                 }
-                else
-                {
-                    // TODO: Actually take the offset into account.
-                    auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
-                    assert(transform != nullptr);
-                }
+            }
+
+            void SetTransform(Napi::Object transformObj)
+            {
+                m_jsTransform = transformObj;
+            }
+
+            XRRigidTransform* GetTransform()
+            {
+                return XRRigidTransform::Unwrap(m_jsTransform);
             }
 
         private:
@@ -938,6 +974,8 @@ namespace Babylon
 
                 return XRReferenceSpace::New(info);
             }
+
+            Napi::Object m_jsTransform;
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
@@ -1062,6 +1100,62 @@ namespace Babylon
             xr::HitResult m_hitResult;
         };
 
+        // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
+        class XRAnchor : public Napi::ObjectWrap<XRAnchor>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRAnchor";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("anchorSpace", &XRAnchor::GetAnchorSpace, nullptr),
+                        InstanceMethod("delete", &XRAnchor::Delete),
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRAnchor(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRAnchor>{info}
+            {
+            }
+
+        private:
+            Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+                rigidTransform->Update(m_nativePose);
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info);
+                XRReferenceSpace* space = XRReferenceSpace::Unwrap(napiSpace);
+                space->SetTransform(napiTransform);
+                return XRReferenceSpace::New(info);
+            }
+
+            void Delete(const Napi::CallbackInfo& info)
+            {
+                // clean up the anchor (on ARCore call ArAnchor_detach()).
+            }
+
+            // Whether this anchor has already been deleted or is still valid.
+            bool deleted = false;
+
+            // The native pose which holds the current position of the anchor.
+            xr::Pose m_nativePose;
+        };
+
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -1130,10 +1224,20 @@ namespace Babylon
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
-
-                m_transform.Update(space, false);
-                return m_jsPose.Value();
+                auto* space = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                if (space != nullptr)
+                {
+                    Napi::Object napiPose = XRPose::New(info);
+                    XRPose* pose = XRPose::Unwrap(napiPose);
+                    pose->Update(space->GetTransform());
+                    return napiPose;
+                }
+                else
+                {
+                    const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+                    m_transform.Update(space, false);
+                    return m_jsPose.Value();
+                }
             }
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
