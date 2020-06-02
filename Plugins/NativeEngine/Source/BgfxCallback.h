@@ -5,6 +5,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <napi/napi.h>
+#include <queue>
 
 namespace Babylon
 {
@@ -30,6 +31,6 @@ namespace Babylon
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
         std::mutex m_ssCallbackAccess;
-        std::vector<Napi::FunctionReference> m_screenshotCallbacks;
+        std::queue<Napi::FunctionReference> m_screenshotCallbacks;
     };
 }

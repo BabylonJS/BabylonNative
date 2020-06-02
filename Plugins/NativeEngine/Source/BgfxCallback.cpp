@@ -13,7 +13,7 @@ namespace Babylon
     void BgfxCallback::addScreenShotCallback(Napi::Function callback)
     {
         std::scoped_lock lock{ m_ssCallbackAccess };
-        m_screenshotCallbacks.push_back(Napi::Persistent(callback));
+        m_screenshotCallbacks.push(Napi::Persistent(callback));
     }
 
     void BgfxCallback::trace(const char* _filePath, uint16_t _line, const char* _format, ...)
@@ -88,7 +88,7 @@ namespace Babylon
     void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, const void* data, uint32_t /*size*/, bool yflip)
     {
         assert(m_screenshotCallbacks.size()); // addScreenShotCallback not called before doing the screenshot call on bgfx
-        auto env = m_screenshotCallbacks.begin()->Env();
+        auto env = m_screenshotCallbacks.front().Env();
         auto array = Napi::Uint8Array::New(env, height * pitch);
         auto bitmap = static_cast<uint8_t*>(array.Data());
 
@@ -107,10 +107,10 @@ namespace Babylon
 
         JsRuntime& runtime{ JsRuntime::GetFromJavaScript(env) };
 
-        runtime.Dispatch([this, array](Napi::Env) {
+        runtime.Dispatch([this, array = std::move(array)](Napi::Env) {
             std::scoped_lock lock{ m_ssCallbackAccess };
-            m_screenshotCallbacks.begin()->Call({ array });
-            m_screenshotCallbacks.erase(m_screenshotCallbacks.begin());
+            m_screenshotCallbacks.front().Call({ array });
+            m_screenshotCallbacks.pop();
         });
     }
 
