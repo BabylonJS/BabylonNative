@@ -1041,10 +1041,10 @@ namespace Babylon
             {
             }
 
-            // Sets the value of the hit pose in AR core space via struct copy.
-            void SetPose(const xr::Pose& inputPose)
+            // Sets the value of the hit pose and native entity via struct copy.
+            void SetHitResult(const xr::HitResult& hitResult)
             {
-                m_hitPose = inputPose;
+                m_hitResult = hitResult;
             }
 
         private:
@@ -1053,13 +1053,13 @@ namespace Babylon
                 // TODO: Once multiple reference views are supported, we need to convert the values into the passed in reference space.
                 Napi::Object napiPose = XRPose::New(info);
                 XRPose* pose = XRPose::Unwrap(napiPose);
-                pose->Update(info, m_hitPose);
+                pose->Update(info, m_hitResult.Pose);
 
                 return napiPose;
             }
 
-            // The hit pose in default ARCore space.
-            xr::Pose m_hitPose;
+            // The hit hit result, which contains the pose in default AR Space, as well as the native entity.
+            xr::HitResult m_hitResult;
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
@@ -1151,17 +1151,17 @@ namespace Babylon
                 }
 
                 // Get the native results
-                std::vector<xr::Pose> nativeHitResults{};
+                std::vector<xr::HitResult> nativeHitResults{};
                 m_frame->GetHitTestResults(nativeHitResults, nativeRay);
 
                 // Translate those results into a napi array.
                 auto results = Napi::Array::New(info.Env(), nativeHitResults.size());
                 uint32_t i{0};
-                for (std::vector<xr::Pose>::iterator it = nativeHitResults.begin(); it != nativeHitResults.end(); ++it)
+                for (std::vector<xr::HitResult>::iterator it = nativeHitResults.begin(); it != nativeHitResults.end(); ++it)
                 {
                     Napi::Object currentResult = XRHitTestResult::New(info);
                     XRHitTestResult* xrResult = XRHitTestResult::Unwrap(currentResult);
-                    xrResult->SetPose(*it);
+                    xrResult->SetHitResult(*it);
 
                     results[i++] = currentResult;
                 }

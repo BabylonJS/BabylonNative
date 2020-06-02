@@ -329,6 +329,7 @@ namespace xr
         {
             if (isInitialized)
             {
+                CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
                 ArPose_destroy(hitResultPose);
                 ArHitResult_destroy(hitResult);
@@ -592,13 +593,13 @@ namespace xr
                 // Present to the screen
                 // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
                 //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
-                eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+                //eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
 
                 glUseProgram(0);
             }
         }
 
-        void GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay)
         {
             ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
@@ -668,26 +669,37 @@ namespace xr
                     {
                         float rawPose[7]{};
                         ArPose_getPoseRaw(session, hitResultPose, rawPose);
-                        Pose pose{};
-                        pose.Orientation.X = rawPose[0];
-                        pose.Orientation.Y = rawPose[1];
-                        pose.Orientation.Z = rawPose[2];
-                        pose.Orientation.W = rawPose[3];
-                        pose.Position.X = rawPose[4];
-                        pose.Position.Y = rawPose[5];
-                        pose.Position.Z = rawPose[6];
+                        HitResult hitResult{};
+                        hitResult.Pose.Orientation.X = rawPose[0];
+                        hitResult.Pose.Orientation.Y = rawPose[1];
+                        hitResult.Pose.Orientation.Z = rawPose[2];
+                        hitResult.Pose.Orientation.W = rawPose[3];
+                        hitResult.Pose.Position.X = rawPose[4];
+                        hitResult.Pose.Position.Y = rawPose[5];
+                        hitResult.Pose.Position.Z = rawPose[6];
 
-                        filteredResults.push_back(pose);
+                        hitResult.NativeEntity = trackable;
+                        filteredResults.push_back(hitResult);
+                        frameTrackables.push_back(trackable);
                     }
                 }
+            }
+        }
 
+        void CleanupFrameTrackables()
+        {
+            for (ArTrackable* trackable : frameTrackables)
+            {
                 ArTrackable_release(trackable);
             }
+
+            frameTrackables.clear();
         }
 
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
+        std::vector<ArTrackable*> frameTrackables{};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -756,13 +768,14 @@ namespace xr
     {
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
     {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
     System::Session::Frame::~Frame()
     {
+        m_impl->sessionImpl.CleanupFrameTrackables();
         m_impl->sessionImpl.DrawFrame();
     }
 
@@ -874,3 +887,4 @@ namespace xr
         m_impl->DepthFarZ = depthFar;
     }
 }
+     

@@ -736,7 +736,7 @@ namespace xr
         }
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, Ray) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, Ray) const {
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 

@@ -46,6 +46,12 @@ namespace xr
         } Orientation;
     };
 
+    struct HitResult
+    {
+        Pose Pose;
+        void* NativeEntity;
+    };
+
     struct Ray
     {
         struct
@@ -133,7 +139,7 @@ namespace xr
                 Frame(System::Session::Impl&);
                 ~Frame();
 
-                void GetHitTestResults(std::vector<Pose>&, Ray) const;
+                void GetHitTestResults(std::vector<HitResult>&, Ray) const;
 
             private:
                 class Impl;
