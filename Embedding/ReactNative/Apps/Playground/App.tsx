@@ -8,7 +8,7 @@
 import React, { useState, FunctionComponent, useEffect, useCallback } from 'react';
 import { SafeAreaView, StatusBar, Button, View, Text, ViewProps } from 'react-native';
 
-import { EngineView, useEngine } from 'react-native-babylon';
+import { EngineView, useEngine } from '@babylonjs/react-native';
 import { Scene, Vector3, Mesh, ArcRotateCamera, Camera, PBRMetallicRoughnessMaterial, Color3, TargetCamera, WebXRSessionManager } from '@babylonjs/core';
 import Slider from '@react-native-community/slider';
 
@@ -62,7 +62,10 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
           const xr = await scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true })
           const session = await xr.baseExperience.enterXRAsync("immersive-ar", "unbounded", xr.renderTarget);
           setXrSession(session);
-          box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
+          // TODO: Figure out why getFrontPosition stopped working
+          //box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
+          const cameraRay = scene.activeCamera!.getForwardRay(1);
+          box.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length)); 
           box.rotate(Vector3.Up(), 3.14159);
         }
       }
