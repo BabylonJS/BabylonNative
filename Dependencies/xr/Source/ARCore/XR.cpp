@@ -429,8 +429,7 @@ namespace xr
                 ArPose_getPoseRaw(session, cameraPose, rawPose);
 
                 // Set the orientation and position
-                ActiveFrameViews[0].Space.Pose.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
-                ActiveFrameViews[0].Space.Pose.Position = {rawPose[4], rawPose[5], rawPose[6]};
+                RawToPose(rawPose, ActiveFrameViews[0].Space.Pose);
             }
 
             // Get the current surface dimensions
@@ -670,13 +669,7 @@ namespace xr
                         float rawPose[7]{};
                         ArPose_getPoseRaw(session, hitResultPose, rawPose);
                         HitResult hitResult{};
-                        hitResult.Pose.Orientation.X = rawPose[0];
-                        hitResult.Pose.Orientation.Y = rawPose[1];
-                        hitResult.Pose.Orientation.Z = rawPose[2];
-                        hitResult.Pose.Orientation.W = rawPose[3];
-                        hitResult.Pose.Position.X = rawPose[4];
-                        hitResult.Pose.Position.Y = rawPose[5];
-                        hitResult.Pose.Position.Z = rawPose[6];
+                        RawToPose(rawPose, hitResult.Pose);
 
                         hitResult.NativeEntity = trackable;
                         filteredResults.push_back(hitResult);
@@ -694,6 +687,20 @@ namespace xr
             }
 
             frameTrackables.clear();
+        }
+
+        Anchor CreateAnchor(Pose pose, void* trackable)
+        {
+            auto trackableObj = (ArTrackable*) trackable;
+            ArPose* arPose;
+            float rawPose[7];
+            PoseToRaw(rawPose, pose);
+            ArPose_create(session, rawPose, &arPose);
+            ArAnchor* arAnchor;
+            ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
+            ArPose_destroy(arPose);
+
+            return {pose, arAnchor};
         }
 
     private:
@@ -748,6 +755,28 @@ namespace xr
             }
 
             ActiveFrameViews[0] = {};
+        }
+
+        void PoseToRaw(float rawPose[], Pose& pose)
+        {
+            rawPose[0] = pose.Orientation.X;
+            rawPose[1] = pose.Orientation.Y;
+            rawPose[2] = pose.Orientation.Z;
+            rawPose[3] = pose.Orientation.W;
+            rawPose[4] = pose.Position.X;
+            rawPose[5] = pose.Position.Y;
+            rawPose[6] = pose.Position.Z;
+        }
+
+        void RawToPose(float rawPose[], Pose& pose)
+        {
+            pose.Orientation.X = rawPose[0];
+            pose.Orientation.Y = rawPose[1];
+            pose.Orientation.Z = rawPose[2];
+            pose.Orientation.W = rawPose[3];
+            pose.Position.X = rawPose[4];
+            pose.Position.Y = rawPose[5];
+            pose.Position.Z = rawPose[6];
         }
     };
 
@@ -886,5 +915,9 @@ namespace xr
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
     }
+
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, void* trackable)
+    {
+        m_impl->sessionImpl.CreateAnchor(pose, trackable);
+    }
 }
-     

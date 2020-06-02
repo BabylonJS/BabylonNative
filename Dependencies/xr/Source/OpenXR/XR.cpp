@@ -853,4 +853,9 @@ namespace xr
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
     }
+
+    Anchor System::Session::CreateAnchor(Pose pose, void* trackable)
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
 }

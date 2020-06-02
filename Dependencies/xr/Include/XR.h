@@ -69,6 +69,12 @@ namespace xr
         } Direction;
     };
 
+    struct Anchor
+    {
+        Pose Pose;
+        void* NativeAnchor;
+    };
+
     class System
     {
     public:
@@ -140,6 +146,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
+                Anchor CreateAnchor(Pose pose, void* trackable);
 
             private:
                 class Impl;

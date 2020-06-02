@@ -978,6 +978,67 @@ namespace Babylon
             Napi::Object m_jsTransform;
         };
 
+        // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
+        class XRAnchor : public Napi::ObjectWrap<XRAnchor>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRAnchor";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("anchorSpace", &XRAnchor::GetAnchorSpace, nullptr),
+                        InstanceMethod("delete", &XRAnchor::Delete),
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRAnchor(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRAnchor>{info}
+            {
+            }
+
+            void InitAnchor(xr::Pose pose, void* nativeEntity)
+            {
+                // Call into XRSession, and set up the anchor.
+            }
+
+        private:
+            Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+                rigidTransform->Update(m_nativeAnchor.Pose);
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info);
+                XRReferenceSpace* space = XRReferenceSpace::Unwrap(napiSpace);
+                space->SetTransform(napiTransform);
+                return XRReferenceSpace::New(info);
+            }
+
+            void Delete(const Napi::CallbackInfo& info)
+            {
+                // clean up the anchor (on ARCore call ArAnchor_detach()).
+            }
+
+            // Whether this anchor has already been deleted or is still valid.
+            bool deleted = false;
+
+            // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
+            xr::Anchor m_nativeAnchor;
+        };
+
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
         class XRHitTestSource : public Napi::ObjectWrap<XRHitTestSource>
         {
@@ -1096,64 +1157,19 @@ namespace Babylon
                 return napiPose;
             }
 
+            Napi::Object CreateAnchor(const Napi::CallbackInfo& info)
+            {
+                // TODO: We should probably actually take into account the user's passed in pose, but for now
+                // just assume it's the same as the hit result pose.
+                // Napi::Object argTansform = info[0].As<Napi::Object>();
+                
+                Napi::Object napiAnchor = XRAnchor::New(info);
+                XRAnchor* anchor = XRAnchor::Unwrap(napiAnchor);
+                anchor->InitAnchor(m_hitResult.Pose, m_hitResult.NativeEntity);
+            }
+
             // The hit hit result, which contains the pose in default AR Space, as well as the native entity.
             xr::HitResult m_hitResult;
-        };
-
-        // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
-        class XRAnchor : public Napi::ObjectWrap<XRAnchor>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRAnchor";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                        InstanceAccessor("anchorSpace", &XRAnchor::GetAnchorSpace, nullptr),
-                        InstanceMethod("delete", &XRAnchor::Delete),
-                    });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRAnchor(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XRAnchor>{info}
-            {
-            }
-
-        private:
-            Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-                rigidTransform->Update(m_nativePose);
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info);
-                XRReferenceSpace* space = XRReferenceSpace::Unwrap(napiSpace);
-                space->SetTransform(napiTransform);
-                return XRReferenceSpace::New(info);
-            }
-
-            void Delete(const Napi::CallbackInfo& info)
-            {
-                // clean up the anchor (on ARCore call ArAnchor_detach()).
-            }
-
-            // Whether this anchor has already been deleted or is still valid.
-            bool deleted = false;
-
-            // The native pose which holds the current position of the anchor.
-            xr::Pose m_nativePose;
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
