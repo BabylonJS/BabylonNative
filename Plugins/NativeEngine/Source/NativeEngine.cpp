@@ -322,7 +322,7 @@ namespace Babylon
     public:
         IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic)
         {
-            const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), bytes.ByteLength());
+            const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
             if (!dynamic)
             {
                 m_handle = bgfx::createIndexBuffer(memory, flags);
@@ -402,7 +402,7 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void EnsureFinalized(Napi::Env env, const bgfx::VertexLayout& layout)
+        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
         {
             const auto nonDynamic = [&layout, this](auto handle) {
                 if (handle.idx != bgfx::kInvalidHandle)
@@ -411,7 +411,7 @@ namespace Babylon
                 }
 
                 const bgfx::Memory* memory = bgfx::makeRef(
-                    m_bytes.data(), m_bytes.size(), [](void*, void* userData) {
+                    m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
                         auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
                         bytes->clear();
                     },
@@ -426,7 +426,7 @@ namespace Babylon
                 }
 
                 const bgfx::Memory* memory = bgfx::makeRef(
-                    m_bytes.data(), m_bytes.size(), [](void*, void* userData) {
+                    m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
                         auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
                         bytes->clear();
                     },
