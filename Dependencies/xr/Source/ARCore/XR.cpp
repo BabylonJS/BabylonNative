@@ -451,7 +451,7 @@ namespace xr
             }
 
             // Check whether the dimensions have changed
-            if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
+            if ((ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height)
             {
                 DestroyDisplayResources();
 
