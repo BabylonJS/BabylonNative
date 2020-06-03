@@ -289,8 +289,8 @@ namespace Babylon
         for (size_t viewIndex = 0; viewIndex < viewCount; viewIndex++)
         {
             const auto& view = m_frame->Views[viewIndex];
-            auto* frameBuffer = m_viewFrameBuffers[viewIndex].get();
-            if (frameBuffer == nullptr || frameBuffer->Width != view.ColorTextureSize.Width || frameBuffer->Height != view.ColorTextureSize.Height)
+            auto* viewFrameBuffer = m_viewFrameBuffers[viewIndex].get();
+            if (viewFrameBuffer == nullptr || viewFrameBuffer->Width != view.ColorTextureSize.Width || viewFrameBuffer->Height != view.ColorTextureSize.Height)
             {
                 // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
                 assert(view.ColorTextureSize.Width); 
@@ -332,7 +332,7 @@ namespace Babylon
             }
             else
             {
-                m_activeFrameBuffers.push_back(frameBuffer);
+                m_activeFrameBuffers.push_back(viewFrameBuffer);
             }
         }
     }
