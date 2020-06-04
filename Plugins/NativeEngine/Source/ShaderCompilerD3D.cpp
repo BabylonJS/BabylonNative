@@ -59,6 +59,68 @@ namespace Babylon
 
         using namespace glslang;
 
+        template<typename ScopeT>
+        void makeReplacements(
+            std::map<std::string, TIntermTyped*> nameToReplacement,
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent,
+            ScopeT& scope)
+        {
+            for (const auto& [symbol, parent] : symbolToParent)
+            {
+                auto* replacement = nameToReplacement[symbol->getName().c_str()];
+                if (auto* aggregate = parent->getAsAggregate())
+                {
+                    auto& sequence = aggregate->getSequence();
+                    for (int idx = 0; idx < sequence.size(); ++idx)
+                    {
+                        if (sequence[idx] == symbol)
+                        {
+                            auto* original = sequence[idx];
+                            scope.finally([aggregate, idx, original] {
+                                aggregate->getSequence()[idx] = original;
+                            });
+
+                            sequence[idx] = replacement;
+                        }
+                    }
+                }
+                else if (auto* binary = parent->getAsBinaryNode())
+                {
+                    if (binary->getLeft() == symbol)
+                    {
+                        auto* original = binary->getLeft();
+                        scope.finally([binary, original] {
+                            binary->setLeft(original);
+                        });
+
+                        binary->setLeft(replacement);
+                    }
+                    else
+                    {
+                        auto* original = binary->getRight();
+                        scope.finally([binary, original] {
+                            binary->setRight(original);
+                        });
+
+                        binary->setRight(replacement);
+                    }
+                }
+                else if (auto* unary = parent->getAsUnaryNode())
+                {
+                    auto* original = unary->getOperand();
+                    scope.finally([unary, original] {
+                        unary->setOperand(original);
+                    });
+
+                    unary->setOperand(replacement);
+                }
+                else
+                {
+                    throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
+                }
+            }
+        }
+
         struct UniformToStructTraverser final : TIntermTraverser
         {
             UniformToStructTraverser()
@@ -78,7 +140,89 @@ namespace Babylon
                     UniformNameToSymbol[symbol->getName().c_str()] = symbol;
                     addToSymbolsToParents();
                 }
-                else if (IsVertex && symbol->getType().getQualifier().storage == EvqVaryingIn)
+            }
+
+            template<typename ScopeT>
+            static void Traverse(glslang::TIntermediate* intermediate, ScopeT& scope)
+            {
+                UniformToStructTraverser traverser{};
+                intermediate->getTreeRoot()->traverse(&traverser);
+
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
+
+                // Precursor types needed to create subtree replacements.
+                TSourceLoc loc{};
+                loc.init();
+                TPublicType publicType{};
+                publicType.qualifier.clearLayout();
+
+                std::vector<std::string> originalNames{};
+                auto* structMembers = scope.make_new<TTypeList>();
+
+                for (const auto& [name, symbol] : traverser.UniformNameToSymbol)
+                {
+                    const auto& type = symbol->getType();
+                    if (type.isMatrix())
+                    {
+                        publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
+                    }
+                    else if (type.isVector())
+                    {
+                        publicType.setVector(type.getVectorSize());
+                    }
+
+                    auto* newType = scope.make_new<TType>(publicType);
+                    newType->setFieldName(name.c_str());
+                    newType->setBasicType(symbol->getType().getBasicType());
+                    structMembers->emplace_back();
+                    structMembers->back().type = newType;
+                    structMembers->back().loc.init();
+                }
+
+                TQualifier qualifier{};
+                qualifier.clearLayout();
+                qualifier.storage = EvqUniform;
+                qualifier.layoutMatrix = ElmColumnMajor;
+                qualifier.layoutPacking = ElpStd140;
+                qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
+
+                TType structType(structMembers, "Frame", qualifier);
+
+                TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
+                scope.take_ownership(structSymbol);
+
+                for (size_t idx = 0; idx < structMembers->size(); ++idx)
+                {
+                    auto* left = structSymbol;
+                    auto* right = intermediate->addConstantUnion(idx, loc);
+                    scope.take_ownership(right);
+                    auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
+                    scope.take_ownership(binary);
+                    originalNameToReplacement[(*structMembers)[idx].type->getFieldName().c_str()] = binary;
+                }
+
+                makeReplacements(originalNameToReplacement, traverser.SymbolsToParents, scope);
+            }
+
+            std::map<std::string, TIntermSymbol*> UniformNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
+        };
+        
+        struct VertexVaryingInTraverser final : TIntermTraverser
+        {
+            VertexVaryingInTraverser()
+                : TIntermTraverser()
+            {
+            }
+
+            ~VertexVaryingInTraverser() override
+            {
+            }
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                const auto addToSymbolsToParents = [symbol, this]() { SymbolsToParents.emplace_back(symbol, this->getParentNode()); };
+                if (symbol->getType().getQualifier().storage == EvqVaryingIn)
                 {
                     VaryingNameToSymbol[symbol->getName().c_str()] = symbol;
                     addToSymbolsToParents();
@@ -103,74 +247,19 @@ namespace Babylon
             }
 
             template<typename ScopeT>
-            static UniformToStructTraverser Traverse(glslang::TIntermediate* intermediate, ScopeT& scope, bool isVertex = false)
+            static void Traverse(glslang::TIntermediate* intermediate, ScopeT& scope)
             {
-                UniformToStructTraverser traverser{};
-                traverser.IsVertex = isVertex;
+                VertexVaryingInTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
 
-                // Default loc we don't care about.
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
+
+                // Precursor types needed to create subtree replacements.
                 TSourceLoc loc{};
                 loc.init();
-
-                // Build the struct
-                std::vector<std::string> originalNames{};
-                auto* structMembers = scope.make_new<TTypeList>();
-
-                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
-                
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-                {
-
-                    for (const auto& [name, symbol] : traverser.UniformNameToSymbol)
-                    {
-                        const auto& type = symbol->getType();
-                        if (type.isMatrix())
-                        {
-                            publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
-                        }
-                        else if (type.isVector())
-                        {
-                            publicType.setVector(type.getVectorSize());
-                        }
-
-                        originalNames.emplace_back(name);
-
-                        auto* newType = scope.make_new<TType>(publicType);
-                        newType->setFieldName(name.c_str()); // TODO: Replace names here as necessary
-                        newType->setBasicType(symbol->getType().getBasicType());
-                        structMembers->emplace_back();
-                        structMembers->back().type = newType;
-                        structMembers->back().loc.init();
-                    }
-
-                    TQualifier qualifier{};
-                    qualifier.clearLayout();
-                    qualifier.storage = EvqUniform;
-                    qualifier.layoutMatrix = ElmColumnMajor;
-                    qualifier.layoutPacking = ElpStd140;
-                    qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
-
-                    TType structType(structMembers, "Frame", qualifier);
-
-                    TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
-                    scope.take_ownership(structSymbol);
-
-                    // Add replacers for uniforms.
-                    for (size_t idx = 0; idx < structMembers->size(); ++idx)
-                    {
-                        auto* left = structSymbol;
-                        auto* right = intermediate->addConstantUnion(idx, loc);
-                        scope.take_ownership(right);
-                        auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
-                        scope.take_ownership(binary);
-                        originalNameToReplacement[originalNames[idx]] = binary;
-                    }
-                }
-
-                // Add replacers for varyings.
                 for (const auto& [name, symbol] : traverser.VaryingNameToSymbol)
                 {
                     publicType.qualifier = symbol->getType().getQualifier();
@@ -186,8 +275,6 @@ namespace Babylon
                         publicType.setVector(type.getVectorSize());
                     }
 
-                    originalNames.emplace_back(name);
-
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
                     auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), newType});
@@ -195,67 +282,9 @@ namespace Babylon
                     originalNameToReplacement[name] = newSymbol;
                 }
 
-                // TODO: Ensure that this is not leaking remnants of the replaced subtrees.
-                for (const auto& [symbol, parent] : traverser.SymbolsToParents)
-                {
-                    auto* replacement = originalNameToReplacement[symbol->getName().c_str()];
-                    if (auto* aggregate = parent->getAsAggregate())
-                    {
-                        auto& sequence = aggregate->getSequence();
-                        for (int idx = 0; idx < sequence.size(); ++idx)
-                        {
-                            if (sequence[idx] == symbol)
-                            {
-                                auto* original = sequence[idx];
-                                scope.finally([aggregate, idx, original] {
-                                    aggregate->getSequence()[idx] = original;
-                                });
-
-                                sequence[idx] = replacement;
-                            }
-                        }
-                    }
-                    else if (auto* binary = parent->getAsBinaryNode())
-                    {
-                        if (binary->getLeft() == symbol)
-                        {
-                            auto* original = binary->getLeft();
-                            scope.finally([binary, original] {
-                                binary->setLeft(original);
-                            });
-
-                            binary->setLeft(replacement);
-                        }
-                        else
-                        {
-                            auto* original = binary->getRight();
-                            scope.finally([binary, original] {
-                                binary->setRight(original);
-                            });
-
-                            binary->setRight(replacement);
-                        }
-                    }
-                    else if (auto* unary = parent->getAsUnaryNode())
-                    {
-                        auto* original = unary->getOperand();
-                        scope.finally([unary, original] {
-                            unary->setOperand(original);
-                        });
-
-                        unary->setOperand(replacement);
-                    }
-                    else
-                    {
-                        throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
-                    }
-                }
-
-                return traverser;
+                makeReplacements(originalNameToReplacement, traverser.SymbolsToParents, scope);
             }
 
-            bool IsVertex{};
-            std::map<std::string, TIntermSymbol*> UniformNameToSymbol{};
             std::map<std::string, TIntermSymbol*> VaryingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
         };
@@ -345,7 +374,8 @@ namespace Babylon
         }
 
         pointer_scope<TType, TTypeList, TIntermSymbol, TIntermBinary, TIntermConstantUnion> scope{};
-        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), scope, true);
+        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), scope);
+        VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), scope);
         UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment), scope);
 
         // clang-format off
