@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "ShaderCompiler.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
@@ -8,8 +10,7 @@
 #include <spirv_hlsl.hpp>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
-
-#include <sstream>
+#include <gsl/gsl>
 
 namespace Babylon
 {
@@ -30,6 +31,30 @@ namespace Babylon
                 vector.emplace_back(std::make_unique<T>(args...));
                 return vector.back().get();
             }
+
+            template<typename T>
+            void take_ownership(T* ptr)
+            {
+                auto& vector = *static_cast<std::vector<std::unique_ptr<T>>*>(this);
+                vector.emplace_back(ptr);
+            }
+
+            template<typename CallableT>
+            void finally(CallableT callable)
+            {
+                m_finalActions.emplace(std::move(callable));
+            }
+
+            ~pointer_scope()
+            {
+                while (!m_finalActions.empty())
+                {
+                    m_finalActions.pop();
+                }
+            }
+        
+        private:
+            std::stack<gsl::final_action<std::function<void()>>> m_finalActions{};
         };
 
         using namespace glslang;
@@ -92,50 +117,57 @@ namespace Babylon
                 std::vector<std::string> originalNames{};
                 auto* structMembers = scope.make_new<TTypeList>();
 
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
+                
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-                for (const auto& [name, symbol] : traverser.UniformNameToSymbol)
                 {
-                    const auto& type = symbol->getType();
-                    if (type.isMatrix())
+
+                    for (const auto& [name, symbol] : traverser.UniformNameToSymbol)
                     {
-                        publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
+                        const auto& type = symbol->getType();
+                        if (type.isMatrix())
+                        {
+                            publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
+                        }
+                        else if (type.isVector())
+                        {
+                            publicType.setVector(type.getVectorSize());
+                        }
+
+                        originalNames.emplace_back(name);
+
+                        auto* newType = scope.make_new<TType>(publicType);
+                        newType->setFieldName(name.c_str()); // TODO: Replace names here as necessary
+                        newType->setBasicType(symbol->getType().getBasicType());
+                        structMembers->emplace_back();
+                        structMembers->back().type = newType;
+                        structMembers->back().loc.init();
                     }
-                    else if (type.isVector())
+
+                    TQualifier qualifier{};
+                    qualifier.clearLayout();
+                    qualifier.storage = EvqUniform;
+                    qualifier.layoutMatrix = ElmColumnMajor;
+                    qualifier.layoutPacking = ElpStd140;
+                    qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
+
+                    TType structType(structMembers, "Frame", qualifier);
+
+                    TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
+                    scope.take_ownership(structSymbol);
+
+                    // Add replacers for uniforms.
+                    for (size_t idx = 0; idx < structMembers->size(); ++idx)
                     {
-                        publicType.setVector(type.getVectorSize());
+                        auto* left = structSymbol;
+                        auto* right = intermediate->addConstantUnion(idx, loc);
+                        scope.take_ownership(right);
+                        auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
+                        scope.take_ownership(binary);
+                        originalNameToReplacement[originalNames[idx]] = binary;
                     }
-
-                    originalNames.emplace_back(name);
-
-                    auto* newType = scope.make_new<TType>(publicType);
-                    newType->setFieldName(name.c_str()); // TODO: Replace names here as necessary
-                    newType->setBasicType(symbol->getType().getBasicType());
-                    structMembers->emplace_back();
-                    structMembers->back().type = newType;
-                    structMembers->back().loc.init();
-                }
-
-                TQualifier qualifier{};
-                qualifier.clearLayout();
-                qualifier.storage = EvqUniform;
-                qualifier.layoutMatrix = ElmColumnMajor;
-                qualifier.layoutPacking = ElpStd140;
-                qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
-
-                TType structType(structMembers, "Frame", qualifier);
-
-                TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
-
-                // Build the struct indexer operations.
-                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
-                for (size_t idx = 0; idx < structMembers->size(); ++idx)
-                {
-                    auto* left = structSymbol;
-                    auto* right = intermediate->addConstantUnion(idx, loc);
-                    auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
-                    originalNameToReplacement[originalNames[idx]] = binary;
                 }
 
                 // Add replacers for varyings.
@@ -159,9 +191,11 @@ namespace Babylon
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
                     auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), newType});
+                    scope.take_ownership(newSymbol);
                     originalNameToReplacement[name] = newSymbol;
                 }
 
+                // TODO: Ensure that this is not leaking remnants of the replaced subtrees.
                 for (const auto& [symbol, parent] : traverser.SymbolsToParents)
                 {
                     auto* replacement = originalNameToReplacement[symbol->getName().c_str()];
@@ -172,6 +206,11 @@ namespace Babylon
                         {
                             if (sequence[idx] == symbol)
                             {
+                                auto* original = sequence[idx];
+                                scope.finally([aggregate, idx, original] {
+                                    aggregate->getSequence()[idx] = original;
+                                });
+
                                 sequence[idx] = replacement;
                             }
                         }
@@ -180,15 +219,30 @@ namespace Babylon
                     {
                         if (binary->getLeft() == symbol)
                         {
+                            auto* original = binary->getLeft();
+                            scope.finally([binary, original] {
+                                binary->setLeft(original);
+                            });
+
                             binary->setLeft(replacement);
                         }
                         else
                         {
+                            auto* original = binary->getRight();
+                            scope.finally([binary, original] {
+                                binary->setRight(original);
+                            });
+
                             binary->setRight(replacement);
                         }
                     }
                     else if (auto* unary = parent->getAsUnaryNode())
                     {
+                        auto* original = unary->getOperand();
+                        scope.finally([unary, original] {
+                            unary->setOperand(original);
+                        });
+
                         unary->setOperand(replacement);
                     }
                     else
@@ -290,7 +344,7 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        pointer_scope<TType, TTypeList> scope{};
+        pointer_scope<TType, TTypeList, TIntermSymbol, TIntermBinary, TIntermConstantUnion> scope{};
         UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), scope, true);
         UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment), scope);
 
