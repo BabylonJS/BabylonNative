@@ -201,7 +201,7 @@ namespace Babylon
         }
 
     private:
-        std::vector<std::unique_ptr<FrameBufferData>> m_viewFrameBuffers{};
+        std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
@@ -277,20 +277,26 @@ namespace Babylon
 
         bool shouldEndSession{};
         bool shouldRestartSession{};
-        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer){
+                auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
+                auto it = m_texturesToFrameBuffers.find(texPtr);
+                if (it != m_texturesToFrameBuffers.end())
+                {
+                    m_texturesToFrameBuffers.erase(it);
+                }
+            });
 
         // Ending a session outside of calls to EndSession() is currently not supported.
         assert(!shouldEndSession);
         assert(m_frame != nullptr);
 
-        size_t viewCount = m_frame->Views.size();
-        m_activeFrameBuffers.reserve(viewCount);
-        m_viewFrameBuffers.resize(viewCount);
-        for (size_t viewIndex = 0; viewIndex < viewCount; viewIndex++)
+        m_activeFrameBuffers.reserve(m_frame->Views.size());
+        for (const auto& view : m_frame->Views)
         {
-            const auto& view = m_frame->Views[viewIndex];
-            auto* viewFrameBuffer = m_viewFrameBuffers[viewIndex].get();
-            if (viewFrameBuffer == nullptr || viewFrameBuffer->Width != view.ColorTextureSize.Width || viewFrameBuffer->Height != view.ColorTextureSize.Height)
+            auto colorTexPtr = reinterpret_cast<uintptr_t>(view.ColorTexturePointer);
+
+            auto it = m_texturesToFrameBuffers.find(colorTexPtr);
+            if (it == m_texturesToFrameBuffers.end() || it->second.get()->Width != view.ColorTextureSize.Width || it->second.get()->Height != view.ColorTextureSize.Height)
             {
                 // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
                 assert(view.ColorTextureSize.Width); 
@@ -310,7 +316,7 @@ namespace Babylon
                 // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
                 bgfx::frame();
 
-                bgfx::overrideInternal(colorTex, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
+                bgfx::overrideInternal(colorTex, colorTexPtr);
                 bgfx::overrideInternal(depthTex, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
 
                 std::array<bgfx::Attachment, 2> attachments{};
@@ -326,13 +332,13 @@ namespace Babylon
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
                 fbPtr->ViewClearState.UpdateColor(0.f, 0.f, 0.f, 0.f);
-                m_viewFrameBuffers[viewIndex] = std::unique_ptr<FrameBufferData>{fbPtr};
+                m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{fbPtr};
 
                 m_activeFrameBuffers.push_back(fbPtr);
             }
             else
             {
-                m_activeFrameBuffers.push_back(viewFrameBuffer);
+                m_activeFrameBuffers.push_back(it->second.get());
             }
         }
     }
