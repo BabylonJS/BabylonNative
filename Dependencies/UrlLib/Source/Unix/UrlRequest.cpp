@@ -138,13 +138,10 @@ namespace UrlLib
                                 if (codep == 0|| codep == 200) 
                                 {
                                     request->m_statusCode = UrlStatusCode::Ok;
-                                    request->m_taskCompletionSource.complete();
                                 }
                             }
-                            else 
-                            {
-                                // TODO: Handle connection failure
-                            }
+                            request->m_taskCompletionSource.complete();
+
                             curl_multi_remove_handle(m_multiHandle, handle);
                             curl_easy_cleanup(handle);
                         }
