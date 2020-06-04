@@ -36,20 +36,39 @@ namespace Babylon
                     UniformNameToSymbol[symbol->getName().c_str()] = symbol;
                     addToSymbolsToParents();
                 }
-                else if (symbol->getType().getQualifier().storage == EvqVaryingIn)
+                else if (IsVertex && symbol->getType().getQualifier().storage == EvqVaryingIn)
                 {
                     VaryingNameToSymbol[symbol->getName().c_str()] = symbol;
                     addToSymbolsToParents();
                 }
             }
 
-            static UniformToStructTraverser Traverse(glslang::TIntermediate* intermediate)
+            uint32_t texCoordIdx = 10;
+            unsigned int GetVaryingLocationForName(const char* name)
+            {
+                if (std::strcmp(name, "position") == 0)
+                {
+                    return 0;
+                }
+                else if (std::strcmp(name, "normal") == 0)
+                {
+                    return 1;
+                }
+                else
+                {
+                    return texCoordIdx++;
+                }
+            }
+
+            static UniformToStructTraverser Traverse(glslang::TIntermediate* intermediate, bool isVertex = false)
             {
                 UniformToStructTraverser traverser{};
+                traverser.IsVertex = isVertex;
                 intermediate->getTreeRoot()->traverse(&traverser);
 
                 // Default loc we don't care about.
                 TSourceLoc loc{};
+                loc.init();
 
                 // Build the struct
                 std::vector<std::string> originalNames{};
@@ -79,6 +98,7 @@ namespace Babylon
                     newType->setBasicType(symbol->getType().getBasicType());
                     structMembers->emplace_back();
                     structMembers->back().type = newType;
+                    structMembers->back().loc.init();
                 }
 
                 TQualifier qualifier{};
@@ -103,11 +123,10 @@ namespace Babylon
                 }
 
                 // Add replacers for varyings.
-                uint32_t idx = 0;
                 for (const auto& [name, symbol] : traverser.VaryingNameToSymbol)
                 {
                     publicType.qualifier = symbol->getType().getQualifier();
-                    publicType.qualifier.layoutLocation = idx++; // TODO: Not this.
+                    publicType.qualifier.layoutLocation = traverser.GetVaryingLocationForName(name.c_str());
 
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
@@ -166,6 +185,7 @@ namespace Babylon
                 return traverser;
             }
 
+            bool IsVertex{};
             std::map<std::string, TIntermSymbol*> UniformNameToSymbol{};
             std::map<std::string, TIntermSymbol*> VaryingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
@@ -347,7 +367,7 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex));
+        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), true);
         UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment));
 
         auto vrtx = DebugTraverser::Traverse(program.getIntermediate(EShLangVertex));
