@@ -146,7 +146,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                Anchor CreateAnchor(Pose pose, void* trackable);
+                Anchor CreateAnchor(Pose pose, void* trackable) const;
 
             private:
                 class Impl;

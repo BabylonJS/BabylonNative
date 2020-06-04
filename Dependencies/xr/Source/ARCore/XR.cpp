@@ -802,6 +802,11 @@ namespace xr
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, void* trackable) const
+    {
+        m_impl->sessionImpl.CreateAnchor(pose, trackable);
+    }
+
     System::Session::Frame::~Frame()
     {
         m_impl->sessionImpl.CleanupFrameTrackables();
@@ -914,10 +919,5 @@ namespace xr
     {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
-    }
-
-    Anchor System::Session::Frame::CreateAnchor(Pose pose, void* trackable)
-    {
-        m_impl->sessionImpl.CreateAnchor(pose, trackable);
     }
 }
