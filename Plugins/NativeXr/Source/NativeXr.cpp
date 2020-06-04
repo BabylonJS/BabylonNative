@@ -1019,6 +1019,11 @@ namespace Babylon
                 m_frame = nullptr;
             }
 
+            xr::Anchor& GetNativeAnchor()
+            {
+                return m_nativeAnchor;
+            }
+
             void SetAnchor(xr::Anchor& nativeAnchor)
             {
                 m_nativeAnchor = nativeAnchor;
@@ -1028,7 +1033,6 @@ namespace Babylon
             {
                 m_frame = frame;
             }
-
         private:
             Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
             {
@@ -1228,6 +1232,27 @@ namespace Babylon
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
                 m_frame = &frame;
+
+                // Loop over all of the anchors and update their state.
+                std::vector<Napi::Value>::iterator anchorIter = m_trackedAnchors.begin();
+                while(anchorIter != m_trackedAnchors.end())
+                {
+                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).As<Napi::Object>());
+                    xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
+
+                    // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
+                    m_frame->UpdateAnchor(nativeAnchor);
+
+                    if (!nativeAnchor.IsValid)
+                    {
+                        DeleteNativeAnchor(xrAnchor, nativeAnchor);
+                        anchorIter = m_trackedAnchors.erase(anchorIter);
+                    }
+                    else
+                    {
+                        ++anchorIter;
+                    }
+                }
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, void* nativeEntity)
@@ -1246,9 +1271,9 @@ namespace Babylon
                 return deferred.Promise();
             }
 
-            void DeleteNativeAnchor(XRAnchor* anchor)
+            void DeleteNativeAnchor(XRAnchor* anchor, xr::Anchor& nativeAnchor)
             {
-                // Call delete routine in xr.h, and remove from map.
+                m_frame->DeleteAnchor(nativeAnchor);
             }
 
         private:
@@ -1353,7 +1378,8 @@ namespace Babylon
 
         void XRAnchor::Delete(const Napi::CallbackInfo& info)
         {
-            m_frame->DeleteNativeAnchor(this);
+            deleted = true;
+            m_frame->DeleteNativeAnchor(this, m_nativeAnchor);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface

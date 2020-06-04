@@ -73,6 +73,7 @@ namespace xr
     {
         Pose Pose;
         void* NativeAnchor;
+        bool IsValid{true};
     };
 
     class System
@@ -147,6 +148,8 @@ namespace xr
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
                 Anchor CreateAnchor(Pose pose, void* trackable) const;
+                void UpdateAnchor(Anchor& anchor) const;
+                void DeleteAnchor(Anchor& anchor) const;
 
             private:
                 class Impl;

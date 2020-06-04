@@ -331,7 +331,7 @@ namespace xr
             {
                 CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
-                ArPose_destroy(hitResultPose);
+                ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
                 ArHitResultList_destroy(hitResultList);
                 ArFrame_destroy(frame);
@@ -384,8 +384,9 @@ namespace xr
             ArHitResultList_create(session, &hitResultList);
             ArHitResult_create(session, &hitResult);
 
-            // Create the ARCore ArPose that tracks the current hit test result
-            ArPose_create(session, nullptr, &hitResultPose);
+            // Create the reusable ARCore ArPose used for short term operations
+            // (i.e. pulling out hit test results, and updating anchors)
+            ArPose_create(session, nullptr, &tempPose);
 
             // Set the texture ID that should be used for the camera frame
             ArSession_setCameraTextureName(session, static_cast<uint32_t>(cameraTextureId));
@@ -661,13 +662,13 @@ namespace xr
                 if (trackableType == AR_TRACKABLE_PLANE)
                 {
                     int32_t isPoseInPolygon{};
-                    ArHitResult_getHitPose(session, hitResult, hitResultPose);
-                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, hitResultPose, &isPoseInPolygon);
+                    ArHitResult_getHitPose(session, hitResult, tempPose);
+                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
 
                     if (isPoseInPolygon != 0)
                     {
                         float rawPose[7]{};
-                        ArPose_getPoseRaw(session, hitResultPose, rawPose);
+                        ArPose_getPoseRaw(session, tempPose, rawPose);
                         HitResult hitResult{};
                         RawToPose(rawPose, hitResult.Pose);
 
@@ -703,6 +704,42 @@ namespace xr
             return {pose, arAnchor};
         }
 
+        void UpdateAnchor(xr::Anchor& anchor)
+        {
+            auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
+
+            if (arAnchor == nullptr)
+            {
+                anchor.IsValid = false;
+                return;
+            }
+
+            ArTrackingState trackingState;
+            ArAnchor_getTrackingState(session, arAnchor, &trackingState);
+
+            // If tracking then update the pose, if paused then skip the update, if stopped then
+            // mark this anchor as no longer valid, as it will never again be tracked by ArCore.
+            if (trackingState == AR_TRACKING_STATE_TRACKING)
+            {
+                ArAnchor_getPose(session, arAnchor, tempPose);
+                float rawPose[7]{};
+                ArPose_getPoseRaw(session, tempPose, rawPose);
+                RawToPose(rawPose, anchor.Pose);
+            }
+            else if (trackingState == AR_TRACKING_STATE_STOPPED)
+            {
+                anchor.IsValid = false;
+            }
+        }
+
+        void DeleteAnchor(xr::Anchor& anchor)
+        {
+            auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
+            ArAnchor_detach(session, arAnchor);
+            ArAnchor_release(arAnchor);
+            anchor.NativeAnchor = nullptr;
+        }
+
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
@@ -715,7 +752,7 @@ namespace xr
         ArSession* session{};
         ArFrame* frame{};
         ArPose* cameraPose{};
-        ArPose* hitResultPose{};
+        ArPose* tempPose{};
         ArHitResultList* hitResultList{};
         ArHitResult* hitResult{};
 
@@ -805,6 +842,16 @@ namespace xr
     Anchor System::Session::Frame::CreateAnchor(Pose pose, void* trackable) const
     {
         m_impl->sessionImpl.CreateAnchor(pose, trackable);
+    }
+
+    void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const
+    {
+        m_impl->sessionImpl.UpdateAnchor(anchor);
+    }
+
+    void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const
+    {
+        m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
     System::Session::Frame::~Frame()
