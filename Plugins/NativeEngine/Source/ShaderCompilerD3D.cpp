@@ -30,10 +30,16 @@ namespace Babylon
 
             void visitSymbol(TIntermSymbol* symbol) override
             {
+                const auto addToSymbolsToParents = [symbol, this]() { SymbolsToParents.emplace_back(symbol, this->getParentNode()); };
                 if (symbol->getType().getQualifier().isUniformOrBuffer())
                 {
-                    NameToSymbol[symbol->getName().c_str()] = symbol;
-                    SymbolsToParents.emplace_back(symbol, this->getParentNode());
+                    UniformNameToSymbol[symbol->getName().c_str()] = symbol;
+                    addToSymbolsToParents();
+                }
+                else if (symbol->getType().getQualifier().storage == EvqVaryingIn)
+                {
+                    VaryingNameToSymbol[symbol->getName().c_str()] = symbol;
+                    addToSymbolsToParents();
                 }
             }
 
@@ -53,7 +59,7 @@ namespace Babylon
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-                for (const auto& [name, symbol] : traverser.NameToSymbol)
+                for (const auto& [name, symbol] : traverser.UniformNameToSymbol)
                 {
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
@@ -87,13 +93,39 @@ namespace Babylon
                 TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
 
                 // Build the struct indexer operations.
-                std::map<std::string, TIntermBinary*> originalNameToReplacement{};
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
                 for (size_t idx = 0; idx < structMembers->size(); ++idx)
                 {
                     auto* left = structSymbol;
                     auto* right = intermediate->addConstantUnion(idx, loc);
                     auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
                     originalNameToReplacement[originalNames[idx]] = binary;
+                }
+
+                // Add replacers for varyings.
+                uint32_t idx = 0;
+                for (const auto& [name, symbol] : traverser.VaryingNameToSymbol)
+                {
+                    publicType.qualifier = symbol->getType().getQualifier();
+                    publicType.qualifier.layoutLocation = idx++; // TODO: Not this.
+
+                    const auto& type = symbol->getType();
+                    if (type.isMatrix())
+                    {
+                        publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
+                    }
+                    else if (type.isVector())
+                    {
+                        publicType.setVector(type.getVectorSize());
+                    }
+
+                    originalNames.emplace_back(name);
+
+                    // TODO: Leak less.
+                    auto* newType = new TType(publicType);
+                    newType->setBasicType(symbol->getType().getBasicType());
+                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), *newType});
+                    originalNameToReplacement[name] = newSymbol;
                 }
 
                 for (const auto& [symbol, parent] : traverser.SymbolsToParents)
@@ -121,6 +153,10 @@ namespace Babylon
                             binary->setRight(replacement);
                         }
                     }
+                    else if (auto* unary = parent->getAsUnaryNode())
+                    {
+                        unary->setOperand(replacement);
+                    }
                     else
                     {
                         throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
@@ -130,7 +166,8 @@ namespace Babylon
                 return traverser;
             }
 
-            std::map<std::string, TIntermSymbol*> NameToSymbol{};
+            std::map<std::string, TIntermSymbol*> UniformNameToSymbol{};
+            std::map<std::string, TIntermSymbol*> VaryingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
         };
 
@@ -145,15 +182,9 @@ namespace Babylon
             ~DebugTraverser() override
             {
             }
-
-            int doStuffNext = 0;
+            
             void visitSymbol(TIntermSymbol* symbol) override
             {
-                if (doStuffNext == 0 && std::strcmp(symbol->getName().c_str(), "finalWorld") == 0)
-                {
-                    doStuffNext = 1;
-                }
-
                 Indent();
                 ss << "Symbol: " << symbol->getName() << std::endl;
             }
@@ -166,12 +197,6 @@ namespace Babylon
 
             bool visitBinary(TVisit, TIntermBinary* binary) override
             {
-                if (binary->getOp() == glslang::EOpIndexDirectStruct && doStuffNext == 1)
-                {
-                    binary->setLeft(symbol);
-                    doStuffNext = 2;
-                }
-
                 Indent();
                 ss << "Binary: " << binary->getOp() << ", " << binary->getCompleteString().c_str() << std::endl;
                 return true;
@@ -222,56 +247,12 @@ namespace Babylon
             static std::string Traverse(glslang::TIntermediate* intermediate)
             {
                 DebugTraverser traverser{};
-                traverser.DoStuff(intermediate);
                 intermediate->getTreeRoot()->traverse(&traverser);
                 return traverser.ss.str();
             }
 
         private:
             std::stringstream ss{};
-
-            TIntermSymbol* symbol;
-            void DoStuff(TIntermediate* intermediate)
-            {
-                auto* structMembers = new TTypeList();
-
-                // Precursor type required for setting things that are otherwise inaccessible for some reason.
-                TPublicType pubMatrix{};
-                pubMatrix.qualifier.clearLayout();
-
-                pubMatrix.setMatrix(4, 4);
-                auto* matrix = new TType(pubMatrix);
-                matrix->setFieldName("fourByFour");
-                matrix->setBasicType(TBasicType::EbtFloat);
-                structMembers->emplace_back();
-                structMembers->back().type = matrix;
-
-                pubMatrix.setMatrix(3, 3);
-                auto* otherMatrix = new TType(pubMatrix);
-                otherMatrix->setFieldName("threeByThree");
-                otherMatrix->setBasicType(TBasicType::EbtFloat);
-                structMembers->emplace_back();
-                structMembers->back().type = otherMatrix;
-
-                pubMatrix.setVector(3);
-                auto* notMatrix = new TType(pubMatrix);
-                notMatrix->setFieldName("vector");
-                notMatrix->setBasicType(TBasicType::EbtFloat);
-                structMembers->emplace_back();
-                structMembers->back().type = notMatrix;
-
-                TQualifier qualifier{};
-                qualifier.clearLayout();
-                qualifier.storage = EvqUniform;
-                qualifier.layoutMatrix = ElmColumnMajor;
-                qualifier.layoutPacking = ElpStd140;
-                qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
-
-                TType structType(structMembers, "Stuff", qualifier);
-
-                TSourceLoc loc{};
-                symbol = intermediate->addSymbol(structType, loc);
-            }
 
             void Indent()
             {
@@ -366,11 +347,11 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        // auto vrtx = DebugTraverser::Traverse(program.getIntermediate(EShLangVertex));
-        // auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
-
         UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex));
         UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment));
+
+        auto vrtx = DebugTraverser::Traverse(program.getIntermediate(EShLangVertex));
+        auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
