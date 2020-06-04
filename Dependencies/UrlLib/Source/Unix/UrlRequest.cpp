@@ -37,22 +37,21 @@ namespace UrlLib
 
         arcana::task<void, std::exception_ptr> SendAsync()
         {
-            return arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, [this]()
+            m_taskCompletionSource = {};
+            switch (m_responseType)
             {
-                switch (m_responseType)
+                case UrlResponseType::String:
                 {
-                    case UrlResponseType::String:
-                    {
-                        LoadFile(m_responseString);
-                        break;
-                    }
-                    case UrlResponseType::Buffer:
-                    {
-                        LoadFile(m_responseBuffer);
-                        break;
-                    }
+                    LoadFile(m_responseString);
+                    break;
                 }
-            });
+                case UrlResponseType::Buffer:
+                {
+                    LoadFile(m_responseBuffer);
+                    break;
+                }
+            }
+            return m_taskCompletionSource.as_task();
         }
 
         UrlStatusCode StatusCode() const
@@ -76,6 +75,83 @@ namespace UrlLib
         }
 
     private:
+        struct CurlMulti
+        {
+            CurlMulti()
+            : m_multiHandle(curl_multi_init())
+            {
+                assert(m_multiHandle != NULL);
+                curl_multi_setopt(m_multiHandle, CURLMOPT_MAX_TOTAL_CONNECTIONS, 200);
+                curl_multi_setopt(m_multiHandle, CURLMOPT_MAX_HOST_CONNECTIONS, 6L);
+                std::thread([this](){
+                    Loop();
+                }).detach();
+            }
+
+            ~CurlMulti()
+            {
+                auto errCode = curl_multi_cleanup(m_multiHandle);
+                assert(errCode == CURLM_OK);
+            }
+
+            void AddHandle(CURL* handle)
+            {
+                std::lock_guard<std::mutex> guard(m_mutex);
+                CURLMcode errCode = curl_multi_add_handle(m_multiHandle, handle); 
+                assert(errCode == CURLM_OK);
+                (void)errCode;
+            }
+
+        private:
+            CURLM* m_multiHandle;
+            // can't add new handle when curl is inside a callback. To be certain, a mutex is used when performing calls.
+            std::mutex m_mutex;
+
+            void Loop()
+            {
+                while (true) 
+                {
+                    int stillRunning;
+                    int numfds;
+                    int msgsLeft;
+                    curl_multi_wait(m_multiHandle, NULL, 0, 1000, &numfds);
+                    {
+                        std::lock_guard<std::mutex> guard(m_mutex);
+                        curl_multi_perform(m_multiHandle, &stillRunning);
+                    }
+                    
+                    // See how the transfers went
+                    CURLMsg *m = NULL;
+                    while ((m = curl_multi_info_read(m_multiHandle, &msgsLeft))) 
+                    {
+                        if (m->msg == CURLMSG_DONE) 
+                        {
+                            CURL *handle = m->easy_handle;
+                            UrlRequest::Impl *request;
+                            curl_easy_getinfo(handle, CURLINFO_PRIVATE, &request);
+                            if (m->data.result == CURLE_OK) 
+                            {
+                                long codep;
+                                curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &codep);
+
+                                // codep 0 for file access
+                                if (codep == 0|| codep == 200) 
+                                {
+                                    request->m_statusCode = UrlStatusCode::Ok;
+                                    request->m_taskCompletionSource.complete();
+                                }
+                            }
+                            else 
+                            {
+                                // TODO: Handle connection failure
+                            }
+                            curl_multi_remove_handle(m_multiHandle, handle);
+                            curl_easy_cleanup(handle);
+                        }
+                    }
+                }
+            }
+        };
 
         static void Append(std::string& string, char* buffer, size_t nitems)
         {
@@ -105,19 +181,14 @@ namespace UrlLib
 
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-
-                auto result = curl_easy_perform(curl);
-                if (result != CURLE_OK)
-                {
-                    throw std::exception();
-                }
-
-                curl_easy_cleanup(curl);
-                m_statusCode = UrlStatusCode::Ok;
+                curl_easy_setopt(curl, CURLOPT_PRIVATE, this);
+                s_curlMulti.AddHandle(curl);
             }
         }
 
+        static inline CurlMulti s_curlMulti{};
         arcana::cancellation_source m_cancellationSource{};
+        arcana::task_completion_source<void, std::exception_ptr> m_taskCompletionSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
