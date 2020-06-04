@@ -15,6 +15,23 @@ namespace Babylon
 {
     namespace
     {
+        template<typename ...Ts> struct types { using type = types<Ts...>; };
+        template<typename T> struct _pointer_vector : std::vector<std::unique_ptr<T>> {};
+        template<typename ...> struct _pointer_scope_builder;
+        template<typename T, typename ...Ts> struct _pointer_scope_builder<_pointer_vector<T>, Ts...> { using type = types<_pointer_vector<T>, Ts...>; };
+        template<typename T, typename... Ts> struct _pointer_scope_builder<T, Ts...> : _pointer_scope_builder<Ts..., _pointer_vector<T>> {};
+        template<typename... Ts> struct pointer_scope : pointer_scope<typename _pointer_scope_builder<Ts...>::type> {};
+        template<typename... Ts> struct pointer_scope<types<Ts...>> : private Ts...
+        {
+            template<typename T, typename ...ArgsT>
+            T* make_new(ArgsT... args)
+            {
+                auto& vector = *static_cast<std::vector<std::unique_ptr<T>>*>(this);
+                vector.emplace_back(std::make_unique<T>(args...));
+                return vector.back().get();
+            }
+        };
+
         using namespace glslang;
 
         struct UniformToStructTraverser final : TIntermTraverser
@@ -60,7 +77,8 @@ namespace Babylon
                 }
             }
 
-            static UniformToStructTraverser Traverse(glslang::TIntermediate* intermediate, bool isVertex = false)
+            template<typename ScopeT>
+            static UniformToStructTraverser Traverse(glslang::TIntermediate* intermediate, ScopeT& scope, bool isVertex = false)
             {
                 UniformToStructTraverser traverser{};
                 traverser.IsVertex = isVertex;
@@ -72,8 +90,7 @@ namespace Babylon
 
                 // Build the struct
                 std::vector<std::string> originalNames{};
-                // TODO: Leak less.
-                auto* structMembers = new TTypeList();
+                auto* structMembers = scope.make_new<TTypeList>();
 
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
@@ -92,8 +109,7 @@ namespace Babylon
 
                     originalNames.emplace_back(name);
 
-                    // TODO: Leak less.
-                    auto* newType = new TType(publicType);
+                    auto* newType = scope.make_new<TType>(publicType);
                     newType->setFieldName(name.c_str()); // TODO: Replace names here as necessary
                     newType->setBasicType(symbol->getType().getBasicType());
                     structMembers->emplace_back();
@@ -140,10 +156,9 @@ namespace Babylon
 
                     originalNames.emplace_back(name);
 
-                    // TODO: Leak less.
-                    auto* newType = new TType(publicType);
-                    newType->setBasicType(symbol->getType().getBasicType());
-                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), *newType});
+                    TType newType{publicType};
+                    newType.setBasicType(symbol->getType().getBasicType());
+                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), newType});
                     originalNameToReplacement[name] = newSymbol;
                 }
 
@@ -189,98 +204,6 @@ namespace Babylon
             std::map<std::string, TIntermSymbol*> UniformNameToSymbol{};
             std::map<std::string, TIntermSymbol*> VaryingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
-        };
-
-        class DebugTraverser : public TIntermTraverser
-        {
-        public:
-            DebugTraverser()
-                : TIntermTraverser{}
-            {
-            }
-
-            ~DebugTraverser() override
-            {
-            }
-            
-            void visitSymbol(TIntermSymbol* symbol) override
-            {
-                Indent();
-                ss << "Symbol: " << symbol->getName() << std::endl;
-            }
-
-            void visitConstantUnion(TIntermConstantUnion* constUnion) override
-            {
-                Indent();
-                ss << "Constant Union: " << constUnion->getCompleteString().c_str() << std::endl;
-            }
-
-            bool visitBinary(TVisit, TIntermBinary* binary) override
-            {
-                Indent();
-                ss << "Binary: " << binary->getOp() << ", " << binary->getCompleteString().c_str() << std::endl;
-                return true;
-            }
-
-            bool visitUnary(TVisit, TIntermUnary* unary) override
-            {
-                Indent();
-                ss << "Unary: " << unary->getCompleteString().c_str() << std::endl;
-                return true;
-            }
-
-            bool visitSelection(TVisit, TIntermSelection* selection) override
-            {
-                Indent();
-                ss << "Selection: " << selection->getCompleteString().c_str() << std::endl;
-                return true;
-            }
-
-            bool visitAggregate(TVisit, TIntermAggregate* aggregate) override
-            {
-                Indent();
-                ss << "Aggregate: " << aggregate->getCompleteString().c_str() << std::endl;
-                return true;
-            }
-
-            bool visitLoop(TVisit, TIntermLoop* loop) override
-            {
-                Indent();
-                ss << "Loop: " << loop->getTest()->getCompleteString().c_str() << std::endl;
-                return true;
-            }
-
-            bool visitBranch(TVisit, TIntermBranch* branch) override
-            {
-                Indent();
-                ss << "Branch: " << branch->getExpression()->getCompleteString().c_str() << std::endl;
-                return true;
-            }
-
-            bool visitSwitch(TVisit, TIntermSwitch* _switch) override
-            {
-                Indent();
-                ss << "Switch: " << std::endl;
-                return true;
-            }
-
-            static std::string Traverse(glslang::TIntermediate* intermediate)
-            {
-                DebugTraverser traverser{};
-                intermediate->getTreeRoot()->traverse(&traverser);
-                return traverser.ss.str();
-            }
-
-        private:
-            std::stringstream ss{};
-
-            void Indent()
-            {
-                for (int idx = 0; idx < this->depth; ++idx)
-                {
-                    ss << "    ";
-                }
-            }
         };
     }
 
@@ -367,11 +290,9 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), true);
-        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment));
-
-        auto vrtx = DebugTraverser::Traverse(program.getIntermediate(EShLangVertex));
-        auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
+        pointer_scope<TType, TTypeList> scope{};
+        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), scope, true);
+        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment), scope);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
