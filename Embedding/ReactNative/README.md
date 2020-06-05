@@ -43,7 +43,7 @@ yarn install
 
 ### **Configuring a Mac Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/), [CMake](https://cmake.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/)
 
 - The `PATH` environment variable must include the path to adb (typically ~/Library/Android/sdk/platform-tools/).
 - The `ANDROID_HOME` environment variable must be defined (typically ~/Library/Android/sdk).
@@ -61,10 +61,12 @@ export ANDROID_AVD_HOME=~/.android/avd
 
 ### **Configuring a Windows Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/), [CMake](https://cmake.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/)
 
 - The `PATH` environment variable must include the path to adb (typically %LOCALAPPDATA%/Android/sdk/platform-tools/).
 - The `ANDROID_HOME` environment variable must be defined (typically %LOCALAPPDATA%/Android/sdk).
+- The `JAVA_HOME` environment variable must be defined (typically %ProgramFiles%/Android/Android Studio/jre).
+
 
 ### **Building and Running the Playground App**
 
