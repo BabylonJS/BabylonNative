@@ -698,7 +698,15 @@ namespace xr
             PoseToRaw(rawPose, pose);
             ArPose_create(session, rawPose, &arPose);
             ArAnchor* arAnchor;
-            ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
+            if (trackableObj)
+            {
+                ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
+            }
+            else
+            {
+                ArSession_acquireNewAnchor(session, arPose, &arAnchor);
+            }
+            
             ArPose_destroy(arPose);
 
             return {pose, arAnchor};
