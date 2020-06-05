@@ -547,9 +547,6 @@ namespace Babylon
 
             xr::System::Session::Frame::Space GetNativeSpace()
             {
-                auto position = m_position.Value();
-                auto orientation = m_orientation.Value();
-
                 return {{GetNativePose()}};
             }
 

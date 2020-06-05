@@ -841,7 +841,7 @@ namespace xr
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, void* trackable) const
     {
-        m_impl->sessionImpl.CreateAnchor(pose, trackable);
+        return m_impl->sessionImpl.CreateAnchor(pose, trackable);
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const
