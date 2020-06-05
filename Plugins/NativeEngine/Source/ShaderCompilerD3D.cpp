@@ -15,29 +15,6 @@ namespace Babylon
 {
     namespace
     {
-        // clang-format off
-        // You're drunk, clang-format. Go home.
-        template<typename ...Ts> struct types { using type = types<Ts...>; };
-        template<typename T> struct _pointer_vector : std::vector<std::unique_ptr<T>> {};
-        template<typename ...> struct _pointer_scope_builder;
-        template<typename T, typename ...Ts> struct _pointer_scope_builder<_pointer_vector<T>, Ts...> { using type = types<_pointer_vector<T>, Ts...>; };
-        template<typename T, typename... Ts> struct _pointer_scope_builder<T, Ts...> : _pointer_scope_builder<Ts..., _pointer_vector<T>> {};
-        template<typename... Ts> struct pointer_scope : pointer_scope<typename _pointer_scope_builder<Ts...>::type> {};
-        template<typename... Ts> struct pointer_scope<types<Ts...>> : private Ts...
-        {
-            template<typename T, typename ...ArgsT>
-            T* make_new(ArgsT... args)
-            {
-                auto& vector = *static_cast<std::vector<std::unique_ptr<T>>*>(this);
-                vector.emplace_back(std::make_unique<T>(args...));
-                return vector.back().get();
-            }
-        
-        private:
-            std::stack<gsl::final_action<std::function<void()>>> m_finalActions{};
-        };
-        // clang-format on
-
         using namespace glslang;
 
         void makeReplacements(
@@ -87,6 +64,13 @@ namespace Babylon
         class UniformToStructTraverser final : private TIntermTraverser
         {
         public:
+            class AllocationsScope
+            {
+                friend UniformToStructTraverser;
+                std::vector<std::unique_ptr<TType>> Types{};
+                std::vector<std::unique_ptr<TTypeList>> TypeLists{};
+            };
+
             ~UniformToStructTraverser() override
             {
             }
@@ -100,16 +84,16 @@ namespace Babylon
                 }
             }
 
-            template<typename ScopeT>
-            static void Traverse(TProgram& program, ScopeT& scope)
+            static AllocationsScope Traverse(TProgram& program)
             {
+                AllocationsScope scope{};
                 Traverse(program.getIntermediate(EShLangVertex), scope);
                 Traverse(program.getIntermediate(EShLangFragment), scope);
+                return scope;
             }
 
         private:
-            template<typename ScopeT>
-            static void Traverse(glslang::TIntermediate* intermediate, ScopeT& scope)
+            static void Traverse(glslang::TIntermediate* intermediate, AllocationsScope& scope)
             {
                 UniformToStructTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -123,7 +107,8 @@ namespace Babylon
                 publicType.qualifier.clearLayout();
 
                 std::vector<std::string> originalNames{};
-                auto* structMembers = scope.make_new<TTypeList>();
+                scope.TypeLists.emplace_back(std::make_unique<TTypeList>());
+                auto* structMembers = scope.TypeLists.back().get();
 
                 for (const auto& [name, symbol] : traverser.m_uniformNameToSymbol)
                 {
@@ -137,7 +122,8 @@ namespace Babylon
                         publicType.setVector(type.getVectorSize());
                     }
 
-                    auto* newType = scope.make_new<TType>(publicType);
+                    scope.Types.emplace_back(std::make_unique<TType>(publicType));
+                    auto* newType = scope.Types.back().get();
                     newType->setFieldName(name.c_str());
                     newType->setBasicType(symbol->getType().getBasicType());
                     structMembers->emplace_back();
@@ -340,8 +326,7 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        pointer_scope<TType, TTypeList> scope{};
-        UniformToStructTraverser::Traverse(program, scope);
+        auto utstScope = UniformToStructTraverser::Traverse(program);
         VertexVaryingInTraverser::Traverse(program);
 
         // clang-format off
