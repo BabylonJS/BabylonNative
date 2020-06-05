@@ -1242,7 +1242,7 @@ namespace Babylon
 
                     if (!nativeAnchor.IsValid)
                     {
-                        DeleteNativeAnchor(xrAnchor, nativeAnchor);
+                        DeleteNativeAnchor(nativeAnchor);
                         anchorIter = m_trackedAnchors.erase(anchorIter);
                     }
                     else
@@ -1268,7 +1268,7 @@ namespace Babylon
                 return deferred.Promise();
             }
 
-            void DeleteNativeAnchor(XRAnchor* anchor, xr::Anchor& nativeAnchor)
+            void DeleteNativeAnchor(xr::Anchor& nativeAnchor)
             {
                 m_frame->DeleteAnchor(nativeAnchor);
             }
@@ -1373,10 +1373,10 @@ namespace Babylon
             return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeEntity);
         }
 
-        void XRAnchor::Delete(const Napi::CallbackInfo& info)
+        void XRAnchor::Delete(const Napi::CallbackInfo&)
         {
             deleted = true;
-            m_frame->DeleteNativeAnchor(this, m_nativeAnchor);
+            m_frame->DeleteNativeAnchor(m_nativeAnchor);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
@@ -1651,7 +1651,6 @@ namespace Babylon
             Napi::Value RequestHitTestSource(const Napi::CallbackInfo& info)
             {
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                auto napiHitTestSource = XRHitTestSource::New(info);
                 deferred.Resolve(XRHitTestSource::New(info));
                 return deferred.Promise();
             }
