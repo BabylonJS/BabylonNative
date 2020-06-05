@@ -1,11 +1,10 @@
-#define NOMINMAX
-
 #include "ShaderCompiler.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
 #include <bgfx/bgfx.h>
 #include <glslang/Public/ShaderLang.h>
 #include <SPIRV/GlslangToSpv.h>
+#include <glslang/MachineIndependent/RemoveTree.h>
 #include <spirv_parser.hpp>
 #include <spirv_hlsl.hpp>
 #include <d3dcompiler.h>
@@ -16,6 +15,8 @@ namespace Babylon
 {
     namespace
     {
+        // clang-format off
+        // You're drunk, clang-format. Go home.
         template<typename ...Ts> struct types { using type = types<Ts...>; };
         template<typename T> struct _pointer_vector : std::vector<std::unique_ptr<T>> {};
         template<typename ...> struct _pointer_scope_builder;
@@ -31,39 +32,17 @@ namespace Babylon
                 vector.emplace_back(std::make_unique<T>(args...));
                 return vector.back().get();
             }
-
-            template<typename T>
-            void take_ownership(T* ptr)
-            {
-                auto& vector = *static_cast<std::vector<std::unique_ptr<T>>*>(this);
-                vector.emplace_back(ptr);
-            }
-
-            template<typename CallableT>
-            void finally(CallableT callable)
-            {
-                m_finalActions.emplace(std::move(callable));
-            }
-
-            ~pointer_scope()
-            {
-                while (!m_finalActions.empty())
-                {
-                    m_finalActions.pop();
-                }
-            }
         
         private:
             std::stack<gsl::final_action<std::function<void()>>> m_finalActions{};
         };
+        // clang-format on
 
         using namespace glslang;
 
-        template<typename ScopeT>
         void makeReplacements(
             std::map<std::string, TIntermTyped*> nameToReplacement,
-            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent,
-            ScopeT& scope)
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent)
         {
             for (const auto& [symbol, parent] : symbolToParent)
             {
@@ -75,11 +54,7 @@ namespace Babylon
                     {
                         if (sequence[idx] == symbol)
                         {
-                            auto* original = sequence[idx];
-                            scope.finally([aggregate, idx, original] {
-                                aggregate->getSequence()[idx] = original;
-                            });
-
+                            RemoveAllTreeNodes(sequence[idx]);
                             sequence[idx] = replacement;
                         }
                     }
@@ -88,30 +63,18 @@ namespace Babylon
                 {
                     if (binary->getLeft() == symbol)
                     {
-                        auto* original = binary->getLeft();
-                        scope.finally([binary, original] {
-                            binary->setLeft(original);
-                        });
-
+                        RemoveAllTreeNodes(binary->getLeft());
                         binary->setLeft(replacement);
                     }
                     else
                     {
-                        auto* original = binary->getRight();
-                        scope.finally([binary, original] {
-                            binary->setRight(original);
-                        });
-
+                        RemoveAllTreeNodes(binary->getRight());
                         binary->setRight(replacement);
                     }
                 }
                 else if (auto* unary = parent->getAsUnaryNode())
                 {
-                    auto* original = unary->getOperand();
-                    scope.finally([unary, original] {
-                        unary->setOperand(original);
-                    });
-
+                    RemoveAllTreeNodes(unary->getOperand());
                     unary->setOperand(replacement);
                 }
                 else
@@ -121,27 +84,30 @@ namespace Babylon
             }
         }
 
-        struct UniformToStructTraverser final : TIntermTraverser
+        class UniformToStructTraverser final : private TIntermTraverser
         {
-            UniformToStructTraverser()
-                : TIntermTraverser()
-            {
-            }
-
+        public:
             ~UniformToStructTraverser() override
             {
             }
 
             void visitSymbol(TIntermSymbol* symbol) override
             {
-                const auto addToSymbolsToParents = [symbol, this]() { SymbolsToParents.emplace_back(symbol, this->getParentNode()); };
                 if (symbol->getType().getQualifier().isUniformOrBuffer())
                 {
-                    UniformNameToSymbol[symbol->getName().c_str()] = symbol;
-                    addToSymbolsToParents();
+                    m_uniformNameToSymbol[symbol->getName().c_str()] = symbol;
+                    m_symbolsToParents.emplace_back(symbol, this->getParentNode());
                 }
             }
 
+            template<typename ScopeT>
+            static void Traverse(TProgram& program, ScopeT& scope)
+            {
+                Traverse(program.getIntermediate(EShLangVertex), scope);
+                Traverse(program.getIntermediate(EShLangFragment), scope);
+            }
+
+        private:
             template<typename ScopeT>
             static void Traverse(glslang::TIntermediate* intermediate, ScopeT& scope)
             {
@@ -159,7 +125,7 @@ namespace Babylon
                 std::vector<std::string> originalNames{};
                 auto* structMembers = scope.make_new<TTypeList>();
 
-                for (const auto& [name, symbol] : traverser.UniformNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_uniformNameToSymbol)
                 {
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
@@ -189,65 +155,66 @@ namespace Babylon
                 TType structType(structMembers, "Frame", qualifier);
 
                 TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
-                scope.take_ownership(structSymbol);
 
                 for (size_t idx = 0; idx < structMembers->size(); ++idx)
                 {
                     auto* left = structSymbol;
                     auto* right = intermediate->addConstantUnion(idx, loc);
-                    scope.take_ownership(right);
                     auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
-                    scope.take_ownership(binary);
                     originalNameToReplacement[(*structMembers)[idx].type->getFieldName().c_str()] = binary;
                 }
 
-                makeReplacements(originalNameToReplacement, traverser.SymbolsToParents, scope);
+                makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
-            std::map<std::string, TIntermSymbol*> UniformNameToSymbol{};
-            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
+            std::map<std::string, TIntermSymbol*> m_uniformNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
-        
-        struct VertexVaryingInTraverser final : TIntermTraverser
-        {
-            VertexVaryingInTraverser()
-                : TIntermTraverser()
-            {
-            }
 
+        class VertexVaryingInTraverser final : private TIntermTraverser
+        {
+        public:
             ~VertexVaryingInTraverser() override
             {
             }
 
             void visitSymbol(TIntermSymbol* symbol) override
             {
-                const auto addToSymbolsToParents = [symbol, this]() { SymbolsToParents.emplace_back(symbol, this->getParentNode()); };
                 if (symbol->getType().getQualifier().storage == EvqVaryingIn)
                 {
-                    VaryingNameToSymbol[symbol->getName().c_str()] = symbol;
-                    addToSymbolsToParents();
+                    m_varyingNameToSymbol[symbol->getName().c_str()] = symbol;
+                    m_symbolsToParents.emplace_back(symbol, this->getParentNode());
                 }
             }
 
-            uint32_t texCoordIdx = 10;
+            static void Traverse(TProgram& program)
+            {
+                Traverse(program.getIntermediate(EShLangVertex));
+            }
+
+        private:
             unsigned int GetVaryingLocationForName(const char* name)
             {
-                if (std::strcmp(name, "position") == 0)
-                {
-                    return 0;
+#define IF_NAME_RETURN_ATTRIB(varyingName, attrib)             \
+                if (std::strcmp(name, varyingName) == 0)       \
+                {                                              \
+                    return static_cast<unsigned int>(attrib);  \
                 }
-                else if (std::strcmp(name, "normal") == 0)
-                {
-                    return 1;
-                }
-                else
-                {
-                    return texCoordIdx++;
-                }
+                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position)
+                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal)
+                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent)
+                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0)
+                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1)
+                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2)
+                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3)
+                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0)
+                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices)
+                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight)
+#undef IF_NAME_RETURN_ATTRIB
+                return FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
             }
 
-            template<typename ScopeT>
-            static void Traverse(glslang::TIntermediate* intermediate, ScopeT& scope)
+            static void Traverse(glslang::TIntermediate* intermediate)
             {
                 VertexVaryingInTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -260,7 +227,7 @@ namespace Babylon
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-                for (const auto& [name, symbol] : traverser.VaryingNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
                     publicType.qualifier = symbol->getType().getQualifier();
                     publicType.qualifier.layoutLocation = traverser.GetVaryingLocationForName(name.c_str());
@@ -278,15 +245,16 @@ namespace Babylon
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
                     auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), newType});
-                    scope.take_ownership(newSymbol);
                     originalNameToReplacement[name] = newSymbol;
                 }
 
-                makeReplacements(originalNameToReplacement, traverser.SymbolsToParents, scope);
+                makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
-            std::map<std::string, TIntermSymbol*> VaryingNameToSymbol{};
-            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> SymbolsToParents{};
+            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10}; // TODO: Is this right? There are returnable values in the list that are larger than 10.
+            unsigned int m_genericAttributesRunningCount{0};
+            std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
     }
 
@@ -296,7 +264,7 @@ namespace Babylon
         {
             const std::array<const char*, 1> sources{source.data()};
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
-            
+
             if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
                 throw std::runtime_error(shader.getInfoDebugLog());
@@ -361,8 +329,7 @@ namespace Babylon
         glslang::TShader fragmentShader{EShLangFragment};
         AddShader(program, fragmentShader, fragmentSource);
         InvertYDerivativeOperands(fragmentShader);
-        
-        // TODO: Do stuff here.
+
         glslang::SpvVersion spv{};
         spv.spv = 0x10000;
         vertexShader.getIntermediate()->setSpv(spv);
@@ -373,10 +340,9 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        pointer_scope<TType, TTypeList, TIntermSymbol, TIntermBinary, TIntermConstantUnion> scope{};
-        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangVertex), scope);
-        VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), scope);
-        UniformToStructTraverser::Traverse(program.getIntermediate(EShLangFragment), scope);
+        pointer_scope<TType, TTypeList> scope{};
+        UniformToStructTraverser::Traverse(program, scope);
+        VertexVaryingInTraverser::Traverse(program);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {

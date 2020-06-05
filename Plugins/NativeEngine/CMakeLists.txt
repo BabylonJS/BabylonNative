@@ -46,6 +46,9 @@ elseif(WIN32)
         PRIVATE "d3dcompiler.lib")
 endif()
 
+target_compile_definitions(NativeEngine
+    PRIVATE NOMINMAX)
+
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
