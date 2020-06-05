@@ -942,7 +942,7 @@ namespace Babylon
             XRReferenceSpace(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRReferenceSpace>{info}
             {
-                if (info.Length() > 0)
+                /*if (info.Length() > 0)
                 {
                     if (info[0].IsString())
                     {
@@ -959,17 +959,17 @@ namespace Babylon
 
                         m_jsTransform = info[0].As<Napi::Object>();
                     }
-                }
+                }*/
             }
 
             void SetTransform(Napi::Object transformObj)
             {
-                m_jsTransform = transformObj;
+                m_jsTransform = Napi::Persistent(transformObj);
             }
 
             XRRigidTransform* GetTransform()
             {
-                return XRRigidTransform::Unwrap(m_jsTransform);
+                return XRRigidTransform::Unwrap(m_jsTransform.Value());
             }
 
         private:
@@ -981,7 +981,7 @@ namespace Babylon
                 return XRReferenceSpace::New(info);
             }
 
-            Napi::Object m_jsTransform;
+            Napi::ObjectReference m_jsTransform;
         };
 
         // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
@@ -1040,7 +1040,7 @@ namespace Babylon
                 Napi::Object napiSpace = XRReferenceSpace::New(info);
                 XRReferenceSpace* space = XRReferenceSpace::Unwrap(napiSpace);
                 space->SetTransform(napiTransform);
-                return XRReferenceSpace::New(info);
+                return napiSpace;
             }
 
             void Delete(const Napi::CallbackInfo& info);
@@ -1357,10 +1357,9 @@ namespace Babylon
             Napi::Value GetTrackedAnchors(const Napi::CallbackInfo& info)
             {
                 Napi::Object anchorSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
-                Napi::Function addFunc = anchorSet.Get("add").As<Napi::Function>();
                 for(Napi::Value napiValue : m_trackedAnchors)
                 {
-                    addFunc({napiValue});
+                    anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
                 }
 
                 return anchorSet;
@@ -1871,6 +1870,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
             XRRay::Initialize(env);
