@@ -10,6 +10,102 @@
 #include <d3dcompiler.h>
 #include <wrl/client.h>
 #include <gsl/gsl>
+#include <sstream>
+namespace
+{
+    using namespace glslang;
+    class DebugTraverser : public TIntermTraverser
+    {
+    public:
+        DebugTraverser()
+            : TIntermTraverser{}
+        {
+        }
+
+        ~DebugTraverser() override
+        {
+        }
+
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            Indent();
+            ss << "Symbol: " << symbol->getName() << std::endl;
+        }
+
+        void visitConstantUnion(TIntermConstantUnion* constUnion) override
+        {
+            Indent();
+            ss << "Constant Union: " << constUnion->getCompleteString().c_str() << std::endl;
+        }
+
+        bool visitBinary(TVisit, TIntermBinary* binary) override
+        {
+            Indent();
+            ss << "Binary: " << binary->getOp() << ", " << binary->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitUnary(TVisit, TIntermUnary* unary) override
+        {
+            Indent();
+            ss << "Unary: " << unary->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitSelection(TVisit, TIntermSelection* selection) override
+        {
+            Indent();
+            ss << "Selection: " << selection->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitAggregate(TVisit, TIntermAggregate* aggregate) override
+        {
+            Indent();
+            ss << "Aggregate: " << aggregate->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitLoop(TVisit, TIntermLoop* loop) override
+        {
+            Indent();
+            ss << "Loop: " << loop->getTest()->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitBranch(TVisit, TIntermBranch* branch) override
+        {
+            Indent();
+            ss << "Branch: " << branch->getExpression()->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitSwitch(TVisit, TIntermSwitch* _switch) override
+        {
+            Indent();
+            ss << "Switch: " << std::endl;
+            return true;
+        }
+
+        static std::string Traverse(glslang::TIntermediate* intermediate)
+        {
+            DebugTraverser traverser{};
+            intermediate->getTreeRoot()->traverse(&traverser);
+            return traverser.ss.str();
+        }
+
+    private:
+        std::stringstream ss{};
+
+        void Indent()
+        {
+            for (int idx = 0; idx < this->depth; ++idx)
+            {
+                ss << "    ";
+            }
+        }
+    };
+}
 
 namespace Babylon
 {
@@ -77,7 +173,7 @@ namespace Babylon
 
             void visitSymbol(TIntermSymbol* symbol) override
             {
-                if (symbol->getType().getQualifier().isUniformOrBuffer())
+                if (symbol->getType().getQualifier().isUniformOrBuffer() && symbol->getType().getBasicType() != EbtSampler)
                 {
                     m_uniformNameToSymbol[symbol->getName().c_str()] = symbol;
                     m_symbolsToParents.emplace_back(symbol, this->getParentNode());
@@ -215,10 +311,10 @@ namespace Babylon
 
                 for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
-                    publicType.qualifier = symbol->getType().getQualifier();
+                    const auto& type = symbol->getType();
+                    publicType.qualifier = type.getQualifier();
                     publicType.qualifier.layoutLocation = traverser.GetVaryingLocationForName(name.c_str());
 
-                    const auto& type = symbol->getType();
                     if (type.isMatrix())
                     {
                         publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
@@ -240,6 +336,99 @@ namespace Babylon
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10}; // TODO: Is this right? There are returnable values in the list that are larger than 10.
             unsigned int m_genericAttributesRunningCount{0};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
+
+        class SamplerSplitterTraverser : TIntermTraverser
+        {
+        public:
+            ~SamplerSplitterTraverser() override
+            {
+            }
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler)
+                {
+                    m_samplerNameToSymbol[symbol->getName().c_str()] = symbol;
+                    m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+                }
+            }
+
+            static void Traverse(TProgram& program)
+            {
+                Traverse(program.getIntermediate(EShLangVertex));
+                Traverse(program.getIntermediate(EShLangFragment));
+            }
+
+        private:
+            static void Traverse(TIntermediate* intermediate)
+            {
+                SamplerSplitterTraverser traverser{};
+                intermediate->getTreeRoot()->traverse(&traverser);
+
+                TSourceLoc loc{};
+                loc.init();
+
+                std::map<std::string, TIntermTyped*> nameToReplacement{};
+
+                for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
+                {
+                    // For each name and symbol, create a replacer.
+                    const auto& type = symbol->getType();
+
+                    // Create the new texture symbol.
+                    TIntermSymbol* newTexture;
+                    {
+                        TPublicType publicType{};
+                        publicType.qualifier.clearLayout();
+                        publicType.basicType = type.getBasicType();
+                        publicType.qualifier = type.getQualifier();
+                        publicType.qualifier.precision = EpqHigh;
+                        publicType.qualifier.layoutBinding = 0; // TODO: Increment as necessary? Or leave out?
+                        publicType.sampler = type.getSampler();
+
+                        TType newType{publicType};
+                        std::string newName = name + "Texture";
+                        newTexture = intermediate->addSymbol(TIntermSymbol{0, newName.c_str(), newType});
+                    }
+
+                    // Create the new sampler symbol.
+                    TIntermSymbol* newSampler;
+                    {
+                        TPublicType publicType{};
+                        publicType.qualifier.clearLayout();
+                        publicType.basicType = type.getBasicType();
+                        publicType.qualifier = type.getQualifier();
+                        publicType.qualifier.precision = EpqHigh;
+                        publicType.qualifier.layoutBinding = 0; // TODO: Increment as necessary? Or leave out?
+                        publicType.sampler.sampler = true;
+
+                        TType newType{publicType};
+                        newSampler = intermediate->addSymbol(TIntermSymbol{0, name.c_str(), newType});
+                    }
+
+                    // Create the aggregate.
+                    auto* aggregate = intermediate->growAggregate(newTexture, newSampler);
+                    {
+                        aggregate->setOperator(EOpConstructTextureSampler);
+
+                        TPublicType publicType{};
+                        publicType.basicType = type.getBasicType();
+                        publicType.qualifier.clearLayout();
+                        publicType.qualifier.storage = EvqTemporary;
+                        publicType.sampler = type.getSampler();
+                        publicType.sampler.combined = true;
+                        aggregate->setType(TType{publicType});
+                    }
+
+                    nameToReplacement[name] = aggregate;
+                }
+
+                makeReplacements(nameToReplacement, traverser.m_symbolsToParents);
+            }
+
+            std::map<std::string, TIntermSymbol*> m_samplerNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
     }
@@ -328,6 +517,9 @@ namespace Babylon
 
         auto utstScope = UniformToStructTraverser::Traverse(program);
         VertexVaryingInTraverser::Traverse(program);
+        SamplerSplitterTraverser::Traverse(program);
+
+        auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
