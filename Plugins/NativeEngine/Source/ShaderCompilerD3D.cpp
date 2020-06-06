@@ -29,7 +29,7 @@ namespace
         void visitSymbol(TIntermSymbol* symbol) override
         {
             Indent();
-            ss << "Symbol: " << symbol->getName() << std::endl;
+            ss << "Symbol: " << symbol->getCompleteString() << std::endl;
         }
 
         void visitConstantUnion(TIntermConstantUnion* constUnion) override
@@ -201,6 +201,10 @@ namespace Babylon
                 loc.init();
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
+                publicType.qualifier.storage = EvqUniform;
+                publicType.qualifier.precision = EpqHigh;
+                publicType.qualifier.layoutMatrix = ElmColumnMajor;
+                publicType.qualifier.layoutPacking = ElpStd140;
 
                 std::vector<std::string> originalNames{};
                 scope.TypeLists.emplace_back(std::make_unique<TTypeList>());
@@ -240,10 +244,13 @@ namespace Babylon
 
                 for (unsigned int idx = 0; idx < structMembers->size(); ++idx)
                 {
+                    auto& memberType = (*structMembers)[idx].type;
+
                     auto* left = structSymbol;
                     auto* right = intermediate->addConstantUnion(idx, loc);
                     auto* binary = intermediate->addBinaryNode(EOpIndexDirectStruct, left, right, loc);
-                    originalNameToReplacement[(*structMembers)[idx].type->getFieldName().c_str()] = binary;
+                    binary->setType(*memberType);
+                    originalNameToReplacement[memberType->getFieldName().c_str()] = binary;
                 }
 
                 makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
@@ -387,6 +394,7 @@ namespace Babylon
                         publicType.qualifier.precision = EpqHigh;
                         publicType.qualifier.layoutBinding = 0; // TODO: Increment as necessary? Or leave out?
                         publicType.sampler = type.getSampler();
+                        publicType.sampler.combined = false;
 
                         TType newType{publicType};
                         std::string newName = name + "Texture";
