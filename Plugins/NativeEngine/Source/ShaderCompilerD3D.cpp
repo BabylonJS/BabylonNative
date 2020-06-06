@@ -28,6 +28,12 @@ namespace
 
         void visitSymbol(TIntermSymbol* symbol) override
         {
+            if (symbol->getType().isStruct() && std::strcmp(symbol->getName().c_str(), "") == 0)
+            {
+                auto* parent = this->getParentNode();
+                parent = parent;
+            }
+
             Indent();
             ss << "Symbol: " << symbol->getCompleteString() << std::endl;
         }
@@ -379,6 +385,7 @@ namespace Babylon
 
                 std::map<std::string, TIntermTyped*> nameToReplacement{};
 
+                unsigned int layoutBinding = 0;
                 for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
                 {
                     // For each name and symbol, create a replacer.
@@ -392,7 +399,7 @@ namespace Babylon
                         publicType.basicType = type.getBasicType();
                         publicType.qualifier = type.getQualifier();
                         publicType.qualifier.precision = EpqHigh;
-                        publicType.qualifier.layoutBinding = 0; // TODO: Increment as necessary? Or leave out?
+                        publicType.qualifier.layoutBinding = layoutBinding;
                         publicType.sampler = type.getSampler();
                         publicType.sampler.combined = false;
 
@@ -409,7 +416,7 @@ namespace Babylon
                         publicType.basicType = type.getBasicType();
                         publicType.qualifier = type.getQualifier();
                         publicType.qualifier.precision = EpqHigh;
-                        publicType.qualifier.layoutBinding = 0; // TODO: Increment as necessary? Or leave out?
+                        publicType.qualifier.layoutBinding = layoutBinding;
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
@@ -431,6 +438,7 @@ namespace Babylon
                     }
 
                     nameToReplacement[name] = aggregate;
+                    ++layoutBinding;
                 }
 
                 makeReplacements(nameToReplacement, traverser.m_symbolsToParents);
