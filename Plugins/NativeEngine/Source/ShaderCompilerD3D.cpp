@@ -238,7 +238,7 @@ namespace Babylon
 
                 TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
 
-                for (size_t idx = 0; idx < structMembers->size(); ++idx)
+                for (unsigned int idx = 0; idx < structMembers->size(); ++idx)
                 {
                     auto* left = structSymbol;
                     auto* right = intermediate->addConstantUnion(idx, loc);
