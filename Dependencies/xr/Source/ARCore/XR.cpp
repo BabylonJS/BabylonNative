@@ -706,7 +706,7 @@ namespace xr
             {
                 ArSession_acquireNewAnchor(session, arPose, &arAnchor);
             }
-            
+
             ArPose_destroy(arPose);
 
             return {pose, arAnchor};

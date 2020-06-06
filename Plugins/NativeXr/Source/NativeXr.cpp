@@ -498,10 +498,18 @@ namespace Babylon
 
             XRRigidTransform(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRigidTransform>{info}
-                , m_position{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_orientation{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
+                if (info.Length() == 2)
+                {
+                    m_position = Napi::Persistent(info[0].As<Napi::Object>());
+                    m_orientation = Napi::Persistent(info[1].As<Napi::Object>());
+                }
+                else
+                {
+                    m_position = Napi::Persistent(Napi::Object::New(info.Env()));
+                    m_orientation = Napi::Persistent(Napi::Object::New(info.Env()));
+                }
             }
 
             void Update(XRRigidTransform* transform)
@@ -536,8 +544,8 @@ namespace Babylon
             {
                 auto position = m_position.Value();
                 auto orientation = m_orientation.Value();
-                return {{position.Get("x").ToNumber(), position.Get("y").ToNumber(), position.Get("z").ToNumber()},
-                    {orientation.Get("x").ToNumber(), orientation.Get("y").ToNumber(), orientation.Get("z").ToNumber(), orientation.Get("w").ToNumber()}};
+                return {{position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
             }
 
         private:
