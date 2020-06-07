@@ -189,8 +189,14 @@ namespace Babylon
             {
                 if (symbol->getType().getQualifier().isUniformOrBuffer() && symbol->getType().getBasicType() != EbtSampler)
                 {
-                    m_uniformNameToSymbol[symbol->getName().c_str()] = symbol;
-                    m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+                    if (isLinkerObject(this->path))
+                    {
+                        m_uniformNameToSymbol[symbol->getName().c_str()] = symbol;
+                    }
+                    else
+                    {
+                        m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+                    }
                 }
             }
 
@@ -267,6 +273,25 @@ namespace Babylon
                     originalNameToReplacement[memberType->getFieldName().c_str()] = binary;
                 }
 
+                // Perform linker object replacements
+                auto* linkerObjectAggregate = intermediate->getTreeRoot()->getAsAggregate()->getSequence().back()->getAsAggregate();
+                assert(linkerObjectAggregate->getOp() == EOpLinkerObjects);
+                auto& sequence = linkerObjectAggregate->getSequence();
+                for (int idx = sequence.size() - 1; idx >= 0; --idx)
+                {
+                    auto* symbol = sequence[idx]->getAsSymbolNode();
+                    if (symbol)
+                    {
+                        auto found = traverser.m_uniformNameToSymbol.find(symbol->getName().c_str());
+                        if (found != traverser.m_uniformNameToSymbol.end())
+                        {
+                            RemoveAllTreeNodes(symbol);
+                            sequence.erase(sequence.begin() + idx);
+                        }
+                    }
+                }
+                sequence.insert(sequence.begin(), structSymbol);
+
                 makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
@@ -285,7 +310,15 @@ namespace Babylon
             {
                 if (symbol->getType().getQualifier().storage == EvqVaryingIn)
                 {
-                    m_varyingNameToSymbol[symbol->getName().c_str()] = symbol;
+                    if (isLinkerObject(this->path))
+                    {
+                        m_varyingNameToSymbol[symbol->getName().c_str()] = symbol;
+                    }
+
+                    // Because the symbol replacement for varyings is just a new symbol with the
+                    // correct parameters, we can just do the linker object replacement alongside
+                    // the other replacements, so we add the occurrence here regardless of whether
+                    // we're in a linker object.
                     m_symbolsToParents.emplace_back(symbol, this->getParentNode());
                 }
             }
@@ -371,8 +404,11 @@ namespace Babylon
             {
                 if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler)
                 {
-                    m_samplerNameToSymbol[symbol->getName().c_str()] = symbol;
-                    if (!isLinkerObject(this->path))
+                    if (isLinkerObject(this->path))
+                    {
+                        m_samplerNameToSymbol[symbol->getName().c_str()] = symbol;
+                    }
+                    else
                     {
                         m_symbolsToParents.emplace_back(symbol, this->getParentNode());
                     }
@@ -395,6 +431,7 @@ namespace Babylon
                 loc.init();
 
                 std::map<std::string, TIntermTyped*> nameToReplacement{};
+                std::map<std::string, std::pair<TIntermSymbol*, TIntermSymbol*>> nameToNewTextureAndSampler{};
 
                 unsigned int layoutBinding = 0;
                 for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
@@ -434,6 +471,8 @@ namespace Babylon
                         newSampler = intermediate->addSymbol(TIntermSymbol{--nextId, name.c_str(), newType});
                     }
 
+                    nameToNewTextureAndSampler[name] = std::pair<TIntermSymbol*, TIntermSymbol*>{newTexture, newSampler};
+
                     // Create the aggregate.
                     auto* aggregate = intermediate->growAggregate(newTexture, newSampler);
                     {
@@ -450,6 +489,25 @@ namespace Babylon
 
                     nameToReplacement[name] = aggregate;
                     ++layoutBinding;
+                }
+
+                // Perform linker object replacements
+                auto* linkerObjectAggregate = intermediate->getTreeRoot()->getAsAggregate()->getSequence().back()->getAsAggregate();
+                assert(linkerObjectAggregate->getOp() == EOpLinkerObjects);
+                auto& sequence = linkerObjectAggregate->getSequence();
+                for (int idx = sequence.size() - 1; idx >= 0; --idx)
+                {
+                    auto* symbol = sequence[idx]->getAsSymbolNode();
+                    if (symbol)
+                    {
+                        auto found = nameToNewTextureAndSampler.find(symbol->getName().c_str());
+                        if (found != nameToNewTextureAndSampler.end())
+                        {
+                            RemoveAllTreeNodes(symbol);
+                            sequence[idx] = found->second.first;
+                            sequence.insert(sequence.begin() + idx + 1, found->second.second);
+                        }
+                    }
                 }
 
                 makeReplacements(nameToReplacement, traverser.m_symbolsToParents);
