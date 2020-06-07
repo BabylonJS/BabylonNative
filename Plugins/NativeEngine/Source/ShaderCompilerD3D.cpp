@@ -165,6 +165,12 @@ namespace Babylon
             }
         }
 
+        bool isLinkerObject(const TIntermSequence& path)
+        {
+            auto* agg = path.size() > 1 ? path[1]->getAsAggregate() : nullptr;
+            return agg && agg->getOp() == EOpLinkerObjects;
+        }
+
         class UniformToStructTraverser final : private TIntermTraverser
         {
         public:
@@ -366,7 +372,10 @@ namespace Babylon
                 if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler)
                 {
                     m_samplerNameToSymbol[symbol->getName().c_str()] = symbol;
-                    m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+                    if (!isLinkerObject(this->path))
+                    {
+                        m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+                    }
                 }
             }
 
