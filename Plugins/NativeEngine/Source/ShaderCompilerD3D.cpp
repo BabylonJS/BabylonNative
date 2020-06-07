@@ -89,6 +89,7 @@ namespace Babylon
                 friend UniformToStructTraverser;
                 std::vector<std::unique_ptr<TType>> Types{};
                 std::vector<std::unique_ptr<TTypeList>> TypeLists{};
+                std::vector<std::unique_ptr<TArraySizes>> ArraySizes{};
             };
 
             ~UniformToStructTraverser() override
@@ -150,6 +151,17 @@ namespace Babylon
                     else if (type.isVector())
                     {
                         publicType.setVector(type.getVectorSize());
+                    }
+
+                    if (type.getArraySizes())
+                    {
+                        scope.ArraySizes.emplace_back(std::make_unique<TArraySizes>());
+                        publicType.arraySizes = scope.ArraySizes.back().get();
+                        *publicType.arraySizes = *type.getArraySizes();
+                    }
+                    else
+                    {
+                        publicType.arraySizes = nullptr;
                     }
 
                     scope.Types.emplace_back(std::make_unique<TType>(publicType));
