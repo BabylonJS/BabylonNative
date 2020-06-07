@@ -13,6 +13,8 @@
 #include <sstream>
 namespace
 {
+    int nextId = 0;
+
     using namespace glslang;
     class DebugTraverser : public TIntermTraverser
     {
@@ -246,7 +248,7 @@ namespace Babylon
 
                 TType structType(structMembers, "Frame", qualifier);
 
-                TIntermSymbol* structSymbol = intermediate->addSymbol(structType, loc);
+                TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{--nextId, "anon@0", structType});
 
                 for (unsigned int idx = 0; idx < structMembers->size(); ++idx)
                 {
@@ -339,7 +341,7 @@ namespace Babylon
 
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
-                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{symbol->getId(), symbol->getName(), newType});
+                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{--nextId, symbol->getName(), newType});
                     originalNameToReplacement[name] = newSymbol;
                 }
 
@@ -405,7 +407,7 @@ namespace Babylon
 
                         TType newType{publicType};
                         std::string newName = name + "Texture";
-                        newTexture = intermediate->addSymbol(TIntermSymbol{0, newName.c_str(), newType});
+                        newTexture = intermediate->addSymbol(TIntermSymbol{--nextId, newName.c_str(), newType});
                     }
 
                     // Create the new sampler symbol.
@@ -420,7 +422,7 @@ namespace Babylon
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
-                        newSampler = intermediate->addSymbol(TIntermSymbol{0, name.c_str(), newType});
+                        newSampler = intermediate->addSymbol(TIntermSymbol{--nextId, name.c_str(), newType});
                     }
 
                     // Create the aggregate.
