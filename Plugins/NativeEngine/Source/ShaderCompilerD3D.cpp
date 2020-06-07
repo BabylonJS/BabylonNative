@@ -9,117 +9,27 @@
 #include <spirv_hlsl.hpp>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
-#include <gsl/gsl>
-#include <sstream>
-namespace
-{
-    int nextId = 0;
-
-    using namespace glslang;
-    class DebugTraverser : public TIntermTraverser
-    {
-    public:
-        DebugTraverser()
-            : TIntermTraverser{}
-        {
-        }
-
-        ~DebugTraverser() override
-        {
-        }
-
-        void visitSymbol(TIntermSymbol* symbol) override
-        {
-            if (symbol->getType().isStruct() && std::strcmp(symbol->getName().c_str(), "") == 0)
-            {
-                auto* parent = this->getParentNode();
-                parent = parent;
-            }
-
-            Indent();
-            ss << "Symbol: " << symbol->getCompleteString() << std::endl;
-        }
-
-        void visitConstantUnion(TIntermConstantUnion* constUnion) override
-        {
-            Indent();
-            ss << "Constant Union: " << constUnion->getCompleteString().c_str() << std::endl;
-        }
-
-        bool visitBinary(TVisit, TIntermBinary* binary) override
-        {
-            Indent();
-            ss << "Binary: " << binary->getOp() << ", " << binary->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitUnary(TVisit, TIntermUnary* unary) override
-        {
-            Indent();
-            ss << "Unary: " << unary->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitSelection(TVisit, TIntermSelection* selection) override
-        {
-            Indent();
-            ss << "Selection: " << selection->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitAggregate(TVisit, TIntermAggregate* aggregate) override
-        {
-            Indent();
-            ss << "Aggregate: " << aggregate->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitLoop(TVisit, TIntermLoop* loop) override
-        {
-            Indent();
-            ss << "Loop: " << loop->getTest()->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitBranch(TVisit, TIntermBranch* branch) override
-        {
-            Indent();
-            ss << "Branch: " << branch->getExpression()->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitSwitch(TVisit, TIntermSwitch* _switch) override
-        {
-            Indent();
-            ss << "Switch: " << std::endl;
-            return true;
-        }
-
-        static std::string Traverse(glslang::TIntermediate* intermediate)
-        {
-            DebugTraverser traverser{};
-            intermediate->getTreeRoot()->traverse(&traverser);
-            return traverser.ss.str();
-        }
-
-    private:
-        std::stringstream ss{};
-
-        void Indent()
-        {
-            for (int idx = 0; idx < this->depth; ++idx)
-            {
-                ss << "    ";
-            }
-        }
-    };
-}
 
 namespace Babylon
 {
     namespace
     {
         using namespace glslang;
+
+        class IdGenerator
+        {
+        public:
+            IdGenerator() = default;
+            IdGenerator(const IdGenerator&) = delete;
+
+            int Next()
+            {
+                return ++m_lastId;
+            }
+
+        private:
+            int m_lastId{0};
+        };
 
         void makeReplacements(
             std::map<std::string, TIntermTyped*> nameToReplacement,
@@ -200,16 +110,16 @@ namespace Babylon
                 }
             }
 
-            static AllocationsScope Traverse(TProgram& program)
+            static AllocationsScope Traverse(TProgram& program, IdGenerator& ids)
             {
                 AllocationsScope scope{};
-                Traverse(program.getIntermediate(EShLangVertex), scope);
-                Traverse(program.getIntermediate(EShLangFragment), scope);
+                Traverse(program.getIntermediate(EShLangVertex), ids, scope);
+                Traverse(program.getIntermediate(EShLangFragment), ids, scope);
                 return scope;
             }
 
         private:
-            static void Traverse(glslang::TIntermediate* intermediate, AllocationsScope& scope)
+            static void Traverse(glslang::TIntermediate* intermediate, IdGenerator& ids, AllocationsScope& scope)
             {
                 UniformToStructTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -260,7 +170,7 @@ namespace Babylon
 
                 TType structType(structMembers, "Frame", qualifier);
 
-                TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{--nextId, "anon@0", structType});
+                TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), "anon@0", structType});
 
                 for (unsigned int idx = 0; idx < structMembers->size(); ++idx)
                 {
@@ -323,9 +233,9 @@ namespace Babylon
                 }
             }
 
-            static void Traverse(TProgram& program)
+            static void Traverse(TProgram& program, IdGenerator& ids)
             {
-                Traverse(program.getIntermediate(EShLangVertex));
+                Traverse(program.getIntermediate(EShLangVertex), ids);
             }
 
         private:
@@ -350,7 +260,7 @@ namespace Babylon
                 return FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
             }
 
-            static void Traverse(glslang::TIntermediate* intermediate)
+            static void Traverse(glslang::TIntermediate* intermediate, IdGenerator& ids)
             {
                 VertexVaryingInTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -380,7 +290,7 @@ namespace Babylon
 
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
-                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{--nextId, symbol->getName(), newType});
+                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), symbol->getName(), newType});
                     originalNameToReplacement[name] = newSymbol;
                 }
 
@@ -415,14 +325,14 @@ namespace Babylon
                 }
             }
 
-            static void Traverse(TProgram& program)
+            static void Traverse(TProgram& program, IdGenerator& ids)
             {
-                Traverse(program.getIntermediate(EShLangVertex));
-                Traverse(program.getIntermediate(EShLangFragment));
+                Traverse(program.getIntermediate(EShLangVertex), ids);
+                Traverse(program.getIntermediate(EShLangFragment), ids);
             }
 
         private:
-            static void Traverse(TIntermediate* intermediate)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids)
             {
                 SamplerSplitterTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -453,7 +363,7 @@ namespace Babylon
 
                         TType newType{publicType};
                         std::string newName = name + "Texture";
-                        newTexture = intermediate->addSymbol(TIntermSymbol{--nextId, newName.c_str(), newType});
+                        newTexture = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName.c_str(), newType});
                     }
 
                     // Create the new sampler symbol.
@@ -468,7 +378,7 @@ namespace Babylon
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
-                        newSampler = intermediate->addSymbol(TIntermSymbol{--nextId, name.c_str(), newType});
+                        newSampler = intermediate->addSymbol(TIntermSymbol{ids.Next(), name.c_str(), newType});
                     }
 
                     nameToNewTextureAndSampler[name] = std::pair<TIntermSymbol*, TIntermSymbol*>{newTexture, newSampler};
@@ -600,11 +510,10 @@ namespace Babylon
             throw std::exception(program.getInfoDebugLog());
         }
 
-        auto utstScope = UniformToStructTraverser::Traverse(program);
-        VertexVaryingInTraverser::Traverse(program);
-        SamplerSplitterTraverser::Traverse(program);
-
-        auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
+        IdGenerator ids{};
+        auto utstScope = UniformToStructTraverser::Traverse(program, ids);
+        VertexVaryingInTraverser::Traverse(program, ids);
+        SamplerSplitterTraverser::Traverse(program, ids);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
