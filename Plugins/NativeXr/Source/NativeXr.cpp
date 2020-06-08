@@ -1301,12 +1301,12 @@ namespace Babylon
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                auto* space = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-                if (space != nullptr)
+                auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                if (xrSpace != nullptr)
                 {
                     Napi::Object napiPose = XRPose::New(info);
                     XRPose* pose = XRPose::Unwrap(napiPose);
-                    pose->Update(space->GetTransform());
+                    pose->Update(xrSpace->GetTransform());
                     return napiPose;
                 }
                 else
