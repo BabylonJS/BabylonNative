@@ -45,7 +45,7 @@ namespace Babylon
                 if (auto* aggregate = parent->getAsAggregate())
                 {
                     auto& sequence = aggregate->getSequence();
-                    for (int idx = 0; idx < sequence.size(); ++idx)
+                    for (size_t idx = 0; idx < sequence.size(); ++idx)
                     {
                         if (sequence[idx] == symbol)
                         {
@@ -203,7 +203,7 @@ namespace Babylon
                 auto* linkerObjectAggregate = intermediate->getTreeRoot()->getAsAggregate()->getSequence().back()->getAsAggregate();
                 assert(linkerObjectAggregate->getOp() == EOpLinkerObjects);
                 auto& sequence = linkerObjectAggregate->getSequence();
-                for (int idx = static_cast<int>(sequence.size()) - 1; idx >= 0; --idx)
+                for (int idx = gsl::narrow_cast<int>(sequence.size()) - 1; idx >= 0; --idx)
                 {
                     auto* symbol = sequence[idx]->getAsSymbolNode();
                     if (symbol)
@@ -421,7 +421,7 @@ namespace Babylon
                 auto* linkerObjectAggregate = intermediate->getTreeRoot()->getAsAggregate()->getSequence().back()->getAsAggregate();
                 assert(linkerObjectAggregate->getOp() == EOpLinkerObjects);
                 auto& sequence = linkerObjectAggregate->getSequence();
-                for (int idx = static_cast<int>(sequence.size()) - 1; idx >= 0; --idx)
+                for (int idx = gsl::narrow_cast<int>(sequence.size()) - 1; idx >= 0; --idx)
                 {
                     auto* symbol = sequence[idx]->getAsSymbolNode();
                     if (symbol)
