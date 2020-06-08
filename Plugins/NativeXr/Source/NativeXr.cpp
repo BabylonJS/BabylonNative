@@ -972,8 +972,8 @@ namespace Babylon
                     }
                     else
                     {
-                        auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
-                        assert(transform != nullptr);
+                        /*auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
+                        assert(transform != nullptr);*/
 
                         m_jsTransform = Napi::Persistent(info[0].As<Napi::Object>());
                     }
