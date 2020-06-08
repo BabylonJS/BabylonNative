@@ -374,11 +374,11 @@ namespace Babylon
 
         struct XRReferenceSpaceType
         {
-            // static constexpr auto VIEWER{"viewer"};
+            static constexpr auto VIEWER{"viewer"};
             // static constexpr auto LOCAL{"local"};
             // static constexpr auto LOCAL_FLOOR{"local-floor"};
             // static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
-            // static constexpr auto UNBOUNDED{"unbounded"};
+            static constexpr auto UNBOUNDED{"unbounded"};
         };
 
         struct XREye
@@ -958,10 +958,15 @@ namespace Babylon
                 return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
+            static Napi::Object New(const Napi::CallbackInfo& info, Napi::Object napiTransform)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({napiTransform});
+            }
+
             XRReferenceSpace(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRReferenceSpace>{info}
             {
-                /*if (info.Length() > 0)
+                if (info.Length() > 0)
                 {
                     if (info[0].IsString())
                     {
@@ -972,13 +977,12 @@ namespace Babylon
                     }
                     else
                     {
-                        // TODO: Actually take the offset into account.
                         auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
                         assert(transform != nullptr);
 
-                        m_jsTransform = info[0].As<Napi::Object>();
+                        m_jsTransform = Napi::Persistent(info[0].As<Napi::Object>());
                     }
-                }*/
+                }
             }
 
             void SetTransform(Napi::Object transformObj)
@@ -1056,9 +1060,7 @@ namespace Babylon
                 XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
                 rigidTransform->Update(m_nativeAnchor.Pose);
 
-                Napi::Object napiSpace = XRReferenceSpace::New(info);
-                XRReferenceSpace* space = XRReferenceSpace::Unwrap(napiSpace);
-                space->SetTransform(napiTransform);
+                Napi::Object napiSpace = XRReferenceSpace::New(info, napiTransform);
                 return napiSpace;
             }
 
