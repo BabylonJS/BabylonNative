@@ -147,9 +147,9 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                Anchor CreateAnchor(Pose pose, void* trackable) const;
-                void UpdateAnchor(Anchor& anchor) const;
-                void DeleteAnchor(Anchor& anchor) const;
+                Anchor CreateAnchor(Pose, void*) const;
+                void UpdateAnchor(Anchor&) const;
+                void DeleteAnchor(Anchor&) const;
 
             private:
                 struct Impl;

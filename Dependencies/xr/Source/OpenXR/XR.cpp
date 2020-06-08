@@ -852,7 +852,17 @@ namespace xr
         m_impl->DepthFarZ = depthFar;
     }
 
-    Anchor System::Session::CreateAnchor(Pose pose, void* trackable)
+    Anchor System::Session::Frame::CreateAnchor(Pose, void*) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    void System::Session::Frame::UpdateAnchor(Anchor&) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    void System::Session::Frame::DeleteAnchor(Anchor&) const
     {
         throw std::runtime_error("Anchors not yet implemented for OpenXR.");
     }

@@ -335,6 +335,7 @@ namespace xr
         {
             if (isInitialized)
             {
+                CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
                 ArPose_destroy(tempPose);
@@ -690,6 +691,7 @@ namespace xr
             }
         }
 
+        // Clean up all ArCore trackables owned by the current frame, this should be called once per frame.
         void CleanupFrameTrackables()
         {
             for (ArTrackable* trackable : frameTrackables)
@@ -702,12 +704,16 @@ namespace xr
 
         Anchor CreateAnchor(Pose pose, void* trackable)
         {
-            auto trackableObj = (ArTrackable*) trackable;
+            // First translate the passed in pose to something usable by ArCore.
             ArPose* arPose;
             float rawPose[7];
             PoseToRaw(rawPose, pose);
             ArPose_create(session, rawPose, &arPose);
+
+            // Create the actual anchor. If a trackable was passed in (from a hit test result) create the
+            // anchor against the tracakble. Otherwise create it against the session.
             ArAnchor* arAnchor;
+            auto trackableObj = (ArTrackable*) trackable;
             if (trackableObj)
             {
                 ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
@@ -717,15 +723,18 @@ namespace xr
                 ArSession_acquireNewAnchor(session, arPose, &arAnchor);
             }
 
+            // Clean up the temp pose.
             ArPose_destroy(arPose);
 
+            // Store the anchor the vector tracking currently allocated anchors, and pass back the result.
+            arCoreAnchors.push_back(arAnchor);
             return {pose, arAnchor};
         }
 
         void UpdateAnchor(xr::Anchor& anchor)
         {
+            // First check if the anchor still exists, if not then mark the anchor as no longer valid.
             auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
-
             if (arAnchor == nullptr)
             {
                 anchor.IsValid = false;
@@ -752,16 +761,46 @@ namespace xr
 
         void DeleteAnchor(xr::Anchor& anchor)
         {
-            auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
-            ArAnchor_detach(session, arAnchor);
-            ArAnchor_release(arAnchor);
-            anchor.NativeAnchor = nullptr;
+            // If this anchor has not already been deleted, then detach it from the current AR session,
+            // and clean up its state in memory.
+            if (anchor.NativeAnchor != nullptr)
+            {
+                auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
+                ArAnchor_detach(session, arAnchor);
+                CleanupAnchor(arAnchor);
+                anchor.NativeAnchor = nullptr;
+            }
+        }
+
+        void CleanupAnchor(ArAnchor* arAnchor)
+        {
+            // Iterate over the list of anchors if arAnchor is null then clean up all anchors
+            // otherwise clean up only the target anchor and return.
+            auto anchorIter = arCoreAnchors.begin();
+            while (anchorIter != arCoreAnchors.end())
+            {
+                if (arAnchor == nullptr || arAnchor == *anchorIter)
+                {
+                    ArAnchor_release(*anchorIter);
+                    anchorIter = arCoreAnchors.erase(anchorIter);
+
+                    if (arAnchor != nullptr)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    anchorIter++;
+                }
+            }
         }
 
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
         std::vector<ArTrackable*> frameTrackables{};
+        std::vector<ArAnchor*> arCoreAnchors{};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};

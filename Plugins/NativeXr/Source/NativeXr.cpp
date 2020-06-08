@@ -277,14 +277,14 @@ namespace Babylon
 
         bool shouldEndSession{};
         bool shouldRestartSession{};
-        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer){
-                auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
-                auto it = m_texturesToFrameBuffers.find(texPtr);
-                if (it != m_texturesToFrameBuffers.end())
-                {
-                    m_texturesToFrameBuffers.erase(it);
-                }
-            });
+        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
+            auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
+            auto it = m_texturesToFrameBuffers.find(texPtr);
+            if (it != m_texturesToFrameBuffers.end())
+            {
+                m_texturesToFrameBuffers.erase(it);
+            }
+        });
 
         // Ending a session outside of calls to EndSession() is currently not supported.
         assert(!shouldEndSession);
@@ -299,7 +299,7 @@ namespace Babylon
             if (it == m_texturesToFrameBuffers.end() || it->second.get()->Width != view.ColorTextureSize.Width || it->second.get()->Height != view.ColorTextureSize.Height)
             {
                 // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
-                assert(view.ColorTextureSize.Width); 
+                assert(view.ColorTextureSize.Width);
                 assert(view.ColorTextureSize.Height);
                 assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
                 assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
@@ -525,7 +525,7 @@ namespace Babylon
 
             void Update(XRRigidTransform* transform)
             {
-                Update(transform->GetNativeSpace(), false);
+                Update({transform->GetNativePose()}, false);
             }
 
             void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
@@ -563,11 +563,6 @@ namespace Babylon
             Napi::ObjectReference m_position{};
             Napi::ObjectReference m_orientation{};
             Napi::Reference<Napi::Float32Array> m_matrix{};
-
-            xr::System::Session::Frame::Space GetNativeSpace()
-            {
-                return {{GetNativePose()}};
-            }
 
             Napi::Value Position(const Napi::CallbackInfo&)
             {
@@ -958,9 +953,9 @@ namespace Babylon
                 return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
-            static Napi::Object New(const Napi::CallbackInfo& info, Napi::Object napiTransform)
+            static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({napiTransform});
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({napiTransform});
             }
 
             XRReferenceSpace(const Napi::CallbackInfo& info)
@@ -1053,6 +1048,7 @@ namespace Babylon
             {
                 m_frame = frame;
             }
+
         private:
             Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
             {
@@ -1060,18 +1056,17 @@ namespace Babylon
                 XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
                 rigidTransform->Update(m_nativeAnchor.Pose);
 
-                Napi::Object napiSpace = XRReferenceSpace::New(info, napiTransform);
+                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
                 return napiSpace;
             }
 
+            // Forward declaration of delete, as this relies on the XRFrame implementation.
             void Delete(const Napi::CallbackInfo& info);
-
-            // Whether this anchor has already been deleted or is still valid.
-            bool deleted = false;
 
             // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
             xr::Anchor m_nativeAnchor;
 
+            // Our native anchor.
             XRFrame* m_frame;
         };
 
@@ -1251,44 +1246,31 @@ namespace Babylon
                 // update the viewer pose here because we don't yet know the desired reference space.
                 m_frame = &frame;
 
-                // Loop over all of the anchors and update their state.
-                std::vector<Napi::Value>::iterator anchorIter = m_trackedAnchors.begin();
-                while(anchorIter != m_trackedAnchors.end())
-                {
-                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).As<Napi::Object>());
-                    xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
-
-                    // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
-                    m_frame->UpdateAnchor(nativeAnchor);
-
-                    if (!nativeAnchor.IsValid)
-                    {
-                        DeleteNativeAnchor(nativeAnchor);
-                        anchorIter = m_trackedAnchors.erase(anchorIter);
-                    }
-                    else
-                    {
-                        ++anchorIter;
-                    }
-                }
+                // Update anchor positions.
+                UpdateAnchors();
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, void* nativeEntity)
             {
+                // Create the native anchor.
                 auto nativeAnchor = m_frame->CreateAnchor(pose, nativeEntity);
 
+                // Create the XRAnchor object, and initialize its members.
                 auto napiAnchor = Napi::Persistent(XRAnchor::New(info));
                 auto* xrAnchor = XRAnchor::Unwrap(napiAnchor.Value());
                 xrAnchor->SetFrame(this);
                 xrAnchor->SetAnchor(nativeAnchor);
 
+                // Add the anchor to the list of tracked anchors.
                 m_trackedAnchors.push_back(napiAnchor.Value());
 
+                // Resolve the promise with the newly created anchor.
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(napiAnchor.Value());
                 return deferred.Promise();
             }
 
+            // Deletes the allocated anchor, and marks it as no longer valid.
             void DeleteNativeAnchor(xr::Anchor& nativeAnchor)
             {
                 m_frame->DeleteAnchor(nativeAnchor);
@@ -1377,25 +1359,52 @@ namespace Babylon
 
             Napi::Value GetTrackedAnchors(const Napi::CallbackInfo& info)
             {
+                // Create a JavaScript set to store all currently tracked anchors.
                 Napi::Object anchorSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
-                for(Napi::Value napiValue : m_trackedAnchors)
+
+                // Loop over the list of tracked anchors, and add them to the set.
+                for (Napi::Value napiValue : m_trackedAnchors)
                 {
                     anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
                 }
 
                 return anchorSet;
             }
+
+            void UpdateAnchors()
+            {
+                // Loop over all anchors and update their state.
+                std::vector<Napi::Value>::iterator anchorIter = m_trackedAnchors.begin();
+                while (anchorIter != m_trackedAnchors.end())
+                {
+                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).As<Napi::Object>());
+                    xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
+
+                    // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
+                    m_frame->UpdateAnchor(nativeAnchor);
+
+                    if (!nativeAnchor.IsValid)
+                    {
+                        DeleteNativeAnchor(nativeAnchor);
+                        anchorIter = m_trackedAnchors.erase(anchorIter);
+                    }
+                    else
+                    {
+                        ++anchorIter;
+                    }
+                }
+            }
         };
 
-        // Creates an anchor from the hit result.
+        // Creates an anchor from a hit result.
         Napi::Value XRHitTestResult::CreateAnchor(const Napi::CallbackInfo& info)
         {
             return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeEntity);
         }
 
+        // Deallocates the native anchor, and marks the XRAnchor as no longer tracked.
         void XRAnchor::Delete(const Napi::CallbackInfo&)
         {
-            deleted = true;
             m_frame->DeleteNativeAnchor(m_nativeAnchor);
         }
 
