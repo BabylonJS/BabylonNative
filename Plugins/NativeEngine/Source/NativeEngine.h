@@ -13,7 +13,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <bimg/bimg.h>
-#include <bx/readerwriter.h>
+#include <bx/allocator.h>
 
 #include <gsl/gsl>
 
@@ -21,6 +21,7 @@
 
 #include <arcana/containers/weak_table.h>
 #include <arcana/threading/cancellation.h>
+#include <unordered_map>
 
 namespace Babylon
 {
@@ -192,6 +193,7 @@ namespace Babylon
         void Unbind(FrameBufferData* data)
         {
             assert(m_boundFrameBuffer == data);
+            (void)data;
             m_boundFrameBuffer = m_backBuffer;
         }
 
@@ -282,23 +284,26 @@ namespace Babylon
         }
     };
 
+    class IndexBufferData;
+    class VertexBufferData;
+
     struct VertexArray final
     {
         struct IndexBuffer
         {
-            bgfx::IndexBufferHandle handle;
+            const IndexBufferData* data{};
         };
 
-        IndexBuffer indexBuffer;
+        IndexBuffer indexBuffer{};
 
         struct VertexBuffer
         {
-            bgfx::VertexBufferHandle handle;
-            uint32_t startVertex;
-            bgfx::VertexLayoutHandle vertexLayoutHandle;
+            const VertexBufferData* data{};
+            uint32_t startVertex{};
+            bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
 
-        std::vector<VertexBuffer> vertexBuffers;
+        std::vector<VertexBuffer> vertexBuffers{};
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
@@ -331,9 +336,11 @@ namespace Babylon
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
         void DeleteIndexBuffer(const Napi::CallbackInfo& info);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
+        void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
         void DeleteVertexBuffer(const Napi::CallbackInfo& info);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
+        void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
@@ -388,6 +395,7 @@ namespace Babylon
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
         Napi::Value GetFramebufferData(const Napi::CallbackInfo& info);
+        Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
 
         void UpdateSize(size_t width, size_t height);
 

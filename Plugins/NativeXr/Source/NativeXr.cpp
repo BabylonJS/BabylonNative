@@ -1,13 +1,16 @@
 #include "NativeXr.h"
 
 #include "NativeEngine.h"
+#include <Babylon/JsRuntimeScheduler.h>
 
 #include <XR.h>
 
 #include <bx/bx.h>
+#include <bx/math.h>
 
 #include <set>
 #include <napi/napi.h>
+#include <arcana/threading/task.h>
 
 namespace
 {
@@ -147,8 +150,9 @@ namespace Babylon
         NativeXr();
         ~NativeXr();
 
-        void BeginSession(Napi::Env env); // TODO: Make this asynchronous.
-        void EndSession();                // TODO: Make this asynchronous.
+        arcana::cancellation_source& GetCancellationSource();
+        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
+        void EndSession(); // TODO: Make this asynchronous.
 
         auto ActiveFrameBuffers() const
         {
@@ -199,10 +203,11 @@ namespace Babylon
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
-        std::unique_ptr<xr::System::Session> m_session{};
+        std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
         NativeEngine* m_engineImpl{};
+        arcana::cancellation_source m_cancellationSource{};
 
         void BeginFrame();
         void EndFrame();
@@ -214,6 +219,8 @@ namespace Babylon
 
     NativeXr::~NativeXr()
     {
+        m_cancellationSource.cancel();
+
         if (m_session != nullptr)
         {
             if (m_frame != nullptr)
@@ -225,8 +232,7 @@ namespace Babylon
         }
     }
 
-    // TODO: Make this asynchronous.
-    void NativeXr::BeginSession(Napi::Env env)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env /*env*/)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -239,7 +245,9 @@ namespace Babylon
             }
         }
 
-        m_session = std::make_unique<xr::System::Session>(m_system, bgfx::getInternalData()->context);
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+            m_session = std::move(session);
+        });
     }
 
     // TODO: Make this asynchronous.
@@ -269,7 +277,14 @@ namespace Babylon
 
         bool shouldEndSession{};
         bool shouldRestartSession{};
-        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer){
+                auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
+                auto it = m_texturesToFrameBuffers.find(texPtr);
+                if (it != m_texturesToFrameBuffers.end())
+                {
+                    m_texturesToFrameBuffers.erase(it);
+                }
+            });
 
         // Ending a session outside of calls to EndSession() is currently not supported.
         assert(!shouldEndSession);
@@ -283,6 +298,9 @@ namespace Babylon
             auto it = m_texturesToFrameBuffers.find(colorTexPtr);
             if (it == m_texturesToFrameBuffers.end() || it->second.get()->Width != view.ColorTextureSize.Width || it->second.get()->Height != view.ColorTextureSize.Height)
             {
+                // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
+                assert(view.ColorTextureSize.Width); 
+                assert(view.ColorTextureSize.Height);
                 assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
                 assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
 
@@ -290,10 +308,10 @@ namespace Babylon
                 // This is mandatory as overrideInternal do not update texture size.
                 // And size is used for determining viewport when rendering to texture.
                 auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                auto colorTex = bgfx::createTexture2D(view.ColorTextureSize.Width, view.ColorTextureSize.Height, false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
+                auto colorTex = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
 
                 auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
-                auto depthTex = bgfx::createTexture2D(view.DepthTextureSize.Width, view.DepthTextureSize.Height, false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
+                auto depthTex = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
 
                 // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
                 bgfx::frame();
@@ -334,6 +352,11 @@ namespace Babylon
 
         m_frame.reset();
     }
+
+    arcana::cancellation_source& NativeXr::GetCancellationSource()
+    {
+        return m_cancellationSource;
+    }
 }
 
 namespace Babylon
@@ -344,25 +367,25 @@ namespace Babylon
         {
             static constexpr auto IMMERSIVE_VR{"immersive-vr"};
             static constexpr auto IMMERSIVE_AR{"immersive-ar"};
-            static constexpr auto IMMERSIVE_INLINE{"inline"};
+            static constexpr auto INLINE{"inline"};
         };
 
         struct XRReferenceSpaceType
         {
             static constexpr auto VIEWER{"viewer"};
-            static constexpr auto LOCAL{"local"};
-            static constexpr auto LOCAL_FLOOR{"local-floor"};
-            static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
+            // static constexpr auto LOCAL{"local"};
+            // static constexpr auto LOCAL_FLOOR{"local-floor"};
+            // static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
             static constexpr auto UNBOUNDED{"unbounded"};
         };
 
         struct XREye
         {
-            static constexpr auto NONE{"none"};
+            // static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
 
-            static const auto IndexToEye(size_t idx)
+            static auto IndexToEye(size_t idx)
             {
                 switch (idx)
                 {
@@ -375,7 +398,7 @@ namespace Babylon
                 }
             }
 
-            static const auto EyeToIndex(const std::string& eye)
+            static auto EyeToIndex(const std::string& eye)
             {
                 if (eye == LEFT)
                 {
@@ -457,7 +480,7 @@ namespace Babylon
         class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
         {
             static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
-            static constexpr size_t VECTOR_SIZE = 4;
+            // static constexpr size_t VECTOR_SIZE = 4;
             static constexpr size_t MATRIX_SIZE = 16;
 
         public:
@@ -580,7 +603,7 @@ namespace Babylon
 
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
-                XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, true);
+                XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
             }
 
         private:
@@ -683,12 +706,12 @@ namespace Babylon
             XRRigidTransform& m_transform;
             std::vector<XRView*> m_views{};
 
-            Napi::Value GetTransform(const Napi::CallbackInfo& info)
+            Napi::Value GetTransform(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsTransform.Value();
             }
 
-            Napi::Value GetViews(const Napi::CallbackInfo& info)
+            Napi::Value GetViews(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsViews.Value();
             }
@@ -726,7 +749,7 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::Pose& pose)
+            void Update(const Napi::CallbackInfo& /*info*/, const xr::Pose& pose)
             {
                 // Update the transform.
                 m_transform.Update(pose);
@@ -736,7 +759,7 @@ namespace Babylon
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
 
-            Napi::Value GetTransform(const Napi::CallbackInfo& info)
+            Napi::Value GetTransform(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsTransform.Value();
             }
@@ -915,6 +938,7 @@ namespace Babylon
                     // TODO: Actually take the offset into account.
                     auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
                     assert(transform != nullptr);
+                    (void)transform;
                 }
             }
 
@@ -987,7 +1011,7 @@ namespace Babylon
             }
 
         private:
-            void Cancel(const Napi::CallbackInfo& info)
+            void Cancel(const Napi::CallbackInfo& /*info*/)
             {
                 // no-op we don't keep a persistent list of active XRHitTestSources..
             }
@@ -1188,13 +1212,30 @@ namespace Babylon
 
             static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
             {
-                auto jsSession = info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
-                auto& session = *XRSession::Unwrap(jsSession);
-
-                session.m_xr.BeginSession(info.Env());
+                auto jsSession = Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}));
+                auto& session = *XRSession::Unwrap(jsSession.Value());
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(jsSession);
+                session.m_xr.BeginSession(info.Env())
+                    .then(session.m_runtimeScheduler, session.m_xr.GetCancellationSource(),
+                        [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
+                            if (result.has_error())
+                            {
+                                try
+                                {
+                                    std::rethrow_exception(result.error());
+                                }
+                                catch (const std::exception& e)
+                                {
+                                    deferred.Reject(Napi::Error::New(env, e.what()).Value());
+                                }
+                            }
+                            else
+                            {
+                                deferred.Resolve(jsSession.Value());
+                            }
+                        });
+
                 return deferred.Promise();
             }
 
@@ -1202,10 +1243,12 @@ namespace Babylon
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
-                // Support both immersive VR and immersive AR is supported.
-                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR || info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
+                // Currently only immersive VR and immersive AR are supported.
+                assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
+                    info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void SetEngine(Napi::Object jsEngine)
@@ -1254,13 +1297,14 @@ namespace Babylon
             NativeXr m_xr{};
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
+            JsRuntimeScheduler m_runtimeScheduler;
 
             std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
 
-            Napi::Value GetInputSources(const Napi::CallbackInfo& info)
+            Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsInputSources.Value();
             }
@@ -1377,7 +1421,7 @@ namespace Babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(std::move(Napi::Persistent(info[0].As<Napi::Function>()))), env = info.Env()](const auto& frame) {
+                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
                     m_xrFrame.Update(frame);
@@ -1561,23 +1605,41 @@ namespace Babylon
 
             XR(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XR>{info}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
             {
             }
 
         private:
+            JsRuntimeScheduler m_runtimeScheduler;
+
             Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
             {
-                auto sessionType = info[0].As<Napi::String>().Utf8Value();
-                bool isSupported = false;
+                std::string sessionTypeString = info[0].As<Napi::String>().Utf8Value();
+                xr::SessionType sessionType{xr::SessionType::INVALID};
 
-                if (sessionType == XRSessionType::IMMERSIVE_VR ||
-                    sessionType == XRSessionType::IMMERSIVE_AR)
+                if (sessionTypeString == XRSessionType::IMMERSIVE_VR)
                 {
-                    isSupported = true;
+                    sessionType = xr::SessionType::IMMERSIVE_VR;
+                }
+                else if (sessionTypeString == XRSessionType::IMMERSIVE_AR)
+                {
+                    sessionType = xr::SessionType::IMMERSIVE_AR;
+                }
+                else if (sessionTypeString == XRSessionType::INLINE)
+                {
+                    sessionType = xr::SessionType::INLINE;
                 }
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(Napi::Boolean::New(info.Env(), isSupported));
+
+                // Fire off the IsSessionSupported task.
+                xr::System::IsSessionSupportedAsync(sessionType)
+                    .then(m_runtimeScheduler,
+                        arcana::cancellation::none(),
+                        [deferred, env = info.Env()](bool result) {
+                            deferred.Resolve(Napi::Boolean::New(env, result));
+                        });
+
                 return deferred.Promise();
             }
 
