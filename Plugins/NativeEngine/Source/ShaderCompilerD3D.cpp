@@ -14,6 +14,103 @@
 #include <d3dcompiler.h>
 #include <wrl/client.h>
 
+#include <sstream>
+namespace
+{
+    using namespace glslang;
+    class DebugTraverser : public TIntermTraverser
+    {
+    public:
+        DebugTraverser()
+            : TIntermTraverser{}
+        {
+        }
+
+        ~DebugTraverser() override
+        {
+        }
+
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            Indent();
+            ss << "Symbol: " << symbol->getName() << std::endl;
+        }
+
+        void visitConstantUnion(TIntermConstantUnion* constUnion) override
+        {
+            Indent();
+            ss << "Constant Union: " << constUnion->getCompleteString().c_str() << std::endl;
+        }
+
+        bool visitBinary(TVisit, TIntermBinary* binary) override
+        {
+            Indent();
+            ss << "Binary: " << binary->getOp() << ", " << binary->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitUnary(TVisit, TIntermUnary* unary) override
+        {
+            Indent();
+            ss << "Unary: " << unary->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitSelection(TVisit, TIntermSelection* selection) override
+        {
+            Indent();
+            ss << "Selection: " << selection->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitAggregate(TVisit, TIntermAggregate* aggregate) override
+        {
+            Indent();
+            ss << "Aggregate: " << aggregate->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitLoop(TVisit, TIntermLoop* loop) override
+        {
+            Indent();
+            ss << "Loop: " << loop->getTest()->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitBranch(TVisit, TIntermBranch* branch) override
+        {
+            Indent();
+            ss << "Branch: " << branch->getExpression()->getCompleteString().c_str() << std::endl;
+            return true;
+        }
+
+        bool visitSwitch(TVisit, TIntermSwitch* _switch) override
+        {
+            Indent();
+            ss << "Switch: " << std::endl;
+            return true;
+        }
+
+        static std::string Traverse(glslang::TIntermediate* intermediate)
+        {
+            DebugTraverser traverser{};
+            intermediate->getTreeRoot()->traverse(&traverser);
+            return traverser.ss.str();
+        }
+
+    private:
+        std::stringstream ss{};
+
+        void Indent()
+        {
+            for (int idx = 0; idx < this->depth; ++idx)
+            {
+                ss << "    ";
+            }
+        }
+    };
+}
+
 namespace Babylon
 {
     namespace
@@ -255,25 +352,25 @@ namespace Babylon
             }
 
         private:
-            unsigned int GetVaryingLocationForName(const char* name)
+            std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
-#define IF_NAME_RETURN_ATTRIB(varyingName, attrib)             \
-                if (std::strcmp(name, varyingName) == 0)       \
-                {                                              \
-                    return static_cast<unsigned int>(attrib);  \
+#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)              \
+                if (std::strcmp(name, varyingName) == 0)                 \
+                {                                                        \
+                    return{static_cast<unsigned int>(attrib), newName};  \
                 }
-                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position)
-                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal)
-                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent)
-                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0)
-                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1)
-                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2)
-                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3)
-                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0)
-                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices)
-                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight)
+                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
+                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
+                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
+                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0, "a_texcoord0")
+                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
+                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
+                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
+                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
+                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
+                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
 #undef IF_NAME_RETURN_ATTRIB
-                return FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
+                return {FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++, name};
             }
 
             static void Traverse(glslang::TIntermediate* intermediate, IdGenerator& ids)
@@ -293,7 +390,8 @@ namespace Babylon
                 {
                     const auto& type = symbol->getType();
                     publicType.qualifier = type.getQualifier();
-                    publicType.qualifier.layoutLocation = traverser.GetVaryingLocationForName(name.c_str());
+                    auto [location, newName] = traverser.GetVaryingLocationAndNewNameForName(name.c_str());
+                    publicType.qualifier.layoutLocation = location;
 
                     if (type.isMatrix())
                     {
@@ -306,7 +404,7 @@ namespace Babylon
 
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
-                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), symbol->getName(), newType});
+                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
                     originalNameToReplacement[name] = newSymbol;
                 }
 
@@ -530,6 +628,8 @@ namespace Babylon
         auto utstScope = UniformToStructTraverser::Traverse(program, ids);
         VertexVaryingInTraverser::Traverse(program, ids);
         SamplerSplitterTraverser::Traverse(program, ids);
+
+        auto vrtx = DebugTraverser::Traverse(program.getIntermediate(EShLangVertex));
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
