@@ -69,10 +69,11 @@ namespace xr
         } Direction;
     };
 
+    using NativeTrackablePtr = void*;
     struct Anchor
     {
         Pose Pose{};
-        void* NativeAnchor{};
+        NativeTrackablePtr NativeAnchor{};
         bool IsValid{true};
     };
 
@@ -147,7 +148,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                Anchor CreateAnchor(Pose, void*) const;
+                Anchor CreateAnchor(Pose, NativeTrackablePtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
 

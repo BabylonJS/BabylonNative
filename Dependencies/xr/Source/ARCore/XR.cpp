@@ -702,7 +702,7 @@ namespace xr
             frameTrackables.clear();
         }
 
-        Anchor CreateAnchor(Pose pose, void* trackable)
+        Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable)
         {
             // First translate the passed in pose to something usable by ArCore.
             ArPose* arPose{};
@@ -728,7 +728,7 @@ namespace xr
 
             // Store the anchor the vector tracking currently allocated anchors, and pass back the result.
             arCoreAnchors.push_back(arAnchor);
-            return {pose, arAnchor};
+            return {pose, reinterpret_cast<NativeTrackablePtr>(arAnchor)};
         }
 
         void UpdateAnchor(xr::Anchor& anchor)
@@ -897,7 +897,7 @@ namespace xr
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose pose, void* trackable) const
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
     {
         return m_impl->sessionImpl.CreateAnchor(pose, trackable);
     }

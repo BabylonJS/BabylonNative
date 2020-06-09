@@ -953,7 +953,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return New(info.Env(), info[0]);
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});	
             }
 
             static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
@@ -975,9 +975,6 @@ namespace Babylon
                     }
                     else
                     {
-                        /*auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
-                        assert(transform != nullptr);*/
-
                         m_jsTransform = Napi::Persistent(info[0].As<Napi::Object>());
                     }
                 }

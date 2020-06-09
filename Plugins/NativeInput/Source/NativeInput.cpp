@@ -11,8 +11,6 @@ namespace Babylon::Plugins
     {
         constexpr auto JS_NATIVE_INPUT_NAME = "_nativeInput";
 
-        //constexpr auto POINTER_BASE_DEVICE_ID = "Pointer";
-
         constexpr uint32_t POINTER_X_INPUT_INDEX{0};
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
         constexpr uint32_t POINTER_BUTTON_BASE_INDEX{2};
@@ -85,7 +83,7 @@ namespace Babylon::Plugins
             SetInputState(DeviceType::Touch, pointerId, inputIndex, 0, deviceInputs);
 
             // If all "buttons" are up, then remove the device (e.g. device "disconnected").
-            for (uint index = 0; index < deviceInputs.size(); index++)
+            for (size_t index = 0; index < deviceInputs.size(); index++)
             {
                 if (index != POINTER_X_INPUT_INDEX && index != POINTER_Y_INPUT_INDEX && deviceInputs[index] > 0)
                 {
