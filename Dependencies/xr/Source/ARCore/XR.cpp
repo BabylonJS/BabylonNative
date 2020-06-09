@@ -705,15 +705,15 @@ namespace xr
         Anchor CreateAnchor(Pose pose, void* trackable)
         {
             // First translate the passed in pose to something usable by ArCore.
-            ArPose* arPose;
-            float rawPose[7];
+            ArPose* arPose{};
+            float rawPose[7]{};
             PoseToRaw(rawPose, pose);
             ArPose_create(session, rawPose, &arPose);
 
             // Create the actual anchor. If a trackable was passed in (from a hit test result) create the
             // anchor against the tracakble. Otherwise create it against the session.
-            ArAnchor* arAnchor;
-            auto trackableObj = (ArTrackable*) trackable;
+            ArAnchor* arAnchor{};
+            auto trackableObj = reinterpret_cast<ArTrackable*>(trackable);
             if (trackableObj)
             {
                 ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
@@ -734,14 +734,14 @@ namespace xr
         void UpdateAnchor(xr::Anchor& anchor)
         {
             // First check if the anchor still exists, if not then mark the anchor as no longer valid.
-            auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
+            auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
             if (arAnchor == nullptr)
             {
                 anchor.IsValid = false;
                 return;
             }
 
-            ArTrackingState trackingState;
+            ArTrackingState trackingState{};
             ArAnchor_getTrackingState(session, arAnchor, &trackingState);
 
             // If tracking then update the pose, if paused then skip the update, if stopped then
@@ -765,7 +765,7 @@ namespace xr
             // and clean up its state in memory.
             if (anchor.NativeAnchor != nullptr)
             {
-                auto arAnchor = (ArAnchor*) anchor.NativeAnchor;
+                auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
                 ArAnchor_detach(session, arAnchor);
                 CleanupAnchor(arAnchor);
                 anchor.NativeAnchor = nullptr;
@@ -852,7 +852,7 @@ namespace xr
             ActiveFrameViews[0] = {};
         }
 
-        void PoseToRaw(float rawPose[], Pose& pose)
+        void PoseToRaw(float rawPose[], const Pose& pose)
         {
             rawPose[0] = pose.Orientation.X;
             rawPose[1] = pose.Orientation.Y;
@@ -863,7 +863,7 @@ namespace xr
             rawPose[6] = pose.Position.Z;
         }
 
-        void RawToPose(float rawPose[], Pose& pose)
+        void RawToPose(const float rawPose[], Pose& pose)
         {
             pose.Orientation.X = rawPose[0];
             pose.Orientation.Y = rawPose[1];

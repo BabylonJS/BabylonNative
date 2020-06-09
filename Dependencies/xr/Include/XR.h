@@ -48,8 +48,8 @@ namespace xr
 
     struct HitResult
     {
-        Pose Pose;
-        void* NativeEntity;
+        Pose Pose{};
+        void* NativeEntity{};
     };
 
     struct Ray
@@ -71,8 +71,8 @@ namespace xr
 
     struct Anchor
     {
-        Pose Pose;
-        void* NativeAnchor;
+        Pose Pose{};
+        void* NativeAnchor{};
         bool IsValid{true};
     };
 

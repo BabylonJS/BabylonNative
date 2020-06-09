@@ -555,8 +555,11 @@ namespace Babylon
             {
                 auto position = m_position.Value();
                 auto orientation = m_orientation.Value();
-                return {{position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
-                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
+                return
+                {
+                    {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}
+                };
             }
 
         private:
@@ -950,7 +953,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
+                return New(info.Env(), info[0]);
             }
 
             static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
@@ -999,7 +1002,7 @@ namespace Babylon
                 return XRReferenceSpace::New(info);
             }
 
-            Napi::ObjectReference m_jsTransform;
+            Napi::ObjectReference m_jsTransform{};
         };
 
         // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
@@ -1064,10 +1067,10 @@ namespace Babylon
             void Delete(const Napi::CallbackInfo& info);
 
             // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
-            xr::Anchor m_nativeAnchor;
+            xr::Anchor m_nativeAnchor{};
 
             // Our native anchor.
-            XRFrame* m_frame;
+            XRFrame* m_frame{};
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
@@ -1185,8 +1188,8 @@ namespace Babylon
 
         private:
             // The hit hit result, which contains the pose in default AR Space, as well as the native entity.
-            xr::HitResult m_hitResult;
-            XRFrame* m_frame;
+            xr::HitResult m_hitResult{};
+            XRFrame* m_frame{};
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
@@ -1280,7 +1283,7 @@ namespace Babylon
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
-            std::vector<Napi::Value> m_trackedAnchors;
+            std::vector<Napi::Value> m_trackedAnchors{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
