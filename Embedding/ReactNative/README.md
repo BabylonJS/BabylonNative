@@ -43,9 +43,10 @@ yarn install
 
 ### **Configuring a Mac Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
 
 - The `PATH` environment variable must include the path to adb (typically ~/Library/Android/sdk/platform-tools/).
+- The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).
 - The `ANDROID_HOME` environment variable must be defined (typically ~/Library/Android/sdk).
 - The `ANDROID_SDK_ROOT` environment variable must be defined (typically ~/Library/Android/sdk).
 - The `ANDROID_AVD_HOME` environment variable must be defined if you plan to use Android emulators (typically ~/.android/avd).
@@ -54,6 +55,7 @@ You can typically configure your environment by editing `~/.zshrc` and adding th
 
 ```
 export PATH=$PATH:~/Library/Android/sdk/platform-tools/
+export PATH=$PATH:~/path_to_ninja_binary/ # Only for manual installations of Ninja (not package manager-based installations).
 export ANDROID_HOME=~/Library/Android/sdk
 export ANDROID_SDK_ROOT=~/Library/Android/sdk
 export ANDROID_AVD_HOME=~/.android/avd
@@ -61,9 +63,10 @@ export ANDROID_AVD_HOME=~/.android/avd
 
 ### **Configuring a Windows Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
 
 - The `PATH` environment variable must include the path to adb (typically %LOCALAPPDATA%/Android/sdk/platform-tools/).
+- The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).  
 - The `ANDROID_HOME` environment variable must be defined (typically %LOCALAPPDATA%/Android/sdk).
 - The `JAVA_HOME` environment variable must be defined (typically %ProgramFiles%/Android/Android Studio/jre).
 
