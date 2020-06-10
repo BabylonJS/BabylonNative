@@ -277,14 +277,14 @@ namespace Babylon
 
         bool shouldEndSession{};
         bool shouldRestartSession{};
-        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer){
-                auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
-                auto it = m_texturesToFrameBuffers.find(texPtr);
-                if (it != m_texturesToFrameBuffers.end())
-                {
-                    m_texturesToFrameBuffers.erase(it);
-                }
-            });
+        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
+            auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
+            auto it = m_texturesToFrameBuffers.find(texPtr);
+            if (it != m_texturesToFrameBuffers.end())
+            {
+                m_texturesToFrameBuffers.erase(it);
+            }
+        });
 
         // Ending a session outside of calls to EndSession() is currently not supported.
         assert(!shouldEndSession);
@@ -299,7 +299,7 @@ namespace Babylon
             if (it == m_texturesToFrameBuffers.end() || it->second.get()->Width != view.ColorTextureSize.Width || it->second.get()->Height != view.ColorTextureSize.Height)
             {
                 // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
-                assert(view.ColorTextureSize.Width); 
+                assert(view.ColorTextureSize.Width);
                 assert(view.ColorTextureSize.Height);
                 assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
                 assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
@@ -363,6 +363,8 @@ namespace Babylon
 {
     namespace
     {
+        class XRFrame;
+
         struct XRSessionType
         {
             static constexpr auto IMMERSIVE_VR{"immersive-vr"};
@@ -507,10 +509,23 @@ namespace Babylon
 
             XRRigidTransform(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRigidTransform>{info}
-                , m_position{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_orientation{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
+                if (info.Length() == 2)
+                {
+                    m_position = Napi::Persistent(info[0].As<Napi::Object>());
+                    m_orientation = Napi::Persistent(info[1].As<Napi::Object>());
+                }
+                else
+                {
+                    m_position = Napi::Persistent(Napi::Object::New(info.Env()));
+                    m_orientation = Napi::Persistent(Napi::Object::New(info.Env()));
+                }
+            }
+
+            void Update(XRRigidTransform* transform)
+            {
+                Update({transform->GetNativePose()}, false);
             }
 
             void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
@@ -534,6 +549,17 @@ namespace Babylon
             {
                 xr::System::Session::Frame::Space space{{pose}};
                 Update(space, true);
+            }
+
+            xr::Pose GetNativePose()
+            {
+                auto position = m_position.Value();
+                auto orientation = m_orientation.Value();
+                return
+                {
+                    {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}
+                };
             }
 
         private:
@@ -755,6 +781,12 @@ namespace Babylon
                 m_transform.Update(pose);
             }
 
+            void Update(XRRigidTransform* transform)
+            {
+                // Update the transform.
+                m_transform.Update(transform);
+            }
+
         private:
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -921,25 +953,41 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});	
+            }
+
+            static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
+            {
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({napiTransform});
             }
 
             XRReferenceSpace(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRReferenceSpace>{info}
             {
-                if (info[0].IsString())
+                if (info.Length() > 0)
                 {
-                    // TODO: Actually support the different types of reference spaces.
-                    const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
-                    assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED || referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                    if (info[0].IsString())
+                    {
+                        // TODO: Actually support the different types of reference spaces.
+                        const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
+                        assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
+                            referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                    }
+                    else
+                    {
+                        m_jsTransform = Napi::Persistent(info[0].As<Napi::Object>());
+                    }
                 }
-                else
-                {
-                    // TODO: Actually take the offset into account.
-                    auto* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
-                    assert(transform != nullptr);
-                    (void)transform;
-                }
+            }
+
+            void SetTransform(Napi::Object transformObj)
+            {
+                m_jsTransform = Napi::Persistent(transformObj);
+            }
+
+            XRRigidTransform* GetTransform()
+            {
+                return XRRigidTransform::Unwrap(m_jsTransform.Value());
             }
 
         private:
@@ -950,6 +998,76 @@ namespace Babylon
 
                 return XRReferenceSpace::New(info);
             }
+
+            Napi::ObjectReference m_jsTransform{};
+        };
+
+        // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
+        class XRAnchor : public Napi::ObjectWrap<XRAnchor>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRAnchor";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("anchorSpace", &XRAnchor::GetAnchorSpace, nullptr),
+                        InstanceMethod("delete", &XRAnchor::Delete),
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRAnchor(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRAnchor>{info}
+            {
+                m_frame = nullptr;
+            }
+
+            xr::Anchor& GetNativeAnchor()
+            {
+                return m_nativeAnchor;
+            }
+
+            void SetAnchor(xr::Anchor& nativeAnchor)
+            {
+                m_nativeAnchor = nativeAnchor;
+            }
+
+            void SetFrame(XRFrame* frame)
+            {
+                m_frame = frame;
+            }
+
+        private:
+            Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+                rigidTransform->Update(m_nativeAnchor.Pose);
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
+                return napiSpace;
+            }
+
+            // Forward declaration of delete, as this relies on the XRFrame implementation.
+            void Delete(const Napi::CallbackInfo& info);
+
+            // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
+            xr::Anchor m_nativeAnchor{};
+
+            // Our native anchor.
+            XRFrame* m_frame{};
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
@@ -1038,6 +1156,7 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("getPose", &XRHitTestResult::GetPose),
+                        InstanceMethod("createAnchor", &XRHitTestResult::CreateAnchor),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1053,25 +1172,33 @@ namespace Babylon
             {
             }
 
-            // Sets the value of the hit pose in AR core space via struct copy.
-            void SetPose(const xr::Pose& inputPose)
+            // Sets the value of the hit pose and native entity via struct copy.
+            void SetHitResult(const xr::HitResult& hitResult)
             {
-                m_hitPose = inputPose;
+                m_hitResult = hitResult;
+            }
+
+            void SetXRFrame(XRFrame* frame)
+            {
+                m_frame = frame;
             }
 
         private:
+            // The hit hit result, which contains the pose in default AR Space, as well as the native entity.
+            xr::HitResult m_hitResult{};
+            XRFrame* m_frame{};
+
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
                 // TODO: Once multiple reference views are supported, we need to convert the values into the passed in reference space.
                 Napi::Object napiPose = XRPose::New(info);
                 XRPose* pose = XRPose::Unwrap(napiPose);
-                pose->Update(info, m_hitPose);
+                pose->Update(info, m_hitResult.Pose);
 
                 return napiPose;
             }
 
-            // The hit pose in default ARCore space.
-            xr::Pose m_hitPose;
+            Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
@@ -1090,6 +1217,8 @@ namespace Babylon
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
                         InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
+                        InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                        InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1116,12 +1245,42 @@ namespace Babylon
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
                 m_frame = &frame;
+
+                // Update anchor positions.
+                UpdateAnchors();
+            }
+
+            Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
+            {
+                // Create the native anchor.
+                auto nativeAnchor = m_frame->CreateAnchor(pose, nativeTrackable);
+
+                // Create the XRAnchor object, and initialize its members.
+                auto napiAnchor = Napi::Persistent(XRAnchor::New(info));
+                auto* xrAnchor = XRAnchor::Unwrap(napiAnchor.Value());
+                xrAnchor->SetFrame(this);
+                xrAnchor->SetAnchor(nativeAnchor);
+
+                // Add the anchor to the list of tracked anchors.
+                m_trackedAnchors.push_back(napiAnchor.Value());
+
+                // Resolve the promise with the newly created anchor.
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(napiAnchor.Value());
+                return deferred.Promise();
+            }
+
+            // Deletes the allocated anchor, and marks it as no longer valid.
+            void DeleteNativeAnchor(xr::Anchor& nativeAnchor)
+            {
+                m_frame->DeleteAnchor(nativeAnchor);
             }
 
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
+            std::vector<Napi::Value> m_trackedAnchors{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1142,10 +1301,20 @@ namespace Babylon
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
-
-                m_transform.Update(space, false);
-                return m_jsPose.Value();
+                auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                if (xrSpace != nullptr)
+                {
+                    Napi::Object napiPose = XRPose::New(info);
+                    XRPose* pose = XRPose::Unwrap(napiPose);
+                    pose->Update(xrSpace->GetTransform());
+                    return napiPose;
+                }
+                else
+                {
+                    const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+                    m_transform.Update(space, false);
+                    return m_jsPose.Value();
+                }
             }
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
@@ -1163,24 +1332,81 @@ namespace Babylon
                 }
 
                 // Get the native results
-                std::vector<xr::Pose> nativeHitResults{};
+                std::vector<xr::HitResult> nativeHitResults{};
                 m_frame->GetHitTestResults(nativeHitResults, nativeRay);
 
                 // Translate those results into a napi array.
                 auto results = Napi::Array::New(info.Env(), nativeHitResults.size());
                 uint32_t i{0};
-                for (std::vector<xr::Pose>::iterator it = nativeHitResults.begin(); it != nativeHitResults.end(); ++it)
+                for (std::vector<xr::HitResult>::iterator it = nativeHitResults.begin(); it != nativeHitResults.end(); ++it)
                 {
                     Napi::Object currentResult = XRHitTestResult::New(info);
                     XRHitTestResult* xrResult = XRHitTestResult::Unwrap(currentResult);
-                    xrResult->SetPose(*it);
+                    xrResult->SetHitResult(*it);
+                    xrResult->SetXRFrame(this);
 
                     results[i++] = currentResult;
                 }
 
                 return results;
             }
+
+            Napi::Value CreateAnchor(const Napi::CallbackInfo& info)
+            {
+                XRRigidTransform* transform = XRRigidTransform::Unwrap(info[0].As<Napi::Object>());
+                return CreateNativeAnchor(info, transform->GetNativePose(), nullptr);
+            }
+
+            Napi::Value GetTrackedAnchors(const Napi::CallbackInfo& info)
+            {
+                // Create a JavaScript set to store all currently tracked anchors.
+                Napi::Object anchorSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
+
+                // Loop over the list of tracked anchors, and add them to the set.
+                for (Napi::Value napiValue : m_trackedAnchors)
+                {
+                    anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
+                }
+
+                return anchorSet;
+            }
+
+            void UpdateAnchors()
+            {
+                // Loop over all anchors and update their state.
+                std::vector<Napi::Value>::iterator anchorIter = m_trackedAnchors.begin();
+                while (anchorIter != m_trackedAnchors.end())
+                {
+                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).As<Napi::Object>());
+                    xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
+
+                    // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
+                    m_frame->UpdateAnchor(nativeAnchor);
+
+                    if (!nativeAnchor.IsValid)
+                    {
+                        DeleteNativeAnchor(nativeAnchor);
+                        anchorIter = m_trackedAnchors.erase(anchorIter);
+                    }
+                    else
+                    {
+                        ++anchorIter;
+                    }
+                }
+            }
         };
+
+        // Creates an anchor from a hit result.
+        Napi::Value XRHitTestResult::CreateAnchor(const Napi::CallbackInfo& info)
+        {
+            return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
+        }
+
+        // Deallocates the native anchor, and marks the XRAnchor as no longer tracked.
+        void XRAnchor::Delete(const Napi::CallbackInfo&)
+        {
+            m_frame->DeleteNativeAnchor(m_nativeAnchor);
+        }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
         class XRSession : public Napi::ObjectWrap<XRSession>
@@ -1673,6 +1899,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
             XRRay::Initialize(env);
