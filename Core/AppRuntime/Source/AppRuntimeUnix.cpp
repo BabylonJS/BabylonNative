@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "WorkQueue.h"
 #include "AppRuntime.h"
 

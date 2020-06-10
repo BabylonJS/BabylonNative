@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "AppRuntime.h"
 
 #include <v8.h>
