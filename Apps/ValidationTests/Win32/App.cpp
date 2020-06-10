@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <algorithm>
 
+#include <napi/napi.h>
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>

@@ -1,5 +1,7 @@
 #import "ViewController.h"
 
+#import <napi/napi.h>
+#import <Babylon/JsRuntime.h>
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeWindow.h>

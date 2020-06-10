@@ -7,8 +7,9 @@
 #include <Shlwapi.h>
 #include <filesystem>
 
+#include <napi/napi.h>
+#include <Babylon/JsRuntime.h>
 #include <Shared/InputManager.h>
-
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>

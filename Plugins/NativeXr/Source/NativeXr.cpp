@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "NativeXr.h"
 
 #include "NativeEngine.h"
@@ -9,7 +10,6 @@
 #include <bx/math.h>
 
 #include <set>
-#include <napi/napi.h>
 #include <arcana/threading/task.h>
 
 namespace

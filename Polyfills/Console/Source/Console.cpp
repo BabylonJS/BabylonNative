@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "Console.h"
 
 #include <functional>

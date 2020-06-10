@@ -7,6 +7,8 @@
 #undef None
 #include <filesystem>
 
+#include <napi/napi.h>
+#include <Babylon/JsRuntime.h>
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>

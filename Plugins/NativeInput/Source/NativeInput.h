@@ -1,5 +1,7 @@
 #pragma once
 
+#include <napi/napi.h>
+#include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <arcana/containers/weak_table.h>

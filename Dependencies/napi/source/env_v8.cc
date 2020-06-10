@@ -1,5 +1,4 @@
-#include <napi/env.h>
-#include <napi/js_native_api_types.h>
+#include <napi/napi.h>
 #include "js_native_api_v8.h"
 #include <libplatform/libplatform.h>
 

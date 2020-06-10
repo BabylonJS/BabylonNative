@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include "NativeEngine.h"
 

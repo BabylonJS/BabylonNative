@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include "js_native_api_types.h"
 
 #ifndef NAPI_VERSION
 #ifdef NAPI_EXPERIMENTAL

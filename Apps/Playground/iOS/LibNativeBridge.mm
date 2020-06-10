@@ -1,5 +1,7 @@
 #include "LibNativeBridge.h"
 
+#import <napi/napi.h>
+#import <Babylon/JsRuntime.h>
 #import <Babylon/AppRuntime.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>

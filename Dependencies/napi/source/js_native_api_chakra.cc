@@ -1,5 +1,5 @@
+#include <napi/napi.h>
 #include "js_native_api_chakra.h"
-#include <napi/js_native_api.h>
 #include <array>
 #include <cassert>
 #include <cmath>

@@ -21,6 +21,7 @@ endif()
 
 set(SOURCES
     "include/napi/env.h"
+    "include/napi/js_napi.h"
     "include/napi/js_native_api.h"
     "include/napi/js_native_api_types.h"
     "include/napi/napi.h"

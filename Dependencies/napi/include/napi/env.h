@@ -1,7 +1,5 @@
 #pragma once
 
-#include "napi.h"
-
 namespace Napi
 {
     template<typename ...Ts> Napi::Env Attach(Ts... args);

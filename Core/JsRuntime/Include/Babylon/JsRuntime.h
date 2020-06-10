@@ -1,7 +1,5 @@
 #pragma once
 
-#include <napi/env.h>
-
 #include <functional>
 #include <mutex>
 

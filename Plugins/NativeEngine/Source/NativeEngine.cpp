@@ -1,10 +1,9 @@
+#include <napi/napi.h>
 #include "NativeEngine.h"
 #include <spirv_cross.hpp>
 #include "ShaderCompiler.h"
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
-
-#include <napi/env.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>

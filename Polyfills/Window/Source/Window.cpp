@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "Window.h"
 #include <basen.hpp>
 #include <chrono>

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <napi/env.h>
-
 namespace Babylon::Plugins::NativeEngine
 {
     void InitializeGraphics(void* windowPtr, size_t width, size_t height);

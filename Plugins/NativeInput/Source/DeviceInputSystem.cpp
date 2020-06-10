@@ -1,3 +1,5 @@
+#include <napi/napi.h>
+#include <Babylon/JsRuntime.h>
 #include "DeviceInputSystem.h"
 
 namespace Babylon::Plugins

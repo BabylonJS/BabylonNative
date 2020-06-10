@@ -1,5 +1,6 @@
-#include "XMLHttpRequest.h"
+#include <napi/napi.h>
 #include <Babylon/JsRuntime.h>
+#include "XMLHttpRequest.h"
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
 namespace Babylon::Polyfills::Internal

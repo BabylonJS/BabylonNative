@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "NativeWindow.h"
 
 namespace Babylon::Plugins::Internal

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
-#include <napi/napi.h>
-#include <napi/env.h>
 #include <functional>
 
 class InputManager final : public Napi::ObjectWrap<InputManager>

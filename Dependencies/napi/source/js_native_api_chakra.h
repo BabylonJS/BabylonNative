@@ -1,7 +1,6 @@
 #pragma once
 
 #include <jsrt.h>
-#include <napi/js_native_api_types.h>
 
 struct napi_env__ {
   JsSourceContext source_context = JS_SOURCE_CONTEXT_NONE;

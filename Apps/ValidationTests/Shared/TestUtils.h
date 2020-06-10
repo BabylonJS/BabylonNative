@@ -1,6 +1,6 @@
 #pragma once
 
-#include <napi/env.h>
+#include <napi/napi.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>

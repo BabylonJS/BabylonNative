@@ -1,4 +1,4 @@
-#include <napi/env.h>
+#include <napi/napi.h>
 #include "js_native_api_chakra.h"
 #include <jsrt.h>
 #include <strsafe.h>

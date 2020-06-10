@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "JsRuntime.h"
 
 namespace Babylon

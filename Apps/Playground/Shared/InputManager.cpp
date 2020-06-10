@@ -1,3 +1,5 @@
+#include <napi/napi.h>
+#include <Babylon/JsRuntime.h>
 #include "InputManager.h"
 
 InputManager::InputManager(const Napi::CallbackInfo& info)

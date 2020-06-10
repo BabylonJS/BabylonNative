@@ -1,4 +1,4 @@
-#include <napi/env.h>
+#include <napi/napi.h>
 
 namespace Napi
 {

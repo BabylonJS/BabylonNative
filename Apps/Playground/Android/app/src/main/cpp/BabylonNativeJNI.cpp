@@ -9,6 +9,8 @@
 #include <android/log.h>
 
 #include <AndroidExtensions/Globals.h>
+#include <napi/napi.h>
+#include <Babylon/JsRuntime.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
