@@ -683,7 +683,7 @@ namespace xr
                         HitResult hitResult{};
                         RawToPose(rawPose, hitResult.Pose);
 
-                        hitResult.NativeEntity = trackable;
+                        hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
                         filteredResults.push_back(hitResult);
                         frameTrackables.push_back(trackable);
                     }
@@ -728,7 +728,7 @@ namespace xr
 
             // Store the anchor the vector tracking currently allocated anchors, and pass back the result.
             arCoreAnchors.push_back(arAnchor);
-            return {pose, reinterpret_cast<NativeTrackablePtr>(arAnchor)};
+            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
         }
 
         void UpdateAnchor(xr::Anchor& anchor)

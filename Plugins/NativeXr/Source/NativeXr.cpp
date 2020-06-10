@@ -1250,10 +1250,10 @@ namespace Babylon
                 UpdateAnchors();
             }
 
-            Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, void* nativeEntity)
+            Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
             {
                 // Create the native anchor.
-                auto nativeAnchor = m_frame->CreateAnchor(pose, nativeEntity);
+                auto nativeAnchor = m_frame->CreateAnchor(pose, nativeTrackable);
 
                 // Create the XRAnchor object, and initialize its members.
                 auto napiAnchor = Napi::Persistent(XRAnchor::New(info));
@@ -1399,7 +1399,7 @@ namespace Babylon
         // Creates an anchor from a hit result.
         Napi::Value XRHitTestResult::CreateAnchor(const Napi::CallbackInfo& info)
         {
-            return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeEntity);
+            return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
         }
 
         // Deallocates the native anchor, and marks the XRAnchor as no longer tracked.
