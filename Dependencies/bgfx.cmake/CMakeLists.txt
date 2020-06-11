@@ -34,8 +34,12 @@ option( BGFX_AMALGAMATED      "Amalgamated bgfx build for faster compilation" OF
 option( BX_AMALGAMATED        "Amalgamated bx build for faster compilation"   OFF )
 option( BGFX_CONFIG_DEBUG     "Enables debug configuration on all builds"     OFF )
 option( BGFX_CONFIG_RENDERER_WEBGPU     "Enables the webgpu renderer"         OFF )
-set( BGFX_OPENGL_VERSION   "" CACHE STRING "Specify minimum OpenGL version" )
-set( BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version" )
+
+set( BGFX_OPENGL_VERSION   ""       CACHE STRING "Specify minimum opengl version" )
+set( BGFX_OPENGLES_VERSION ""       CACHE STRING "Specify minimum OpenGL ES version" )
+set( BGFX_LIBRARY_TYPE     "STATIC" CACHE STRING "Linking type for library" )
+
+set_property( CACHE BGFX_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED )
 
 if( NOT BX_DIR )
 	set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bx." )
