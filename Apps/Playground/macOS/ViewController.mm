@@ -53,7 +53,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 - (void)mouseDown:(NSEvent *)__unused theEvent {
 }
 
-- (void)mouseDragged:(NSEvent *)theEvent {
+- (void)mouseDragged:(NSEvent *)__unused theEvent {
 
 }
 
