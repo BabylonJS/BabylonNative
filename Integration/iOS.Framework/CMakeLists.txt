@@ -23,20 +23,20 @@ target_compile_definitions(BabylonNative PRIVATE UNICODE)
 target_compile_definitions(BabylonNative PRIVATE _UNICODE)
 
 target_include_directories(BabylonNative PUBLIC "Source" ".")
-file(GLOB_RECURSE appruntime_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Core/AppRuntime/Include/Babylon/*.h)
-file(GLOB_RECURSE jsruntime_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Core/JsRuntime/Include/Babylon/*.h)
-file(GLOB_RECURSE scriptloader_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Core/ScriptLoader/Include/Babylon/*.h)
+file(GLOB_RECURSE appruntime_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/AppRuntime/Include/Babylon/*.h)
+file(GLOB_RECURSE jsruntime_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/JsRuntime/Include/Babylon/*.h)
+file(GLOB_RECURSE scriptloader_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/ScriptLoader/Include/Babylon/*.h)
 
-file(GLOB_RECURSE nativewindow_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Plugins/NativeWindow/Include/Babylon/*.h)
-file(GLOB_RECURSE nativeengine_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Plugins/NativeEngine/Include/Babylon/*.h)
-file(GLOB_RECURSE nativeinput_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Plugins/NativeInput/Include/Babylon/*.h)
+file(GLOB_RECURSE nativewindow_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeWindow/Include/Babylon/*.h)
+file(GLOB_RECURSE nativeengine_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Include/Babylon/*.h)
+file(GLOB_RECURSE nativeinput_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeInput/Include/Babylon/*.h)
 #file(GLOB_RECURSE nativexr_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Plugins/NativeXr/Include/Babylon/*.h)
 
-file(GLOB_RECURSE console_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Polyfills/Console/Include/Babylon/*.h)
-file(GLOB_RECURSE window_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Polyfills/Window/Include/Babylon/*.h)
-file(GLOB_RECURSE xmlhttprequest_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Polyfills/XMLHttpRequest/Include/Babylon/*.h)
+file(GLOB_RECURSE console_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Polyfills/Console/Include/Babylon/*.h)
+file(GLOB_RECURSE window_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Polyfills/Window/Include/Babylon/*.h)
+file(GLOB_RECURSE xmlhttprequest_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Polyfills/XMLHttpRequest/Include/Babylon/*.h)
 
-file(GLOB_RECURSE napi_headers ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/napi/Include/napi/*.h)
+file(GLOB_RECURSE napi_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/napi/Include/napi/*.h)
 
 # copy headers
 foreach(header ${appruntime_headers} 
@@ -44,8 +44,8 @@ foreach(header ${appruntime_headers}
         ${scriptloader_headers}
         ${nativewindow_headers}
         ${nativeengine_headers}
-        ${nativeinput_headers}
         #${nativexr_headers}
+        ${nativeinput_headers}
         ${console_headers}
         ${window_headers}
         ${xmlhttprequest_headers} )
@@ -67,23 +67,24 @@ endforeach()
 # concatenate static libs
 add_custom_command(TARGET BabylonNative POST_BUILD
         COMMAND libtool -static -o $<TARGET_FILE:BabylonNative> 
-            $<TARGET_FILE:AppRuntime> 
-            $<TARGET_FILE:JsRuntime> 
+            $<TARGET_FILE:AppRuntime>
+            $<TARGET_FILE:JsRuntime>
             $<TARGET_FILE:NativeWindow>
-            $<TARGET_FILE:NativeEngine> 
-            $<TARGET_FILE:Console> 
-            $<TARGET_FILE:Window> 
-            $<TARGET_FILE:ScriptLoader> 
-            $<TARGET_FILE:XMLHttpRequest> 
-            $<TARGET_FILE:NativeInput> 
-            $<TARGET_FILE:napi> 
-            $<TARGET_FILE:UrlLib> 
-            $<TARGET_FILE:bgfx> 
-            $<TARGET_FILE:bimg> 
-            $<TARGET_FILE:bx> 
-            $<TARGET_FILE:glslang> 
-            $<TARGET_FILE:SPIRV> 
-            $<TARGET_FILE:spirv-cross-core> 
+            $<TARGET_FILE:NativeEngine>
+            #$<TARGET_FILE:NativeXr>
+            $<TARGET_FILE:Console>
+            $<TARGET_FILE:Window>
+            $<TARGET_FILE:ScriptLoader>
+            $<TARGET_FILE:XMLHttpRequest>
+            $<TARGET_FILE:NativeInput>
+            $<TARGET_FILE:napi>
+            $<TARGET_FILE:UrlLib>
+            $<TARGET_FILE:bgfx>
+            $<TARGET_FILE:bimg>
+            $<TARGET_FILE:bx>
+            $<TARGET_FILE:glslang>
+            $<TARGET_FILE:SPIRV>
+            $<TARGET_FILE:spirv-cross-core>
             $<TARGET_FILE:spirv-cross-hlsl>
             $<TARGET_FILE:spirv-cross-msl>
             $<TARGET_FILE:spirv-cross-glsl>
@@ -91,18 +92,18 @@ add_custom_command(TARGET BabylonNative POST_BUILD
             $<TARGET_FILE:OSDependent>
             $<TARGET_FILE:astc>
             $<TARGET_FILE:astc-codec>
-            #$<TARGET_FILE:NativeXr>
+            
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         DEPENDS AppRuntime 
-            NativeWindow 
-            NativeEngine 
-            #NativeXr
-            Console 
-            ScriptLoader 
-            XMLHttpRequest 
-            NativeInput 
-            Window 
             JsRuntime
+            NativeWindow
+            NativeEngine
+            #NativeXr
+            Console
+            Window
+            ScriptLoader
+            XMLHttpRequest
+            NativeInput
             napi
             UrlLib
             bgfx
