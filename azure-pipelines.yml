@@ -27,11 +27,6 @@ jobs:
       cd buildmacOS
       cmake .. -GXcode
     displayName: 'Generate macOS solution'
-      
-  - script: |
-      cd buildmacOS/Apps/Playground/Debug
-      ./Playground
-    displayName: 'Run MacOS App'
     
   - task: Xcode@5
     inputs:
@@ -41,3 +36,7 @@ jobs:
       useXcpretty: false
     displayName: 'Build macOS'
     
+  - script: |
+      cd buildmacOS/Apps/Playground/Debug
+      ./Playground
+    displayName: 'Run MacOS App'
