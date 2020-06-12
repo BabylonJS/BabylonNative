@@ -734,7 +734,7 @@ namespace xr
         }
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& /*filteredResults*/, Ray) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>&, Ray) const {
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 
@@ -850,5 +850,20 @@ namespace xr
     {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
+    }
+
+    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    void System::Session::Frame::UpdateAnchor(Anchor&) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    void System::Session::Frame::DeleteAnchor(Anchor&) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
     }
 }
