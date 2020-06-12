@@ -4,6 +4,9 @@
 #include <optional>
 #include <sstream>
 #include <chrono>
+#include <arcana/threading/task.h>
+#include <arcana/threading/dispatcher.h>
+#include <thread>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -11,6 +14,7 @@
 #include <EGL/egl.h>
 
 #include <AndroidExtensions/Globals.h>
+#include <AndroidExtensions/JavaWrappers.h>
 
 #include <android/native_window.h>
 #include <android/log.h>
@@ -24,15 +28,19 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/quaternion.hpp>
+#include <arcana/threading/task_schedulers.h>
 
+using namespace android;
 using namespace android::global;
 
 namespace xr
 {
-    class System::Impl
+    // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
+    const int PERMISSION_REQUEST_ID = 8435;
+
+    struct System::Impl
     {
-    public:
-        Impl(const std::string& applicationName)
+        Impl(const std::string& /*applicationName*/)
         {
         }
 
@@ -212,25 +220,139 @@ namespace xr
                 glClearColor(red, green, blue, alpha);
                 return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
             }
+
+            auto Sampler(int unit)
+            {
+                glActiveTexture(GL_TEXTURE0 + unit);
+                GLint previousSampler;
+                glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
+                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
+            }
+        }
+
+        bool CheckARCoreInstallStatus(bool requestInstall)
+        {
+            ArInstallStatus install_status;
+            ArStatus installStatus = ArCoreApk_requestInstall(
+                GetEnvForCurrentThread(), GetCurrentActivity(), requestInstall, &install_status);
+            return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
+        }
+
+        arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync()
+        {
+            auto task = arcana::task_from_result<std::exception_ptr>();
+
+            // Check if ARCore is already installed.
+            if (!CheckARCoreInstallStatus(false))
+            {
+                arcana::task_completion_source<void, std::exception_ptr> installTcs{};
+
+                // Add a resume callback, which will check if ARCore has been successfully installed upon app resume.
+                auto resumeTicket{AddResumeCallback([installTcs]() mutable {
+                    if (!CheckARCoreInstallStatus(false))
+                    {
+                        // ARCore not installed, throw an error.
+                        std::ostringstream message;
+                        message << "ARCore not installed.";
+                        installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                    }
+                    else
+                    {
+                        // ARCore installed successfully, complete the promise.
+                        installTcs.complete();
+                    }
+                })};
+
+                // Kick off the install request, and set the task for our caller to wait on.
+                CheckARCoreInstallStatus(true);
+                task = installTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){
+                    return;
+                });
+            }
+
+            return task;
+        }
+
+        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
+        {
+            auto task = arcana::task_from_result<std::exception_ptr>();
+
+            // Check if permissions are already granted.
+            if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA()))
+            {
+                // Register for the permission callback request.
+                arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
+                auto permissionTicket
+                {
+                    AddRequestPermissionsResultCallback(
+                    [permissionTcs](int32_t requestCode, const std::vector<std::string>& /*permissionList*/, const std::vector<int32_t>& results) mutable
+                    {
+                        // Check if this is our permission request ID.
+                        if (requestCode == PERMISSION_REQUEST_ID)
+                        {
+                            // If the permission is found and granted complete the task.
+                            if (results[0] == 0 /* PackageManager.PERMISSION_GRANTED */)
+                            {
+                                permissionTcs.complete();
+                                return;
+                            }
+
+                            // Permission was denied.  Complete the task with an error.
+                            std::ostringstream message;
+                            message << "Camera permission not acquired successfully";
+                            permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                        }
+                    })
+                };
+
+                // Kick off the permission check request, and set the task for our caller to wait on.
+                GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(), PERMISSION_REQUEST_ID);
+                task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){
+                    return;
+                });
+            }
+
+            return task;
         }
     }
 
-    class System::Session::Impl
+    struct System::Session::Impl
     {
-    public:
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
-        Impl(System::Impl& systemImpl, void* graphicsContext)
+        Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
             : SystemImpl{ systemImpl }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
-            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
+            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
+        {
+        }
+
+        ~Impl()
+        {
+            if (isInitialized)
+            {
+                ArPose_destroy(cameraPose);
+                ArPose_destroy(hitResultPose);
+                ArHitResult_destroy(hitResult);
+                ArHitResultList_destroy(hitResultList);
+                ArFrame_destroy(frame);
+                ArSession_destroy(session);
+
+                glDeleteTextures(1, &cameraTextureId);
+                glDeleteProgram(shaderProgramId);
+                glDeleteFramebuffers(1, &clearFrameBufferId);
+
+                DestroyDisplayResources();
+            }
+        }
+
+        void Initialize()
         {
             // Note: graphicsContext is an EGLContext
-
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
                 glGenTextures(1, &cameraTextureId);
@@ -283,26 +405,17 @@ namespace xr
                     throw std::runtime_error{ message.str() };
                 }
             }
+
+            isInitialized = true;
         }
 
-        ~Impl()
+        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
         {
-            ArPose_destroy(cameraPose);
-            ArPose_destroy(hitResultPose);
-            ArHitResult_destroy(hitResult);
-            ArHitResultList_destroy(hitResultList);
-            ArFrame_destroy(frame);
-            ArSession_destroy(session);
+            if (!isInitialized)
+            {
+                Initialize();
+            }
 
-            glDeleteTextures(1, &cameraTextureId);
-            glDeleteProgram(shaderProgramId);
-            glDeleteFramebuffers(1, &clearFrameBufferId);
-
-            DestroyDisplayResources();
-        }
-
-        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
-        {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
@@ -338,9 +451,9 @@ namespace xr
             }
 
             // Check whether the dimensions have changed
-            if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
+            if ((ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height)
             {
-                DestroyDisplayResources();
+                DestroyDisplayResources(deletedTextureCallback);
 
                 int rotation = GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation();
 
@@ -433,7 +546,7 @@ namespace xr
             sessionEnded = true;
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const
         {
             // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
             return {1,1};
@@ -454,6 +567,8 @@ namespace xr
                 auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                auto sampler0Transation = GLTransactions::Sampler(0);
+                auto sampler1Transation = GLTransactions::Sampler(1);
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(shaderProgramId);
@@ -467,6 +582,7 @@ namespace xr
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+                glBindSampler(0, 0);
 
                 // Configure the camera frame UVs
                 auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
@@ -478,6 +594,7 @@ namespace xr
                 glActiveTexture(GL_TEXTURE1);
                 auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
+                glBindSampler(1, 0);
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
@@ -579,6 +696,7 @@ namespace xr
         }
 
     private:
+        bool isInitialized{false};
         bool sessionEnded{false};
 
         GLuint shaderProgramId{};
@@ -613,12 +731,13 @@ namespace xr
             }
         }
 
-        void DestroyDisplayResources()
+        void DestroyDisplayResources(std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){})
         {
             if (ActiveFrameViews[0].ColorTexturePointer)
             {
                 auto colorTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer));
                 glDeleteTextures(1, &colorTextureId);
+                deletedTextureCallback(ActiveFrameViews[0].ColorTexturePointer);
             }
 
             if (ActiveFrameViews[0].DepthTexturePointer)
@@ -674,7 +793,70 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
-    System::Session::Session(System& system, void* graphicsDevice, void* /*window*/)
+    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
+    {
+        // Currently only AR is supported on Android
+        if (sessionType == SessionType::IMMERSIVE_AR)
+        {
+            // Spin up a background thread to own the polling check.
+            arcana::task_completion_source<bool, std::exception_ptr> tcs;
+            std::thread([tcs]() mutable
+            {
+                // Query ARCore to check if AR sessions are supported.
+                // If not yet installed then poll supported status up to 100 times over 20 seconds.
+                for (int i = 0; i < 100; i++)
+                {
+                    ArAvailability arAvailability{};
+                    ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(), &arAvailability);
+                    switch (arAvailability)
+                    {
+                        case AR_AVAILABILITY_SUPPORTED_APK_TOO_OLD:
+                        case AR_AVAILABILITY_SUPPORTED_INSTALLED:
+                        case AR_AVAILABILITY_SUPPORTED_NOT_INSTALLED:
+                            tcs.complete(true);
+                            break;
+                        case AR_AVAILABILITY_UNKNOWN_CHECKING:
+                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                            break;
+                        default:
+                            tcs.complete(false);
+                            break;
+                    }
+
+                    if (tcs.completed())
+                    {
+                        break;
+                    }
+                }
+
+                if (!tcs.completed())
+                {
+                    tcs.complete(false);
+                }
+            }).detach();
+
+            return tcs.as_task();
+        }
+
+        // VR and inline sessions are not supported at this time.
+        return arcana::task_from_result<std::exception_ptr>(false);
+    }
+
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice)
+    {
+        // First perform the ARCore installation check, request install if not yet installed.
+        return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), []()
+        {
+            // Next check for camera permissions, and request if not already granted.
+            return CheckCameraPermissionAsync();
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
+        {
+            // Finally if the previous two tasks succeed, start the AR session.
+            return std::make_shared<System::Session>(system, graphicsDevice);
+        });
+    }
+
+    System::Session::Session(System& system, void* graphicsDevice)
         : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
     {}
 
@@ -682,9 +864,9 @@ namespace xr
     {
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
     {
-        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
+        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureCallback);
     }
 
     void System::Session::RequestEndSession()
