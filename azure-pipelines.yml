@@ -78,7 +78,7 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'iOS Framework'
-      pathtoPublish: 'buildiOS/Integration/Debug-iphoneos/BabylonNative.framework'
+      pathtoPublish: 'buildiOS/Integration/iOS.Framework/Debug-iphoneos/BabylonNative.framework'
     displayName: 'Publish iOS Framework'
     
 - job: win32_x64
