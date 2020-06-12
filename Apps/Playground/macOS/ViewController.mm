@@ -26,6 +26,18 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     auto device = MTLCreateSystemDefaultDevice();
     NSLog(@"Got %@", device);
     (void)device;
+    
+    
+    id <NSObject> deviceObserver  = nil;
+    NSArray<id<MTLDevice>> *deviceList = nil;
+    deviceList = MTLCopyAllDevicesWithObserver(&deviceObserver,
+                                               ^(id<MTLDevice> /*device*/, MTLDeviceNotificationName name) {
+                                                   /*[self handleExternalGPUEventsForDevice:device notification:name];
+                                                    */
+        NSLog(@"%@", name);
+                                               });
+    
+    NSLog(@"%@", deviceList);
     exit(-1);
 }
 
