@@ -34,6 +34,7 @@ namespace Babylon::ShaderCompilerTraversers
     };
 
     ScopeT MoveNonSamplerUniformsIntoStruct(glslang::TProgram& program, IdGenerator& ids);
+    ScopeT ChangeUniformTypes(glslang::TProgram& program, IdGenerator& ids);
     void AssignLocationsAndNamesToVertexVaryings(glslang::TProgram& program, IdGenerator& ids);
     void SplitSamplersIntoSamplersAndTextures(glslang::TProgram& program, IdGenerator& ids);
 }

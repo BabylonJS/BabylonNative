@@ -113,8 +113,6 @@ namespace
 
 namespace Babylon
 {
-    
-
     namespace
     {
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
@@ -128,6 +126,28 @@ namespace Babylon
             }
 
             program.addShader(&shader);
+        }
+
+        std::string CompileShaderGlsl(glslang::TProgram& program, EShLanguage stage)
+        {
+            std::vector<uint32_t> spirv;
+            glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
+
+            spirv_cross::Parser parser{std::move(spirv)};
+            parser.parse();
+
+            auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser.get_parsed_ir());
+
+            compiler->build_combined_image_samplers();
+
+            spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
+
+            options.version = 310;
+            options.es = true;
+            compiler->set_common_options(options);
+
+            auto compiled = compiler->compile();
+            return compiled;
         }
 
         std::unique_ptr<spirv_cross::Compiler> CompileShader(glslang::TProgram& program, EShLanguage stage, gsl::span<const spirv_cross::HLSLVertexAttributeRemap> attributes, ID3DBlob** blob)
@@ -199,10 +219,14 @@ namespace Babylon
 
         ShaderCompilerTraversers::IdGenerator ids{};
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
+        //ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
 
         // auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
+
+        // auto vrtx = CompileShaderGlsl(program, EShLangVertex);
+        // auto fgmt = CompileShaderGlsl(program, EShLangFragment);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {

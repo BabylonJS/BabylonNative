@@ -62,27 +62,22 @@ namespace Babylon
         {
             const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
 
-            const spirv_cross::SPIRType& type = compiler.get_type(uniformBuffer.base_type_id);
-            for (uint32_t index = 0; index < type.member_types.size(); ++index)
+            const auto append = [&](const std::string& name, uint32_t offset, const spirv_cross::SPIRType& type)
             {
-                auto name = compiler.get_member_name(uniformBuffer.base_type_id, index);
-                auto offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
-                auto memberType = compiler.get_type(type.member_types[index]);
-
                 bgfx::UniformType::Enum bgfxType;
                 uint16_t regCount;
 
-                if (memberType.basetype != spirv_cross::SPIRType::Float)
+                if (type.basetype != spirv_cross::SPIRType::Float)
                 {
                     throw std::exception(); // Not supported
                 }
 
-                if (memberType.columns == 1 && 1 <= memberType.vecsize && memberType.vecsize <= 4)
+                if (type.columns == 1 && 1 <= type.vecsize && type.vecsize <= 4)
                 {
                     bgfxType = bgfx::UniformType::Vec4;
                     regCount = 1;
                 }
-                else if (memberType.columns == 4 && memberType.vecsize == 4)
+                else if (type.columns == 4 && type.vecsize == 4)
                 {
                     bgfxType = bgfx::UniformType::Mat4;
                     regCount = 4;
@@ -92,7 +87,7 @@ namespace Babylon
                     throw std::exception();
                 }
 
-                for (const auto size : memberType.array)
+                for (const auto size : type.array)
                 {
                     regCount *= static_cast<uint16_t>(size);
                 }
@@ -103,6 +98,26 @@ namespace Babylon
                 AppendBytes(bytes, static_cast<uint8_t>(0)); // Value "num" not used by D3D11 pipeline.
                 AppendBytes(bytes, static_cast<uint16_t>(offset));
                 AppendBytes(bytes, static_cast<uint16_t>(regCount));
+            };
+
+            const spirv_cross::SPIRType& type = compiler.get_type(uniformBuffer.base_type_id);
+            if (type.basetype == spirv_cross::SPIRType::BaseType::Struct)
+            {
+                for (uint32_t index = 0; index < type.member_types.size(); ++index)
+                {
+                    auto name = compiler.get_member_name(uniformBuffer.base_type_id, index);
+                    auto offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
+                    auto memberType = compiler.get_type(type.member_types[index]);
+
+                    append(name, offset, memberType);
+                }
+            }
+            else
+            {
+                auto& name = uniformBuffer.name;
+                auto offset = compiler.get_decoration(uniformBuffer.base_type_id, spv::DecorationOffset);
+
+                append(name, offset, type);
             }
         }
 
@@ -802,22 +817,35 @@ namespace Babylon
             {
                 const spirv_cross::Compiler& compiler = *vertexShaderInfo.Compiler;
                 const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-                assert(resources.uniform_buffers.size() == 1);
-                const spirv_cross::Resource& uniformBuffer = resources.uniform_buffers[0];
 #if (BGFX_CONFIG_RENDERER_METAL)
                 // with metal, we bind images and not samplers
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
-                size_t numUniforms = compiler.get_type(uniformBuffer.base_type_id).member_types.size() + samplers.size();
+                size_t numUniforms = samplers.size();
+                for (const auto& uniformBuffer : resources.uniform_buffers)
+                {
+                    const auto& type = compiler.get_type(uniformBuffer.base_type_id);
+                    if (type.basetype == spirv_cross::SPIRType::BaseType::Struct)
+                    {
+                        numUniforms += type.member_types.size();
+                    }
+                    else
+                    {
+                        ++numUniforms;
+                    }
+                }
 
                 AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
                 AppendBytes(vertexBytes, vertexOutputsHash);
                 AppendBytes(vertexBytes, fragmentInputsHash);
 
                 AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
-                AppendUniformBuffer(vertexBytes, compiler, uniformBuffer, false);
+                for (const auto& uniformBuffer : resources.uniform_buffers)
+                {
+                    AppendUniformBuffer(vertexBytes, compiler, uniformBuffer, false);
+                }
                 AppendSamplers(vertexBytes, compiler, samplers, false, programData->VertexUniformNameToInfo);
 
                 AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
@@ -855,28 +883,48 @@ namespace Babylon
                     attributeLocations[attributeName] = location;
                 }
 
-                AppendBytes(vertexBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(uniformBuffer.base_type_id))));
+                if (resources.uniform_buffers.size() == 1)
+                {
+                    AppendBytes(vertexBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(resources.uniform_buffers[0].base_type_id))));
+                }
+                else
+                {
+                    AppendBytes(vertexBytes, uint16_t{0});
+                }
             }
 
             {
                 const spirv_cross::Compiler& compiler = *fragmentShaderInfo.Compiler;
                 const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-                assert(resources.uniform_buffers.size() == 1);
-                const spirv_cross::Resource& uniformBuffer = resources.uniform_buffers[0];
 #if __APPLE__
                 // with metal, we bind images and not samplers
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
-                size_t numUniforms = compiler.get_type(uniformBuffer.base_type_id).member_types.size() + samplers.size();
+                size_t numUniforms = samplers.size();
+                for (const auto& uniformBuffer : resources.uniform_buffers)
+                {
+                    const auto& type = compiler.get_type(uniformBuffer.base_type_id);
+                    if (type.basetype == spirv_cross::SPIRType::BaseType::Struct)
+                    {
+                        numUniforms += type.member_types.size();
+                    }
+                    else
+                    {
+                        ++numUniforms;
+                    }
+                }
 
                 AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
                 AppendBytes(fragmentBytes, vertexOutputsHash);
                 AppendBytes(fragmentBytes, fragmentInputsHash);
 
                 AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
-                AppendUniformBuffer(fragmentBytes, compiler, uniformBuffer, true);
+                for (const auto& uniformBuffer : resources.uniform_buffers)
+                {
+                    AppendUniformBuffer(fragmentBytes, compiler, uniformBuffer, true);
+                }
                 AppendSamplers(fragmentBytes, compiler, samplers, true, programData->FragmentUniformNameToInfo);
 
                 AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
@@ -886,7 +934,14 @@ namespace Babylon
                 // Fragment shaders don't have attributes.
                 AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
 
-                AppendBytes(fragmentBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(uniformBuffer.base_type_id))));
+                if (resources.uniform_buffers.size() == 1)
+                {
+                    AppendBytes(fragmentBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(resources.uniform_buffers[0].base_type_id))));
+                }
+                else
+                {
+                    AppendBytes(fragmentBytes, uint16_t{0});
+                }
             }
         });
 
