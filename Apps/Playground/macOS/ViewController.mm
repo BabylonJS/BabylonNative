@@ -26,7 +26,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     auto device = MTLCreateSystemDefaultDevice();
     NSLog(@"Got %@", device);
     (void)device;
-    exit(12);
+    exit(-1);
 }
 
 - (void)viewDidAppear {
