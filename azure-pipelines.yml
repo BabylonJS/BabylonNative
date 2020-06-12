@@ -67,6 +67,20 @@ jobs:
       useXcpretty: false
     displayName: 'Build iOS'
     
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+      scheme: 'BabylonNative'
+      sdk: 'iphoneos'
+      useXcpretty: false
+    displayName: 'Build iOS Framework'
+    
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'iOS Framework'
+      pathtoPublish: 'buildiOS/Integration/Debug-iphoneos/BabylonNative.framework'
+    displayName: 'Publish iOS Framework'
+    
 - job: win32_x64
   timeoutInMinutes: 20
   pool:

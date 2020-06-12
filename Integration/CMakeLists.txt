@@ -1,0 +1,5 @@
+if(APPLE)
+    if(IOS)
+        add_subdirectory(iOS.Framework)
+    endif()
+endif()

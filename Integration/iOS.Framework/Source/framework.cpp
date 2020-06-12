@@ -1,0 +1,1 @@
+// blank .cpp to bootstrap library creation

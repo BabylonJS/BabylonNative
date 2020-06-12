@@ -38,3 +38,6 @@ if(hasParent)
 else()
     add_subdirectory(Apps)
 endif()
+
+# integration
+add_subdirectory(Integration)
