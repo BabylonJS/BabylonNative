@@ -37,7 +37,6 @@ jobs:
     displayName: 'Build macOS'
     
   - script: |
-      pwd
-      cd Apps/Playground/Debug
-      ./Playground
+      cd buildmacOS/Apps/Playground/Debug
+      open ./Playground.app
     displayName: 'Run MacOS App'
