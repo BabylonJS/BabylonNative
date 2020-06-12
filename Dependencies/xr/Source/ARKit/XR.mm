@@ -48,7 +48,7 @@
         height = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
             
         auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
-        id<MTLTexture> mtlTexture;
+        id<MTLTexture> mtlTexture = nil;
         CVMetalTextureRef texture;
         auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, NULL, pixelFormat, width, height, planeIndex, &texture);
         if (status == kCVReturnSuccess)
@@ -239,10 +239,10 @@ namespace xr
         }
     }
     
-    class System::Impl
+    struct System::Impl
     {
     public:
-        Impl(const std::string& applicationName)
+        Impl(const std::string&)
         {
         }
 
@@ -257,7 +257,7 @@ namespace xr
         }
     };
 
-    class System::Session::Impl
+    struct System::Session::Impl
     {
     public:
         const System::Impl& SystemImpl;
@@ -327,7 +327,7 @@ namespace xr
                 [xrView removeFromSuperview]; });
         }
 
-        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
+        std::unique_ptr<System::Session::Frame> GetNextFrame(bool&, bool&)
         {
             unsigned int width = viewportSize.x;
             unsigned int height = viewportSize.y;
@@ -372,7 +372,7 @@ namespace xr
             SessionEnded = true;
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
+        Size GetWidthAndHeightForViewIndex(size_t) const
         {
             // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
             return {1,1};
@@ -423,7 +423,7 @@ namespace xr
             [commandBuffer commit];
         }
 
-        void GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
+        void GetHitTestResults(std::vector<HitResult>&, xr::Ray) const
         {
             // TODO
         }
@@ -441,7 +441,7 @@ namespace xr
             id<MTLCommandQueue> commandQueue;
     };
 
-    class System::Session::Frame::Impl
+    struct System::Session::Frame::Impl
     {
     public:
         Impl(Session::Impl& sessionImpl)
@@ -466,9 +466,24 @@ namespace xr
         m_impl->sessionImpl.DrawFrame();
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
     {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
+    }
+
+    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const
+    {
+        throw std::runtime_error("Not yet implemented");
+    }
+
+    void System::Session::Frame::UpdateAnchor(xr::Anchor&) const
+    {
+        throw std::runtime_error("Not yet implemented");
+    }
+
+    void System::Session::Frame::DeleteAnchor(xr::Anchor&) const
+    {
+        throw std::runtime_error("Not yet implemented");
     }
 
     System::System(const char* appName)
@@ -487,6 +502,17 @@ namespace xr
         return m_impl->TryInitialize();
     }
 
+    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
+    {
+        // Only immersive_VR is supported for now.
+        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
+    }
+
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window)
+    {
+        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, window));
+    }
+
     System::Session::Session(System& system, void* graphicsDevice, void* window)
         : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, window) }
     {}
@@ -496,7 +522,7 @@ namespace xr
         // Free textures
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)>)
     {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
     }
