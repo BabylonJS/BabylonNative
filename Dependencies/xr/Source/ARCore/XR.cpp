@@ -220,6 +220,14 @@ namespace xr
                 glClearColor(red, green, blue, alpha);
                 return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
             }
+
+            auto Sampler(int unit)
+            {
+                glActiveTexture(GL_TEXTURE0 + unit);
+                GLint previousSampler;
+                glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
+                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
+            }
         }
 
         bool CheckARCoreInstallStatus(bool requestInstall)
@@ -327,8 +335,10 @@ namespace xr
         {
             if (isInitialized)
             {
+                CleanupAnchor(nullptr);
+                CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
-                ArPose_destroy(hitResultPose);
+                ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
                 ArHitResultList_destroy(hitResultList);
                 ArFrame_destroy(frame);
@@ -381,8 +391,9 @@ namespace xr
             ArHitResultList_create(session, &hitResultList);
             ArHitResult_create(session, &hitResult);
 
-            // Create the ARCore ArPose that tracks the current hit test result
-            ArPose_create(session, nullptr, &hitResultPose);
+            // Create the reusable ARCore ArPose used for short term operations
+            // (i.e. pulling out hit test results, and updating anchors)
+            ArPose_create(session, nullptr, &tempPose);
 
             // Set the texture ID that should be used for the camera frame
             ArSession_setCameraTextureName(session, static_cast<uint32_t>(cameraTextureId));
@@ -401,7 +412,7 @@ namespace xr
             isInitialized = true;
         }
 
-        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
+        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
         {
             if (!isInitialized)
             {
@@ -426,8 +437,7 @@ namespace xr
                 ArPose_getPoseRaw(session, cameraPose, rawPose);
 
                 // Set the orientation and position
-                ActiveFrameViews[0].Space.Pose.Orientation = {rawPose[0], rawPose[1], rawPose[2], rawPose[3]};
-                ActiveFrameViews[0].Space.Pose.Position = {rawPose[4], rawPose[5], rawPose[6]};
+                RawToPose(rawPose, ActiveFrameViews[0].Space.Pose);
             }
 
             // Get the current surface dimensions
@@ -443,9 +453,9 @@ namespace xr
             }
 
             // Check whether the dimensions have changed
-            if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
+            if ((ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height)
             {
-                DestroyDisplayResources();
+                DestroyDisplayResources(deletedTextureCallback);
 
                 int rotation = GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation();
 
@@ -559,6 +569,8 @@ namespace xr
                 auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                auto sampler0Transation = GLTransactions::Sampler(0);
+                auto sampler1Transation = GLTransactions::Sampler(1);
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(shaderProgramId);
@@ -572,6 +584,7 @@ namespace xr
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+                glBindSampler(0, 0);
 
                 // Configure the camera frame UVs
                 auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
@@ -583,6 +596,7 @@ namespace xr
                 glActiveTexture(GL_TEXTURE1);
                 auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
+                glBindSampler(1, 0);
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
@@ -596,7 +610,7 @@ namespace xr
             }
         }
 
-        void GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay)
         {
             ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
@@ -659,33 +673,134 @@ namespace xr
                 if (trackableType == AR_TRACKABLE_PLANE)
                 {
                     int32_t isPoseInPolygon{};
-                    ArHitResult_getHitPose(session, hitResult, hitResultPose);
-                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, hitResultPose, &isPoseInPolygon);
+                    ArHitResult_getHitPose(session, hitResult, tempPose);
+                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
 
                     if (isPoseInPolygon != 0)
                     {
                         float rawPose[7]{};
-                        ArPose_getPoseRaw(session, hitResultPose, rawPose);
-                        Pose pose{};
-                        pose.Orientation.X = rawPose[0];
-                        pose.Orientation.Y = rawPose[1];
-                        pose.Orientation.Z = rawPose[2];
-                        pose.Orientation.W = rawPose[3];
-                        pose.Position.X = rawPose[4];
-                        pose.Position.Y = rawPose[5];
-                        pose.Position.Z = rawPose[6];
+                        ArPose_getPoseRaw(session, tempPose, rawPose);
+                        HitResult hitResult{};
+                        RawToPose(rawPose, hitResult.Pose);
 
-                        filteredResults.push_back(pose);
+                        hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
+                        filteredResults.push_back(hitResult);
+                        frameTrackables.push_back(trackable);
                     }
                 }
+            }
+        }
 
+        // Clean up all ArCore trackables owned by the current frame, this should be called once per frame.
+        void CleanupFrameTrackables()
+        {
+            for (ArTrackable* trackable : frameTrackables)
+            {
                 ArTrackable_release(trackable);
+            }
+
+            frameTrackables.clear();
+        }
+
+        Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable)
+        {
+            // First translate the passed in pose to something usable by ArCore.
+            ArPose* arPose{};
+            float rawPose[7]{};
+            PoseToRaw(rawPose, pose);
+            ArPose_create(session, rawPose, &arPose);
+
+            // Create the actual anchor. If a trackable was passed in (from a hit test result) create the
+            // anchor against the tracakble. Otherwise create it against the session.
+            ArAnchor* arAnchor{};
+            auto trackableObj = reinterpret_cast<ArTrackable*>(trackable);
+            if (trackableObj)
+            {
+                ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
+            }
+            else
+            {
+                ArSession_acquireNewAnchor(session, arPose, &arAnchor);
+            }
+
+            // Clean up the temp pose.
+            ArPose_destroy(arPose);
+
+            // Store the anchor the vector tracking currently allocated anchors, and pass back the result.
+            arCoreAnchors.push_back(arAnchor);
+            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
+        }
+
+        void UpdateAnchor(xr::Anchor& anchor)
+        {
+            // First check if the anchor still exists, if not then mark the anchor as no longer valid.
+            auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
+            if (arAnchor == nullptr)
+            {
+                anchor.IsValid = false;
+                return;
+            }
+
+            ArTrackingState trackingState{};
+            ArAnchor_getTrackingState(session, arAnchor, &trackingState);
+
+            // If tracking then update the pose, if paused then skip the update, if stopped then
+            // mark this anchor as no longer valid, as it will never again be tracked by ArCore.
+            if (trackingState == AR_TRACKING_STATE_TRACKING)
+            {
+                ArAnchor_getPose(session, arAnchor, tempPose);
+                float rawPose[7]{};
+                ArPose_getPoseRaw(session, tempPose, rawPose);
+                RawToPose(rawPose, anchor.Pose);
+            }
+            else if (trackingState == AR_TRACKING_STATE_STOPPED)
+            {
+                anchor.IsValid = false;
+            }
+        }
+
+        void DeleteAnchor(xr::Anchor& anchor)
+        {
+            // If this anchor has not already been deleted, then detach it from the current AR session,
+            // and clean up its state in memory.
+            if (anchor.NativeAnchor != nullptr)
+            {
+                auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
+                ArAnchor_detach(session, arAnchor);
+                CleanupAnchor(arAnchor);
+                anchor.NativeAnchor = nullptr;
+            }
+        }
+
+        void CleanupAnchor(ArAnchor* arAnchor)
+        {
+            // Iterate over the list of anchors if arAnchor is null then clean up all anchors
+            // otherwise clean up only the target anchor and return.
+            auto anchorIter = arCoreAnchors.begin();
+            while (anchorIter != arCoreAnchors.end())
+            {
+                if (arAnchor == nullptr || arAnchor == *anchorIter)
+                {
+                    ArAnchor_release(*anchorIter);
+                    anchorIter = arCoreAnchors.erase(anchorIter);
+
+                    if (arAnchor != nullptr)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    anchorIter++;
+                }
             }
         }
 
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
+        std::vector<ArTrackable*> frameTrackables{};
+        std::vector<ArAnchor*> arCoreAnchors{};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -694,7 +809,7 @@ namespace xr
         ArSession* session{};
         ArFrame* frame{};
         ArPose* cameraPose{};
-        ArPose* hitResultPose{};
+        ArPose* tempPose{};
         ArHitResultList* hitResultList{};
         ArHitResult* hitResult{};
 
@@ -719,12 +834,13 @@ namespace xr
             }
         }
 
-        void DestroyDisplayResources()
+        void DestroyDisplayResources(std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){})
         {
             if (ActiveFrameViews[0].ColorTexturePointer)
             {
                 auto colorTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer));
                 glDeleteTextures(1, &colorTextureId);
+                deletedTextureCallback(ActiveFrameViews[0].ColorTexturePointer);
             }
 
             if (ActiveFrameViews[0].DepthTexturePointer)
@@ -734,6 +850,28 @@ namespace xr
             }
 
             ActiveFrameViews[0] = {};
+        }
+
+        void PoseToRaw(float rawPose[], const Pose& pose)
+        {
+            rawPose[0] = pose.Orientation.X;
+            rawPose[1] = pose.Orientation.Y;
+            rawPose[2] = pose.Orientation.Z;
+            rawPose[3] = pose.Orientation.W;
+            rawPose[4] = pose.Position.X;
+            rawPose[5] = pose.Position.Y;
+            rawPose[6] = pose.Position.Z;
+        }
+
+        void RawToPose(const float rawPose[], Pose& pose)
+        {
+            pose.Orientation.X = rawPose[0];
+            pose.Orientation.Y = rawPose[1];
+            pose.Orientation.Z = rawPose[2];
+            pose.Orientation.W = rawPose[3];
+            pose.Position.X = rawPose[4];
+            pose.Position.Y = rawPose[5];
+            pose.Position.Z = rawPose[6];
         }
     };
 
@@ -754,13 +892,29 @@ namespace xr
     {
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, xr::Ray offsetRay) const
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
     {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
+    {
+        return m_impl->sessionImpl.CreateAnchor(pose, trackable);
+    }
+
+    void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const
+    {
+        m_impl->sessionImpl.UpdateAnchor(anchor);
+    }
+
+    void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const
+    {
+        m_impl->sessionImpl.DeleteAnchor(anchor);
+    }
+
     System::Session::Frame::~Frame()
     {
+        m_impl->sessionImpl.CleanupFrameTrackables();
         m_impl->sessionImpl.DrawFrame();
     }
 
@@ -851,9 +1005,9 @@ namespace xr
     {
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
     {
-        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
+        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureCallback);
     }
 
     void System::Session::RequestEndSession()
