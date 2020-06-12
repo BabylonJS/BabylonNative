@@ -46,6 +46,13 @@ namespace xr
         } Orientation;
     };
 
+    using NativeTrackablePtr = void*;
+    struct HitResult
+    {
+        Pose Pose{};
+        NativeTrackablePtr NativeTrackable{};
+    };
+
     struct Ray
     {
         struct
@@ -61,6 +68,14 @@ namespace xr
             float Y{};
             float Z{};
         } Direction;
+    };
+
+    using NativeAnchorPtr = void*;
+    struct Anchor
+    {
+        Pose Pose{};
+        NativeAnchorPtr NativeAnchor{};
+        bool IsValid{true};
     };
 
     class System
@@ -133,7 +148,10 @@ namespace xr
                 Frame(System::Session::Impl&);
                 ~Frame();
 
-                void GetHitTestResults(std::vector<Pose>&, Ray) const;
+                void GetHitTestResults(std::vector<HitResult>&, Ray) const;
+                Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
+                void UpdateAnchor(Anchor&) const;
+                void DeleteAnchor(Anchor&) const;
 
             private:
                 struct Impl;
