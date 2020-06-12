@@ -3,7 +3,7 @@ var turntable = false;
 var logfps = true;
 var ibl = false;
 var rtt = false;
-var xr = false;
+var xr = true;
 var xrHitTest = false;
 
 function CreateBoxAsync() {

@@ -36,24 +36,31 @@
 
 - (id<MTLTexture>)updateCapturedTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex
 {
-    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    /*CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (ret != kCVReturnSuccess)
     {
         return {};
     }
-    width = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
-    height = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
-        
-    auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
-    id<MTLTexture> mtlTexture;
-    CVMetalTextureRef texture;
-    auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, NULL, pixelFormat, width, height, planeIndex, &texture);
-    if (status == kCVReturnSuccess)
+
+    @try*/
     {
-        mtlTexture = CVMetalTextureGetTexture(texture);
+        width = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        height = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+            
+        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
+        id<MTLTexture> mtlTexture;
+        CVMetalTextureRef texture;
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, NULL, pixelFormat, width, height, planeIndex, &texture);
+        if (status == kCVReturnSuccess)
+        {
+            mtlTexture = CVMetalTextureGetTexture(texture);
+        }
+        return mtlTexture;
     }
-    
-    return mtlTexture;
+    /*@finally
+    {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    }*/
 }
 
 - (UIInterfaceOrientation)orientation
@@ -121,6 +128,23 @@
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
 }
 
+- (void)triggerProgrammaticCapture:(id<MTLDevice>)captureObject
+{
+    MTLCaptureManager* captureManager = [MTLCaptureManager sharedCaptureManager];
+    if (@available(iOS 13.0, *)) {
+        MTLCaptureDescriptor* captureDescriptor = [[MTLCaptureDescriptor alloc] init];
+        captureDescriptor.captureObject = captureObject;
+
+        NSError *error;
+        if (![captureManager startCaptureWithDescriptor: captureDescriptor error:&error])
+        {
+            NSLog(@"Failed to start capture, error %@", error);
+        }
+    } else {
+        // Fallback on earlier versions
+    }
+}
+
 @end
 namespace xr
 {
@@ -178,6 +202,11 @@ namespace xr
                 constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
 
                 const float4 babylonSample = babylonTexture.sample(linearSampler, in.uv);
+                if (is_null_texture(cameraTextureY))
+                {
+                    return babylonSample;
+                }
+    
                 const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.uv);
                 const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.uv);
 
@@ -351,7 +380,6 @@ namespace xr
         
         void DrawFrame()
         {
-
             // Create a new command buffer for each render pass to the current drawable.
             id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
             commandBuffer.label = @"XRDisplayCommandBuffer";
