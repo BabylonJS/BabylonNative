@@ -149,14 +149,17 @@ namespace Babylon
 
             auto compiled = compiler->compile();
 
-            ir.for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
-                auto store = var.storage;
-                store = store;
+            parser.get_parsed_ir().for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
                 auto& type = compiler->get_type_from_variable(id);
-                std::string name = compiler->get_name(id);
-                name = name;
-                auto foo = type.self;
-                foo = foo;
+                if (var.storage == spv::StorageClassUniformConstant && 
+                    type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
+                    type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
+                {
+                    auto name = compiler->get_name(id);
+                    uint32_t offset = 0; // Not actually used for anything by OpenGL.
+                    name = name;
+                    offset = offset;
+                }
             });
 
             auto resources = compiler->get_shader_resources();

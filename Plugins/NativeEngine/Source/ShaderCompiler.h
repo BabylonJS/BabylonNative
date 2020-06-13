@@ -24,7 +24,7 @@ namespace Babylon
 
         struct ShaderInfo
         {
-            std::unique_ptr<const spirv_cross::Parser> Parser;
+            std::unique_ptr<spirv_cross::Parser> Parser;
             std::unique_ptr<const spirv_cross::Compiler> Compiler;
             gsl::span<uint8_t> Bytes;
         };

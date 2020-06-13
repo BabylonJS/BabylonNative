@@ -298,7 +298,7 @@ namespace Babylon
             texture->Height = height;
         }
 
-        NonSamplerUniformsInfo CollectNonSamplerUniforms(const spirv_cross::Parser& /*parser*/, const spirv_cross::Compiler& compiler)
+        NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler)
         {
             NonSamplerUniformsInfo info{};
 
@@ -343,8 +343,40 @@ namespace Babylon
             }
             else
             {
-                // GLSL case, now things get really hacky.
-                throw std::runtime_error{"Give up already."};
+                info.ByteSize = 0;
+                parser.get_parsed_ir().for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
+                    auto& type = compiler.get_type_from_variable(id);
+                    if (var.storage == spv::StorageClassUniformConstant &&
+                        type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
+                        type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
+                    {
+                        auto& uniform = info.Uniforms.emplace_back();
+                        uniform.Name = compiler.get_name(id);
+                        uniform.Offset = 0; // Not actually used for anything by OpenGL.
+                        
+                        if (type.columns == 1 && 1 <= type.vecsize && type.vecsize <= 4)
+                        {
+                            uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4;
+                            uniform.RegisterSize = 1;
+                        }
+                        else if (type.columns == 4 && type.vecsize == 4)
+                        {
+                            uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
+                            uniform.RegisterSize = 4;
+                        }
+                        else
+                        {
+                            throw std::runtime_error{"Unrecognized uniform type."};
+                        }
+
+                        for (const auto size : type.array)
+                        {
+                            uniform.RegisterSize *= static_cast<uint16_t>(size);
+                        }
+
+                        info.ByteSize += 4 * uniform.RegisterSize;
+                    }
+                });
             }
 
             return info;
