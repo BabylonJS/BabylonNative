@@ -14,103 +14,6 @@
 #include <d3dcompiler.h>
 #include <wrl/client.h>
 
-#include <sstream>
-namespace
-{
-    using namespace glslang;
-    class DebugTraverser : public TIntermTraverser
-    {
-    public:
-        DebugTraverser()
-            : TIntermTraverser{}
-        {
-        }
-
-        ~DebugTraverser() override
-        {
-        }
-
-        void visitSymbol(TIntermSymbol* symbol) override
-        {
-            Indent();
-            ss << "Symbol: " << symbol->getName() << std::endl;
-        }
-
-        void visitConstantUnion(TIntermConstantUnion* constUnion) override
-        {
-            Indent();
-            ss << "Constant Union: " << constUnion->getCompleteString().c_str() << std::endl;
-        }
-
-        bool visitBinary(TVisit, TIntermBinary* binary) override
-        {
-            Indent();
-            ss << "Binary: " << binary->getOp() << ", " << binary->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitUnary(TVisit, TIntermUnary* unary) override
-        {
-            Indent();
-            ss << "Unary: " << unary->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitSelection(TVisit, TIntermSelection* selection) override
-        {
-            Indent();
-            ss << "Selection: " << selection->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitAggregate(TVisit, TIntermAggregate* aggregate) override
-        {
-            Indent();
-            ss << "Aggregate: " << aggregate->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitLoop(TVisit, TIntermLoop* loop) override
-        {
-            Indent();
-            ss << "Loop: " << loop->getTest()->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitBranch(TVisit, TIntermBranch* branch) override
-        {
-            Indent();
-            ss << "Branch: " << branch->getExpression()->getCompleteString().c_str() << std::endl;
-            return true;
-        }
-
-        bool visitSwitch(TVisit, TIntermSwitch* _switch) override
-        {
-            Indent();
-            ss << "Switch: " << std::endl;
-            return true;
-        }
-
-        static std::string Traverse(glslang::TIntermediate* intermediate)
-        {
-            DebugTraverser traverser{};
-            intermediate->getTreeRoot()->traverse(&traverser);
-            return traverser.ss.str();
-        }
-
-    private:
-        std::stringstream ss{};
-
-        void Indent()
-        {
-            for (int idx = 0; idx < this->depth; ++idx)
-            {
-                ss << "    ";
-            }
-        }
-    };
-}
-
 namespace Babylon
 {
     namespace
@@ -126,44 +29,6 @@ namespace Babylon
             }
 
             program.addShader(&shader);
-        }
-
-        std::string CompileShaderGlsl(glslang::TProgram& program, EShLanguage stage)
-        {
-            std::vector<uint32_t> spirv;
-            glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
-
-            spirv_cross::Parser parser{std::move(spirv)};
-            parser.parse();
-            
-            auto& ir = parser.get_parsed_ir();
-            auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(ir);
-
-            compiler->build_combined_image_samplers();
-
-            spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
-
-            options.version = 310;
-            options.es = true;
-            compiler->set_common_options(options);
-
-            auto compiled = compiler->compile();
-
-            parser.get_parsed_ir().for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
-                auto& type = compiler->get_type_from_variable(id);
-                if (var.storage == spv::StorageClassUniformConstant && 
-                    type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
-                    type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
-                {
-                    auto name = compiler->get_name(id);
-                    uint32_t offset = 0; // Not actually used for anything by OpenGL.
-                    name = name;
-                    offset = offset;
-                }
-            });
-
-            auto resources = compiler->get_shader_resources();
-            return compiled;
         }
 
         std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, gsl::span<const spirv_cross::HLSLVertexAttributeRemap> attributes, ID3DBlob** blob)
@@ -235,14 +100,8 @@ namespace Babylon
 
         ShaderCompilerTraversers::IdGenerator ids{};
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
-        //ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
-
-        // auto fgmt = DebugTraverser::Traverse(program.getIntermediate(EShLangFragment));
-
-        auto vrtx = CompileShaderGlsl(program, EShLangVertex);
-        auto fgmt = CompileShaderGlsl(program, EShLangFragment);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
