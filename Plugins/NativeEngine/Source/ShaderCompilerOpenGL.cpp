@@ -26,15 +26,15 @@ namespace Babylon
             program.addShader(&shader);
         }
 
-        std::unique_ptr<spirv_cross::Compiler> CompileShader(glslang::TProgram& program, EShLanguage stage, std::string& glsl)
+        std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, std::string& glsl)
         {
             std::vector<uint32_t> spirv;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 
-            spirv_cross::Parser parser{std::move(spirv)};
-            parser.parse();
+            auto parser = std::make_unique<spirv_cross::Parser>(std::move(spirv));
+            parser->parse();
 
-            auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser.get_parsed_ir());
+            auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser->get_parsed_ir());
 
             compiler->build_combined_image_samplers();
 
@@ -151,7 +151,7 @@ namespace Babylon
 //#else
             glsl = compiled;
 //#endif
-            return compiler;
+            return{std::move(parser), std::move(compiler)};
         }
     }
 
@@ -192,15 +192,15 @@ namespace Babylon
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
-        auto vertexCompiler = CompileShader(program, EShLangVertex, vertexGLSL);
+        auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);
 
         std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
-        auto fragmentCompiler = CompileShader(program, EShLangFragment, fragmentGLSL);
+        auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
         uint8_t* strVertex = (uint8_t*)vertexGLSL.data();
         uint8_t* strFragment = (uint8_t*)fragmentGLSL.data();
         onCompiled(
-            {std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size())},
-            {std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size())});
+            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size())},
+            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size())});
     }
 }

@@ -1,5 +1,6 @@
 #include "NativeEngine.h"
 #include <spirv_cross.hpp>
+#include <spirv_parser.hpp>
 #include "ShaderCompiler.h"
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -58,66 +59,52 @@ namespace Babylon
             bytes.insert(bytes.end(), ptr, ptr + stride);
         }
 
-        void AppendUniformBuffer(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::Resource& uniformBuffer, bool isFragment)
+        struct NonSamplerUniformsInfo
+        {
+            struct Uniform
+            {
+                enum class TypeEnum
+                {
+                    Vec4,
+                    Mat4
+                };
+
+                std::string Name{};
+                uint32_t Offset{};
+                uint16_t RegisterSize{};
+                TypeEnum Type{};
+            };
+
+            uint16_t ByteSize{};
+            std::vector<Uniform> Uniforms{};
+        };
+
+        void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
         {
             const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
 
-            const auto append = [&](const std::string& name, uint32_t offset, const spirv_cross::SPIRType& type)
+            for (const auto& uniform : uniformBuffer.Uniforms)
             {
                 bgfx::UniformType::Enum bgfxType;
-                uint16_t regCount;
 
-                if (type.basetype != spirv_cross::SPIRType::Float)
+                switch (uniform.Type)
                 {
-                    throw std::exception(); // Not supported
-                }
-
-                if (type.columns == 1 && 1 <= type.vecsize && type.vecsize <= 4)
-                {
-                    bgfxType = bgfx::UniformType::Vec4;
-                    regCount = 1;
-                }
-                else if (type.columns == 4 && type.vecsize == 4)
-                {
-                    bgfxType = bgfx::UniformType::Mat4;
-                    regCount = 4;
-                }
-                else
-                {
-                    throw std::exception();
+                    case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
+                        bgfxType = bgfx::UniformType::Vec4;
+                        break;
+                    case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
+                        bgfxType = bgfx::UniformType::Mat4;
+                        break;
+                    default:
+                        throw std::runtime_error{"Unrecognized uniform type."};
                 }
 
-                for (const auto size : type.array)
-                {
-                    regCount *= static_cast<uint16_t>(size);
-                }
-
-                AppendBytes(bytes, static_cast<uint8_t>(name.size()));
-                AppendBytes(bytes, name);
+                AppendBytes(bytes, static_cast<uint8_t>(uniform.Name.size()));
+                AppendBytes(bytes, uniform.Name);
                 AppendBytes(bytes, static_cast<uint8_t>(bgfxType | fragmentBit));
                 AppendBytes(bytes, static_cast<uint8_t>(0)); // Value "num" not used by D3D11 pipeline.
-                AppendBytes(bytes, static_cast<uint16_t>(offset));
-                AppendBytes(bytes, static_cast<uint16_t>(regCount));
-            };
-
-            const spirv_cross::SPIRType& type = compiler.get_type(uniformBuffer.base_type_id);
-            if (type.basetype == spirv_cross::SPIRType::BaseType::Struct)
-            {
-                for (uint32_t index = 0; index < type.member_types.size(); ++index)
-                {
-                    auto name = compiler.get_member_name(uniformBuffer.base_type_id, index);
-                    auto offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
-                    auto memberType = compiler.get_type(type.member_types[index]);
-
-                    append(name, offset, memberType);
-                }
-            }
-            else
-            {
-                auto& name = uniformBuffer.name;
-                auto offset = compiler.get_decoration(uniformBuffer.base_type_id, spv::DecorationOffset);
-
-                append(name, offset, type);
+                AppendBytes(bytes, static_cast<uint16_t>(uniform.Offset));
+                AppendBytes(bytes, static_cast<uint16_t>(uniform.RegisterSize));
             }
         }
 
@@ -309,6 +296,58 @@ namespace Babylon
             texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
             texture->Width = width;
             texture->Height = height;
+        }
+
+        NonSamplerUniformsInfo CollectNonSamplerUniforms(const spirv_cross::Parser& /*parser*/, const spirv_cross::Compiler& compiler)
+        {
+            NonSamplerUniformsInfo info{};
+
+            const auto& resources = compiler.get_shader_resources();
+            if (resources.uniform_buffers.size() == 1)
+            {
+                const auto& uniformBuffer = resources.uniform_buffers[0];
+                const auto& type = compiler.get_type(uniformBuffer.base_type_id);
+                assert(type.basetype == spirv_cross::SPIRType::BaseType::Struct);
+
+                info.ByteSize = static_cast<uint16_t>(compiler.get_declared_struct_size(type));
+
+                info.Uniforms.resize(type.member_types.size());
+                for (uint32_t index = 0; index < type.member_types.size(); ++index)
+                {
+                    auto& uniform = info.Uniforms[index];
+
+                    uniform.Name = compiler.get_member_name(uniformBuffer.base_type_id, index);
+                    uniform.Offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
+                    
+                    const auto spirType = compiler.get_type(type.member_types[index]);
+                    if (spirType.columns == 1 && 1 <= spirType.vecsize && spirType.vecsize <= 4)
+                    {
+                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4;
+                        uniform.RegisterSize = 1;
+                    }
+                    else if (spirType.columns == 4 && spirType.vecsize == 4)
+                    {
+                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
+                        uniform.RegisterSize = 4;
+                    }
+                    else
+                    {
+                        throw std::runtime_error{"Unrecognized uniform type."};
+                    }
+
+                    for (const auto size : spirType.array)
+                    {
+                        uniform.RegisterSize *= static_cast<uint16_t>(size);
+                    }
+                }
+            }
+            else
+            {
+                // GLSL case, now things get really hacky.
+                throw std::runtime_error{"Give up already."};
+            }
+
+            return info;
         }
     }
 
@@ -815,37 +854,23 @@ namespace Babylon
             constexpr uint32_t fragmentInputsHash = vertexOutputsHash;
 
             {
-                const spirv_cross::Compiler& compiler = *vertexShaderInfo.Compiler;
+                const auto& compiler = *vertexShaderInfo.Compiler;
                 const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+                auto uniformsInfo = CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler);
 #if (BGFX_CONFIG_RENDERER_METAL)
                 // with metal, we bind images and not samplers
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
-                size_t numUniforms = samplers.size();
-                for (const auto& uniformBuffer : resources.uniform_buffers)
-                {
-                    const auto& type = compiler.get_type(uniformBuffer.base_type_id);
-                    if (type.basetype == spirv_cross::SPIRType::BaseType::Struct)
-                    {
-                        numUniforms += type.member_types.size();
-                    }
-                    else
-                    {
-                        ++numUniforms;
-                    }
-                }
+                size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
 
                 AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
                 AppendBytes(vertexBytes, vertexOutputsHash);
                 AppendBytes(vertexBytes, fragmentInputsHash);
 
                 AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
-                for (const auto& uniformBuffer : resources.uniform_buffers)
-                {
-                    AppendUniformBuffer(vertexBytes, compiler, uniformBuffer, false);
-                }
+                AppendUniformBuffer(vertexBytes, uniformsInfo, false);
                 AppendSamplers(vertexBytes, compiler, samplers, false, programData->VertexUniformNameToInfo);
 
                 AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
@@ -883,48 +908,27 @@ namespace Babylon
                     attributeLocations[attributeName] = location;
                 }
 
-                if (resources.uniform_buffers.size() == 1)
-                {
-                    AppendBytes(vertexBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(resources.uniform_buffers[0].base_type_id))));
-                }
-                else
-                {
-                    AppendBytes(vertexBytes, uint16_t{0});
-                }
+                AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
             }
 
             {
                 const spirv_cross::Compiler& compiler = *fragmentShaderInfo.Compiler;
                 const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+                const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
 #if __APPLE__
                 // with metal, we bind images and not samplers
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
-                size_t numUniforms = samplers.size();
-                for (const auto& uniformBuffer : resources.uniform_buffers)
-                {
-                    const auto& type = compiler.get_type(uniformBuffer.base_type_id);
-                    if (type.basetype == spirv_cross::SPIRType::BaseType::Struct)
-                    {
-                        numUniforms += type.member_types.size();
-                    }
-                    else
-                    {
-                        ++numUniforms;
-                    }
-                }
+                size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
 
                 AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
                 AppendBytes(fragmentBytes, vertexOutputsHash);
                 AppendBytes(fragmentBytes, fragmentInputsHash);
 
                 AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
-                for (const auto& uniformBuffer : resources.uniform_buffers)
-                {
-                    AppendUniformBuffer(fragmentBytes, compiler, uniformBuffer, true);
-                }
+                AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
                 AppendSamplers(fragmentBytes, compiler, samplers, true, programData->FragmentUniformNameToInfo);
 
                 AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
@@ -934,14 +938,7 @@ namespace Babylon
                 // Fragment shaders don't have attributes.
                 AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
 
-                if (resources.uniform_buffers.size() == 1)
-                {
-                    AppendBytes(fragmentBytes, static_cast<uint16_t>(compiler.get_declared_struct_size(compiler.get_type(resources.uniform_buffers[0].base_type_id))));
-                }
-                else
-                {
-                    AppendBytes(fragmentBytes, uint16_t{0});
-                }
+                AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
             }
         });
 
