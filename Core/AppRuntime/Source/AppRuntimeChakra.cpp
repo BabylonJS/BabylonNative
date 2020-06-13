@@ -2,6 +2,8 @@
 
 #include <jsrt.h>
 
+#include <ChakraRuntime.h>
+
 #include <gsl/gsl>
 #include <cassert>
 
@@ -51,9 +53,13 @@ namespace Babylon
         ThrowIfFailed(JsStartDebugging());
 #endif
 
-        Napi::Env env = Napi::Attach();
-        Run(env);
-        Napi::Detach(env);
+        Microsoft::JSI::ChakraRuntime chakraRuntime{jsRuntime, context};
+
+        {
+            Napi::Env env = Napi::Attach<facebook::jsi::Runtime*>(&chakraRuntime);
+            Run(env);
+            Napi::Detach(env);
+        }
 
         ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
         ThrowIfFailed(JsDisposeRuntime(jsRuntime));

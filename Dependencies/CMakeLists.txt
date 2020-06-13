@@ -67,7 +67,10 @@ set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 
 # -------------------------------- napi --------------------------------
 # Dependencies: none
-add_subdirectory(napi)
+#add_subdirectory(napi)
+add_subdirectory(napi-jsi)
+set_property(TARGET chakra-jsi PROPERTY FOLDER Dependencies)
+set_property(TARGET jsi PROPERTY FOLDER Dependencies)
 set_property(TARGET napi PROPERTY FOLDER Dependencies)
 
 # -------------------------------- SPIRV-Cross --------------------------------
