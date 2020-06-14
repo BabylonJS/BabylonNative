@@ -2,13 +2,9 @@
 
 namespace Napi {
 
-namespace details {
+using namespace facebook;
 
-template <typename Callable>
-inline napi_value WrapCallback(Callable callback) {
-  throw std::runtime_error{"TODO"};
-  return {};
-}
+namespace details {
 
 template <typename T>
 class External : public facebook::jsi::HostObject {
@@ -619,12 +615,12 @@ inline bool Object::Has(uint32_t index) const {
 }
 
 inline Value Object::Get(uint32_t index) const {
-  throw std::runtime_error{"TODO"};
+  return {_env, {_env, _value->getObject(*_env).getArray(*_env).getValueAtIndex(*_env, static_cast<size_t>(index))}};
 }
 
 template <typename ValueType>
 inline void Object::Set(uint32_t index, const ValueType& value) {
-  throw std::runtime_error{"TODO"};
+  _value->getObject(*_env).getArray(*_env).setValueAtIndex(*_env, static_cast<size_t>(index), *napi_value{Value::From(_env, value)});
 }
 
 inline bool Object::Delete(uint32_t index) {
@@ -687,7 +683,7 @@ inline External<T>::External(napi_env env, napi_value value) : Value(env, value)
 
 template <typename T>
 inline T* External<T>::Data() const {
-  return _value->asObject(*_env).asHostObject<details::External<T>>(*_env)->Data();
+  return _value->getObject(*_env).getHostObject<details::External<T>>(*_env)->Data();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -695,11 +691,11 @@ inline T* External<T>::Data() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 inline Array Array::New(napi_env env) {
-  throw std::runtime_error{"TODO"};
+  return New(env, 0);
 }
 
 inline Array Array::New(napi_env env, size_t length) {
-  throw std::runtime_error{"TODO"};
+  return {env, {env, jsi::Array{*env, length}}};
 }
 
 inline Array::Array() : Object() {
@@ -709,7 +705,7 @@ inline Array::Array(napi_env env, napi_value value) : Object(env, value) {
 }
 
 inline uint32_t Array::Length() const {
-  throw std::runtime_error{"TODO"};
+  return static_cast<uint32_t>(_value->getObject(*_env).getArray(*_env).length(*_env));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -971,15 +967,11 @@ inline TypedArray::TypedArray(napi_env env,
 }
 
 inline napi_typedarray_type TypedArray::TypedArrayType() const {
-  //if (_type == TypedArray::unknown_array_type) {
-  //  napi_status status = napi_get_typedarray_info(_env, _value,
-  //    &const_cast<TypedArray*>(this)->_type, &const_cast<TypedArray*>(this)->_length,
-  //    nullptr, nullptr, nullptr);
-  //  NAPI_THROW_IF_FAILED(_env, status, napi_int8_array);
-  //}
+  if (_type == TypedArray::unknown_array_type) {
+    GetTypedArrayInfo(_env, _value, &_type, &_length, nullptr, nullptr, nullptr);
+  }
 
-  //return _type;
-  throw std::runtime_error{"TODO"};
+  return _type;
 }
 
 inline uint8_t TypedArray::ElementSize() const {
@@ -1003,24 +995,17 @@ inline uint8_t TypedArray::ElementSize() const {
 }
 
 inline size_t TypedArray::ElementLength() const {
-  //if (_type == TypedArray::unknown_array_type) {
-  //  napi_status status = napi_get_typedarray_info(_env, _value,
-  //    &const_cast<TypedArray*>(this)->_type, &const_cast<TypedArray*>(this)->_length,
-  //    nullptr, nullptr, nullptr);
-  //  NAPI_THROW_IF_FAILED(_env, status, 0);
-  //}
+  if (_type == TypedArray::unknown_array_type) {
+    GetTypedArrayInfo(_env, _value, &_type, &_length, nullptr, nullptr, nullptr);
+  }
 
-  //return _length;
-  throw std::runtime_error{"TODO"};
+  return _length;
 }
 
 inline size_t TypedArray::ByteOffset() const {
-  //size_t byteOffset;
-  //napi_status status = napi_get_typedarray_info(
-  //  _env, _value, nullptr, nullptr, nullptr, nullptr, &byteOffset);
-  //NAPI_THROW_IF_FAILED(_env, status, 0);
-  //return byteOffset;
-  throw std::runtime_error{"TODO"};
+  size_t byteOffset;
+  GetTypedArrayInfo(_env, _value, nullptr, nullptr, nullptr, nullptr, &byteOffset);
+  return byteOffset;
 }
 
 inline size_t TypedArray::ByteLength() const {
@@ -1028,13 +1013,67 @@ inline size_t TypedArray::ByteLength() const {
 }
 
 inline Napi::ArrayBuffer TypedArray::ArrayBuffer() const {
-  //napi_value arrayBuffer;
-  //napi_status status = napi_get_typedarray_info(
-  //  _env, _value, nullptr, nullptr, nullptr, &arrayBuffer, nullptr);
-  //NAPI_THROW_IF_FAILED(_env, status, Napi::ArrayBuffer());
-  //return Napi::ArrayBuffer(_env, arrayBuffer);
-  throw std::runtime_error{"TODO"};
+  napi_value arrayBuffer;
+  GetTypedArrayInfo(_env, _value, nullptr, nullptr, nullptr, &arrayBuffer, nullptr);
+  return Napi::ArrayBuffer(_env, std::move(arrayBuffer));
 }
+
+inline void TypedArray::GetTypedArrayInfo(napi_env env,
+                                          const napi_value& value,
+                                          napi_typedarray_type* type,
+                                          size_t* length,
+                                          void** data,
+                                          napi_value* buffer,
+                                          size_t* byteOffset) {
+  jsi::Object typedArray{value->getObject(*env)};
+
+  if (type != nullptr) {
+    std::string name{typedArray.getPropertyAsObject(*env, "constructor").getProperty(*env, "name").getString(*env).utf8(*env)};
+    if (name == "Int8Array") {
+      *type = napi_int8_array;
+    } else if (name == "Uint8Array") {
+      *type = napi_uint8_array;
+    } else if (name == "Uint8ClampedArray") {
+      *type = napi_uint8_clamped_array;
+    } else if (name == "Int16Array") {
+      *type = napi_int16_array;
+    } else if (name == "Uint16Array") {
+      *type = napi_uint16_array;
+    } else if (name == "Int32Array") {
+      *type = napi_int32_array;
+    } else if (name == "Uint32Array") {
+      *type = napi_uint32_array;
+    } else if (name == "Float32Array") {
+      *type = napi_float32_array;
+    } else if (name == "Float64Array") {
+      *type = napi_float64_array;
+    } else {
+      *type = TypedArray::unknown_array_type;
+    }
+  }
+
+  if (length != nullptr) {
+    *length = static_cast<size_t>(typedArray.getProperty(*env, "length").asNumber());
+  }
+
+  if (byteOffset != nullptr) {
+    *byteOffset = static_cast<size_t>(typedArray.getProperty(*env, "byteOffset").asNumber());
+  }
+
+  if (data != nullptr || buffer != nullptr) {
+    jsi::ArrayBuffer _buffer{typedArray.getPropertyAsObject(*env, "buffer").getArrayBuffer(*env)};
+
+    if (data != nullptr) {
+      size_t _byteOffset{byteOffset ? *byteOffset : static_cast<size_t>(typedArray.getProperty(*env, "byteOffset").asNumber())};
+      *data = _buffer.data(*env) + _byteOffset;
+    }
+
+    if (buffer != nullptr) {
+      *buffer = {env, {*env, _buffer}};
+    }
+  }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // TypedArrayOf<T> class
@@ -1071,11 +1110,8 @@ inline TypedArrayOf<T>::TypedArrayOf() : TypedArray(), _data(nullptr) {
 
 template <typename T>
 inline TypedArrayOf<T>::TypedArrayOf(napi_env env, napi_value value)
-  : TypedArray(env, value), _data(nullptr) {
-  //napi_status status = napi_get_typedarray_info(
-  //  _env, _value, &_type, &_length, reinterpret_cast<void**>(&_data), nullptr, nullptr);
-  //NAPI_THROW_IF_FAILED_VOID(_env, status);
-  throw std::runtime_error{"TODO"};
+  : TypedArray(env, value) {
+  GetTypedArrayInfo(env, value, &_type, &_length, reinterpret_cast<void**>(&_data), nullptr, nullptr);
 }
 
 template <typename T>
@@ -1139,23 +1175,14 @@ inline Function Function::New(napi_env env,
                               Callable cb,
                               const char* utf8name,
                               void* data) {
-  //typedef decltype(cb(CallbackInfo(nullptr, nullptr))) ReturnType;
-  //typedef details::CallbackData<Callable, ReturnType> CbData;
-  //auto callbackData = new CbData({ cb, data });
+  auto function{jsi::Function::createFromHostFunction(*env, jsi::PropNameID::forUtf8(*env, utf8name), 0,
+    [cb{std::move(cb)}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+      CallbackInfo callbackInfo{&rt, thisVal, args, count, {}, data};
+      cb(callbackInfo);
+      return {};
+    })};
 
-  //napi_value value;
-  //napi_status status = CreateFunction(env,
-  //                                    utf8name,
-  //                                    CbData::Wrapper,
-  //                                    callbackData,
-  //                                    &value);
-  //if (status != napi_ok) {
-  //  delete callbackData;
-  //  NAPI_THROW_IF_FAILED(env, status, Function());
-  //}
-
-  //return Function(env, value);
-  throw std::runtime_error{"TODO"};
+  return {env, {env, std::move(function)}};
 }
 
 template <typename Callable>
@@ -1173,61 +1200,79 @@ inline Function::Function(napi_env env, napi_value value) : Object(env, value) {
 }
 
 inline Value Function::operator ()(const std::initializer_list<napi_value>& args) const {
-  //return Call(Env().Undefined(), args);
-  throw std::runtime_error{"TODO"};
+  return Call(Env().Undefined(), args);
 }
 
 inline Value Function::Call(const std::initializer_list<napi_value>& args) const {
-  //return Call(Env().Undefined(), args);
-  throw std::runtime_error{"TODO"};
+  return Call(Env().Undefined(), args);
 }
 
 inline Value Function::Call(const std::vector<napi_value>& args) const {
-  //return Call(Env().Undefined(), args);
-  throw std::runtime_error{"TODO"};
+  return Call(Env().Undefined(), args);
 }
 
 inline Value Function::Call(size_t argc, const napi_value* args) const {
-  //return Call(Env().Undefined(), argc, args);
-  throw std::runtime_error{"TODO"};
+  return Call(Env().Undefined(), argc, args);
 }
 
 inline Value Function::Call(napi_value recv, const std::initializer_list<napi_value>& args) const {
-  //return Call(recv, args.size(), args.begin());
-  throw std::runtime_error{"TODO"};
+  return Call(recv, args.size(), args.begin());
 }
 
 inline Value Function::Call(napi_value recv, const std::vector<napi_value>& args) const {
-  //return Call(recv, args.size(), args.data());
-  throw std::runtime_error{"TODO"};
+  return Call(recv, args.size(), args.data());
 }
 
 inline Value Function::Call(napi_value recv, size_t argc, const napi_value* args) const {
-  //napi_value result;
-  //napi_status status = napi_call_function(
-  //  _env, recv, _value, argc, args, &result);
-  //NAPI_THROW_IF_FAILED(_env, status, Value());
-  //return Value(_env, result);
-  throw std::runtime_error{"TODO"};
+  jsi::Value stackArgs[6];
+  std::vector<jsi::Value> heapArgs;
+  jsi::Value* argv;
+  if (argc <= std::size(stackArgs)) {
+    argv = stackArgs;
+  } else {
+    heapArgs.resize(argc);
+    argv = heapArgs.data();
+  }
+
+  for (int i = 0; i < argc; ++i) {
+    argv[i] = {*_env, *args[i]};
+  }
+
+  jsi::Function function{_value->getObject(*_env).getFunction(*_env)};
+
+  jsi::Value result{
+    recv->isUndefined()
+      ? function.call(*_env, static_cast<const jsi::Value*>(argv), argc)
+      : function.callWithThis(*_env, recv->asObject(*_env), static_cast<const jsi::Value*>(argv), argc)};
+
+  return {_env, {_env, result}};
 }
 
 inline Object Function::New(const std::initializer_list<napi_value>& args) const {
-  //return New(args.size(), args.begin());
-  throw std::runtime_error{"TODO"};
+  return New(args.size(), args.begin());
 }
 
 inline Object Function::New(const std::vector<napi_value>& args) const {
-  //return New(args.size(), args.data());
-  throw std::runtime_error{"TODO"};
+  return New(args.size(), args.data());
 }
 
 inline Object Function::New(size_t argc, const napi_value* args) const {
-  //napi_value result;
-  //napi_status status = napi_new_instance(
-  //  _env, _value, argc, args, &result);
-  //NAPI_THROW_IF_FAILED(_env, status, Object());
-  //return Object(_env, result);
-  throw std::runtime_error{"TODO"};
+  jsi::Value stackArgs[6];
+  std::vector<jsi::Value> heapArgs;
+  jsi::Value* argv;
+  if (argc <= std::size(stackArgs)) {
+    argv = stackArgs;
+  } else {
+    heapArgs.resize(argc);
+    argv = heapArgs.data();
+  }
+
+  for (int i = 0; i < argc; ++i) {
+    argv[i] = {*_env, *args[i]};
+  }
+
+  jsi::Value instance{_value->getObject(*_env).getFunction(*_env).callAsConstructor(*_env, static_cast<const jsi::Value*>(argv), argc)};
+  return {_env, {_env, instance}};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1343,7 +1388,7 @@ inline Error Error::New(napi_env env, const std::string& message) {
 inline Error::Error() : ObjectReference() {
 }
 
-inline Error::Error(napi_env env, napi_value value) : ObjectReference(env, nullptr) {
+inline Error::Error(napi_env env, napi_value value) : ObjectReference(env, {value}) {
   //if (value != nullptr) {
   //  napi_status status = napi_create_reference(env, value, 1, &_ref);
 
@@ -1351,7 +1396,7 @@ inline Error::Error(napi_env env, napi_value value) : ObjectReference(env, nullp
   //  // Don't try to construct & throw another Error instance.
   //  NAPI_FATAL_IF_FAILED(status, "Error::Error", "napi_create_reference");
   //}
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
 }
 
 inline Error::Error(Error&& other) : ObjectReference(other) {
@@ -1494,12 +1539,13 @@ inline Reference<T> Reference<T>::New(const T& value, uint32_t initialRefcount) 
   //NAPI_THROW_IF_FAILED(env, status, Reference<T>());
 
   //return Reference<T>(env, ref);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return {value.Env(), {value}};
 }
 
 
 template <typename T>
-inline Reference<T>::Reference() : _env(nullptr), _ref(nullptr), _suppressDestruct(false) {
+inline Reference<T>::Reference() : _env(nullptr), _ref{}, _suppressDestruct(false) {
 }
 
 template <typename T>
@@ -1521,9 +1567,8 @@ inline Reference<T>::~Reference() {
 
 template <typename T>
 inline Reference<T>::Reference(Reference<T>&& other)
-  : _env(other._env), _ref(other._ref), _suppressDestruct(other._suppressDestruct) {
+  : _env(other._env), _ref(std::move(other._ref)), _suppressDestruct(other._suppressDestruct) {
   other._env = nullptr;
-  other._ref = nullptr;
   other._suppressDestruct = false;
 }
 
@@ -1531,17 +1576,16 @@ template <typename T>
 inline Reference<T>& Reference<T>::operator =(Reference<T>&& other) {
   Reset();
   _env = other._env;
-  _ref = other._ref;
+  _ref = std::move(other._ref);
   _suppressDestruct = other._suppressDestruct;
   other._env = nullptr;
-  other._ref = nullptr;
   other._suppressDestruct = false;
   return *this;
 }
 
 template <typename T>
 inline Reference<T>::Reference(const Reference<T>& other)
-  : _env(other._env), _ref(nullptr), _suppressDestruct(false) {
+  : _env(other._env), _ref(other._ref), _suppressDestruct(false) {
   //HandleScope scope(_env);
 
   //napi_value value = other.Value();
@@ -1551,7 +1595,7 @@ inline Reference<T>::Reference(const Reference<T>& other)
   //  napi_status status = napi_create_reference(_env, value, 1, &_ref);
   //  NAPI_FATAL_IF_FAILED(status, "Reference<T>::Reference", "napi_create_reference");
   //}
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -1577,7 +1621,7 @@ inline Napi::Env Reference<T>::Env() const {
 
 template <typename T>
 inline bool Reference<T>::IsEmpty() const {
-  return _ref == nullptr;
+  return _ref.value->isUndefined();
 }
 
 template <typename T>
@@ -1590,7 +1634,8 @@ inline T Reference<T>::Value() const {
   //napi_status status = napi_get_reference_value(_env, _ref, &value);
   //NAPI_THROW_IF_FAILED(_env, status, T());
   //return T(_env, value);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return T{_env, _ref.value};
 }
 
 template <typename T>
@@ -1599,7 +1644,7 @@ inline uint32_t Reference<T>::Ref() {
   //napi_status status = napi_reference_ref(_env, _ref, &result);
   //NAPI_THROW_IF_FAILED(_env, status, 1);
   //return result;
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -1608,7 +1653,7 @@ inline uint32_t Reference<T>::Unref() {
   //napi_status status = napi_reference_unref(_env, _ref, &result);
   //NAPI_THROW_IF_FAILED(_env, status, 1);
   //return result;
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -1618,7 +1663,7 @@ inline void Reference<T>::Reset() {
   //  NAPI_THROW_IF_FAILED_VOID(_env, status);
   //  _ref = nullptr;
   //}
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -1631,7 +1676,9 @@ inline void Reference<T>::Reset(const T& value, uint32_t refcount) {
   //  napi_status status = napi_create_reference(_env, value, refcount, &_ref);
   //  NAPI_THROW_IF_FAILED_VOID(_env, status);
   //}
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  _env = value.Env();
+  _ref.value = value;
 }
 
 template <typename T>
@@ -1832,13 +1879,14 @@ inline Napi::Value FunctionReference::operator ()(
 }
 
 inline Napi::Value FunctionReference::Call(const std::initializer_list<napi_value>& args) const {
-  EscapableHandleScope scope(_env);
+  //EscapableHandleScope scope(_env);
   //Napi::Value result = Value().Call(args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
   //}
   //return scope.Escape(result);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return Value().Call(args);
 }
 
 inline Napi::Value FunctionReference::Call(const std::vector<napi_value>& args) const {
@@ -2194,7 +2242,8 @@ inline PropertyDescriptor::operator const napi_property_descriptor&() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo) {
+inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo)
+  : Reference<Object>(callbackInfo.Env(), {}) {
   //napi_env env = callbackInfo.Env();
   //napi_value wrapper = callbackInfo.This();
   //napi_status status;
@@ -2205,7 +2254,7 @@ inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo) {
 
   //Reference<Object>* instanceRef = instance;
   //*instanceRef = Reference<Object>(env, ref);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
 }
 
 template<typename T>
@@ -2213,11 +2262,9 @@ inline ObjectWrap<T>::~ObjectWrap() {}
 
 template<typename T>
 inline T* ObjectWrap<T>::Unwrap(Object wrapper) {
-  //T* unwrapped;
-  //napi_status status = napi_unwrap(wrapper.Env(), wrapper, reinterpret_cast<void**>(&unwrapped));
-  //NAPI_THROW_IF_FAILED(wrapper.Env(), status, nullptr);
-  //return unwrapped;
-  throw std::runtime_error{"TODO"};
+  facebook::jsi::Runtime& rt{*static_cast<napi_env>(wrapper.Env())};
+  auto native{napi_value{wrapper}->getObject(rt).getProperty(rt, "__native__")};
+  return native.isUndefined() ? nullptr : native.getObject(rt).getHostObject<T>(rt).get();
 }
 
 template <typename T>
@@ -2227,110 +2274,53 @@ ObjectWrap<T>::DefineClass(Napi::Env env,
                            const size_t props_count,
                            const napi_property_descriptor* descriptors,
                            void* data) {
-  using namespace facebook;
+  jsi::Runtime& rt{*static_cast<napi_env>(env)};
 
-  jsi::Runtime& rt{*env._env};
+  auto newTarget{std::make_shared<jsi::Value>()};
 
-  // TODO: cache this somewhere
-  constexpr auto script{"(function(constructor) { return function() { return constructor.apply(this, arguments); }; })"};
-  auto createClass = rt.evaluateJavaScript(std::make_shared<const jsi::StringBuffer>(script), "");
+  jsi::Function constructor{
+    jsi::Function::createFromHostFunction(rt, jsi::PropNameID::forUtf8(rt, utf8name), 0,
+      [newTarget, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+        CallbackInfo callbackInfo{&rt, thisVal, args, count, *newTarget, data};
+        // TODO: use prototype to wrap object? or return new host object?
+        thisVal.getObject(rt).setProperty(rt, "__native__", jsi::Object::createFromHostObject(rt, std::make_shared<T>(callbackInfo)));
+        return {};
+      })};
 
-  jsi::Function constructor{jsi::Function::createFromHostFunction(rt, jsi::PropNameID::forUtf8(rt, utf8name), 0,
-    [data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-      jsi::Object thisObj{thisVal.asObject(rt)};
+  *newTarget = {rt, constructor};
 
-      // TODO: find a mechanism to get the newTarget here.
-      CallbackInfo callbackInfo{&rt, thisVal, args, count, {}, data};
-      thisObj.setProperty(rt, "__native__", jsi::Object::createFromHostObject(rt, std::make_shared<T>(env, callbackInfo)));
-      return nullptr;
-    })};
+  jsi::Object prototype{constructor.getProperty(rt, "prototype").getObject(rt)};
 
-  jsi::Object cls{createClass.call(rt, constructor).asObject(rt)};
-  jsi::Object prototype{cls.getProperty(rt, "prototype").asObject(rt)};
+  for (int i = 0; i < props_count; ++i) {
+    const napi_property_descriptor& p{descriptors[i]};
+    jsi::PropNameID name{jsi::PropNameID::forUtf8(rt, p.utf8name)};
+    if (p.attributes & napi_static) {
+      //throw std::runtime_error{"TODO"};
+    } else {
+      jsi::Object descriptor{rt};
+      descriptor.setProperty(rt, "configurable", jsi::Value{(p.attributes & napi_configurable) != 0});
+      descriptor.setProperty(rt, "enumerable", jsi::Value{(p.attributes & napi_enumerable) != 0});
+      if (p.getter != nullptr || p.setter != nullptr) {
+        if (p.getter != nullptr) {
+          descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0, p.getter));
+        }
+        if (p.setter != nullptr) {
+          descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0, p.setter));
+        }
+      } else if (p.method != nullptr) {
+        descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0, p.method));
+      } else {
+        descriptor.setProperty(rt, "writable", jsi::Value{(p.attributes & napi_writable) != 0});
+        descriptor.setProperty(rt, "value", *p.value);
+      }
 
+      jsi::Object object{rt.global().getPropertyAsObject(rt, "Object")};
+      jsi::Function defineProperty{object.getPropertyAsFunction(rt, "defineProperty")};
+      defineProperty.callWithThis(rt, object, prototype, p.utf8name, descriptor);
+    }
+  }
 
-
-  //napi_status status;
-  //std::vector<napi_property_descriptor> props(props_count);
-
-  //// We copy the descriptors to a local array because before defining the class
-  //// we must replace static method property descriptors with value property
-  //// descriptors such that the value is a function-valued `napi_value` created
-  //// with `CreateFunction()`.
-  ////
-  //// This replacement could be made for instance methods as well, but V8 aborts
-  //// if we do that, because it expects methods defined on the prototype template
-  //// to have `FunctionTemplate`s.
-  //for (size_t index = 0; index < props_count; index++) {
-  //  props[index] = descriptors[index];
-  //  napi_property_descriptor* prop = &props[index];
-  //  if (prop->method == T::StaticMethodCallbackWrapper) {
-  //    status = CreateFunction(env,
-  //             utf8name,
-  //             prop->method,
-  //             static_cast<StaticMethodCallbackData*>(prop->data),
-  //             &(prop->value));
-  //    NAPI_THROW_IF_FAILED(env, status, Function());
-  //    prop->method = nullptr;
-  //    prop->data = nullptr;
-  //  } else if (prop->method == T::StaticVoidMethodCallbackWrapper) {
-  //    status = CreateFunction(env,
-  //             utf8name,
-  //             prop->method,
-  //             static_cast<StaticVoidMethodCallbackData*>(prop->data),
-  //             &(prop->value));
-  //    NAPI_THROW_IF_FAILED(env, status, Function());
-  //    prop->method = nullptr;
-  //    prop->data = nullptr;
-  //  }
-  //}
-
-  //napi_value value;
-  //status = napi_define_class(env,
-  //                           utf8name,
-  //                           NAPI_AUTO_LENGTH,
-  //                           T::ConstructorCallbackWrapper,
-  //                           data,
-  //                           props_count,
-  //                           props.data(),
-  //                           &value);
-  //NAPI_THROW_IF_FAILED(env, status, Function());
-
-  //// After defining the class we iterate once more over the property descriptors
-  //// and attach the data associated with accessors and instance methods to the
-  //// newly created JavaScript class.
-  //for (size_t idx = 0; idx < props_count; idx++) {
-  //  const napi_property_descriptor* prop = &props[idx];
-
-  //  if (prop->getter == T::StaticGetterCallbackWrapper ||
-  //      prop->setter == T::StaticSetterCallbackWrapper) {
-  //    status = Napi::details::AttachData(env,
-  //                        value,
-  //                        static_cast<StaticAccessorCallbackData*>(prop->data));
-  //    NAPI_THROW_IF_FAILED(env, status, Function());
-  //  } else if (prop->getter == T::InstanceGetterCallbackWrapper ||
-  //      prop->setter == T::InstanceSetterCallbackWrapper) {
-  //    status = Napi::details::AttachData(env,
-  //                        value,
-  //                        static_cast<InstanceAccessorCallbackData*>(prop->data));
-  //    NAPI_THROW_IF_FAILED(env, status, Function());
-  //  } else if (prop->method != nullptr && !(prop->attributes & napi_static)) {
-  //    if (prop->method == T::InstanceVoidMethodCallbackWrapper) {
-  //      status = Napi::details::AttachData(env,
-  //                    value,
-  //                    static_cast<InstanceVoidMethodCallbackData*>(prop->data));
-  //      NAPI_THROW_IF_FAILED(env, status, Function());
-  //    } else if (prop->method == T::InstanceMethodCallbackWrapper) {
-  //      status = Napi::details::AttachData(env,
-  //                        value,
-  //                        static_cast<InstanceMethodCallbackData*>(prop->data));
-  //      NAPI_THROW_IF_FAILED(env, status, Function());
-  //    }
-  //  }
-  //}
-
-  //return Function(env, value);
-  throw std::runtime_error{"TODO"};
+  return {&rt, {&rt, {rt, constructor}}};
 }
 
 template <typename T>
@@ -2365,14 +2355,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
+  //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.utf8name = utf8name;
-  desc.method = T::StaticVoidMethodCallbackWrapper;
-  desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.utf8name = utf8name;
+  //desc.method = T::StaticVoidMethodCallbackWrapper;
+  //desc.data = callbackData;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2381,14 +2372,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
+  //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.utf8name = utf8name;
-  desc.method = T::StaticMethodCallbackWrapper;
-  desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.utf8name = utf8name;
+  //desc.method = T::StaticMethodCallbackWrapper;
+  //desc.data = callbackData;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2397,14 +2389,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
+  //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.method = T::StaticVoidMethodCallbackWrapper;
-  desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.method = T::StaticVoidMethodCallbackWrapper;
+  //desc.data = callbackData;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2413,14 +2406,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
+  //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.method = T::StaticMethodCallbackWrapper;
-  desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.method = T::StaticMethodCallbackWrapper;
+  //desc.data = callbackData;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2430,16 +2424,17 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  StaticAccessorCallbackData* callbackData =
-    new StaticAccessorCallbackData({ getter, setter, data });
+  //StaticAccessorCallbackData* callbackData =
+  //  new StaticAccessorCallbackData({ getter, setter, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.utf8name = utf8name;
-  desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
-  desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
-  desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.utf8name = utf8name;
+  //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
+  //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
+  //desc.data = callbackData;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2449,16 +2444,17 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  StaticAccessorCallbackData* callbackData =
-    new StaticAccessorCallbackData({ getter, setter, data });
+  //StaticAccessorCallbackData* callbackData =
+  //  new StaticAccessorCallbackData({ getter, setter, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
-  desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
-  desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
+  //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
+  //desc.data = callbackData;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2467,15 +2463,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
     InstanceVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  using namespace facebook;
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.method = jsi::Function::createFromHostFunction(*_env, jsi::PropNameID::forUtf8(*_env, utf8name), 0,
+  napi_property_descriptor desc{};
+  desc.utf8name = utf8name;
+  desc.method =
     [method, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-      auto thisObj{thisVal.asObject(rt)};
-      auto native{thisObj.getPropertyAsObject(rt, "__native__").asHostObject<NativeEngine>(runtime)};
-      return native->*method(rt, );
-    });
-  desc.data = callbackData;
+      auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
+      CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
+      (instance->*method)(callbackInfo);
+      return {};
+    };
   desc.attributes = attributes;
   return desc;
 }
@@ -2486,12 +2482,14 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
     InstanceMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  InstanceMethodCallbackData* callbackData = new InstanceMethodCallbackData({ method, data });
-
-  napi_property_descriptor desc = napi_property_descriptor();
+  napi_property_descriptor desc{};
   desc.utf8name = utf8name;
-  desc.method = T::InstanceMethodCallbackWrapper;
-  desc.data = callbackData;
+  desc.method =
+    [method, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+      auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
+      CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
+      return {*napi_value{(instance->*method)(callbackInfo)}};
+    };
   desc.attributes = attributes;
   return desc;
 }
@@ -2502,15 +2500,16 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
     InstanceVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  InstanceVoidMethodCallbackData* callbackData =
-    new InstanceVoidMethodCallbackData({ method, data});
+  //InstanceVoidMethodCallbackData* callbackData =
+  //  new InstanceVoidMethodCallbackData({ method, data});
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.method = T::InstanceVoidMethodCallbackWrapper;
-  desc.data = callbackData;
-  desc.attributes = attributes;
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.method = T::InstanceVoidMethodCallbackWrapper;
+  //desc.data = data;
+  //desc.attributes = attributes;
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2519,14 +2518,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
     InstanceMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  InstanceMethodCallbackData* callbackData = new InstanceMethodCallbackData({ method, data });
+  //InstanceMethodCallbackData* callbackData = new InstanceMethodCallbackData({ method, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.method = T::InstanceMethodCallbackWrapper;
-  desc.data = callbackData;
-  desc.attributes = attributes;
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.method = T::InstanceMethodCallbackWrapper;
+  //desc.data = callbackData;
+  //desc.attributes = attributes;
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2536,14 +2536,25 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceAccessor(
     InstanceSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  InstanceAccessorCallbackData* callbackData =
-    new InstanceAccessorCallbackData({ getter, setter, data });
-
-  napi_property_descriptor desc = napi_property_descriptor();
+  napi_property_descriptor desc{};
   desc.utf8name = utf8name;
-  desc.getter = getter != nullptr ? T::InstanceGetterCallbackWrapper : nullptr;
-  desc.setter = setter != nullptr ? T::InstanceSetterCallbackWrapper : nullptr;
-  desc.data = callbackData;
+  if (getter != nullptr) {
+    desc.getter =
+      [getter, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+        auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
+        CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
+        return {*napi_value{(instance->*getter)(callbackInfo)}};
+      };
+  }
+  if (setter != nullptr) {
+    desc.setter =
+      [setter, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+        auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
+        CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
+        (instance->*setter)(callbackInfo, {&rt, {&rt, args[0]}});
+        return {};
+      };
+  }
   desc.attributes = attributes;
   return desc;
 }
@@ -2555,22 +2566,23 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceAccessor(
     InstanceSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  InstanceAccessorCallbackData* callbackData =
-    new InstanceAccessorCallbackData({ getter, setter, data });
+  //InstanceAccessorCallbackData* callbackData =
+  //  new InstanceAccessorCallbackData({ getter, setter, data });
 
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.getter = getter != nullptr ? T::InstanceGetterCallbackWrapper : nullptr;
-  desc.setter = setter != nullptr ? T::InstanceSetterCallbackWrapper : nullptr;
-  desc.data = callbackData;
-  desc.attributes = attributes;
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.getter = getter != nullptr ? T::InstanceGetterCallbackWrapper : nullptr;
+  //desc.setter = setter != nullptr ? T::InstanceSetterCallbackWrapper : nullptr;
+  //desc.data = callbackData;
+  //desc.attributes = attributes;
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
 inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticValue(const char* utf8name,
     Napi::Value value, napi_property_attributes attributes) {
-  napi_property_descriptor desc = napi_property_descriptor();
+  napi_property_descriptor desc{};
   desc.utf8name = utf8name;
   desc.value = value;
   desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
@@ -2580,11 +2592,12 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticValue(const char* utf8nam
 template <typename T>
 inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticValue(Symbol name,
     Napi::Value value, napi_property_attributes attributes) {
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.value = value;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.value = value;
+  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -2604,11 +2617,12 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceValue(
     Symbol name,
     Napi::Value value,
     napi_property_attributes attributes) {
-  napi_property_descriptor desc = napi_property_descriptor();
-  desc.name = name;
-  desc.value = value;
-  desc.attributes = attributes;
-  return desc;
+  //napi_property_descriptor desc = napi_property_descriptor();
+  //desc.name = name;
+  //desc.value = value;
+  //desc.attributes = attributes;
+  //return desc;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>

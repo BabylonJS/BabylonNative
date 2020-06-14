@@ -44,12 +44,20 @@ namespace details {
       return &_value;
     }
 
-    facebook::jsi::Value& operator *() {
+    facebook::jsi::Value& operator *() & {
       return _value;
     }
 
-    const facebook::jsi::Value& operator *() const {
+    const facebook::jsi::Value& operator *() const & {
       return _value;
+    }
+
+    facebook::jsi::Value&& operator *() && {
+      return std::move(_value);
+    }
+
+    facebook::jsi::Runtime& Runtime() const {
+      return *_rt;
     }
 
   private:
@@ -62,7 +70,7 @@ using napi_env = facebook::jsi::Runtime*;
 using napi_value = details::Value;
 
 // TODO
-using napi_ref = void*;
+using napi_ref = struct { napi_value value; };
 using napi_handle_scope = void*;
 using napi_escapable_handle_scope = void*;
 using napi_deferred = void*;
@@ -102,12 +110,12 @@ typedef enum {
 } napi_typedarray_type;
 
 typedef struct {
+  const char* utf8name;
+  facebook::jsi::HostFunctionType method;
+  facebook::jsi::HostFunctionType getter;
+  facebook::jsi::HostFunctionType setter;
+  napi_value value;
   napi_property_attributes attributes;
-  void* data;
-  facebook::jsi::Value method;
-  facebook::jsi::Value getter;
-  facebook::jsi::Value setter;
-  facebook::jsi::Value value;
 } napi_property_descriptor;
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known good version)
@@ -823,8 +831,8 @@ namespace Napi {
 
   protected:
     /// !cond INTERNAL
-    napi_typedarray_type _type;
-    size_t _length;
+    mutable napi_typedarray_type _type;
+    mutable size_t _length;
 
     TypedArray(napi_env env, napi_value value, napi_typedarray_type type, size_t length);
 
@@ -846,6 +854,14 @@ namespace Napi {
         : std::is_same<T, double>::value ? napi_float64_array
         : unknown_array_type;
     }
+
+    static void GetTypedArrayInfo(napi_env env,
+                                  const napi_value& value,
+                                  napi_typedarray_type* type,
+                                  size_t* length,
+                                  void** data,
+                                  napi_value* arraybuffer,
+                                  size_t* byte_offset);
     /// !endcond
   };
 
@@ -1464,7 +1480,7 @@ namespace Napi {
   ///         Napi::Value DoSomething(const Napi::CallbackInfo& info);
   ///     }
   template <typename T>
-  class ObjectWrap : public Reference<Object> {
+  class ObjectWrap : public Reference<Object>, public facebook::jsi::HostObject {
   public:
     ObjectWrap(const CallbackInfo& callbackInfo);
     virtual ~ObjectWrap();

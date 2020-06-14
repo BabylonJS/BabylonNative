@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(napi)
 
+set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
+
 add_subdirectory(ReactCommon/jsi)
 
 # --- chakra-jsi --- START
