@@ -26,11 +26,11 @@ template <typename T, typename Finalizer>
 class ExternalWithFinalizer : public External<T> {
 public:
   ExternalWithFinalizer(napi_env env, T* data, Finalizer finalizer)
-    : External{env, data}, _finalizer{std::move(finalizer)} {
+    : External<T>{env, data}, _finalizer{std::move(finalizer)} {
   }
 
   ~ExternalWithFinalizer() {
-    _finalizer(_env, _data);
+    _finalizer(this->_env, this->_data);
   }
 
 private:
@@ -41,11 +41,11 @@ template <typename T, typename Finalizer, typename Hint>
 class ExternalWithFinalizerAndHint : public External<T> {
 public:
   ExternalWithFinalizerAndHint(napi_env env, T* data, Finalizer finalizer, Hint* hint)
-    : External{env, data}, _finalizer{std::move(finalizer)}, _hint{hint} {
+    : External<T>{env, data}, _finalizer{std::move(finalizer)}, _hint{hint} {
   }
 
   ~ExternalWithFinalizerAndHint() {
-    _finalizer(_env, _data, _hint);
+    _finalizer(this->_env, this->_data, _hint);
   }
 
 private:
@@ -683,7 +683,7 @@ inline External<T>::External(napi_env env, napi_value value) : Value(env, value)
 
 template <typename T>
 inline T* External<T>::Data() const {
-  return _value->getObject(*_env).getHostObject<details::External<T>>(*_env)->Data();
+  return _value->getObject(*_env).template getHostObject<details::External<T>>(*_env)->Data();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2278,14 +2278,18 @@ ObjectWrap<T>::DefineClass(Napi::Env env,
 
   auto newTarget{std::make_shared<jsi::Value>()};
 
-  jsi::Function constructor{
+  // TODO: Cache this somewhere?
+  auto constructorFactoryCode = std::make_shared<const jsi::StringBuffer>("(function(constructor) { return function() { return constructor.apply(this, arguments); }; })");
+  auto createConstructor = rt.evaluateJavaScript(std::move(constructorFactoryCode), "").asObject(rt).asFunction(rt);
+
+  jsi::Function constructor{createConstructor.call(rt,
     jsi::Function::createFromHostFunction(rt, jsi::PropNameID::forUtf8(rt, utf8name), 0,
       [newTarget, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
         CallbackInfo callbackInfo{&rt, thisVal, args, count, *newTarget, data};
         // TODO: use prototype to wrap object? or return new host object?
         thisVal.getObject(rt).setProperty(rt, "__native__", jsi::Object::createFromHostObject(rt, std::make_shared<T>(callbackInfo)));
         return {};
-      })};
+      })).getObject(rt).getFunction(rt)};
 
   *newTarget = {rt, constructor};
 
