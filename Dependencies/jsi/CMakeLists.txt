@@ -6,11 +6,17 @@
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_library(jsi
-        jsi.cpp)
+set(SOURCES
+    "include/jsi/instrumentation.h"
+    "include/jsi/jsi.h"
+    "include/jsi/jsi-inl.h"
+    "source/jsi.cpp")
 
-include_directories(..)
+add_library(jsi ${SOURCES})
 
+target_include_directories(jsi
+    PRIVATE "source"
+    PUBLIC "include")
 
 set(jsi_compile_flags "")
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
@@ -22,3 +28,5 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   list(APPEND jsi_compile_flags "/EHsc")
 endif()
 target_compile_options(jsi PUBLIC ${jsi_compile_flags})
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

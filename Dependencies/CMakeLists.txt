@@ -65,12 +65,13 @@ set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 # -------------------------------- ios-cmake --------------------------------
 # Nothing to do here.
 
-# -------------------------------- napi --------------------------------
-# Dependencies: none
-#add_subdirectory(napi)
-add_subdirectory(napi-jsi)
-set_property(TARGET chakra-jsi PROPERTY FOLDER Dependencies)
+# -------------------------------- jsi --------------------------------
+add_subdirectory(jsi)
 set_property(TARGET jsi PROPERTY FOLDER Dependencies)
+
+# -------------------------------- napi-jsi --------------------------------
+# Dependencies: jsi
+add_subdirectory(napi-jsi)
 set_property(TARGET napi PROPERTY FOLDER Dependencies)
 
 # -------------------------------- SPIRV-Cross --------------------------------
