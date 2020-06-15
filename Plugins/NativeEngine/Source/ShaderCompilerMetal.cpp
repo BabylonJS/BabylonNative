@@ -41,6 +41,22 @@ namespace Babylon
                 compiler->set_name(resource.id, "_mtl_u");
             }
 
+            // Disable location for varying stage to force compiler to do it with variable names
+            if (stage == EShLangVertex)
+            {
+                for (auto& output : resources.stage_outputs)
+                {
+                    compiler->set_decoration(output.id, spv::DecorationLocation, -1);
+                }
+            }
+            else
+            {
+              for (auto& input : resources.stage_inputs)
+                {
+                    compiler->set_decoration(input.id, spv::DecorationLocation, -1);
+                }
+            }
+            
             // rename textures without the 'texture' suffix so it's bindable from .js
             for (auto& resource : resources.separate_images)
             {
