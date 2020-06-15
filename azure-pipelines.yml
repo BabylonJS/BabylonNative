@@ -257,6 +257,7 @@ jobs:
     displayName: 'Build androidJSC'
 
 - job: Ubuntu_Clang8_JSC
+  timeoutInMinutes: 20
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -278,8 +279,23 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
       ninja
     displayName: 'Build X11'
+  - script: |
+      export DISPLAY=:99
+      Xvfb :99 -screen 0 1600x900x24 &
+      sleep 3
+      cd build/Apps/ValidationTests
+      mkdir Errors
+      mkdir Results
+      ./ValidationTests
+    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_Clang8_JSC Rendered Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Ubuntu_Clang8_JSC Results'
     
 - job: Ubuntu_GCC9_JSC
+  timeoutInMinutes: 20
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -301,4 +317,17 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
       ninja
     displayName: 'Build X11'
-
+  - script: |
+      export DISPLAY=:99
+      Xvfb :99 -screen 0 1600x900x24 &
+      sleep 3
+      cd build/Apps/ValidationTests
+      mkdir Errors
+      mkdir Results
+      ./ValidationTests
+    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
