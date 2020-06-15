@@ -92,6 +92,7 @@
 
 int frameCount = 0;
 CVPixelBufferRef frameBuffer = nullptr;
+
 - (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
 {
     // Get pixel buffer info
@@ -149,9 +150,9 @@ CVPixelBufferRef frameBuffer = nullptr;
         , transformOrientation.vector.z
         , transformOrientation.vector.w};
     
-    frameView.Space.Pose.Position = { transform.columns[0][3]
-        , transform.columns[1][3]
-        , transform.columns[2][3]};
+    frameView.Space.Pose.Position = { -1 * transform.columns[3][0]
+        , transform.columns[3][1]
+        , transform.columns[3][2]};
     
     auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:[self viewportSize] zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
     float a = projection.columns[0][0];
