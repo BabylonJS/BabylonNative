@@ -25,7 +25,7 @@
     self = [super init];
     self->activeFrameViews = activeFrameViews;
     
-    CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, 0, graphicsContext, 0, &textureCache);
+    CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, graphicsContext, nil, &textureCache);
     if (err)
     {
         throw std::runtime_error{"Unable to create Texture Cache"};
@@ -36,13 +36,13 @@
 
 - (id<MTLTexture>)updateCapturedTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex
 {
-    /*CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (ret != kCVReturnSuccess)
     {
         return {};
     }
 
-    @try*/
+    @try
     {
         width = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
         height = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
@@ -50,17 +50,18 @@
         auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
         id<MTLTexture> mtlTexture = nil;
         CVMetalTextureRef texture;
-        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, NULL, pixelFormat, width, height, planeIndex, &texture);
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nullptr, pixelFormat, width, height, planeIndex, &texture);
         if (status == kCVReturnSuccess)
         {
             mtlTexture = CVMetalTextureGetTexture(texture);
         }
+        
         return mtlTexture;
     }
-    /*@finally
+    @finally
     {
         CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    }*/
+    }
 }
 
 - (UIInterfaceOrientation)orientation
@@ -89,16 +90,50 @@
     return viewport_size;
 }
 
+int frameCount = 0;
+CVPixelBufferRef frameBuffer = nullptr;
 - (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
 {
-    CVPixelBufferRef pixel_buffer = frame.capturedImage;
-    if (CVPixelBufferGetPlaneCount(pixel_buffer) < 2)
+    // Get pixel buffer info
+    CVPixelBufferLockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
+    int bufferWidth = (int)CVPixelBufferGetWidth(frame.capturedImage);
+    int bufferHeight = (int)CVPixelBufferGetHeight(frame.capturedImage);
+    auto format = CVPixelBufferGetPixelFormatType(frame.capturedImage);
+    
+    if (CVPixelBufferGetPlaneCount(frame.capturedImage) < 2)
     {
+        CVPixelBufferUnlockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
         return;
     }
+
+    if (frameBuffer == nullptr || bufferWidth != (int)CVPixelBufferGetWidth(frameBuffer) || bufferHeight != (int)CVPixelBufferGetHeight(frameBuffer))
+    {
+        if (frameBuffer != nullptr)
+        {
+            CVPixelBufferRelease(frameBuffer);
+            frameBuffer = nullptr;
+        }
+        
+        auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                     [NSNumber numberWithBool:YES], kCVPixelBufferMetalCompatibilityKey, nil];
+        CVPixelBufferCreate(kCFAllocatorDefault, bufferWidth, bufferHeight, format, (__bridge CFDictionaryRef)attributes, &frameBuffer);
+    }
     
-    _cameraTextureY = [self updateCapturedTexture:pixel_buffer plane:0];
-    _cameraTextureCbCr = [self updateCapturedTexture:pixel_buffer plane:1];
+    CVPixelBufferLockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
+
+    void* ydestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 0);
+    void* ysrcPlane = CVPixelBufferGetBaseAddressOfPlane(frame.capturedImage, 0);
+    memcpy(ydestPlane, ysrcPlane, bufferWidth * bufferHeight);
+    
+    auto uvdestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 1);
+    auto uvsrcPlane = CVPixelBufferGetBaseAddressOfPlane(frame.capturedImage, 1);
+    memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight/2);
+
+    CVPixelBufferUnlockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferUnlockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
+   
+    _cameraTextureY = [self updateCapturedTexture:frameBuffer plane:0];
+    _cameraTextureCbCr = [self updateCapturedTexture:frameBuffer plane:1];
     [self updateCamera:frame.camera];
 }
 
@@ -126,23 +161,6 @@
     
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
-}
-
-- (void)triggerProgrammaticCapture:(id<MTLDevice>)captureObject
-{
-    MTLCaptureManager* captureManager = [MTLCaptureManager sharedCaptureManager];
-    if (@available(iOS 13.0, *)) {
-        MTLCaptureDescriptor* captureDescriptor = [[MTLCaptureDescriptor alloc] init];
-        captureDescriptor.captureObject = captureObject;
-
-        NSError *error;
-        if (![captureManager startCaptureWithDescriptor: captureDescriptor error:&error])
-        {
-            NSLog(@"Failed to start capture, error %@", error);
-        }
-    } else {
-        // Fallback on earlier versions
-    }
 }
 
 @end
