@@ -10,6 +10,24 @@
 @property (readonly) id<MTLTexture> cameraTextureCbCr;
 @end
 
+namespace
+{
+    typedef struct
+    {
+        vector_float2 position;
+        vector_float2 uv;
+        vector_float2 cameraUV;
+    } XRVertex;
+
+    static XRVertex triangleVertices[] =
+    {
+        // 2D positions,    UV   camera UV
+        { { -3, -1 }, { -1, 0 }, {0, 0} },
+        { {  1,  3 }, {  1, 2 }, {0, 0} },
+        { {  1, -1 }, {  1, 0 }, {0, 0} },
+    };
+}
+
 @implementation SessionDelegate
 {
     int width;
@@ -132,6 +150,16 @@ CVPixelBufferRef frameBuffer = nullptr;
 
     CVPixelBufferUnlockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
     CVPixelBufferUnlockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
+    
+    // When the orientation or viewport size changes re-run this routine.
+    // Loop over triangleVerts, apply transform to UVs
+    auto transform = [frame displayTransformForOrientation:[self orientation] viewportSize:[self viewportSize]];
+    for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
+    {
+        CGPoint transformedPoint = CGPointApplyAffineTransform({triangleVertices[i].uv[0], triangleVertices[i].uv[1]}, transform);
+        triangleVertices[i].cameraUV[0] = transformedPoint.x;
+        triangleVertices[i].cameraUV[1] = 1 - transformedPoint.y;
+    }
    
     _cameraTextureY = [self updateCapturedTexture:frameBuffer plane:0];
     _cameraTextureCbCr = [self updateCapturedTexture:frameBuffer plane:1];
@@ -146,11 +174,11 @@ CVPixelBufferRef frameBuffer = nullptr;
     auto transform = [camera transform];
     auto transformOrientation = simd_quaternion(transform);
     frameView.Space.Pose.Orientation = {transformOrientation.vector.x
-        , transformOrientation.vector.y
-        , transformOrientation.vector.z
+        , -transformOrientation.vector.y
+        , -transformOrientation.vector.z
         , transformOrientation.vector.w};
     
-    frameView.Space.Pose.Position = { -1 * transform.columns[3][0]
+    frameView.Space.Pose.Position = { -transform.columns[3][0]
         , transform.columns[3][1]
         , transform.columns[3][2]};
     
@@ -169,20 +197,6 @@ namespace xr
 {
     namespace
     {
-        typedef struct
-        {
-            vector_float2 position;
-            vector_float2 uv;
-        } XRVertex;
-
-        static const XRVertex triangleVertices[] =
-        {
-            // 2D positions,    UV
-            { { -3, -1 }, { -1, 0 } },
-            { {  1,  3 }, {  1, 2 } },
-            { {  1, -1 }, {  1, 0 } },
-        };
-
         const char* shaderSource = R"(
             #include <metal_stdlib>
             #include <simd/simd.h>
@@ -195,12 +209,14 @@ namespace xr
             {
                 vector_float2 position;
                 vector_float2 uv;
+                vector_float2 cameraUV;
             } XRVertex;
 
             typedef struct
             {
                 float4 position [[position]];
                 float2 uv;
+                float2 cameraUV;
             } RasterizerData;
 
             vertex RasterizerData
@@ -210,6 +226,7 @@ namespace xr
                 RasterizerData out;
                 out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
                 out.uv = vertices[vertexID].uv;
+                out.cameraUV = vertices[vertexID].cameraUV;
                 return out;
             }
 
@@ -226,8 +243,8 @@ namespace xr
                     return babylonSample;
                 }
     
-                const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.uv);
-                const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.uv);
+                const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.cameraUV);
+                const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.cameraUV);
 
                 const float4x4 ycbcrToRGBTransform = float4x4(
                     float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
@@ -292,15 +309,16 @@ namespace xr
             UIView* MainView = (UIView*)window;
             
             dispatch_sync(dispatch_get_main_queue(), ^{
-                xrView = [[MTKView alloc] initWithFrame:[MainView bounds] device:MetalDevice];
+                auto guide = MainView.safeAreaLayoutGuide;
+                xrView = [[MTKView alloc] initWithFrame:guide.layoutFrame device:MetalDevice];
                 [MainView addSubview:xrView];
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
                 MetalLayer = (CAMetalLayer *)xrView.layer;
                 MetalLayer.device = MetalDevice;
                 auto scale = UIScreen.mainScreen.scale;
-                viewportSize.x = [MainView bounds].size.width * scale;
-                viewportSize.y = [MainView bounds].size.height * scale;
+                viewportSize.x = guide.layoutFrame.size.width * scale;
+                viewportSize.y = guide.layoutFrame.size.height * scale;
             });
 
             configuration = [ARWorldTrackingConfiguration new];
