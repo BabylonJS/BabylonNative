@@ -1,11 +1,11 @@
 Xcode provides an excellent toolchain to capture and debug Metal rendered frames for iOS and MacOS.
 This quick tutorial was captured on iOS simulator. It works exactly the same for BabylonNative MacOS.
 
-![SimulatorFrameToCapture](Images/FrameCaptureiOS/SimulatorFrameToCapture.png)
+![SimulatorFrameToCapture](Images/FrameCaptureiOS/SimulatorFrameToCapture.jpg)
 
 Once BabylonNative is running on the simulator, get back to Xcode and capture the frame using this menu option
 
-![CaptureFrameMenu](Images/FrameCaptureiOS/CaptureFrameMenu.png)
+![CaptureFrameMenu](Images/FrameCaptureiOS/CaptureFrameMenu.jpg)
 
 After a couple seconds, you will have a view that looks like this:
 
@@ -21,6 +21,8 @@ As RenderDoc, you debug by inspectin draw calls; where resources are commited to
 Inputs streams (positions, UV, normals) are transformed by the vertex shader to produce (usualy) screen space streams.
 Those streams are used to render triangles where each pixel passes trough a fragment shader that returns a color.
 Vertex and fragment shaders processing are parametrized by uniforms (matrices that convert from world space to screen space, light position and orientation, ...)
+
+![CaptureDrawCall](Images/FrameCaptureiOS/CaptureDrawCall.jpg)
 
 When a rendering goes wrong, one or multiple parts of that pipeline are also wrong.
 If nothing is displayed, check you have all the resources (shaders, vertex buffer, textures,...) are bound.
@@ -67,25 +69,6 @@ The texture is also visible in the debugger.
 
 ![Texture](Images/FrameCaptureiOS/Texture.jpg)
 
-
-
-![CaptureDrawCall](Images/FrameCaptureiOS/CaptureDrawCall.png)
-
-Once BabylonNative is running on the simulator
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Once you are done debugging a frame, you can stop the application or continue execution and capture another frame.
 To do so, release the capture:
-![ReleaseFrameCapture](Images/FrameCaptureiOS/ReleaseFrameCapture.png)
+![ReleaseFrameCapture](Images/FrameCaptureiOS/ReleaseFrameCapture.jpg)
