@@ -166,22 +166,68 @@ CVPixelBufferRef frameBuffer = nullptr;
     [self updateCamera:frame.camera];
 }
 
+-(void)updateDisplayOrientedPose:(ARCamera*)camera
+{
+    auto& frameView = activeFrameViews->at(0);
+    UIInterfaceOrientation orientation = [self orientation];
+    auto transform = [camera transform];
+    auto rawTransformOrientation = simd_quaternion(transform);
+    
+    // ARKit camera transform is always a local right hand coordinate space WRT landscape right orientation
+    // see (https://developer.apple.com/documentation/arkit/arcamera/2866108-transform)
+    if (orientation == UIInterfaceOrientationLandscapeRight)
+    {
+        frameView.Space.Pose.Orientation = {-rawTransformOrientation.vector.x
+            , rawTransformOrientation.vector.y
+            , -rawTransformOrientation.vector.z
+            , rawTransformOrientation.vector.w};
+        
+        frameView.Space.Pose.Position = { transform.columns[3][0]
+            , -transform.columns[3][1]
+            , transform.columns[3][2] };
+    }
+    else if (orientation == UIInterfaceOrientationLandscapeLeft)
+    {
+        frameView.Space.Pose.Orientation = {rawTransformOrientation.vector.x
+            , -rawTransformOrientation.vector.y
+            , -rawTransformOrientation.vector.z
+            , rawTransformOrientation.vector.w};
+        
+        frameView.Space.Pose.Position = { -transform.columns[3][0]
+            , transform.columns[3][1]
+            , transform.columns[3][2]} ;
+    }
+    else if (orientation == UIInterfaceOrientationPortraitUpsideDown)
+    {
+        frameView.Space.Pose.Orientation = {rawTransformOrientation.vector.y
+            , rawTransformOrientation.vector.x
+            , -rawTransformOrientation.vector.z
+            , rawTransformOrientation.vector.w};
+        
+        frameView.Space.Pose.Position = { -transform.columns[3][1]
+            , -transform.columns[3][0]
+            , transform.columns[3][2] };
+    }
+    if (orientation == UIInterfaceOrientationPortrait)
+    {
+        frameView.Space.Pose.Orientation = {-rawTransformOrientation.vector.y
+            , -rawTransformOrientation.vector.x
+            , -rawTransformOrientation.vector.z
+            , rawTransformOrientation.vector.w} ;
+        
+        frameView.Space.Pose.Position = { transform.columns[3][1]
+            , transform.columns[3][0]
+            , transform.columns[3][2] };
+    }
+}
+
 - (void)updateCamera:(ARCamera*)camera
 {
     auto& frameView = activeFrameViews->at(0);
     
     UIInterfaceOrientation orientation = [self orientation];
-    auto transform = [camera transform];
-    auto transformOrientation = simd_quaternion(transform);
-    frameView.Space.Pose.Orientation = {transformOrientation.vector.x
-        , -transformOrientation.vector.y
-        , -transformOrientation.vector.z
-        , transformOrientation.vector.w};
-    
-    frameView.Space.Pose.Position = { -transform.columns[3][0]
-        , transform.columns[3][1]
-        , transform.columns[3][2]};
-    
+    [self updateDisplayOrientedPose:(camera)];
+       
     auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:[self viewportSize] zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
     float a = projection.columns[0][0];
     float b = projection.columns[1][1];
