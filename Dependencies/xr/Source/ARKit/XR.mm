@@ -30,8 +30,8 @@ namespace
 
 @implementation SessionDelegate
 {
-    int width;
-    int height;
+    int arCameraWidth;
+    int arCameraHeight;
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
     CVMetalTextureCacheRef textureCache;
     id<MTLTexture> _cameraTextureY;
@@ -62,13 +62,13 @@ namespace
 
     @try
     {
-        width = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
-        height = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+        arCameraWidth = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        arCameraHeight = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
             
         auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
         id<MTLTexture> mtlTexture = nil;
         CVMetalTextureRef texture;
-        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nullptr, pixelFormat, width, height, planeIndex, &texture);
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nullptr, pixelFormat, arCameraWidth, arCameraHeight, planeIndex, &texture);
         if (status == kCVReturnSuccess)
         {
             mtlTexture = CVMetalTextureGetTexture(texture);
@@ -90,19 +90,20 @@ namespace
 - (CGSize)viewportSize
 {
     UIInterfaceOrientation orientation = [self orientation];
-    CGSize viewport_size = CGSizeMake(width, height);
+    
+    CGSize viewport_size = CGSizeMake(arCameraWidth, arCameraHeight);
     if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
     {
-        if (width > height)
+        if (arCameraWidth > arCameraHeight)
         {
-            viewport_size = CGSizeMake(height, width);
+            viewport_size = CGSizeMake(arCameraHeight, arCameraWidth);
         }
     }
     else
     {
-        if (width < height)
+        if (arCameraWidth < arCameraHeight)
         {
-            viewport_size = CGSizeMake(height, width);
+            viewport_size = CGSizeMake(arCameraHeight, arCameraWidth);
         }
     }
     return viewport_size;
@@ -153,6 +154,8 @@ CVPixelBufferRef frameBuffer = nullptr;
     
     // When the orientation or viewport size changes re-run this routine.
     // Loop over triangleVerts, apply transform to UVs
+    //auto frameSize = activeFrameViews->front().ColorTextureSize;
+    //CGSize viewport_size = CGSizeMake(frameSize.Width, frameSize.Height);
     auto transform = [frame displayTransformForOrientation:[self orientation] viewportSize:[self viewportSize]];
     for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
     {
@@ -170,55 +173,42 @@ CVPixelBufferRef frameBuffer = nullptr;
 {
     auto& frameView = activeFrameViews->at(0);
     UIInterfaceOrientation orientation = [self orientation];
-    auto transform = [camera transform];
-    auto rawTransformOrientation = simd_quaternion(transform);
+    simd_float4x4 transform = [camera transform];
+    simd_quatf displayOrientationQuat;
     
     // ARKit camera transform is always a local right hand coordinate space WRT landscape right orientation
     // see (https://developer.apple.com/documentation/arkit/arcamera/2866108-transform)
     if (orientation == UIInterfaceOrientationLandscapeRight)
     {
-        frameView.Space.Pose.Orientation = {-rawTransformOrientation.vector.x
-            , rawTransformOrientation.vector.y
-            , -rawTransformOrientation.vector.z
-            , rawTransformOrientation.vector.w};
-        
-        frameView.Space.Pose.Position = { transform.columns[3][0]
-            , -transform.columns[3][1]
-            , transform.columns[3][2] };
+        displayOrientationQuat = simd_quaternion((float)M_PI, simd_make_float3(0, 0, 1));
     }
     else if (orientation == UIInterfaceOrientationLandscapeLeft)
     {
-        frameView.Space.Pose.Orientation = {rawTransformOrientation.vector.x
-            , -rawTransformOrientation.vector.y
-            , -rawTransformOrientation.vector.z
-            , rawTransformOrientation.vector.w};
-        
-        frameView.Space.Pose.Position = { -transform.columns[3][0]
-            , transform.columns[3][1]
-            , transform.columns[3][2]} ;
+        displayOrientationQuat = simd_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
     }
     else if (orientation == UIInterfaceOrientationPortraitUpsideDown)
     {
-        frameView.Space.Pose.Orientation = {rawTransformOrientation.vector.y
-            , rawTransformOrientation.vector.x
-            , -rawTransformOrientation.vector.z
-            , rawTransformOrientation.vector.w};
-        
-        frameView.Space.Pose.Position = { -transform.columns[3][1]
-            , -transform.columns[3][0]
-            , transform.columns[3][2] };
+        displayOrientationQuat = simd_quaternion((float)M_PI * .5f, simd_make_float3(0, 0, 1));
     }
-    if (orientation == UIInterfaceOrientationPortrait)
+    else if (orientation == UIInterfaceOrientationPortrait)
     {
-        frameView.Space.Pose.Orientation = {-rawTransformOrientation.vector.y
-            , -rawTransformOrientation.vector.x
-            , -rawTransformOrientation.vector.z
-            , rawTransformOrientation.vector.w} ;
-        
-        frameView.Space.Pose.Position = { transform.columns[3][1]
-            , transform.columns[3][0]
-            , transform.columns[3][2] };
+        displayOrientationQuat = simd_quaternion((float)M_PI * 1.5f, simd_make_float3(0, 0, 1));
     }
+    
+    simd_float4x4 rotationMatrix = simd_matrix4x4(displayOrientationQuat);
+    auto displayOrientedTransform = simd_mul(transform, rotationMatrix);
+    auto displayOrientation = simd_quaternion(displayOrientedTransform);
+    
+    // Set the orientation of the camera, the Y and Z values of the quaternion need to be inverted.
+    frameView.Space.Pose.Orientation = { displayOrientation.vector.x
+        , -1 * displayOrientation.vector.y
+        , -1 * displayOrientation.vector.z
+        , displayOrientation.vector.w};
+    
+    // Set the translation, the X value must be inverted.
+    frameView.Space.Pose.Position = { -1 * displayOrientedTransform.columns[3][0]
+        , displayOrientedTransform.columns[3][1]
+        , displayOrientedTransform.columns[3][2] };
 }
 
 - (void)updateCamera:(ARCamera*)camera
