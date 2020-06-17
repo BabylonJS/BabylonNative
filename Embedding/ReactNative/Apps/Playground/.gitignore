@@ -63,4 +63,6 @@ buck-out/
 # CocoaPods
 /ios/Pods/
 
-!node_modules/react-native-babylon
+!node_modules/@babylonjs
+node_modules/@babylonjs/*
+!node_modules/@babylonjs/react-native

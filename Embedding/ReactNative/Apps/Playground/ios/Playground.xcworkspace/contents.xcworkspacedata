@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:../node_modules/@babylonjs/react-native/ios/ReactNativeBabylon.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:Playground.xcodeproj">
    </FileRef>
    <FileRef

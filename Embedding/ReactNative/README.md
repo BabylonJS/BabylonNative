@@ -41,6 +41,13 @@ cd Apps/Playground
 yarn install
 ```
 
+For iOS, CocoaPods are also used, and these must be installed.
+
+```
+cd Apps/Playground/ios
+pod install --repo-update
+```
+
 ### **Configuring a Mac Dev Environment**
 
 **Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
@@ -75,19 +82,34 @@ export ANDROID_AVD_HOME=~/.android/avd
 
 On either Mac or Windows, NPX is used to build and run the Playground sample/test app from the command line. Open a command prompt at the root of the BabylonReactNative repo if you don't have one already open.
 
+#### Android
+
 ```
 cd Apps/Playground
 npx react-native run-android
 ```
 
-After having run the above command, you can also open `Apps/Playground/android` in Android Studio and run the app from there.
+After having run the above commands, you can also open `Apps/Playground/android` in Android Studio and run the app from there.
+
+#### iOS
+
+```
+pushd Apps/Playground/ios
+cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF .
+popd
+
+cd Apps/Playground
+npx react-native run-ios
+```
+
+After having run the above commands, you can also open `Apps/Playground/ios/Playground.xcworkspace` in XCode and run the app from there.
 
 ### **Building the NPM Package**
 
 If you want to test using a local build of the NPM package with your own React Native app, you can do so with the `npm pack` command on either Mac or Windows.
 
 ```
-cd Apps/Playground/node_modules/react-native-babylon
+cd Apps/Playground/node_modules/@babylonjs/react-native
 npm pack
 ```
 

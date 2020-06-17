@@ -18,6 +18,33 @@
 		2D02E4BF1E0B4AB3006451C7 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		2DCD954D1E0B4F2C00145EB5 /* PlaygroundTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* PlaygroundTests.m */; };
 		76A5C9314E69F53B9308D45C /* libPods-PlaygroundTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A27E99BCBBA16817330523FA /* libPods-PlaygroundTests.a */; };
+		8A992A76249035EB000ACD23 /* libBabylonNative.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A75249035EB000ACD23 /* libBabylonNative.a */; };
+		8A992A7824903631000ACD23 /* libnapi.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A7724903631000ACD23 /* libnapi.a */; };
+		8A992A7E2491A0F3000ACD23 /* libJsRuntime.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A7D2491A0F3000ACD23 /* libJsRuntime.a */; };
+		8A992A802491A296000ACD23 /* libNativeInput.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A7F2491A296000ACD23 /* libNativeInput.a */; };
+		8A992A822491A29E000ACD23 /* libNativeEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A812491A29E000ACD23 /* libNativeEngine.a */; };
+		8A992A842491A2A8000ACD23 /* libNativeWindow.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A832491A2A8000ACD23 /* libNativeWindow.a */; };
+		8A992A862491A2B3000ACD23 /* libWindow.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A852491A2B3000ACD23 /* libWindow.a */; };
+		8A992A9E2491A348000ACD23 /* libbimgd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A9D2491A348000ACD23 /* libbimgd.a */; };
+		8A992AA62491A52A000ACD23 /* libastc-codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AA52491A52A000ACD23 /* libastc-codec.a */; };
+		8A992AA82491A52A000ACD23 /* libastc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AA72491A52A000ACD23 /* libastc.a */; };
+		8A992AAE2491AEB9000ACD23 /* libbxd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AAD2491AEB9000ACD23 /* libbxd.a */; };
+		8A992AB02491AF28000ACD23 /* libglslang.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AAF2491AF28000ACD23 /* libglslang.a */; };
+		8A992AB22491AF4D000ACD23 /* libOSDependent.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB12491AF4D000ACD23 /* libOSDependent.a */; };
+		8A992AB42491AF71000ACD23 /* libOGLCompiler.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB32491AF71000ACD23 /* libOGLCompiler.a */; };
+		8A992AB62491B00C000ACD23 /* libSPIRV.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB52491B00C000ACD23 /* libSPIRV.a */; };
+		8A992AB82491B020000ACD23 /* libspirv-cross-msl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB72491B020000ACD23 /* libspirv-cross-msl.a */; };
+		8A992ABA2491B074000ACD23 /* libpvrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB92491B074000ACD23 /* libpvrtc.a */; };
+		8A992ABC2491B07E000ACD23 /* libnvtt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ABB2491B07E000ACD23 /* libnvtt.a */; };
+		8A992ABE2491B088000ACD23 /* libsquish.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ABD2491B088000ACD23 /* libsquish.a */; };
+		8A992AC02491B08E000ACD23 /* libiqa.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ABF2491B08E000ACD23 /* libiqa.a */; };
+		8A992AC22491B09A000ACD23 /* libetc1.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AC12491B09A000ACD23 /* libetc1.a */; };
+		8A992AC42491B09A000ACD23 /* libetc2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AC32491B09A000ACD23 /* libetc2.a */; };
+		8A992ACA2491B0C9000ACD23 /* libbgfxd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AC92491B0C9000ACD23 /* libbgfxd.a */; };
+		8A992ACE2491B10E000ACD23 /* libedtaa3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ACD2491B10E000ACD23 /* libedtaa3.a */; };
+		8A992AD02491B132000ACD23 /* libspirv-cross-hlsl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ACF2491B132000ACD23 /* libspirv-cross-hlsl.a */; };
+		8A992AD22491B13B000ACD23 /* libspirv-cross-glsl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AD12491B13B000ACD23 /* libspirv-cross-glsl.a */; };
+		8A992AD42491B155000ACD23 /* libspirv-cross-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AD32491B155000ACD23 /* libspirv-cross-core.a */; };
 		BC17671D40F4DD48338295AB /* libPods-Playground.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BC394028D7BAE8A003F7EF /* libPods-Playground.a */; };
 		DC0E086EEC7F13FF7B7A6ACC /* libPods-Playground-tvOSTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EFE1A6A1208FCAF679B3028D /* libPods-Playground-tvOSTests.a */; };
 /* End PBXBuildFile section */
@@ -58,6 +85,54 @@
 		5BF3DEA5030AD445D3CF62D1 /* Pods-Playground-tvOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Playground-tvOS.debug.xcconfig"; path = "Target Support Files/Pods-Playground-tvOS/Pods-Playground-tvOS.debug.xcconfig"; sourceTree = "<group>"; };
 		68FACB011E63361C5C3BD1B4 /* Pods-Playground-tvOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Playground-tvOS.release.xcconfig"; path = "Target Support Files/Pods-Playground-tvOS/Pods-Playground-tvOS.release.xcconfig"; sourceTree = "<group>"; };
 		6BCB9591CE7C52AE32A2296E /* Pods-PlaygroundTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PlaygroundTests.release.xcconfig"; path = "Target Support Files/Pods-PlaygroundTests/Pods-PlaygroundTests.release.xcconfig"; sourceTree = "<group>"; };
+		8A992A75249035EB000ACD23 /* libBabylonNative.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libBabylonNative.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A7724903631000ACD23 /* libnapi.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libnapi.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A7D2491A0F3000ACD23 /* libJsRuntime.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libJsRuntime.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A7F2491A296000ACD23 /* libNativeInput.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libNativeInput.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A812491A29E000ACD23 /* libNativeEngine.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libNativeEngine.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A832491A2A8000ACD23 /* libNativeWindow.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libNativeWindow.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A852491A2B3000ACD23 /* libWindow.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libWindow.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A872491A319000ACD23 /* libspirv-cross-c.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-c.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A892491A319000ACD23 /* libspirv-cross-core.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-core.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A8B2491A319000ACD23 /* libspirv-cross-cpp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-cpp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A8D2491A319000ACD23 /* libspirv-cross-glsl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-glsl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A8F2491A319000ACD23 /* libspirv-cross-hlsl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-hlsl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A912491A319000ACD23 /* libspirv-cross-msl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-msl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A932491A319000ACD23 /* libspirv-cross-reflect.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-reflect.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A952491A319000ACD23 /* libspirv-cross-util.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-util.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A972491A319000ACD23 /* libSPIRV.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libSPIRV.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A992491A31F000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A9B2491A338000ACD23 /* libbxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A9D2491A348000ACD23 /* libbimgd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbimgd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992A9F2491A35F000ACD23 /* libglslang.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libglslang.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AA12491A3DB000ACD23 /* libOSDependent.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOSDependent.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AA32491A435000ACD23 /* libOGLCompiler.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOGLCompiler.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AA52491A52A000ACD23 /* libastc-codec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libastc-codec.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AA72491A52A000ACD23 /* libastc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libastc.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AA92491AE7D000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AAB2491AE93000ACD23 /* libOGLCompiler.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOGLCompiler.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AAD2491AEB9000ACD23 /* libbxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AAF2491AF28000ACD23 /* libglslang.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libglslang.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AB12491AF4D000ACD23 /* libOSDependent.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOSDependent.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AB32491AF71000ACD23 /* libOGLCompiler.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOGLCompiler.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AB52491B00C000ACD23 /* libSPIRV.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libSPIRV.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AB72491B020000ACD23 /* libspirv-cross-msl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-msl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AB92491B074000ACD23 /* libpvrtc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libpvrtc.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992ABB2491B07E000ACD23 /* libnvtt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libnvtt.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992ABD2491B088000ACD23 /* libsquish.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libsquish.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992ABF2491B08E000ACD23 /* libiqa.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libiqa.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AC12491B09A000ACD23 /* libetc1.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libetc1.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AC32491B09A000ACD23 /* libetc2.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libetc2.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AC52491B0A7000ACD23 /* libastc-codec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libastc-codec.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AC72491B0A7000ACD23 /* libastc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libastc.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AC92491B0C9000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992ACB2491B0E2000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992ACD2491B10E000ACD23 /* libedtaa3.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libedtaa3.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992ACF2491B132000ACD23 /* libspirv-cross-hlsl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-hlsl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AD12491B13B000ACD23 /* libspirv-cross-glsl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-glsl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AD32491B155000ACD23 /* libspirv-cross-core.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-core.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A992AD52493FE5D000ACD23 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		8A992AD62493FE5E000ACD23 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		99C45ADF56518ABFCCFCB01B /* Pods-Playground-tvOSTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Playground-tvOSTests.debug.xcconfig"; path = "Target Support Files/Pods-Playground-tvOSTests/Pods-Playground-tvOSTests.debug.xcconfig"; sourceTree = "<group>"; };
 		A27E99BCBBA16817330523FA /* libPods-PlaygroundTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PlaygroundTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C876831BED593CF1A1FCBD19 /* Pods-Playground.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Playground.release.xcconfig"; path = "Target Support Files/Pods-Playground/Pods-Playground.release.xcconfig"; sourceTree = "<group>"; };
@@ -82,6 +157,33 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8A992AD42491B155000ACD23 /* libspirv-cross-core.a in Frameworks */,
+				8A992AD22491B13B000ACD23 /* libspirv-cross-glsl.a in Frameworks */,
+				8A992AD02491B132000ACD23 /* libspirv-cross-hlsl.a in Frameworks */,
+				8A992ACE2491B10E000ACD23 /* libedtaa3.a in Frameworks */,
+				8A992ACA2491B0C9000ACD23 /* libbgfxd.a in Frameworks */,
+				8A992AC22491B09A000ACD23 /* libetc1.a in Frameworks */,
+				8A992AC42491B09A000ACD23 /* libetc2.a in Frameworks */,
+				8A992AC02491B08E000ACD23 /* libiqa.a in Frameworks */,
+				8A992ABE2491B088000ACD23 /* libsquish.a in Frameworks */,
+				8A992ABC2491B07E000ACD23 /* libnvtt.a in Frameworks */,
+				8A992ABA2491B074000ACD23 /* libpvrtc.a in Frameworks */,
+				8A992AB82491B020000ACD23 /* libspirv-cross-msl.a in Frameworks */,
+				8A992AB62491B00C000ACD23 /* libSPIRV.a in Frameworks */,
+				8A992AB42491AF71000ACD23 /* libOGLCompiler.a in Frameworks */,
+				8A992AB22491AF4D000ACD23 /* libOSDependent.a in Frameworks */,
+				8A992AB02491AF28000ACD23 /* libglslang.a in Frameworks */,
+				8A992AAE2491AEB9000ACD23 /* libbxd.a in Frameworks */,
+				8A992AA62491A52A000ACD23 /* libastc-codec.a in Frameworks */,
+				8A992AA82491A52A000ACD23 /* libastc.a in Frameworks */,
+				8A992A9E2491A348000ACD23 /* libbimgd.a in Frameworks */,
+				8A992A862491A2B3000ACD23 /* libWindow.a in Frameworks */,
+				8A992A842491A2A8000ACD23 /* libNativeWindow.a in Frameworks */,
+				8A992A822491A29E000ACD23 /* libNativeEngine.a in Frameworks */,
+				8A992A802491A296000ACD23 /* libNativeInput.a in Frameworks */,
+				8A992A7E2491A0F3000ACD23 /* libJsRuntime.a in Frameworks */,
+				8A992A7824903631000ACD23 /* libnapi.a in Frameworks */,
+				8A992A76249035EB000ACD23 /* libBabylonNative.a in Frameworks */,
 				BC17671D40F4DD48338295AB /* libPods-Playground.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -139,6 +241,54 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				8A992AD62493FE5E000ACD23 /* Metal.framework */,
+				8A992AD52493FE5D000ACD23 /* MetalKit.framework */,
+				8A992AD32491B155000ACD23 /* libspirv-cross-core.a */,
+				8A992AD12491B13B000ACD23 /* libspirv-cross-glsl.a */,
+				8A992ACF2491B132000ACD23 /* libspirv-cross-hlsl.a */,
+				8A992ACD2491B10E000ACD23 /* libedtaa3.a */,
+				8A992ACB2491B0E2000ACD23 /* libbgfxd.a */,
+				8A992AC92491B0C9000ACD23 /* libbgfxd.a */,
+				8A992AC52491B0A7000ACD23 /* libastc-codec.a */,
+				8A992AC72491B0A7000ACD23 /* libastc.a */,
+				8A992AC12491B09A000ACD23 /* libetc1.a */,
+				8A992AC32491B09A000ACD23 /* libetc2.a */,
+				8A992ABF2491B08E000ACD23 /* libiqa.a */,
+				8A992ABD2491B088000ACD23 /* libsquish.a */,
+				8A992ABB2491B07E000ACD23 /* libnvtt.a */,
+				8A992AB92491B074000ACD23 /* libpvrtc.a */,
+				8A992AB72491B020000ACD23 /* libspirv-cross-msl.a */,
+				8A992AB52491B00C000ACD23 /* libSPIRV.a */,
+				8A992AB32491AF71000ACD23 /* libOGLCompiler.a */,
+				8A992AB12491AF4D000ACD23 /* libOSDependent.a */,
+				8A992AAF2491AF28000ACD23 /* libglslang.a */,
+				8A992AAD2491AEB9000ACD23 /* libbxd.a */,
+				8A992AAB2491AE93000ACD23 /* libOGLCompiler.a */,
+				8A992AA92491AE7D000ACD23 /* libbgfxd.a */,
+				8A992AA52491A52A000ACD23 /* libastc-codec.a */,
+				8A992AA72491A52A000ACD23 /* libastc.a */,
+				8A992AA32491A435000ACD23 /* libOGLCompiler.a */,
+				8A992AA12491A3DB000ACD23 /* libOSDependent.a */,
+				8A992A9F2491A35F000ACD23 /* libglslang.a */,
+				8A992A9D2491A348000ACD23 /* libbimgd.a */,
+				8A992A9B2491A338000ACD23 /* libbxd.a */,
+				8A992A992491A31F000ACD23 /* libbgfxd.a */,
+				8A992A872491A319000ACD23 /* libspirv-cross-c.a */,
+				8A992A892491A319000ACD23 /* libspirv-cross-core.a */,
+				8A992A8B2491A319000ACD23 /* libspirv-cross-cpp.a */,
+				8A992A8D2491A319000ACD23 /* libspirv-cross-glsl.a */,
+				8A992A8F2491A319000ACD23 /* libspirv-cross-hlsl.a */,
+				8A992A912491A319000ACD23 /* libspirv-cross-msl.a */,
+				8A992A932491A319000ACD23 /* libspirv-cross-reflect.a */,
+				8A992A952491A319000ACD23 /* libspirv-cross-util.a */,
+				8A992A972491A319000ACD23 /* libSPIRV.a */,
+				8A992A852491A2B3000ACD23 /* libWindow.a */,
+				8A992A832491A2A8000ACD23 /* libNativeWindow.a */,
+				8A992A812491A29E000ACD23 /* libNativeEngine.a */,
+				8A992A7F2491A296000ACD23 /* libNativeInput.a */,
+				8A992A7D2491A0F3000ACD23 /* libJsRuntime.a */,
+				8A992A7724903631000ACD23 /* libnapi.a */,
+				8A992A75249035EB000ACD23 /* libBabylonNative.a */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				ED2971642150620600B7C4FE /* JavaScriptCore.framework */,
 				F6BC394028D7BAE8A003F7EF /* libPods-Playground.a */,
@@ -161,7 +311,6 @@
 				CC776FD0C9DEA942DC9C8F18 /* Pods-PlaygroundTests.debug.xcconfig */,
 				6BCB9591CE7C52AE32A2296E /* Pods-PlaygroundTests.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -308,6 +457,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -816,7 +966,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -862,7 +1012,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
