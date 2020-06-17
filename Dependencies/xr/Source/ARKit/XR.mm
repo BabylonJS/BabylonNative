@@ -36,6 +36,10 @@ namespace
     CVMetalTextureCacheRef textureCache;
     id<MTLTexture> _cameraTextureY;
     id<MTLTexture> _cameraTextureCbCr;
+    CVPixelBufferRef frameBuffer;
+    
+    UIInterfaceOrientation cameraUVReferenceOrientation;
+    CGSize cameraUVReferenceSize;
 }
 
 - (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext
@@ -90,27 +94,55 @@ namespace
 - (CGSize)viewportSize
 {
     UIInterfaceOrientation orientation = [self orientation];
-    
-    CGSize viewport_size = CGSizeMake(arCameraWidth, arCameraHeight);
+    auto frameSize = activeFrameViews->front().ColorTextureSize;
+    CGSize viewportSize = CGSizeMake(frameSize.Width, frameSize.Height);
     if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
     {
-        if (arCameraWidth > arCameraHeight)
+        if (viewportSize.width > viewportSize.height)
         {
-            viewport_size = CGSizeMake(arCameraHeight, arCameraWidth);
+            viewportSize = CGSizeMake(viewportSize.height, viewportSize.width);
         }
     }
     else
     {
-        if (arCameraWidth < arCameraHeight)
+        if (viewportSize.width < viewportSize.height)
         {
-            viewport_size = CGSizeMake(arCameraHeight, arCameraWidth);
+            viewportSize = CGSizeMake(viewportSize.height, viewportSize.width);
         }
     }
-    return viewport_size;
+    return viewportSize;
 }
 
-int frameCount = 0;
-CVPixelBufferRef frameBuffer = nullptr;
+- (void)checkAndUpdateCameraUVs:(ARFrame *)frame
+{
+    // When the orientation or viewport size changes Loop over triangleVerts, apply transform to the UV to generate camera UVs.
+    auto orientation = [self orientation];
+    CGSize viewportSize = [self viewportSize];
+    if (cameraUVReferenceOrientation != orientation || cameraUVReferenceSize.height != viewportSize.height || cameraUVReferenceSize.width != viewportSize.width)
+    {
+        // The default transform is for converting normalized image coordinates to UVs, we want the inverse as we are converting
+        // UVs to normalized image coordinates.
+        auto transform = CGAffineTransformInvert([frame displayTransformForOrientation:orientation viewportSize:[self viewportSize]]);
+        for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
+        {
+            CGPoint transformedPoint = CGPointApplyAffineTransform({triangleVertices[i].uv[0], triangleVertices[i].uv[1]}, transform);
+            
+            if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
+            {
+                triangleVertices[i].cameraUV[0] = 1 - transformedPoint.x;
+                triangleVertices[i].cameraUV[1] = transformedPoint.y;
+            }
+            else
+            {
+                triangleVertices[i].cameraUV[0] = transformedPoint.x;
+                triangleVertices[i].cameraUV[1] = 1 - transformedPoint.y;
+            }
+        }
+        
+        cameraUVReferenceOrientation = orientation;
+        cameraUVReferenceSize = viewportSize;
+    }
+}
 
 - (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
 {
@@ -151,21 +183,11 @@ CVPixelBufferRef frameBuffer = nullptr;
 
     CVPixelBufferUnlockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
     CVPixelBufferUnlockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
-    
-    // When the orientation or viewport size changes re-run this routine.
-    // Loop over triangleVerts, apply transform to UVs
-    //auto frameSize = activeFrameViews->front().ColorTextureSize;
-    //CGSize viewport_size = CGSizeMake(frameSize.Width, frameSize.Height);
-    auto transform = [frame displayTransformForOrientation:[self orientation] viewportSize:[self viewportSize]];
-    for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
-    {
-        CGPoint transformedPoint = CGPointApplyAffineTransform({triangleVertices[i].uv[0], triangleVertices[i].uv[1]}, transform);
-        triangleVertices[i].cameraUV[0] = transformedPoint.x;
-        triangleVertices[i].cameraUV[1] = 1 - transformedPoint.y;
-    }
-   
+     
     _cameraTextureY = [self updateCapturedTexture:frameBuffer plane:0];
     _cameraTextureCbCr = [self updateCapturedTexture:frameBuffer plane:1];
+     
+    [self checkAndUpdateCameraUVs:frame];
     [self updateCamera:frame.camera];
 }
 
@@ -205,7 +227,7 @@ CVPixelBufferRef frameBuffer = nullptr;
         , -1 * displayOrientation.vector.z
         , displayOrientation.vector.w};
     
-    // Set the translation, the X value must be inverted.
+    // Set the translation, the X value must be inverted as the default axis points left instead of right.
     frameView.Space.Pose.Position = { -1 * displayOrientedTransform.columns[3][0]
         , displayOrientedTransform.columns[3][1]
         , displayOrientedTransform.columns[3][2] };
