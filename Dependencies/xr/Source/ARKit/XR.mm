@@ -22,10 +22,12 @@ namespace
     static XRVertex triangleVertices[] =
     {
         // 2D positions,    UV   camera UV
-        { { -3, -1 }, { -1, 0 }, {0, 0} },
-        { {  1,  3 }, {  1, 2 }, {0, 0} },
+        { { -1, -1 }, {  0, 0 }, {0, 0} },
+        { {  -1, 1 }, {  0, 1 }, {0, 0} },
         { {  1, -1 }, {  1, 0 }, {0, 0} },
+        { {  1, 1 }, {  1, 1 }, {0, 0} },
     };
+
 }
 
 @implementation SessionDelegate
@@ -100,10 +102,14 @@ namespace
     _cameraTextureCbCr = [self updateCameraTexture:frameBuffer plane:1];
      
     // Check if our orientation or size has changed and update camera UVs if necessary.
-    [self checkAndUpdateCameraUVs:frame];
+    if ([self checkAndUpdateCameraUVs:frame])
+    {
+        // If our camera UVs updated, then also update the FoV to match the updated UVs.
+        [self updateFoV:frame.camera];
+    }
     
-    // Finally update the camera XR pose and FoV based on the current position from ARKit.
-    [self updatePoseAndFoV:frame.camera];
+    // Finally update the XR pose based on the current transform from ARKit.
+    [self updateDisplayOrientedPose:(frame.camera)];
 }
 
 /**
@@ -168,7 +174,7 @@ namespace
             
             auto uvdestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 1);
             auto uvsrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 1);
-            memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight/2);
+            memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight / 2);
         }
         @finally
         {
@@ -219,8 +225,9 @@ namespace
 
 /**
  Checks whether the camera UVs need to be updated (based on the orientation and size of the view port, and updates them if necessary.
+ @return True if the camera UVs were updated, false otherwise.
 */
-- (void)checkAndUpdateCameraUVs:(ARFrame *)frame
+- (Boolean)checkAndUpdateCameraUVs:(ARFrame *)frame
 {
     // When the orientation or viewport size changes Loop over triangleVerts, apply transform to the UV to generate camera UVs.
     auto orientation = [self orientation];
@@ -248,24 +255,52 @@ namespace
         
         cameraUVReferenceOrientation = orientation;
         cameraUVReferenceSize = viewportSize;
+        return true;
     }
+    
+    return false;
 }
 
 /**
- Updates the XR representation pose and orientation as well as the field of view of the frame.
+ Updates the FoV of the frame.
 */
-- (void)updatePoseAndFoV:(ARCamera*)camera
+- (void)updateFoV:(ARCamera*)camera
 {
+    // First grab the projection matrix for the image, this uses an aspect fill algorithm.
     auto& frameView = activeFrameViews->at(0);
+    auto viewportSize = [self viewportSize];
+    auto orientation = [self orientation];
+    auto projection = [camera projectionMatrixForOrientation:[self orientation] viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    float yScale = projection.columns[1][1];
+    float aspectRatio = viewportSize.width/viewportSize.height;
     
-    UIInterfaceOrientation orientation = [self orientation];
-    [self updateDisplayOrientedPose:(camera)];
-       
-    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:[self viewportSize] zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-    float a = projection.columns[0][0];
-    float b = projection.columns[1][1];
-    float aspectRatio = b/a;
-    float fov = atanf(1.f / b);
+    // In order to adjust the vertical FOV correctly we need to find the amount cropped off the image
+    // to find the amount of FOV ignored from the display's vertical FOV.
+    float min = 1.0f;
+    float max = 0.0f;
+    
+    // Since the image from the camera is always presented in landscape mode, the camera UV index of the
+    // display oriented vertical dimension is 1 for landscape orientation, and 0 for portrait mode.
+    int uvIndex = 0;
+    if (orientation == UIInterfaceOrientationLandscapeLeft || orientation == UIInterfaceOrientationLandscapeRight)
+    {
+        uvIndex = 1;
+    }
+    
+    for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
+    {
+        
+        if (triangleVertices[i].cameraUV[uvIndex] > max)
+        {
+            max = triangleVertices[i].cameraUV[uvIndex];
+        }
+        else if (triangleVertices[i].cameraUV[uvIndex] < min)
+        {
+            min = triangleVertices[i].cameraUV[uvIndex];
+        }
+    }
+
+    float fov =  atanf((max - min) / yScale);
     
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
@@ -572,7 +607,7 @@ namespace xr
                 [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureCbCr atIndex:2];
 
                 // Draw the triangle.
-                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
                 [renderEncoder endEncoding];
 
@@ -590,15 +625,15 @@ namespace xr
         }
         
         private:
-            MTKView* xrView;
+            MTKView* xrView{};
             bool SessionEnded{ false };
-            id<MTLDevice> MetalDevice;
-            CAMetalLayer* MetalLayer;
+            id<MTLDevice> MetalDevice{};
+            CAMetalLayer* MetalLayer{};
             ARSession* session{};
             SessionDelegate* sessionDelegate{};
             ARWorldTrackingConfiguration* configuration{};
-            id<MTLRenderPipelineState> pipelineState;
-            vector_uint2 viewportSize;
+            id<MTLRenderPipelineState> pipelineState{};
+            vector_uint2 viewportSize{};
             id<MTLCommandQueue> commandQueue;
     };
 
