@@ -21,13 +21,12 @@ namespace
 
     static XRVertex triangleVertices[] =
     {
-        // 2D positions,    UV   camera UV
-        { { -1, -1 }, {  0, 0 }, {0, 0} },
-        { {  -1, 1 }, {  0, 1 }, {0, 0} },
-        { {  1, -1 }, {  1, 0 }, {0, 0} },
-        { {  1, 1 }, {  1, 1 }, {0, 0} },
+        // 2D positions, UV         camera UV
+        { { -1, -1 },   { 0, 0 },   { 0, 0} },
+        { { -1, 1 },    { 0, 1 },   { 0, 0} },
+        { { 1, -1 },    { 1, 0 },   { 0, 0} },
+        { { 1, 1 },     { 1, 1 },   { 0, 0} },
     };
-
 }
 
 @implementation SessionDelegate
@@ -69,24 +68,8 @@ namespace
 */
 - (CGSize)viewportSize
 {
-    UIInterfaceOrientation orientation = [self orientation];
     auto frameSize = activeFrameViews->front().ColorTextureSize;
-    CGSize viewportSize = CGSizeMake(frameSize.Width, frameSize.Height);
-    if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
-    {
-        if (viewportSize.width > viewportSize.height)
-        {
-            viewportSize = CGSizeMake(viewportSize.height, viewportSize.width);
-        }
-    }
-    else
-    {
-        if (viewportSize.width < viewportSize.height)
-        {
-            viewportSize = CGSizeMake(viewportSize.height, viewportSize.width);
-        }
-    }
-    return viewportSize;
+    return CGSizeMake(frameSize.Width, frameSize.Height);
 }
 
 /**
@@ -241,6 +224,7 @@ namespace
         {
             CGPoint transformedPoint = CGPointApplyAffineTransform({triangleVertices[i].uv[0], triangleVertices[i].uv[1]}, transform);
             
+            // The camera image is represented as bottom->top, so we have to flip the vertical component of the source image.
             if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
             {
                 triangleVertices[i].cameraUV[0] = 1 - transformedPoint.x;
@@ -262,7 +246,7 @@ namespace
 }
 
 /**
- Updates the FoV of the frame.
+ Updates the tracked FoV of the AR Camera.
 */
 - (void)updateFoV:(ARCamera*)camera
 {
@@ -287,6 +271,7 @@ namespace
         uvIndex = 1;
     }
     
+    // Loop over all the UVs and find the min and max crop values.
     for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
     {
         
@@ -300,8 +285,8 @@ namespace
         }
     }
 
+    // Calculate FoV and apply it to the frame view.
     float fov =  atanf((max - min) / yScale);
-    
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
 }
@@ -317,7 +302,7 @@ namespace
     simd_float4x4 transform = [camera transform];
     simd_quatf displayOrientationQuat;
     
-    // Create the display orientation quaternion based on the current orientation of the device..
+    // Create the display orientation quaternion based on the current orientation of the device.
     if (orientation == UIInterfaceOrientationLandscapeRight)
     {
         displayOrientationQuat = simd_quaternion((float)M_PI, simd_make_float3(0, 0, 1));
@@ -335,8 +320,13 @@ namespace
         displayOrientationQuat = simd_quaternion((float)M_PI * 1.5f, simd_make_float3(0, 0, 1));
     }
     
+    // Convert the display orientation quaternion to a transform matrix.
     simd_float4x4 rotationMatrix = simd_matrix4x4(displayOrientationQuat);
+    
+    // Multiply the transform by the rotation matrix to generate the display oriented transform.
     auto displayOrientedTransform = simd_mul(transform, rotationMatrix);
+    
+    //Pull out the display oriented rotation.
     auto displayOrientation = simd_quaternion(displayOrientedTransform);
     
     // Set the orientation of the camera, the Y and Z values of the quaternion need to be inverted.
