@@ -122,12 +122,12 @@ namespace
         }
 
         // Check if the size of the frame buffer has changed, if so then dispose of the old one and create a new buffer.
-        if (frameBuffer == nullptr || bufferWidth != (int)CVPixelBufferGetWidth(frameBuffer) || bufferHeight != (int)CVPixelBufferGetHeight(frameBuffer))
+        if (frameBuffer == nil || bufferWidth != (int)CVPixelBufferGetWidth(frameBuffer) || bufferHeight != (int)CVPixelBufferGetHeight(frameBuffer))
         {
-            if (frameBuffer != nullptr)
+            if (frameBuffer != nil)
             {
                 CVPixelBufferRelease(frameBuffer);
-                frameBuffer = nullptr;
+                frameBuffer = nil;
             }
             
             // We must specify PixelBufferMetalCompatibility on the frame buffer to make this composable into a Metal Texture.
@@ -192,7 +192,7 @@ namespace
         CVMetalTextureRef texture;
         
         // Create a texture from the corresponding plane.
-        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nullptr, pixelFormat, planeWidth, planeHeight, planeIndex, &texture);
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &texture);
         if (status == kCVReturnSuccess)
         {
             mtlTexture = CVMetalTextureGetTexture(texture);
@@ -416,7 +416,7 @@ namespace xr
         {
             NSError* error;
             id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
-            if(NULL != error)
+            if(nil != error)
             {
                 throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
             }
