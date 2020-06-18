@@ -30,8 +30,6 @@ namespace
 
 @implementation SessionDelegate
 {
-    int arCameraWidth;
-    int arCameraHeight;
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
     CVMetalTextureCacheRef textureCache;
     id<MTLTexture> _cameraTextureY;
@@ -56,41 +54,17 @@ namespace
     return self;
 }
 
-- (id<MTLTexture>)updateCapturedTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex
-{
-    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    if (ret != kCVReturnSuccess)
-    {
-        return {};
-    }
-
-    @try
-    {
-        arCameraWidth = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
-        arCameraHeight = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
-            
-        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
-        id<MTLTexture> mtlTexture = nil;
-        CVMetalTextureRef texture;
-        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nullptr, pixelFormat, arCameraWidth, arCameraHeight, planeIndex, &texture);
-        if (status == kCVReturnSuccess)
-        {
-            mtlTexture = CVMetalTextureGetTexture(texture);
-        }
-        
-        return mtlTexture;
-    }
-    @finally
-    {
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    }
-}
-
+/**
+ Returns the orientation of the app based on the current status bar orientation.
+*/
 - (UIInterfaceOrientation)orientation
 {
     return [[UIApplication sharedApplication] statusBarOrientation];
 }
 
+/**
+ Returns the viewportSize as determined by the texture size of the first active frame view.
+*/
 - (CGSize)viewportSize
 {
     UIInterfaceOrientation orientation = [self orientation];
@@ -113,6 +87,139 @@ namespace
     return viewportSize;
 }
 
+/**
+ Called every frame during the active ARKit session.  Updates the AR Camera texture, UVs, and Camera pose.
+*/
+- (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
+{
+    // First copy the current ARFrame's image to our frame buffer, accounting for any change in image size.
+    [self updateFrameBuffer:frame.capturedImage];
+    
+    // Next update both metal textures used by the renderer.
+    _cameraTextureY = [self updateCameraTexture:frameBuffer plane:0];
+    _cameraTextureCbCr = [self updateCameraTexture:frameBuffer plane:1];
+     
+    // Check if our orientation or size has changed and update camera UVs if necessary.
+    [self checkAndUpdateCameraUVs:frame];
+    
+    // Finally update the camera XR pose and FoV based on the current position from ARKit.
+    [self updatePoseAndFoV:frame.camera];
+}
+
+/**
+ Copies the camera buffer from from the current ARFrame into our pixel buffer used for composing the metal texture.
+*/
+- (void)updateFrameBuffer:(CVPixelBufferRef)arCameraBuffer
+{
+    // Lock the frame buffer with read access to stop ARKit from updating the camera buffer during update.
+    CVReturn ret = CVPixelBufferLockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
+    if (ret != kCVReturnSuccess)
+    {
+        return;
+    }
+    
+    @try
+    {
+        // Find the width, height, and format of the AR image.
+        int bufferWidth = (int)CVPixelBufferGetWidth(arCameraBuffer);
+        int bufferHeight = (int)CVPixelBufferGetHeight(arCameraBuffer);
+        auto format = CVPixelBufferGetPixelFormatType(arCameraBuffer);
+        
+        // If we don't have two planes the arCamera has not yet been initialized so back out for now.
+        if (CVPixelBufferGetPlaneCount(arCameraBuffer) < 2)
+        {
+            CVPixelBufferUnlockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
+            return;
+        }
+
+        // Check if the size of the frame buffer has changed, if so then dispose of the old one and create a new buffer.
+        if (frameBuffer == nullptr || bufferWidth != (int)CVPixelBufferGetWidth(frameBuffer) || bufferHeight != (int)CVPixelBufferGetHeight(frameBuffer))
+        {
+            if (frameBuffer != nullptr)
+            {
+                CVPixelBufferRelease(frameBuffer);
+                frameBuffer = nullptr;
+            }
+            
+            // We must specify PixelBufferMetalCompatibility on the frame buffer to make this composable into a Metal Texture.
+            auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], kCVPixelBufferMetalCompatibilityKey, nil];
+            
+            // Create the actual pixel buffer.
+            ret = CVPixelBufferCreate(kCFAllocatorDefault, bufferWidth, bufferHeight, format, (__bridge CFDictionaryRef)attributes, &frameBuffer);
+            if (ret != kCVReturnSuccess)
+            {
+                throw std::runtime_error("Failed to allocate frame buffer.");
+            }
+        }
+        
+        // Lock the pixel buffer for write access.
+        ret = CVPixelBufferLockBaseAddress(frameBuffer, 0);
+        if (ret != kCVReturnSuccess)
+        {
+            return;
+        }
+        
+        @try
+        {
+            // Copy both planes of the AR camera image to the frame buffer.
+            void* ydestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 0);
+            void* ysrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 0);
+            memcpy(ydestPlane, ysrcPlane, bufferWidth * bufferHeight);
+            
+            auto uvdestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 1);
+            auto uvsrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 1);
+            memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight/2);
+        }
+        @finally
+        {
+            CVPixelBufferUnlockBaseAddress(arCameraBuffer, 0);
+        }
+    }
+    @finally
+    {
+        CVPixelBufferUnlockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
+    }
+}
+
+/**
+ Updates the captured texture with the current frame buffer.
+*/
+- (id<MTLTexture>)updateCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex
+{
+    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    if (ret != kCVReturnSuccess)
+    {
+        return {};
+    }
+
+    @try
+    {
+        int planeWidth = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        int planeHeight = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+            
+        // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
+        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
+        id<MTLTexture> mtlTexture = nil;
+        CVMetalTextureRef texture;
+        
+        // Create a texture from the corresponding plane.
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nullptr, pixelFormat, planeWidth, planeHeight, planeIndex, &texture);
+        if (status == kCVReturnSuccess)
+        {
+            mtlTexture = CVMetalTextureGetTexture(texture);
+        }
+        
+        return mtlTexture;
+    }
+    @finally
+    {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    }
+}
+
+/**
+ Checks whether the camera UVs need to be updated (based on the orientation and size of the view port, and updates them if necessary.
+*/
 - (void)checkAndUpdateCameraUVs:(ARFrame *)frame
 {
     // When the orientation or viewport size changes Loop over triangleVerts, apply transform to the UV to generate camera UVs.
@@ -144,53 +251,30 @@ namespace
     }
 }
 
-- (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
+/**
+ Updates the XR representation pose and orientation as well as the field of view of the frame.
+*/
+- (void)updatePoseAndFoV:(ARCamera*)camera
 {
-    // Get pixel buffer info
-    CVPixelBufferLockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
-    int bufferWidth = (int)CVPixelBufferGetWidth(frame.capturedImage);
-    int bufferHeight = (int)CVPixelBufferGetHeight(frame.capturedImage);
-    auto format = CVPixelBufferGetPixelFormatType(frame.capturedImage);
+    auto& frameView = activeFrameViews->at(0);
     
-    if (CVPixelBufferGetPlaneCount(frame.capturedImage) < 2)
-    {
-        CVPixelBufferUnlockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
-        return;
-    }
-
-    if (frameBuffer == nullptr || bufferWidth != (int)CVPixelBufferGetWidth(frameBuffer) || bufferHeight != (int)CVPixelBufferGetHeight(frameBuffer))
-    {
-        if (frameBuffer != nullptr)
-        {
-            CVPixelBufferRelease(frameBuffer);
-            frameBuffer = nullptr;
-        }
-        
-        auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                     [NSNumber numberWithBool:YES], kCVPixelBufferMetalCompatibilityKey, nil];
-        CVPixelBufferCreate(kCFAllocatorDefault, bufferWidth, bufferHeight, format, (__bridge CFDictionaryRef)attributes, &frameBuffer);
-    }
+    UIInterfaceOrientation orientation = [self orientation];
+    [self updateDisplayOrientedPose:(camera)];
+       
+    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:[self viewportSize] zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    float a = projection.columns[0][0];
+    float b = projection.columns[1][1];
+    float aspectRatio = b/a;
+    float fov = atanf(1.f / b);
     
-    CVPixelBufferLockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
-
-    void* ydestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 0);
-    void* ysrcPlane = CVPixelBufferGetBaseAddressOfPlane(frame.capturedImage, 0);
-    memcpy(ydestPlane, ysrcPlane, bufferWidth * bufferHeight);
-    
-    auto uvdestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 1);
-    auto uvsrcPlane = CVPixelBufferGetBaseAddressOfPlane(frame.capturedImage, 1);
-    memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight/2);
-
-    CVPixelBufferUnlockBaseAddress(frame.capturedImage, kCVPixelBufferLock_ReadOnly);
-    CVPixelBufferUnlockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
-     
-    _cameraTextureY = [self updateCapturedTexture:frameBuffer plane:0];
-    _cameraTextureCbCr = [self updateCapturedTexture:frameBuffer plane:1];
-     
-    [self checkAndUpdateCameraUVs:frame];
-    [self updateCamera:frame.camera];
+    frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
+    frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
 }
 
+/**
+ The ARKit camera transform is always a local right hand coordinate space WRT landscape right orientation, so this function takes the transform and converts
+ it into a display oriented pose see: (https://developer.apple.com/documentation/arkit/arcamera/2866108-transform)
+*/
 -(void)updateDisplayOrientedPose:(ARCamera*)camera
 {
     auto& frameView = activeFrameViews->at(0);
@@ -198,8 +282,7 @@ namespace
     simd_float4x4 transform = [camera transform];
     simd_quatf displayOrientationQuat;
     
-    // ARKit camera transform is always a local right hand coordinate space WRT landscape right orientation
-    // see (https://developer.apple.com/documentation/arkit/arcamera/2866108-transform)
+    // Create the display orientation quaternion based on the current orientation of the device..
     if (orientation == UIInterfaceOrientationLandscapeRight)
     {
         displayOrientationQuat = simd_quaternion((float)M_PI, simd_make_float3(0, 0, 1));
@@ -231,23 +314,6 @@ namespace
     frameView.Space.Pose.Position = { -1 * displayOrientedTransform.columns[3][0]
         , displayOrientedTransform.columns[3][1]
         , displayOrientedTransform.columns[3][2] };
-}
-
-- (void)updateCamera:(ARCamera*)camera
-{
-    auto& frameView = activeFrameViews->at(0);
-    
-    UIInterfaceOrientation orientation = [self orientation];
-    [self updateDisplayOrientedPose:(camera)];
-       
-    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:[self viewportSize] zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-    float a = projection.columns[0][0];
-    float b = projection.columns[1][1];
-    float aspectRatio = b/a;
-    float fov = atanf(1.f / b);
-    
-    frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
-    frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
 }
 
 @end
