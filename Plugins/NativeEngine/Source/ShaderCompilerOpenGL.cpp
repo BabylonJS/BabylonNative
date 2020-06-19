@@ -44,7 +44,7 @@ namespace Babylon
             options.version = 310;
             options.es = true;
 #else
-            options.version = 430;
+            options.version = 330;
             options.es = false;
 #endif
             compiler->set_common_options(options);
