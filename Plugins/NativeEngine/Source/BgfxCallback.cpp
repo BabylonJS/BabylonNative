@@ -49,7 +49,6 @@ namespace Babylon
         }
         out[total] = '\0';
         bx::debugOutput(out);
-        
     }
 
     void BgfxCallback::profilerBegin(const char* /*name*/, uint32_t /*abgr*/, const char* /*filePath*/, uint16_t /*line*/)
