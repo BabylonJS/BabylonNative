@@ -60,6 +60,15 @@ namespace
 */
 - (UIInterfaceOrientation)orientation
 {
+    auto sharedApplication = [UIApplication sharedApplication];
+    auto window = sharedApplication.windows.firstObject;
+    if (@available(iOS 13.0, *)) {
+        if (window && window.windowScene)
+        {
+            return window.windowScene.interfaceOrientation;
+        }
+    }
+
     return [[UIApplication sharedApplication] statusBarOrientation];
 }
 
@@ -212,7 +221,7 @@ namespace
 */
 - (Boolean)checkAndUpdateCameraUVs:(ARFrame *)frame
 {
-    // When the orientation or viewport size changes Loop over triangleVerts, apply transform to the UV to generate camera UVs.
+    // When the orientation or viewport size changes loop over triangleVerts, apply transform to the UV to generate camera UVs.
     auto orientation = [self orientation];
     CGSize viewportSize = [self viewportSize];
     if (cameraUVReferenceOrientation != orientation || cameraUVReferenceSize.height != viewportSize.height || cameraUVReferenceSize.width != viewportSize.width)
@@ -256,10 +265,10 @@ namespace
     auto orientation = [self orientation];
     auto projection = [camera projectionMatrixForOrientation:[self orientation] viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
     float yScale = projection.columns[1][1];
-    float aspectRatio = viewportSize.width/viewportSize.height;
+    float aspectRatio = viewportSize.width / viewportSize.height;
     
-    // In order to adjust the vertical FOV correctly we need to find the amount cropped off the image
-    // to find the amount of FOV ignored from the display's vertical FOV.
+    // In order to adjust the vertical FoV correctly we need to find the amount cropped off the image
+    // to find the amount of FoV ignored from the display's vertical FoV.
     float min = 1.0f;
     float max = 0.0f;
     
@@ -285,7 +294,7 @@ namespace
         }
     }
 
-    // Calculate FoV and apply it to the frame view.
+    // Calculate FoV and apply it to the frame view. TODO: Validate if this actually gives the right FoV.
     float fov =  atanf((max - min) / yScale);
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
@@ -498,6 +507,7 @@ namespace xr
                 NSLog(@"Failed to create pipeline state: %@", error);
             }
             commandQueue = [MetalDevice newCommandQueue];
+            
             // default fov values to avoid NaN at startup
             auto& frameView = ActiveFrameViews[0];
             frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = 0.5);
