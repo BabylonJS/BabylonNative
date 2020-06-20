@@ -95,7 +95,8 @@ inline Value::Value(const Value& other)
 }
 
 inline Value& Value::operator =(const Value& other){
-  Value::Value(other);
+  _env = other._env;
+  _value = {_env->rt, other._value};
   return *this;
 }
 
@@ -550,7 +551,8 @@ inline Object::Object(const Object& other)
 }
 
 inline Object& Object::operator =(const Object& other){
-  Object::Object(other);
+  Value::operator =(other);
+  _object = _value.getObject(_env->rt);
   return *this;
 }
 
@@ -735,7 +737,8 @@ inline Array::Array(const Array& other)
 }
 
 inline Array& Array::operator =(const Array& other){
-  Array::Array(other);
+  Object::operator =(other);
+  _array = _object->getArray(_env->rt);
   return *this;
 }
 
@@ -798,7 +801,8 @@ inline ArrayBuffer::ArrayBuffer(const ArrayBuffer& other)
 }
 
 inline ArrayBuffer& ArrayBuffer::operator =(const ArrayBuffer& other){
-  ArrayBuffer::ArrayBuffer(other);
+  Object::operator =(other);
+  _arrayBuffer = _object->getArrayBuffer(_env->rt);
   return *this;
 }
 
@@ -1003,6 +1007,10 @@ inline TypedArray::TypedArray(napi_env env, jsi::Value value)
   : Object{env, std::move(value)}, _type{TypedArray::unknown_array_type}, _length{0} {
 }
 
+inline TypedArray::TypedArray(napi_env env, jsi::Value value, napi_typedarray_type type, size_t length)
+  : Object(env, std::move(value)), _type(type), _length(length) {
+}
+
 inline napi_typedarray_type TypedArray::TypedArrayType() const {
   if (_type == TypedArray::unknown_array_type) {
     GetTypedArrayInfo(_env, *_object, &_type, &_length);
@@ -1130,7 +1138,7 @@ inline TypedArrayOf<T>::TypedArrayOf(napi_env env,
                                      napi_typedarray_type type,
                                      size_t length,
                                      T* data)
-  : TypedArray(env, value, type, length), _data(data) {
+  : TypedArray{env, std::move(value), type, length}, _data{data} {
   //if (!(type == TypedArrayTypeForPrimitiveType<T>() ||
   //    (type == napi_uint8_clamped_array && std::is_same<T, uint8_t>::value))) {
   //  NAPI_THROW_VOID(TypeError::New(env, "Array type must match the template parameter. "
@@ -1202,7 +1210,8 @@ inline Function::Function(const Function& other)
 }
 
 inline Function& Function::operator =(const Function& other){
-  Function::Function(other);
+  Object::operator =(other);
+  _function = _object->getFunction(_env->rt);
   return *this;
 }
 

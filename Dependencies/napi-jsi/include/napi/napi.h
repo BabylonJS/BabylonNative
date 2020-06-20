@@ -788,6 +788,8 @@ namespace Napi {
 
   protected:
     /// !cond INTERNAL
+    TypedArray(napi_env env, jsi::Value value, napi_typedarray_type type, size_t length);
+
     mutable napi_typedarray_type _type;
     mutable size_t _length;
 
