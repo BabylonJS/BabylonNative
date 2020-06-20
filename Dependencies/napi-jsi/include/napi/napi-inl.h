@@ -2,64 +2,60 @@
 
 namespace Napi {
 
-using namespace facebook;
-
 namespace details {
+  template <typename T>
+  class External : public jsi::HostObject {
+  public:
+    External(napi_env env, T* data)
+      : _env{env}, _data{data} {
+    }
 
-template <typename T>
-class External : public facebook::jsi::HostObject {
-public:
-  External(napi_env env, T* data)
-    : _env{env}, _data{data} {
-  }
+    T* Data() const {
+      return _data;
+    }
 
-  T* Data() const {
-    return _data;
-  }
+  protected:
+    napi_env _env;
+    T* _data;
+  };
 
-protected:
-  napi_env _env;
-  T* _data;
-};
+  template <typename T, typename Finalizer>
+  class ExternalWithFinalizer : public External<T> {
+  public:
+    ExternalWithFinalizer(napi_env env, T* data, Finalizer finalizer)
+      : External<T>{env, data}, _finalizer{std::move(finalizer)} {
+    }
 
-template <typename T, typename Finalizer>
-class ExternalWithFinalizer : public External<T> {
-public:
-  ExternalWithFinalizer(napi_env env, T* data, Finalizer finalizer)
-    : External<T>{env, data}, _finalizer{std::move(finalizer)} {
-  }
+    ~ExternalWithFinalizer() {
+      _finalizer(this->_env, this->_data);
+    }
 
-  ~ExternalWithFinalizer() {
-    _finalizer(this->_env, this->_data);
-  }
+  private:
+    Finalizer _finalizer;
+  };
 
-private:
-  Finalizer _finalizer;
-};
+  template <typename T, typename Finalizer, typename Hint>
+  class ExternalWithFinalizerAndHint : public External<T> {
+  public:
+    ExternalWithFinalizerAndHint(napi_env env, T* data, Finalizer finalizer, Hint* hint)
+      : External<T>{env, data}, _finalizer{std::move(finalizer)}, _hint{hint} {
+    }
 
-template <typename T, typename Finalizer, typename Hint>
-class ExternalWithFinalizerAndHint : public External<T> {
-public:
-  ExternalWithFinalizerAndHint(napi_env env, T* data, Finalizer finalizer, Hint* hint)
-    : External<T>{env, data}, _finalizer{std::move(finalizer)}, _hint{hint} {
-  }
+    ~ExternalWithFinalizerAndHint() {
+      _finalizer(this->_env, this->_data, _hint);
+    }
 
-  ~ExternalWithFinalizerAndHint() {
-    _finalizer(this->_env, this->_data, _hint);
-  }
-
-private:
-  Finalizer _finalizer;
-  Hint* _hint;
-};
-
+  private:
+    Finalizer _finalizer;
+    Hint* _hint;
+  };
 } // details
 
 ////////////////////////////////////////////////////////////////////////////////
 // Env class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Env::Env(napi_env env) : _env(env) {
+inline Env::Env(napi_env env) : _env{env} {
 }
 
 inline Env::operator napi_env() const {
@@ -67,28 +63,47 @@ inline Env::operator napi_env() const {
 }
 
 inline Object Env::Global() const {
-  return {_env, {_env, _env->global()}};
+  return {_env, _env->rt.global()};
 }
 
 inline Value Env::Undefined() const {
-  return {_env, {_env, facebook::jsi::Value::undefined()}};
+  return {_env, jsi::Value::undefined()};
 }
 
 inline Value Env::Null() const {
-  return {_env, {_env, facebook::jsi::Value::null()}};
+  return {_env, jsi::Value::null()};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Value class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Value::Value() : _env(nullptr) {
+inline Value::Value()
+  : _env{nullptr}, _value{} {
 }
 
-inline Value::Value(napi_env env, napi_value value) : _env(env), _value(value) {
+inline Value::Value(napi_env env, jsi::Value value)
+  : _env{env}, _value{std::move(value)} {
 }
 
-inline Value::operator napi_value() const {
+inline Value::operator jsi::Value&&() && {
+  return std::move(_value);
+}
+
+inline Value::Value(const Value& other)
+  : _env{other._env}, _value{_env->rt, other._value} {
+}
+
+inline Value& Value::operator =(const Value& other){
+  Value::Value(other);
+  return *this;
+}
+
+inline Value::operator jsi::Value&() & {
+  return _value;
+}
+
+inline Value::operator const jsi::Value&() const & {
   return _value;
 }
 
@@ -101,11 +116,11 @@ inline bool Value::operator !=(const Value& other) const {
 }
 
 inline bool Value::StrictEquals(const Value& other) const {
-  return facebook::jsi::Value::strictEquals(*_env, *_value, *other._value);
+  return jsi::Value::strictEquals(_env->rt, _value, other._value);
 }
 
 inline Napi::Env Value::Env() const {
-  return Napi::Env(_env);
+  return {_env};
 }
 
 inline bool Value::IsEmpty() const {
@@ -113,23 +128,23 @@ inline bool Value::IsEmpty() const {
 }
 
 inline napi_valuetype Value::Type() const {
-  if (_value->isUndefined()) {
+  if (_value.isUndefined()) {
     return napi_undefined;
-  } else if (_value->isNull()) {
+  } else if (_value.isNull()) {
     return napi_null;
-  } else if (_value->isBool()) {
+  } else if (_value.isBool()) {
     return napi_boolean;
-  } else if (_value->isNumber()) {
+  } else if (_value.isNumber()) {
     return napi_number;
-  } else if (_value->isString()) {
+  } else if (_value.isString()) {
     return napi_string;
-  } else if (_value->isSymbol()) {
+  } else if (_value.isSymbol()) {
     return napi_symbol;
-  } else if (_value->isObject()) {
-    auto object{_value->getObject(*_env)};
-    if (object.isFunction(*_env)) {
+  } else if (_value.isObject()) {
+    auto object{_value.getObject(_env->rt)};
+    if (object.isFunction(_env->rt)) {
         return napi_function;
-    } else if (object.isHostObject(*_env)) {
+    } else if (object.isHostObject(_env->rt)) {
         return napi_external;
     }
     return napi_object;
@@ -140,45 +155,45 @@ inline napi_valuetype Value::Type() const {
 }
 
 inline bool Value::IsUndefined() const {
-  return _value->isUndefined();
+  return _value.isUndefined();
 }
 
 inline bool Value::IsNull() const {
-  return _value->isNull();
+  return _value.isNull();
 }
 
 inline bool Value::IsBoolean() const {
-  return _value->isBool();
+  return _value.isBool();
 }
 
 inline bool Value::IsNumber() const {
-  return _value->isNumber();
+  return _value.isNumber();
 }
 
 inline bool Value::IsString() const {
-  return _value->isString();
+  return _value.isString();
 }
 
 inline bool Value::IsSymbol() const {
-  return _value->isSymbol();
+  return _value.isSymbol();
 }
 
 inline bool Value::IsArray() const {
-  if (!_value->isObject()) {
+  if (!_value.isObject()) {
       return false;
   }
 
-  auto object{_value->getObject(*_env)};
-  return object.isArray(*_env);
+  auto object{_value.getObject(_env->rt)};
+  return object.isArray(_env->rt);
 }
 
 inline bool Value::IsArrayBuffer() const {
-  if (!_value->isObject()) {
+  if (!_value.isObject()) {
       return false;
   }
 
-  auto object{_value->getObject(*_env)};
-  return object.isArrayBuffer(*_env);
+  auto object{_value.getObject(_env->rt)};
+  return object.isArrayBuffer(_env->rt);
 }
 
 inline bool Value::IsTypedArray() const {
@@ -186,11 +201,11 @@ inline bool Value::IsTypedArray() const {
 }
 
 inline bool Value::IsObject() const {
-  return _value->isObject();
+  return _value.isObject();
 }
 
 inline bool Value::IsFunction() const {
-  return _value->isObject() && _value->getObject(*_env).isFunction(*_env);
+  return _value.isObject() && _value.getObject(_env->rt).isFunction(_env->rt);
 }
 
 inline bool Value::IsPromise() const {
@@ -202,44 +217,45 @@ inline bool Value::IsDataView() const {
 }
 
 inline bool Value::IsExternal() const {
-  return _value->isObject() && _value->getObject(*_env).isHostObject(*_env);
+  return _value.isObject() && _value.getObject(_env->rt).isHostObject(_env->rt);
 }
 
 template <typename T>
 inline T Value::As() const {
-  return T(_env, _value);
+  return T(_env, {_env->rt, _value});
 }
 
 inline Boolean Value::ToBoolean() const {
   // TODO: need to coerce if not the right type
-  return Boolean::New(_env, _value->getBool());
+  return Boolean::New(_env, _value.getBool());
 }
 
 inline Number Value::ToNumber() const {
   // TODO: need to coerce if not the right type
-  return Number::New(_env, _value->getNumber());
+  return Number::New(_env, _value.getNumber());
 }
 
 inline String Value::ToString() const {
-  return {_env, {_env, _value->toString(*_env)}};
+  return {_env, {_env->rt, _value.toString(_env->rt)}};
 }
 
 inline Object Value::ToObject() const {
-  return {_env, {_env, _value->asObject(*_env)}};
+  return {_env, _value.getObject(_env->rt)};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Boolean class
 ////////////////////////////////////////////////////////////////////////////////
 
+inline Boolean::Boolean() {
+}
+
 inline Boolean Boolean::New(napi_env env, bool val) {
-  return Boolean(env, {env, facebook::jsi::Value{val}});
+  return Boolean(env, {val});
 }
 
-inline Boolean::Boolean() : Napi::Value() {
-}
-
-inline Boolean::Boolean(napi_env env, napi_value value) : Napi::Value(env, value) {
+inline Boolean::Boolean(napi_env env, jsi::Value value)
+  : Napi::Value(env, std::move(value)) {
 }
 
 inline Boolean::operator bool() const {
@@ -247,21 +263,22 @@ inline Boolean::operator bool() const {
 }
 
 inline bool Boolean::Value() const {
-  return _value->getBool();
+  return _value.getBool();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Number class
 ////////////////////////////////////////////////////////////////////////////////
 
+inline Number::Number() {
+}
+
 inline Number Number::New(napi_env env, double val) {
-  return Number(env, {env, facebook::jsi::Value(val)});
+  return Number(env, {env->rt, jsi::Value(val)});
 }
 
-inline Number::Number() : Value() {
-}
-
-inline Number::Number(napi_env env, napi_value value) : Value(env, value) {
+inline Number::Number(napi_env env, jsi::Value value)
+  : Value(env, std::move(value)) {
 }
 
 inline Number::operator int32_t() const {
@@ -285,33 +302,31 @@ inline Number::operator double() const {
 }
 
 inline int32_t Number::Int32Value() const {
-  return static_cast<int32_t>(_value->getNumber());
+  return static_cast<int32_t>(_value.getNumber());
 }
 
 inline uint32_t Number::Uint32Value() const {
-  return static_cast<uint32_t>(_value->getNumber());
+  return static_cast<uint32_t>(_value.getNumber());
 }
 
 inline int64_t Number::Int64Value() const {
-  return static_cast<int64_t>(_value->getNumber());
+  return static_cast<int64_t>(_value.getNumber());
 }
 
 inline float Number::FloatValue() const {
-  return static_cast<float>(_value->getNumber());
+  return static_cast<float>(_value.getNumber());
 }
 
 inline double Number::DoubleValue() const {
-  return _value->getNumber();
+  return _value.getNumber();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Name class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Name::Name() : Value() {
-}
-
-inline Name::Name(napi_env env, napi_value value) : Value(env, value) {
+inline Name::Name(napi_env env, jsi::Value value)
+  : Value(env, std::move(value)) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -327,7 +342,7 @@ inline String String::New(napi_env env, const std::u16string& val) {
 }
 
 inline String String::New(napi_env env, const char* val) {
-  return String(env, {env, facebook::jsi::String::createFromUtf8(*env, val)});
+  return String(env, {env->rt, jsi::String::createFromUtf8(env->rt, val)});
 }
 
 inline String String::New(napi_env env, const char16_t* val) {
@@ -335,17 +350,15 @@ inline String String::New(napi_env env, const char16_t* val) {
 }
 
 inline String String::New(napi_env env, const char* val, size_t length) {
-  return String(env, {env, facebook::jsi::String::createFromUtf8(*env, reinterpret_cast<const uint8_t*>(val), length)});
+  return String(env, {env->rt, jsi::String::createFromUtf8(env->rt, reinterpret_cast<const uint8_t*>(val), length)});
 }
 
 inline String String::New(napi_env env, const char16_t* val, size_t length) {
   throw std::runtime_error("TODO");
 }
 
-inline String::String() : Name() {
-}
-
-inline String::String(napi_env env, napi_value value) : Name(env, value) {
+inline String::String(napi_env env, jsi::Value value)
+  : Name(env, std::move(value)) {
 }
 
 inline String::operator std::string() const {
@@ -357,7 +370,7 @@ inline String::operator std::u16string() const {
 }
 
 inline std::string String::Utf8Value() const {
-  return _value->getString(*_env).utf8(*_env);
+  return _value.getString(_env->rt).utf8(_env->rt);
 }
 
 inline std::u16string String::Utf16Value() const {
@@ -380,18 +393,17 @@ inline Symbol Symbol::New(napi_env env, String description) {
   throw std::runtime_error("TODO");
 }
 
-inline Symbol Symbol::New(napi_env env, napi_value description) {
+inline Symbol Symbol::New(napi_env env, jsi::Value description) {
   throw std::runtime_error("TODO");
 }
 
 inline Symbol Symbol::WellKnown(napi_env env, const std::string& name) {
+  // TODO: can be optimized
   return Napi::Env(env).Global().Get("Symbol").As<Object>().Get(name).As<Symbol>();
 }
 
-inline Symbol::Symbol() : Name() {
-}
-
-inline Symbol::Symbol(napi_env env, napi_value value) : Name(env, value) {
+inline Symbol::Symbol(napi_env env, jsi::Value value)
+  : Name(env, std::move(value)) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -436,10 +448,18 @@ struct vf_utf16_string {
   }
 };
 
+// TODO: this can probably be folded into the Helper/disjunction
 template <typename T>
 struct vf_fallback {
   static Value From(napi_env env, const T& value) {
-    return Value(env, value);
+    return value;
+  }
+};
+
+template <>
+struct vf_fallback<jsi::Value> {
+  static Value From(napi_env env, const jsi::Value& value) {
+    return {env, {env->rt, value}};
   }
 };
 
@@ -500,27 +520,50 @@ String String::From(napi_env env, const T& value) {
 
 template <typename Key>
 inline Object::PropertyLValue<Key>::operator Value() const {
-  return Object(_env, _object).Get(_key);
+  return _object.Get(_key);
 }
 
 template <typename Key> template <typename ValueType>
 inline Object::PropertyLValue<Key>& Object::PropertyLValue<Key>::operator =(ValueType value) {
-  Object(_env, _object).Set(_key, value);
+  _object.Set(_key, value);
   return *this;
 }
 
 template <typename Key>
-inline Object::PropertyLValue<Key>::PropertyLValue(Object object, Key key)
-  : _env(object.Env()), _object(object), _key(key) {}
+inline Object::PropertyLValue<Key>::PropertyLValue(Object& object, Key key)
+  : _object{object}, _key{key} {
+}
+
+inline Object::Object() {
+}
+
+inline Object::Object(napi_env env, jsi::Value value)
+  : Value{env, std::move(value)}, _object{_value.getObject(env->rt)} {
+}
+
+inline Object::operator jsi::Object&&() && {
+  return std::move(*_object);
+}
+
+inline Object::Object(const Object& other)
+  : Object{other._env, {other._env->rt, other._value}} {
+}
+
+inline Object& Object::operator =(const Object& other){
+  Object::Object(other);
+  return *this;
+}
+
+inline Object::operator jsi::Object&() & {
+  return *_object;
+}
+
+inline Object::operator const jsi::Object&() const & {
+  return *_object;
+}
 
 inline Object Object::New(napi_env env) {
-  return {env, {env, facebook::jsi::Object(*env)}};
-}
-
-inline Object::Object() : Value() {
-}
-
-inline Object::Object(napi_env env, napi_value value) : Value(env, value) {
+  return {env, jsi::Object{env->rt}};
 }
 
 inline Object::PropertyLValue<std::string> Object::operator [](const char* utf8name) {
@@ -547,20 +590,12 @@ inline Value Object::operator [](uint32_t index) const {
   return Get(index);
 }
 
-inline bool Object::Has(napi_value key) const {
-  throw std::runtime_error("TODO");
-}
-
 inline bool Object::Has(const char* utf8name) const {
-  return _value->getObject(*_env).hasProperty(*_env, utf8name);
+  return _object->hasProperty(_env->rt, utf8name);
 }
 
 inline bool Object::Has(const std::string& utf8name) const {
   return Has(utf8name.c_str());
-}
-
-inline bool Object::HasOwnProperty(napi_value key) const {
-  throw std::runtime_error("TODO");
 }
 
 inline bool Object::HasOwnProperty(const char* utf8name) const {
@@ -571,12 +606,8 @@ inline bool Object::HasOwnProperty(const std::string& utf8name) const {
   return HasOwnProperty(utf8name.c_str());
 }
 
-inline Value Object::Get(napi_value key) const {
-  throw std::runtime_error("TODO");
-}
-
 inline Value Object::Get(const char* utf8name) const {
-  return {_env, {_env, _value->getObject(*_env).getProperty(*_env, utf8name)}};
+  return {_env, _object->getProperty(_env->rt, utf8name)};
 }
 
 inline Value Object::Get(const std::string& utf8name) const {
@@ -584,22 +615,13 @@ inline Value Object::Get(const std::string& utf8name) const {
 }
 
 template <typename ValueType>
-inline void Object::Set(napi_value key, const ValueType& value) {
-  throw std::runtime_error("TODO");
-}
-
-template <typename ValueType>
 inline void Object::Set(const char* utf8name, const ValueType& value) {
-  _value->getObject(*_env).setProperty(*_env, utf8name, *static_cast<napi_value>(Value::From(_env, value)));
+  _object->setProperty(_env->rt, utf8name, static_cast<jsi::Value&&>(Value::From(_env, value)));
 }
 
 template <typename ValueType>
 inline void Object::Set(const std::string& utf8name, const ValueType& value) {
   Set(utf8name.c_str(), value);
-}
-
-inline bool Object::Delete(napi_value key) {
-  throw std::runtime_error("TODO");
 }
 
 inline bool Object::Delete(const char* utf8name) {
@@ -615,12 +637,14 @@ inline bool Object::Has(uint32_t index) const {
 }
 
 inline Value Object::Get(uint32_t index) const {
-  return {_env, {_env, _value->getObject(*_env).getArray(*_env).getValueAtIndex(*_env, static_cast<size_t>(index))}};
+  // TODO: does this need to work for non-array objects?
+  return {_env, _object->getArray(_env->rt).getValueAtIndex(_env->rt, static_cast<size_t>(index))};
 }
 
 template <typename ValueType>
 inline void Object::Set(uint32_t index, const ValueType& value) {
-  _value->getObject(*_env).getArray(*_env).setValueAtIndex(*_env, static_cast<size_t>(index), *napi_value{Value::From(_env, value)});
+  // TODO: does this need to work for non-array objects?
+  _object->getArray(_env->rt).setValueAtIndex(_env->rt, static_cast<size_t>(index), static_cast<jsi::Value&&>(Value::From(_env, value)));
 }
 
 inline bool Object::Delete(uint32_t index) {
@@ -631,17 +655,17 @@ inline Array Object::GetPropertyNames() const {
   throw std::runtime_error{"TODO"};
 }
 
-inline void Object::DefineProperty(const PropertyDescriptor& property) {
-  throw std::runtime_error{"TODO"};
-}
-
-inline void Object::DefineProperties(const std::initializer_list<PropertyDescriptor>& properties) {
-  throw std::runtime_error{"TODO"};
-}
-
-inline void Object::DefineProperties(const std::vector<PropertyDescriptor>& properties) {
-  throw std::runtime_error{"TODO"};
-}
+//inline void Object::DefineProperty(const PropertyDescriptor& property) {
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//inline void Object::DefineProperties(const std::initializer_list<PropertyDescriptor>& properties) {
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//inline void Object::DefineProperties(const std::vector<PropertyDescriptor>& properties) {
+//  throw std::runtime_error{"TODO"};
+//}
 
 inline bool Object::InstanceOf(const Function& constructor) const {
   throw std::runtime_error{"TODO"};
@@ -653,7 +677,7 @@ inline bool Object::InstanceOf(const Function& constructor) const {
 
 template <typename T>
 inline External<T> External<T>::New(napi_env env, T* data) {
-  return {env, {env, facebook::jsi::Object::createFromHostObject(*env, std::make_shared<details::External<T>>(env, data))}};
+  return {env, jsi::Object::createFromHostObject(env->rt, std::make_shared<details::External<T>>(env, data))};
 }
 
 template <typename T>
@@ -661,7 +685,7 @@ template <typename Finalizer>
 inline External<T> External<T>::New(napi_env env,
                                     T* data,
                                     Finalizer finalizeCallback) {
-  return {env, {env, facebook::jsi::Object::createFromHostObject(*env, std::make_shared<details::ExternalWithFinalizer<T, Finalizer>>(env, data, std::move(finalizeCallback)))}};
+  return {env, jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizer<T, Finalizer>>(env, data, std::move(finalizeCallback)))};
 }
 
 template <typename T>
@@ -670,20 +694,17 @@ inline External<T> External<T>::New(napi_env env,
                                     T* data,
                                     Finalizer finalizeCallback,
                                     Hint* finalizeHint) {
-  return {env, {env, facebook::jsi::Object::createFromHostObject(*env, std::make_shared<details::ExternalWithFinalizerAndHint<T, Finalizer, Hint>>(env, data, std::move(finalizeCallback), finalizeHint))}};
+  return {env, jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizerAndHint<T, Finalizer, Hint>>(env, data, std::move(finalizeCallback), finalizeHint))};
 }
 
 template <typename T>
-inline External<T>::External() : Value() {
-}
-
-template <typename T>
-inline External<T>::External(napi_env env, napi_value value) : Value(env, value) {
+inline External<T>::External(napi_env env, jsi::Value value)
+  : Value(env, std::move(value)) {
 }
 
 template <typename T>
 inline T* External<T>::Data() const {
-  return _value->getObject(*_env).template getHostObject<details::External<T>>(*_env)->Data();
+  return _value.getObject(_env->rt).template getHostObject<details::External<T>>(_env->rt)->Data();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -695,17 +716,39 @@ inline Array Array::New(napi_env env) {
 }
 
 inline Array Array::New(napi_env env, size_t length) {
-  return {env, {env, jsi::Array{*env, length}}};
+  return {env, jsi::Array{env->rt, length}};
 }
 
-inline Array::Array() : Object() {
+inline Array::Array() {
 }
 
-inline Array::Array(napi_env env, napi_value value) : Object(env, value) {
+inline Array::Array(napi_env env, jsi::Value value)
+  : Object{env, std::move(value)}, _array{_object->getArray(env->rt)} {
+}
+
+inline Array::operator jsi::Array&&() && {
+  return std::move(*_array);
+}
+
+inline Array::Array(const Array& other)
+  : Array{other._env, {other._env->rt, other._value}} {
+}
+
+inline Array& Array::operator =(const Array& other){
+  Array::Array(other);
+  return *this;
+}
+
+inline Array::operator jsi::Array&() & {
+  return *_array;
+}
+
+inline Array::operator const jsi::Array&() const & {
+  return *_array;
 }
 
 inline uint32_t Array::Length() const {
-  return static_cast<uint32_t>(_value->getObject(*_env).getArray(*_env).length(*_env));
+  return static_cast<uint32_t>(_array->length(_env->rt));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -739,36 +782,40 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
   throw std::runtime_error{"TODO"};
 }
 
-inline ArrayBuffer::ArrayBuffer() : Object(), _data(nullptr), _length(0) {
+inline ArrayBuffer::ArrayBuffer() {
 }
 
-inline ArrayBuffer::ArrayBuffer(napi_env env, napi_value value)
-  : Object(env, value), _data(nullptr), _length(0) {
+inline ArrayBuffer::ArrayBuffer(napi_env env, jsi::Value value)
+  : Object{env, std::move(value)}, _arrayBuffer{_object->getArrayBuffer(env->rt)} {
 }
 
-inline ArrayBuffer::ArrayBuffer(napi_env env, napi_value value, void* data, size_t length)
-  : Object(env, value), _data(data), _length(length) {
+inline ArrayBuffer::operator jsi::ArrayBuffer&&() && {
+  return std::move(*_arrayBuffer);
+}
+
+inline ArrayBuffer::ArrayBuffer(const ArrayBuffer& other)
+  : ArrayBuffer{other._env, {other._env->rt, other._value}} {
+}
+
+inline ArrayBuffer& ArrayBuffer::operator =(const ArrayBuffer& other){
+  ArrayBuffer::ArrayBuffer(other);
+  return *this;
+}
+
+inline ArrayBuffer::operator jsi::ArrayBuffer&() & {
+  return *_arrayBuffer;
+}
+
+inline ArrayBuffer::operator const jsi::ArrayBuffer&() const & {
+  return *_arrayBuffer;
 }
 
 inline void* ArrayBuffer::Data() const {
-  EnsureInfo();
-  return _data;
+  return const_cast<jsi::ArrayBuffer&>(*_arrayBuffer).data(_env->rt);
 }
 
 inline size_t ArrayBuffer::ByteLength() const {
-  EnsureInfo();
-  return _length;
-}
-
-inline void ArrayBuffer::EnsureInfo() const {
-  //// The ArrayBuffer instance may have been constructed from a napi_value whose
-  //// length/data are not yet known. Fetch and cache these values just once,
-  //// since they can never change during the lifetime of the ArrayBuffer.
-  //if (_data == nullptr) {
-  //  napi_status status = napi_get_arraybuffer_info(_env, _value, &_data, &_length);
-  //  NAPI_THROW_IF_FAILED_VOID(_env, status);
-  //}
-  throw std::runtime_error{"TODO"};
+  return _arrayBuffer->length(_env->rt);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -800,18 +847,16 @@ inline DataView DataView::New(napi_env env,
   //  NAPI_THROW(RangeError::New(env, "Invalid DataView length"),
   //             DataView());
   //}
-  //napi_value value;
+  //jsi::Value value;
   //napi_status status = napi_create_dataview(
-  //  env, byteLength, arrayBuffer, byteOffset, &value);
+  //  rt, byteLength, arrayBuffer, byteOffset, &value);
   //NAPI_THROW_IF_FAILED(env, status, DataView());
   //return DataView(env, value);
   throw std::runtime_error{"TODO"};
 }
 
-inline DataView::DataView() : Object() {
-}
-
-inline DataView::DataView(napi_env env, napi_value value) : Object(env, value) {
+inline DataView::DataView(napi_env env, jsi::Value value)
+  : Object{env, std::move(value)} {
   //napi_status status = napi_get_dataview_info(
   //  _env,
   //  _value   /* dataView */,
@@ -824,7 +869,7 @@ inline DataView::DataView(napi_env env, napi_value value) : Object(env, value) {
 }
 
 inline Napi::ArrayBuffer DataView::ArrayBuffer() const {
-  //napi_value arrayBuffer;
+  //jsi::Value arrayBuffer;
   //napi_status status = napi_get_dataview_info(
   //  _env,
   //  _value       /* dataView */,
@@ -951,24 +996,16 @@ inline void DataView::WriteData(size_t byteOffset, T value) const {
 // TypedArray class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline TypedArray::TypedArray()
-  : Object(), _type(TypedArray::unknown_array_type), _length(0) {
+inline TypedArray::TypedArray() {
 }
 
-inline TypedArray::TypedArray(napi_env env, napi_value value)
-  : Object(env, value), _type(TypedArray::unknown_array_type), _length(0) {
-}
-
-inline TypedArray::TypedArray(napi_env env,
-                              napi_value value,
-                              napi_typedarray_type type,
-                              size_t length)
-  : Object(env, value), _type(type), _length(length) {
+inline TypedArray::TypedArray(napi_env env, jsi::Value value)
+  : Object{env, std::move(value)}, _type{TypedArray::unknown_array_type}, _length{0} {
 }
 
 inline napi_typedarray_type TypedArray::TypedArrayType() const {
   if (_type == TypedArray::unknown_array_type) {
-    GetTypedArrayInfo(_env, _value, &_type, &_length, nullptr, nullptr, nullptr);
+    GetTypedArrayInfo(_env, *_object, &_type, &_length);
   }
 
   return _type;
@@ -996,16 +1033,14 @@ inline uint8_t TypedArray::ElementSize() const {
 
 inline size_t TypedArray::ElementLength() const {
   if (_type == TypedArray::unknown_array_type) {
-    GetTypedArrayInfo(_env, _value, &_type, &_length, nullptr, nullptr, nullptr);
+    GetTypedArrayInfo(_env, *_object, &_type, &_length);
   }
 
   return _length;
 }
 
 inline size_t TypedArray::ByteOffset() const {
-  size_t byteOffset;
-  GetTypedArrayInfo(_env, _value, nullptr, nullptr, nullptr, nullptr, &byteOffset);
-  return byteOffset;
+  return static_cast<size_t>(_object->getProperty(_env->rt, "byteOffset").asNumber());
 }
 
 inline size_t TypedArray::ByteLength() const {
@@ -1013,22 +1048,15 @@ inline size_t TypedArray::ByteLength() const {
 }
 
 inline Napi::ArrayBuffer TypedArray::ArrayBuffer() const {
-  napi_value arrayBuffer;
-  GetTypedArrayInfo(_env, _value, nullptr, nullptr, nullptr, &arrayBuffer, nullptr);
-  return Napi::ArrayBuffer(_env, std::move(arrayBuffer));
+  return {_env, _object->getPropertyAsObject(_env->rt, "buffer").getArrayBuffer(_env->rt)};
 }
 
 inline void TypedArray::GetTypedArrayInfo(napi_env env,
-                                          const napi_value& value,
+                                          const jsi::Object& object,
                                           napi_typedarray_type* type,
-                                          size_t* length,
-                                          void** data,
-                                          napi_value* buffer,
-                                          size_t* byteOffset) {
-  jsi::Object typedArray{value->getObject(*env)};
-
+                                          size_t* length) {
   if (type != nullptr) {
-    std::string name{typedArray.getPropertyAsObject(*env, "constructor").getProperty(*env, "name").getString(*env).utf8(*env)};
+    std::string name{object.getPropertyAsObject(env->rt, "constructor").getProperty(env->rt, "name").getString(env->rt).utf8(env->rt)};
     if (name == "Int8Array") {
       *type = napi_int8_array;
     } else if (name == "Uint8Array") {
@@ -1053,24 +1081,7 @@ inline void TypedArray::GetTypedArrayInfo(napi_env env,
   }
 
   if (length != nullptr) {
-    *length = static_cast<size_t>(typedArray.getProperty(*env, "length").asNumber());
-  }
-
-  if (byteOffset != nullptr) {
-    *byteOffset = static_cast<size_t>(typedArray.getProperty(*env, "byteOffset").asNumber());
-  }
-
-  if (data != nullptr || buffer != nullptr) {
-    jsi::ArrayBuffer _buffer{typedArray.getPropertyAsObject(*env, "buffer").getArrayBuffer(*env)};
-
-    if (data != nullptr) {
-      size_t _byteOffset{byteOffset ? *byteOffset : static_cast<size_t>(typedArray.getProperty(*env, "byteOffset").asNumber())};
-      *data = _buffer.data(*env) + _byteOffset;
-    }
-
-    if (buffer != nullptr) {
-      *buffer = {env, {*env, _buffer}};
-    }
+    *length = static_cast<size_t>(object.getProperty(env->rt, "length").asNumber());
   }
 }
 
@@ -1093,30 +1104,29 @@ inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
                                             Napi::ArrayBuffer arrayBuffer,
                                             size_t bufferOffset,
                                             napi_typedarray_type type) {
-  //napi_value value;
+  //jsi::Value value;
   //napi_status status = napi_create_typedarray(
-  //  env, type, elementLength, arrayBuffer, bufferOffset, &value);
+  //  rt, type, elementLength, arrayBuffer, bufferOffset, &value);
   //NAPI_THROW_IF_FAILED(env, status, TypedArrayOf<T>());
 
   //return TypedArrayOf<T>(
-  //  env, value, type, elementLength,
+  //  rt, value, type, elementLength,
   //  reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(arrayBuffer.Data()) + bufferOffset));
   throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
-inline TypedArrayOf<T>::TypedArrayOf() : TypedArray(), _data(nullptr) {
+inline TypedArrayOf<T>::TypedArrayOf() {
 }
 
 template <typename T>
-inline TypedArrayOf<T>::TypedArrayOf(napi_env env, napi_value value)
-  : TypedArray(env, value) {
-  GetTypedArrayInfo(env, value, &_type, &_length, reinterpret_cast<void**>(&_data), nullptr, nullptr);
+inline TypedArrayOf<T>::TypedArrayOf(napi_env env, jsi::Value value)
+  : TypedArray{env, std::move(value)}, _data{reinterpret_cast<T*>(jsi::ArrayBuffer{_object->getPropertyAsObject(env->rt, "buffer").getArrayBuffer(env->rt)}.data(env->rt) + ByteOffset())} {
 }
 
 template <typename T>
 inline TypedArrayOf<T>::TypedArrayOf(napi_env env,
-                                     napi_value value,
+                                     jsi::Value value,
                                      napi_typedarray_type type,
                                      size_t length,
                                      T* data)
@@ -1153,36 +1163,19 @@ inline const T* TypedArrayOf<T>::Data() const {
 // Function class
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO
-//template <typename CbData>
-//static inline napi_status
-//CreateFunction(napi_env env,
-//               const char* utf8name,
-//               napi_callback cb,
-//               CbData* data,
-//               napi_value* result) {
-//  napi_status status =
-//      napi_create_function(env, utf8name, NAPI_AUTO_LENGTH, cb, data, result);
-//  if (status == napi_ok) {
-//    status = Napi::details::AttachData(env, *result, data);
-//  }
-//
-//  return status;
-//}
-
 template <typename Callable>
 inline Function Function::New(napi_env env,
                               Callable cb,
                               const char* utf8name,
                               void* data) {
-  auto function{jsi::Function::createFromHostFunction(*env, jsi::PropNameID::forUtf8(*env, utf8name), 0,
-    [cb{std::move(cb)}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-      CallbackInfo callbackInfo{&rt, thisVal, args, count, {}, data};
+  auto function{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forUtf8(env->rt, utf8name), 0,
+    [env, cb{std::move(cb)}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+      CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
       cb(callbackInfo);
       return {};
     })};
 
-  return {env, {env, std::move(function)}};
+  return {env, std::move(function)};
 }
 
 template <typename Callable>
@@ -1193,37 +1186,59 @@ inline Function Function::New(napi_env env,
   return New(env, cb, utf8name.c_str(), data);
 }
 
-inline Function::Function() : Object() {
+inline Function::Function() {
 }
 
-inline Function::Function(napi_env env, napi_value value) : Object(env, value) {
+inline Function::Function(napi_env env, jsi::Value value)
+  : Object{env, std::move(value)}, _function{_object->getFunction(env->rt)} {
 }
 
-inline Value Function::operator ()(const std::initializer_list<napi_value>& args) const {
+inline Function::operator jsi::Function&&() && {
+  return std::move(*_function);
+}
+
+inline Function::Function(const Function& other)
+  : Function{other._env, {other._env->rt, other._value}} {
+}
+
+inline Function& Function::operator =(const Function& other){
+  Function::Function(other);
+  return *this;
+}
+
+inline Function::operator jsi::Function&() & {
+  return *_function;
+}
+
+inline Function::operator const jsi::Function&() const & {
+  return *_function;
+}
+
+inline Value Function::operator ()(const std::initializer_list<Value>& args) const {
   return Call(Env().Undefined(), args);
 }
 
-inline Value Function::Call(const std::initializer_list<napi_value>& args) const {
+inline Value Function::Call(const std::initializer_list<Value>& args) const {
   return Call(Env().Undefined(), args);
 }
 
-inline Value Function::Call(const std::vector<napi_value>& args) const {
+inline Value Function::Call(const std::vector<Value>& args) const {
   return Call(Env().Undefined(), args);
 }
 
-inline Value Function::Call(size_t argc, const napi_value* args) const {
+inline Value Function::Call(size_t argc, const Value* args) const {
   return Call(Env().Undefined(), argc, args);
 }
 
-inline Value Function::Call(napi_value recv, const std::initializer_list<napi_value>& args) const {
+inline Value Function::Call(const Value& recv, const std::initializer_list<Value>& args) const {
   return Call(recv, args.size(), args.begin());
 }
 
-inline Value Function::Call(napi_value recv, const std::vector<napi_value>& args) const {
+inline Value Function::Call(const Value& recv, const std::vector<Value>& args) const {
   return Call(recv, args.size(), args.data());
 }
 
-inline Value Function::Call(napi_value recv, size_t argc, const napi_value* args) const {
+inline Value Function::Call(const Value& recv, size_t argc, const Value* args) const {
   jsi::Value stackArgs[6];
   std::vector<jsi::Value> heapArgs;
   jsi::Value* argv;
@@ -1235,28 +1250,26 @@ inline Value Function::Call(napi_value recv, size_t argc, const napi_value* args
   }
 
   for (int i = 0; i < argc; ++i) {
-    argv[i] = {*_env, *args[i]};
+    argv[i] = {_env->rt, args[i]};
   }
 
-  jsi::Function function{_value->getObject(*_env).getFunction(*_env)};
-
   jsi::Value result{
-    recv->isUndefined()
-      ? function.call(*_env, static_cast<const jsi::Value*>(argv), argc)
-      : function.callWithThis(*_env, recv->asObject(*_env), static_cast<const jsi::Value*>(argv), argc)};
+    recv.IsUndefined()
+      ? _function->call(_env->rt, static_cast<const jsi::Value*>(argv), argc)
+      : _function->callWithThis(_env->rt, static_cast<const jsi::Object&>(recv.ToObject()), static_cast<const jsi::Value*>(argv), argc)};
 
-  return {_env, {_env, result}};
+  return {_env, std::move(result)};
 }
 
-inline Object Function::New(const std::initializer_list<napi_value>& args) const {
+inline Object Function::New(const std::initializer_list<Value>& args) const {
   return New(args.size(), args.begin());
 }
 
-inline Object Function::New(const std::vector<napi_value>& args) const {
+inline Object Function::New(const std::vector<Value>& args) const {
   return New(args.size(), args.data());
 }
 
-inline Object Function::New(size_t argc, const napi_value* args) const {
+inline Object Function::New(size_t argc, const Value* args) const {
   jsi::Value stackArgs[6];
   std::vector<jsi::Value> heapArgs;
   jsi::Value* argv;
@@ -1268,11 +1281,13 @@ inline Object Function::New(size_t argc, const napi_value* args) const {
   }
 
   for (int i = 0; i < argc; ++i) {
-    argv[i] = {*_env, *args[i]};
+    argv[i] = {_env->rt, args[i]};
   }
 
-  jsi::Value instance{_value->getObject(*_env).getFunction(*_env).callAsConstructor(*_env, static_cast<const jsi::Value*>(argv), argc)};
-  return {_env, {_env, instance}};
+  jsi::Value instance{_function->callAsConstructor(
+    _env->rt, static_cast<const jsi::Value*>(argv), argc)};
+
+  return {_env, std::move(instance)};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1280,10 +1295,11 @@ inline Object Function::New(size_t argc, const napi_value* args) const {
 ////////////////////////////////////////////////////////////////////////////////
 
 inline Promise::Deferred Promise::Deferred::New(napi_env env) {
-  return Promise::Deferred(env);
+  return {env};
 }
 
-inline Promise::Deferred::Deferred(napi_env env) : _env(env) {
+inline Promise::Deferred::Deferred(napi_env env)
+  : _env{env} {
   //napi_status status = napi_create_promise(_env, &_deferred, &_promise);
   //NAPI_THROW_IF_FAILED_VOID(_env, status);
   throw std::runtime_error{"TODO"};
@@ -1295,22 +1311,23 @@ inline Promise Promise::Deferred::Promise() const {
 }
 
 inline Napi::Env Promise::Deferred::Env() const {
-  return Napi::Env(_env);
+  return {_env};
 }
 
-inline void Promise::Deferred::Resolve(napi_value value) const {
+inline void Promise::Deferred::Resolve(const jsi::Value& value) const {
   //napi_status status = napi_resolve_deferred(_env, _deferred, value);
   //NAPI_THROW_IF_FAILED_VOID(_env, status);
   throw std::runtime_error{"TODO"};
 }
 
-inline void Promise::Deferred::Reject(napi_value value) const {
+inline void Promise::Deferred::Reject(const jsi::Value& value) const {
   //napi_status status = napi_reject_deferred(_env, _deferred, value);
   //NAPI_THROW_IF_FAILED_VOID(_env, status);
   throw std::runtime_error{"TODO"};
 }
 
-inline Promise::Promise(napi_env env, napi_value value) : Object(env, value) {
+inline Promise::Promise(napi_env env, jsi::Value value)
+  : Object(env, std::move(value)) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1319,7 +1336,7 @@ inline Promise::Promise(napi_env env, napi_value value) : Object(env, value) {
 
 inline Error Error::New(napi_env env) {
   //napi_status status;
-  //napi_value error = nullptr;
+  //jsi::Value error = nullptr;
 
   //const napi_extended_error_info* info;
   //status = napi_get_last_error_info(env, &info);
@@ -1342,7 +1359,7 @@ inline Error Error::New(napi_env env) {
   //    NAPI_FATAL_IF_FAILED(status, "Error::New", "napi_get_and_clear_last_exception");
   //  }
 
-  //  napi_value message;
+  //  jsi::Value message;
   //  status = napi_create_string_utf8(
   //    env,
   //    error_message,
@@ -1378,19 +1395,16 @@ inline Error Error::New(napi_env env, const std::string& message) {
   throw std::runtime_error{"TODO"};
 }
 
-// TODO
-//inline NAPI_NO_RETURN void Error::Fatal(const char* location, const char* message) {
-//  // $HACK
-//  //napi_fatal_error(location, NAPI_AUTO_LENGTH, message, NAPI_AUTO_LENGTH);
-//  throw std::exception();
-//}
-
-inline Error::Error() : ObjectReference() {
+inline /*NAPI_NO_RETURN*/ void Error::Fatal(const char* location, const char* message) {
+  // $HACK
+  //napi_fatal_error(location, NAPI_AUTO_LENGTH, message, NAPI_AUTO_LENGTH);
+  throw std::exception();
 }
 
-inline Error::Error(napi_env env, napi_value value) : ObjectReference(env, {value}) {
+inline Error::Error(napi_env env, jsi::Object object)
+  : ObjectReference{env, std::move(object)} {
   //if (value != nullptr) {
-  //  napi_status status = napi_create_reference(env, value, 1, &_ref);
+  //  napi_status status = napi_create_reference(env, value, 1, &_object);
 
   //  // Avoid infinite recursion in the failure case.
   //  // Don't try to construct & throw another Error instance.
@@ -1414,11 +1428,11 @@ inline Error& Error::operator =(Error& other) {
   //Reset();
 
   //_env = other.Env();
-  //HandleScope scope(_env);
+  //HandleScope scope{_env};
 
-  //napi_value value = other.Value();
+  //jsi::Value value = other.Value();
   //if (value != nullptr) {
-  //  napi_status status = napi_create_reference(_env, value, 1, &_ref);
+  //  napi_status status = napi_create_reference(_env, value, 1, &_object);
   //  NAPI_THROW_IF_FAILED(_env, status, *this);
   //}
 
@@ -1427,7 +1441,7 @@ inline Error& Error::operator =(Error& other) {
 }
 
 inline const std::string& Error::Message() const NAPI_NOEXCEPT {
-  if (_message.size() == 0 && _env != nullptr) {
+  if (_message.empty()) {
 #ifdef NAPI_CPP_EXCEPTIONS
     try {
       _message = Get("message").As<String>();
@@ -1444,7 +1458,7 @@ inline const std::string& Error::Message() const NAPI_NOEXCEPT {
 }
 
 inline void Error::ThrowAsJavaScriptException() const {
-//  HandleScope scope(_env);
+//  HandleScope scope{_env};
 //  if (!IsEmpty()) {
 //
 //    // We intentionally don't use `NAPI_THROW_*` macros here to ensure
@@ -1478,11 +1492,11 @@ inline const char* Error::what() const NAPI_NOEXCEPT {
 //                         const char* message,
 //                         size_t length,
 //                         create_error_fn create_error) {
-//  napi_value str;
+//  jsi::Value str;
 //  napi_status status = napi_create_string_utf8(env, message, length, &str);
 //  NAPI_THROW_IF_FAILED(env, status, TError());
 //
-//  napi_value error;
+//  jsi::Value error;
 //  status = create_error(env, nullptr, str, &error);
 //  NAPI_THROW_IF_FAILED(env, status, TError());
 //
@@ -1499,10 +1513,8 @@ inline TypeError TypeError::New(napi_env env, const std::string& message) {
   throw std::runtime_error{"TODO"};
 }
 
-inline TypeError::TypeError() : Error() {
-}
-
-inline TypeError::TypeError(napi_env env, napi_value value) : Error(env, value) {
+inline TypeError::TypeError(napi_env env, jsi::Object object)
+  : Error{env, std::move(object)} {
 }
 
 inline RangeError RangeError::New(napi_env env, const char* message) {
@@ -1515,10 +1527,8 @@ inline RangeError RangeError::New(napi_env env, const std::string& message) {
   throw std::runtime_error{"TODO"};
 }
 
-inline RangeError::RangeError() : Error() {
-}
-
-inline RangeError::RangeError(napi_env env, napi_value value) : Error(env, value) {
+inline RangeError::RangeError(napi_env env, jsi::Object object)
+  : Error{env, std::move(object)} {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1526,9 +1536,9 @@ inline RangeError::RangeError(napi_env env, napi_value value) : Error(env, value
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline Reference<T> Reference<T>::New(const T& value, uint32_t initialRefcount) {
+inline Reference<T> Reference<T>::New(const T& object, uint32_t initialRefcount) {
   //napi_env env = value.Env();
-  //napi_value val = value;
+  //jsi::Value val = value;
 
   //if (val == nullptr) {
   //  return Reference<T>(env, nullptr);
@@ -1540,72 +1550,55 @@ inline Reference<T> Reference<T>::New(const T& value, uint32_t initialRefcount) 
 
   //return Reference<T>(env, ref);
   //throw std::runtime_error{"TODO"};
-  return {value.Env(), {value}};
-}
-
-
-template <typename T>
-inline Reference<T>::Reference() : _env(nullptr), _ref{}, _suppressDestruct(false) {
+  return {object.Env(), object};
 }
 
 template <typename T>
-inline Reference<T>::Reference(napi_env env, napi_ref ref)
-  : _env(env), _ref(ref), _suppressDestruct(false) {
+inline Reference<T>::Reference()
+  : _env{nullptr}, _suppressDestruct{false} {
+}
+
+template <typename T>
+inline Reference<T>::Reference(napi_env env, T object)
+  : _env{env}, _object{std::move(object)}, _suppressDestruct{false} {
 }
 
 template <typename T>
 inline Reference<T>::~Reference() {
-  //if (_ref != nullptr) {
+  //if (_object != nullptr) {
   //  if (!_suppressDestruct) {
-  //    napi_delete_reference(_env, _ref);
+  //    napi_delete_reference(_env, _object);
   //  }
 
-  //  _ref = nullptr;
+  //  _object = nullptr;
   //}
   //throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
 inline Reference<T>::Reference(Reference<T>&& other)
-  : _env(other._env), _ref(std::move(other._ref)), _suppressDestruct(other._suppressDestruct) {
+  : _env(other._env), _object(std::move(other._object)), _suppressDestruct(other._suppressDestruct) {
   other._env = nullptr;
   other._suppressDestruct = false;
+}
+
+template <typename T>
+inline Reference<T>::Reference(const Reference<T>& other)
+  : _env{other._env}, _object{other._object}, _suppressDestruct{false} {
 }
 
 template <typename T>
 inline Reference<T>& Reference<T>::operator =(Reference<T>&& other) {
   Reset();
   _env = other._env;
-  _ref = std::move(other._ref);
+  _object = std::move(other._object);
   _suppressDestruct = other._suppressDestruct;
-  other._env = nullptr;
-  other._suppressDestruct = false;
   return *this;
 }
 
 template <typename T>
-inline Reference<T>::Reference(const Reference<T>& other)
-  : _env(other._env), _ref(other._ref), _suppressDestruct(false) {
-  //HandleScope scope(_env);
-
-  //napi_value value = other.Value();
-  //if (value != nullptr) {
-  //  // Copying is a limited scenario (currently only used for Error object) and always creates a
-  //  // strong reference to the given value even if the incoming reference is weak.
-  //  napi_status status = napi_create_reference(_env, value, 1, &_ref);
-  //  NAPI_FATAL_IF_FAILED(status, "Reference<T>::Reference", "napi_create_reference");
-  //}
-  //throw std::runtime_error{"TODO"};
-}
-
-template <typename T>
-inline Reference<T>::operator napi_ref() const {
-  return _ref;
-}
-
-template <typename T>
 inline bool Reference<T>::operator ==(const Reference<T> &other) const {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   return this->Value().StrictEquals(other.Value());
 }
 
@@ -1616,32 +1609,46 @@ inline bool Reference<T>::operator !=(const Reference<T> &other) const {
 
 template <typename T>
 inline Napi::Env Reference<T>::Env() const {
-  return Napi::Env(_env);
+  return {_env};
 }
 
 template <typename T>
 inline bool Reference<T>::IsEmpty() const {
-  return _ref.value->isUndefined();
+  return _env == nullptr;
 }
 
 template <typename T>
-inline T Reference<T>::Value() const {
-  //if (_ref == nullptr) {
+inline const T& Reference<T>::Value() const {
+  //if (_object == nullptr) {
   //  return T(_env, nullptr);
   //}
 
-  //napi_value value;
-  //napi_status status = napi_get_reference_value(_env, _ref, &value);
+  //jsi::Value value;
+  //napi_status status = napi_get_reference_value(_env, _object, &value);
   //NAPI_THROW_IF_FAILED(_env, status, T());
   //return T(_env, value);
   //throw std::runtime_error{"TODO"};
-  return T{_env, _ref.value};
+  return _object;
+}
+
+template <typename T>
+inline T& Reference<T>::Value() {
+  //if (_object == nullptr) {
+  //  return T(_env, nullptr);
+  //}
+
+  //jsi::Value value;
+  //napi_status status = napi_get_reference_value(_env, _object, &value);
+  //NAPI_THROW_IF_FAILED(_env, status, T());
+  //return T(_env, value);
+  //throw std::runtime_error{"TODO"};
+  return _object;
 }
 
 template <typename T>
 inline uint32_t Reference<T>::Ref() {
   //uint32_t result;
-  //napi_status status = napi_reference_ref(_env, _ref, &result);
+  //napi_status status = napi_reference_ref(_env, _object, &result);
   //NAPI_THROW_IF_FAILED(_env, status, 1);
   //return result;
   //throw std::runtime_error{"TODO"};
@@ -1650,7 +1657,7 @@ inline uint32_t Reference<T>::Ref() {
 template <typename T>
 inline uint32_t Reference<T>::Unref() {
   //uint32_t result;
-  //napi_status status = napi_reference_unref(_env, _ref, &result);
+  //napi_status status = napi_reference_unref(_env, _object, &result);
   //NAPI_THROW_IF_FAILED(_env, status, 1);
   //return result;
   //throw std::runtime_error{"TODO"};
@@ -1658,10 +1665,10 @@ inline uint32_t Reference<T>::Unref() {
 
 template <typename T>
 inline void Reference<T>::Reset() {
-  //if (_ref != nullptr) {
-  //  napi_status status = napi_delete_reference(_env, _ref);
+  //if (_object != nullptr) {
+  //  napi_status status = napi_delete_reference(_env, _object);
   //  NAPI_THROW_IF_FAILED_VOID(_env, status);
-  //  _ref = nullptr;
+  //  _object = nullptr;
   //}
   //throw std::runtime_error{"TODO"};
 }
@@ -1671,14 +1678,12 @@ inline void Reference<T>::Reset(const T& value, uint32_t refcount) {
   //Reset();
   //_env = value.Env();
 
-  //napi_value val = value;
+  //jsi::Value val = value;
   //if (val != nullptr) {
-  //  napi_status status = napi_create_reference(_env, value, refcount, &_ref);
+  //  napi_status status = napi_create_reference(_env, value, refcount, &_object);
   //  NAPI_THROW_IF_FAILED_VOID(_env, status);
   //}
-  //throw std::runtime_error{"TODO"};
-  _env = value.Env();
-  _ref.value = value;
+  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -1716,10 +1721,11 @@ inline FunctionReference Persistent(Function value) {
 // ObjectReference class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline ObjectReference::ObjectReference(): Reference<Object>() {
+inline ObjectReference::ObjectReference() {
 }
 
-inline ObjectReference::ObjectReference(napi_env env, napi_ref ref): Reference<Object>(env, ref) {
+inline ObjectReference::ObjectReference(napi_env env, jsi::Object object)
+  : Reference<Object>{env, {env, std::move(object)}} {
 }
 
 inline ObjectReference::ObjectReference(Reference<Object>&& other)
@@ -1745,100 +1751,85 @@ inline ObjectReference::ObjectReference(const ObjectReference& other)
 }
 
 inline Napi::Value ObjectReference::Get(const char* utf8name) const {
-  //EscapableHandleScope scope(_env);
+  //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().Get(utf8name));
   throw std::runtime_error{"TODO"};
 }
 
 inline Napi::Value ObjectReference::Get(const std::string& utf8name) const {
-  //EscapableHandleScope scope(_env);
+  //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().Get(utf8name));
   throw std::runtime_error{"TODO"};
 }
 
-inline void ObjectReference::Set(const char* utf8name, napi_value value) {
-  HandleScope scope(_env);
-  Value().Set(utf8name, value);
-}
-
 inline void ObjectReference::Set(const char* utf8name, Napi::Value value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, value);
 }
 
 inline void ObjectReference::Set(const char* utf8name, const char* utf8value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, utf8value);
 }
 
 inline void ObjectReference::Set(const char* utf8name, bool boolValue) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, boolValue);
 }
 
 inline void ObjectReference::Set(const char* utf8name, double numberValue) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, numberValue);
 }
 
-inline void ObjectReference::Set(const std::string& utf8name, napi_value value) {
-  HandleScope scope(_env);
-  Value().Set(utf8name, value);
-}
-
 inline void ObjectReference::Set(const std::string& utf8name, Napi::Value value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, value);
 }
 
 inline void ObjectReference::Set(const std::string& utf8name, std::string& utf8value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, utf8value);
 }
 
 inline void ObjectReference::Set(const std::string& utf8name, bool boolValue) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, boolValue);
 }
 
 inline void ObjectReference::Set(const std::string& utf8name, double numberValue) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(utf8name, numberValue);
 }
 
 inline Napi::Value ObjectReference::Get(uint32_t index) const {
-  //EscapableHandleScope scope(_env);
+  //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().Get(index));
   throw std::runtime_error{"TODO"};
 }
 
-inline void ObjectReference::Set(uint32_t index, napi_value value) {
-  HandleScope scope(_env);
-  Value().Set(index, value);
-}
-
 inline void ObjectReference::Set(uint32_t index, Napi::Value value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(index, value);
 }
 
 inline void ObjectReference::Set(uint32_t index, const char* utf8value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(index, utf8value);
 }
 
 inline void ObjectReference::Set(uint32_t index, const std::string& utf8value) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(index, utf8value);
 }
 
 inline void ObjectReference::Set(uint32_t index, bool boolValue) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(index, boolValue);
 }
 
 inline void ObjectReference::Set(uint32_t index, double numberValue) {
-  HandleScope scope(_env);
+  HandleScope scope{_env};
   Value().Set(index, numberValue);
 }
 
@@ -1846,11 +1837,11 @@ inline void ObjectReference::Set(uint32_t index, double numberValue) {
 // FunctionReference class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline FunctionReference::FunctionReference(): Reference<Function>() {
+inline FunctionReference::FunctionReference() {
 }
 
-inline FunctionReference::FunctionReference(napi_env env, napi_ref ref)
-  : Reference<Function>(env, ref) {
+inline FunctionReference::FunctionReference(napi_env env, jsi::Function function)
+  : Reference<Function>{env, {env, std::move(function)}} {
 }
 
 inline FunctionReference::FunctionReference(Reference<Function>&& other)
@@ -1872,14 +1863,14 @@ inline FunctionReference& FunctionReference::operator =(FunctionReference&& othe
 }
 
 inline Napi::Value FunctionReference::operator ()(
-    const std::initializer_list<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+    const std::initializer_list<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //return scope.Escape(Value()(args));
   throw std::runtime_error{"TODO"};
 }
 
-inline Napi::Value FunctionReference::Call(const std::initializer_list<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+inline Napi::Value FunctionReference::Call(const std::initializer_list<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
@@ -1889,8 +1880,8 @@ inline Napi::Value FunctionReference::Call(const std::initializer_list<napi_valu
   return Value().Call(args);
 }
 
-inline Napi::Value FunctionReference::Call(const std::vector<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+inline Napi::Value FunctionReference::Call(const std::vector<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
@@ -1900,8 +1891,8 @@ inline Napi::Value FunctionReference::Call(const std::vector<napi_value>& args) 
 }
 
 inline Napi::Value FunctionReference::Call(
-    napi_value recv, const std::initializer_list<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+    const Napi::Value& recv, const std::initializer_list<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
@@ -1911,8 +1902,8 @@ inline Napi::Value FunctionReference::Call(
 }
 
 inline Napi::Value FunctionReference::Call(
-    napi_value recv, const std::vector<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+    const Napi::Value& recv, const std::vector<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
@@ -1922,8 +1913,8 @@ inline Napi::Value FunctionReference::Call(
 }
 
 inline Napi::Value FunctionReference::Call(
-    napi_value recv, size_t argc, const napi_value* args) const {
-  //EscapableHandleScope scope(_env);
+    const Napi::Value& recv, size_t argc, const Napi::Value* args) const {
+  //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, argc, args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
@@ -1932,14 +1923,14 @@ inline Napi::Value FunctionReference::Call(
   throw std::runtime_error{"TODO"};
 }
 
-inline Object FunctionReference::New(const std::initializer_list<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+inline Object FunctionReference::New(const std::initializer_list<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().New(args)).As<Object>();
   throw std::runtime_error{"TODO"};
 }
 
-inline Object FunctionReference::New(const std::vector<napi_value>& args) const {
-  //EscapableHandleScope scope(_env);
+inline Object FunctionReference::New(const std::vector<Napi::Value>& args) const {
+  //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().New(args)).As<Object>();
   throw std::runtime_error{"TODO"};
 }
@@ -1948,17 +1939,17 @@ inline Object FunctionReference::New(const std::vector<napi_value>& args) const 
 // CallbackInfo class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline CallbackInfo::CallbackInfo(napi_env env, const facebook::jsi::Value& thisVal, const facebook::jsi::Value* args, size_t argc, const facebook::jsi::Value& newTarget, void* data)
-    : _env{env}, _this{_env, thisVal}, _argc{argc}, _dynamicArgs{nullptr}, _newTarget{_env, newTarget}, _data{data} {
+inline CallbackInfo::CallbackInfo(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t argc, const jsi::Value& newTarget, void* data)
+    : _env{env}, _this{_env->rt, thisVal}, _argc{argc}, _dynamicArgs{nullptr}, _newTarget{_env->rt, newTarget}, _data{data} {
   if (_argc <= std::size(_staticArgs)) {
     _argv = _staticArgs;
   } else {
-    _dynamicArgs = new napi_value[_argc];
+    _dynamicArgs = new jsi::Value[_argc];
     _argv = _dynamicArgs;
   }
 
   for (int i = 0; i < _argc; ++i) {
-    _argv[i] = {_env, args[i]};
+    _argv[i] = {_env->rt, args[i]};
   }
 }
 
@@ -1969,11 +1960,11 @@ inline CallbackInfo::~CallbackInfo() {
 }
 
 inline Value CallbackInfo::NewTarget() const {
-  return {_env, _newTarget};
+  return {_env, jsi::Value{_env->rt, _newTarget}};
 }
 
 inline bool CallbackInfo::IsConstructCall() const {
-  return !NewTarget().IsEmpty();
+  return !NewTarget().IsUndefined();
 }
 
 inline Napi::Env CallbackInfo::Env() const {
@@ -1985,11 +1976,11 @@ inline size_t CallbackInfo::Length() const {
 }
 
 inline const Value CallbackInfo::operator [](size_t index) const {
-  return index < _argc ? Value{_env, _argv[index]} : Env().Undefined();
+  return index < _argc ? Value{_env, {_env->rt, _argv[index]}} : Env().Undefined();
 }
 
 inline Value CallbackInfo::This() const {
-  return {_env, _this};
+  return {_env, {_env->rt, _this}};
 }
 
 inline void* CallbackInfo::Data() const {
@@ -2004,238 +1995,237 @@ inline void CallbackInfo::SetData(void* data) {
 // PropertyDescriptor class
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename Getter>
-inline PropertyDescriptor
-PropertyDescriptor::Accessor(Napi::Env env,
-                             Napi::Object object,
-                             const char* utf8name,
-                             Getter getter,
-                             napi_property_attributes attributes,
-                             void* data) {
-  //typedef details::CallbackData<Getter, Napi::Value> CbData;
-  //auto callbackData = new CbData({ getter, data });
-
-  //napi_status status = AttachData(env, object, callbackData);
-  //if (status != napi_ok) {
-  //  delete callbackData;
-  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
-  //}
-
-  //return PropertyDescriptor({
-  //  utf8name,
-  //  nullptr,
-  //  nullptr,
-  //  CbData::Wrapper,
-  //  nullptr,
-  //  nullptr,
-  //  attributes,
-  //  callbackData
-  //});
-  throw std::runtime_error{"TODO"};
-}
-
-template <typename Getter>
-inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
-                                                       Napi::Object object,
-                                                       const std::string& utf8name,
-                                                       Getter getter,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  return Accessor(env, object, utf8name.c_str(), getter, attributes, data);
-}
-
-template <typename Getter>
-inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
-                                                       Napi::Object object,
-                                                       Name name,
-                                                       Getter getter,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  //typedef details::CallbackData<Getter, Napi::Value> CbData;
-  //auto callbackData = new CbData({ getter, data });
-
-  //napi_status status = AttachData(env, object, callbackData);
-  //if (status != napi_ok) {
-  //  delete callbackData;
-  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
-  //}
-
-  //return PropertyDescriptor({
-  //  nullptr,
-  //  name,
-  //  nullptr,
-  //  CbData::Wrapper,
-  //  nullptr,
-  //  nullptr,
-  //  attributes,
-  //  callbackData
-  //});
-  throw std::runtime_error{"TODO"};
-}
-
-template <typename Getter, typename Setter>
-inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
-                                                       Napi::Object object,
-                                                       const char* utf8name,
-                                                       Getter getter,
-                                                       Setter setter,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  //typedef details::AccessorCallbackData<Getter, Setter> CbData;
-  //auto callbackData = new CbData({ getter, setter, data });
-
-  //napi_status status = AttachData(env, object, callbackData);
-  //if (status != napi_ok) {
-  //  delete callbackData;
-  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
-  //}
-
-  //return PropertyDescriptor({
-  //  utf8name,
-  //  nullptr,
-  //  nullptr,
-  //  CbData::GetterWrapper,
-  //  CbData::SetterWrapper,
-  //  nullptr,
-  //  attributes,
-  //  callbackData
-  //});
-  throw std::runtime_error{"TODO"};
-}
-
-template <typename Getter, typename Setter>
-inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
-                                                       Napi::Object object,
-                                                       const std::string& utf8name,
-                                                       Getter getter,
-                                                       Setter setter,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  return Accessor(env, object, utf8name.c_str(), getter, setter, attributes, data);
-}
-
-template <typename Getter, typename Setter>
-inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
-                                                       Napi::Object object,
-                                                       Name name,
-                                                       Getter getter,
-                                                       Setter setter,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  //typedef details::AccessorCallbackData<Getter, Setter> CbData;
-  //auto callbackData = new CbData({ getter, setter, data });
-
-  //napi_status status = AttachData(env, object, callbackData);
-  //if (status != napi_ok) {
-  //  delete callbackData;
-  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
-  //}
-
-  //return PropertyDescriptor({
-  //  nullptr,
-  //  name,
-  //  nullptr,
-  //  CbData::GetterWrapper,
-  //  CbData::SetterWrapper,
-  //  nullptr,
-  //  attributes,
-  //  callbackData
-  //});
-  throw std::runtime_error{"TODO"};
-}
-
-template <typename Callable>
-inline PropertyDescriptor PropertyDescriptor::Function(Napi::Env env,
-                                                       Napi::Object /*object*/,
-                                                       const char* utf8name,
-                                                       Callable cb,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  return PropertyDescriptor({
-    utf8name,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    Napi::Function::New(env, cb, utf8name, data),
-    attributes,
-    nullptr
-  });
-}
-
-template <typename Callable>
-inline PropertyDescriptor PropertyDescriptor::Function(Napi::Env env,
-                                                       Napi::Object object,
-                                                       const std::string& utf8name,
-                                                       Callable cb,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  return Function(env, object, utf8name.c_str(), cb, attributes, data);
-}
-
-template <typename Callable>
-inline PropertyDescriptor PropertyDescriptor::Function(Napi::Env env,
-                                                       Napi::Object /*object*/,
-                                                       Name name,
-                                                       Callable cb,
-                                                       napi_property_attributes attributes,
-                                                       void* data) {
-  return PropertyDescriptor({
-    nullptr,
-    name,
-    nullptr,
-    nullptr,
-    nullptr,
-    Napi::Function::New(env, cb, nullptr, data),
-    attributes,
-    nullptr
-  });
-}
-
-inline PropertyDescriptor PropertyDescriptor::Value(const char* utf8name,
-                                                    napi_value value,
-                                                    napi_property_attributes attributes) {
-  //return PropertyDescriptor({
-  //  utf8name, {}, nullptr, nullptr, nullptr, value, attributes, nullptr
-  //});
-  throw std::runtime_error{"TODO"};
-}
-
-inline PropertyDescriptor PropertyDescriptor::Value(const std::string& utf8name,
-                                                    napi_value value,
-                                                    napi_property_attributes attributes) {
-  return Value(utf8name.c_str(), value, attributes);
-}
-
-inline PropertyDescriptor PropertyDescriptor::Value(napi_value name,
-                                                    napi_value value,
-                                                    napi_property_attributes attributes) {
-  //return PropertyDescriptor({
-  //  nullptr, name, nullptr, nullptr, nullptr, value, attributes, nullptr
-  //});
-  throw std::runtime_error{"TODO"};
-}
-
-inline PropertyDescriptor PropertyDescriptor::Value(Name name,
-                                                    Napi::Value value,
-                                                    napi_property_attributes attributes) {
-  napi_value nameValue = name;
-  napi_value valueValue = value;
-  return PropertyDescriptor::Value(nameValue, valueValue, attributes);
-}
-
-inline PropertyDescriptor::PropertyDescriptor(napi_property_descriptor desc)
-  /*: _desc(desc)*/ {
-  throw std::runtime_error{"TODO"};
-}
-
-inline PropertyDescriptor::operator napi_property_descriptor&() {
-  return _desc;
-}
-
-inline PropertyDescriptor::operator const napi_property_descriptor&() const {
-  return _desc;
-}
+//template <typename Getter>
+//inline PropertyDescriptor
+//PropertyDescriptor::Accessor(Napi::Env env,
+//                             Napi::Object object,
+//                             const char* utf8name,
+//                             Getter getter,
+//                             napi_property_attributes attributes,
+//                             void* data) {
+//  //typedef details::CallbackData<Getter, Napi::Value> CbData;
+//  //auto callbackData = new CbData({ getter, data });
+//
+//  //napi_status status = AttachData(env, object, callbackData);
+//  //if (status != napi_ok) {
+//  //  delete callbackData;
+//  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
+//  //}
+//
+//  //return PropertyDescriptor({
+//  //  utf8name,
+//  //  nullptr,
+//  //  nullptr,
+//  //  CbData::Wrapper,
+//  //  nullptr,
+//  //  nullptr,
+//  //  attributes,
+//  //  callbackData
+//  //});
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//template <typename Getter>
+//inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
+//                                                       Napi::Object object,
+//                                                       const std::string& utf8name,
+//                                                       Getter getter,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  return Accessor(env, object, utf8name.c_str(), getter, attributes, data);
+//}
+//
+//template <typename Getter>
+//inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
+//                                                       Napi::Object object,
+//                                                       Name name,
+//                                                       Getter getter,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  //typedef details::CallbackData<Getter, Napi::Value> CbData;
+//  //auto callbackData = new CbData({ getter, data });
+//
+//  //napi_status status = AttachData(env, object, callbackData);
+//  //if (status != napi_ok) {
+//  //  delete callbackData;
+//  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
+//  //}
+//
+//  //return PropertyDescriptor({
+//  //  nullptr,
+//  //  name,
+//  //  nullptr,
+//  //  CbData::Wrapper,
+//  //  nullptr,
+//  //  nullptr,
+//  //  attributes,
+//  //  callbackData
+//  //});
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//template <typename Getter, typename Setter>
+//inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
+//                                                       Napi::Object object,
+//                                                       const char* utf8name,
+//                                                       Getter getter,
+//                                                       Setter setter,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  //typedef details::AccessorCallbackData<Getter, Setter> CbData;
+//  //auto callbackData = new CbData({ getter, setter, data });
+//
+//  //napi_status status = AttachData(env, object, callbackData);
+//  //if (status != napi_ok) {
+//  //  delete callbackData;
+//  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
+//  //}
+//
+//  //return PropertyDescriptor({
+//  //  utf8name,
+//  //  nullptr,
+//  //  nullptr,
+//  //  CbData::GetterWrapper,
+//  //  CbData::SetterWrapper,
+//  //  nullptr,
+//  //  attributes,
+//  //  callbackData
+//  //});
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//template <typename Getter, typename Setter>
+//inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
+//                                                       Napi::Object object,
+//                                                       const std::string& utf8name,
+//                                                       Getter getter,
+//                                                       Setter setter,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  return Accessor(env, object, utf8name.c_str(), getter, setter, attributes, data);
+//}
+//
+//template <typename Getter, typename Setter>
+//inline PropertyDescriptor PropertyDescriptor::Accessor(Napi::Env env,
+//                                                       Napi::Object object,
+//                                                       Name name,
+//                                                       Getter getter,
+//                                                       Setter setter,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  //typedef details::AccessorCallbackData<Getter, Setter> CbData;
+//  //auto callbackData = new CbData({ getter, setter, data });
+//
+//  //napi_status status = AttachData(env, object, callbackData);
+//  //if (status != napi_ok) {
+//  //  delete callbackData;
+//  //  NAPI_THROW_IF_FAILED(env, status, napi_property_descriptor());
+//  //}
+//
+//  //return PropertyDescriptor({
+//  //  nullptr,
+//  //  name,
+//  //  nullptr,
+//  //  CbData::GetterWrapper,
+//  //  CbData::SetterWrapper,
+//  //  nullptr,
+//  //  attributes,
+//  //  callbackData
+//  //});
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//template <typename Callable>
+//inline PropertyDescriptor PropertyDescriptor::Function(Napi::Env env,
+//                                                       Napi::Object /*object*/,
+//                                                       const char* utf8name,
+//                                                       Callable cb,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  return PropertyDescriptor({
+//    utf8name,
+//    nullptr,
+//    nullptr,
+//    nullptr,
+//    nullptr,
+//    Napi::Function::New(env, cb, utf8name, data),
+//    attributes,
+//    nullptr
+//  });
+//}
+//
+//template <typename Callable>
+//inline PropertyDescriptor PropertyDescriptor::Function(Napi::Env env,
+//                                                       Napi::Object object,
+//                                                       const std::string& utf8name,
+//                                                       Callable cb,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  return Function(env, object, utf8name.c_str(), cb, attributes, data);
+//}
+//
+//template <typename Callable>
+//inline PropertyDescriptor PropertyDescriptor::Function(Napi::Env env,
+//                                                       Napi::Object /*object*/,
+//                                                       Name name,
+//                                                       Callable cb,
+//                                                       napi_property_attributes attributes,
+//                                                       void* data) {
+//  return PropertyDescriptor({
+//    nullptr,
+//    name,
+//    nullptr,
+//    nullptr,
+//    nullptr,
+//    Napi::Function::New(env, cb, nullptr, data),
+//    attributes,
+//    nullptr
+//  });
+//}
+//
+//inline PropertyDescriptor PropertyDescriptor::Value(const char* utf8name,
+//                                                    jsi::Value value,
+//                                                    napi_property_attributes attributes) {
+//  //return PropertyDescriptor({
+//  //  utf8name, {}, nullptr, nullptr, nullptr, value, attributes, nullptr
+//  //});
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//inline PropertyDescriptor PropertyDescriptor::Value(const std::string& utf8name,
+//                                                    jsi::Value value,
+//                                                    napi_property_attributes attributes) {
+//  return Value(utf8name.c_str(), std::move(value), attributes);
+//}
+//
+//inline PropertyDescriptor PropertyDescriptor::Value(jsi::Value name,
+//                                                    jsi::Value value,
+//                                                    napi_property_attributes attributes) {
+//  //return PropertyDescriptor({
+//  //  nullptr, name, nullptr, nullptr, nullptr, value, attributes, nullptr
+//  //});
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//inline PropertyDescriptor PropertyDescriptor::Value(Name name,
+//                                                    Napi::Value value,
+//                                                    napi_property_attributes attributes) {
+//  //return PropertyDescriptor::Value(jsi::Value{name}, jsi::Value{value}, attributes);
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//inline PropertyDescriptor::PropertyDescriptor(napi_property_descriptor desc)
+//  /*: _desc(desc)*/ {
+//  throw std::runtime_error{"TODO"};
+//}
+//
+//inline PropertyDescriptor::operator napi_property_descriptor&() {
+//  return _desc;
+//}
+//
+//inline PropertyDescriptor::operator const napi_property_descriptor&() const {
+//  return _desc;
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 // ObjectWrap<T> class
@@ -2243,9 +2233,10 @@ inline PropertyDescriptor::operator const napi_property_descriptor&() const {
 
 template <typename T>
 inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo)
-  : Reference<Object>(callbackInfo.Env(), {}) {
+  : _env{callbackInfo.Env()} {
+  //: Reference<Object>(callbackInfo.Env(), {}) {
   //napi_env env = callbackInfo.Env();
-  //napi_value wrapper = callbackInfo.This();
+  //jsi::Value wrapper = callbackInfo.This();
   //napi_status status;
   //napi_ref ref;
   //T* instance = static_cast<T*>(this);
@@ -2261,82 +2252,115 @@ template<typename T>
 inline ObjectWrap<T>::~ObjectWrap() {}
 
 template<typename T>
+Napi::Env ObjectWrap<T>::Env() const {
+  return {_env};
+}
+
+template<typename T>
+inline T* ObjectWrap<T>::Unwrap(napi_env env, const jsi::Object& wrapper) {
+  auto native{wrapper.getProperty(env->rt, env->native_name)};
+  return native.isUndefined() ? nullptr : native.getObject(env->rt).getHostObject<T>(env->rt).get();
+}
+
+template<typename T>
 inline T* ObjectWrap<T>::Unwrap(Object wrapper) {
-  facebook::jsi::Runtime& rt{*static_cast<napi_env>(wrapper.Env())};
-  auto native{napi_value{wrapper}->getObject(rt).getProperty(rt, "__native__")};
-  return native.isUndefined() ? nullptr : native.getObject(rt).getHostObject<T>(rt).get();
+  return Unwrap(wrapper.Env(), wrapper);
 }
 
 template <typename T>
 inline Function
-ObjectWrap<T>::DefineClass(Napi::Env env,
+ObjectWrap<T>::DefineClass(napi_env env,
                            const char* utf8name,
                            const size_t props_count,
-                           const napi_property_descriptor* descriptors,
+                           const PropertyDescriptor* descriptors,
                            void* data) {
-  jsi::Runtime& rt{*static_cast<napi_env>(env)};
+  jsi::Runtime& rt{env->rt};
+
+  // TODO: Cache this somewhere?
+  auto constructorFactoryCode{std::make_shared<const jsi::StringBuffer>("(function(constructor) { return function() { return constructor.apply(this, arguments); }; })")};
+  auto createConstructor{rt.evaluateJavaScript(std::move(constructorFactoryCode), "").asObject(rt).asFunction(rt)};
 
   auto newTarget{std::make_shared<jsi::Value>()};
 
-  // TODO: Cache this somewhere?
-  auto constructorFactoryCode = std::make_shared<const jsi::StringBuffer>("(function(constructor) { return function() { return constructor.apply(this, arguments); }; })");
-  auto createConstructor = rt.evaluateJavaScript(std::move(constructorFactoryCode), "").asObject(rt).asFunction(rt);
-
   jsi::Function constructor{createConstructor.call(rt,
     jsi::Function::createFromHostFunction(rt, jsi::PropNameID::forUtf8(rt, utf8name), 0,
-      [newTarget, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-        CallbackInfo callbackInfo{&rt, thisVal, args, count, *newTarget, data};
-        // TODO: use prototype to wrap object? or return new host object?
-        thisVal.getObject(rt).setProperty(rt, "__native__", jsi::Object::createFromHostObject(rt, std::make_shared<T>(callbackInfo)));
+      [env, newTarget, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+        CallbackInfo callbackInfo{env, thisVal, args, count, *newTarget, data};
+        // TODO: use prototype to wrap object?
+        thisVal.getObject(rt).setProperty(rt, env->native_name, jsi::Object::createFromHostObject(rt, std::make_shared<T>(callbackInfo)));
         return {};
       })).getObject(rt).getFunction(rt)};
 
-  *newTarget = {rt, constructor};
+  *newTarget = {rt, static_cast<const jsi::Object&>(constructor)};
 
   jsi::Object prototype{constructor.getProperty(rt, "prototype").getObject(rt)};
 
   for (int i = 0; i < props_count; ++i) {
-    const napi_property_descriptor& p{descriptors[i]};
+    const PropertyDescriptor& p{descriptors[i]};
     jsi::PropNameID name{jsi::PropNameID::forUtf8(rt, p.utf8name)};
-    if (p.attributes & napi_static) {
-      //throw std::runtime_error{"TODO"};
-    } else {
-      jsi::Object descriptor{rt};
-      descriptor.setProperty(rt, "configurable", jsi::Value{(p.attributes & napi_configurable) != 0});
-      descriptor.setProperty(rt, "enumerable", jsi::Value{(p.attributes & napi_enumerable) != 0});
-      if (p.getter != nullptr || p.setter != nullptr) {
-        if (p.getter != nullptr) {
-          descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0, p.getter));
-        }
-        if (p.setter != nullptr) {
-          descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0, p.setter));
-        }
-      } else if (p.method != nullptr) {
-        descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0, p.method));
-      } else {
-        descriptor.setProperty(rt, "writable", jsi::Value{(p.attributes & napi_writable) != 0});
-        descriptor.setProperty(rt, "value", *p.value);
-      }
+    jsi::Object descriptor{rt};
+    descriptor.setProperty(rt, "configurable", jsi::Value{(p.attributes & napi_configurable) != 0});
+    descriptor.setProperty(rt, "enumerable", jsi::Value{(p.attributes & napi_enumerable) != 0});
 
-      jsi::Object object{rt.global().getPropertyAsObject(rt, "Object")};
-      jsi::Function defineProperty{object.getPropertyAsFunction(rt, "defineProperty")};
-      defineProperty.callWithThis(rt, object, prototype, p.utf8name, descriptor);
+    if (p.staticVoidMethod != nullptr) {
+      //throw std::runtime_error{"TODO"};
+    } else if (p.staticMethod != nullptr) {
+      //throw std::runtime_error{"TODO"};
+    } else if (p.staticGetter != nullptr || p.staticSetter != nullptr) {
+      //throw std::runtime_error{"TODO"};
+    } else if (!p.staticValue.IsEmpty()) {
+    } else if (p.instanceVoidMethod != nullptr) {
+      descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
+        [env, method{p.instanceVoidMethod}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+          T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+          (nativeObject->*method)({env, thisVal, args, count, nullptr, data});
+          return {};
+        }));
+    } else if (p.instanceMethod != nullptr) {
+      descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
+        [env, method{p.instanceMethod}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+          T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+          return {rt, (nativeObject->*method)({env, thisVal, args, count, nullptr, data})};
+        }));
+    } else if (p.instanceGetter != nullptr || p.instanceSetter != nullptr) {
+      if (p.instanceGetter != nullptr) {
+        descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
+          [env, getter{p.instanceGetter}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+            return {rt, (nativeObject->*getter)({env, thisVal, args, count, nullptr, data})};
+          }));
+      }
+      if (p.instanceSetter != nullptr) {
+        descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
+          [env, setter{p.instanceSetter}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+            (nativeObject->*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
+            return {};
+          }));
+      }
+    } else if (!p.instanceValue.IsEmpty()) {
+      descriptor.setProperty(rt, "writable", jsi::Value{(p.attributes & napi_writable) != 0});
+      descriptor.setProperty(rt, "value", static_cast<const jsi::Value&>(p.instanceValue));
     }
+
+    jsi::Object object{rt.global().getPropertyAsObject(rt, "Object")};
+    jsi::Function defineProperty{object.getPropertyAsFunction(rt, "defineProperty")};
+    defineProperty.callWithThis(rt, object, prototype, p.utf8name, descriptor);
   }
 
-  return {&rt, {&rt, {rt, constructor}}};
+  return {env, std::move(constructor)};
 }
 
 template <typename T>
 inline Function ObjectWrap<T>::DefineClass(
     Napi::Env env,
     const char* utf8name,
-    const std::initializer_list<ClassPropertyDescriptor<T>>& properties,
+    const std::initializer_list<PropertyDescriptor>& properties,
     void* data) {
   return DefineClass(env,
           utf8name,
           properties.size(),
-          reinterpret_cast<const napi_property_descriptor*>(properties.begin()),
+          properties.begin(),
           data);
 }
 
@@ -2344,24 +2368,24 @@ template <typename T>
 inline Function ObjectWrap<T>::DefineClass(
     Napi::Env env,
     const char* utf8name,
-    const std::vector<ClassPropertyDescriptor<T>>& properties,
+    const std::vector<PropertyDescriptor>& properties,
     void* data) {
   return DefineClass(env,
            utf8name,
            properties.size(),
-           reinterpret_cast<const napi_property_descriptor*>(properties.data()),
+           properties.data(),
            data);
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     const char* utf8name,
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
   //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.utf8name = utf8name;
   //desc.method = T::StaticVoidMethodCallbackWrapper;
   //desc.data = callbackData;
@@ -2371,14 +2395,14 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     const char* utf8name,
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
   //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.utf8name = utf8name;
   //desc.method = T::StaticMethodCallbackWrapper;
   //desc.data = callbackData;
@@ -2388,14 +2412,14 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     Symbol name,
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
   //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.method = T::StaticVoidMethodCallbackWrapper;
   //desc.data = callbackData;
@@ -2405,14 +2429,14 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     Symbol name,
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
   //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.method = T::StaticMethodCallbackWrapper;
   //desc.data = callbackData;
@@ -2422,7 +2446,7 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticMethod(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     const char* utf8name,
     StaticGetterCallback getter,
     StaticSetterCallback setter,
@@ -2431,7 +2455,7 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
   //StaticAccessorCallbackData* callbackData =
   //  new StaticAccessorCallbackData({ getter, setter, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.utf8name = utf8name;
   //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
   //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
@@ -2442,7 +2466,7 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     Symbol name,
     StaticGetterCallback getter,
     StaticSetterCallback setter,
@@ -2451,7 +2475,7 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
   //StaticAccessorCallbackData* callbackData =
   //  new StaticAccessorCallbackData({ getter, setter, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
   //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
@@ -2462,44 +2486,33 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticAccessor(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     const char* utf8name,
     InstanceVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  napi_property_descriptor desc{};
+  PropertyDescriptor desc{};
   desc.utf8name = utf8name;
-  desc.method =
-    [method, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-      auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
-      CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
-      (instance->*method)(callbackInfo);
-      return {};
-    };
+  desc.instanceVoidMethod = method;
   desc.attributes = attributes;
   return desc;
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     const char* utf8name,
     InstanceMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  napi_property_descriptor desc{};
+  PropertyDescriptor desc{};
   desc.utf8name = utf8name;
-  desc.method =
-    [method, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-      auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
-      CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
-      return {*napi_value{(instance->*method)(callbackInfo)}};
-    };
+  desc.instanceMethod = method;
   desc.attributes = attributes;
   return desc;
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     Symbol name,
     InstanceVoidMethodCallback method,
     napi_property_attributes attributes,
@@ -2517,7 +2530,7 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     Symbol name,
     InstanceMethodCallback method,
     napi_property_attributes attributes,
@@ -2534,37 +2547,22 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceMethod(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceAccessor(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceAccessor(
     const char* utf8name,
     InstanceGetterCallback getter,
     InstanceSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  napi_property_descriptor desc{};
+  PropertyDescriptor desc{};
   desc.utf8name = utf8name;
-  if (getter != nullptr) {
-    desc.getter =
-      [getter, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-        auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
-        CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
-        return {*napi_value{(instance->*getter)(callbackInfo)}};
-      };
-  }
-  if (setter != nullptr) {
-    desc.setter =
-      [setter, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-        auto instance{Unwrap({&rt, {&rt, thisVal.getObject(rt)}})};
-        CallbackInfo callbackInfo{&rt, thisVal, args, count, nullptr, data};
-        (instance->*setter)(callbackInfo, {&rt, {&rt, args[0]}});
-        return {};
-      };
-  }
+  desc.instanceGetter = getter;
+  desc.instanceSetter = setter;
   desc.attributes = attributes;
   return desc;
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceAccessor(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceAccessor(
     Symbol name,
     InstanceGetterCallback getter,
     InstanceSetterCallback setter,
@@ -2573,7 +2571,7 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceAccessor(
   //InstanceAccessorCallbackData* callbackData =
   //  new InstanceAccessorCallbackData({ getter, setter, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.getter = getter != nullptr ? T::InstanceGetterCallbackWrapper : nullptr;
   //desc.setter = setter != nullptr ? T::InstanceSetterCallbackWrapper : nullptr;
@@ -2584,19 +2582,19 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceAccessor(
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticValue(const char* utf8name,
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(const char* utf8name,
     Napi::Value value, napi_property_attributes attributes) {
-  napi_property_descriptor desc{};
+  PropertyDescriptor desc{};
   desc.utf8name = utf8name;
-  desc.value = value;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  desc.staticValue = std::move(value);
+  desc.attributes = static_cast<napi_property_attributes>(attributes);
   return desc;
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticValue(Symbol name,
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(Symbol name,
     Napi::Value value, napi_property_attributes attributes) {
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.value = value;
   //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
@@ -2605,23 +2603,23 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::StaticValue(Symbol name,
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceValue(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceValue(
     const char* utf8name,
     Napi::Value value,
     napi_property_attributes attributes) {
-  napi_property_descriptor desc = napi_property_descriptor();
+  PropertyDescriptor desc{};
   desc.utf8name = utf8name;
-  desc.value = value;
+  desc.instanceValue = std::move(value);
   desc.attributes = attributes;
   return desc;
 }
 
 template <typename T>
-inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceValue(
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceValue(
     Symbol name,
     Napi::Value value,
     napi_property_attributes attributes) {
-  //napi_property_descriptor desc = napi_property_descriptor();
+  //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.value = value;
   //desc.attributes = attributes;
@@ -2632,162 +2630,15 @@ inline ClassPropertyDescriptor<T> ObjectWrap<T>::InstanceValue(
 template <typename T>
 inline void ObjectWrap<T>::Finalize(Napi::Env /*env*/) {}
 
-//template <typename T>
-//inline napi_value ObjectWrap<T>::ConstructorCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  napi_value new_target;
-//  napi_status status = napi_get_new_target(env, info, &new_target);
-//  if (status != napi_ok) return nullptr;
-//
-//  bool isConstructCall = (new_target != nullptr);
-//  if (!isConstructCall) {
-//    napi_throw_type_error(env, nullptr, "Class constructors cannot be invoked without 'new'");
-//    return nullptr;
-//  }
-//
-//  T* instance;
-//  napi_value wrapper = details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    instance = new T(callbackInfo);
-//    return callbackInfo.This();
-//  });
-//
-//  return wrapper;
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::StaticVoidMethodCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    StaticVoidMethodCallbackData* callbackData =
-//      reinterpret_cast<StaticVoidMethodCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    callbackData->callback(callbackInfo);
-//    return nullptr;
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::StaticMethodCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    StaticMethodCallbackData* callbackData =
-//      reinterpret_cast<StaticMethodCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    return callbackData->callback(callbackInfo);
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::StaticGetterCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    StaticAccessorCallbackData* callbackData =
-//      reinterpret_cast<StaticAccessorCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    return callbackData->getterCallback(callbackInfo);
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::StaticSetterCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    StaticAccessorCallbackData* callbackData =
-//      reinterpret_cast<StaticAccessorCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    callbackData->setterCallback(callbackInfo, callbackInfo[0]);
-//    return nullptr;
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::InstanceVoidMethodCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    InstanceVoidMethodCallbackData* callbackData =
-//      reinterpret_cast<InstanceVoidMethodCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    T* instance = Unwrap(callbackInfo.This().As<Object>());
-//    auto cb = callbackData->callback;
-//    (instance->*cb)(callbackInfo);
-//    return nullptr;
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::InstanceMethodCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    InstanceMethodCallbackData* callbackData =
-//      reinterpret_cast<InstanceMethodCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    T* instance = Unwrap(callbackInfo.This().As<Object>());
-//    auto cb = callbackData->callback;
-//    return (instance->*cb)(callbackInfo);
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::InstanceGetterCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    InstanceAccessorCallbackData* callbackData =
-//      reinterpret_cast<InstanceAccessorCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    T* instance = Unwrap(callbackInfo.This().As<Object>());
-//    auto cb = callbackData->getterCallback;
-//    return (instance->*cb)(callbackInfo);
-//  });
-//}
-//
-//template <typename T>
-//inline napi_value ObjectWrap<T>::InstanceSetterCallbackWrapper(
-//    napi_env env,
-//    napi_callback_info info) {
-//  return details::WrapCallback([&] {
-//    CallbackInfo callbackInfo(env, info);
-//    InstanceAccessorCallbackData* callbackData =
-//      reinterpret_cast<InstanceAccessorCallbackData*>(callbackInfo.Data());
-//    callbackInfo.SetData(callbackData->data);
-//    T* instance = Unwrap(callbackInfo.This().As<Object>());
-//    auto cb = callbackData->setterCallback;
-//    (instance->*cb)(callbackInfo, callbackInfo[0]);
-//    return nullptr;
-//  });
-//}
-//
-//template <typename T>
-//inline void ObjectWrap<T>::FinalizeCallback(napi_env env, void* data, void* /*hint*/) {
-//  T* instance = reinterpret_cast<T*>(data);
-//  instance->Finalize(Napi::Env(env));
-//  delete instance;
-//}
-
 ////////////////////////////////////////////////////////////////////////////////
 // HandleScope class
 ////////////////////////////////////////////////////////////////////////////////
 
 inline HandleScope::HandleScope(napi_env env, napi_handle_scope scope)
-    : _env(env), _scope(scope) {
+    : _env{env}, _scope{scope} {
 }
 
-inline HandleScope::HandleScope(Napi::Env env) : _env(env) {
+inline HandleScope::HandleScope(Napi::Env env) : _env{env} {
   //napi_status status = napi_open_handle_scope(_env, &_scope);
   //NAPI_THROW_IF_FAILED_VOID(_env, status);
   //throw std::runtime_error{"TODO"};
@@ -2803,7 +2654,7 @@ inline HandleScope::operator napi_handle_scope() const {
 }
 
 inline Napi::Env HandleScope::Env() const {
-  return Napi::Env(_env);
+  return {_env};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2811,10 +2662,10 @@ inline Napi::Env HandleScope::Env() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 inline EscapableHandleScope::EscapableHandleScope(
-  napi_env env, napi_escapable_handle_scope scope) : _env(env), _scope(scope) {
+  napi_env env, napi_escapable_handle_scope scope) : _env{env}, _scope{scope} {
 }
 
-inline EscapableHandleScope::EscapableHandleScope(Napi::Env env) : _env(env) {
+inline EscapableHandleScope::EscapableHandleScope(Napi::Env env) : _env{env} {
   //napi_status status = napi_open_escapable_handle_scope(_env, &_scope);
   //NAPI_THROW_IF_FAILED_VOID(_env, status);
   throw std::runtime_error{"TODO"};
@@ -2830,11 +2681,11 @@ inline EscapableHandleScope::operator napi_escapable_handle_scope() const {
 }
 
 inline Napi::Env EscapableHandleScope::Env() const {
-  return Napi::Env(_env);
+  return {_env};
 }
 
-inline Value EscapableHandleScope::Escape(napi_value escapee) {
-  //napi_value result;
+inline Value EscapableHandleScope::Escape(jsi::Value escapee) {
+  //jsi::Value result;
   //napi_status status = napi_escape_handle(_env, _scope, escapee, &result);
   //NAPI_THROW_IF_FAILED(_env, status, Value());
   //return Value(_env, result);

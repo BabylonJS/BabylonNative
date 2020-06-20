@@ -3,9 +3,10 @@
 namespace Napi
 {
     template<>
-    Env Attach<>(facebook::jsi::Runtime* rt)
+    Env Attach<>(facebook::jsi::Runtime& rt)
     {
-        return {rt};
+      napi_env__* env_ptr{new napi_env__{rt}};
+      return {env_ptr};
     }
 
     void Detach(Env env)
@@ -14,7 +15,7 @@ namespace Napi
 
     Napi::Value Eval(Napi::Env env, const char* string, const char* sourceUrl)
     {
-        napi_env env_ptr{env};
-        return {env_ptr, {env_ptr, env_ptr->evaluateJavaScript(std::make_shared<facebook::jsi::StringBuffer>(string), sourceUrl)}};
+      napi_env__* env_ptr{env};
+      return {env_ptr, env_ptr->rt.evaluateJavaScript(std::make_shared<facebook::jsi::StringBuffer>(string), sourceUrl)};
     }
 }

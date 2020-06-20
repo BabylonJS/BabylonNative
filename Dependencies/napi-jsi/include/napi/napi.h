@@ -6,71 +6,20 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 
-namespace details {
-  class Value {
-  public:
-    Value() :
-      _rt{nullptr},
-      _value{nullptr} {
-    }
 
-    Value(facebook::jsi::Runtime* rt, const facebook::jsi::Value& value) :
-      _rt{rt},
-      _value{*_rt, value} {
-    }
+struct napi_env__ {
+  napi_env__(facebook::jsi::Runtime& rt)
+    : rt{rt}, native_name{facebook::jsi::PropNameID::forAscii(rt, "__native__")} {
+  }
 
-    Value(facebook::jsi::Runtime* rt, facebook::jsi::Value&& value) :
-      _rt{rt},
-      _value{std::move(value)} {
-    }
-
-    Value(const Value& value) :
-      _rt(value._rt),
-      _value(*_rt, value._value) {
-    }
-
-    Value& operator =(const Value& other) {
-      _rt = other._rt;
-      _value = {*_rt, other._value};
-      return *this;
-    }
-
-    facebook::jsi::Value* operator ->() {
-      return &_value;
-    }
-
-    const facebook::jsi::Value* operator ->() const {
-      return &_value;
-    }
-
-    facebook::jsi::Value& operator *() & {
-      return _value;
-    }
-
-    const facebook::jsi::Value& operator *() const & {
-      return _value;
-    }
-
-    facebook::jsi::Value&& operator *() && {
-      return std::move(_value);
-    }
-
-    facebook::jsi::Runtime& Runtime() const {
-      return *_rt;
-    }
-
-  private:
-    facebook::jsi::Runtime* _rt;
-    facebook::jsi::Value _value;
-  };
+  facebook::jsi::Runtime& rt;
+  facebook::jsi::PropNameID native_name;
 };
 
-using napi_env = facebook::jsi::Runtime*;
-using napi_value = details::Value;
-
 // TODO
-using napi_ref = struct { napi_value value; };
+using napi_env = napi_env__*;
 using napi_handle_scope = void*;
 using napi_escapable_handle_scope = void*;
 using napi_deferred = void*;
@@ -81,7 +30,6 @@ typedef enum {
   napi_writable = 1 << 0,
   napi_enumerable = 1 << 1,
   napi_configurable = 1 << 2,
-  napi_static = 1 << 10,
 } napi_property_attributes;
 
 typedef enum {
@@ -108,15 +56,6 @@ typedef enum {
   napi_float32_array,
   napi_float64_array,
 } napi_typedarray_type;
-
-typedef struct {
-  const char* utf8name;
-  facebook::jsi::HostFunctionType method;
-  facebook::jsi::HostFunctionType getter;
-  facebook::jsi::HostFunctionType setter;
-  napi_value value;
-  napi_property_attributes attributes;
-} napi_property_descriptor;
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known good version)
 #if !defined(_MSC_VER) || _MSC_FULL_VER >= 190024210
@@ -208,6 +147,8 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////////////
 namespace Napi {
 
+  using namespace facebook;
+
   // Forward declarations
   class Env;
   class Value;
@@ -218,7 +159,7 @@ namespace Napi {
   class Array;
   class Function;
   class Error;
-  class PropertyDescriptor;
+  //class PropertyDescriptor;
   class CallbackInfo;
   template <typename T> class Reference;
   class TypedArray;
@@ -254,6 +195,9 @@ namespace Napi {
     Value Undefined() const;
     Value Null() const;
 
+    bool IsExceptionPending() const;
+    Error GetAndClearPendingException();
+
   private:
     napi_env _env;
   };
@@ -272,7 +216,18 @@ namespace Napi {
   class Value {
   public:
     Value();                               ///< Creates a new _empty_ Value instance.
-    Value(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    Value(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
+
+    // Move semantics
+    Value(Value&&) = default;
+    Value& operator =(Value&&) = default;
+    operator jsi::Value&&() &&;
+
+    // Copy semantics
+    Value(const Value& other);
+    Value& operator =(const Value& other);
+    operator jsi::Value&() &;
+    operator const jsi::Value&() const &;
 
     /// Creates a JS value from a C++ primitive.
     ///
@@ -285,14 +240,9 @@ namespace Napi {
     /// - std::string (encoded using UTF-8)
     /// - std::u16string
     /// - napi::Value
-    /// - napi_value
+    /// - jsi::Value
     template <typename T>
     static Value From(napi_env env, const T& value);
-
-    /// Converts to a N-API value primitive.
-    ///
-    /// If the instance is _empty_, this returns `nullptr`.
-    operator napi_value() const;
 
     /// Tests if this value strictly equals another value.
     bool operator ==(const Value& other) const;
@@ -348,7 +298,7 @@ namespace Napi {
   protected:
     /// !cond INTERNAL
     napi_env _env;
-    napi_value _value;
+    jsi::Value _value;
     /// !endcond
   };
 
@@ -361,7 +311,7 @@ namespace Napi {
     );
 
     Boolean();                               ///< Creates a new _empty_ Boolean instance.
-    Boolean(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    Boolean(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
 
     operator bool() const; ///< Converts a Boolean value to a boolean primitive.
     bool Value() const;    ///< Converts a Boolean value to a boolean primitive.
@@ -376,7 +326,7 @@ namespace Napi {
     );
 
     Number();                               ///< Creates a new _empty_ Number instance.
-    Number(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    Number(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
 
     operator int32_t() const;  ///< Converts a Number value to a 32-bit signed integer value.
     operator uint32_t() const; ///< Converts a Number value to a 32-bit unsigned integer value.
@@ -395,7 +345,7 @@ namespace Napi {
   class Name : public Value {
   public:
     Name();                               ///< Creates a new _empty_ Name instance.
-    Name(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    Name(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
   };
 
   /// A JavaScript string value.
@@ -450,7 +400,7 @@ namespace Napi {
     static String From(napi_env env, const T& value);
 
     String();                               ///< Creates a new _empty_ String instance.
-    String(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    String(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
 
     operator std::string() const;      ///< Converts a String value to a UTF-8 encoded C++ string.
     operator std::u16string() const;   ///< Converts a String value to a UTF-16 encoded C++ string.
@@ -483,14 +433,14 @@ namespace Napi {
     /// Creates a new Symbol value with a description.
     static Symbol New(
       napi_env env,          ///< N-API environment
-      napi_value description ///< String value describing the symbol
+      jsi::Value description ///< String value describing the symbol
     );
 
     /// Get a public Symbol (e.g. Symbol.iterator).
-    static Symbol WellKnown(napi_env, const std::string& name);
+    static Symbol WellKnown(napi_env env, const std::string& name);
 
     Symbol();                               ///< Creates a new _empty_ Symbol instance.
-    Symbol(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    Symbol(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
   };
 
   /// A JavaScript object value.
@@ -517,9 +467,8 @@ namespace Napi {
 
     private:
       PropertyLValue() = delete;
-      PropertyLValue(Object object, Key key);
-      napi_env _env;
-      napi_value _object;
+      PropertyLValue(Object& object, Key key);
+      Object& _object;
       Key _key;
 
       friend class Napi::Object;
@@ -531,7 +480,18 @@ namespace Napi {
     );
 
     Object();                               ///< Creates a new _empty_ Object instance.
-    Object(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    Object(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
+
+    // Move semantics
+    Object(Object&&) = default;
+    Object& operator =(Object&&) = default;
+    operator jsi::Object&&() &&;
+
+    // Copy semantics
+    Object(const Object& other);
+    Object& operator =(const Object& other);
+    operator jsi::Object&() &;
+    operator const jsi::Object&() const &;
 
     /// Gets or sets a named property.
     PropertyLValue<std::string> operator [](
@@ -565,11 +525,6 @@ namespace Napi {
 
     /// Checks whether a property is present.
     bool Has(
-      napi_value key ///< Property key primitive
-    ) const;
-
-    /// Checks whether a property is present.
-    bool Has(
       Value key ///< Property key
     ) const;
 
@@ -581,11 +536,6 @@ namespace Napi {
     /// Checks whether a named property is present.
     bool Has(
       const std::string& utf8name ///< UTF-8 encoded property name
-    ) const;
-
-    /// Checks whether a own property is present.
-    bool HasOwnProperty(
-      napi_value key ///< Property key primitive
     ) const;
 
     /// Checks whether a own property is present.
@@ -605,11 +555,6 @@ namespace Napi {
 
     /// Gets a property.
     Value Get(
-      napi_value key ///< Property key primitive
-    ) const;
-
-    /// Gets a property.
-    Value Get(
       Value key ///< Property key
     ) const;
 
@@ -622,13 +567,6 @@ namespace Napi {
     Value Get(
       const std::string& utf8name ///< UTF-8 encoded property name
     ) const;
-
-    /// Sets a property.
-    template <typename ValueType>
-    void Set(
-      napi_value key,  ///< Property key primitive
-      const ValueType& value ///< Property value primitive
-    );
 
     /// Sets a property.
     template <typename ValueType>
@@ -649,11 +587,6 @@ namespace Napi {
     void Set(
       const std::string& utf8name, ///< UTF-8 encoded property name
       const ValueType& value             ///< Property value primitive
-    );
-
-    /// Delete property.
-    bool Delete(
-      napi_value key ///< Property key primitive
     );
 
     /// Delete property.
@@ -695,22 +628,22 @@ namespace Napi {
 
     Array GetPropertyNames() const; ///< Get all property names
 
-    /// Defines a property on the object.
-    void DefineProperty(
-      const PropertyDescriptor& property ///< Descriptor for the property to be defined
-    );
+    ///// Defines a property on the object.
+    //void DefineProperty(
+    //  const PropertyDescriptor& property ///< Descriptor for the property to be defined
+    //);
 
-    /// Defines properties on the object.
-    void DefineProperties(
-      const std::initializer_list<PropertyDescriptor>& properties
-        ///< List of descriptors for the properties to be defined
-    );
+    ///// Defines properties on the object.
+    //void DefineProperties(
+    //  const std::initializer_list<PropertyDescriptor>& properties
+    //    ///< List of descriptors for the properties to be defined
+    //);
 
-    /// Defines properties on the object.
-    void DefineProperties(
-      const std::vector<PropertyDescriptor>& properties
-        ///< Vector of descriptors for the properties to be defined
-    );
+    ///// Defines properties on the object.
+    //void DefineProperties(
+    //  const std::vector<PropertyDescriptor>& properties
+    //    ///< Vector of descriptors for the properties to be defined
+    //);
 
     /// Checks if an object is an instance created by a constructor function.
     ///
@@ -718,6 +651,9 @@ namespace Napi {
     bool InstanceOf(
       const Function& constructor ///< Constructor function
     ) const;
+
+  protected:
+    std::optional<jsi::Object> _object;
   };
 
   template <typename T>
@@ -738,7 +674,7 @@ namespace Napi {
                         Hint* finalizeHint);
 
     External();
-    External(napi_env env, napi_value value);
+    External(napi_env env, jsi::Value value);
 
     T* Data() const;
   };
@@ -749,9 +685,23 @@ namespace Napi {
     static Array New(napi_env env, size_t length);
 
     Array();
-    Array(napi_env env, napi_value value);
+    Array(napi_env env, jsi::Value value);
+
+    // Move semantics
+    Array(Array&&) = default;
+    Array& operator =(Array&&) = default;
+    operator jsi::Array&&() &&;
+
+    // Copy semantics
+    Array(const Array& other);
+    Array& operator =(const Array& other);
+    operator jsi::Array&() &;
+    operator const jsi::Array&() const &;
 
     uint32_t Length() const;
+
+  private:
+    std::optional<jsi::Array> _array;
   };
 
   /// A JavaScript array buffer value.
@@ -794,17 +744,24 @@ namespace Napi {
     );
 
     ArrayBuffer();                               ///< Creates a new _empty_ ArrayBuffer instance.
-    ArrayBuffer(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    ArrayBuffer(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
+
+    // Move semantics
+    ArrayBuffer(ArrayBuffer&&) = default;
+    ArrayBuffer& operator =(ArrayBuffer&&) = default;
+    operator jsi::ArrayBuffer&&() &&;
+
+    // Copy semantics
+    ArrayBuffer(const ArrayBuffer& other);
+    ArrayBuffer& operator =(const ArrayBuffer& other);
+    operator jsi::ArrayBuffer&() &;
+    operator const jsi::ArrayBuffer&() const &;
 
     void* Data() const;        ///< Gets a pointer to the data buffer.
     size_t ByteLength() const; ///< Gets the length of the array buffer in bytes.
 
   private:
-    mutable void* _data;
-    mutable size_t _length;
-
-    ArrayBuffer(napi_env env, napi_value value, void* data, size_t length);
-    void EnsureInfo() const;
+    std::optional<jsi::ArrayBuffer> _arrayBuffer;
   };
 
   /// A JavaScript typed-array value with unknown array type.
@@ -819,7 +776,7 @@ namespace Napi {
   class TypedArray : public Object {
   public:
     TypedArray();                               ///< Creates a new _empty_ TypedArray instance.
-    TypedArray(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    TypedArray(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
 
     napi_typedarray_type TypedArrayType() const; ///< Gets the type of this typed-array.
     Napi::ArrayBuffer ArrayBuffer() const;       ///< Gets the backing array buffer.
@@ -833,8 +790,6 @@ namespace Napi {
     /// !cond INTERNAL
     mutable napi_typedarray_type _type;
     mutable size_t _length;
-
-    TypedArray(napi_env env, napi_value value, napi_typedarray_type type, size_t length);
 
     static const napi_typedarray_type unknown_array_type = static_cast<napi_typedarray_type>(-1);
 
@@ -856,12 +811,9 @@ namespace Napi {
     }
 
     static void GetTypedArrayInfo(napi_env env,
-                                  const napi_value& value,
+                                  const jsi::Object& typedArray,
                                   napi_typedarray_type* type,
-                                  size_t* length,
-                                  void** data,
-                                  napi_value* arraybuffer,
-                                  size_t* byte_offset);
+                                  size_t* length);
     /// !endcond
   };
 
@@ -909,7 +861,7 @@ namespace Napi {
     );
 
     TypedArrayOf();                               ///< Creates a new _empty_ TypedArrayOf instance.
-    TypedArrayOf(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    TypedArrayOf(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
 
     T& operator [](size_t index);             ///< Gets or sets an element in the array.
     const T& operator [](size_t index) const; ///< Gets an element in the array.
@@ -930,7 +882,7 @@ namespace Napi {
     T* _data;
 
     TypedArrayOf(napi_env env,
-                 napi_value value,
+                 jsi::Value value,
                  napi_typedarray_type type,
                  size_t length,
                  T* data);
@@ -950,8 +902,7 @@ namespace Napi {
                         size_t byteOffset,
                         size_t byteLength);
 
-    DataView();                               ///< Creates a new _empty_ DataView instance.
-    DataView(napi_env env, napi_value value); ///< Wraps a N-API value primitive.
+    DataView(napi_env env, jsi::Value value); ///< Wraps a N-API value primitive.
 
     Napi::ArrayBuffer ArrayBuffer() const;    ///< Gets the backing array buffer.
     size_t ByteOffset() const;    ///< Gets the offset into the buffer where the array starts.
@@ -1006,20 +957,34 @@ namespace Napi {
                         void* data = nullptr);
 
     Function();
-    Function(napi_env env, napi_value value);
+    Function(napi_env env, jsi::Value value);
 
-    Value operator ()(const std::initializer_list<napi_value>& args) const;
+    // Move semantics
+    Function(Function&&) = default;
+    Function& operator =(Function&&) = default;
+    operator jsi::Function&&() &&;
 
-    Value Call(const std::initializer_list<napi_value>& args) const;
-    Value Call(const std::vector<napi_value>& args) const;
-    Value Call(size_t argc, const napi_value* args) const;
-    Value Call(napi_value recv, const std::initializer_list<napi_value>& args) const;
-    Value Call(napi_value recv, const std::vector<napi_value>& args) const;
-    Value Call(napi_value recv, size_t argc, const napi_value* args) const;
+    // Copy semantics
+    Function(const Function& other);
+    Function& operator =(const Function& other);
+    operator jsi::Function&() &;
+    operator const jsi::Function&() const &;
 
-    Object New(const std::initializer_list<napi_value>& args) const;
-    Object New(const std::vector<napi_value>& args) const;
-    Object New(size_t argc, const napi_value* args) const;
+    Value operator ()(const std::initializer_list<Value>& args) const;
+
+    Value Call(const std::initializer_list<Value>& args) const;
+    Value Call(const std::vector<Value>& args) const;
+    Value Call(size_t argc, const Value* args) const;
+    Value Call(const Value& recv, const std::initializer_list<Value>& args) const;
+    Value Call(const Value& recv, const std::vector<Value>& args) const;
+    Value Call(const Value& recv, size_t argc, const Value* args) const;
+
+    Object New(const std::initializer_list<Value>& args) const;
+    Object New(const std::vector<Value>& args) const;
+    Object New(size_t argc, const Value* args) const;
+
+  private:
+    std::optional<jsi::Function> _function;
   };
 
   class Promise : public Object {
@@ -1032,16 +997,15 @@ namespace Napi {
       Napi::Promise Promise() const;
       Napi::Env Env() const;
 
-      void Resolve(napi_value value) const;
-      void Reject(napi_value value) const;
+      void Resolve(const jsi::Value& value) const;
+      void Reject(const jsi::Value& value) const;
 
     private:
       napi_env _env;
       napi_deferred _deferred;
-      napi_value _promise;
     };
 
-    Promise(napi_env env, napi_value value);
+    Promise(napi_env env, jsi::Value value);
   };
 
   /// Holds a counted reference to a value; initially a weak reference unless otherwise specified,
@@ -1052,18 +1016,19 @@ namespace Napi {
   template <typename T>
   class Reference {
   public:
-    static Reference<T> New(const T& value, uint32_t initialRefcount = 0);
+    static Reference<T> New(const T& object, uint32_t initialRefcount = 0);
 
     Reference();
-    Reference(napi_env env, napi_ref ref);
+    Reference(napi_env env, T object);
     ~Reference();
 
     // A reference can be moved but cannot be copied.
     Reference(Reference<T>&& other);
     Reference<T>& operator =(Reference<T>&& other);
-    Reference<T>& operator =(Reference<T>&) = delete;
 
-    operator napi_ref() const;
+    operator jsi::Object&();
+    operator const jsi::Object&() const;
+
     bool operator ==(const Reference<T> &other) const;
     bool operator !=(const Reference<T> &other) const;
 
@@ -1072,7 +1037,8 @@ namespace Napi {
 
     // Note when getting the value of a Reference it is usually correct to do so
     // within a HandleScope so that the value handle gets cleaned up efficiently.
-    T Value() const;
+    const T& Value() const;
+    T& Value();
 
     uint32_t Ref();
     uint32_t Unref();
@@ -1089,40 +1055,36 @@ namespace Napi {
 
     /// !cond INTERNAL
     napi_env _env;
-    napi_ref _ref;
+    T _object;
     /// !endcond
 
   private:
     bool _suppressDestruct;
   };
 
-  class ObjectReference: public Reference<Object> {
+  class ObjectReference : public Reference<Object> {
   public:
     ObjectReference();
-    ObjectReference(napi_env env, napi_ref ref);
+    ObjectReference(napi_env env, jsi::Object object);
 
     // A reference can be moved but cannot be copied.
     ObjectReference(Reference<Object>&& other);
     ObjectReference& operator =(Reference<Object>&& other);
     ObjectReference(ObjectReference&& other);
     ObjectReference& operator =(ObjectReference&& other);
-    ObjectReference& operator =(ObjectReference&) = delete;
 
     Napi::Value Get(const char* utf8name) const;
     Napi::Value Get(const std::string& utf8name) const;
-    void Set(const char* utf8name, napi_value value);
     void Set(const char* utf8name, Napi::Value value);
     void Set(const char* utf8name, const char* utf8value);
     void Set(const char* utf8name, bool boolValue);
     void Set(const char* utf8name, double numberValue);
-    void Set(const std::string& utf8name, napi_value value);
     void Set(const std::string& utf8name, Napi::Value value);
     void Set(const std::string& utf8name, std::string& utf8value);
     void Set(const std::string& utf8name, bool boolValue);
     void Set(const std::string& utf8name, double numberValue);
 
     Napi::Value Get(uint32_t index) const;
-    void Set(uint32_t index, const napi_value value);
     void Set(uint32_t index, const Napi::Value value);
     void Set(uint32_t index, const char* utf8value);
     void Set(uint32_t index, const std::string& utf8value);
@@ -1133,29 +1095,27 @@ namespace Napi {
     ObjectReference(const ObjectReference&);
   };
 
-  class FunctionReference: public Reference<Function> {
+  class FunctionReference : public Reference<Function> {
   public:
     FunctionReference();
-    FunctionReference(napi_env env, napi_ref ref);
+    FunctionReference(napi_env env, jsi::Function function);
 
     // A reference can be moved but cannot be copied.
     FunctionReference(Reference<Function>&& other);
     FunctionReference& operator =(Reference<Function>&& other);
     FunctionReference(FunctionReference&& other);
     FunctionReference& operator =(FunctionReference&& other);
-    FunctionReference(const FunctionReference&) = delete;
-    FunctionReference& operator =(FunctionReference&) = delete;
 
-    Napi::Value operator ()(const std::initializer_list<napi_value>& args) const;
+    Napi::Value operator ()(const std::initializer_list<Napi::Value>& args) const;
 
-    Napi::Value Call(const std::initializer_list<napi_value>& args) const;
-    Napi::Value Call(const std::vector<napi_value>& args) const;
-    Napi::Value Call(napi_value recv, const std::initializer_list<napi_value>& args) const;
-    Napi::Value Call(napi_value recv, const std::vector<napi_value>& args) const;
-    Napi::Value Call(napi_value recv, size_t argc, const napi_value* args) const;
+    Napi::Value Call(const std::initializer_list<Napi::Value>& args) const;
+    Napi::Value Call(const std::vector<Napi::Value>& args) const;
+    Napi::Value Call(const Napi::Value& recv, const std::initializer_list<Napi::Value>& args) const;
+    Napi::Value Call(const Napi::Value& recv, const std::vector<Napi::Value>& args) const;
+    Napi::Value Call(const Napi::Value& recv, size_t argc, const Napi::Value* args) const;
 
-    Object New(const std::initializer_list<napi_value>& args) const;
-    Object New(const std::vector<napi_value>& args) const;
+    Object New(const std::initializer_list<Napi::Value>& args) const;
+    Object New(const std::vector<Napi::Value>& args) const;
   };
 
   // Shortcuts to creating a new reference with inferred type and refcount = 0.
@@ -1269,7 +1229,7 @@ namespace Napi {
     static void Fatal(const char* location, const char* message);
 
     Error();
-    Error(napi_env env, napi_value value);
+    Error(napi_env env, jsi::Object object);
 
     // An error can be moved or copied.
     Error(Error&& other);
@@ -1306,7 +1266,7 @@ namespace Napi {
     static TypeError New(napi_env env, const std::string& message);
 
     TypeError();
-    TypeError(napi_env env, napi_value value);
+    TypeError(napi_env env, jsi::Object object);
   };
 
   class RangeError : public Error {
@@ -1315,12 +1275,12 @@ namespace Napi {
     static RangeError New(napi_env env, const std::string& message);
 
     RangeError();
-    RangeError(napi_env env, napi_value value);
+    RangeError(napi_env env, jsi::Object object);
   };
 
   class CallbackInfo {
   public:
-    CallbackInfo(napi_env env, const facebook::jsi::Value& thisVal, const facebook::jsi::Value* args, size_t argc, const facebook::jsi::Value& newTarget, void* data);
+    CallbackInfo(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t argc, const jsi::Value& newTarget, void* data);
     ~CallbackInfo();
 
     // Disallow copying to prevent multiple free of _dynamicArgs
@@ -1338,121 +1298,98 @@ namespace Napi {
 
   private:
     napi_env _env;
-    napi_value _this;
+    jsi::Value _this;
     size_t _argc;
-    napi_value* _argv;
-    napi_value _staticArgs[6];
-    napi_value* _dynamicArgs;
-    napi_value _newTarget;
+    jsi::Value* _argv;
+    jsi::Value _staticArgs[6];
+    jsi::Value* _dynamicArgs;
+    jsi::Value _newTarget;
     void* _data;
   };
 
-  class PropertyDescriptor {
-  public:
-    template <typename Getter>
-    static PropertyDescriptor Accessor(Napi::Env env,
-                                       Napi::Object object,
-                                       const char* utf8name,
-                                       Getter getter,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Getter>
-    static PropertyDescriptor Accessor(Napi::Env env,
-                                       Napi::Object object,
-                                       const std::string& utf8name,
-                                       Getter getter,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Getter>
-    static PropertyDescriptor Accessor(Napi::Env env,
-                                       Napi::Object object,
-                                       Name name,
-                                       Getter getter,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Getter, typename Setter>
-    static PropertyDescriptor Accessor(Napi::Env env,
-                                       Napi::Object object,
-                                       const char* utf8name,
-                                       Getter getter,
-                                       Setter setter,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Getter, typename Setter>
-    static PropertyDescriptor Accessor(Napi::Env env,
-                                       Napi::Object object,
-                                       const std::string& utf8name,
-                                       Getter getter,
-                                       Setter setter,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Getter, typename Setter>
-    static PropertyDescriptor Accessor(Napi::Env env,
-                                       Napi::Object object,
-                                       Name name,
-                                       Getter getter,
-                                       Setter setter,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Callable>
-    static PropertyDescriptor Function(Napi::Env env,
-                                       Napi::Object object,
-                                       const char* utf8name,
-                                       Callable cb,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Callable>
-    static PropertyDescriptor Function(Napi::Env env,
-                                       Napi::Object object,
-                                       const std::string& utf8name,
-                                       Callable cb,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    template <typename Callable>
-    static PropertyDescriptor Function(Napi::Env env,
-                                       Napi::Object object,
-                                       Name name,
-                                       Callable cb,
-                                       napi_property_attributes attributes = napi_default,
-                                       void* data = nullptr);
-    static PropertyDescriptor Value(const char* utf8name,
-                                    napi_value value,
-                                    napi_property_attributes attributes = napi_default);
-    static PropertyDescriptor Value(const std::string& utf8name,
-                                    napi_value value,
-                                    napi_property_attributes attributes = napi_default);
-    static PropertyDescriptor Value(napi_value name,
-                                    napi_value value,
-                                    napi_property_attributes attributes = napi_default);
-    static PropertyDescriptor Value(Name name,
-                                    Napi::Value value,
-                                    napi_property_attributes attributes = napi_default);
-
-    PropertyDescriptor(napi_property_descriptor desc);
-
-    operator napi_property_descriptor&();
-    operator const napi_property_descriptor&() const;
-
-  private:
-    napi_property_descriptor _desc;
-  };
-
-  /// Property descriptor for use with `ObjectWrap::DefineClass()`.
-  ///
-  /// This is different from the standalone `PropertyDescriptor` because it is specific to each
-  /// `ObjectWrap<T>` subclass. This prevents using descriptors from a different class when
-  /// defining a new class (preventing the callbacks from having incorrect `this` pointers).
-  template <typename T>
-  class ClassPropertyDescriptor {
-  public:
-    ClassPropertyDescriptor(napi_property_descriptor desc) : _desc(desc) {}
-
-    operator napi_property_descriptor&() { return _desc; }
-    operator const napi_property_descriptor&() const { return _desc; }
-
-  private:
-    napi_property_descriptor _desc;
-  };
+  //class PropertyDescriptor {
+  //public:
+  //  template <typename Getter>
+  //  static PropertyDescriptor Accessor(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     const char* utf8name,
+  //                                     Getter getter,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Getter>
+  //  static PropertyDescriptor Accessor(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     const std::string& utf8name,
+  //                                     Getter getter,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Getter>
+  //  static PropertyDescriptor Accessor(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     Name name,
+  //                                     Getter getter,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Getter, typename Setter>
+  //  static PropertyDescriptor Accessor(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     const char* utf8name,
+  //                                     Getter getter,
+  //                                     Setter setter,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Getter, typename Setter>
+  //  static PropertyDescriptor Accessor(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     const std::string& utf8name,
+  //                                     Getter getter,
+  //                                     Setter setter,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Getter, typename Setter>
+  //  static PropertyDescriptor Accessor(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     Name name,
+  //                                     Getter getter,
+  //                                     Setter setter,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Callable>
+  //  static PropertyDescriptor Function(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     const char* utf8name,
+  //                                     Callable cb,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Callable>
+  //  static PropertyDescriptor Function(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     const std::string& utf8name,
+  //                                     Callable cb,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  template <typename Callable>
+  //  static PropertyDescriptor Function(Napi::Env env,
+  //                                     Napi::Object object,
+  //                                     Name name,
+  //                                     Callable cb,
+  //                                     napi_property_attributes attributes = napi_default,
+  //                                     void* data = nullptr);
+  //  static PropertyDescriptor Value(const char* utf8name,
+  //                                  jsi::Value value,
+  //                                  napi_property_attributes attributes = napi_default);
+  //  static PropertyDescriptor Value(const std::string& utf8name,
+  //                                  jsi::Value value,
+  //                                  napi_property_attributes attributes = napi_default);
+  //  static PropertyDescriptor Value(jsi::Value name,
+  //                                  jsi::Value value,
+  //                                  napi_property_attributes attributes = napi_default);
+  //  static PropertyDescriptor Value(Name name,
+  //                                  Napi::Value value,
+  //                                  napi_property_attributes attributes = napi_default);
+  //private:
+  //  napi_property_descriptor _desc;
+  //};
 
   /// Base class to be extended by C++ classes exposed to JavaScript; each C++ class instance gets
   /// "wrapped" by a JavaScript object that is managed by this class.
@@ -1480,10 +1417,12 @@ namespace Napi {
   ///         Napi::Value DoSomething(const Napi::CallbackInfo& info);
   ///     }
   template <typename T>
-  class ObjectWrap : public Reference<Object>, public facebook::jsi::HostObject {
+  class ObjectWrap : public jsi::HostObject {
   public:
     ObjectWrap(const CallbackInfo& callbackInfo);
     virtual ~ObjectWrap();
+
+    Napi::Env Env() const;
 
     static T* Unwrap(Object wrapper);
 
@@ -1497,7 +1436,22 @@ namespace Napi {
     typedef Napi::Value (T::*InstanceGetterCallback)(const CallbackInfo& info);
     typedef void (T::*InstanceSetterCallback)(const CallbackInfo& info, const Napi::Value& value);
 
-    typedef ClassPropertyDescriptor<T> PropertyDescriptor;
+    class PropertyDescriptor {
+      friend ObjectWrap<T>;
+
+      const char* utf8name;
+      StaticVoidMethodCallback staticVoidMethod;
+      StaticMethodCallback staticMethod;
+      StaticGetterCallback staticGetter;
+      StaticSetterCallback staticSetter;
+      Napi::Value staticValue;
+      InstanceVoidMethodCallback instanceVoidMethod;
+      InstanceMethodCallback instanceMethod;
+      InstanceGetterCallback instanceGetter;
+      InstanceSetterCallback instanceSetter;
+      Napi::Value instanceValue;
+      napi_property_attributes attributes;
+    };
 
     static Function DefineClass(Napi::Env env,
                                 const char* utf8name,
@@ -1574,42 +1528,15 @@ namespace Napi {
     virtual void Finalize(Napi::Env env);
 
   private:
-    //static napi_value ConstructorCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value StaticVoidMethodCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value StaticMethodCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value StaticGetterCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value StaticSetterCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value InstanceVoidMethodCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value InstanceMethodCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value InstanceGetterCallbackWrapper(napi_env env, napi_callback_info info);
-    //static napi_value InstanceSetterCallbackWrapper(napi_env env, napi_callback_info info);
-    //static void FinalizeCallback(napi_env env, void* data, void* hint);
-    static Function DefineClass(Napi::Env env,
+    static Function DefineClass(napi_env env,
                                 const char* utf8name,
                                 const size_t props_count,
-                                const napi_property_descriptor* props,
+                                const PropertyDescriptor* props,
                                 void* data = nullptr);
 
-    //template <typename TCallback>
-    //struct MethodCallbackData {
-    //  TCallback callback;
-    //  void* data;
-    //};
-    //typedef MethodCallbackData<StaticVoidMethodCallback> StaticVoidMethodCallbackData;
-    //typedef MethodCallbackData<StaticMethodCallback> StaticMethodCallbackData;
-    //typedef MethodCallbackData<InstanceVoidMethodCallback> InstanceVoidMethodCallbackData;
-    //typedef MethodCallbackData<InstanceMethodCallback> InstanceMethodCallbackData;
+    static T* Unwrap(napi_env env, const jsi::Object& object);
 
-    //template <typename TGetterCallback, typename TSetterCallback>
-    //struct AccessorCallbackData {
-    //  TGetterCallback getterCallback;
-    //  TSetterCallback setterCallback;
-    //  void* data;
-    //};
-    //typedef AccessorCallbackData<StaticGetterCallback, StaticSetterCallback>
-    //  StaticAccessorCallbackData;
-    //typedef AccessorCallbackData<InstanceGetterCallback, InstanceSetterCallback>
-    //  InstanceAccessorCallbackData;
+    napi_env _env;
   };
 
   class HandleScope {
@@ -1636,7 +1563,7 @@ namespace Napi {
     operator napi_escapable_handle_scope() const;
 
     Napi::Env Env() const;
-    Value Escape(napi_value escapee);
+    Value Escape(jsi::Value escapee);
 
   private:
     napi_env _env;

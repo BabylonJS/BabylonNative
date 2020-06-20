@@ -56,7 +56,7 @@ namespace Babylon
         Microsoft::JSI::ChakraRuntime chakraRuntime{jsRuntime, context};
 
         {
-            Napi::Env env = Napi::Attach<facebook::jsi::Runtime*>(&chakraRuntime);
+            Napi::Env env = Napi::Attach<facebook::jsi::Runtime&>(chakraRuntime);
             Run(env);
             Napi::Detach(env);
         }
