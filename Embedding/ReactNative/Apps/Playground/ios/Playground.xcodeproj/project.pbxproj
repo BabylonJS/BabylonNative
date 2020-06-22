@@ -28,7 +28,6 @@
 		8A992A9E2491A348000ACD23 /* libbimgd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992A9D2491A348000ACD23 /* libbimgd.a */; };
 		8A992AA62491A52A000ACD23 /* libastc-codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AA52491A52A000ACD23 /* libastc-codec.a */; };
 		8A992AA82491A52A000ACD23 /* libastc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AA72491A52A000ACD23 /* libastc.a */; };
-		8A992AAE2491AEB9000ACD23 /* libbxd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AAD2491AEB9000ACD23 /* libbxd.a */; };
 		8A992AB02491AF28000ACD23 /* libglslang.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AAF2491AF28000ACD23 /* libglslang.a */; };
 		8A992AB22491AF4D000ACD23 /* libOSDependent.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB12491AF4D000ACD23 /* libOSDependent.a */; };
 		8A992AB42491AF71000ACD23 /* libOGLCompiler.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AB32491AF71000ACD23 /* libOGLCompiler.a */; };
@@ -40,7 +39,6 @@
 		8A992AC02491B08E000ACD23 /* libiqa.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ABF2491B08E000ACD23 /* libiqa.a */; };
 		8A992AC22491B09A000ACD23 /* libetc1.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AC12491B09A000ACD23 /* libetc1.a */; };
 		8A992AC42491B09A000ACD23 /* libetc2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AC32491B09A000ACD23 /* libetc2.a */; };
-		8A992ACA2491B0C9000ACD23 /* libbgfxd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AC92491B0C9000ACD23 /* libbgfxd.a */; };
 		8A992ACE2491B10E000ACD23 /* libedtaa3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ACD2491B10E000ACD23 /* libedtaa3.a */; };
 		8A992AD02491B132000ACD23 /* libspirv-cross-hlsl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992ACF2491B132000ACD23 /* libspirv-cross-hlsl.a */; };
 		8A992AD22491B13B000ACD23 /* libspirv-cross-glsl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A992AD12491B13B000ACD23 /* libspirv-cross-glsl.a */; };
@@ -101,17 +99,13 @@
 		8A992A932491A319000ACD23 /* libspirv-cross-reflect.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-reflect.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992A952491A319000ACD23 /* libspirv-cross-util.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-util.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992A972491A319000ACD23 /* libSPIRV.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libSPIRV.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A992A992491A31F000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A992A9B2491A338000ACD23 /* libbxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992A9D2491A348000ACD23 /* libbimgd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbimgd.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992A9F2491A35F000ACD23 /* libglslang.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libglslang.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AA12491A3DB000ACD23 /* libOSDependent.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOSDependent.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AA32491A435000ACD23 /* libOGLCompiler.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOGLCompiler.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AA52491A52A000ACD23 /* libastc-codec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libastc-codec.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AA72491A52A000ACD23 /* libastc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libastc.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A992AA92491AE7D000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AAB2491AE93000ACD23 /* libOGLCompiler.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOGLCompiler.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A992AAD2491AEB9000ACD23 /* libbxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AAF2491AF28000ACD23 /* libglslang.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libglslang.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AB12491AF4D000ACD23 /* libOSDependent.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOSDependent.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AB32491AF71000ACD23 /* libOGLCompiler.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOGLCompiler.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -125,8 +119,6 @@
 		8A992AC32491B09A000ACD23 /* libetc2.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libetc2.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AC52491B0A7000ACD23 /* libastc-codec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libastc-codec.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AC72491B0A7000ACD23 /* libastc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libastc.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A992AC92491B0C9000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A992ACB2491B0E2000ACD23 /* libbgfxd.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libbgfxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992ACD2491B10E000ACD23 /* libedtaa3.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libedtaa3.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992ACF2491B132000ACD23 /* libspirv-cross-hlsl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-hlsl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A992AD12491B13B000ACD23 /* libspirv-cross-glsl.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = "libspirv-cross-glsl.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -161,7 +153,6 @@
 				8A992AD22491B13B000ACD23 /* libspirv-cross-glsl.a in Frameworks */,
 				8A992AD02491B132000ACD23 /* libspirv-cross-hlsl.a in Frameworks */,
 				8A992ACE2491B10E000ACD23 /* libedtaa3.a in Frameworks */,
-				8A992ACA2491B0C9000ACD23 /* libbgfxd.a in Frameworks */,
 				8A992AC22491B09A000ACD23 /* libetc1.a in Frameworks */,
 				8A992AC42491B09A000ACD23 /* libetc2.a in Frameworks */,
 				8A992AC02491B08E000ACD23 /* libiqa.a in Frameworks */,
@@ -173,7 +164,6 @@
 				8A992AB42491AF71000ACD23 /* libOGLCompiler.a in Frameworks */,
 				8A992AB22491AF4D000ACD23 /* libOSDependent.a in Frameworks */,
 				8A992AB02491AF28000ACD23 /* libglslang.a in Frameworks */,
-				8A992AAE2491AEB9000ACD23 /* libbxd.a in Frameworks */,
 				8A992AA62491A52A000ACD23 /* libastc-codec.a in Frameworks */,
 				8A992AA82491A52A000ACD23 /* libastc.a in Frameworks */,
 				8A992A9E2491A348000ACD23 /* libbimgd.a in Frameworks */,
@@ -247,8 +237,6 @@
 				8A992AD12491B13B000ACD23 /* libspirv-cross-glsl.a */,
 				8A992ACF2491B132000ACD23 /* libspirv-cross-hlsl.a */,
 				8A992ACD2491B10E000ACD23 /* libedtaa3.a */,
-				8A992ACB2491B0E2000ACD23 /* libbgfxd.a */,
-				8A992AC92491B0C9000ACD23 /* libbgfxd.a */,
 				8A992AC52491B0A7000ACD23 /* libastc-codec.a */,
 				8A992AC72491B0A7000ACD23 /* libastc.a */,
 				8A992AC12491B09A000ACD23 /* libetc1.a */,
@@ -262,17 +250,13 @@
 				8A992AB32491AF71000ACD23 /* libOGLCompiler.a */,
 				8A992AB12491AF4D000ACD23 /* libOSDependent.a */,
 				8A992AAF2491AF28000ACD23 /* libglslang.a */,
-				8A992AAD2491AEB9000ACD23 /* libbxd.a */,
 				8A992AAB2491AE93000ACD23 /* libOGLCompiler.a */,
-				8A992AA92491AE7D000ACD23 /* libbgfxd.a */,
 				8A992AA52491A52A000ACD23 /* libastc-codec.a */,
 				8A992AA72491A52A000ACD23 /* libastc.a */,
 				8A992AA32491A435000ACD23 /* libOGLCompiler.a */,
 				8A992AA12491A3DB000ACD23 /* libOSDependent.a */,
 				8A992A9F2491A35F000ACD23 /* libglslang.a */,
 				8A992A9D2491A348000ACD23 /* libbimgd.a */,
-				8A992A9B2491A338000ACD23 /* libbxd.a */,
-				8A992A992491A31F000ACD23 /* libbgfxd.a */,
 				8A992A872491A319000ACD23 /* libspirv-cross-c.a */,
 				8A992A892491A319000ACD23 /* libspirv-cross-core.a */,
 				8A992A8B2491A319000ACD23 /* libspirv-cross-cpp.a */,
@@ -784,6 +768,8 @@
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
+					"-lbgfxd",
+					"-lbxd",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = Playground;
@@ -803,6 +789,8 @@
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
+					"-lbgfx",
+					"-lbx",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = Playground;
