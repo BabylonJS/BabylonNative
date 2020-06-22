@@ -19,7 +19,7 @@ namespace
         vector_float2 cameraUV;
     } XRVertex;
 
-    static XRVertex triangleVertices[] =
+    static XRVertex vertices[] =
     {
         // 2D positions, UV         camera UV
         { { -1, -1 },   { 0, 0 },   { 0, 0} },
@@ -29,6 +29,9 @@ namespace
     };
 }
 
+/**
+ Implementation of the ARSessionDelegate interface for more info see: https://developer.apple.com/documentation/arkit/arsessiondelegate
+ */
 @implementation SessionDelegate
 {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
@@ -41,6 +44,9 @@ namespace
     CGSize cameraUVReferenceSize;
 }
 
+/**
+ Initializes this session delgate with the given frame views and metal graphics context.
+ */
 - (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext
 {
     self = [super init];
@@ -82,14 +88,14 @@ namespace
 }
 
 /**
- Called every frame during the active ARKit session.  Updates the AR Camera texture, UVs, and Camera pose.
+ Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose. If a size change is detected also sets the UVs, and FoV values.
 */
 - (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
 {
     // First copy the current ARFrame's image to our frame buffer, accounting for any change in image size.
     [self updateFrameBuffer:frame.capturedImage];
     
-    // Next update both metal textures used by the renderer.
+    // Next update both metal textures used by the renderer to display the camera image.
     _cameraTextureY = [self updateCameraTexture:frameBuffer plane:0];
     _cameraTextureCbCr = [self updateCameraTexture:frameBuffer plane:1];
      
@@ -119,8 +125,8 @@ namespace
     @try
     {
         // Find the width, height, and format of the AR image.
-        int bufferWidth = (int)CVPixelBufferGetWidth(arCameraBuffer);
-        int bufferHeight = (int)CVPixelBufferGetHeight(arCameraBuffer);
+        size_t bufferWidth = CVPixelBufferGetWidth(arCameraBuffer);
+        size_t bufferHeight = CVPixelBufferGetHeight(arCameraBuffer);
         auto format = CVPixelBufferGetPixelFormatType(arCameraBuffer);
         
         // If we don't have two planes the arCamera has not yet been initialized so back out for now.
@@ -130,8 +136,8 @@ namespace
             return;
         }
 
-        // Check if the size of the frame buffer has changed, if so then dispose of the old one and create a new buffer.
-        if (frameBuffer == nil || bufferWidth != (int)CVPixelBufferGetWidth(frameBuffer) || bufferHeight != (int)CVPixelBufferGetHeight(frameBuffer))
+        // Check if the size of the frame buffer has changed, if so dispose of the old one and create a new buffer.
+        if (frameBuffer == nil || bufferWidth != CVPixelBufferGetWidth(frameBuffer) || bufferHeight !=CVPixelBufferGetHeight(frameBuffer))
         {
             if (frameBuffer != nil)
             {
@@ -142,7 +148,7 @@ namespace
             // We must specify PixelBufferMetalCompatibility on the frame buffer to make this composable into a Metal Texture.
             auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], kCVPixelBufferMetalCompatibilityKey, nil];
             
-            // Create the actual pixel buffer.
+            // Create the frame buffer.
             ret = CVPixelBufferCreate(kCFAllocatorDefault, bufferWidth, bufferHeight, format, (__bridge CFDictionaryRef)attributes, &frameBuffer);
             if (ret != kCVReturnSuccess)
             {
@@ -192,8 +198,8 @@ namespace
 
     @try
     {
-        int planeWidth = (int) CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
-        int planeHeight = (int) CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+        size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
             
         // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
         auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
@@ -216,7 +222,7 @@ namespace
 }
 
 /**
- Checks whether the camera UVs need to be updated (based on the orientation and size of the view port, and updates them if necessary.
+ Checks whether the camera UVs need to be updated based on the orientation and size of the view port, and updates them if necessary.
  @return True if the camera UVs were updated, false otherwise.
 */
 - (Boolean)checkAndUpdateCameraUVs:(ARFrame *)frame
@@ -229,23 +235,24 @@ namespace
         // The default transform is for converting normalized image coordinates to UVs, we want the inverse as we are converting
         // UVs to normalized image coordinates.
         auto transform = CGAffineTransformInvert([frame displayTransformForOrientation:orientation viewportSize:[self viewportSize]]);
-        for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
+        for(size_t i = 0; i < sizeof(vertices) / sizeof(*vertices); i++)
         {
-            CGPoint transformedPoint = CGPointApplyAffineTransform({triangleVertices[i].uv[0], triangleVertices[i].uv[1]}, transform);
+            CGPoint transformedPoint = CGPointApplyAffineTransform({vertices[i].uv[0], vertices[i].uv[1]}, transform);
             
-            // The camera image is represented as bottom->top, so we have to flip the vertical component of the source image.
+            // In the inverse transform the camera image is represented bottom->top, so we have to flip the vertical component of the source image.
             if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
             {
-                triangleVertices[i].cameraUV[0] = 1 - transformedPoint.x;
-                triangleVertices[i].cameraUV[1] = transformedPoint.y;
+                vertices[i].cameraUV[0] = 1 - transformedPoint.x;
+                vertices[i].cameraUV[1] = transformedPoint.y;
             }
             else
             {
-                triangleVertices[i].cameraUV[0] = transformedPoint.x;
-                triangleVertices[i].cameraUV[1] = 1 - transformedPoint.y;
+                vertices[i].cameraUV[0] = transformedPoint.x;
+                vertices[i].cameraUV[1] = 1 - transformedPoint.y;
             }
         }
         
+        // Keep track of the last known orientation and viewport size.
         cameraUVReferenceOrientation = orientation;
         cameraUVReferenceSize = viewportSize;
         return true;
@@ -255,47 +262,30 @@ namespace
 }
 
 /**
- Updates the tracked FoV of the AR Camera.
+ Finds the FoV of the AR Camera, and applies it to the frameView.
 */
 - (void)updateFoV:(ARCamera*)camera
 {
-    // First grab the projection matrix for the image, this uses an aspect fill algorithm.
+    // Get the viewport size and the orientation of the device.
     auto& frameView = activeFrameViews->at(0);
     auto viewportSize = [self viewportSize];
     auto orientation = [self orientation];
-    auto projection = [camera projectionMatrixForOrientation:[self orientation] viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    
+    // Grab the projection matrix for the image based on the viewport.
+    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    
+    // Pull out the xScale, and yScale values from the projection matrix.
+    float xScale = projection.columns[0][0];
     float yScale = projection.columns[1][1];
-    float aspectRatio = viewportSize.width / viewportSize.height;
     
-    // In order to adjust the vertical FoV correctly we need to find the amount cropped off the image
-    // to find the amount of FoV ignored from the display's vertical FoV.
-    float min = 1.0f;
-    float max = 0.0f;
-    
-    // Since the image from the camera is always presented in landscape mode, the camera UV index of the
-    // display oriented vertical dimension is 1 for landscape orientation, and 0 for portrait mode.
-    int uvIndex = 0;
-    if (orientation == UIInterfaceOrientationLandscapeLeft || orientation == UIInterfaceOrientationLandscapeRight)
-    {
-        uvIndex = 1;
-    }
-    
-    // Loop over all the UVs and find the min and max crop values.
-    for(size_t i = 0; i < sizeof(triangleVertices) / sizeof(*triangleVertices); i++)
-    {
-        
-        if (triangleVertices[i].cameraUV[uvIndex] > max)
-        {
-            max = triangleVertices[i].cameraUV[uvIndex];
-        }
-        else if (triangleVertices[i].cameraUV[uvIndex] < min)
-        {
-            min = triangleVertices[i].cameraUV[uvIndex];
-        }
-    }
+    // Calculate the aspect ratio of the projection.
+    float aspectRatio = yScale / xScale;
 
-    // Calculate FoV and apply it to the frame view. TODO: Validate if this actually gives the right FoV.
-    float fov =  atanf((max - min) / yScale);
+    // Calculate FoV and apply it to the frame view.
+    // TODO: Validate if this actually gives the right FoV, it seems to be stretched vertically in Landscape
+    // mode likely due to the image being cropped by the transformation in checkAndUpdateCameraUVs vs being
+    // aspect fitted by projectionMatrixForOrientation.
+    float fov =  atanf(1 / yScale);
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
 }
@@ -303,6 +293,9 @@ namespace
 /**
  The ARKit camera transform is always a local right hand coordinate space WRT landscape right orientation, so this function takes the transform and converts
  it into a display oriented pose see: (https://developer.apple.com/documentation/arkit/arcamera/2866108-transform)
+ 
+ TODO: This seems like it could be vastly simplified, but the axes do not seem to match up with the values in the
+ ARKit documentaiton.
 */
 -(void)updateDisplayOrientedPose:(ARCamera*)camera
 {
@@ -326,7 +319,7 @@ namespace
     }
     else if (orientation == UIInterfaceOrientationPortrait)
     {
-        displayOrientationQuat = simd_quaternion((float)M_PI * 1.5f, simd_make_float3(0, 0, 1));
+        displayOrientationQuat = simd_quaternion((float)M_PI * -.5f, simd_make_float3(0, 0, 1));
     }
     
     // Convert the display orientation quaternion to a transform matrix.
@@ -466,6 +459,8 @@ namespace xr
             MetalDevice = id<MTLDevice>(graphicsContext);
             UIView* MainView = (UIView*)window;
             
+            // Create the XR View to stay within the safe area of the main view.
+            // TODO: Should re-use the view passed into the engine rather than creating a sub-view.
             dispatch_sync(dispatch_get_main_queue(), ^{
                 auto guide = MainView.safeAreaLayoutGuide;
                 xrView = [[MTKView alloc] initWithFrame:guide.layoutFrame device:MetalDevice];
@@ -479,6 +474,7 @@ namespace xr
                 viewportSize.y = guide.layoutFrame.size.height * scale;
             });
 
+            // Create and configure the ARKit session.
             configuration = [ARWorldTrackingConfiguration new];
             session = [ARSession new];
             MetalDevice = id<MTLDevice>(graphicsContext);
@@ -486,6 +482,7 @@ namespace xr
             session.delegate = sessionDelegate;
             configuration.planeDetection = ARPlaneDetectionHorizontal;
             configuration.lightEstimationEnabled = false;
+            configuration.worldAlignment = ARWorldAlignmentGravity;
             [session runWithConfiguration:configuration];
 
             // build pipeline
@@ -600,13 +597,13 @@ namespace xr
                 [renderEncoder setRenderPipelineState:pipelineState];
 
                 // Pass in the parameter data.
-                [renderEncoder setVertexBytes:triangleVertices length:sizeof(triangleVertices) atIndex:0];
+                [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
                 [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
                 [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureY atIndex:1];
                 [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureCbCr atIndex:2];
 
-                // Draw the triangle.
+                // Draw the triangles.
                 [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
                 [renderEncoder endEncoding];
@@ -700,7 +697,7 @@ namespace xr
 
     arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
     {
-        // Only immersive_VR is supported for now.
+        // Only IMMERSIVE_AR is supported for now.
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
     }
 
