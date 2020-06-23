@@ -580,16 +580,17 @@ namespace xr
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
                 if(renderPassDescriptor != nil)
                 {
+                    // Set up the clear for the color texture.
                     renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
                     renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,0.0);
-                    //renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+                    
+                    // Set up the clear for the depth texture.
                     renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
                     renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
                     renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
-                    //renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
                     
-                    // Create a render command encoder.
+                    // Create and end the render encoder.
                     id<MTLRenderCommandEncoder> renderEncoder =
                         [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"BabylonTextureClearEncoder";
