@@ -534,6 +534,7 @@ namespace Babylon
                 position.Set("_x", space.Pose.Position.X);
                 position.Set("_y", space.Pose.Position.Y);
                 position.Set("_z", space.Pose.Position.Z);
+                position.Set("_w", 1.f);
 
                 auto orientation = m_orientation.Value();
                 orientation.Set("_x", space.Pose.Orientation.X);
