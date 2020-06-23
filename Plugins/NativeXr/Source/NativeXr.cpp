@@ -535,17 +535,19 @@ namespace Babylon
 
             void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
             {
+                // The names of these properties should be reverted to x, y, z, w to match the WebXR spec
+                // once the regression in BabylonJS is fixed see: https://github.com/BabylonJS/BabylonNative/issues/304
                 auto position = m_position.Value();
-                position.Set("x", space.Pose.Position.X);
-                position.Set("y", space.Pose.Position.Y);
-                position.Set("z", space.Pose.Position.Z);
-                position.Set("w", 1.f);
+                position.Set("_x", space.Pose.Position.X);
+                position.Set("_y", space.Pose.Position.Y);
+                position.Set("_z", space.Pose.Position.Z);
+                position.Set("_w", 1.f);
 
                 auto orientation = m_orientation.Value();
-                orientation.Set("x", space.Pose.Orientation.X);
-                orientation.Set("y", space.Pose.Orientation.Y);
-                orientation.Set("z", space.Pose.Orientation.Z);
-                orientation.Set("w", space.Pose.Orientation.W);
+                orientation.Set("_x", space.Pose.Orientation.X);
+                orientation.Set("_y", space.Pose.Orientation.Y);
+                orientation.Set("_z", space.Pose.Orientation.Z);
+                orientation.Set("_w", space.Pose.Orientation.W);
 
                 std::memcpy(m_matrix.Value().Data(), CreateTransformMatrix(space, isViewSpace).data(), m_matrix.Value().ByteLength());
             }
