@@ -530,6 +530,8 @@ namespace Babylon
 
             void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
             {
+                // The names of these properties should be reverted to x, y, z, w to match the WebXR spec
+                // once the regression in BabylonJS is fixed see: https://github.com/BabylonJS/BabylonNative/issues/304
                 auto position = m_position.Value();
                 position.Set("_x", space.Pose.Position.X);
                 position.Set("_y", space.Pose.Position.Y);
