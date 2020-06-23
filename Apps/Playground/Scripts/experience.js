@@ -151,7 +151,7 @@ CreateBoxAsync().then(function () {
                 }
                 else {
                     setTimeout(function () {
-                        scene.meshes[0].position = scene.activeCamera.getFrontPosition(2);
+                        scene.meshes[0].position.z = 2;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                     }, 5000);
                 }
