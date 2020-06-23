@@ -529,6 +529,14 @@ namespace xr
             {
                 // Color texture
                 {
+                    if (ActiveFrameViews[0].ColorTexturePointer != nil)
+                    {
+                        id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
+                        [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
+                        [oldColorTexture release];
+                        ActiveFrameViews[0].ColorTexturePointer = nil;
+                    }
+                    
                     MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
                     textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
                     textureDescriptor.width = width;
@@ -543,6 +551,14 @@ namespace xr
 
                 // Allocate and store the depth texture
                 {
+                    if (ActiveFrameViews[0].DepthTexturePointer != nil)
+                    {
+                        id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
+                        [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
+                        [oldDepthTexture release];
+                        ActiveFrameViews[0].DepthTexturePointer = nil;
+                    }
+
                     MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
                     textureDescriptor.pixelFormat = MTLPixelFormatDepth32Float_Stencil8;
                     textureDescriptor.width = width;
@@ -556,6 +572,34 @@ namespace xr
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
             }
+            else
+            {
+                // Clear the color and depth texture before handing it off to Babylon
+                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+                commandBuffer.label = @"BabylonTextureClearBuffer";
+                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                if(renderPassDescriptor != nil)
+                {
+                    renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,0.0);
+                    //renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+                    renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
+                    renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
+                    //renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
+                    
+                    // Create a render command encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder =
+                        [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"BabylonTextureClearEncoder";
+                    [renderEncoder endEncoding];
+                }
+                
+                // Finalize rendering here & push the command buffer to the GPU.
+                [commandBuffer commit];
+            }
+            
             return std::make_unique<Frame>(*this);
         }
 
@@ -587,8 +631,7 @@ namespace xr
                 renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,1.0);
                 
                 // Create a render command encoder.
-                id<MTLRenderCommandEncoder> renderEncoder =
-                [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                 renderEncoder.label = @"XRDisplayEncoder";
 
                 // Set the region of the drawable to draw into.
