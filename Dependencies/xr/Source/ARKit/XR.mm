@@ -34,7 +34,6 @@ namespace {
     CVMetalTextureCacheRef textureCache;
     id<MTLTexture> _cameraTextureY;
     id<MTLTexture> _cameraTextureCbCr;
-    CVPixelBufferRef frameBuffer;
     
     UIInterfaceOrientation cameraUVReferenceOrientation;
     CGSize cameraUVReferenceSize;
@@ -79,15 +78,13 @@ namespace {
 }
 
 /**
- Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose. If a size change is detected also sets the UVs, and FoV values.
+ Implementaiton of the ARSessionDelegate protocol. Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose.
+ If a size change is detected also sets the UVs, and FoV values.
 */
 - (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame {
-    // First copy the current ARFrame's image to our frame buffer, accounting for any change in image size.
-    [self updateFrameBuffer:frame.capturedImage];
-    
     // Next update both metal textures used by the renderer to display the camera image.
-    _cameraTextureY = [self updateCameraTexture:frameBuffer plane:0];
-    _cameraTextureCbCr = [self updateCameraTexture:frameBuffer plane:1];
+    _cameraTextureY = [self updateCameraTexture:frame.capturedImage plane:0];
+    _cameraTextureCbCr = [self updateCameraTexture:frame.capturedImage plane:1];
      
     // Check if our orientation or size has changed and update camera UVs if necessary.
     if ([self checkAndUpdateCameraUVs:frame]) {
@@ -97,69 +94,6 @@ namespace {
     
     // Finally update the XR pose based on the current transform from ARKit.
     [self updateDisplayOrientedPose:(frame.camera)];
-}
-
-/**
- Copies the camera buffer from from the current ARFrame into our pixel buffer used for composing the metal texture.
-*/
-- (void)updateFrameBuffer:(CVPixelBufferRef)arCameraBuffer {
-    // Lock the frame buffer with read access to stop ARKit from updating the camera buffer during update.
-    CVReturn ret = CVPixelBufferLockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
-    if (ret != kCVReturnSuccess) {
-        return;
-    }
-    
-    @try {
-        // Find the width, height, and format of the AR image.
-        size_t bufferWidth = CVPixelBufferGetWidth(arCameraBuffer);
-        size_t bufferHeight = CVPixelBufferGetHeight(arCameraBuffer);
-        auto format = CVPixelBufferGetPixelFormatType(arCameraBuffer);
-        
-        // If we don't have two planes the arCamera has not yet been initialized so back out for now.
-        if (CVPixelBufferGetPlaneCount(arCameraBuffer) < 2) {
-            return;
-        }
-
-        // Check if the size of the frame buffer has changed, if so dispose of the old one and create a new buffer.
-        if (frameBuffer == nil || bufferWidth != CVPixelBufferGetWidth(frameBuffer) || bufferHeight != CVPixelBufferGetHeight(frameBuffer)) {
-            if (frameBuffer != nil) {
-                CVPixelBufferRelease(frameBuffer);
-                frameBuffer = nil;
-            }
-            
-            // We must specify PixelBufferMetalCompatibility on the frame buffer to make this composable into a Metal Texture.
-            auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], kCVPixelBufferMetalCompatibilityKey, nil];
-            
-            // Create the frame buffer.
-            ret = CVPixelBufferCreate(kCFAllocatorDefault, bufferWidth, bufferHeight, format, (__bridge CFDictionaryRef)attributes, &frameBuffer);
-            if (ret != kCVReturnSuccess) {
-                throw std::runtime_error("Failed to allocate frame buffer.");
-            }
-        }
-        
-        // Lock the pixel buffer for write access.
-        ret = CVPixelBufferLockBaseAddress(frameBuffer, 0);
-        if (ret != kCVReturnSuccess) {
-            return;
-        }
-        
-        @try {
-            // Copy both planes of the AR camera image to the frame buffer.
-            void* ydestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 0);
-            void* ysrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 0);
-            memcpy(ydestPlane, ysrcPlane, bufferWidth * bufferHeight);
-            
-            auto uvdestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 1);
-            auto uvsrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 1);
-            memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight / 2);
-        }
-        @finally {
-            CVPixelBufferUnlockBaseAddress(frameBuffer, 0);
-        }
-    }
-    @finally {
-        CVPixelBufferUnlockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
-    }
 }
 
 /**
@@ -306,13 +240,8 @@ namespace {
 }
 
 -(void)dealloc {
-  if (frameBuffer != nil) {
-      CVPixelBufferRelease(frameBuffer);
-      CVMetalTextureCacheFlush(textureCache, 0);
-      frameBuffer = nil;
-  }
-  
   if (textureCache != nil) {
+      CVMetalTextureCacheFlush(textureCache, 0);
       CFRelease(textureCache);
       textureCache = nil;
   }
@@ -579,8 +508,7 @@ namespace xr {
                         renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
                         
                         // Create and end the render encoder.
-                        id<MTLRenderCommandEncoder> renderEncoder =
-                            [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                         renderEncoder.label = @"BabylonTextureClearEncoder";
                         [renderEncoder endEncoding];
                     }
