@@ -1,4 +1,4 @@
-#include <XR.h>
+#import <XR.h>
 
 #import <UIKit/UIKit.h>
 #import <ARKit/ARKit.h>
@@ -10,18 +10,15 @@
 @property (readonly) id<MTLTexture> cameraTextureCbCr;
 @end
 
-namespace
-{
-    typedef struct
-    {
+namespace {
+    typedef struct {
         vector_float2 position;
         vector_float2 uv;
         vector_float2 cameraUV;
     } XRVertex;
 
-    static XRVertex vertices[] =
-    {
-        // 2D positions, UV         camera UV
+    static XRVertex vertices[] = {
+        // 2D positions, UV,        camera UV
         { { -1, -1 },   { 0, 0 },   { 0, 0} },
         { { -1, 1 },    { 0, 1 },   { 0, 0} },
         { { 1, -1 },    { 1, 0 },   { 0, 0} },
@@ -32,8 +29,7 @@ namespace
 /**
  Implementation of the ARSessionDelegate interface for more info see: https://developer.apple.com/documentation/arkit/arsessiondelegate
  */
-@implementation SessionDelegate
-{
+@implementation SessionDelegate {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
     CVMetalTextureCacheRef textureCache;
     id<MTLTexture> _cameraTextureY;
@@ -47,14 +43,12 @@ namespace
 /**
  Initializes this session delgate with the given frame views and metal graphics context.
  */
-- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext
-{
+- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext {
     self = [super init];
     self->activeFrameViews = activeFrameViews;
     
     CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, graphicsContext, nil, &textureCache);
-    if (err)
-    {
+    if (err) {
         throw std::runtime_error{"Unable to create Texture Cache"};
     }
     
@@ -64,13 +58,11 @@ namespace
 /**
  Returns the orientation of the app based on the current status bar orientation.
 */
-- (UIInterfaceOrientation)orientation
-{
+- (UIInterfaceOrientation)orientation {
     auto sharedApplication = [UIApplication sharedApplication];
     auto window = sharedApplication.windows.firstObject;
     if (@available(iOS 13.0, *)) {
-        if (window && window.windowScene)
-        {
+        if (window && window.windowScene) {
             return window.windowScene.interfaceOrientation;
         }
     }
@@ -81,8 +73,7 @@ namespace
 /**
  Returns the viewportSize as determined by the texture size of the first active frame view.
 */
-- (CGSize)viewportSize
-{
+- (CGSize)viewportSize {
     auto frameSize = activeFrameViews->front().ColorTextureSize;
     return CGSizeMake(frameSize.Width, frameSize.Height);
 }
@@ -90,8 +81,7 @@ namespace
 /**
  Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose. If a size change is detected also sets the UVs, and FoV values.
 */
-- (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame
-{
+- (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame {
     // First copy the current ARFrame's image to our frame buffer, accounting for any change in image size.
     [self updateFrameBuffer:frame.capturedImage];
     
@@ -100,8 +90,7 @@ namespace
     _cameraTextureCbCr = [self updateCameraTexture:frameBuffer plane:1];
      
     // Check if our orientation or size has changed and update camera UVs if necessary.
-    if ([self checkAndUpdateCameraUVs:frame])
-    {
+    if ([self checkAndUpdateCameraUVs:frame]) {
         // If our camera UVs updated, then also update the FoV to match the updated UVs.
         [self updateFoV:frame.camera];
     }
@@ -113,34 +102,27 @@ namespace
 /**
  Copies the camera buffer from from the current ARFrame into our pixel buffer used for composing the metal texture.
 */
-- (void)updateFrameBuffer:(CVPixelBufferRef)arCameraBuffer
-{
+- (void)updateFrameBuffer:(CVPixelBufferRef)arCameraBuffer {
     // Lock the frame buffer with read access to stop ARKit from updating the camera buffer during update.
     CVReturn ret = CVPixelBufferLockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
-    if (ret != kCVReturnSuccess)
-    {
+    if (ret != kCVReturnSuccess) {
         return;
     }
     
-    @try
-    {
+    @try {
         // Find the width, height, and format of the AR image.
         size_t bufferWidth = CVPixelBufferGetWidth(arCameraBuffer);
         size_t bufferHeight = CVPixelBufferGetHeight(arCameraBuffer);
         auto format = CVPixelBufferGetPixelFormatType(arCameraBuffer);
         
         // If we don't have two planes the arCamera has not yet been initialized so back out for now.
-        if (CVPixelBufferGetPlaneCount(arCameraBuffer) < 2)
-        {
-            CVPixelBufferUnlockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
+        if (CVPixelBufferGetPlaneCount(arCameraBuffer) < 2) {
             return;
         }
 
         // Check if the size of the frame buffer has changed, if so dispose of the old one and create a new buffer.
-        if (frameBuffer == nil || bufferWidth != CVPixelBufferGetWidth(frameBuffer) || bufferHeight !=CVPixelBufferGetHeight(frameBuffer))
-        {
-            if (frameBuffer != nil)
-            {
+        if (frameBuffer == nil || bufferWidth != CVPixelBufferGetWidth(frameBuffer) || bufferHeight != CVPixelBufferGetHeight(frameBuffer)) {
+            if (frameBuffer != nil) {
                 CVPixelBufferRelease(frameBuffer);
                 frameBuffer = nil;
             }
@@ -150,21 +132,18 @@ namespace
             
             // Create the frame buffer.
             ret = CVPixelBufferCreate(kCFAllocatorDefault, bufferWidth, bufferHeight, format, (__bridge CFDictionaryRef)attributes, &frameBuffer);
-            if (ret != kCVReturnSuccess)
-            {
+            if (ret != kCVReturnSuccess) {
                 throw std::runtime_error("Failed to allocate frame buffer.");
             }
         }
         
         // Lock the pixel buffer for write access.
         ret = CVPixelBufferLockBaseAddress(frameBuffer, 0);
-        if (ret != kCVReturnSuccess)
-        {
+        if (ret != kCVReturnSuccess) {
             return;
         }
         
-        @try
-        {
+        @try {
             // Copy both planes of the AR camera image to the frame buffer.
             void* ydestPlane = CVPixelBufferGetBaseAddressOfPlane(frameBuffer, 0);
             void* ysrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 0);
@@ -174,30 +153,25 @@ namespace
             auto uvsrcPlane = CVPixelBufferGetBaseAddressOfPlane(arCameraBuffer, 1);
             memcpy(uvdestPlane, uvsrcPlane, bufferWidth * bufferHeight / 2);
         }
-        @finally
-        {
-            CVPixelBufferUnlockBaseAddress(arCameraBuffer, 0);
+        @finally {
+            CVPixelBufferUnlockBaseAddress(frameBuffer, 0);
         }
     }
-    @finally
-    {
-        CVPixelBufferUnlockBaseAddress(frameBuffer, kCVPixelBufferLock_ReadOnly);
+    @finally {
+        CVPixelBufferUnlockBaseAddress(arCameraBuffer, kCVPixelBufferLock_ReadOnly);
     }
 }
 
 /**
  Updates the captured texture with the current frame buffer.
 */
-- (id<MTLTexture>)updateCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex
-{
+- (id<MTLTexture>)updateCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
     CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    if (ret != kCVReturnSuccess)
-    {
+    if (ret != kCVReturnSuccess) {
         return {};
     }
 
-    @try
-    {
+    @try {
         size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
         size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
             
@@ -208,16 +182,14 @@ namespace
         
         // Create a texture from the corresponding plane.
         auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &texture);
-        if (status == kCVReturnSuccess)
-        {
+        if (status == kCVReturnSuccess) {
             mtlTexture = CVMetalTextureGetTexture(texture);
             CVBufferRelease(texture);
         }
         
         return mtlTexture;
     }
-    @finally
-    {
+    @finally {
         CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     }
 }
@@ -226,28 +198,23 @@ namespace
  Checks whether the camera UVs need to be updated based on the orientation and size of the view port, and updates them if necessary.
  @return True if the camera UVs were updated, false otherwise.
 */
-- (Boolean)checkAndUpdateCameraUVs:(ARFrame *)frame
-{
+- (Boolean)checkAndUpdateCameraUVs:(ARFrame *)frame {
     // When the orientation or viewport size changes loop over triangleVerts, apply transform to the UV to generate camera UVs.
     auto orientation = [self orientation];
     CGSize viewportSize = [self viewportSize];
-    if (cameraUVReferenceOrientation != orientation || cameraUVReferenceSize.height != viewportSize.height || cameraUVReferenceSize.width != viewportSize.width)
-    {
+    if (cameraUVReferenceOrientation != orientation || cameraUVReferenceSize.height != viewportSize.height || cameraUVReferenceSize.width != viewportSize.width) {
         // The default transform is for converting normalized image coordinates to UVs, we want the inverse as we are converting
         // UVs to normalized image coordinates.
         auto transform = CGAffineTransformInvert([frame displayTransformForOrientation:orientation viewportSize:[self viewportSize]]);
-        for(size_t i = 0; i < sizeof(vertices) / sizeof(*vertices); i++)
-        {
+        for(size_t i = 0; i < sizeof(vertices) / sizeof(*vertices); i++) {
             CGPoint transformedPoint = CGPointApplyAffineTransform({vertices[i].uv[0], vertices[i].uv[1]}, transform);
             
             // In the inverse transform the camera image is represented bottom->top, so we have to flip the vertical component of the source image.
-            if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown)
-            {
+            if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
                 vertices[i].cameraUV[0] = 1 - transformedPoint.x;
                 vertices[i].cameraUV[1] = transformedPoint.y;
             }
-            else
-            {
+            else {
                 vertices[i].cameraUV[0] = transformedPoint.x;
                 vertices[i].cameraUV[1] = 1 - transformedPoint.y;
             }
@@ -265,8 +232,7 @@ namespace
 /**
  Finds the FoV of the AR Camera, and applies it to the frameView.
 */
-- (void)updateFoV:(ARCamera*)camera
-{
+- (void)updateFoV:(ARCamera*)camera {
     // Get the viewport size and the orientation of the device.
     auto& frameView = activeFrameViews->at(0);
     auto viewportSize = [self viewportSize];
@@ -298,28 +264,23 @@ namespace
  TODO: This seems like it could be vastly simplified, but the axes do not seem to match up with the values in the
  ARKit documentaiton.
 */
--(void)updateDisplayOrientedPose:(ARCamera*)camera
-{
+-(void)updateDisplayOrientedPose:(ARCamera*)camera {
     auto& frameView = activeFrameViews->at(0);
     UIInterfaceOrientation orientation = [self orientation];
     simd_float4x4 transform = [camera transform];
     simd_quatf displayOrientationQuat;
     
     // Create the display orientation quaternion based on the current orientation of the device.
-    if (orientation == UIInterfaceOrientationLandscapeRight)
-    {
+    if (orientation == UIInterfaceOrientationLandscapeRight) {
         displayOrientationQuat = simd_quaternion((float)M_PI, simd_make_float3(0, 0, 1));
     }
-    else if (orientation == UIInterfaceOrientationLandscapeLeft)
-    {
+    else if (orientation == UIInterfaceOrientationLandscapeLeft) {
         displayOrientationQuat = simd_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
     }
-    else if (orientation == UIInterfaceOrientationPortraitUpsideDown)
-    {
+    else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
         displayOrientationQuat = simd_quaternion((float)M_PI * .5f, simd_make_float3(0, 0, 1));
     }
-    else if (orientation == UIInterfaceOrientationPortrait)
-    {
+    else if (orientation == UIInterfaceOrientationPortrait) {
         displayOrientationQuat = simd_quaternion((float)M_PI * -.5f, simd_make_float3(0, 0, 1));
     }
     
@@ -345,15 +306,13 @@ namespace
 }
 
 -(void)dealloc {
-  if (frameBuffer != nil)
-  {
+  if (frameBuffer != nil) {
       CVPixelBufferRelease(frameBuffer);
       CVMetalTextureCacheFlush(textureCache, 0);
       frameBuffer = nil;
   }
   
-  if (textureCache != nil)
-  {
+  if (textureCache != nil) {
       CFRelease(textureCache);
       textureCache = nil;
   }
@@ -362,10 +321,8 @@ namespace
 }
 
 @end
-namespace xr
-{
-    namespace
-    {
+namespace xr {
+    namespace {
         const char* shaderSource = R"(
             #include <metal_stdlib>
             #include <simd/simd.h>
@@ -432,38 +389,30 @@ namespace xr
             }
         )";
 
-        id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source)
-        {
+        id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
             NSError* error;
             id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
-            if(nil != error)
-            {
+            if(nil != error) {
                 throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
             }
             return lib;
         }
     }
     
-    struct System::Impl
-    {
+    struct System::Impl {
     public:
-        Impl(const std::string&)
-        {
-        }
+        Impl(const std::string&) {}
 
-        bool IsInitialized() const
-        {
+        bool IsInitialized() const {
             return true;
         }
 
-        bool TryInitialize()
-        {
+        bool TryInitialize() {
             return true;
         }
     };
 
-    struct System::Session::Impl
-    {
+    struct System::Session::Impl {
     public:
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
@@ -472,8 +421,7 @@ namespace xr
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
         Impl(System::Impl& systemImpl, void* graphicsContext, void* window)
-            : SystemImpl{ systemImpl }
-        {
+            : SystemImpl{ systemImpl } {
             MetalDevice = id<MTLDevice>(graphicsContext);
             UIView* MainView = (UIView*)window;
             
@@ -493,8 +441,7 @@ namespace xr
             });
 
             // Create and configure the ARKit session.
-            if (session == nil)
-            {
+            if (session == nil) {
                 session = [ARSession new];
                 configuration = [ARWorldTrackingConfiguration new];
                 configuration.planeDetection = ARPlaneDetectionHorizontal;
@@ -507,8 +454,6 @@ namespace xr
             session.delegate = sessionDelegate;
             [session runWithConfiguration:configuration];
 
-            // build pipeline
-            NSError* error;
             id<MTLLibrary> lib = CompileShader(MetalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
@@ -520,9 +465,10 @@ namespace xr
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
             pipelineStateDescriptor.colorAttachments[0].pixelFormat = MetalLayer.pixelFormat;
 
+            // build pipeline
+            NSError* error;
             pipelineState = [MetalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-            if (!pipelineState)
-            {
+            if (!pipelineState) {
                 NSLog(@"Failed to create pipeline state: %@", error);
             }
             
@@ -535,18 +481,15 @@ namespace xr
             frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = 0.5);
         }
 
-        ~Impl()
-        {
-            if (ActiveFrameViews[0].ColorTexturePointer != nil)
-            {
+        ~Impl() {
+            if (ActiveFrameViews[0].ColorTexturePointer != nil) {
                 id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                 [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
                 [oldColorTexture release];
                 ActiveFrameViews[0].ColorTexturePointer = nil;
             }
             
-            if (ActiveFrameViews[0].DepthTexturePointer != nil)
-            {
+            if (ActiveFrameViews[0].DepthTexturePointer != nil) {
                 id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
                 [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
                 [oldDepthTexture release];
@@ -564,19 +507,16 @@ namespace xr
             xrView = nil;
         }
 
-        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
-        {
-            unsigned int width = viewportSize.x;
-            unsigned int height = viewportSize.y;
+        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession) {
+            uint32_t width = viewportSize.x;
+            uint32_t height = viewportSize.y;
             shouldEndSession = SessionEnded;
             shouldRestartSession = false;
             
-            if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
-            {
+            if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) {
                 // Color texture
                 {
-                    if (ActiveFrameViews[0].ColorTexturePointer != nil)
-                    {
+                    if (ActiveFrameViews[0].ColorTexturePointer != nil) {
                         id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                         [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
                         [oldColorTexture release];
@@ -598,8 +538,7 @@ namespace xr
 
                 // Allocate and store the depth texture
                 {
-                    if (ActiveFrameViews[0].DepthTexturePointer != nil)
-                    {
+                    if (ActiveFrameViews[0].DepthTexturePointer != nil) {
                         id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
                         [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
                         [oldDepthTexture release];
@@ -620,15 +559,13 @@ namespace xr
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
             }
-            else
-            {
+            else {
                 @autoreleasepool {
                     // Clear the color and depth texture before handing it off to Babylon
                     id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
                     commandBuffer.label = @"BabylonTextureClearBuffer";
                     MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-                    if(renderPassDescriptor != nil)
-                    {
+                    if(renderPassDescriptor != nil) {
                         // Set up the clear for the color texture.
                         renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                         renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
@@ -657,22 +594,18 @@ namespace xr
             return std::make_unique<Frame>(*this);
         }
 
-        void RequestEndSession()
-        {
+        void RequestEndSession() {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             SessionEnded = true;
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t) const
-        {
+        Size GetWidthAndHeightForViewIndex(size_t) const {
             // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
             return {1,1};
         }
         
-        void DrawFrame()
-        {
-            @autoreleasepool
-            {
+        void DrawFrame() {
+            @autoreleasepool {
                 // Create a new command buffer for each render pass to the current drawable.
                 id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
                 commandBuffer.label = @"XRDisplayCommandBuffer";
@@ -680,8 +613,7 @@ namespace xr
                 id<CAMetalDrawable> drawable = [MetalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                if(renderPassDescriptor != nil)
-                {
+                if(renderPassDescriptor != nil) {
                     renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
                     renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,1.0);
@@ -716,8 +648,7 @@ namespace xr
             }
         }
 
-        void GetHitTestResults(std::vector<HitResult>&, xr::Ray) const
-        {
+        void GetHitTestResults(std::vector<HitResult>&, xr::Ray) const {
             // TODO
         }
         
@@ -734,13 +665,10 @@ namespace xr
             id<MTLCommandQueue> commandQueue;
     };
 
-    struct System::Session::Frame::Impl
-    {
+    struct System::Session::Frame::Impl {
     public:
         Impl(Session::Impl& sessionImpl)
-            : sessionImpl{sessionImpl}
-        {
-        }
+            : sessionImpl{sessionImpl} { }
 
         Session::Impl& sessionImpl;
     };
@@ -748,90 +676,73 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
-        , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
-    {
+        , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
     }
 
-    System::Session::Frame::~Frame()
-    {
+    System::Session::Frame::~Frame() {
         m_impl->sessionImpl.DrawFrame();
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
-    {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const
-    {
+    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const {
         throw std::runtime_error("Not yet implemented");
     }
 
-    void System::Session::Frame::UpdateAnchor(xr::Anchor&) const
-    {
+    void System::Session::Frame::UpdateAnchor(xr::Anchor&) const {
         throw std::runtime_error("Not yet implemented");
     }
 
-    void System::Session::Frame::DeleteAnchor(xr::Anchor&) const
-    {
+    void System::Session::Frame::DeleteAnchor(xr::Anchor&) const {
         throw std::runtime_error("Not yet implemented");
     }
 
     System::System(const char* appName)
-        : m_impl{ std::make_unique<System::Impl>(appName) }
-    {}
+        : m_impl{ std::make_unique<System::Impl>(appName) } {}
 
     System::~System() {}
 
-    bool System::IsInitialized() const
-    {
+    bool System::IsInitialized() const {
         return m_impl->IsInitialized();
     }
 
-    bool System::TryInitialize()
-    {
+    bool System::TryInitialize() {
         return m_impl->TryInitialize();
     }
 
-    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
-    {
+    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType) {
         // Only IMMERSIVE_AR is supported for now.
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window)
-    {
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window) {
         return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, window));
     }
 
     System::Session::Session(System& system, void* graphicsDevice, void* window)
-        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, window) }
-    {}
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, window) } {}
 
-    System::Session::~Session()
-    {
+    System::Session::~Session() {
         // Free textures
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)>)
-    {
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)>) {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
     }
 
-    void System::Session::RequestEndSession()
-    {
+    void System::Session::RequestEndSession() {
         m_impl->RequestEndSession();
     }
 
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
-    {
+    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const {
         return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 
-    void System::Session::SetDepthsNearFar(float depthNear, float depthFar)
-    {
+    void System::Session::SetDepthsNearFar(float depthNear, float depthFar) {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
     }
