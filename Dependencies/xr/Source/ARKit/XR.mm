@@ -90,7 +90,7 @@ namespace
 /**
  Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose. If a size change is detected also sets the UVs, and FoV values.
 */
-- (void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame
+- (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame
 {
     // First copy the current ARFrame's image to our frame buffer, accounting for any change in image size.
     [self updateFrameBuffer:frame.capturedImage];
@@ -211,6 +211,7 @@ namespace
         if (status == kCVReturnSuccess)
         {
             mtlTexture = CVMetalTextureGetTexture(texture);
+            CVBufferRelease(texture);
         }
         
         return mtlTexture;
@@ -341,6 +342,23 @@ namespace
     frameView.Space.Pose.Position = { -1 * displayOrientedTransform.columns[3][0]
         , displayOrientedTransform.columns[3][1]
         , displayOrientedTransform.columns[3][2] };
+}
+
+-(void)dealloc {
+  if (frameBuffer != nil)
+  {
+      CVPixelBufferRelease(frameBuffer);
+      CVMetalTextureCacheFlush(textureCache, 0);
+      frameBuffer = nil;
+  }
+  
+  if (textureCache != nil)
+  {
+      CFRelease(textureCache);
+      textureCache = nil;
+  }
+  
+  [super dealloc];
 }
 
 @end
@@ -475,14 +493,18 @@ namespace xr
             });
 
             // Create and configure the ARKit session.
-            configuration = [ARWorldTrackingConfiguration new];
-            session = [ARSession new];
+            if (session == nil)
+            {
+                session = [ARSession new];
+                configuration = [ARWorldTrackingConfiguration new];
+                configuration.planeDetection = ARPlaneDetectionHorizontal;
+                configuration.lightEstimationEnabled = false;
+                configuration.worldAlignment = ARWorldAlignmentGravity;
+            }
+            
             MetalDevice = id<MTLDevice>(graphicsContext);
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:MetalDevice];
             session.delegate = sessionDelegate;
-            configuration.planeDetection = ARPlaneDetectionHorizontal;
-            configuration.lightEstimationEnabled = false;
-            configuration.worldAlignment = ARWorldAlignmentGravity;
             [session runWithConfiguration:configuration];
 
             // build pipeline
@@ -503,6 +525,8 @@ namespace xr
             {
                 NSLog(@"Failed to create pipeline state: %@", error);
             }
+            
+            [pipelineStateDescriptor release];
             commandQueue = [MetalDevice newCommandQueue];
             
             // default fov values to avoid NaN at startup
@@ -513,17 +537,39 @@ namespace xr
 
         ~Impl()
         {
+            if (ActiveFrameViews[0].ColorTexturePointer != nil)
+            {
+                id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
+                [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
+                [oldColorTexture release];
+                ActiveFrameViews[0].ColorTexturePointer = nil;
+            }
+            
+            if (ActiveFrameViews[0].DepthTexturePointer != nil)
+            {
+                id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
+                [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
+                [oldDepthTexture release];
+                ActiveFrameViews[0].DepthTexturePointer = nil;
+            }
+
+            [session pause];
+            session.delegate = nil;
             [sessionDelegate release];
-            [configuration release];
-            [session release];
+            [pipelineState release];
             dispatch_sync(dispatch_get_main_queue(), ^{
                 [xrView removeFromSuperview]; });
+            [xrView releaseDrawables];
+            [xrView dealloc];
+            xrView = nil;
         }
 
-        std::unique_ptr<System::Session::Frame> GetNextFrame(bool&, bool&)
+        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
             unsigned int width = viewportSize.x;
             unsigned int height = viewportSize.y;
+            shouldEndSession = SessionEnded;
+            shouldRestartSession = false;
             
             if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height)
             {
@@ -543,7 +589,8 @@ namespace xr
                     textureDescriptor.height = height;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     id<MTLTexture> texture = [MetalDevice newTextureWithDescriptor:textureDescriptor];
-                    
+                    [textureDescriptor dealloc];
+                                        
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
                     ActiveFrameViews[0].ColorTextureSize = {width, height};
@@ -566,6 +613,7 @@ namespace xr
                     textureDescriptor.storageMode = MTLStorageModePrivate;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
                     id<MTLTexture> texture = [MetalDevice newTextureWithDescriptor:textureDescriptor];
+                    [textureDescriptor dealloc];
                     
                     ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(texture);
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
@@ -574,31 +622,36 @@ namespace xr
             }
             else
             {
-                // Clear the color and depth texture before handing it off to Babylon
-                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"BabylonTextureClearBuffer";
-                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-                if(renderPassDescriptor != nil)
-                {
-                    // Set up the clear for the color texture.
-                    renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
-                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,0.0);
+                @autoreleasepool {
+                    // Clear the color and depth texture before handing it off to Babylon
+                    id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+                    commandBuffer.label = @"BabylonTextureClearBuffer";
+                    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                    if(renderPassDescriptor != nil)
+                    {
+                        // Set up the clear for the color texture.
+                        renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
+                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+                        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,0.0);
+                        renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+                        
+                        // Set up the clear for the depth texture.
+                        renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
+                        renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+                        renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
+                        renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
+                        
+                        // Create and end the render encoder.
+                        id<MTLRenderCommandEncoder> renderEncoder =
+                            [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                        renderEncoder.label = @"BabylonTextureClearEncoder";
+                        [renderEncoder endEncoding];
+                    }
                     
-                    // Set up the clear for the depth texture.
-                    renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
-                    renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
-                    
-                    // Create and end the render encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder =
-                        [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"BabylonTextureClearEncoder";
-                    [renderEncoder endEncoding];
+                    // Finalize rendering here & push the command buffer to the GPU.
+                    [commandBuffer commit];
+                    [commandBuffer waitUntilCompleted];
                 }
-                
-                // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
             }
             
             return std::make_unique<Frame>(*this);
@@ -618,46 +671,49 @@ namespace xr
         
         void DrawFrame()
         {
-            // Create a new command buffer for each render pass to the current drawable.
-            id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-            commandBuffer.label = @"XRDisplayCommandBuffer";
-            
-            id<CAMetalDrawable> drawable = [MetalLayer nextDrawable];
-            MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-
-            if(renderPassDescriptor != nil)
+            @autoreleasepool
             {
-                renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-                renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-                renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,1.0);
+                // Create a new command buffer for each render pass to the current drawable.
+                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+                commandBuffer.label = @"XRDisplayCommandBuffer";
                 
-                // Create a render command encoder.
-                id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                renderEncoder.label = @"XRDisplayEncoder";
+                id<CAMetalDrawable> drawable = [MetalLayer nextDrawable];
+                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                // Set the region of the drawable to draw into.
-                [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
-                
-                [renderEncoder setRenderPipelineState:pipelineState];
+                if(renderPassDescriptor != nil)
+                {
+                    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,1.0);
+                    
+                    // Create a render command encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"XRDisplayEncoder";
 
-                // Pass in the parameter data.
-                [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                    // Set the region of the drawable to draw into.
+                    [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
+                    
+                    [renderEncoder setRenderPipelineState:pipelineState];
 
-                [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
-                [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureY atIndex:1];
-                [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureCbCr atIndex:2];
+                    // Pass in the parameter data.
+                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
-                // Draw the triangles.
-                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                    [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
+                    [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureY atIndex:1];
+                    [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureCbCr atIndex:2];
 
-                [renderEncoder endEncoding];
+                    // Draw the triangles.
+                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-                // Schedule a present once the framebuffer is complete using the current drawable.
-                [commandBuffer presentDrawable:drawable];
+                    [renderEncoder endEncoding];
+
+                    // Schedule a present once the framebuffer is complete using the current drawable.
+                    [commandBuffer presentDrawable:drawable];
+                }
+
+                // Finalize rendering here & push the command buffer to the GPU.
+                [commandBuffer commit];
             }
-
-            // Finalize rendering here & push the command buffer to the GPU.
-            [commandBuffer commit];
         }
 
         void GetHitTestResults(std::vector<HitResult>&, xr::Ray) const
@@ -666,13 +722,13 @@ namespace xr
         }
         
         private:
+            inline static ARSession* session{};
+            inline static ARWorldTrackingConfiguration* configuration{};
             MTKView* xrView{};
             bool SessionEnded{ false };
             id<MTLDevice> MetalDevice{};
             CAMetalLayer* MetalLayer{};
-            ARSession* session{};
             SessionDelegate* sessionDelegate{};
-            ARWorldTrackingConfiguration* configuration{};
             id<MTLRenderPipelineState> pipelineState{};
             vector_uint2 viewportSize{};
             id<MTLCommandQueue> commandQueue;
