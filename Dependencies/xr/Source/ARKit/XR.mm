@@ -61,12 +61,11 @@ namespace {
     auto sharedApplication = [UIApplication sharedApplication];
     auto window = sharedApplication.windows.firstObject;
     if (@available(iOS 13.0, *)) {
-        if (window && window.windowScene) {
-            return window.windowScene.interfaceOrientation;
-        }
+        return window.windowScene.interfaceOrientation;
     }
-
-    return [[UIApplication sharedApplication] statusBarOrientation];
+    else {
+        return [[UIApplication sharedApplication] statusBarOrientation];
+    }	
 }
 
 /**
@@ -370,13 +369,11 @@ namespace xr {
             });
 
             // Create and configure the ARKit session.
-            if (session == nil) {
-                session = [ARSession new];
-                configuration = [ARWorldTrackingConfiguration new];
-                configuration.planeDetection = ARPlaneDetectionHorizontal;
-                configuration.lightEstimationEnabled = false;
-                configuration.worldAlignment = ARWorldAlignmentGravity;
-            }
+            session = [ARSession new];
+            configuration = [ARWorldTrackingConfiguration new];
+            configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
+            configuration.lightEstimationEnabled = false;
+            configuration.worldAlignment = ARWorldAlignmentGravity;
             
             metalDevice = id<MTLDevice>(graphicsContext);
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
@@ -574,10 +571,53 @@ namespace xr {
             }
         }
 
-        void GetHitTestResults(std::vector<HitResult>&, xr::Ray) const {
-            // TODO
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const {
+            @autoreleasepool {
+                if (session != nil && session.currentFrame != nil && session.currentFrame.camera != nil && [session.currentFrame.camera trackingState] == ARTrackingStateNormal) {
+                    if (@available(iOS 13.0, *)) {
+                        // Push the camera origin into a simd_float3.
+                        auto cameraOrigin = simd_make_float3(
+                                                             ActiveFrameViews[0].Space.Pose.Position.X,
+                                                             ActiveFrameViews[0].Space.Pose.Position.Y,
+                                                             ActiveFrameViews[0].Space.Pose.Position.Z);
+                        
+                        // Push the camera direction into a simd_quaternion.
+                        auto cameraDirection = simd_quaternion(
+                                                               ActiveFrameViews[0].Space.Pose.Orientation.X,
+                                                               ActiveFrameViews[0].Space.Pose.Orientation.Y,
+                                                               ActiveFrameViews[0].Space.Pose.Orientation.Z,
+                                                               ActiveFrameViews[0].Space.Pose.Orientation.W);
+                        
+                        // Load the offset ray and direction into simd equivalents.
+                        auto offsetOrigin = simd_make_float3(offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z);
+                        auto offsetDirection = simd_make_float3(offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z);
+
+                        // Construct the ARRaycast query compositing the camera origin + direction and offset ray origin + direction targetting estimated planes.
+                        auto raycastQuery = [[ARRaycastQuery alloc]
+                                             initWithOrigin:(cameraOrigin + offsetOrigin)
+                                             direction:simd_act(cameraDirection, offsetDirection)
+                                             allowingTarget:ARRaycastTargetEstimatedPlane
+                                             alignment:ARRaycastTargetAlignmentAny];
+                        
+                        // Perform the actual raycast.
+                        auto rayCastResults = [session raycast:raycastQuery];
+                        
+                        // Process the results and push them into the results list.
+                        for (ARRaycastResult* result in rayCastResults) {
+                            filteredResults.push_back(transformToHitResult(result.worldTransform));
+                        }
+                    } else {
+                        // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't bother translating the offset ray.
+                        auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(ARHitTestResultTypeExistingPlane)];
+                        for (ARHitTestResult* result in hitTestResults)
+                        {
+                            filteredResults.push_back(transformToHitResult(result.worldTransform));
+                        }
+                    }
+                }
+            }
         }
-        
+               
         private:
             inline static ARSession* session{};
             inline static ARWorldTrackingConfiguration* configuration{};
@@ -589,6 +629,24 @@ namespace xr {
             id<MTLRenderPipelineState> pipelineState{};
             vector_uint2 viewportSize{};
             id<MTLCommandQueue> commandQueue;
+        
+        /*
+         Helper function to translate a world transform into a hit test result.
+         */
+        HitResult transformToHitResult(simd_float4x4 transform) const
+        {
+            auto orientation = simd_quaternion(transform);
+            HitResult hitResult{};
+            hitResult.Pose.Orientation = { orientation.vector.x,
+                orientation.vector.y,
+                orientation.vector.z,
+                orientation.vector.w};
+            hitResult.Pose.Position = { transform.columns[3][0],
+                transform.columns[3][1],
+                transform.columns[3][2] };
+            
+            return hitResult;
+        }
     };
 
     struct System::Session::Frame::Impl {
