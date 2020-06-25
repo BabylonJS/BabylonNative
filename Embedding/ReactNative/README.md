@@ -17,6 +17,8 @@ See the [package usage](Apps/Playground/node_modules/@babylonjs/react-native/REA
 
 This quick overview will help you get started developing in the Babylon React Native repository. We support development on Windows and macOS, but assume the use of [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell) in the instructions below.
 
+If you are interested in making contributions, be sure to also review [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### **Preparing a new Repo**
 
 **Required Tools:** [git](https://git-scm.com/), [Yarn](https://classic.yarnpkg.com/en/docs/install)
@@ -114,3 +116,7 @@ npm pack
 ```
 
 This will produce a zipped local NPM package that can be installed into a React Native application for testing purposes.
+
+## Security
+
+If you believe you have found a security vulnerability in this repository, please see [SECURITY.md](SECURITY.md).
