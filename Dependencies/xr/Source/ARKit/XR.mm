@@ -368,12 +368,14 @@ namespace xr {
                 viewportSize.y = guide.layoutFrame.size.height * scale;
             });
 
-            // Create and configure the ARKit session.
-            session = [ARSession new];
-            configuration = [ARWorldTrackingConfiguration new];
-            configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
-            configuration.lightEstimationEnabled = false;
-            configuration.worldAlignment = ARWorldAlignmentGravity;
+            // If the singleton session and configuraiton have not yet been created, create them here now.
+            if (session == nil) {
+                session = [ARSession new];
+                configuration = [ARWorldTrackingConfiguration new];
+                configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
+                configuration.lightEstimationEnabled = false;
+                configuration.worldAlignment = ARWorldAlignmentGravity;
+            }
             
             metalDevice = id<MTLDevice>(graphicsContext);
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
