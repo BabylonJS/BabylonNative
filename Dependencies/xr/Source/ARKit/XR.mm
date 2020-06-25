@@ -592,7 +592,7 @@ namespace xr {
                         auto offsetOrigin = simd_make_float3(offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z);
                         auto offsetDirection = simd_make_float3(offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z);
 
-                        // Construct the ARRaycast query compositing the camera origin + direction and offset ray origin + direction targetting estimated planes.
+                        // Construct the ARRaycast query compositing the camera and offset ray origin + direction targetting estimated planes.
                         auto raycastQuery = [[ARRaycastQuery alloc]
                                              initWithOrigin:(cameraOrigin + offsetOrigin)
                                              direction:simd_act(cameraDirection, offsetDirection)
@@ -607,7 +607,7 @@ namespace xr {
                             filteredResults.push_back(transformToHitResult(result.worldTransform));
                         }
                     } else {
-                        // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't bother translating the offset ray.
+                        // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
                         auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(ARHitTestResultTypeExistingPlane)];
                         for (ARHitTestResult* result in hitTestResults)
                         {
