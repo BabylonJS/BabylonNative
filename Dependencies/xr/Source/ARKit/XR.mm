@@ -609,8 +609,7 @@ namespace xr {
                     } else {
                         // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
                         auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(ARHitTestResultTypeExistingPlane)];
-                        for (ARHitTestResult* result in hitTestResults)
-                        {
+                        for (ARHitTestResult* result in hitTestResults) {
                             filteredResults.push_back(transformToHitResult(result.worldTransform));
                         }
                     }
@@ -633,8 +632,7 @@ namespace xr {
         /*
          Helper function to translate a world transform into a hit test result.
          */
-        HitResult transformToHitResult(simd_float4x4 transform) const
-        {
+        HitResult transformToHitResult(simd_float4x4 transform) const {
             auto orientation = simd_quaternion(transform);
             HitResult hitResult{};
             hitResult.Pose.Orientation = { orientation.vector.x,
