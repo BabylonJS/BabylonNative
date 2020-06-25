@@ -594,15 +594,16 @@ namespace xr {
                         auto offsetOrigin = simd_make_float3(offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z);
                         auto offsetDirection = simd_make_float3(offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z);
 
-                        // Construct the ARRaycast query compositing the camera and offset ray origin + direction targetting estimated planes.
+                        // Construct the ARRaycast query compositing the camera and offset ray origin + direction targetting existing plane geometry.
                         auto raycastQuery = [[ARRaycastQuery alloc]
                                              initWithOrigin:(cameraOrigin + offsetOrigin)
                                              direction:simd_act(cameraDirection, offsetDirection)
-                                             allowingTarget:ARRaycastTargetEstimatedPlane
+                                             allowingTarget:ARRaycastTargetExistingPlaneGeometry
                                              alignment:ARRaycastTargetAlignmentAny];
                         
                         // Perform the actual raycast.
                         auto rayCastResults = [session raycast:raycastQuery];
+                        [raycastQuery release];
                         
                         // Process the results and push them into the results list.
                         for (ARRaycastResult* result in rayCastResults) {
