@@ -351,19 +351,19 @@ namespace xr {
 
         Impl(System::Impl& systemImpl, void* graphicsContext, void* window)
             : SystemImpl{ systemImpl } {
-            MetalDevice = id<MTLDevice>(graphicsContext);
+            metalDevice = id<MTLDevice>(graphicsContext);
             UIView* MainView = (UIView*)window;
             
             // Create the XR View to stay within the safe area of the main view.
             // TODO: Should re-use the view passed into the engine rather than creating a sub-view.
             dispatch_sync(dispatch_get_main_queue(), ^{
                 auto guide = MainView.safeAreaLayoutGuide;
-                xrView = [[MTKView alloc] initWithFrame:guide.layoutFrame device:MetalDevice];
+                xrView = [[MTKView alloc] initWithFrame:guide.layoutFrame device:metalDevice];
                 [MainView addSubview:xrView];
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-                MetalLayer = (CAMetalLayer *)xrView.layer;
-                MetalLayer.device = MetalDevice;
+                metalLayer = (CAMetalLayer *)xrView.layer;
+                metalLayer.device = metalDevice;
                 auto scale = UIScreen.mainScreen.scale;
                 viewportSize.x = guide.layoutFrame.size.width * scale;
                 viewportSize.y = guide.layoutFrame.size.height * scale;
@@ -378,12 +378,12 @@ namespace xr {
                 configuration.worldAlignment = ARWorldAlignmentGravity;
             }
             
-            MetalDevice = id<MTLDevice>(graphicsContext);
-            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:MetalDevice];
+            metalDevice = id<MTLDevice>(graphicsContext);
+            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
             session.delegate = sessionDelegate;
             [session runWithConfiguration:configuration];
 
-            id<MTLLibrary> lib = CompileShader(MetalDevice, shaderSource);
+            id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
@@ -392,17 +392,17 @@ namespace xr {
             pipelineStateDescriptor.label = @"XR Pipeline";
             pipelineStateDescriptor.vertexFunction = vertexFunction;
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MetalLayer.pixelFormat;
+            pipelineStateDescriptor.colorAttachments[0].pixelFormat = metalLayer.pixelFormat;
 
             // build pipeline
             NSError* error;
-            pipelineState = [MetalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+            pipelineState = [metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
             if (!pipelineState) {
                 NSLog(@"Failed to create pipeline state: %@", error);
             }
             
             [pipelineStateDescriptor release];
-            commandQueue = [MetalDevice newCommandQueue];
+            commandQueue = [metalDevice newCommandQueue];
             
             // default fov values to avoid NaN at startup
             auto& frameView = ActiveFrameViews[0];
@@ -439,7 +439,7 @@ namespace xr {
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession) {
             uint32_t width = viewportSize.x;
             uint32_t height = viewportSize.y;
-            shouldEndSession = SessionEnded;
+            shouldEndSession = sessionEnded;
             shouldRestartSession = false;
             
             if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) {
@@ -457,7 +457,7 @@ namespace xr {
                     textureDescriptor.width = width;
                     textureDescriptor.height = height;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-                    id<MTLTexture> texture = [MetalDevice newTextureWithDescriptor:textureDescriptor];
+                    id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
                     [textureDescriptor dealloc];
                                         
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
@@ -480,7 +480,7 @@ namespace xr {
                     textureDescriptor.height = height;
                     textureDescriptor.storageMode = MTLStorageModePrivate;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
-                    id<MTLTexture> texture = [MetalDevice newTextureWithDescriptor:textureDescriptor];
+                    id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
                     [textureDescriptor dealloc];
                     
                     ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(texture);
@@ -499,13 +499,11 @@ namespace xr {
                         renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                         renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
                         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,0.0);
-                        renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
                         
                         // Set up the clear for the depth texture.
                         renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
                         renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
                         renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
-                        renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
                         
                         // Create and end the render encoder.
                         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -524,7 +522,7 @@ namespace xr {
 
         void RequestEndSession() {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
-            SessionEnded = true;
+            sessionEnded = true;
         }
 
         Size GetWidthAndHeightForViewIndex(size_t) const {
@@ -538,7 +536,7 @@ namespace xr {
                 id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
                 commandBuffer.label = @"XRDisplayCommandBuffer";
                 
-                id<CAMetalDrawable> drawable = [MetalLayer nextDrawable];
+                id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
                 if(renderPassDescriptor != nil) {
@@ -584,9 +582,9 @@ namespace xr {
             inline static ARSession* session{};
             inline static ARWorldTrackingConfiguration* configuration{};
             MTKView* xrView{};
-            bool SessionEnded{ false };
-            id<MTLDevice> MetalDevice{};
-            CAMetalLayer* MetalLayer{};
+            bool sessionEnded{ false };
+            id<MTLDevice> metalDevice{};
+            CAMetalLayer* metalLayer{};
             SessionDelegate* sessionDelegate{};
             id<MTLRenderPipelineState> pipelineState{};
             vector_uint2 viewportSize{};
