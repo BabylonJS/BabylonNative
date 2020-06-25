@@ -619,7 +619,6 @@ namespace xr {
                 }
             }
         }
-               
         private:
             inline static ARSession* session{};
             inline static ARWorldTrackingConfiguration* configuration{};
@@ -638,13 +637,17 @@ namespace xr {
         HitResult transformToHitResult(simd_float4x4 transform) const {
             auto orientation = simd_quaternion(transform);
             HitResult hitResult{};
-            hitResult.Pose.Orientation = { orientation.vector.x,
+            hitResult.Pose.Orientation = {
+                orientation.vector.x,
                 orientation.vector.y,
                 orientation.vector.z,
-                orientation.vector.w};
-            hitResult.Pose.Position = { transform.columns[3][0],
+                orientation.vector.w
+            };
+            hitResult.Pose.Position = {
+                transform.columns[3][0],
                 transform.columns[3][1],
-                transform.columns[3][2] };
+                transform.columns[3][2]
+            };
             
             return hitResult;
         }
