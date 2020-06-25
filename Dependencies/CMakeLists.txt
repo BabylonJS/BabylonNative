@@ -100,8 +100,8 @@ disable_warnings(spirv-cross-hlsl)
 
 # -------------------------------- xr --------------------------------
 # Dependencies: none
-# Currently supported on Windows via OpenXR via ARCore.
-if(WIN32 OR WINDOWS_STORE OR ANDROID)
+# Currently supported on Windows via OpenXR, Android via ARCore, and iOS via ARKit.
+if(WIN32 OR WINDOWS_STORE OR ANDROID OR IOS)
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)

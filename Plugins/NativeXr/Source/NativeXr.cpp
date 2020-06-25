@@ -232,7 +232,7 @@ namespace Babylon
         }
     }
 
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env /*env*/)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -245,7 +245,7 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, Plugins::Internal::NativeWindow::GetFromJavaScript(env).GetWindowPtr()).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
             m_session = std::move(session);
         });
     }
