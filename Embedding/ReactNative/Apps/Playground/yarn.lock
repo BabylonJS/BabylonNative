@@ -607,14 +607,14 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@babylonjs/core@4.2.0-alpha.17":
-  version "4.2.0-alpha.17"
-  resolved "https://registry.yarnpkg.com/@babylonjs/core/-/core-4.2.0-alpha.17.tgz#0ce4202e586a15dc46b30f3fe50c28703ef00f31"
+"@babylonjs/core@4.2.0-alpha.21":
+  version "4.2.0-alpha.21"
+  resolved "https://registry.yarnpkg.com/@babylonjs/core/-/core-4.2.0-alpha.21.tgz#f75fd78eaa322ee30a8a2d625e707f21f5f934c0"
   dependencies:
-    tslib "^1.10.0"
+    tslib ">=1.10.0"
 
 "@babylonjs/react-native@./node_modules/@babylonjs/react-native":
-  version "1.0.0"
+  version "0.0.1"
 
 "@cnakazawa/watch@^1.0.3":
   version "1.0.4"
@@ -5310,7 +5310,11 @@ tr46@^1.0.1:
   dependencies:
     punycode "^2.1.0"
 
-tslib@^1.10.0, tslib@^1.8.1, tslib@^1.9.0:
+tslib@>=1.10.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.0.0.tgz#18d13fc2dce04051e20f074cc8387fd8089ce4f3"
+
+tslib@^1.8.1, tslib@^1.9.0:
   version "1.11.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.11.1.tgz#eb15d128827fbee2841549e171f45ed338ac7e35"
 
