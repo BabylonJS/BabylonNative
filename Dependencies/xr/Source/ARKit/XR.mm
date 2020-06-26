@@ -356,16 +356,15 @@ namespace xr {
             // Create the XR View to stay within the safe area of the main view.
             // TODO: Should re-use the view passed into the engine rather than creating a sub-view.
             dispatch_sync(dispatch_get_main_queue(), ^{
-                auto guide = MainView.safeAreaLayoutGuide;
-                xrView = [[MTKView alloc] initWithFrame:guide.layoutFrame device:metalDevice];
+                xrView = [[MTKView alloc] initWithFrame:MainView.bounds device:metalDevice];
                 [MainView addSubview:xrView];
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
                 metalLayer = (CAMetalLayer *)xrView.layer;
                 metalLayer.device = metalDevice;
                 auto scale = UIScreen.mainScreen.scale;
-                viewportSize.x = guide.layoutFrame.size.width * scale;
-                viewportSize.y = guide.layoutFrame.size.height * scale;
+                viewportSize.x = MainView.bounds.size.width * scale;
+                viewportSize.y = MainView.bounds.size.height * scale;
             });
 
             // If the singleton session and configuraiton have not yet been created, create them here now.
