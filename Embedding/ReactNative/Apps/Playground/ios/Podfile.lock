@@ -366,7 +366,7 @@ SPEC CHECKSUMS:
   React-jsi: 600d8e42510c3254fd2abd702f4b9d3f598d8f52
   React-jsiexecutor: e9698dee4fd43ceb44832baf15d5745f455b0157
   React-jsinspector: f74a62727e5604119abd4a1eda52c0a12144bcd5
-  react-native-babylon: b11dbc4e865e266b34f21483834342d8aba442de
+  react-native-babylon: fb07a9209a7236b70d93bee5c6404d97b6eddfca
   react-native-slider: e51492f1264d882a8815b71c5870f8978e52887d
   React-RCTActionSheet: af8f28dd82fec89b8fe29637b8c779829e016a88
   React-RCTAnimation: 0d21fff7c20fb8ee41de5f2ebb63221127febd96
@@ -381,6 +381,6 @@ SPEC CHECKSUMS:
   RNPermissions: 3635b407c15f2fe591bd2101c8f20aa0912caba8
   Yoga: 50fb6eb13d2152e7363293ff603385db380815b1
 
-PODFILE CHECKSUM: e147de45c5a48bff12430fed9a560d7f5532fbe8
+PODFILE CHECKSUM: c71804c13614d480b45b5c7626319a3d6050167d
 
 COCOAPODS: 1.6.1
