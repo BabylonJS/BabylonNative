@@ -361,7 +361,11 @@ namespace xr {
                 [MainView addSubview:xrView];
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
                 metalLayer = (CAMetalLayer *)xrView.layer;
+#pragma clang diagnostic pop
                 metalLayer.device = metalDevice;
                 auto scale = UIScreen.mainScreen.scale;
                 viewportSize.x = MainView.bounds.size.width * scale;
@@ -583,7 +587,11 @@ namespace xr {
             MTKView* xrView{};
             bool sessionEnded{ false };
             id<MTLDevice> metalDevice{};
+// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
             CAMetalLayer* metalLayer{};
+#pragma clang diagnostic pop
             SessionDelegate* sessionDelegate{};
             id<MTLRenderPipelineState> pipelineState{};
             vector_uint2 viewportSize{};
