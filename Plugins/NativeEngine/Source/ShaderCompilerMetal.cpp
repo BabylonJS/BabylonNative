@@ -1,4 +1,5 @@
 #include "ShaderCompiler.h"
+#include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
 #include <bgfx/bgfx.h>
@@ -7,54 +8,71 @@
 #include <spirv_parser.hpp>
 #include <spirv_msl.hpp>
 
-namespace glslang
+namespace Babylon
 {
-    void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
+    namespace
     {
-        const std::array<const char*, 1> sources{source.data()};
-        shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
-        shader.setEnvInput(glslang::EShSourceGlsl, shader.getStage(), glslang::EShClientVulkan, 100);
-        shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
-        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
-
-        if (!shader.parse(&Babylon::DefaultTBuiltInResource, 450, false, EShMsgDefault))
+        void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
         {
-            throw std::exception(); //shader.getInfoDebugLog());
-        }
+            const std::array<const char*, 1> sources{source.data()};
+            shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
 
-        program.addShader(&shader);
-    }
-
-    std::unique_ptr<spirv_cross::Compiler> CompileShader(glslang::TProgram& program, EShLanguage stage, std::string& shaderResult)
-    {
-        std::vector<uint32_t> spirv;
-        glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
-
-        spirv_cross::Parser parser{std::move(spirv)};
-        parser.parse();
-
-        auto compiler = std::make_unique<spirv_cross::CompilerMSL>(parser.get_parsed_ir());
-
-        auto resources = compiler->get_shader_resources();
-        for (auto& resource : resources.uniform_buffers)
-        {
-            compiler->set_name(resource.id, "_mtl_u");
-        }
-
-        // rename textures without the 'texture' suffix so it's bindable from .js
-        for (auto& resource : resources.separate_images)
-        {
-            std::string imageName = resource.name;
-            if (imageName.find("Texture") != std::string::npos)
+            if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
-                imageName.replace(imageName.find("Texture"), std::string::npos, "");
-                compiler->set_name(resource.id, imageName);
+                throw std::runtime_error(shader.getInfoDebugLog());
             }
-        }
-        compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
 
-        shaderResult = compiler->compile();
-        return std::move(compiler);
+            program.addShader(&shader);
+        }
+
+        std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, std::string& shaderResult)
+        {
+            std::vector<uint32_t> spirv;
+            glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
+
+            auto parser = std::make_unique<spirv_cross::Parser>(std::move(spirv));
+            parser->parse();
+
+            auto compiler = std::make_unique<spirv_cross::CompilerMSL>(parser->get_parsed_ir());
+
+            auto resources = compiler->get_shader_resources();
+            for (auto& resource : resources.uniform_buffers)
+            {
+                compiler->set_name(resource.id, "_mtl_u");
+            }
+
+            // Disable location for varying stage to force compiler to do it with variable names
+            if (stage == EShLangVertex)
+            {
+                for (auto& output : resources.stage_outputs)
+                {
+                    compiler->set_decoration(output.id, spv::DecorationLocation, -1);
+                }
+            }
+            else
+            {
+              for (auto& input : resources.stage_inputs)
+                {
+                    compiler->set_decoration(input.id, spv::DecorationLocation, -1);
+                }
+            }
+            
+            // rename textures without the 'texture' suffix so it's bindable from .js
+            for (auto& resource : resources.separate_images)
+            {
+                std::string imageName = resource.name;
+                if (imageName.find("Texture") != std::string::npos)
+                {
+                    imageName.replace(imageName.find("Texture"), std::string::npos, "");
+                    compiler->set_name(resource.id, imageName);
+                }
+            }
+            
+            compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
+
+            shaderResult = compiler->compile();
+            return{std::move(parser), std::move(compiler)};
+        }
     }
 }
 
@@ -81,23 +99,33 @@ namespace Babylon
         AddShader(program, fragmentShader, fragmentSource);
         InvertYDerivativeOperands(fragmentShader);
 
+        glslang::SpvVersion spv{};
+        spv.spv = 0x10000;
+        vertexShader.getIntermediate()->setSpv(spv);
+        fragmentShader.getIntermediate()->setSpv(spv);
+
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception(); //program.getInfoDebugLog());
+            throw std::exception();//program.getInfoDebugLog());
         }
 
-        std::string vertexShaderMSL(vertexSource.data(), vertexSource.size());
-        auto vertexCompiler = CompileShader(program, EShLangVertex, vertexShaderMSL);
-        ShaderInfo vertexShaderInfo{
-            std::move(vertexCompiler),
-            gsl::make_span(reinterpret_cast<uint8_t*>(vertexShaderMSL.data()), vertexShaderMSL.size())};
+        ShaderCompilerTraversers::IdGenerator ids{};
+        auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
+        auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
+        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
 
-        std::string fragmentShaderMSL(fragmentSource.data(), fragmentSource.size());
-        auto fragmentCompiler = CompileShader(program, EShLangFragment, fragmentShaderMSL);
-        ShaderInfo fragmentShaderInfo{
-            std::move(fragmentCompiler),
-            gsl::make_span(reinterpret_cast<uint8_t*>(fragmentShaderMSL.data()), fragmentShaderMSL.size())};
+        std::string vertexGLSL(vertexSource.data(), vertexSource.size());
+        auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);
 
-        onCompiled(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
+        std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
+        auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
+
+        uint8_t* strVertex = (uint8_t*)vertexGLSL.data();
+        uint8_t* strFragment = (uint8_t*)fragmentGLSL.data();
+        onCompiled(
+            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size())},
+            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size())});
+        
     }
 }

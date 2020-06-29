@@ -28,13 +28,13 @@ class ViewController: UIViewController {
             let gesture = UIPanGestureRecognizer(target: self, action:  #selector(self.panGesture))
             mtkView.addGestureRecognizer(gesture)
 
-            let rawMetalLayerPtr: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView.layer).toOpaque()
-            
             let scale = UIScreen.main.scale
             let width = view.bounds.size.width
             let height = view.bounds.size.height
             
-            appDelegate!._bridge!.init(rawMetalLayerPtr, width:Int32(width * scale), height:Int32(height * scale))
+            let mainView: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView).toOpaque()
+            
+            appDelegate!._bridge!.init(mainView, width:Int32(width * scale), height:Int32(height * scale))
         }
     }
 
