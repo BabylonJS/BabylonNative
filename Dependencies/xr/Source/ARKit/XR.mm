@@ -19,10 +19,10 @@ namespace {
 
     static XRVertex vertices[] = {
         // 2D positions, UV,        camera UV
-        { { -1, -1 },   { 0, 0 },   { 0, 0} },
-        { { -1, 1 },    { 0, 1 },   { 0, 0} },
-        { { 1, -1 },    { 1, 0 },   { 0, 0} },
-        { { 1, 1 },     { 1, 1 },   { 0, 0} },
+        { { -1, -1 },   { 1, 0 },   { 0, 0} },
+        { { -1, 1 },    { 1, 1 },   { 0, 0} },
+        { { 1, -1 },    { 0, 0 },   { 0, 0} },
+        { { 1, 1 },     { 0, 1 },   { 0, 0} },
     };
 }
 
@@ -77,22 +77,26 @@ namespace {
 }
 
 /**
- Implementaiton of the ARSessionDelegate protocol. Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose.
+ Implementation of the ARSessionDelegate protocol. Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose.
  If a size change is detected also sets the UVs, and FoV values.
 */
 - (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame {
-    // Next update both metal textures used by the renderer to display the camera image.
-    _cameraTextureY = [self updateCameraTexture:frame.capturedImage plane:0];
-    _cameraTextureCbCr = [self updateCameraTexture:frame.capturedImage plane:1];
-     
-    // Check if our orientation or size has changed and update camera UVs if necessary.
-    if ([self checkAndUpdateCameraUVs:frame]) {
-        // If our camera UVs updated, then also update the FoV to match the updated UVs.
-        [self updateFoV:frame.camera];
+    @autoreleasepool{
+        [self cleanupTextures];
+        
+        // Next update both metal textures used by the renderer to display the camera image.
+        _cameraTextureY = [self updateCameraTexture:frame.capturedImage plane:0];
+        _cameraTextureCbCr = [self updateCameraTexture:frame.capturedImage plane:1];
+         
+        // Check if our orientation or size has changed and update camera UVs if necessary.
+        if ([self checkAndUpdateCameraUVs:frame]) {
+            // If our camera UVs updated, then also update the FoV to match the updated UVs.
+            [self updateFoV:frame.camera];
+        }
+        
+        // Finally update the XR pose based on the current transform from ARKit.
+        [self updateDisplayOrientedPose:(frame.camera)];
     }
-    
-    // Finally update the XR pose based on the current transform from ARKit.
-    [self updateDisplayOrientedPose:(frame.camera)];
 }
 
 /**
@@ -142,13 +146,13 @@ namespace {
         for(size_t i = 0; i < sizeof(vertices) / sizeof(*vertices); i++) {
             CGPoint transformedPoint = CGPointApplyAffineTransform({vertices[i].uv[0], vertices[i].uv[1]}, transform);
             
-            // In the inverse transform the camera image is represented bottom->top, so we have to flip the vertical component of the source image.
+            // In the inverse transform the camera image is represented bottom->top right->left, so we have to flip the vertical component of the source image.
             if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
                 vertices[i].cameraUV[0] = 1 - transformedPoint.x;
-                vertices[i].cameraUV[1] = transformedPoint.y;
+                vertices[i].cameraUV[1] = 1 - transformedPoint.y;
             }
             else {
-                vertices[i].cameraUV[0] = transformedPoint.x;
+                vertices[i].cameraUV[0] = 1 - transformedPoint.x;
                 vertices[i].cameraUV[1] = 1 - transformedPoint.y;
             }
         }
@@ -193,10 +197,7 @@ namespace {
 /**
  The ARKit camera transform is always a local right hand coordinate space WRT landscape right orientation, so this function takes the transform and converts
  it into a display oriented pose see: (https://developer.apple.com/documentation/arkit/arcamera/2866108-transform)
- 
- TODO: This seems like it could be vastly simplified, but the axes do not seem to match up with the values in the
- ARKit documentaiton.
-*/
+ */
 -(void)updateDisplayOrientedPose:(ARCamera*)camera {
     auto& frameView = activeFrameViews->at(0);
     UIInterfaceOrientation orientation = [self orientation];
@@ -226,19 +227,30 @@ namespace {
     //Pull out the display oriented rotation.
     auto displayOrientation = simd_quaternion(displayOrientedTransform);
     
-    // Set the orientation of the camera, the Y and Z values of the quaternion need to be inverted.
+    // Set the orientation of the camera
     frameView.Space.Pose.Orientation = { displayOrientation.vector.x
-        , -1 * displayOrientation.vector.y
-        , -1 * displayOrientation.vector.z
+        , displayOrientation.vector.y
+        , displayOrientation.vector.z
         , displayOrientation.vector.w};
     
-    // Set the translation, the X value must be inverted as the default axis points left instead of right.
-    frameView.Space.Pose.Position = { -1 * displayOrientedTransform.columns[3][0]
+    // Set the translation.
+    frameView.Space.Pose.Position = { displayOrientedTransform.columns[3][0]
         , displayOrientedTransform.columns[3][1]
         , displayOrientedTransform.columns[3][2] };
 }
 
+-(void)cleanupTextures {
+    if (_cameraTextureY != nil) {
+        [_cameraTextureY setPurgeableState:(MTLPurgeableStateEmpty)];
+        _cameraTextureY = nil;
+        [_cameraTextureCbCr setPurgeableState:(MTLPurgeableStateEmpty)];
+        _cameraTextureCbCr = nil;
+    }
+}
+
 -(void)dealloc {
+  [self cleanupTextures];
+
   if (textureCache != nil) {
       CVMetalTextureCacheFlush(textureCache, 0);
       CFRelease(textureCache);
@@ -354,10 +366,10 @@ namespace xr {
             UIView* MainView = (UIView*)window;
             
             // Create the XR View to stay within the safe area of the main view.
-            // TODO: Should re-use the view passed into the engine rather than creating a sub-view.
             dispatch_sync(dispatch_get_main_queue(), ^{
                 xrView = [[MTKView alloc] initWithFrame:MainView.bounds device:metalDevice];
                 [MainView addSubview:xrView];
+                xrView.userInteractionEnabled = false;
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
@@ -573,6 +585,7 @@ namespace xr {
 
                 // Finalize rendering here & push the command buffer to the GPU.
                 [commandBuffer commit];
+                [commandBuffer waitUntilCompleted];
             }
         }
 
