@@ -645,7 +645,7 @@ namespace xr {
                         [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                     }
                     
-                    [exception raise];
+                    @throw;
                 }
             }
         }
