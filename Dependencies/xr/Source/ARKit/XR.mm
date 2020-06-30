@@ -419,7 +419,7 @@ namespace xr {
             if (session == nil) {
                 session = [ARSession new];
                 configuration = [ARWorldTrackingConfiguration new];
-                configuration.planeDetection = ARPlaneDetectionHorizontal;
+                configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
                 configuration.lightEstimationEnabled = false;
                 configuration.worldAlignment = ARWorldAlignmentGravity;
             }
