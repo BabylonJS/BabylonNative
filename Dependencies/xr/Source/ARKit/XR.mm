@@ -588,6 +588,16 @@ namespace xr {
                     cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
                 }
                 
+                [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                    if (cameraTextureY != nil) {
+                        [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                    
+                    if (cameraTextureCbCr != nil) {
+                        [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                }];
+                
                 @try {
                     if(renderPassDescriptor != nil) {
                         renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
@@ -621,9 +631,8 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
-                    [commandBuffer waitUntilCompleted];
                 }
-                @finally {
+                @catch (NSException* exception) {
                     if (cameraTextureY != nil) {
                         [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
                     }
@@ -631,6 +640,8 @@ namespace xr {
                     if (cameraTextureCbCr != nil) {
                         [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                     }
+                    
+                    [exception raise];
                 }
             }
         }
