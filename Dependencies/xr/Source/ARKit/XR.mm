@@ -6,8 +6,6 @@
 #import <MetalKit/MetalKit.h>
 
 @interface SessionDelegate : NSObject <ARSessionDelegate>
-@property (readonly) id<MTLTexture> cameraTextureY;
-@property (readonly) id<MTLTexture> cameraTextureCbCr;
 @end
 
 namespace {
@@ -32,11 +30,37 @@ namespace {
 @implementation SessionDelegate {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
     CVMetalTextureCacheRef textureCache;
-    id<MTLTexture> _cameraTextureY;
-    id<MTLTexture> _cameraTextureCbCr;
+    CVMetalTextureRef _cameraTextureY;
+    CVMetalTextureRef _cameraTextureCbCr;
     
     UIInterfaceOrientation cameraUVReferenceOrientation;
     CGSize cameraUVReferenceSize;
+}
+
+/**
+ Returns the camera Y texture, the caller is responsible for freeing this texture.
+ */
+- (id<MTLTexture>)GetCameraTextureY {
+    if (_cameraTextureY != nil)
+    {
+        id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(_cameraTextureY);
+        return mtlTexture;
+    }
+    
+    return nil;
+}
+
+/**
+ Returns the camera CbCr texture, the caller is responsible for freeing this texture.
+ */
+- (id<MTLTexture>)GetCameraTextureCbCr {
+    if (_cameraTextureCbCr != nil)
+    {
+        id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(_cameraTextureCbCr);
+        return mtlTexture;
+    }
+    
+    return nil;
 }
 
 /**
@@ -82,11 +106,17 @@ namespace {
 */
 - (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame {
     @autoreleasepool{
-        [self cleanupTextures];
+        // Update both metal textures used by the renderer to display the camera image.
+        CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
+        CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
         
-        // Next update both metal textures used by the renderer to display the camera image.
-        _cameraTextureY = [self updateCameraTexture:frame.capturedImage plane:0];
-        _cameraTextureCbCr = [self updateCameraTexture:frame.capturedImage plane:1];
+        // Swap the camera textures, do this under synchronization lock to prevent null access.
+        @synchronized(self)
+        {
+            [self cleanupTextures];
+            _cameraTextureY = newCameraTextureY;
+            _cameraTextureCbCr = newCameraTextureCbCr;
+        }
          
         // Check if our orientation or size has changed and update camera UVs if necessary.
         if ([self checkAndUpdateCameraUVs:frame]) {
@@ -102,7 +132,7 @@ namespace {
 /**
  Updates the captured texture with the current frame buffer.
 */
-- (id<MTLTexture>)updateCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
+- (CVMetalTextureRef)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
     CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (ret != kCVReturnSuccess) {
         return {};
@@ -114,17 +144,15 @@ namespace {
             
         // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
         auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
-        id<MTLTexture> mtlTexture = nil;
         CVMetalTextureRef texture;
         
         // Create a texture from the corresponding plane.
         auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &texture);
-        if (status == kCVReturnSuccess) {
-            mtlTexture = CVMetalTextureGetTexture(texture);
-            CVBufferRelease(texture);
+        if (status != kCVReturnSuccess) {
+            return nil;
         }
         
-        return mtlTexture;
+        return texture;
     }
     @finally {
         CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
@@ -241,9 +269,12 @@ namespace {
 
 -(void)cleanupTextures {
     if (_cameraTextureY != nil) {
-        [_cameraTextureY setPurgeableState:(MTLPurgeableStateEmpty)];
+        CVBufferRelease(_cameraTextureY);
         _cameraTextureY = nil;
-        [_cameraTextureCbCr setPurgeableState:(MTLPurgeableStateEmpty)];
+    }
+    
+    if (_cameraTextureCbCr != nil) {
+        CVBufferRelease(_cameraTextureCbCr);
         _cameraTextureCbCr = nil;
     }
 }
@@ -304,7 +335,7 @@ namespace xr {
                 constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
 
                 const float4 babylonSample = babylonTexture.sample(linearSampler, in.uv);
-                if (is_null_texture(cameraTextureY))
+                if (is_null_texture(cameraTextureY) || is_null_texture(cameraTextureCbCr))
                 {
                     return babylonSample;
                 }
@@ -387,7 +418,7 @@ namespace xr {
             if (session == nil) {
                 session = [ARSession new];
                 configuration = [ARWorldTrackingConfiguration new];
-                configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
+                configuration.planeDetection = ARPlaneDetectionHorizontal;
                 configuration.lightEstimationEnabled = false;
                 configuration.worldAlignment = ARWorldAlignmentGravity;
             }
@@ -552,40 +583,58 @@ namespace xr {
                 
                 id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-
-                if(renderPassDescriptor != nil) {
-                    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,1.0);
-                    
-                    // Create a render command encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"XRDisplayEncoder";
-
-                    // Set the region of the drawable to draw into.
-                    [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
-                    
-                    [renderEncoder setRenderPipelineState:pipelineState];
-
-                    // Pass in the parameter data.
-                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
-
-                    [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
-                    [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureY atIndex:1];
-                    [renderEncoder setFragmentTexture:sessionDelegate.cameraTextureCbCr atIndex:2];
-
-                    // Draw the triangles.
-                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
-
-                    [renderEncoder endEncoding];
-
-                    // Schedule a present once the framebuffer is complete using the current drawable.
-                    [commandBuffer presentDrawable:drawable];
+                
+                id<MTLTexture> cameraTextureY = nil;
+                id<MTLTexture> cameraTextureCbCr = nil;
+                @synchronized(sessionDelegate) {
+                    cameraTextureY = [sessionDelegate GetCameraTextureY];
+                    cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
                 }
+                
+                @try {
+                    if(renderPassDescriptor != nil) {
+                        renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+                        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0,0.0,0.0,1.0);
+                        
+                        // Create a render command encoder.
+                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                        renderEncoder.label = @"XRDisplayEncoder";
 
-                // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
-                [commandBuffer waitUntilCompleted];
+                        // Set the region of the drawable to draw into.
+                        [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
+                        
+                        [renderEncoder setRenderPipelineState:pipelineState];
+
+                        // Pass in the parameter data.
+                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+
+                        [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
+                        [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
+                        [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
+
+                        // Draw the triangles.
+                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+
+                        [renderEncoder endEncoding];
+
+                        // Schedule a present once the framebuffer is complete using the current drawable.
+                        [commandBuffer presentDrawable:drawable];
+                    }
+
+                    // Finalize rendering here & push the command buffer to the GPU.
+                    [commandBuffer commit];
+                    [commandBuffer waitUntilCompleted];
+                }
+                @finally {
+                    if (cameraTextureY != nil) {
+                        [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                    
+                    if (cameraTextureCbCr != nil) {
+                        [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                }
             }
         }
 
