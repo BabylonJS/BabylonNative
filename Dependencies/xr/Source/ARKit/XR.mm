@@ -41,8 +41,7 @@ namespace {
  Returns the camera Y texture, the caller is responsible for freeing this texture.
  */
 - (id<MTLTexture>)GetCameraTextureY {
-    if (_cameraTextureY != nil)
-    {
+    if (_cameraTextureY != nil) {
         id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(_cameraTextureY);
         return mtlTexture;
     }
@@ -54,8 +53,7 @@ namespace {
  Returns the camera CbCr texture, the caller is responsible for freeing this texture.
  */
 - (id<MTLTexture>)GetCameraTextureCbCr {
-    if (_cameraTextureCbCr != nil)
-    {
+    if (_cameraTextureCbCr != nil) {
         id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(_cameraTextureCbCr);
         return mtlTexture;
     }
@@ -111,8 +109,7 @@ namespace {
         CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
         
         // Swap the camera textures, do this under synchronization lock to prevent null access.
-        @synchronized(self)
-        {
+        @synchronized(self) {
             [self cleanupTextures];
             _cameraTextureY = newCameraTextureY;
             _cameraTextureCbCr = newCameraTextureCbCr;
@@ -174,7 +171,7 @@ namespace {
         for(size_t i = 0; i < sizeof(vertices) / sizeof(*vertices); i++) {
             CGPoint transformedPoint = CGPointApplyAffineTransform({vertices[i].uv[0], vertices[i].uv[1]}, transform);
             
-            // In the inverse transform the camera image is represented bottom->top right->left, so we have to flip the vertical component of the source image.
+            // In the inverse transform the camera image is represented bottom->top left->right, so we have to flip the vertical component of the source image.
             if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
                 vertices[i].cameraUV[0] = 1 - transformedPoint.x;
                 vertices[i].cameraUV[1] = 1 - transformedPoint.y;
