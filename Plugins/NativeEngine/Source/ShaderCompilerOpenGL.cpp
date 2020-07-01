@@ -1,3 +1,8 @@
+#if __clang__ || __GNUC__
+// GCC and clang disable unused warning
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "ShaderCompiler.h"
 #include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"

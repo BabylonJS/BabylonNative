@@ -228,7 +228,7 @@ jobs:
         gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
-        tasks: 'assembleDebug'
+        tasks: 'assembleRelease'
     displayName: 'Build androidV8'
 
 - job: Android_JSC
@@ -253,7 +253,7 @@ jobs:
         gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
-        tasks: 'assembleDebug'
+        tasks: 'assembleRelease'
     displayName: 'Build androidJSC'
 
 - job: Ubuntu_Clang8_JSC
