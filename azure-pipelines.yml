@@ -34,6 +34,7 @@ jobs:
       scheme: 'Playground'
       sdk: 'macosx'
       useXcpretty: false
+      configuration: Release
     displayName: 'Build macOS'
     
 - job: iOS
@@ -65,6 +66,7 @@ jobs:
       scheme: 'Playground'
       sdk: 'iphoneos'
       useXcpretty: false
+      configuration: Release
     displayName: 'Build iOS'
     
 - job: win32_x64
