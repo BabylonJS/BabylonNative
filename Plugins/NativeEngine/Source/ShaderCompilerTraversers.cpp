@@ -3,7 +3,7 @@
 #endif
 
 #ifdef __clang__
-#pragma Clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-parameter"
 #endif
 
 #ifdef __GNUC__
