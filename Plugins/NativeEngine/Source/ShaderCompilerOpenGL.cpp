@@ -1,5 +1,7 @@
-#if __clang__ || __GNUC__
-// GCC and clang disable unused warning
+#ifdef __clang__
+#pragma Clang diagnostic ignored "-Wunused-parameter"
+
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
