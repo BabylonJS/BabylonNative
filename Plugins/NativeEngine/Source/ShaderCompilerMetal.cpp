@@ -1,3 +1,7 @@
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "ShaderCompiler.h"
 #include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
