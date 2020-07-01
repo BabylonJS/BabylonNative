@@ -1,15 +1,3 @@
-#if _MSC_VER 
-#pragma warning( disable : 4100 ) // unreferenced formal parameter in glslang header
-#endif
-
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wunused-parameter"
-#endif
-
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "ShaderCompiler.h"
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/MachineIndependent/localintermediate.h>
