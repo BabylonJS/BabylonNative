@@ -4,6 +4,7 @@
 
 #ifdef __clang__
 #pragma Clang diagnostic ignored "-Wunused-parameter"
+#endif
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
