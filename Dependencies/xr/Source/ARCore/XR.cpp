@@ -983,21 +983,21 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(false);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window)
     {
         // First perform the ARCore installation check, request install if not yet installed.
         return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), []()
         {
             // Next check for camera permissions, and request if not already granted.
             return CheckCameraPermissionAsync();
-        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice]()
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, window]()
         {
             // Finally if the previous two tasks succeed, start the AR session.
-            return std::make_shared<System::Session>(system, graphicsDevice);
+            return std::make_shared<System::Session>(system, graphicsDevice, window);
         });
     }
 
-    System::Session::Session(System& system, void* graphicsDevice)
+    System::Session::Session(System& system, void* graphicsDevice, void*)
         : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
     {}
 

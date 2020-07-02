@@ -205,6 +205,7 @@ namespace Babylon
         xr::System m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
+        ClearState m_clearState{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
         NativeEngine* m_engineImpl{};
         arcana::cancellation_source m_cancellationSource{};
@@ -232,7 +233,7 @@ namespace Babylon
         }
     }
 
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env /*env*/)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -245,7 +246,7 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, Plugins::Internal::NativeWindow::GetFromJavaScript(env).GetWindowPtr()).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
             m_session = std::move(session);
         });
     }
@@ -324,8 +325,9 @@ namespace Babylon
                 attachments[1].init(depthTex);
                 auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                auto fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
+                Babylon::FrameBufferData* fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
                     frameBuffer,
+                    m_clearState,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
                     static_cast<uint16_t>(view.ColorTextureSize.Height));
 
@@ -530,19 +532,17 @@ namespace Babylon
 
             void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
             {
-                // The names of these properties should be reverted to x, y, z, w to match the WebXR spec
-                // once the regression in BabylonJS is fixed see: https://github.com/BabylonJS/BabylonNative/issues/304
                 auto position = m_position.Value();
-                position.Set("_x", space.Pose.Position.X);
-                position.Set("_y", space.Pose.Position.Y);
-                position.Set("_z", space.Pose.Position.Z);
-                position.Set("_w", 1.f);
+                position.Set("x", space.Pose.Position.X);
+                position.Set("y", space.Pose.Position.Y);
+                position.Set("z", space.Pose.Position.Z);
+                position.Set("w", 1.f);
 
                 auto orientation = m_orientation.Value();
-                orientation.Set("_x", space.Pose.Orientation.X);
-                orientation.Set("_y", space.Pose.Orientation.Y);
-                orientation.Set("_z", space.Pose.Orientation.Z);
-                orientation.Set("_w", space.Pose.Orientation.W);
+                orientation.Set("x", space.Pose.Orientation.X);
+                orientation.Set("y", space.Pose.Orientation.Y);
+                orientation.Set("z", space.Pose.Orientation.Z);
+                orientation.Set("w", space.Pose.Orientation.W);
 
                 std::memcpy(m_matrix.Value().Data(), CreateTransformMatrix(space, isViewSpace).data(), m_matrix.Value().ByteLength());
             }
