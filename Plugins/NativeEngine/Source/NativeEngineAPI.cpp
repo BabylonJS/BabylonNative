@@ -15,6 +15,11 @@ namespace Babylon::Plugins::NativeEngine
         Babylon::NativeEngine::Initialize(env);
     }
 
+    std::unique_ptr<RenderToken> Render(Napi::Env env)
+    {
+        return Babylon::NativeEngine::Render(env);
+    }
+
     void Reinitialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
     {
         bgfx::PlatformData pd;

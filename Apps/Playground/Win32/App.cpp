@@ -26,6 +26,7 @@ WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<Babylon::Plugins::NativeEngine::RenderToken> renderToken{};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -79,6 +80,7 @@ namespace
     void Uninitialize()
     {
         inputBuffer.reset();
+        renderToken.reset();
 
         if (runtime)
         {
@@ -116,6 +118,7 @@ namespace
             // Initialize NativeEngine plugin.
             Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
+            renderToken = Babylon::Plugins::NativeEngine::Render(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);

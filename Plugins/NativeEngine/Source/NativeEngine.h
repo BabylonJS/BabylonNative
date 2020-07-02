@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Babylon/Plugins/NativeEngine.h>
+
 #include "ShaderCompiler.h"
 #include "BgfxCallback.h"
 
@@ -163,23 +165,25 @@ namespace Babylon
 
     struct FrameBufferManager final
     {
-        FrameBufferManager()
+        static constexpr auto JS_ENGINE_NEXT_FRAMEBUFFER_ID = "NextFramebufferId";
+
+        FrameBufferManager(Napi::Env env)
         {
-            m_boundFrameBuffer = m_backBuffer = new FrameBufferData(BGFX_INVALID_HANDLE, GetNewViewId(), bgfx::getStats()->width, bgfx::getStats()->height);
+            m_boundFrameBuffer = m_backBuffer = new FrameBufferData(BGFX_INVALID_HANDLE, GetNewViewId(env), bgfx::getStats()->width, bgfx::getStats()->height);
         }
 
-        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height)
+        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height, Napi::Env env)
         {
-            return new FrameBufferData(frameBufferHandle, GetNewViewId(), width, height);
+            return new FrameBufferData(frameBufferHandle, GetNewViewId(env), width, height);
         }
 
-        void Bind(FrameBufferData* data)
+        void Bind(FrameBufferData* data, Napi::Env env)
         {
             m_boundFrameBuffer = data;
 
             // TODO: Consider doing this only on bgfx::reset(); the effects of this call don't survive reset, but as
             // long as there's no reset this doesn't technically need to be called every time the frame buffer is bound.
-            m_boundFrameBuffer->SetUpView(GetNewViewId());
+            m_boundFrameBuffer->SetUpView(GetNewViewId(env));
 
             // bgfx::setTexture()? Why?
             // TODO: View order?
@@ -197,22 +201,23 @@ namespace Babylon
             m_boundFrameBuffer = m_backBuffer;
         }
 
-        uint16_t GetNewViewId()
+        static uint16_t GetNewViewId(Napi::Env env)
         {
-            m_nextId++;
-            assert(m_nextId < bgfx::getCaps()->limits.maxViews);
-            return m_nextId;
+            auto native = env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
+            auto nextId = native.Get(JS_ENGINE_NEXT_FRAMEBUFFER_ID).As<Napi::Number>().Uint32Value() + 1;
+            assert(nextId < bgfx::getCaps()->limits.maxViews);
+            native.Set(JS_ENGINE_NEXT_FRAMEBUFFER_ID, nextId);
+            return static_cast<uint16_t>(nextId);
         }
 
-        void Reset()
+        static void Reset(Napi::Env env)
         {
-            m_nextId = 0;
+            env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_NEXT_FRAMEBUFFER_ID, 0);
         }
 
     private:
         FrameBufferData* m_boundFrameBuffer{nullptr};
         FrameBufferData* m_backBuffer{nullptr};
-        uint16_t m_nextId{0};
     };
 
     struct UniformInfo final
@@ -320,11 +325,14 @@ namespace Babylon
         static void DeinitializeWindow();
         static void Initialize(Napi::Env);
 
+        static std::unique_ptr<Plugins::NativeEngine::RenderToken> Render(Napi::Env env);
+
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
-        void EndFrame();
+        static void EndFrame(Napi::Env);
 
     private:
+        static void Render(Napi::Env, bool*);
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
@@ -413,7 +421,7 @@ namespace Babylon
         uint64_t m_engineState;
 
         static inline BgfxCallback s_bgfxCallback{};
-        FrameBufferManager m_frameBufferManager{};
+        FrameBufferManager m_frameBufferManager;
 
         Plugins::Internal::NativeWindow::NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
 

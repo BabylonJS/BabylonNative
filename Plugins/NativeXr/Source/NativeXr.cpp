@@ -169,18 +169,18 @@ namespace Babylon
             m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine>>().Data();
         }
 
-        void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
+        void DoFrame(Napi::Env env, std::function<void(const xr::System::Session::Frame&)> callback)
         {
-            Dispatch([this, callback = std::move(callback)]() {
+            Dispatch([this, env, callback = std::move(callback)]() {
                 // Early out if there's no session available.
                 if (m_session == nullptr)
                 {
                     return;
                 }
 
-                BeginFrame();
+                BeginFrame(env);
                 callback(*m_frame);
-                m_engineImpl->EndFrame();
+                NativeEngine::EndFrame(env);
                 EndFrame();
             });
         }
@@ -209,7 +209,7 @@ namespace Babylon
         NativeEngine* m_engineImpl{};
         arcana::cancellation_source m_cancellationSource{};
 
-        void BeginFrame();
+        void BeginFrame(Napi::Env env);
         void EndFrame();
     };
 
@@ -269,7 +269,7 @@ namespace Babylon
         m_session.reset();
     }
 
-    void NativeXr::BeginFrame()
+    void NativeXr::BeginFrame(Napi::Env env)
     {
         assert(m_engineImpl != nullptr);
         assert(m_session != nullptr);
@@ -327,7 +327,7 @@ namespace Babylon
                 auto fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
                     frameBuffer,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
-                    static_cast<uint16_t>(view.ColorTextureSize.Height));
+                    static_cast<uint16_t>(view.ColorTextureSize.Height), env);
 
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
@@ -1647,7 +1647,7 @@ namespace Babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
+                m_xr.DoFrame(info.Env(), [this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
                     m_xrFrame.Update(frame);

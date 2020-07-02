@@ -131,6 +131,7 @@ CreateBoxAsync().then(function () {
     engine.runRenderLoop(function () {
         scene.render();
     });
+    //scene.render();
 
     if (vr || ar) {
         setTimeout(function () {

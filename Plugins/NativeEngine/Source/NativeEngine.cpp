@@ -666,6 +666,29 @@ namespace Babylon
             });
 
         env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+        env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(FrameBufferManager::JS_ENGINE_NEXT_FRAMEBUFFER_ID, 0);
+    }
+
+    std::unique_ptr<Plugins::NativeEngine::RenderToken> NativeEngine::Render(Napi::Env env)
+    {
+        auto* shouldContinuePtr = new bool(true);
+        Render(env, shouldContinuePtr);
+        return std::make_unique<Plugins::NativeEngine::RenderToken>(shouldContinuePtr);
+    }
+
+    void NativeEngine::Render(Napi::Env env, bool* shouldContinuePtr)
+    {
+        if (*shouldContinuePtr)
+        {
+            EndFrame(env);
+            JsRuntime::GetFromJavaScript(env).Dispatch([shouldContinuePtr](auto env) {
+                Render(env, shouldContinuePtr);
+            });
+        }
+        else
+        {
+            delete shouldContinuePtr;
+        }
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
@@ -678,6 +701,7 @@ namespace Babylon
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
         , m_engineState{BGFX_STATE_DEFAULT}
+        , m_frameBufferManager{info.Env()}
         , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
         UpdateSize(static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()));
@@ -744,7 +768,6 @@ namespace Babylon
             try
             {
                 m_requestAnimationFrameCalback.Call({});
-                EndFrame();
             }
             catch (const std::exception& ex)
             {
@@ -1542,7 +1565,7 @@ namespace Babylon
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
 
-        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
+        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height, info.Env()));
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
@@ -1554,7 +1577,7 @@ namespace Babylon
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        m_frameBufferManager.Bind(frameBufferData);
+        m_frameBufferManager.Bind(frameBufferData, info.Env());
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
@@ -1638,7 +1661,7 @@ namespace Babylon
         const auto backbufferHeight = bgfx::getStats()->height;
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_frameBufferManager.GetBound().UseViewId(m_frameBufferManager.GetNewViewId());
+        m_frameBufferManager.GetBound().UseViewId(m_frameBufferManager.GetNewViewId(info.Env()));
         const bgfx::ViewId viewId = m_frameBufferManager.GetBound().ViewId;
         bgfx::setViewFrameBuffer(viewId, m_frameBufferManager.GetBound().FrameBuffer);
         bgfx::setViewRect(viewId,
@@ -1694,9 +1717,9 @@ namespace Babylon
         return Napi::Value::From(info.Env(), static_cast<int>(bgfx::getRendererType()));
     }
 
-    void NativeEngine::EndFrame()
+    void NativeEngine::EndFrame(Napi::Env env)
     {
-        GetFrameBufferManager().Reset();
+        FrameBufferManager::Reset(env);
 
         bgfx::frame();
     }
