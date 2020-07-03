@@ -1,8 +1,5 @@
-#if _MSC_VER 
-#pragma warning( disable : 4100 ) // unreferenced formal parameter in glslang header
-#endif
-
 #include "ShaderCompiler.h"
+#include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
 #include <bgfx/bgfx.h>
@@ -21,27 +18,24 @@ namespace Babylon
         {
             const std::array<const char*, 1> sources{source.data()};
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
-            shader.setEnvInput(glslang::EShSourceGlsl, shader.getStage(), glslang::EShClientVulkan, 100);
-            shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
-            shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
 
-            if (!shader.parse(&DefaultTBuiltInResource, 450, false, EShMsgDefault))
+            if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
-                throw std::exception(shader.getInfoDebugLog());
+                throw std::runtime_error(shader.getInfoDebugLog());
             }
 
             program.addShader(&shader);
         }
 
-        std::unique_ptr<spirv_cross::Compiler> CompileShader(glslang::TProgram& program, EShLanguage stage, gsl::span<const spirv_cross::HLSLVertexAttributeRemap> attributes, ID3DBlob** blob)
+        std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, gsl::span<const spirv_cross::HLSLVertexAttributeRemap> attributes, ID3DBlob** blob)
         {
             std::vector<uint32_t> spirv;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 
-            spirv_cross::Parser parser{std::move(spirv)};
-            parser.parse();
+            auto parser = std::make_unique<spirv_cross::Parser>(std::move(spirv));
+            parser->parse();
 
-            auto compiler = std::make_unique<spirv_cross::CompilerHLSL>(parser.get_parsed_ir());
+            auto compiler = std::make_unique<spirv_cross::CompilerHLSL>(parser->get_parsed_ir());
             compiler->set_hlsl_options({40});
 
             for (const auto& attribute : attributes)
@@ -65,7 +59,7 @@ namespace Babylon
                 throw std::exception(static_cast<const char*>(errorMsgs->GetBufferPointer()));
             }
 
-            return std::move(compiler);
+            return{std::move(parser), std::move(compiler)};
         }
     }
 
@@ -90,10 +84,20 @@ namespace Babylon
         AddShader(program, fragmentShader, fragmentSource);
         InvertYDerivativeOperands(fragmentShader);
 
+        glslang::SpvVersion spv{};
+        spv.spv = 0x10000;
+        vertexShader.getIntermediate()->setSpv(spv);
+        fragmentShader.getIntermediate()->setSpv(spv);
+
         if (!program.link(EShMsgDefault))
         {
             throw std::exception(program.getInfoDebugLog());
         }
+
+        ShaderCompilerTraversers::IdGenerator ids{};
+        auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
+        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
@@ -115,14 +119,16 @@ namespace Babylon
         // clang-format on
 
         Microsoft::WRL::ComPtr<ID3DBlob> vertexBlob;
-        auto vertexCompiler = CompileShader(program, EShLangVertex, attributes, &vertexBlob);
+        auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, attributes, &vertexBlob);
         ShaderInfo vertexShaderInfo{
+            std::move(vertexParser),
             std::move(vertexCompiler),
             gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize())};
 
         Microsoft::WRL::ComPtr<ID3DBlob> fragmentBlob;
-        auto fragmentCompiler = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
+        auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
         ShaderInfo fragmentShaderInfo{
+            std::move(fragmentParser),
             std::move(fragmentCompiler),
             gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize())};
 
