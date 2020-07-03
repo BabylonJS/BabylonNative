@@ -974,6 +974,8 @@ namespace Babylon
                         const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
                         assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
                             referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                        (void)XRReferenceSpaceType::UNBOUNDED;
+                        (void)XRReferenceSpaceType::VIEWER;
                     }
                     else
                     {
