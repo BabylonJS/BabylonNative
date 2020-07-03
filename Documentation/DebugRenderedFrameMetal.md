@@ -37,7 +37,7 @@ The white rectangle corresponds to the display view.
 See the vertex stream dumped in the bottom right list.
 If your geometry is completely off screen you should see it here.
 
-You can modify the virtual debug camera and select a particular triangle to see the stream vertices that is producing it.
+You can modify the virtual debug camera and select a particular triangle to see the stream vertices that are producing it.
 
 ![CaptureGeometryReview](Images/FrameCaptureiOS/CaptureGeometryReview.jpg)
 
