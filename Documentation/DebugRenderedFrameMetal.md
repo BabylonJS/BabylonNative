@@ -52,7 +52,7 @@ The order of bound values can be checked by double clicking on the Vertex Functi
 
 ![CaptureVertexShaderSource](Images/FrameCaptureiOS/CaptureVertexShaderSource.jpg)
 
-And it works the same for fragment shader:
+And it works the same for the fragment shader:
 
 ![CaptureFragmentUniforms](Images/FrameCaptureiOS/CaptureFragmentUniforms.jpg)
 
