@@ -1648,45 +1648,13 @@ namespace Babylon
             static_cast<uint16_t>(height * backbufferHeight));
     }
 
-    Napi::Value NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
+    void NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
     {
         bgfx::FrameBufferHandle fbh = BGFX_INVALID_HANDLE;
+        const auto callback = info[0].As<Napi::Function>();
+
+        s_bgfxCallback.addScreenShotCallback(callback);
         bgfx::requestScreenShot(fbh, "GetImageData");
-
-        while (s_bgfxCallback.m_screenShotBitmap.empty())
-        {
-            bgfx::frame();
-        }
-        const uint32_t x = info[0].As<Napi::Number>().Uint32Value();
-        const uint32_t y = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t width = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t height = info[3].As<Napi::Number>().Uint32Value();
-
-        auto imageData = new ImageData();
-        //const auto buffer = info[0].As<Napi::ArrayBuffer>();
-
-        imageData->Image.reset(bimg::imageAlloc(&m_allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false));
-
-        auto bitmap = static_cast<uint8_t*>(imageData->Image->m_data);
-
-        uint32_t sourceWidth = bgfx::getStats()->width;
-        //uint32_t sourceHeight = bgfx::getStats()->height;
-
-        for (auto py = y; py < (y + height); py++)
-        {
-            for (auto px = x; px < (x + width); px++)
-            {
-                // bgfx screenshot is BGRA
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 2];
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 1];
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 0];
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 3];
-            }
-        }
-
-        s_bgfxCallback.m_screenShotBitmap.clear();
-
-        return Napi::External<ImageData>::New(info.Env(), imageData);
     }
 
     Napi::Value NativeEngine::GetRenderAPI(const Napi::CallbackInfo& info)
