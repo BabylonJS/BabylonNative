@@ -19,7 +19,7 @@ Bottom right: debug output
 
 As with RenderDoc, you can debug by inspecting draw calls; where resources are commited to rasterize triangles.
 Inputs streams (positions, UV, normals) are transformed by the vertex shader to produce (usualy) screen space streams.
-Those streams are used to render triangles where each pixel passes trough a fragment shader that returns a color.
+Those streams are used to render triangles where each pixel passes through a fragment shader that returns a color.
 Vertex and fragment shaders processing are parametrized by uniforms (matrices that convert from world space to screen space, light position and orientation, ...)
 
 ![CaptureDrawCall](Images/FrameCaptureiOS/CaptureDrawCall.jpg)
