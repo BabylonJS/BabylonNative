@@ -48,7 +48,7 @@ The data in that buffer then looks like this:
 
 ![CaptureVertexUniforms](Images/FrameCaptureiOS/CaptureVertexUniforms.jpg)
 
-The order of bound values can be check by double clicking on the Vertex Function. The shader source uses a struct ```Frame``` that corresponds to the bound uniform buffer.
+The order of bound values can be checked by double clicking on the Vertex Function. The shader source uses a struct ```Frame``` that corresponds to the bound uniform buffer.
 
 ![CaptureVertexShaderSource](Images/FrameCaptureiOS/CaptureVertexShaderSource.jpg)
 
