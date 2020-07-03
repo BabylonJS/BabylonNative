@@ -18,4 +18,4 @@
 
 ## Extending Babylon Native
 
-[Babylon Native extensive plugin system allows you to add and expose functionnalities. Here is how.](Extending.md)
+[Babylon Native's extensive plugin system allows you to add and expose functionalities. Here is how.](Extending.md)
