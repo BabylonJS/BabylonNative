@@ -10,7 +10,7 @@
 
 ## Debugging JavaScript on Mac and iOS
 
-[Put break points in your JS. Inspect variable and watch the console output on your Mac for iOS and MacOS.](DebugJavascriptMacIOS.md)
+[Put break points in your JS. Inspect variables and watch the console output on your Mac for iOS and MacOS.](DebugJavascriptMacIOS.md)
 
 ## Debugging iOS and MacOS rendering using Xcode
 
