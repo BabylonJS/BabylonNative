@@ -25,7 +25,7 @@ Vertex and fragment shaders processing are parametrized by uniforms (matrices th
 ![CaptureDrawCall](Images/FrameCaptureiOS/CaptureDrawCall.jpg)
 
 When a rendering goes wrong, one or multiple parts of that pipeline are also wrong.
-If nothing is displayed, check you have all the resources (shaders, vertex buffer, textures,...) are bound.
+If nothing is displayed, check you have all the resources (shaders, vertex buffer, textures,...) bound.
 If something is missing, a call to the rendering engine is missing.
 If every thing is bound, then it's time to take a closer look.
 First thing to check is the geometry. It's common to expect a mesh to be rendered but you render something else because of previous stream is not replaced for example.
