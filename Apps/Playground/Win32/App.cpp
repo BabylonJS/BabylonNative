@@ -99,6 +99,10 @@ namespace
             return;
         }
 
+        auto width = static_cast<size_t>(rect.right - rect.left);
+        auto height = static_cast<size_t>(rect.bottom - rect.top);
+        Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+
         // Initialize console plugin.
         runtime->Dispatch([rect, hWnd](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -114,7 +118,7 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize NativeXr plugin.
@@ -156,6 +160,7 @@ namespace
 
     void UpdateWindowSize(size_t width, size_t height)
     {
+        Babylon::Plugins::NativeEngine::Resize(width, height);
         runtime->Dispatch([width, height](Napi::Env env) {
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
@@ -188,13 +193,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (true) // 
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
+        if (msg.message == WM_QUIT)
+        {
+            break;
+        }
+        Babylon::Plugins::NativeEngine::Render();
     }
 
     return (int)msg.wParam;

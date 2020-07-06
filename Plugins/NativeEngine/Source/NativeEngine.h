@@ -2,7 +2,7 @@
 
 #include "ShaderCompiler.h"
 #include "BgfxCallback.h"
-
+#include <bx/semaphore.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
@@ -154,13 +154,7 @@ namespace Babylon
 
     private:
 
-        void Update() const
-        {
-            bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
-            // discard any previous set state
-            bgfx::discard();
-            bgfx::touch(m_viewId);
-        }
+        void Update() const;
 
         uint16_t m_viewId{};
         ClearState& m_clearState;
@@ -390,7 +384,13 @@ namespace Babylon
         void Dispatch(std::function<void()>);
         void EndFrame();
 
+        static void UpdateSize(size_t width, size_t height);
+        static void Render();
+        static inline bgfx::Encoder* m_encoder{ nullptr };
+        static inline bx::Semaphore m_syncEncoder;
+        static inline bx::Semaphore m_syncRenderer;
     private:
+        
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
@@ -463,7 +463,7 @@ namespace Babylon
         void GetFramebufferData(const Napi::CallbackInfo& info);
         Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
 
-        void UpdateSize(size_t width, size_t height);
+        
 
         arcana::cancellation_source m_cancelSource{};
 
@@ -496,5 +496,7 @@ namespace Babylon
         std::vector<float> m_scratch{};
         
         Napi::FunctionReference m_requestAnimationFrameCalback{};
+
+        
     };
 }

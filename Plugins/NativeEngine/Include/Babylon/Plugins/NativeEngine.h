@@ -11,4 +11,9 @@ namespace Babylon::Plugins::NativeEngine
     void Reinitialize(Napi::Env env, void* windowPtr, size_t width, size_t height);
 
     void DeinitializeGraphics();
+
+
+    void Resize(size_t width, size_t height);
+    void Render();
+
 }

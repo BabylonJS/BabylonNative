@@ -33,6 +33,14 @@ namespace bgfx
 
 namespace Babylon
 {
+    void ViewClearState::Update() const
+    {
+        bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
+        // discard any previous set state
+        NativeEngine::m_encoder->discard();
+        NativeEngine::m_encoder->touch(m_viewId);
+    }
+
     namespace
     {
         template<typename AppendageT>
@@ -446,10 +454,10 @@ namespace Babylon
         void SetBgfxIndexBuffer() const
         {
             constexpr auto nonDynamic = [](auto handle) {
-                bgfx::setIndexBuffer(handle);
+                NativeEngine::m_encoder->setIndexBuffer(handle);
             };
             constexpr auto dynamic = [](auto handle) {
-                bgfx::setIndexBuffer(handle);
+                NativeEngine::m_encoder->setIndexBuffer(handle);
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -547,10 +555,10 @@ namespace Babylon
         void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex, bgfx::VertexLayoutHandle layout) const
         {
             const auto nonDynamic = [index, startVertex, layout](auto handle) {
-                bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
+                NativeEngine::m_encoder->setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
             };
             const auto dynamic = [index, startVertex, layout](auto handle) {
-                bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
+                NativeEngine::m_encoder->setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -574,10 +582,13 @@ namespace Babylon
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_FLAGS;
         init.callback = &s_bgfxCallback;
+        bgfx::renderFrame();
         bgfx::init(init);
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
         bgfx::touch(0);
+        m_encoder = bgfx::begin(false);
+        //m_sync.post();
     }
 
     void NativeEngine::DeinitializeWindow()
@@ -686,24 +697,6 @@ namespace Babylon
     NativeEngine::~NativeEngine()
     {
         Dispose();
-    }
-
-    void NativeEngine::UpdateSize(size_t width, size_t height)
-    {
-        const auto w = static_cast<uint16_t>(width);
-        const auto h = static_cast<uint16_t>(height);
-
-        auto bgfxStats = bgfx::getStats();
-        if (w != bgfxStats->width || h != bgfxStats->height)
-        {
-            bgfx::reset(w, h, BGFX_RESET_FLAGS);
-            bgfx::setViewRect(0, 0, 0, w, h);
-#ifdef __APPLE__
-            bgfx::frame();
-#else
-            bgfx::touch(0);
-#endif
-        }
     }
 
     FrameBufferManager& NativeEngine::GetFrameBufferManager()
@@ -1574,15 +1567,15 @@ namespace Babylon
         for (const auto& it : m_currentProgram->Uniforms)
         {
             const ProgramData::UniformValue& value = it.second;
-            bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            m_encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
-        bgfx::setState(m_engineState);
+        m_encoder->setState(m_engineState);
 #if (ANDROID)
         // TODO : find why we need to discard state on Android
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
+        m_encoder->submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
 #else
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
+        m_encoder->submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
 #endif
     }
 
@@ -1665,8 +1658,35 @@ namespace Babylon
     void NativeEngine::EndFrame()
     {
         GetFrameBufferManager().Reset();
+        bgfx::end(NativeEngine::m_encoder);
+        m_syncEncoder.post();
+        m_syncRenderer.wait();
+        m_encoder = bgfx::begin(false);
+    }
 
+    void NativeEngine::Render()
+    {
+        m_syncEncoder.wait();
         bgfx::frame();
+        bgfx::touch(0);
+        m_syncRenderer.post();
+    }
+
+    void NativeEngine::UpdateSize(size_t width, size_t height)
+    {
+        const auto w = static_cast<uint16_t>(width);
+        const auto h = static_cast<uint16_t>(height);
+
+        auto bgfxStats = bgfx::getStats();
+        if (w != bgfxStats->width || h != bgfxStats->height)
+        {
+            m_syncEncoder.wait();
+            bgfx::reset(w, h, BGFX_RESET_FLAGS);
+            bgfx::setViewRect(0, 0, 0, w, h);
+            bgfx::frame();
+            bgfx::touch(0);
+            m_syncRenderer.post();
+        }
     }
 
     void NativeEngine::Dispatch(std::function<void()> function)

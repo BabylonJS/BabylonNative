@@ -34,4 +34,14 @@ namespace Babylon::Plugins::NativeEngine
     {
         Babylon::NativeEngine::DeinitializeWindow();
     }
+
+    void Resize(size_t width, size_t height)
+    {
+        Babylon::NativeEngine::UpdateSize(width, height);
+    }
+
+    void Render()
+    {
+        Babylon::NativeEngine::Render();
+    }
 }
