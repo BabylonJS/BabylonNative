@@ -26,6 +26,41 @@ namespace {
         { { 1, -1 },    { 0, 0 },   { 0, 0} },
         { { 1, 1 },     { 0, 1 },   { 0, 0} },
     };
+
+    /**
+     Helper function to convert a transform into an xr::pose.
+     */
+    static xr::Pose TransformToPose(simd_float4x4 transform){
+        //Pull out the rotation.
+        auto orientation = simd_quaternion(transform);
+        
+        // set the orientation;
+        xr::Pose pose{};
+        pose.Orientation = { orientation.vector.x
+            , orientation.vector.y
+            , orientation.vector.z
+            , orientation.vector.w};
+        
+        // Set the translation.
+        pose.Position = { transform.columns[3][0]
+            , transform.columns[3][1]
+            , transform.columns[3][2] };
+        
+        return pose;
+    }
+
+    /**
+     Helper function to convert an xr pose into a transform.
+     */
+    static simd_float4x4 PoseToTransform(xr::Pose pose){
+        auto poseQuaternion = simd_quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
+        auto poseTransform = simd_matrix4x4(poseQuaternion);
+        poseTransform.columns[3][0] = pose.Position.X;
+        poseTransform.columns[3][1] = pose.Position.Y;
+        poseTransform.columns[3][2] = pose.Position.Z;
+        
+        return poseTransform;
+    }
 }
 
 /**
@@ -684,18 +719,83 @@ namespace xr {
                         
                         // Process the results and push them into the results list.
                         for (ARRaycastResult* result in rayCastResults) {
-                            filteredResults.push_back(transformToHitResult(result.worldTransform));
+                            auto hitResult = transformToHitResult(result.worldTransform);
+                            hitResult.NativeTrackable = result.anchor;
+                            filteredResults.push_back(hitResult);
                         }
                     } else {
                         // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
                         auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(ARHitTestResultTypeExistingPlane)];
                         for (ARHitTestResult* result in hitTestResults) {
-                            filteredResults.push_back(transformToHitResult(result.worldTransform));
+                            auto hitResult = transformToHitResult(result.worldTransform);
+                            hitResult.NativeTrackable = result.anchor;
+                            filteredResults.push_back(hitResult);
                         }
                     }
                 }
             }
         }
+        
+        /**
+         Create an ARKit anchor for the given pose and/or hit test result.
+         */
+        xr::Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable){
+            // Pull out the transform into a pose.
+            auto poseTransform = PoseToTransform(pose);
+            
+            // Check if we already are creating a virtual anchor for an extant tracked anchor.  If so calculate the offset, and construct
+            // the XR anchor.
+            if (trackable != nil) {
+                auto anchor = reinterpret_cast<ARAnchor*>(trackable);
+                auto offset = simd_mul(simd_inverse(anchor.transform), poseTransform);
+                return { TransformToPose(poseTransform), anchor, TransformToPose(offset), false };
+            }
+            else {
+                auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
+                [session addAnchor:anchor];
+                return { pose, reinterpret_cast<NativeAnchorPtr>(anchor) };
+            }
+        }
+        
+        /**
+         For a given anchor update the current pose, and determine if it is still valid.
+         */
+        void UpdateAnchor(xr::Anchor& anchor) {
+            // First check if the anchor still exists, if not then mark the anchor as no longer valid.
+            auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+            if (arAnchor == nil) {
+                anchor.IsValid = false;
+                return;
+            }
+            
+            // Update the anchor's pose based on its transform.
+            if (anchor.isAnchorOwned) {
+                anchor.Pose = TransformToPose(arAnchor.transform);
+            }
+            else {
+                auto offsetTransform = PoseToTransform(anchor.Offset);
+                auto compositeTransform = simd_mul(arAnchor.transform, offsetTransform);
+                anchor.Pose = TransformToPose(compositeTransform);
+            }
+        }
+        
+        /**
+         Deletes the ArKit anchor associated with this anchor if it still exists.
+         */
+        void DeleteAnchor(xr::Anchor& anchor) {
+            // If this anchor has not already been deleted, then remove it from the current AR session,
+            // and clean up its state in memory.
+            if (anchor.NativeAnchor != nil) {
+                if (anchor.isAnchorOwned) {
+                    auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+                    [session removeAnchor:arAnchor];
+                    [arAnchor release];
+                }
+                
+                anchor.NativeAnchor = nil;
+            }
+        }
+        
         private:
             inline static ARSession* session{};
             inline static ARWorldTrackingConfiguration* configuration{};
@@ -758,16 +858,16 @@ namespace xr {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const {
-        throw std::runtime_error("Not yet implemented");
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackablePtr) const {
+        return m_impl->sessionImpl.CreateAnchor(pose, trackablePtr);
     }
 
-    void System::Session::Frame::UpdateAnchor(xr::Anchor&) const {
-        throw std::runtime_error("Not yet implemented");
+    void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
+        m_impl->sessionImpl.UpdateAnchor(anchor);
     }
 
-    void System::Session::Frame::DeleteAnchor(xr::Anchor&) const {
-        throw std::runtime_error("Not yet implemented");
+    void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const {
+        m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
     System::System(const char* appName)
