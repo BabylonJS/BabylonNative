@@ -31,11 +31,10 @@ namespace {
      Helper function to convert a transform into an xr::pose.
      */
     static xr::Pose TransformToPose(simd_float4x4 transform){
-        //Pull out the rotation.
-        auto orientation = simd_quaternion(transform);
         
-        // set the orientation;
+        // Set orientation.
         xr::Pose pose{};
+        auto orientation = simd_quaternion(transform);
         pose.Orientation = { orientation.vector.x
             , orientation.vector.y
             , orientation.vector.z
@@ -720,17 +719,13 @@ namespace xr {
                         
                         // Process the results and push them into the results list.
                         for (ARRaycastResult* result in rayCastResults) {
-                            auto hitResult = transformToHitResult(result.worldTransform);
-                            hitResult.NativeTrackable = result.anchor;
-                            filteredResults.push_back(hitResult);
+                            filteredResults.push_back(transformToHitResult(result.worldTransform));
                         }
                     } else {
                         // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
                         auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(ARHitTestResultTypeExistingPlane)];
                         for (ARHitTestResult* result in hitTestResults) {
-                            auto hitResult = transformToHitResult(result.worldTransform);
-                            hitResult.NativeTrackable = result.anchor;
-                            filteredResults.push_back(hitResult);
+                            filteredResults.push_back(transformToHitResult(result.worldTransform));
                         }
                     }
                 }
@@ -741,7 +736,7 @@ namespace xr {
          Create an ARKit anchor for the given pose and/or hit test result.
          */
         xr::Anchor CreateAnchor(Pose pose){
-            // Pull out the transform into a pose.
+            // Pull out the pose into a float 4x4 transform that is usable by ARKit.
             auto poseTransform = PoseToTransform(pose);
             
             // Create the anchor and add it to the ARKit session.
@@ -767,7 +762,7 @@ namespace xr {
         }
         
         /**
-         Deletes the ArKit anchor associated with this anchor if it still exists.
+         Deletes the ArKit anchor associated with this XR anchor if it still exists.
          */
         void DeleteAnchor(xr::Anchor& anchor) {
             // If this anchor has not already been deleted, then remove it from the current AR session,
@@ -782,7 +777,7 @@ namespace xr {
         }
         
         /**
-         Deallocates the native ARKit anchor object, and removes it from our anchor list.
+         Deallocates the native ARKit anchor object, and removes it from the anchor list.
          */
         void CleanupAnchor(ARAnchor* arAnchor)
         {
