@@ -31,7 +31,6 @@ namespace {
      Helper function to convert a transform into an xr::pose.
      */
     static xr::Pose TransformToPose(simd_float4x4 transform){
-        
         // Set orientation.
         xr::Pose pose{};
         auto orientation = simd_quaternion(transform);
@@ -733,7 +732,7 @@ namespace xr {
         }
         
         /**
-         Create an ARKit anchor for the given pose and/or hit test result.
+         Create an ARKit anchor for the given pose.
          */
         xr::Anchor CreateAnchor(Pose pose){
             // Pull out the pose into a float 4x4 transform that is usable by ARKit.
@@ -771,7 +770,6 @@ namespace xr {
                 auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
                 anchor.NativeAnchor = nil;
 
-                [session removeAnchor:arAnchor];
                 CleanupAnchor(arAnchor);
             }
         }
