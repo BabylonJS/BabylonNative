@@ -506,6 +506,7 @@ namespace xr {
                 ActiveFrameViews[0].DepthTexturePointer = nil;
             }
 
+            CleanupAnchor(nil);
             [session pause];
             session.delegate = nil;
             [sessionDelegate release];
@@ -746,6 +747,7 @@ namespace xr {
             // Create the anchor and add it to the ARKit session.
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
             [session addAnchor:anchor];
+            nativeAnchors.push_back(anchor);
             return { pose, reinterpret_cast<NativeAnchorPtr>(anchor) };
         }
         
@@ -772,12 +774,37 @@ namespace xr {
             // and clean up its state in memory.
             if (anchor.NativeAnchor != nil) {
                 auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
-                [session removeAnchor:arAnchor];
-                [arAnchor release];
                 anchor.NativeAnchor = nil;
+
+                [session removeAnchor:arAnchor];
+                CleanupAnchor(arAnchor);
             }
         }
         
+        /**
+         Deallocates the native ARKit anchor object, and removes it from our anchor list.
+         */
+        void CleanupAnchor(ARAnchor* arAnchor)
+        {
+            // Iterate over the list of anchors if arAnchor is nil then clean up all anchors
+            // otherwise clean up only the target anchor and return.
+            auto anchorIter = nativeAnchors.begin();
+            while (anchorIter != nativeAnchors.end()) {
+                if (arAnchor == nil || arAnchor == *anchorIter) {
+                    [session removeAnchor:*anchorIter];
+                    [*anchorIter release];
+                    anchorIter = nativeAnchors.erase(anchorIter);
+
+                    if (arAnchor != nil) {
+                        return;
+                    }
+                }
+                else {
+                    anchorIter++;
+                }
+            }
+        }
+
         private:
             inline static ARSession* session{};
             inline static ARWorldTrackingConfiguration* configuration{};
@@ -793,6 +820,7 @@ namespace xr {
             id<MTLRenderPipelineState> pipelineState{};
             vector_uint2 viewportSize{};
             id<MTLCommandQueue> commandQueue;
+            std::vector<ARAnchor*> nativeAnchors{};
         
         /*
          Helper function to translate a world transform into a hit test result.
