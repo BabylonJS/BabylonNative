@@ -588,7 +588,6 @@ namespace Babylon
         bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
         bgfx::touch(0);
         m_encoder = bgfx::begin(false);
-        //m_sync.post();
     }
 
     void NativeEngine::DeinitializeWindow()
@@ -680,18 +679,11 @@ namespace Babylon
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
-        : NativeEngine(info, Plugins::Internal::NativeWindow::GetFromJavaScript(info.Env()))
-    {
-    }
-
-    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, Plugins::Internal::NativeWindow& nativeWindow)
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
         , m_engineState{BGFX_STATE_DEFAULT}
-        , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
-        UpdateSize(static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()));
     }
 
     NativeEngine::~NativeEngine()
@@ -1612,12 +1604,12 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), bgfx::getStats()->width);
+        return Napi::Value::From(info.Env(), _displayWidth);
     }
 
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), bgfx::getStats()->height);
+        return Napi::Value::From(info.Env(), _displayHeight);
     }
 
     void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
@@ -1627,8 +1619,8 @@ namespace Babylon
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
-        const auto backbufferWidth = bgfx::getStats()->width;
-        const auto backbufferHeight = bgfx::getStats()->height;
+        const auto backbufferWidth = _displayWidth;
+        const auto backbufferHeight = _displayHeight;
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
         m_frameBufferManager.GetBound().UseViewId(m_frameBufferManager.GetNewViewId());
@@ -1662,6 +1654,8 @@ namespace Babylon
         m_syncEncoder.post();
         m_syncRenderer.wait();
         m_encoder = bgfx::begin(false);
+        // happens when too many frames are queued in advance without a bgfx::frame() to flush them
+        assert(m_encoder);
     }
 
     void NativeEngine::Render()
@@ -1677,14 +1671,16 @@ namespace Babylon
         const auto w = static_cast<uint16_t>(width);
         const auto h = static_cast<uint16_t>(height);
 
-        auto bgfxStats = bgfx::getStats();
-        if (w != bgfxStats->width || h != bgfxStats->height)
+        if (w != _displayWidth || h != _displayHeight)
         {
             m_syncEncoder.wait();
+            // flush rendering
+            bgfx::frame();
             bgfx::reset(w, h, BGFX_RESET_FLAGS);
             bgfx::setViewRect(0, 0, 0, w, h);
-            bgfx::frame();
             bgfx::touch(0);
+            _displayWidth = w;
+            _displayHeight = h;
             m_syncRenderer.post();
         }
     }

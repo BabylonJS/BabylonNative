@@ -373,7 +373,6 @@ namespace Babylon
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
-        NativeEngine(const Napi::CallbackInfo& info, Plugins::Internal::NativeWindow& nativeWindow);
         ~NativeEngine();
 
         static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
@@ -389,6 +388,8 @@ namespace Babylon
         static inline bgfx::Encoder* m_encoder{ nullptr };
         static inline bx::Semaphore m_syncEncoder;
         static inline bx::Semaphore m_syncRenderer;
+        static inline size_t _displayWidth{ 1 };
+        static inline size_t _displayHeight{ 1 };
     private:
         
         void Dispose();
@@ -480,8 +481,6 @@ namespace Babylon
 
         static inline BgfxCallback s_bgfxCallback{};
         FrameBufferManager m_frameBufferManager{};
-
-        Plugins::Internal::NativeWindow::NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);

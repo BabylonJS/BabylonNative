@@ -12,8 +12,7 @@ namespace Babylon::Plugins::NativeEngine
 
     void DeinitializeGraphics();
 
-
     void Resize(size_t width, size_t height);
-    void Render();
 
+    void Render();
 }

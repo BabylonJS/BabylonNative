@@ -118,7 +118,6 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize NativeXr plugin.
@@ -261,10 +260,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
     }
 
+    RefreshBabylon(hWnd);
+
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
-
-    RefreshBabylon(hWnd);
 
     return TRUE;
 }
