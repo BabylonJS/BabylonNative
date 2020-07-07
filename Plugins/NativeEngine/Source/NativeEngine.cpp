@@ -578,6 +578,8 @@ namespace Babylon
 #else
         init.type = bgfx::RendererType::Direct3D11;
 #endif
+        _displayWidth = width;
+        _displayHeight = height;
         init.resolution.width = width;
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_FLAGS;
