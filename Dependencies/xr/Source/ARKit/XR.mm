@@ -739,22 +739,14 @@ namespace xr {
         /**
          Create an ARKit anchor for the given pose and/or hit test result.
          */
-        xr::Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable){
+        xr::Anchor CreateAnchor(Pose pose){
             // Pull out the transform into a pose.
             auto poseTransform = PoseToTransform(pose);
             
-            // Check if we already are creating a virtual anchor for an extant tracked anchor.  If so calculate the offset, and construct
-            // the XR anchor.
-            if (trackable != nil) {
-                auto anchor = reinterpret_cast<ARAnchor*>(trackable);
-                auto offset = simd_mul(simd_inverse(anchor.transform), poseTransform);
-                return { TransformToPose(poseTransform), anchor, TransformToPose(offset), false };
-            }
-            else {
-                auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
-                [session addAnchor:anchor];
-                return { pose, reinterpret_cast<NativeAnchorPtr>(anchor) };
-            }
+            // Create the anchor and add it to the ARKit session.
+            auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
+            [session addAnchor:anchor];
+            return { pose, reinterpret_cast<NativeAnchorPtr>(anchor) };
         }
         
         /**
@@ -768,15 +760,8 @@ namespace xr {
                 return;
             }
             
-            // Update the anchor's pose based on its transform.
-            if (anchor.isAnchorOwned) {
-                anchor.Pose = TransformToPose(arAnchor.transform);
-            }
-            else {
-                auto offsetTransform = PoseToTransform(anchor.Offset);
-                auto compositeTransform = simd_mul(arAnchor.transform, offsetTransform);
-                anchor.Pose = TransformToPose(compositeTransform);
-            }
+            // Then update the anchor's pose based on its transform.
+            anchor.Pose = TransformToPose(arAnchor.transform);
         }
         
         /**
@@ -786,12 +771,9 @@ namespace xr {
             // If this anchor has not already been deleted, then remove it from the current AR session,
             // and clean up its state in memory.
             if (anchor.NativeAnchor != nil) {
-                if (anchor.isAnchorOwned) {
-                    auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
-                    [session removeAnchor:arAnchor];
-                    [arAnchor release];
-                }
-                
+                auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+                [session removeAnchor:arAnchor];
+                [arAnchor release];
                 anchor.NativeAnchor = nil;
             }
         }
@@ -858,8 +840,8 @@ namespace xr {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackablePtr) const {
-        return m_impl->sessionImpl.CreateAnchor(pose, trackablePtr);
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr) const {
+        return m_impl->sessionImpl.CreateAnchor(pose);
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {

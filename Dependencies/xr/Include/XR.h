@@ -75,8 +75,6 @@ namespace xr
     {
         Pose Pose{};
         NativeAnchorPtr NativeAnchor{};
-        struct Pose Offset{};
-        bool isAnchorOwned{true};
         bool IsValid{true};
     };
 
