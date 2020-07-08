@@ -1475,6 +1475,7 @@ namespace Napi {
       InstanceSetterCallback instanceSetter;
       Napi::Value instanceValue;
       napi_property_attributes attributes;
+      void* data;
     };
 
     static Function DefineClass(napi_env env,

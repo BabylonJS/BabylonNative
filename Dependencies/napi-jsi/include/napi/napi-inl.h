@@ -346,6 +346,8 @@ inline String String::New(napi_env env, const char* val) {
 }
 
 inline String String::New(napi_env env, const char16_t* val) {
+  (void)env;
+  (void)val;
   throw std::runtime_error("TODO");
 }
 
@@ -354,6 +356,9 @@ inline String String::New(napi_env env, const char* val, size_t length) {
 }
 
 inline String String::New(napi_env env, const char16_t* val, size_t length) {
+  (void)env;
+  (void)val;
+  (void)length;
   throw std::runtime_error("TODO");
 }
 
@@ -382,18 +387,26 @@ inline std::u16string String::Utf16Value() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 inline Symbol Symbol::New(napi_env env, const char* description) {
+  (void)env;
+  (void)description;
   throw std::runtime_error("TODO");
 }
 
 inline Symbol Symbol::New(napi_env env, const std::string& description) {
+  (void)env;
+  (void)description;
   throw std::runtime_error("TODO");
 }
 
 inline Symbol Symbol::New(napi_env env, String description) {
+  (void)env;
+  (void)description;
   throw std::runtime_error("TODO");
 }
 
 inline Symbol Symbol::New(napi_env env, jsi::Value description) {
+  (void)env;
+  (void)description;
   throw std::runtime_error("TODO");
 }
 
@@ -451,7 +464,7 @@ struct vf_utf16_string {
 // TODO: this can probably be folded into the Helper/disjunction
 template <typename T>
 struct vf_fallback {
-  static Value From(napi_env env, const T& value) {
+  static Value From(napi_env, const T& value) {
     return value;
   }
 };
@@ -600,6 +613,7 @@ inline bool Object::Has(const std::string& utf8name) const {
 }
 
 inline bool Object::HasOwnProperty(const char* utf8name) const {
+  (void)utf8name;
   throw std::runtime_error("TODO");
 }
 
@@ -626,6 +640,7 @@ inline void Object::Set(const std::string& utf8name, const ValueType& value) {
 }
 
 inline bool Object::Delete(const char* utf8name) {
+  (void)utf8name;
   throw std::runtime_error("TODO");
 }
 
@@ -634,6 +649,7 @@ inline bool Object::Delete(const std::string& utf8name) {
 }
 
 inline bool Object::Has(uint32_t index) const {
+  (void)index;
   throw std::runtime_error{"TODO"};
 }
 
@@ -649,6 +665,7 @@ inline void Object::Set(uint32_t index, const ValueType& value) {
 }
 
 inline bool Object::Delete(uint32_t index) {
+  (void)index;
   throw std::runtime_error{"TODO"};
 }
 
@@ -840,6 +857,9 @@ inline DataView DataView::New(napi_env env,
 inline DataView DataView::New(napi_env env,
                               Napi::ArrayBuffer arrayBuffer,
                               size_t byteOffset) {
+  (void)env;
+  (void)arrayBuffer;
+  (void)byteOffset;
   //if (byteOffset > arrayBuffer.ByteLength()) {
   //  NAPI_THROW(RangeError::New(env,
   //      "Start offset is outside the bounds of the buffer"),
@@ -854,6 +874,10 @@ inline DataView DataView::New(napi_env env,
                               Napi::ArrayBuffer arrayBuffer,
                               size_t byteOffset,
                               size_t byteLength) {
+  (void)env;
+  (void)arrayBuffer;
+  (void)byteOffset;
+  (void)byteLength;
   //if (byteOffset + byteLength > arrayBuffer.ByteLength()) {
   //  NAPI_THROW(RangeError::New(env, "Invalid DataView length"),
   //             DataView());
@@ -981,6 +1005,7 @@ inline void DataView::SetUint32(size_t byteOffset, uint32_t value) const {
 
 template <typename T>
 inline T DataView::ReadData(size_t byteOffset) const {
+  (void)byteOffset;
   //if (byteOffset + sizeof(T) > _length ||
   //    byteOffset + sizeof(T) < byteOffset) {  // overflow
   //  NAPI_THROW(RangeError::New(_env,
@@ -993,6 +1018,8 @@ inline T DataView::ReadData(size_t byteOffset) const {
 
 template <typename T>
 inline void DataView::WriteData(size_t byteOffset, T value) const {
+  (void)byteOffset;
+  (void)value;
   //if (byteOffset + sizeof(T) > _length ||
   //    byteOffset + sizeof(T) < byteOffset) {  // overflow
   //  NAPI_THROW_VOID(RangeError::New(_env,
@@ -1199,7 +1226,7 @@ inline Function Function::New(napi_env env,
                               const char* utf8name,
                               void* data) {
   auto function{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forUtf8(env->rt, utf8name), 0,
-    [env, cb{std::move(cb)}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+    [env, cb{std::move(cb)}, data](jsi::Runtime&, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
       typedef decltype(cb(CallbackInfo({}, {}, {}, {}, {}, {}))) ReturnType;
       return details::Function<Callable, ReturnType>::Callback(env, thisVal, args, count, data, cb);
     })};
@@ -1331,7 +1358,7 @@ inline Promise::Deferred Promise::Deferred::New(napi_env env) {
 inline Promise::Deferred::Deferred(napi_env env)
   : _env{env} {
   jsi::Function executor{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forAscii(env->rt, "executor"), 0,
-    [this](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+    [this](jsi::Runtime& rt, const jsi::Value&, const jsi::Value* args, size_t) -> jsi::Value {
       _resolve = args[0].asObject(rt).asFunction(rt);
       _reject = args[1].asObject(rt).asFunction(rt);
       return {};
@@ -1379,6 +1406,7 @@ inline Promise::Promise(napi_env env, jsi::Value value)
 ////////////////////////////////////////////////////////////////////////////////
 
 inline Error Error::New(napi_env env) {
+  (void)env;
   //napi_status status;
   //jsi::Value error = nullptr;
 
@@ -1430,16 +1458,22 @@ inline Error Error::New(napi_env env) {
 }
 
 inline Error Error::New(napi_env env, const char* message) {
+  (void)env;
+  (void)message;
   //return Error::New<Error>(env, message, std::strlen(message), napi_create_error);
   throw std::runtime_error{"TODO"};
 }
 
 inline Error Error::New(napi_env env, const std::string& message) {
+  (void)env;
+  (void)message;
   //return Error::New<Error>(env, message.c_str(), message.size(), napi_create_error);
   throw std::runtime_error{"TODO"};
 }
 
 inline /*NAPI_NO_RETURN*/ void Error::Fatal(const char* location, const char* message) {
+  (void)location;
+  (void)message;
   // $HACK
   //napi_fatal_error(location, NAPI_AUTO_LENGTH, message, NAPI_AUTO_LENGTH);
   throw std::exception();
@@ -1469,6 +1503,7 @@ inline Error::Error(const Error& other) : ObjectReference(other) {
 }
 
 inline Error& Error::operator =(Error& other) {
+  (void)other;
   //Reset();
 
   //_env = other.Env();
@@ -1548,11 +1583,15 @@ inline const char* Error::what() const NAPI_NOEXCEPT {
 //}
 
 inline TypeError TypeError::New(napi_env env, const char* message) {
+  (void)env;
+  (void)message;
   //return Error::New<TypeError>(env, message, std::strlen(message), napi_create_type_error);
   throw std::runtime_error{"TODO"};
 }
 
 inline TypeError TypeError::New(napi_env env, const std::string& message) {
+  (void)env;
+  (void)message;
   //return Error::New<TypeError>(env, message.c_str(), message.size(), napi_create_type_error);
   throw std::runtime_error{"TODO"};
 }
@@ -1562,11 +1601,15 @@ inline TypeError::TypeError(napi_env env, jsi::Object object)
 }
 
 inline RangeError RangeError::New(napi_env env, const char* message) {
+  (void)env;
+  (void)message;
   //return Error::New<RangeError>(env, message, std::strlen(message), napi_create_range_error);
   throw std::runtime_error{"TODO"};
 }
 
 inline RangeError RangeError::New(napi_env env, const std::string& message) {
+  (void)env;
+  (void)message;
   //return Error::New<RangeError>(env, message.c_str(), message.size(), napi_create_range_error);
   throw std::runtime_error{"TODO"};
 }
@@ -1581,6 +1624,8 @@ inline RangeError::RangeError(napi_env env, jsi::Object object)
 
 template <typename T>
 inline Reference<T> Reference<T>::New(const T& object, uint32_t initialRefcount) {
+  (void)object;
+  (void)initialRefcount;
   //napi_env env = value.Env();
   //jsi::Value val = value;
 
@@ -1795,12 +1840,14 @@ inline ObjectReference::ObjectReference(const ObjectReference& other)
 }
 
 inline Napi::Value ObjectReference::Get(const char* utf8name) const {
+  (void)utf8name;
   //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().Get(utf8name));
   throw std::runtime_error{"TODO"};
 }
 
 inline Napi::Value ObjectReference::Get(const std::string& utf8name) const {
+  (void)utf8name;
   //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().Get(utf8name));
   throw std::runtime_error{"TODO"};
@@ -1847,6 +1894,7 @@ inline void ObjectReference::Set(const std::string& utf8name, double numberValue
 }
 
 inline Napi::Value ObjectReference::Get(uint32_t index) const {
+  (void)index;
   //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().Get(index));
   throw std::runtime_error{"TODO"};
@@ -1908,6 +1956,7 @@ inline FunctionReference& FunctionReference::operator =(FunctionReference&& othe
 
 inline Napi::Value FunctionReference::operator ()(
     const std::initializer_list<Napi::Value>& args) const {
+  (void)args;
   //EscapableHandleScope scope{_env};
   //return scope.Escape(Value()(args));
   throw std::runtime_error{"TODO"};
@@ -1925,6 +1974,7 @@ inline Napi::Value FunctionReference::Call(const std::initializer_list<Napi::Val
 }
 
 inline Napi::Value FunctionReference::Call(const std::vector<Napi::Value>& args) const {
+  (void)args;
   //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(args);
   //if (scope.Env().IsExceptionPending()) {
@@ -1936,6 +1986,8 @@ inline Napi::Value FunctionReference::Call(const std::vector<Napi::Value>& args)
 
 inline Napi::Value FunctionReference::Call(
     const Napi::Value& recv, const std::initializer_list<Napi::Value>& args) const {
+  (void)recv;
+  (void)args;
   //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, args);
   //if (scope.Env().IsExceptionPending()) {
@@ -1947,6 +1999,8 @@ inline Napi::Value FunctionReference::Call(
 
 inline Napi::Value FunctionReference::Call(
     const Napi::Value& recv, const std::vector<Napi::Value>& args) const {
+  (void)recv;
+  (void)args;
   //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, args);
   //if (scope.Env().IsExceptionPending()) {
@@ -1964,16 +2018,21 @@ inline Napi::Value FunctionReference::Call(
   //  return Value();
   //}
   //return scope.Escape(result);
+  (void)recv;
+  (void)argc;
+  (void)args;
   throw std::runtime_error{"TODO"};
 }
 
 inline Object FunctionReference::New(const std::initializer_list<Napi::Value>& args) const {
   //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().New(args)).As<Object>();
+  (void)args;
   throw std::runtime_error{"TODO"};
 }
 
 inline Object FunctionReference::New(const std::vector<Napi::Value>& args) const {
+  (void)args;
   //EscapableHandleScope scope{_env};
   //return scope.Escape(Value().New(args)).As<Object>();
   throw std::runtime_error{"TODO"};
@@ -2355,29 +2414,29 @@ ObjectWrap<T>::DefineClass(napi_env env,
     } else if (!p.staticValue.IsEmpty()) {
     } else if (p.instanceVoidMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
-        [env, method{p.instanceVoidMethod}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-          T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+        [env, method{p.instanceVoidMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+          T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
           (nativeObject->*method)({env, thisVal, args, count, nullptr, data});
           return {};
         }));
     } else if (p.instanceMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
-        [env, method{p.instanceMethod}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-          T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+        [env, method{p.instanceMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+          T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
           return {rt, (nativeObject->*method)({env, thisVal, args, count, nullptr, data})};
         }));
     } else if (p.instanceGetter != nullptr || p.instanceSetter != nullptr) {
       if (p.instanceGetter != nullptr) {
         descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
-          [env, getter{p.instanceGetter}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+          [env, getter{p.instanceGetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
             return {rt, (nativeObject->*getter)({env, thisVal, args, count, nullptr, data})};
           }));
       }
       if (p.instanceSetter != nullptr) {
         descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
-          [env, setter{p.instanceSetter}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            T* nativeObject{Unwrap(env, thisVal.getObject(env->rt))};
+          [env, setter{p.instanceSetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
             (nativeObject->*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
             return {};
           }));
@@ -2539,6 +2598,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
   desc.utf8name = utf8name;
   desc.instanceVoidMethod = method;
   desc.attributes = attributes;
+  desc.data = data;
   return desc;
 }
 
@@ -2552,6 +2612,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
   desc.utf8name = utf8name;
   desc.instanceMethod = method;
   desc.attributes = attributes;
+  desc.data = data;
   return desc;
 }
 
@@ -2602,6 +2663,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceAccesso
   desc.instanceGetter = getter;
   desc.instanceSetter = setter;
   desc.attributes = attributes;
+  desc.data = data;
   return desc;
 }
 
