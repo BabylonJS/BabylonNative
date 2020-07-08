@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "^4.2.0-alpha.21",
-    "@babylonjs/react-native": "file:../Playground/node_modules/@babylonjs/react-native/babylonjs-react-native-0.0.1.tgz",
+    "@babylonjs/react-native": "file:../../Package/Assembled/babylonjs-react-native-0.0.1.tgz",
     "react": "16.11.0",
     "react-native": "0.62.2",
     "react-native-permissions": "^2.1.5"

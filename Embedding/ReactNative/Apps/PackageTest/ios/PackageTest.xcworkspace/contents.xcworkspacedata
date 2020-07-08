@@ -2,9 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:../node_modules/@babylonjs/react-native/ios/ReactNativeBabylon.xcodeproj">
-   </FileRef>
-   <FileRef
       location = "group:PackageTest.xcodeproj">
    </FileRef>
    <FileRef

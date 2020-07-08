@@ -1,0 +1,8 @@
+{
+  "description": "This package.json exists only so we can restore the tools needed to build the actual @babylonjs/react-native binary package.",
+  "devDependencies": {
+    "fancy-log": "^1.3.3",
+    "gulp": "^4.0.2",
+    "shelljs": "^0.8.4"
+  }
+}

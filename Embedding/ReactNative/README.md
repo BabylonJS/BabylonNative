@@ -108,14 +108,30 @@ After having run the above commands, you can also open `Apps/Playground/ios/Play
 
 ### **Building the NPM Package**
 
-If you want to test using a local build of the NPM package with your own React Native app, you can do so with the `npm pack` command on either Mac or Windows.
+An NPM package can be built in two different ways: as source, and as binaries. Source is useful if you want to debug the Babylon React Native source in the context of the project consuming it, though configuration is a bit more involved. Binaries are useful in that they simplify configuration in the consuming app, though they cannot be debugged so easily.
+
+#### Source Package
+
+If you want to test using a local build of the source-based NPM package with your own React Native app, you can do so with the `npm pack` command on either Mac or Windows.
 
 ```
 cd Apps/Playground/node_modules/@babylonjs/react-native
 npm pack
 ```
 
-This will produce a zipped local NPM package that can be installed into a React Native application for testing purposes.
+This will produce a zipped local NPM source-based package that can be installed into a React Native application for testing purposes.
+
+#### Binary Package
+
+If you want to test using a local build of the binary-based NPM package with your own React Native app, you can do so with a `gulp` command on a Mac (this requires a Mac as it builds binaries for both iOS and Android).
+
+```
+cd Package
+npm install
+gulp pack
+```
+
+This will produce a zipped local NPM binary-based package that can be installed into a React Native application for testing purposes.
 
 ## Security
 
