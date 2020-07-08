@@ -498,6 +498,6 @@ namespace Babylon
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
         
-        Napi::FunctionReference m_requestAnimationFrameCallback{};
+        std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
     };
 }

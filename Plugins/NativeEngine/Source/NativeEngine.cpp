@@ -718,18 +718,20 @@ namespace Babylon
             m_runtime.Dispatch([this](Napi::Env env) {
                 m_isRenderScheduled = false;
 
-                if (!m_requestAnimationFrameCallback.IsEmpty())
+                std::vector<Napi::FunctionReference> callbacks{};
+                m_requestAnimationFrameCallbacks.swap(callbacks);
+
+                for (auto& callback : callbacks)
                 {
                     try
                     {
-                        m_requestAnimationFrameCallback.Call({});
+                        callback.Call({});
                     }
                     catch (const std::exception& ex)
                     {
                         Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
                     }
                 }
-                m_requestAnimationFrameCallback.Reset();
 
                 EndFrame();
             });
@@ -763,13 +765,7 @@ namespace Babylon
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         auto callback = info[0].As<Napi::Function>();
-
-        if (m_requestAnimationFrameCallback.IsEmpty() ||
-            m_requestAnimationFrameCallback.Value() != callback)
-        {
-            m_requestAnimationFrameCallback = Napi::Persistent(callback);
-        }
-
+        m_requestAnimationFrameCallbacks.push_back(Napi::Persistent(callback));
         ScheduleRender();
     }
 
