@@ -465,6 +465,9 @@ namespace Babylon
 
         void UpdateSize(size_t width, size_t height);
 
+        void ScheduleRender();
+        bool m_isRenderScheduled{false};
+
         arcana::cancellation_source m_cancelSource{};
 
         ShaderCompiler m_shaderCompiler;
@@ -495,6 +498,6 @@ namespace Babylon
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
         
-        Napi::FunctionReference m_requestAnimationFrameCalback{};
+        Napi::FunctionReference m_requestAnimationFrameCallback{};
     };
 }

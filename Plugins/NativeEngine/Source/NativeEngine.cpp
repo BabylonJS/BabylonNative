@@ -706,6 +706,36 @@ namespace Babylon
         }
     }
 
+    void NativeEngine::ScheduleRender()
+    {
+        if (m_isRenderScheduled)
+        {
+            return;
+        }
+        else
+        {
+            m_isRenderScheduled = true;
+            m_runtime.Dispatch([this](Napi::Env env) {
+                m_isRenderScheduled = false;
+
+                if (!m_requestAnimationFrameCallback.IsEmpty())
+                {
+                    try
+                    {
+                        m_requestAnimationFrameCallback.Call({});
+                    }
+                    catch (const std::exception& ex)
+                    {
+                        Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
+                    }
+                }
+                m_requestAnimationFrameCallback.Reset();
+
+                EndFrame();
+            });
+        }
+    }
+
     FrameBufferManager& NativeEngine::GetFrameBufferManager()
     {
         return m_frameBufferManager;
@@ -734,23 +764,13 @@ namespace Babylon
     {
         auto callback = info[0].As<Napi::Function>();
 
-        if (m_requestAnimationFrameCalback.IsEmpty() ||
-            m_requestAnimationFrameCalback.Value() != callback)
+        if (m_requestAnimationFrameCallback.IsEmpty() ||
+            m_requestAnimationFrameCallback.Value() != callback)
         {
-            m_requestAnimationFrameCalback = Napi::Persistent(callback);
+            m_requestAnimationFrameCallback = Napi::Persistent(callback);
         }
 
-        m_runtime.Dispatch([this](Napi::Env env) {
-            try
-            {
-                m_requestAnimationFrameCalback.Call({});
-                EndFrame();
-            }
-            catch (const std::exception& ex)
-            {
-                Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
-            }
-        });
+        ScheduleRender();
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
@@ -1584,6 +1604,8 @@ namespace Babylon
 #else
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
 #endif
+
+        ScheduleRender();
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& /*info*/)
@@ -1595,6 +1617,8 @@ namespace Babylon
         // STUB: Stub.
         // bgfx::submit(), right?  Which means we have to preserve here the state of
         // which program is being worked on.
+
+        ScheduleRender();
     }
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
