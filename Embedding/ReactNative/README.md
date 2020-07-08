@@ -52,7 +52,7 @@ pod install --repo-update
 
 ### **Configuring a Mac Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
 
 - The `PATH` environment variable must include the path to adb (typically ~/Library/Android/sdk/platform-tools/).
 - The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).
@@ -72,7 +72,7 @@ export ANDROID_AVD_HOME=~/.android/avd
 
 ### **Configuring a Windows Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.0.6113669), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
 
 - The `PATH` environment variable must include the path to adb (typically %LOCALAPPDATA%/Android/sdk/platform-tools/).
 - The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).  
