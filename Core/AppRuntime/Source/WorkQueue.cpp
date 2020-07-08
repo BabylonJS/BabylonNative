@@ -9,7 +9,7 @@ namespace Babylon
 
     WorkQueue::~WorkQueue()
     {
-        if (m_suspensionLock != nullptr)
+        if (m_suspensionLock.has_value())
         {
             Resume();
         }
@@ -20,19 +20,13 @@ namespace Babylon
         m_thread.join();
     }
 
-    std::future<void> WorkQueue::Suspend()
+    void WorkQueue::Suspend()
     {
-        std::promise<void> promise{};
-        std::future<void> future = promise.get_future();
-
         auto suspensionMutex = std::make_unique<std::mutex>();
-        m_suspensionLock = std::make_unique<std::scoped_lock<std::mutex>>(*suspensionMutex);
-        Append([suspensionMutex{std::move(suspensionMutex)}, promise{std::move(promise)}](Napi::Env) mutable {
-            promise.set_value();
+        m_suspensionLock.emplace(*suspensionMutex);
+        Append([suspensionMutex{std::move(suspensionMutex)}](Napi::Env) mutable {
             std::scoped_lock lock{*suspensionMutex};
         });
-
-        return future;
     }
 
     void WorkQueue::Resume()

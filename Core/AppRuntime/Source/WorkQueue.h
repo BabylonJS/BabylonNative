@@ -23,7 +23,7 @@ namespace Babylon
             });
         }
 
-        std::future<void> Suspend();
+        void Suspend();
         void Resume();
         void Run(Napi::Env);
 
@@ -32,7 +32,7 @@ namespace Babylon
 
         std::mutex m_appendMutex{};
 
-        std::unique_ptr<std::scoped_lock<std::mutex>> m_suspensionLock{};
+        std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
 
         arcana::cancellation_source m_cancelSource{};
         arcana::task<void, std::exception_ptr> m_task = arcana::task_from_result<std::exception_ptr>();

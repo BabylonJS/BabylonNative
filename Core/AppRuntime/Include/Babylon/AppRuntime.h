@@ -16,7 +16,7 @@ namespace Babylon
         AppRuntime();
         ~AppRuntime();
 
-        std::future<void> Suspend();
+        void Suspend();
         void Resume();
 
         void Dispatch(std::function<void(Napi::Env)> callback);

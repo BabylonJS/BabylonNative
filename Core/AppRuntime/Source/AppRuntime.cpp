@@ -21,9 +21,9 @@ namespace Babylon
         m_workQueue->Run(env);
     }
 
-    std::future<void> AppRuntime::Suspend()
+    void AppRuntime::Suspend()
     {
-        return m_workQueue->Suspend();
+        m_workQueue->Suspend();
     }
 
     void AppRuntime::Resume()
