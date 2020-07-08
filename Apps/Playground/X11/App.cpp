@@ -68,7 +68,7 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)(uintptr_t)window, width, height);
+            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)(uintptr_t)window, width, height, true);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);

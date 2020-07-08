@@ -115,7 +115,7 @@ namespace
                 Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
                 // Initialize NativeEngine plugin.
-                Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+                Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height, true);
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::TestUtils::CreateInstance(env, hWnd);

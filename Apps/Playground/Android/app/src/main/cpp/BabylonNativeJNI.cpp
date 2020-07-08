@@ -81,7 +81,7 @@ extern "C"
 
                 Babylon::Plugins::NativeWindow::Initialize(env, window, width, height);
 
-                Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height);
+                Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height, true);
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::Plugins::NativeXr::Initialize(env);

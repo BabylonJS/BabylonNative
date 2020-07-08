@@ -36,7 +36,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     float width = inWidth;
     float height = inHeight;
     void* windowPtr = view;
-    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height, false);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {

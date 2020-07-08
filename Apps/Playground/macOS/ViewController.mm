@@ -40,7 +40,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     float height = size.height;
     NSWindow* nativeWindow = [[self view] window];
     void* windowPtr = (__bridge void*)nativeWindow;
-    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height, false);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
