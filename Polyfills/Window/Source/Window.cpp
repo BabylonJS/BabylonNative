@@ -77,10 +77,23 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)
     {
-        std::string encodedData = info[0].As<Napi::String>().Utf8Value();
-        std::u16string decodedData;
-        bn::decode_b64(encodedData.begin(), encodedData.end(), std::back_inserter(decodedData));
-        return Napi::Value::From(info.Env(), decodedData);
+        std::string encoded = info[0].As<Napi::String>().Utf8Value();
+        std::vector<uint8_t> decoded;
+        bn::decode_b64(encoded.begin(), encoded.end(), std::back_inserter(decoded));
+        std::string utf8;
+        for (uint8_t ch : decoded)
+        {
+           if (ch < 0x80)
+           {
+              utf8.push_back(ch);
+           }
+           else
+           {
+              utf8.push_back(0xC0 | (ch >> 6));
+              utf8.push_back(0x80 | (ch & 0x3F));
+           }
+        }
+        return Napi::Value::From(info.Env(), utf8);
     }
 
     void Window::AddEventListener(const Napi::CallbackInfo& info)
