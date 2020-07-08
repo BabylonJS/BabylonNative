@@ -1149,7 +1149,7 @@ inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
                                             napi_typedarray_type type) {
   jsi::Function& ctor{env->typed_array_ctor[type]};
   jsi::Value value{ctor.callAsConstructor(env->rt, arrayBuffer, static_cast<int>(bufferOffset), static_cast<int>(elementLength))};
-  return {env, std::move(value), type, elementLength, reinterpret_cast<T*>(arrayBuffer.Data() + bufferOffset)};
+  return {env, std::move(value), type, elementLength, reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(arrayBuffer.Data()) + bufferOffset)};
 }
 
 template <typename T>
