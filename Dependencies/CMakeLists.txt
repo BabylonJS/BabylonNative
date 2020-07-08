@@ -20,7 +20,7 @@ target_include_directories(base-n INTERFACE "base-n/include")
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
 add_compile_definitions(BGFX_CONFIG_DEBUG_UNIFORM=0)
-add_compile_definitions(BGFX_CONFIG_MULTITHREADED=1)
+add_compile_definitions(BGFX_CONFIG_MULTITHREADED=0)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=32)
 add_compile_definitions(BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
 if(APPLE)

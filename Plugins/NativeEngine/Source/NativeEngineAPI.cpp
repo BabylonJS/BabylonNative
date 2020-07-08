@@ -5,9 +5,9 @@
 
 namespace Babylon::Plugins::NativeEngine
 {
-    void InitializeGraphics(void* windowPtr, size_t width, size_t height)
+    void InitializeGraphics(void* windowPtr, size_t width, size_t height, bool theadedRendering)
     {
-        Babylon::NativeEngine::InitializeWindow(windowPtr, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        Babylon::NativeEngine::InitializeWindow(windowPtr, static_cast<uint32_t>(width), static_cast<uint32_t>(height), theadedRendering);
     }
 
     void Initialize(Napi::Env env)

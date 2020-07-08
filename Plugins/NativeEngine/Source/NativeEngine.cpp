@@ -567,7 +567,7 @@ namespace Babylon
         std::vector<uint8_t> m_bytes{};
     };
 
-    void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
+    void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height, bool theadedRendering)
     {
         // Initialize bgfx.
         bgfx::Init init{};
@@ -580,11 +580,11 @@ namespace Babylon
 #endif
         _displayWidth = width;
         _displayHeight = height;
+        _theadedRendering = theadedRendering;
         init.resolution.width = width;
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_FLAGS;
         init.callback = &s_bgfxCallback;
-        bgfx::renderFrame();
         bgfx::init(init);
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
@@ -1653,8 +1653,24 @@ namespace Babylon
     {
         GetFrameBufferManager().Reset();
         bgfx::end(NativeEngine::m_encoder);
-        m_syncEncoder.post();
-        m_syncRenderer.wait();
+        if (_theadedRendering)
+        {
+            // resize bgfx if the size has changed
+            auto bgfxStats = bgfx::getStats();
+            if (_displayWidth != bgfxStats->width || _displayHeight != bgfxStats->height)
+            {
+                bgfx::reset(static_cast<uint32_t>(_displayWidth), static_cast<uint32_t>(_displayHeight), BGFX_RESET_FLAGS);
+                bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(_displayWidth), static_cast<uint16_t>(_displayHeight));
+            }
+            // do the rendering in the JS thread
+            bgfx::frame();
+        }
+        else
+        {
+            // tells the user a frame is available for his thread to render
+            m_syncEncoder.post();
+            m_syncRenderer.wait();
+        }
         m_encoder = bgfx::begin(false);
         // happens when too many frames are queued in advance without a bgfx::frame() to flush them
         assert(m_encoder);
@@ -1662,6 +1678,11 @@ namespace Babylon
 
     void NativeEngine::Render()
     {
+        if (_theadedRendering)
+        {
+            // then theadedRendering is true, the JS thread is responsible to do the frame rendering, no need to call it
+            return;
+        }
         m_syncEncoder.wait();
         bgfx::frame();
         bgfx::touch(0);
@@ -1675,15 +1696,18 @@ namespace Babylon
 
         if (w != _displayWidth || h != _displayHeight)
         {
-            m_syncEncoder.wait();
-            // flush rendering
-            bgfx::frame();
-            bgfx::reset(w, h, BGFX_RESET_FLAGS);
-            bgfx::setViewRect(0, 0, 0, w, h);
-            bgfx::touch(0);
             _displayWidth = w;
             _displayHeight = h;
-            m_syncRenderer.post();
+            if (!_theadedRendering)
+            {
+                m_syncEncoder.wait();
+                // flush rendering
+                bgfx::frame();
+                bgfx::reset(w, h, BGFX_RESET_FLAGS);
+                bgfx::setViewRect(0, 0, 0, w, h);
+                bgfx::touch(0);
+                m_syncRenderer.post();
+            }
         }
     }
 

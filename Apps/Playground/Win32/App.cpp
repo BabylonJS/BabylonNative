@@ -101,7 +101,7 @@ namespace
 
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
-        Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+        Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height, true);
 
         // Initialize console plugin.
         runtime->Dispatch([rect, hWnd](Napi::Env env) {
@@ -192,21 +192,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 
     // Main message loop:
-    while (true) // 
+    while (GetMessage(&msg, nullptr, 0, 0))
     {
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
         {
-            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
-        if (msg.message == WM_QUIT)
-        {
-            break;
-        }
-        Babylon::Plugins::NativeEngine::Render();
     }
 
     return (int)msg.wParam;

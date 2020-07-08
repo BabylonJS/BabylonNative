@@ -375,7 +375,7 @@ namespace Babylon
         NativeEngine(const Napi::CallbackInfo& info);
         ~NativeEngine();
 
-        static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
+        static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height, bool theadedRendering);
         static void DeinitializeWindow();
         static void Initialize(Napi::Env);
 
@@ -390,6 +390,7 @@ namespace Babylon
         static inline bx::Semaphore m_syncRenderer;
         static inline size_t _displayWidth{ 1 };
         static inline size_t _displayHeight{ 1 };
+        static inline bool _theadedRendering{ false };
     private:
         
         void Dispose();

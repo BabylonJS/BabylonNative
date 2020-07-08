@@ -4,7 +4,7 @@
 
 namespace Babylon::Plugins::NativeEngine
 {
-    void InitializeGraphics(void* windowPtr, size_t width, size_t height);
+    void InitializeGraphics(void* windowPtr, size_t width, size_t height, bool theadedRendering);
 
     void Initialize(Napi::Env env);
 
@@ -13,6 +13,6 @@ namespace Babylon::Plugins::NativeEngine
     void DeinitializeGraphics();
 
     void Resize(size_t width, size_t height);
-
+    // when theadedRendering is false, user is responsible for calling Render
     void Render();
 }
