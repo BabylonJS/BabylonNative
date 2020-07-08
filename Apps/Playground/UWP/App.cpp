@@ -153,7 +153,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
-    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height, true);
     m_runtime->Dispatch([&runtime = m_runtime, &inputBuffer = m_inputBuffer, windowPtr, width, height](Napi::Env env)
     {
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
@@ -167,6 +166,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
 
         // Initialize NativeEngine plugin.
+        Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height, true);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize NativeXr plugin.

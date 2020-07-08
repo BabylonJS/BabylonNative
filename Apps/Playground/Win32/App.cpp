@@ -99,10 +99,6 @@ namespace
             return;
         }
 
-        auto width = static_cast<size_t>(rect.right - rect.left);
-        auto height = static_cast<size_t>(rect.bottom - rect.top);
-        Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height, true);
-
         // Initialize console plugin.
         runtime->Dispatch([rect, hWnd](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -118,6 +114,7 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
+            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height, true);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize NativeXr plugin.
