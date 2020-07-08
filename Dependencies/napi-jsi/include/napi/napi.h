@@ -11,20 +11,19 @@
 
 struct napi_env__ {
   napi_env__(facebook::jsi::Runtime& rt)
-    : rt{rt}, native_name{facebook::jsi::PropNameID::forAscii(rt, "__native__")} {
+    : rt{rt}
+    , native_name{facebook::jsi::PropNameID::forAscii(rt, "__native__")}
+    , array_buffer_ctor{rt.global().getPropertyAsFunction(rt, "ArrayBuffer") } {
   }
 
   facebook::jsi::Runtime& rt;
   facebook::jsi::PropNameID native_name;
+  facebook::jsi::Function array_buffer_ctor;
 };
 
-// TODO
 using napi_env = napi_env__*;
-using napi_handle_scope = void*;
-using napi_escapable_handle_scope = void*;
-using napi_deferred = void*;
 
-// TODO: Copy from js_native_api.h for now
+// Copied from js_native_api.h
 typedef enum {
   napi_default = 0,
   napi_writable = 1 << 0,
@@ -1004,7 +1003,8 @@ namespace Napi {
 
     private:
       napi_env _env;
-      napi_deferred _deferred;
+      // TODO
+      //napi_deferred _deferred;
     };
 
     Promise(napi_env env, jsi::Value value);
@@ -1309,6 +1309,7 @@ namespace Napi {
     void* _data;
   };
 
+  // TODO: not implemented
   //class PropertyDescriptor {
   //public:
   //  template <typename Getter>
@@ -1455,11 +1456,11 @@ namespace Napi {
       napi_property_attributes attributes;
     };
 
-    static Function DefineClass(Napi::Env env,
+    static Function DefineClass(napi_env env,
                                 const char* utf8name,
                                 const std::initializer_list<PropertyDescriptor>& properties,
                                 void* data = nullptr);
-    static Function DefineClass(Napi::Env env,
+    static Function DefineClass(napi_env env,
                                 const char* utf8name,
                                 const std::vector<PropertyDescriptor>& properties,
                                 void* data = nullptr);
@@ -1527,7 +1528,7 @@ namespace Napi {
     static PropertyDescriptor InstanceValue(Symbol name,
                                             Napi::Value value,
                                             napi_property_attributes attributes = napi_default);
-    virtual void Finalize(Napi::Env env);
+    virtual void Finalize(napi_env env);
 
   private:
     static Function DefineClass(napi_env env,
@@ -1541,35 +1542,29 @@ namespace Napi {
     napi_env _env;
   };
 
+  // No-op stub class
   class HandleScope {
   public:
-    HandleScope(napi_env env, napi_handle_scope scope);
-    explicit HandleScope(Napi::Env env);
+    explicit HandleScope(napi_env env);
     ~HandleScope();
-
-    operator napi_handle_scope() const;
 
     Napi::Env Env() const;
 
   private:
     napi_env _env;
-    napi_handle_scope _scope;
   };
 
+  // No-op stub class
   class EscapableHandleScope {
   public:
-    EscapableHandleScope(napi_env env, napi_escapable_handle_scope scope);
-    explicit EscapableHandleScope(Napi::Env env);
+    explicit EscapableHandleScope(napi_env env);
     ~EscapableHandleScope();
-
-    operator napi_escapable_handle_scope() const;
 
     Napi::Env Env() const;
     Value Escape(jsi::Value escapee);
 
   private:
     napi_env _env;
-    napi_escapable_handle_scope _scope;
   };
 } // namespace Napi
 

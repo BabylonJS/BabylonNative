@@ -151,8 +151,7 @@ inline napi_valuetype Value::Type() const {
     return napi_object;
   }
 
-  assert(false);
-  return napi_undefined;
+  abort();
 }
 
 inline bool Value::IsUndefined() const {
@@ -657,6 +656,7 @@ inline Array Object::GetPropertyNames() const {
   throw std::runtime_error{"TODO"};
 }
 
+// TODO: not implemented
 //inline void Object::DefineProperty(const PropertyDescriptor& property) {
 //  throw std::runtime_error{"TODO"};
 //}
@@ -670,7 +670,8 @@ inline Array Object::GetPropertyNames() const {
 //}
 
 inline bool Object::InstanceOf(const Function& constructor) const {
-  throw std::runtime_error{"TODO"};
+  // REVIEW: why is jsi::Object::instanceOf not a const function?
+  return const_cast<jsi::Object&>(*_object).instanceOf(_env->rt, constructor);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -759,13 +760,19 @@ inline uint32_t Array::Length() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 inline ArrayBuffer ArrayBuffer::New(napi_env env, size_t byteLength) {
-  throw std::runtime_error{"TODO"};
+  jsi::Value value{env->array_buffer_ctor.callAsConstructor(env->rt, static_cast<int>(byteLength))};
+  jsi::ArrayBuffer arrayBuffer{value.getObject(env->rt).getArrayBuffer(env->rt)};
+  return {env, std::move(value)};
 }
 
 inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     void* externalData,
                                     size_t byteLength) {
-  throw std::runtime_error{"TODO"};
+  // must copy since jsi does not support array buffers with external data
+  jsi::Value value{ env->array_buffer_ctor.callAsConstructor(env->rt, static_cast<int>(byteLength)) };
+  jsi::ArrayBuffer arrayBuffer{ value.getObject(env->rt).getArrayBuffer(env->rt) };
+  std::memcpy(arrayBuffer.data(env->rt), externalData, byteLength);
+  return {env, std::move(value)};
 }
 
 template <typename Finalizer>
@@ -773,7 +780,7 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     void* externalData,
                                     size_t byteLength,
                                     Finalizer finalizeCallback) {
-  throw std::runtime_error{"TODO"};
+  return New(env, externalData, byteLength, finalizeCallback, nullptr);
 }
 
 template <typename Finalizer, typename Hint>
@@ -1171,6 +1178,26 @@ inline const T* TypedArrayOf<T>::Data() const {
 // Function class
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace details
+{
+  template <typename Callable, typename Return>
+  struct Function {
+    static inline jsi::Value Callback(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t count, void* data, Callable cb) {
+      CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
+      return {env->rt, cb(callbackInfo)};
+    }
+  };
+
+  template <typename Callable>
+  struct Function<Callable, void> {
+    static inline jsi::Value Callback(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t count, void* data, Callable cb) {
+      CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
+      cb(callbackInfo);
+      return {};
+    }
+  };
+}
+
 template <typename Callable>
 inline Function Function::New(napi_env env,
                               Callable cb,
@@ -1178,9 +1205,8 @@ inline Function Function::New(napi_env env,
                               void* data) {
   auto function{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forUtf8(env->rt, utf8name), 0,
     [env, cb{std::move(cb)}, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-      CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
-      cb(callbackInfo);
-      return {};
+      typedef decltype(cb(CallbackInfo({}, {}, {}, {}, {}, {}))) ReturnType;
+      return details::Function<Callable, ReturnType>::Callback(env, thisVal, args, count, data, cb);
     })};
 
   return {env, std::move(function)};
@@ -2362,7 +2388,7 @@ ObjectWrap<T>::DefineClass(napi_env env,
 
 template <typename T>
 inline Function ObjectWrap<T>::DefineClass(
-    Napi::Env env,
+    napi_env env,
     const char* utf8name,
     const std::initializer_list<PropertyDescriptor>& properties,
     void* data) {
@@ -2375,7 +2401,7 @@ inline Function ObjectWrap<T>::DefineClass(
 
 template <typename T>
 inline Function ObjectWrap<T>::DefineClass(
-    Napi::Env env,
+    napi_env env,
     const char* utf8name,
     const std::vector<PropertyDescriptor>& properties,
     void* data) {
@@ -2637,29 +2663,18 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceValue(
 }
 
 template <typename T>
-inline void ObjectWrap<T>::Finalize(Napi::Env /*env*/) {}
+inline void ObjectWrap<T>::Finalize(napi_env /*env*/) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // HandleScope class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline HandleScope::HandleScope(napi_env env, napi_handle_scope scope)
-    : _env{env}, _scope{scope} {
-}
-
-inline HandleScope::HandleScope(Napi::Env env) : _env{env} {
-  //napi_status status = napi_open_handle_scope(_env, &_scope);
-  //NAPI_THROW_IF_FAILED_VOID(_env, status);
-  //throw std::runtime_error{"TODO"};
+inline HandleScope::HandleScope(napi_env env) : _env{env} {
+  // no-op
 }
 
 inline HandleScope::~HandleScope() {
-  //napi_close_handle_scope(_env, _scope);
-  //throw std::runtime_error{"TODO"};
-}
-
-inline HandleScope::operator napi_handle_scope() const {
-  return _scope;
+  // no-op
 }
 
 inline Napi::Env HandleScope::Env() const {
@@ -2670,23 +2685,12 @@ inline Napi::Env HandleScope::Env() const {
 // EscapableHandleScope class
 ////////////////////////////////////////////////////////////////////////////////
 
-inline EscapableHandleScope::EscapableHandleScope(
-  napi_env env, napi_escapable_handle_scope scope) : _env{env}, _scope{scope} {
-}
-
-inline EscapableHandleScope::EscapableHandleScope(Napi::Env env) : _env{env} {
-  //napi_status status = napi_open_escapable_handle_scope(_env, &_scope);
-  //NAPI_THROW_IF_FAILED_VOID(_env, status);
-  throw std::runtime_error{"TODO"};
+inline EscapableHandleScope::EscapableHandleScope(napi_env env) : _env{env} {
+  // no-op
 }
 
 inline EscapableHandleScope::~EscapableHandleScope() {
-  //napi_close_escapable_handle_scope(_env, _scope);
-  //throw std::runtime_error{"TODO"};
-}
-
-inline EscapableHandleScope::operator napi_escapable_handle_scope() const {
-  return _scope;
+  // no-op
 }
 
 inline Napi::Env EscapableHandleScope::Env() const {
@@ -2694,11 +2698,8 @@ inline Napi::Env EscapableHandleScope::Env() const {
 }
 
 inline Value EscapableHandleScope::Escape(jsi::Value escapee) {
-  //jsi::Value result;
-  //napi_status status = napi_escape_handle(_env, _scope, escapee, &result);
-  //NAPI_THROW_IF_FAILED(_env, status, Value());
-  //return Value(_env, result);
-  throw std::runtime_error{"TODO"};
+  // no-op
+  return {_env, std::move(escapee)};
 }
 
 } // namespace Napi
