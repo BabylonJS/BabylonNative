@@ -3,6 +3,7 @@ set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylonjs.materials.js"
     "../BabylonScripts/ammo.js"
+    "../BabylonScripts/meshwriter.min.js"
     "../BabylonScripts/recast.js")
 
 set(SCRIPTS
@@ -22,7 +23,7 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        set(ADDITIONAL_LIBRARIES PRIVATE z)
+        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
         set(SOURCES
             ${SOURCES}
             "iOS/AppDelegate.swift"
@@ -95,6 +96,7 @@ else()
     add_executable(Playground ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
 
+warnings_as_errors(Playground)
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
 

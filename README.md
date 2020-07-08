@@ -52,6 +52,10 @@ but are expected to be supported in the future. Note that this list is not exhau
 This section will be updated frequently. If you have any questions, please reach out
 to us on [the Babylon forum](https://forum.babylonjs.com).
 
+## Documentation
+
+Babylon Native documentation is available in this repo. From extending Babylon Native using your very own features to debugging the rendering on iOS, [you'll find extensive documentation here.](Documentation/Readme.md)
+
 ## Build System and Extensions
 
 The Babylon Native build system strives for simplicity, modularity, and scalability

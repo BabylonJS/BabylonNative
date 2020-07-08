@@ -109,8 +109,8 @@ namespace
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeWindow plugin.
-            auto width = static_cast<float>(rect.right - rect.left);
-            auto height = static_cast<float>(rect.bottom - rect.top);
+            auto width = static_cast<size_t>(rect.right - rect.left);
+            auto height = static_cast<size_t>(rect.bottom - rect.top);
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
@@ -136,6 +136,7 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
+        loader.LoadScript(scriptsRootUrl + "/meshwriter.min.js");
 
         std::vector<std::string> scripts = GetCommandLineArguments();
         if (scripts.empty())
@@ -153,7 +154,7 @@ namespace
         }
     }
 
-    void UpdateWindowSize(float width, float height)
+    void UpdateWindowSize(size_t width, size_t height)
     {
         runtime->Dispatch([width, height](Napi::Env env) {
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
@@ -310,8 +311,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (runtime != nullptr)
             {
-                float width = static_cast<float>(LOWORD(lParam));
-                float height = static_cast<float>(HIWORD(lParam));
+                auto width = static_cast<size_t>(LOWORD(lParam));
+                auto height = static_cast<size_t>(HIWORD(lParam));
                 UpdateWindowSize(width, height);
             }
             break;

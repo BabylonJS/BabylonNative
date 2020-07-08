@@ -23,6 +23,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
 endif()
 
 add_library(AppRuntime ${SOURCES})
+warnings_as_errors(AppRuntime)
 
 target_include_directories(AppRuntime
     PRIVATE "Include/Babylon"

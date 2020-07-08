@@ -46,6 +46,13 @@ namespace xr
         } Orientation;
     };
 
+    using NativeTrackablePtr = void*;
+    struct HitResult
+    {
+        Pose Pose{};
+        NativeTrackablePtr NativeTrackable{};
+    };
+
     struct Ray
     {
         struct
@@ -63,6 +70,14 @@ namespace xr
         } Direction;
     };
 
+    using NativeAnchorPtr = void*;
+    struct Anchor
+    {
+        Pose Pose{};
+        NativeAnchorPtr NativeAnchor{};
+        bool IsValid{true};
+    };
+
     class System
     {
     public:
@@ -72,7 +87,7 @@ namespace xr
         class Session
         {
             friend class System;
-            class Impl;
+            struct Impl;
 
         public:
             class Frame
@@ -133,21 +148,24 @@ namespace xr
                 Frame(System::Session::Impl&);
                 ~Frame();
 
-                void GetHitTestResults(std::vector<Pose>&, Ray) const;
+                void GetHitTestResults(std::vector<HitResult>&, Ray) const;
+                Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
+                void UpdateAnchor(Anchor&) const;
+                void DeleteAnchor(Anchor&) const;
 
             private:
-                class Impl;
+                struct Impl;
                 std::unique_ptr<Impl> m_impl{};
             };
 
-            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(System& system, void* graphicsDevice);
+            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(System& system, void* graphicsDevice, void* window);
             ~Session();
 
             // Do not use, call CreateAsync instead. Kept public to keep compatibility with make_shared.
             // Move to private when changing to unique_ptr.
-            Session(System& system, void* graphicsDevice);
+            Session(System& system, void* graphicsDevice, void* window);
 
-            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession);
+            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){});
             void RequestEndSession();
             Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
@@ -164,7 +182,7 @@ namespace xr
         static arcana::task<bool, std::exception_ptr> IsSessionSupportedAsync(SessionType);
 
     private:
-        class Impl;
+        struct Impl;
         std::unique_ptr<Impl> m_impl{};
     };
 }

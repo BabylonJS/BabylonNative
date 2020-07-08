@@ -71,9 +71,8 @@ namespace xr
         };
     }
 
-    class System::Impl
+    struct System::Impl
     {
-    public:
         static constexpr XrFormFactor FORM_FACTOR{ XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY };
         static constexpr XrViewConfigurationType VIEW_CONFIGURATION_TYPE{ XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO };
         static constexpr uint32_t STEREO_VIEW_COUNT{ 2 }; // PRIMARY_STEREO view configuration always has 2 views
@@ -156,9 +155,8 @@ namespace xr
         }
     };
 
-    class System::Session::Impl
+    struct System::Session::Impl
     {
-    public:
         const System::Impl& HmdImpl;
         XrSession Session{ XR_NULL_HANDLE };
 
@@ -352,7 +350,7 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
                 actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetGripPoseAction));
                 // For each controller subaction
@@ -379,7 +377,7 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = ActionResources.ControllerSubactionPaths.size();
+                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
                 actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetAimPoseAction));
                 // For each controller subaction
@@ -736,7 +734,7 @@ namespace xr
         }
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<Pose>& filteredResults, Ray) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>&, Ray) const {
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 
@@ -822,18 +820,18 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window)
     {
-        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice));
+        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, window));
     }
 
-    System::Session::Session(System& headMountedDisplay, void* graphicsDevice)
+    System::Session::Session(System& headMountedDisplay, void* graphicsDevice, void*)
         : m_impl{ std::make_unique<System::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}
 
     System::Session::~Session() {}
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* /*texturePointer*/)> /*deletedTextureCallback*/)
     {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
     }
@@ -852,5 +850,20 @@ namespace xr
     {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
+    }
+
+    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    void System::Session::Frame::UpdateAnchor(Anchor&) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    void System::Session::Frame::DeleteAnchor(Anchor&) const
+    {
+        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
     }
 }
