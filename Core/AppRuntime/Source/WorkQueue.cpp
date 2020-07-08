@@ -27,7 +27,7 @@ namespace Babylon
 
         auto suspensionMutex = std::make_unique<std::mutex>();
         m_suspensionLock = std::make_unique<std::scoped_lock<std::mutex>>(*suspensionMutex);
-        Append([suspensionMutex = std::move(suspensionMutex), promise = std::move(promise)](Napi::Env) mutable {
+        Append([suspensionMutex{std::move(suspensionMutex)}, promise{std::move(promise)}](Napi::Env) mutable {
             promise.set_value();
             std::scoped_lock lock{*suspensionMutex};
         });
