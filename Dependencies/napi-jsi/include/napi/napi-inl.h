@@ -1109,8 +1109,9 @@ template <typename T>
 inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
                                             size_t elementLength,
                                             napi_typedarray_type type) {
-  Napi::ArrayBuffer arrayBuffer = Napi::ArrayBuffer::New(env, elementLength * sizeof (T));
-  return New(env, elementLength, arrayBuffer, 0, type);
+  jsi::Function& ctor{ env->typed_array_ctor[type] };
+  jsi::Value value{ctor.callAsConstructor(env->rt, static_cast<int>(elementLength))};
+  return {env, std::move(value)};
 }
 
 template <typename T>
@@ -1119,15 +1120,9 @@ inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
                                             Napi::ArrayBuffer arrayBuffer,
                                             size_t bufferOffset,
                                             napi_typedarray_type type) {
-  //jsi::Value value;
-  //napi_status status = napi_create_typedarray(
-  //  rt, type, elementLength, arrayBuffer, bufferOffset, &value);
-  //NAPI_THROW_IF_FAILED(env, status, TypedArrayOf<T>());
-
-  //return TypedArrayOf<T>(
-  //  rt, value, type, elementLength,
-  //  reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(arrayBuffer.Data()) + bufferOffset));
-  throw std::runtime_error{"TODO"};
+  jsi::Function& ctor{env->typed_array_ctor[type]};
+  jsi::Value value{ctor.callAsConstructor(env->rt, arrayBuffer, static_cast<int>(bufferOffset), static_cast<int>(elementLength))};
+  return {env, std::move(value), type, elementLength, reinterpret_cast<T*>(arrayBuffer.Data() + bufferOffset)};
 }
 
 template <typename T>
@@ -1146,12 +1141,12 @@ inline TypedArrayOf<T>::TypedArrayOf(napi_env env,
                                      size_t length,
                                      T* data)
   : TypedArray{env, std::move(value), type, length}, _data{data} {
+  // TODO
   //if (!(type == TypedArrayTypeForPrimitiveType<T>() ||
   //    (type == napi_uint8_clamped_array && std::is_same<T, uint8_t>::value))) {
   //  NAPI_THROW_VOID(TypeError::New(env, "Array type must match the template parameter. "
   //    "(Uint8 arrays may optionally have the \"clamped\" array type.)"));
   //}
-  throw std::runtime_error{"TODO"};
 }
 
 template <typename T>
@@ -1335,14 +1330,32 @@ inline Promise::Deferred Promise::Deferred::New(napi_env env) {
 
 inline Promise::Deferred::Deferred(napi_env env)
   : _env{env} {
-  //napi_status status = napi_create_promise(_env, &_deferred, &_promise);
-  //NAPI_THROW_IF_FAILED_VOID(_env, status);
-  throw std::runtime_error{"TODO"};
+  jsi::Function executor{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forAscii(env->rt, "executor"), 0,
+    [this](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+      _resolve = args[0].asObject(rt).asFunction(rt);
+      _reject = args[1].asObject(rt).asFunction(rt);
+      return {};
+    })};
+
+  _promise = env->promise_ctor.callAsConstructor(env->rt, executor);
+}
+
+inline Promise::Deferred::Deferred(const Deferred& other)
+  : _env{other._env}
+  , _promise{_env->rt, other._promise}
+  , _resolve{jsi::Value{_env->rt, *other._resolve}.asObject(_env->rt).asFunction(_env->rt)}
+  , _reject{jsi::Value{_env->rt, *other._reject}.asObject(_env->rt).asFunction(_env->rt)} {
+}
+
+inline Promise::Deferred& Promise::Deferred::operator =(const Deferred& other) {
+  _env = other._env;
+  _promise = {_env->rt, other._promise};
+  _resolve = jsi::Value{_env->rt, *other._resolve}.asObject(_env->rt).asFunction(_env->rt);
+  _reject = jsi::Value{_env->rt, *other._reject}.asObject(_env->rt).asFunction(_env->rt);
 }
 
 inline Promise Promise::Deferred::Promise() const {
-  //return Napi::Promise(_env, _promise);
-  throw std::runtime_error{"TODO"};
+  return {_env, {_env->rt, _promise}};
 }
 
 inline Napi::Env Promise::Deferred::Env() const {
@@ -1350,15 +1363,11 @@ inline Napi::Env Promise::Deferred::Env() const {
 }
 
 inline void Promise::Deferred::Resolve(const jsi::Value& value) const {
-  //napi_status status = napi_resolve_deferred(_env, _deferred, value);
-  //NAPI_THROW_IF_FAILED_VOID(_env, status);
-  throw std::runtime_error{"TODO"};
+  _resolve->call(_env->rt, value);
 }
 
 inline void Promise::Deferred::Reject(const jsi::Value& value) const {
-  //napi_status status = napi_reject_deferred(_env, _deferred, value);
-  //NAPI_THROW_IF_FAILED_VOID(_env, status);
-  throw std::runtime_error{"TODO"};
+  _reject->call(_env->rt, value);
 }
 
 inline Promise::Promise(napi_env env, jsi::Value value)

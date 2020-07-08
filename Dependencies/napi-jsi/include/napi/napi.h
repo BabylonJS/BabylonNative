@@ -8,21 +8,6 @@
 #include <vector>
 #include <optional>
 
-
-struct napi_env__ {
-  napi_env__(facebook::jsi::Runtime& rt)
-    : rt{rt}
-    , native_name{facebook::jsi::PropNameID::forAscii(rt, "__native__")}
-    , array_buffer_ctor{rt.global().getPropertyAsFunction(rt, "ArrayBuffer") } {
-  }
-
-  facebook::jsi::Runtime& rt;
-  facebook::jsi::PropNameID native_name;
-  facebook::jsi::Function array_buffer_ctor;
-};
-
-using napi_env = napi_env__*;
-
 // Copied from js_native_api.h
 typedef enum {
   napi_default = 0,
@@ -55,6 +40,33 @@ typedef enum {
   napi_float32_array,
   napi_float64_array,
 } napi_typedarray_type;
+
+struct napi_env__ {
+  napi_env__(facebook::jsi::Runtime& rt)
+    : rt{rt}
+    , native_name{facebook::jsi::PropNameID::forAscii(rt, "__native__")}
+    , array_buffer_ctor{rt.global().getPropertyAsFunction(rt, "ArrayBuffer")}
+    , promise_ctor{rt.global().getPropertyAsFunction(rt, "Promise")}
+    , typed_array_ctor{
+        rt.global().getPropertyAsFunction(rt, "Int8Array"),
+        rt.global().getPropertyAsFunction(rt, "Uint8Array"),
+        rt.global().getPropertyAsFunction(rt, "Uint8ClampedArray"),
+        rt.global().getPropertyAsFunction(rt, "Int16Array"),
+        rt.global().getPropertyAsFunction(rt, "Uint16Array"),
+        rt.global().getPropertyAsFunction(rt, "Int32Array"),
+        rt.global().getPropertyAsFunction(rt, "Uint32Array"),
+        rt.global().getPropertyAsFunction(rt, "Float32Array"),
+        rt.global().getPropertyAsFunction(rt, "Float64Array")} {
+  }
+
+  facebook::jsi::Runtime& rt;
+  facebook::jsi::PropNameID native_name;
+  facebook::jsi::Function array_buffer_ctor;
+  facebook::jsi::Function promise_ctor;
+  facebook::jsi::Function typed_array_ctor[9];
+};
+
+using napi_env = napi_env__*;
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known good version)
 #if !defined(_MSC_VER) || _MSC_FULL_VER >= 190024210
@@ -995,6 +1007,14 @@ namespace Napi {
       static Deferred New(napi_env env);
       Deferred(napi_env env);
 
+      // Move semantics
+      Deferred(Deferred&&) = default;
+      Deferred& operator =(Deferred&&) = default;
+
+      // Copy semantics
+      Deferred(const Deferred& other);
+      Deferred& operator =(const Deferred& other);
+
       Napi::Promise Promise() const;
       Napi::Env Env() const;
 
@@ -1003,8 +1023,9 @@ namespace Napi {
 
     private:
       napi_env _env;
-      // TODO
-      //napi_deferred _deferred;
+      jsi::Value _promise;
+      std::optional<jsi::Function> _resolve;
+      std::optional<jsi::Function> _reject;
     };
 
     Promise(napi_env env, jsi::Value value);
