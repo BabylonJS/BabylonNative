@@ -17,6 +17,26 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     [super viewDidLoad];
 }
 
+- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
+{
+    if (runtime)
+    {
+        Babylon::Plugins::NativeEngine::Resize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+        runtime->Dispatch([size](Napi::Env env)
+        {
+            Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+        });
+    }
+}
+
+- (void)drawInMTKView:(MTKView *)view
+{
+   if (runtime)
+   {
+       Babylon::Plugins::NativeEngine::Render();
+   }
+}
+
 - (void)refreshBabylon {
     // reset
     runtime.reset();
@@ -33,12 +53,17 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
     // Create the AppRuntime
     runtime = std::make_unique<Babylon::AppRuntime>();
+    MTKView* mtkView = [[MTKView alloc]initWithFrame:self.view.frame device:MTLCreateSystemDefaultDevice()];
+    mtkView.delegate = self;
+    [self.view setAutoresizesSubviews:YES];
+    [mtkView setAutoresizingMask:NSViewWidthSizable|NSViewHeightSizable];
+    [self.view addSubview:mtkView];
     
     // Initialize NativeWindow plugin
     NSSize size = [self view].frame.size;
     float width = size.width;
     float height = size.height;
-    NSWindow* nativeWindow = [[self view] window];
+    NSWindow* nativeWindow = [mtkView window];
     void* windowPtr = (__bridge void*)nativeWindow;
     Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height, false);
 
@@ -90,26 +115,6 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     inputBuffer.reset();
     runtime.reset();
     Babylon::Plugins::NativeEngine::DeinitializeGraphics();
-}
-
-- (void)setRepresentedObject:(id)representedObject {
-    [super setRepresentedObject:representedObject];
-
-    // Update the view, if already loaded.
-}
-
-- (void)viewDidLayout {
-    [super viewDidLayout];
-    if (runtime)
-    {
-        NSSize size = [self view].frame.size;
-        float width = size.width;
-        float height = size.height;
-        runtime->Dispatch([width, height](Napi::Env env)
-        {
-            Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(width), static_cast<size_t>(height));
-        });
-    }
 }
 
 - (void)mouseDown:(NSEvent *)__unused theEvent {

@@ -163,6 +163,7 @@ if(APPLE)
             XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
             RESOURCE "${RESOURCE_FILES}"
             FOLDER "Playground")
+        target_link_libraries(Playground PRIVATE "-framework MetalKit")
     endif()
 endif()
 
