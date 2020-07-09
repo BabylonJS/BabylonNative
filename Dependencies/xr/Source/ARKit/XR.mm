@@ -30,14 +30,14 @@ namespace {
     /**
      Helper function to convert a transform into an xr::pose.
      */
-    static xr::Pose TransformToPose(simd_float4x4 transform){
+    static xr::Pose TransformToPose(simd_float4x4 transform) {
         // Set orientation.
         xr::Pose pose{};
         auto orientation = simd_quaternion(transform);
         pose.Orientation = { orientation.vector.x
             , orientation.vector.y
             , orientation.vector.z
-            , orientation.vector.w};
+            , orientation.vector.w };
         
         // Set the translation.
         pose.Position = { transform.columns[3][0]
@@ -50,7 +50,7 @@ namespace {
     /**
      Helper function to convert an xr pose into a transform.
      */
-    static simd_float4x4 PoseToTransform(xr::Pose pose){
+    static simd_float4x4 PoseToTransform(xr::Pose pose) {
         auto poseQuaternion = simd_quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
         auto poseTransform = simd_matrix4x4(poseQuaternion);
         poseTransform.columns[3][0] = pose.Position.X;
@@ -734,7 +734,7 @@ namespace xr {
         /**
          Create an ARKit anchor for the given pose.
          */
-        xr::Anchor CreateAnchor(Pose pose){
+        xr::Anchor CreateAnchor(Pose pose) {
             // Pull out the pose into a float 4x4 transform that is usable by ARKit.
             auto poseTransform = PoseToTransform(pose);
             
@@ -777,8 +777,7 @@ namespace xr {
         /**
          Deallocates the native ARKit anchor object, and removes it from the anchor list.
          */
-        void CleanupAnchor(ARAnchor* arAnchor)
-        {
+        void CleanupAnchor(ARAnchor* arAnchor) {
             // Iterate over the list of anchors if arAnchor is nil then clean up all anchors
             // otherwise clean up only the target anchor and return.
             auto anchorIter = nativeAnchors.begin();
