@@ -221,25 +221,6 @@ namespace {
     float fov =  atanf(1 / yScale);
     frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
     frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
-    
-    // Angles for FieldOfView respect the viewport ratio
-    // but tangent is not a linear function and ratio of values(l,r,b,t) computed
-    // in CreateProjectionMatrix do not respect that ratio
-    // so, here, a ratio after tangent is computed
-    // and a second derivative ratio computed to compensate
-    // the aspect ratio delta after tangent calls
-    const float n = frameView.DepthNearZ;
-    const float r{std::tanf(frameView.FieldOfView.AngleRight) * n};
-    const float l{std::tanf(frameView.FieldOfView.AngleLeft) * n};
-    const float t{std::tanf(frameView.FieldOfView.AngleUp) * n};
-    const float b{std::tanf(frameView.FieldOfView.AngleDown) * n};
-    
-    float deltax = (r - l);
-    float deltay = (t - b);
-    float afterTangentAspectRatio = deltax / deltay;
-    float compensationRatio = afterTangentAspectRatio / aspectRatio;
-    frameView.FieldOfView.AngleDown *= compensationRatio;
-    frameView.FieldOfView.AngleUp *= compensationRatio;
 }
 
 /**
