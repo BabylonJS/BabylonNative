@@ -1,8 +1,6 @@
-cmake_minimum_required(VERSION 3.12)
-
-project(napi)
-
-set(NAPI_JAVASCRIPT_ENGINE "JSI" CACHE STRING "JavaScript engine for N-API.")
+if(NOT TARGET jsi)
+    message(FATAL_ERROR "jsi target is required")
+endif()
 
 set(SOURCES
     "include/napi/env.h"

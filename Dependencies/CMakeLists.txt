@@ -70,25 +70,25 @@ set(ENABLE_HLSL OFF CACHE BOOL "Enables HLSL input support")
 set(ENABLE_OPT OFF CACHE BOOL "Enables spirv-opt capability if present")
 set(BUILD_EXTERNAL OFF CACHE BOOL "Build external dependencies in /External")
 add_subdirectory(glslang)
+set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
+set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
+disable_warnings(GenericCodeGen)
 disable_warnings(glslang)
 disable_warnings(OGLCompiler)
 disable_warnings(OSDependent)
+disable_warnings(MachineIndependent)
 disable_warnings(SPIRV)
 
 # -------------------------------- ios-cmake --------------------------------
 # Nothing to do here.
 
-# -------------------------------- jsi --------------------------------
-add_subdirectory(jsi)
-set_property(TARGET jsi PROPERTY FOLDER Dependencies)
-
-# -------------------------------- napi-jsi --------------------------------
-# Dependencies: jsi
-add_subdirectory(napi-jsi)
+# -------------------------------- napi --------------------------------
+# Dependencies: none
+add_subdirectory(napi)
 set_property(TARGET napi PROPERTY FOLDER Dependencies)
 
 # -------------------------------- SPIRV-Cross --------------------------------

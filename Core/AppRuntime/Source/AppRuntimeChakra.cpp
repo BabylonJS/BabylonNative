@@ -2,8 +2,6 @@
 
 #include <jsrt.h>
 
-#include <ChakraRuntime.h>
-
 #include <gsl/gsl>
 #include <cassert>
 
@@ -28,7 +26,7 @@ namespace Babylon
                 Dispatch([action = std::move(action)](Napi::Env) {
                     action();
                 });
-            }};
+            } };
 
         JsRuntimeHandle jsRuntime;
         ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
@@ -43,8 +41,8 @@ namespace Babylon
                 ThrowIfFailed(JsGetUndefinedValue(&undefined));
                 ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
                 ThrowIfFailed(JsRelease(task, nullptr));
-            });
-        },
+                });
+            },
             &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
@@ -53,13 +51,9 @@ namespace Babylon
         ThrowIfFailed(JsStartDebugging());
 #endif
 
-        Microsoft::JSI::ChakraRuntime chakraRuntime{jsRuntime, context};
-
-        {
-            Napi::Env env = Napi::Attach<facebook::jsi::Runtime*>(&chakraRuntime);
-            Run(env);
-            Napi::Detach(env);
-        }
+        Napi::Env env = Napi::Attach();
+        Run(env);
+        Napi::Detach(env);
 
         ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
         ThrowIfFailed(JsDisposeRuntime(jsRuntime));
