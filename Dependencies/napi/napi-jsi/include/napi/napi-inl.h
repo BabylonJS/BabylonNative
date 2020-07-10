@@ -806,6 +806,11 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     size_t byteLength,
                                     Finalizer finalizeCallback,
                                     Hint* finalizeHint) {
+  (void)env;
+  (void)externalData;
+  (void)byteLength;
+  (void)finalizeCallback;
+  (void)finalizeHint;
   throw std::runtime_error{"TODO"};
 }
 
@@ -1306,7 +1311,7 @@ inline Value Function::Call(const Value& recv, size_t argc, const Value* args) c
     argv = heapArgs.data();
   }
 
-  for (int i = 0; i < argc; ++i) {
+  for (size_t i = 0; i < argc; ++i) {
     argv[i] = {_env->rt, args[i]};
   }
 
@@ -1337,7 +1342,7 @@ inline Object Function::New(size_t argc, const Value* args) const {
     argv = heapArgs.data();
   }
 
-  for (int i = 0; i < argc; ++i) {
+  for (size_t i = 0; i < argc; ++i) {
     argv[i] = {_env->rt, args[i]};
   }
 
@@ -1379,6 +1384,7 @@ inline Promise::Deferred& Promise::Deferred::operator =(const Deferred& other) {
   _promise = {_env->rt, other._promise};
   _resolve = jsi::Value{_env->rt, *other._resolve}.asObject(_env->rt).asFunction(_env->rt);
   _reject = jsi::Value{_env->rt, *other._reject}.asObject(_env->rt).asFunction(_env->rt);
+  return *this;
 }
 
 inline Promise Promise::Deferred::Promise() const {
@@ -1764,6 +1770,8 @@ inline void Reference<T>::Reset() {
 
 template <typename T>
 inline void Reference<T>::Reset(const T& value, uint32_t refcount) {
+  (void)value;
+  (void)refcount;
   //Reset();
   //_env = value.Env();
 
@@ -2051,7 +2059,7 @@ inline CallbackInfo::CallbackInfo(napi_env env, const jsi::Value& thisVal, const
     _argv = _dynamicArgs;
   }
 
-  for (int i = 0; i < _argc; ++i) {
+  for (size_t i = 0; i < _argc; ++i) {
     _argv[i] = {_env->rt, args[i]};
   }
 }
@@ -2398,7 +2406,7 @@ ObjectWrap<T>::DefineClass(napi_env env,
 
   jsi::Object prototype{constructor.getProperty(rt, "prototype").getObject(rt)};
 
-  for (int i = 0; i < props_count; ++i) {
+  for (size_t i = 0; i < props_count; ++i) {
     const PropertyDescriptor& p{descriptors[i]};
     jsi::PropNameID name{jsi::PropNameID::forUtf8(rt, p.utf8name)};
     jsi::Object descriptor{rt};
@@ -2486,6 +2494,10 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
+  (void)utf8name;
+  (void)method;
+  (void)attributes;
+  (void)data;
   //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
   //PropertyDescriptor desc = napi_property_descriptor();
@@ -2503,6 +2515,10 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
+  (void)utf8name;
+  (void)method;
+  (void)attributes;
+  (void)data;
   //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
   //PropertyDescriptor desc = napi_property_descriptor();
@@ -2520,6 +2536,10 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
+  (void)name;
+  (void)method;
+  (void)attributes;
+  (void)data;
   //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
   //PropertyDescriptor desc = napi_property_descriptor();
@@ -2537,6 +2557,10 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
+  (void)name;
+  (void)method;
+  (void)attributes;
+  (void)data;
   //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
   //PropertyDescriptor desc = napi_property_descriptor();
@@ -2555,6 +2579,11 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
+  (void)utf8name;
+  (void)getter;
+  (void)setter;
+  (void)attributes;
+  (void)data;
   //StaticAccessorCallbackData* callbackData =
   //  new StaticAccessorCallbackData({ getter, setter, data });
 
@@ -2575,6 +2604,11 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
+  (void)name;
+  (void)getter;
+  (void)setter;
+  (void)attributes;
+  (void)data;
   //StaticAccessorCallbackData* callbackData =
   //  new StaticAccessorCallbackData({ getter, setter, data });
 
@@ -2622,6 +2656,10 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     InstanceVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
+  (void)name;
+  (void)method;
+  (void)attributes;
+  (void)data;
   //InstanceVoidMethodCallbackData* callbackData =
   //  new InstanceVoidMethodCallbackData({ method, data});
 
@@ -2640,6 +2678,10 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     InstanceMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
+  (void)name;
+  (void)method;
+  (void)attributes;
+  (void)data;
   //InstanceMethodCallbackData* callbackData = new InstanceMethodCallbackData({ method, data });
 
   //napi_property_descriptor desc = napi_property_descriptor();
@@ -2674,6 +2716,11 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceAccesso
     InstanceSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
+  (void)name;
+  (void)getter;
+  (void)setter;
+  (void)attributes;
+  (void)data;
   //InstanceAccessorCallbackData* callbackData =
   //  new InstanceAccessorCallbackData({ getter, setter, data });
 
@@ -2700,6 +2747,9 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(con
 template <typename T>
 inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(Symbol name,
     Napi::Value value, napi_property_attributes attributes) {
+  (void)name;
+  (void)value;
+  (void)attributes;
   //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.value = value;
@@ -2725,6 +2775,9 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceValue(
     Symbol name,
     Napi::Value value,
     napi_property_attributes attributes) {
+  (void)name;
+  (void)value;
+  (void)attributes;
   //PropertyDescriptor desc = napi_property_descriptor();
   //desc.name = name;
   //desc.value = value;
