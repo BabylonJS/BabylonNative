@@ -26,7 +26,7 @@ namespace Babylon
                 Dispatch([action = std::move(action)](Napi::Env) {
                     action();
                 });
-            } };
+            }};
 
         JsRuntimeHandle jsRuntime;
         ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
@@ -41,8 +41,8 @@ namespace Babylon
                 ThrowIfFailed(JsGetUndefinedValue(&undefined));
                 ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
                 ThrowIfFailed(JsRelease(task, nullptr));
-                });
-            },
+            });
+        },
             &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
