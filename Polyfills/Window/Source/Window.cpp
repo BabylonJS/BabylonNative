@@ -26,6 +26,11 @@ namespace Babylon::Polyfills::Internal
         auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
         auto jsWindow = constructor.New({});
 
+        // Need a reference or it's destroyed when loading babylon.material.js
+        // TODO: Find why
+        Napi::ObjectReference leakedRef{Napi::Persistent(jsWindow)};
+        leakedRef.SuppressDestruct();
+
         jsNative.Set(JS_WINDOW_NAME, jsWindow);
 
         if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined())
