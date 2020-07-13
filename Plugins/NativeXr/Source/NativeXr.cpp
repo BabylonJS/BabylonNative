@@ -8,6 +8,7 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
+#include <map>
 #include <set>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
@@ -1219,6 +1220,82 @@ namespace Babylon
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
         };
 
+        // Implementation of the XRPlane interface: https://github.com/immersive-web/real-world-geometry/blob/master/plane-detection-explainer.md
+        class XRPlane : public Napi::ObjectWrap<XRPlane>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRPlane";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
+                        InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
+                        InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRPlane(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRPlane>{info}
+            {
+            }
+
+            xr::Plane& GetNativePlane()
+            {
+                return m_nativePlane;
+            }
+
+            void SetNativePlane(xr::Plane& nativePlane)
+            {
+                m_nativePlane = nativePlane;
+            }
+
+            void SetLastUpdatedTime(uint32_t timestamp)
+            {
+                m_lastUpdatedTimestamp = timestamp;
+            }
+
+        private:
+            Napi::Value GetPlaneSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+                rigidTransform->Update(m_nativePlane.Center);
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
+                return napiSpace;
+            }
+
+            Napi::Value GetPolygon(const Napi::CallbackInfo& info)
+            {
+                // Translate std::Vector of points to an array of points.
+                return Napi::Value::From(info.Env(), 0);
+            }
+
+            Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
+            }
+
+            // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
+            uint32_t m_lastUpdatedTimestamp{0};
+
+            // The native plane which holds the center and polygonal vertices of the plane.
+            xr::Plane m_nativePlane{};
+        };
+
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -1237,6 +1314,7 @@ namespace Babylon
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
+                        InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1258,7 +1336,7 @@ namespace Babylon
                 m_jsPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const xr::System::Session::Frame& frame)
+            void Update(const xr::System::Session::Frame& frame, uint32_t)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
@@ -1299,6 +1377,7 @@ namespace Babylon
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::Value> m_trackedAnchors{};
+            std::map<xr::NativePlanePtr, Napi::Value> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1411,6 +1490,32 @@ namespace Babylon
                         ++anchorIter;
                     }
                 }
+            }
+
+            Napi::Value GetWorldInformation(const Napi::CallbackInfo& info)
+            {
+                // Create a JavaScript object that stores all world information.
+                Napi::Object worldInformationObj = Napi::Object::New(info.Env());
+
+                // Create a set to contain all of the currently tracked planes.
+                Napi::Object planeSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
+
+                // Loop over the list of tracked planes, and add them to the set.
+                for (const auto & [planePointer, planeNapiValue] : m_trackedPlanes)
+                {
+                    planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue});
+                }
+
+                // Pass the world information object back to the caller.
+                worldInformationObj.Set("detectedPlanes", planeSet);
+                return worldInformationObj;
+            }
+
+            void UpdatePlanes()
+            {
+                // First call m_frame->GetPlanes
+                
+                // Next compare returned set to the currently tracked planes, remove any that no longer exist, create new XRPlanes for any newly found planes and add them to the map.
             }
         };
 
@@ -1542,6 +1647,7 @@ namespace Babylon
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
             JsRuntimeScheduler m_runtimeScheduler;
+            uint32_t m_timestamp{0};
 
             std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
@@ -1668,12 +1774,13 @@ namespace Babylon
                 m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
-                    m_xrFrame.Update(frame);
-                    func->Call({Napi::Value::From(env, -1), m_jsXRFrame.Value()});
+                    m_xrFrame.Update(frame, m_timestamp);
+                    func->Call({Napi::Value::From(env, m_timestamp), m_jsXRFrame.Value()});
                 });
 
-                // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
-                return Napi::Value::From(info.Env(), 0);
+                // Return value should be a request ID to allow for requesting cancellation, this is unused in Babylon.js currently.
+                // Just pass our "timestamp" as that uniquely identifies the frame.
+                return Napi::Value::From(info.Env(), m_timestamp++);
             }
 
             Napi::Value End(const Napi::CallbackInfo& info)

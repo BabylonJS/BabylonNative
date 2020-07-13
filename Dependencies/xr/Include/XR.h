@@ -28,6 +28,13 @@ namespace xr
         size_t Height{};
     };
 
+    struct Point
+    {
+        float X{};
+        float Y{};
+        float Z{};
+    };
+    
     struct Pose
     {
         struct
@@ -76,6 +83,15 @@ namespace xr
         Pose Pose{};
         NativeAnchorPtr NativeAnchor{};
         bool IsValid{true};
+    };
+
+    using NativePlanePtr = void*;
+    struct Plane
+    {
+        Pose Center{};
+        std::vector<Point> Polygon{};
+        NativePlanePtr NativePlane{};
+        bool updated;
     };
 
     class System
