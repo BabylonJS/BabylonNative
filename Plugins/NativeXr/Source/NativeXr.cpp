@@ -1377,7 +1377,7 @@ namespace Babylon
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::Value> m_trackedAnchors{};
-            std::map<xr::NativePlanePtr, Napi::Value> m_trackedPlanes{};
+            std::map<xr::Plane, Napi::Value> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1501,7 +1501,7 @@ namespace Babylon
                 Napi::Object planeSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
                 // Loop over the list of tracked planes, and add them to the set.
-                for (const auto & [planePointer, planeNapiValue] : m_trackedPlanes)
+                for (const auto & [plane, planeNapiValue] : m_trackedPlanes)
                 {
                     planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue});
                 }
@@ -1513,7 +1513,7 @@ namespace Babylon
 
             void UpdatePlanes()
             {
-                // First call m_frame->GetPlanes
+                // First call m_frame->UpdatePlanes
                 
                 // Next compare returned set to the currently tracked planes, remove any that no longer exist, create new XRPlanes for any newly found planes and add them to the map.
             }

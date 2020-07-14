@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 #include <arcana/threading/task.h>
 
 namespace xr
@@ -89,9 +90,13 @@ namespace xr
     struct Plane
     {
         Pose Center{};
-        std::vector<Point> Polygon{};
+        float* Polygon{};
         NativePlanePtr NativePlane{};
         bool updated;
+        bool operator==(const Plane&rhs) const
+        {
+            return NativePlane == rhs.NativePlane;
+        }
     };
 
     class System
@@ -165,6 +170,9 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
+                void UpdatePlanes(std::set<Plane>& existingPlanes, std::vector<Plane>& updatedPlanes, std::vector<Plane>& removedPlanes) const;
+                void CleanupPlane(Plane& plane) const;
+
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;

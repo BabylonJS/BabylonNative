@@ -7,6 +7,7 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>
 #include <thread>
+#include <set>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -341,6 +342,7 @@ namespace xr
                 ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
                 ArHitResultList_destroy(hitResultList);
+                ArTrackableList_destroy(trackableList);
                 ArFrame_destroy(frame);
                 ArSession_destroy(session);
 
@@ -390,6 +392,9 @@ namespace xr
             // Create the hit result list, and hit result.
             ArHitResultList_create(session, &hitResultList);
             ArHitResult_create(session, &hitResult);
+
+            // Cerate the trackable list used to process planes.
+            ArTrackableList_create(session, &trackableList);
 
             // Create the reusable ARCore ArPose used for short term operations
             // (i.e. pulling out hit test results, and updating anchors)
@@ -796,6 +801,79 @@ namespace xr
             }
         }
 
+        void UpdatePlanes(std::set<Plane>& existingPlanes,  std::vector<Plane>& updatedPlanes, std::vector<Plane>& deletedPlanes)
+        {
+            ArCamera* camera{};
+            ArFrame_acquireCamera(session, frame, &camera);
+
+            // Get the tracking state
+            ArTrackingState trackingState{};
+            ArCamera_getTrackingState(session, camera, &trackingState);
+
+            // If not tracking, back out and return.
+            if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING)
+            {
+                return;
+            }
+
+            // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
+            for (auto plane : existingPlanes)
+            {
+                ArPlane* subsumingPlane;
+                auto* planeTrackable = reinterpret_cast<ArPlane*>(plane.NativePlane);
+                ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
+
+                // Plane has been subsumed, stop tracking it explicitly.
+                if (subsumingPlane != nullptr)
+                {
+                    deletedPlanes.push_back(plane);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                }
+            }
+
+            // Next check for updated planes, and add them to the list.
+            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
+            
+            int32_t size{};
+            ArTrackableList_getSize(session, trackableList, &size);
+            for (int i = 0; i < size; i++)
+            {
+                ArTrackable* trackable;
+                ArTrackableList_acquireItem(session, trackableList, i, &trackable);
+                auto planeTrackable = reinterpret_cast<ArPlane*>(trackable);
+
+                // Set the plane pointer.
+                Plane plane{};
+                plane.NativePlane = reinterpret_cast<NativePlanePtr>(trackable);
+
+                // Get the center pose.
+                float rawPose[7]{};
+                ArPlane_getCenterPose(session, planeTrackable, tempPose);
+                ArPose_getPoseRaw(session, cameraPose, rawPose);
+                RawToPose(rawPose, plane.Center);
+
+                // Dynamically allocate the polygon array, and fill it in.
+                int32_t polygonSize;
+                ArPlane_getPolygonSize(session, planeTrackable, &polygonSize);
+                plane.Polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize));
+                ArPlane_getPolygon(session, planeTrackable, plane.Polygon);
+
+                updatedPlanes.push_back(plane);          
+            }
+        }
+
+        void CleanupPlane(Plane& plane)
+        {
+            ArTrackable_release(reinterpret_cast<ArTrackable*>(plane.NativePlane));
+            plane.NativePlane = nullptr;
+
+            if (plane.Polygon != nullptr)
+            {
+                free(plane.Polygon);
+                plane.Polygon = nullptr;
+            }
+        }
+
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
@@ -812,6 +890,7 @@ namespace xr
         ArPose* tempPose{};
         ArHitResultList* hitResultList{};
         ArHitResult* hitResult{};
+        ArTrackableList* trackableList{};
 
         float CameraFrameUVs[VERTEX_COUNT * 2]{};
 
@@ -910,6 +989,16 @@ namespace xr
     void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const
     {
         m_impl->sessionImpl.DeleteAnchor(anchor);
+    }
+
+    void System::Session::Frame::UpdatePlanes(std::set<Plane>& existingPlanes,  std::vector<Plane>& updatedPlanes, std::vector<Plane>& deletedPlanes) const
+    {
+        m_impl->sessionImpl.UpdatePlanes(existingPlanes, updatedPlanes, deletedPlanes);
+    }
+
+    void System::Session::Frame::CleanupPlane(Plane& plane) const
+    {
+        m_impl->sessionImpl.CleanupPlane(plane);
     }
 
     System::Session::Frame::~Frame()
