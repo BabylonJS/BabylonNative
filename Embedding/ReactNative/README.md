@@ -52,13 +52,14 @@ pod install --repo-update
 
 ### **Configuring a Mac Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/), [JDK 13](https://www.oracle.com/java/technologies/javase-jdk13-downloads.html)
 
 - The `PATH` environment variable must include the path to adb (typically ~/Library/Android/sdk/platform-tools/).
 - The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).
 - The `ANDROID_HOME` environment variable must be defined (typically ~/Library/Android/sdk).
 - The `ANDROID_SDK_ROOT` environment variable must be defined (typically ~/Library/Android/sdk).
 - The `ANDROID_AVD_HOME` environment variable must be defined if you plan to use Android emulators (typically ~/.android/avd).
+- The `JAVA_HOME` environment variable must be defined to point to the correct version of the JDK (typically /usr/libexec/java_home -v 13).
 
 You can typically configure your environment by editing `~/.zshrc` and adding the following:
 
@@ -68,6 +69,7 @@ export PATH=$PATH:~/path_to_ninja_binary/ # Only for manual installations of Nin
 export ANDROID_HOME=~/Library/Android/sdk
 export ANDROID_SDK_ROOT=~/Library/Android/sdk
 export ANDROID_AVD_HOME=~/.android/avd
+export JAVA_HOME=$(/usr/libexec/java_home -v 13)
 ```
 
 ### **Configuring a Windows Dev Environment**
