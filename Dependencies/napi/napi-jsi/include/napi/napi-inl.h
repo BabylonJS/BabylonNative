@@ -1039,6 +1039,9 @@ inline void DataView::WriteData(size_t byteOffset, T value) const {
 // TypedArray class
 ////////////////////////////////////////////////////////////////////////////////
 
+// JSI does not support typed array directly and thus this implementation is
+// suboptimal. See https://github.com/facebook/hermes/issues/182.
+
 inline TypedArray::TypedArray() {
 }
 
