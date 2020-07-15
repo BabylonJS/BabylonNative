@@ -1242,9 +1242,9 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(const Napi::CallbackInfo& info)
+            static Napi::Object New(const Napi::Env& env)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
             }
 
             XRPlane(const Napi::CallbackInfo& info)
@@ -1252,19 +1252,19 @@ namespace Babylon
             {
             }
 
-            xr::Plane& GetNativePlane()
-            {
-                return m_nativePlane;
-            }
-
-            void SetNativePlane(xr::Plane& nativePlane)
-            {
-                m_nativePlane = nativePlane;
-            }
-
             void SetLastUpdatedTime(uint32_t timestamp)
             {
                 m_lastUpdatedTimestamp = timestamp;
+            }
+
+            void SetNativePlane(xr::Plane& plane)
+            {
+                m_nativePlane = plane;
+            }
+
+            xr::Plane* GetNativePlane()
+            {
+                return &m_nativePlane;
             }
 
         private:
@@ -1291,8 +1291,8 @@ namespace Babylon
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
-
-            // The native plane which holds the center and polygonal vertices of the plane.
+            
+            // The underlying native plane.
             xr::Plane m_nativePlane{};
         };
 
@@ -1336,7 +1336,7 @@ namespace Babylon
                 m_jsPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const xr::System::Session::Frame& frame, uint32_t)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
@@ -1344,6 +1344,9 @@ namespace Babylon
 
                 // Update anchor positions.
                 UpdateAnchors();
+
+                // Update planes.
+                UpdatePlanes(env, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -1377,7 +1380,7 @@ namespace Babylon
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::Value> m_trackedAnchors{};
-            std::map<xr::Plane, Napi::Value> m_trackedPlanes{};
+            std::map<xr::Plane*, Napi::Object> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1511,11 +1514,50 @@ namespace Babylon
                 return worldInformationObj;
             }
 
-            void UpdatePlanes()
+            void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                // First call m_frame->UpdatePlanes
+                std::map<xr::NativePlanePtr, xr::Plane*> existingNativePlaneMap;
+
+                // Loop over our Planes, and create a mapping of native plane pointers to xr::planes.
+                for (auto & [plane, planeNapiValue] : m_trackedPlanes)
+                {
+                    std::pair<xr::NativePlanePtr, xr::Plane*> pair = {plane->NativePlane, plane};
+                    existingNativePlaneMap.insert(pair);
+                }
+
+                // Call update to update planes, fetch new planes, and get the list of deleted planes.
+                std::vector<xr::Plane> newPlanes{};
+                std::vector<xr::Plane*> deletedPlanes{};
+                m_frame->UpdatePlanes(existingNativePlaneMap, newPlanes, deletedPlanes);
+
+                // First loop over deleted planes and remove them from our JS mapping.
+                for (auto planePtr : deletedPlanes)
+                {
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planePtr);
+                    assert(trackedPlaneIterator != m_trackedPlanes.end());
+                    m_frame->CleanupPlane(trackedPlaneIterator->first);
+                    m_trackedPlanes.erase(trackedPlaneIterator);
+                }
+
+                // Next loop over the list of new planes, initialize the wrapper object and insert.
+                for(auto newPlane : newPlanes)
+                {
+                    auto napiPlane = Napi::Persistent(XRPlane::New(env));   
+                    auto xrPlane = XRPlane::Unwrap(napiPlane.Value());
+                    xrPlane->SetNativePlane(newPlane);
+
+                    m_trackedPlanes.insert({xrPlane->GetNativePlane(), napiPlane.Value()});
+                }
                 
-                // Next compare returned set to the currently tracked planes, remove any that no longer exist, create new XRPlanes for any newly found planes and add them to the map.
+                // Finally update the timestamp of any planes that have been updated in the last frame.
+                for (const auto & [plane, planeNapiValue] : m_trackedPlanes)
+                {
+                    if (plane->Updated)
+                    {
+                        auto xrPlane = XRPlane::Unwrap(planeNapiValue);
+                        xrPlane->SetLastUpdatedTime(timestamp);
+                    }
+                }
             }
         };
 
@@ -1774,7 +1816,7 @@ namespace Babylon
                 m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
-                    m_xrFrame.Update(frame, m_timestamp);
+                    m_xrFrame.Update(env, frame, m_timestamp);
                     func->Call({Napi::Value::From(env, m_timestamp), m_jsXRFrame.Value()});
                 });
 

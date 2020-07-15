@@ -801,7 +801,7 @@ namespace xr
             }
         }
 
-        void UpdatePlanes(std::set<Plane>& existingPlanes,  std::vector<Plane>& updatedPlanes, std::vector<Plane>& deletedPlanes)
+        void UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
         {
             ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
@@ -817,10 +817,14 @@ namespace xr
             }
 
             // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
-            for (auto plane : existingPlanes)
+            for (auto & [nativePlanePtr, plane] : existingPlanes)
             {
+                // Mark each plane as unupdated this frame.
+                plane->Updated = false;
+
+                // Check if the plane has been subsumed, and if we should stop tracking it.
                 ArPlane* subsumingPlane;
-                auto* planeTrackable = reinterpret_cast<ArPlane*>(plane.NativePlane);
+                auto* planeTrackable = reinterpret_cast<ArPlane*>(nativePlanePtr);
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
 
                 // Plane has been subsumed, stop tracking it explicitly.
@@ -831,7 +835,7 @@ namespace xr
                 }
             }
 
-            // Next check for updated planes, and add them to the list.
+            // Next check for updated planes, and update them in place.
             ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
             
             int32_t size{};
@@ -842,35 +846,56 @@ namespace xr
                 ArTrackableList_acquireItem(session, trackableList, i, &trackable);
                 auto planeTrackable = reinterpret_cast<ArPlane*>(trackable);
 
-                // Set the plane pointer.
-                Plane plane{};
-                plane.NativePlane = reinterpret_cast<NativePlanePtr>(trackable);
 
                 // Get the center pose.
                 float rawPose[7]{};
                 ArPlane_getCenterPose(session, planeTrackable, tempPose);
                 ArPose_getPoseRaw(session, cameraPose, rawPose);
-                RawToPose(rawPose, plane.Center);
 
                 // Dynamically allocate the polygon array, and fill it in.
                 int32_t polygonSize;
                 ArPlane_getPolygonSize(session, planeTrackable, &polygonSize);
-                plane.Polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize));
-                ArPlane_getPolygon(session, planeTrackable, plane.Polygon);
+                float* polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize));
+                ArPlane_getPolygon(session, planeTrackable, polygon);
 
-                updatedPlanes.push_back(plane);          
+                // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
+                auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlanePtr>(trackable));
+                if (planeIterator != existingPlanes.end())
+                {
+                    auto plane = planeIterator->second;
+                    plane->Updated = true;
+                    RawToPose(rawPose, plane->Center);
+                    if (plane->Polygon != nullptr)
+                    {
+                        free(plane->Polygon);
+                        plane->Polygon = nullptr;
+                    }
+
+                    plane->Polygon = polygon;
+                    plane->PolygonSize = polygonSize;
+                }
+                else
+                {
+                    // Set the plane pointer.
+                    Plane plane{};
+                    plane.Updated = true;
+                    plane.NativePlane = reinterpret_cast<NativePlanePtr>(trackable);
+                    RawToPose(rawPose, plane.Center);
+                    plane.Polygon = polygon;
+                    plane.PolygonSize = polygonSize;
+                    newPlanes.push_back(plane);          
+                }
             }
         }
 
-        void CleanupPlane(Plane& plane)
+        void CleanupPlane(Plane* plane)
         {
-            ArTrackable_release(reinterpret_cast<ArTrackable*>(plane.NativePlane));
-            plane.NativePlane = nullptr;
+            ArTrackable_release(reinterpret_cast<ArTrackable*>(plane->NativePlane));
 
-            if (plane.Polygon != nullptr)
+            if (plane->Polygon != nullptr)
             {
-                free(plane.Polygon);
-                plane.Polygon = nullptr;
+                free(plane->Polygon);
+                plane->Polygon = nullptr;
             }
         }
 
@@ -991,12 +1016,12 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::set<Plane>& existingPlanes,  std::vector<Plane>& updatedPlanes, std::vector<Plane>& deletedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
-        m_impl->sessionImpl.UpdatePlanes(existingPlanes, updatedPlanes, deletedPlanes);
+        m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }
 
-    void System::Session::Frame::CleanupPlane(Plane& plane) const
+    void System::Session::Frame::CleanupPlane(Plane* plane) const
     {
         m_impl->sessionImpl.CleanupPlane(plane);
     }

@@ -91,12 +91,9 @@ namespace xr
     {
         Pose Center{};
         float* Polygon{};
+        size_t PolygonSize{0};
         NativePlanePtr NativePlane{};
-        bool updated;
-        bool operator==(const Plane&rhs) const
-        {
-            return NativePlane == rhs.NativePlane;
-        }
+        bool Updated;
     };
 
     class System
@@ -170,8 +167,8 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                void UpdatePlanes(std::set<Plane>& existingPlanes, std::vector<Plane>& updatedPlanes, std::vector<Plane>& removedPlanes) const;
-                void CleanupPlane(Plane& plane) const;
+                void UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
+                void CleanupPlane(Plane* plane) const;
 
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
