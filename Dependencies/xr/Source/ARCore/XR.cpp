@@ -873,6 +873,7 @@ namespace xr
 
                     plane->Polygon = polygon;
                     plane->PolygonSize = polygonSize;
+                    plane->PolygonFormat = PolygonFormat::XZ;
                 }
                 else
                 {

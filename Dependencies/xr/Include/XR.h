@@ -23,6 +23,12 @@ namespace xr
         INVALID
     };
 
+    enum class PolygonFormat
+    {
+        XZ,
+        XYZ
+    };
+
     struct Size
     {
         size_t Width{};
@@ -92,6 +98,7 @@ namespace xr
         Pose Center{};
         float* Polygon{};
         size_t PolygonSize{0};
+        PolygonFormat PolygonFormat{};
         NativePlanePtr NativePlane{};
         bool Updated;
     };
