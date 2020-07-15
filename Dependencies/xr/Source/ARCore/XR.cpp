@@ -801,7 +801,7 @@ namespace xr
             }
         }
 
-        void UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& /*deletedPlanes*/)
+        void UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
         {
             ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
@@ -817,13 +817,13 @@ namespace xr
             }
 
             // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
-            /*for (auto & [nativePlanePtr, plane] : existingPlanes)
+            for (auto & [nativePlanePtr, plane] : existingPlanes)
             {
                 // Mark each plane as unupdated this frame.
                 plane->Updated = false;
 
                 // Check if the plane has been subsumed, and if we should stop tracking it.
-                ArPlane* subsumingPlane;
+                ArPlane* subsumingPlane = nullptr;
                 auto* planeTrackable = reinterpret_cast<ArPlane*>(nativePlanePtr);
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
 
@@ -833,7 +833,7 @@ namespace xr
                     deletedPlanes.push_back(plane);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                 }
-            }*/
+            }
 
             // Next check for updated planes, and update them in place.
             ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);

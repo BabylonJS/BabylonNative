@@ -1380,7 +1380,7 @@ namespace Babylon
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::Value> m_trackedAnchors{};
-            std::map<xr::Plane*, Napi::Object> m_trackedPlanes{};
+            std::map<xr::Plane*, Napi::ObjectReference> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1506,7 +1506,7 @@ namespace Babylon
                 // Loop over the list of tracked planes, and add them to the set.
                 for (const auto & [plane, planeNapiValue] : m_trackedPlanes)
                 {
-                    planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue});
+                    planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue.Value()});
                 }
 
                 // Pass the world information object back to the caller.
@@ -1546,7 +1546,7 @@ namespace Babylon
                     auto xrPlane = XRPlane::Unwrap(napiPlane.Value());
                     xrPlane->SetNativePlane(newPlane);
 
-                    m_trackedPlanes.insert({xrPlane->GetNativePlane(), napiPlane.Value()});
+                    m_trackedPlanes.insert({xrPlane->GetNativePlane(), std::move(napiPlane)});
                 }
                 
                 // Finally update the timestamp of any planes that have been updated in the last frame.
@@ -1554,7 +1554,7 @@ namespace Babylon
                 {
                     if (plane->Updated)
                     {
-                        auto xrPlane = XRPlane::Unwrap(planeNapiValue);
+                        auto xrPlane = XRPlane::Unwrap(planeNapiValue.Value());
                         xrPlane->SetLastUpdatedTime(timestamp);
                     }
                 }
