@@ -571,11 +571,9 @@ namespace Babylon
             {
                 auto position = m_position.Value();
                 auto orientation = m_orientation.Value();
-                return
-                {
+                return {
                     {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
-                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}
-                };
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
             }
 
         private:
@@ -969,7 +967,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});	
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
             static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
@@ -1319,19 +1317,20 @@ namespace Babylon
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-                if (xrSpace != nullptr)
-                {
-                    Napi::Object napiPose = XRPose::New(info);
-                    XRPose* pose = XRPose::Unwrap(napiPose);
-                    pose->Update(xrSpace->GetTransform());
-                    return napiPose;
-                }
-                else
+                if (info[0].IsExternal())
                 {
                     const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
                     m_transform.Update(space, false);
                     return m_jsPose.Value();
+                }
+                else
+                {
+                    auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                    assert(xrSpace != nullptr);
+                    Napi::Object napiPose = XRPose::New(info);
+                    XRPose* pose = XRPose::Unwrap(napiPose);
+                    pose->Update(xrSpace->GetTransform());
+                    return napiPose;
                 }
             }
 
