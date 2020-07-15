@@ -1017,7 +1017,7 @@ namespace Babylon
             }
         }
 
-        return uniforms;
+        return std::move(uniforms);
     }
 
     Napi::Value NativeEngine::GetAttributes(const Napi::CallbackInfo& info)
@@ -1037,7 +1037,7 @@ namespace Babylon
             attributes[index] = Napi::Value::From(info.Env(), location);
         }
 
-        return attributes;
+        return std::move(attributes);
     }
 
     void NativeEngine::SetProgram(const Napi::CallbackInfo& info)

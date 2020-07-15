@@ -1075,7 +1075,7 @@ namespace Babylon
                 rigidTransform->Update(m_nativeAnchor.Pose);
 
                 Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return napiSpace;
+                return std::move(napiSpace);
             }
 
             // Forward declaration of delete, as this relies on the XRFrame implementation.
@@ -1213,7 +1213,7 @@ namespace Babylon
                 XRPose* pose = XRPose::Unwrap(napiPose);
                 pose->Update(info, m_hitResult.Pose);
 
-                return napiPose;
+                return std::move(napiPose);
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
@@ -1325,7 +1325,7 @@ namespace Babylon
                     Napi::Object napiPose = XRPose::New(info);
                     XRPose* pose = XRPose::Unwrap(napiPose);
                     pose->Update(xrSpace->GetTransform());
-                    return napiPose;
+                    return std::move(napiPose);
                 }
                 else
                 {
@@ -1366,7 +1366,7 @@ namespace Babylon
                     results[i++] = currentResult;
                 }
 
-                return results;
+                return std::move(results);
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info)
@@ -1386,7 +1386,7 @@ namespace Babylon
                     anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
                 }
 
-                return anchorSet;
+                return std::move(anchorSet);
             }
 
             void UpdateAnchors()
@@ -1803,7 +1803,7 @@ namespace Babylon
 
                 auto renderTargetTexture = m_jsRenderTargetTextures[XREye::EyeToIndex(eye)].Value();
                 renderTargetTexture.Get("_texture").As<Napi::Object>().Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session.GetFrameBufferForEye(eye)));
-                return renderTargetTexture;
+                return std::move(renderTargetTexture);
             }
         };
 
