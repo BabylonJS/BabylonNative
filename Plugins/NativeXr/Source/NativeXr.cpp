@@ -1550,7 +1550,7 @@ namespace Babylon
                 }
                 
                 // Finally update the timestamp of any planes that have been updated in the last frame.
-                for (const auto & [plane, planeNapiValue] : m_trackedPlanes)
+                for (auto & [plane, planeNapiValue] : m_trackedPlanes)
                 {
                     if (plane->Updated)
                     {
@@ -2066,6 +2066,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRPlane::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
