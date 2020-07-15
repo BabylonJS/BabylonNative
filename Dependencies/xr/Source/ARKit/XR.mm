@@ -26,6 +26,39 @@ namespace {
         { { 1, -1 },    { 0, 0 },   { 0, 0} },
         { { 1, 1 },     { 0, 1 },   { 0, 0} },
     };
+
+    /**
+     Helper function to convert a transform into an xr::pose.
+     */
+    static xr::Pose TransformToPose(simd_float4x4 transform) {
+        // Set orientation.
+        xr::Pose pose{};
+        auto orientation = simd_quaternion(transform);
+        pose.Orientation = { orientation.vector.x
+            , orientation.vector.y
+            , orientation.vector.z
+            , orientation.vector.w };
+        
+        // Set the translation.
+        pose.Position = { transform.columns[3][0]
+            , transform.columns[3][1]
+            , transform.columns[3][2] };
+        
+        return pose;
+    }
+
+    /**
+     Helper function to convert an xr pose into a transform.
+     */
+    static simd_float4x4 PoseToTransform(xr::Pose pose) {
+        auto poseQuaternion = simd_quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
+        auto poseTransform = simd_matrix4x4(poseQuaternion);
+        poseTransform.columns[3][0] = pose.Position.X;
+        poseTransform.columns[3][1] = pose.Position.Y;
+        poseTransform.columns[3][2] = pose.Position.Z;
+        
+        return poseTransform;
+    }
 }
 
 /**
@@ -471,6 +504,7 @@ namespace xr {
                 ActiveFrameViews[0].DepthTexturePointer = nil;
             }
 
+            CleanupAnchor(nil);
             [session pause];
             session.delegate = nil;
             [sessionDelegate release];
@@ -696,6 +730,73 @@ namespace xr {
                 }
             }
         }
+        
+        /**
+         Create an ARKit anchor for the given pose.
+         */
+        xr::Anchor CreateAnchor(Pose pose) {
+            // Pull out the pose into a float 4x4 transform that is usable by ARKit.
+            auto poseTransform = PoseToTransform(pose);
+            
+            // Create the anchor and add it to the ARKit session.
+            auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
+            [session addAnchor:anchor];
+            nativeAnchors.push_back(anchor);
+            return { pose, reinterpret_cast<NativeAnchorPtr>(anchor) };
+        }
+        
+        /**
+         For a given anchor update the current pose, and determine if it is still valid.
+         */
+        void UpdateAnchor(xr::Anchor& anchor) {
+            // First check if the anchor still exists, if not then mark the anchor as no longer valid.
+            auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+            if (arAnchor == nil) {
+                anchor.IsValid = false;
+                return;
+            }
+            
+            // Then update the anchor's pose based on its transform.
+            anchor.Pose = TransformToPose(arAnchor.transform);
+        }
+        
+        /**
+         Deletes the ArKit anchor associated with this XR anchor if it still exists.
+         */
+        void DeleteAnchor(xr::Anchor& anchor) {
+            // If this anchor has not already been deleted, then remove it from the current AR session,
+            // and clean up its state in memory.
+            if (anchor.NativeAnchor != nil) {
+                auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+                anchor.NativeAnchor = nil;
+
+                CleanupAnchor(arAnchor);
+            }
+        }
+        
+        /**
+         Deallocates the native ARKit anchor object, and removes it from the anchor list.
+         */
+        void CleanupAnchor(ARAnchor* arAnchor) {
+            // Iterate over the list of anchors if arAnchor is nil then clean up all anchors
+            // otherwise clean up only the target anchor and return.
+            auto anchorIter = nativeAnchors.begin();
+            while (anchorIter != nativeAnchors.end()) {
+                if (arAnchor == nil || arAnchor == *anchorIter) {
+                    [session removeAnchor:*anchorIter];
+                    [*anchorIter release];
+                    anchorIter = nativeAnchors.erase(anchorIter);
+
+                    if (arAnchor != nil) {
+                        return;
+                    }
+                }
+                else {
+                    anchorIter++;
+                }
+            }
+        }
+
         private:
             inline static ARSession* session{};
             inline static ARWorldTrackingConfiguration* configuration{};
@@ -711,6 +812,7 @@ namespace xr {
             id<MTLRenderPipelineState> pipelineState{};
             vector_uint2 viewportSize{};
             id<MTLCommandQueue> commandQueue;
+            std::vector<ARAnchor*> nativeAnchors{};
         
         /*
          Helper function to translate a world transform into a hit test result.
@@ -758,16 +860,16 @@ namespace xr {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const {
-        throw std::runtime_error("Not yet implemented");
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr) const {
+        return m_impl->sessionImpl.CreateAnchor(pose);
     }
 
-    void System::Session::Frame::UpdateAnchor(xr::Anchor&) const {
-        throw std::runtime_error("Not yet implemented");
+    void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
+        m_impl->sessionImpl.UpdateAnchor(anchor);
     }
 
-    void System::Session::Frame::DeleteAnchor(xr::Anchor&) const {
-        throw std::runtime_error("Not yet implemented");
+    void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const {
+        m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
     System::System(const char* appName)
