@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <locale>
 
 struct napi_callback_info__ {
   napi_value newTarget;
@@ -27,7 +28,7 @@ namespace {
     }
 
     JSString(const char* string, size_t length = NAPI_AUTO_LENGTH)
-      : _string{JSStringCreateWithUTF8CString(length == NAPI_AUTO_LENGTH ? string : std::string(string, length).data())} {
+      : _string{CreateUTF8(string, length)} {
     }
 
     JSString(const JSChar* string, size_t length = NAPI_AUTO_LENGTH)
@@ -95,8 +96,30 @@ namespace {
     }
 
    private:
+    static JSStringRef CreateUTF8(const char* string, size_t length) {
+      if (length == NAPI_AUTO_LENGTH) {
+        return JSStringCreateWithUTF8CString(string);
+      }
+
+      std::vector<JSChar> chars(length);
+      const char* from = string;
+      char16_t* to = reinterpret_cast<char16_t*>(chars.data());
+      std::locale::global(std::locale("en_US.UTF-8"));
+      auto& facet = std::use_facet<std::codecvt<char16_t, char, std::mbstate_t>>(std::locale());
+      std::mbstate_t state{};
+      const char* from_next;
+      char16_t* to_next;
+      auto result = facet.in(state, from, from + length, from_next, to, to + length, to_next);
+      if (result != std::codecvt_base::ok) {
+        throw std::invalid_argument{"Invalid unicode string"};
+      }
+      chars.resize(to_next - to);
+
+      return JSStringCreateWithCharacters(chars.data(), chars.size());
+    }
+
     JSString(JSStringRef string)
-        : _string{string} {
+      : _string{string} {
     }
 
     JSStringRef _string;
