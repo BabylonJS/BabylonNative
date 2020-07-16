@@ -835,22 +835,32 @@ namespace xr
                 }
             }
 
-            // Next check for updated planes, and update them in place.
+            // Next check for updated planes, and update their pose and polygon.
             ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
             
             int32_t size{};
             ArTrackableList_getSize(session, trackableList, &size);
             for (int i = 0; i < size; i++)
             {
+                // Get the plane.
                 ArTrackable* trackable;
                 ArTrackableList_acquireItem(session, trackableList, i, &trackable);
                 auto planeTrackable = reinterpret_cast<ArPlane*>(trackable);
 
+                // Check if this plane has been subsumed. If so skip it.
+                ArPlane* subsumingPlane = nullptr;
+                ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
+                if (subsumingPlane != nullptr)
+                {
+                    ArTrackable_release(trackable);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                    continue;
+                }
 
                 // Get the center pose.
                 float rawPose[7]{};
                 ArPlane_getCenterPose(session, planeTrackable, tempPose);
-                ArPose_getPoseRaw(session, cameraPose, rawPose);
+                ArPose_getPoseRaw(session, tempPose, rawPose);
 
                 // Dynamically allocate the polygon array, and fill it in.
                 int32_t polygonSize;
@@ -872,7 +882,7 @@ namespace xr
                     }
 
                     plane->Polygon = polygon;
-                    plane->PolygonSize = polygonSize;
+                    plane->PolygonSize = polygonSize / 2;
                     plane->PolygonFormat = PolygonFormat::XZ;
                 }
                 else
@@ -883,7 +893,7 @@ namespace xr
                     plane.NativePlane = reinterpret_cast<NativePlanePtr>(trackable);
                     RawToPose(rawPose, plane.Center);
                     plane.Polygon = polygon;
-                    plane.PolygonSize = polygonSize;
+                    plane.PolygonSize = polygonSize / 2;
                     newPlanes.push_back(plane);          
                 }
             }
