@@ -91,7 +91,7 @@ inline Value::operator jsi::Value&&() && {
 }
 
 inline Value::Value(const Value& other)
-  : _env{other._env}, _value{_env->rt, other._value} {
+  : _env{other._env}, _value{_env == nullptr ? jsi::Value{} : jsi::Value{_env->rt, other._value}} {
 }
 
 inline Value& Value::operator =(const Value& other){
@@ -1967,10 +1967,7 @@ inline FunctionReference& FunctionReference::operator =(FunctionReference&& othe
 
 inline Napi::Value FunctionReference::operator ()(
     const std::initializer_list<Napi::Value>& args) const {
-  (void)args;
-  //EscapableHandleScope scope{_env};
-  //return scope.Escape(Value()(args));
-  throw std::runtime_error{"TODO"};
+  return Value().Call(args);
 }
 
 inline Napi::Value FunctionReference::Call(const std::initializer_list<Napi::Value>& args) const {
@@ -1985,40 +1982,38 @@ inline Napi::Value FunctionReference::Call(const std::initializer_list<Napi::Val
 }
 
 inline Napi::Value FunctionReference::Call(const std::vector<Napi::Value>& args) const {
-  (void)args;
   //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
   //}
   //return scope.Escape(result);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return Value().Call(args);
 }
 
 inline Napi::Value FunctionReference::Call(
     const Napi::Value& recv, const std::initializer_list<Napi::Value>& args) const {
-  (void)recv;
-  (void)args;
   //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
   //}
   //return scope.Escape(result);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return Value().Call(recv, args);
 }
 
 inline Napi::Value FunctionReference::Call(
     const Napi::Value& recv, const std::vector<Napi::Value>& args) const {
-  (void)recv;
-  (void)args;
   //EscapableHandleScope scope{_env};
   //Napi::Value result = Value().Call(recv, args);
   //if (scope.Env().IsExceptionPending()) {
   //  return Value();
   //}
   //return scope.Escape(result);
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return Value().Call(recv, args);
 }
 
 inline Napi::Value FunctionReference::Call(
@@ -2029,24 +2024,16 @@ inline Napi::Value FunctionReference::Call(
   //  return Value();
   //}
   //return scope.Escape(result);
-  (void)recv;
-  (void)argc;
-  (void)args;
-  throw std::runtime_error{"TODO"};
+  //throw std::runtime_error{"TODO"};
+  return Value().Call(recv, argc, args);
 }
 
 inline Object FunctionReference::New(const std::initializer_list<Napi::Value>& args) const {
-  //EscapableHandleScope scope{_env};
-  //return scope.Escape(Value().New(args)).As<Object>();
-  (void)args;
-  throw std::runtime_error{"TODO"};
+  return Value().New(args);
 }
 
 inline Object FunctionReference::New(const std::vector<Napi::Value>& args) const {
-  (void)args;
-  //EscapableHandleScope scope{_env};
-  //return scope.Escape(Value().New(args)).As<Object>();
-  throw std::runtime_error{"TODO"};
+  return Value().New(args);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
