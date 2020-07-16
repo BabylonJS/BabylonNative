@@ -38,6 +38,23 @@ namespace xr
 {
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID = 8435;
+    const float FLOAT_COMPARISON_THRESHHOLD = .01f;
+
+    bool operator==(const Pose& lhs, const Pose& rhs)
+    {
+        return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHHOLD
+               && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHHOLD
+               && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHHOLD
+               && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHHOLD
+               && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHHOLD
+               && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHHOLD
+               && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHHOLD;
+    }
+
+    bool operator!=(const Pose& lhs, const Pose& rhs)
+    {
+        return !(lhs == rhs);
+    }
 
     struct System::Impl
     {
@@ -338,6 +355,7 @@ namespace xr
             {
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
+                CleanupAllPlaneBuffers();
                 ArPose_destroy(cameraPose);
                 ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
@@ -866,39 +884,83 @@ namespace xr
                 int32_t polygonSize;
                 ArPlane_getPolygonSize(session, planeTrackable, &polygonSize);
                 float* polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize));
+
+                // Get the polygon.
                 ArPlane_getPolygon(session, planeTrackable, polygon);
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
                 auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlanePtr>(trackable));
                 if (planeIterator != existingPlanes.end())
                 {
+                    // Mark the plane as updated
                     auto plane = planeIterator->second;
+
+                    // Grab the new center
+                    Pose newCenter{};
+                    RawToPose(rawPose, newCenter);
+
+                    // Plane was not actually updated, free the polygon buffer, and continue to the next plane.
+                    if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter))
+                    {
+                        free(polygon);
+                        continue;
+                    }
+
+                    // Mark the plane as updated, and grab the new center.
                     plane->Updated = true;
-                    RawToPose(rawPose, plane->Center);
+                    plane->Center = newCenter;
+
+                    // Clean up the old plane buffer, and remove it from the set of allocated buffers.
                     if (plane->Polygon != nullptr)
                     {
                         free(plane->Polygon);
+                        planeBuffers.erase(plane->Polygon);
                         plane->Polygon = nullptr;
                     }
 
+                    // Store the polygon.
                     plane->Polygon = polygon;
+                    planeBuffers.insert(polygon);
                     plane->PolygonSize = polygonSize / 2;
                     plane->PolygonFormat = PolygonFormat::XZ;
                 }
                 else
                 {
-                    // Set the plane pointer.
+                    // This is a new plane, create it and initialize its values.
                     Plane plane{};
                     plane.Updated = true;
                     plane.NativePlane = reinterpret_cast<NativePlanePtr>(trackable);
                     RawToPose(rawPose, plane.Center);
                     plane.Polygon = polygon;
+                    planeBuffers.insert(polygon);
                     plane.PolygonSize = polygonSize / 2;
-                    newPlanes.push_back(plane);          
+                    newPlanes.push_back(plane);
                 }
             }
         }
 
+        bool CheckIfPlaneWasUpdated(Plane* existingPlane, float* newPolygon, size_t newPolygonSize, Pose& newCenter)
+        {
+            // First check if the center has changed, or the polygon size has changed.
+            if (existingPlane->Center != newCenter
+                || existingPlane->PolygonSize * 2 != newPolygonSize)
+            {
+                return true;
+            }
+
+            // Next loop over the polygon and check if any points have changed.
+            for (size_t i = 0; i < newPolygonSize; i++)
+            {
+                if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHHOLD)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Cleans up a plane. Called when a plane gets deleted.
         void CleanupPlane(Plane* plane)
         {
             ArTrackable_release(reinterpret_cast<ArTrackable*>(plane->NativePlane));
@@ -906,6 +968,7 @@ namespace xr
             if (plane->Polygon != nullptr)
             {
                 free(plane->Polygon);
+                planeBuffers.erase(plane->Polygon);
                 plane->Polygon = nullptr;
             }
         }
@@ -915,6 +978,7 @@ namespace xr
         bool sessionEnded{false};
         std::vector<ArTrackable*> frameTrackables{};
         std::vector<ArAnchor*> arCoreAnchors{};
+        std::set<float*> planeBuffers{};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -987,6 +1051,17 @@ namespace xr
             pose.Position.X = rawPose[4];
             pose.Position.Y = rawPose[5];
             pose.Position.Z = rawPose[6];
+        }
+
+        // Clean up all allocated plane buffers, called when the session gets disposed.
+        void CleanupAllPlaneBuffers()
+        {
+            auto bufferIter = planeBuffers.begin();
+            while (bufferIter != planeBuffers.end())
+            {
+                free(*bufferIter);
+                bufferIter = planeBuffers.erase(bufferIter);
+            }
         }
     };
 
