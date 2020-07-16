@@ -54,8 +54,22 @@ namespace
         const float t{std::tanf(view.FieldOfView.AngleUp) * n};
         const float b{std::tanf(view.FieldOfView.AngleDown) * n};
 
+        // Angles for FieldOfView respect the viewport ratio
+        // but tangent is not a linear function and ratio of values(l,r,b,t) computed
+        // in CreateProjectionMatrix do not respect that ratio
+        // so, here, a ratio after tangent is computed
+        // and a second derivative ratio computed to compensate
+        // the aspect ratio delta after tangent calls
+        const float aspectRatio = static_cast<float>(view.ColorTextureSize.Width) / static_cast<float>(view.ColorTextureSize.Height);
+        const float deltax = (r - l);
+        const float deltay = (t - b);
+        const float afterTangentAspectRatio = deltax / deltay;
+        const float compensationRatio = afterTangentAspectRatio / aspectRatio;
+        const float tc{std::tanf(view.FieldOfView.AngleUp * compensationRatio) * n};
+        const float bc{std::tanf(view.FieldOfView.AngleDown * compensationRatio) * n};
+
         std::array<float, 16> bxResult{};
-        bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
+        bx::mtxProj(bxResult.data(), tc, bc, l, r, n, f, false, bx::Handness::Right);
 
         return bxResult;
     }
@@ -205,6 +219,7 @@ namespace Babylon
         xr::System m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
+        ClearState m_clearState{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
         NativeEngine* m_engineImpl{};
         arcana::cancellation_source m_cancellationSource{};
@@ -232,7 +247,7 @@ namespace Babylon
         }
     }
 
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env /*env*/)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -245,7 +260,7 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, Plugins::Internal::NativeWindow::GetFromJavaScript(env).GetWindowPtr()).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
             m_session = std::move(session);
         });
     }
@@ -324,8 +339,9 @@ namespace Babylon
                 attachments[1].init(depthTex);
                 auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                auto fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
+                Babylon::FrameBufferData* fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
                     frameBuffer,
+                    m_clearState,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
                     static_cast<uint16_t>(view.ColorTextureSize.Height));
 
@@ -555,11 +571,9 @@ namespace Babylon
             {
                 auto position = m_position.Value();
                 auto orientation = m_orientation.Value();
-                return
-                {
+                return {
                     {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
-                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}
-                };
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
             }
 
         private:
@@ -953,7 +967,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});	
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
             static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
@@ -972,6 +986,8 @@ namespace Babylon
                         const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
                         assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
                             referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                        (void)XRReferenceSpaceType::UNBOUNDED;
+                        (void)XRReferenceSpaceType::VIEWER;
                     }
                     else
                     {
@@ -1057,7 +1073,7 @@ namespace Babylon
                 rigidTransform->Update(m_nativeAnchor.Pose);
 
                 Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return napiSpace;
+                return std::move(napiSpace);
             }
 
             // Forward declaration of delete, as this relies on the XRFrame implementation.
@@ -1195,7 +1211,7 @@ namespace Babylon
                 XRPose* pose = XRPose::Unwrap(napiPose);
                 pose->Update(info, m_hitResult.Pose);
 
-                return napiPose;
+                return std::move(napiPose);
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
@@ -1301,19 +1317,20 @@ namespace Babylon
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-                if (xrSpace != nullptr)
-                {
-                    Napi::Object napiPose = XRPose::New(info);
-                    XRPose* pose = XRPose::Unwrap(napiPose);
-                    pose->Update(xrSpace->GetTransform());
-                    return napiPose;
-                }
-                else
+                if (info[0].IsExternal())
                 {
                     const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
                     m_transform.Update(space, false);
                     return m_jsPose.Value();
+                }
+                else
+                {
+                    auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                    assert(xrSpace != nullptr);
+                    Napi::Object napiPose = XRPose::New(info);
+                    XRPose* pose = XRPose::Unwrap(napiPose);
+                    pose->Update(xrSpace->GetTransform());
+                    return std::move(napiPose);
                 }
             }
 
@@ -1348,7 +1365,7 @@ namespace Babylon
                     results[i++] = currentResult;
                 }
 
-                return results;
+                return std::move(results);
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info)
@@ -1368,7 +1385,7 @@ namespace Babylon
                     anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
                 }
 
-                return anchorSet;
+                return std::move(anchorSet);
             }
 
             void UpdateAnchors()
@@ -1785,7 +1802,7 @@ namespace Babylon
 
                 auto renderTargetTexture = m_jsRenderTargetTextures[XREye::EyeToIndex(eye)].Value();
                 renderTargetTexture.Get("_texture").As<Napi::Object>().Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session.GetFrameBufferForEye(eye)));
-                return renderTargetTexture;
+                return std::move(renderTargetTexture);
             }
         };
 

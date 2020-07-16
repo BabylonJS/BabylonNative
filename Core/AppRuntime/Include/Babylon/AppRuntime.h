@@ -2,6 +2,7 @@
 
 #include <Babylon/JsRuntime.h>
 
+#include <future>
 #include <memory>
 #include <string>
 
