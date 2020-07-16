@@ -1,3 +1,17 @@
 # OSX
 #
 .DS_Store
+
+# Visual Studio Code
+#
+.vscode
+
+# Android Studio
+.project
+.classpath
+org.eclipse.buildship.core.prefs
+
+# XCode
+#
+IDEWorkspaceChecks.plist
+WorkspaceSettings.xcsettings
