@@ -1,4 +1,7 @@
 #include <stdexcept>
+#include <locale>
+#include <codecvt>
+#include <cstring>
 
 namespace Napi {
 
@@ -342,24 +345,21 @@ inline String String::New(napi_env env, const std::u16string& val) {
 }
 
 inline String String::New(napi_env env, const char* val) {
-  return String(env, {env->rt, jsi::String::createFromUtf8(env->rt, val)});
+  return {env, {env->rt, jsi::String::createFromUtf8(env->rt, reinterpret_cast<const uint8_t*>(val), std::strlen(val))}};
 }
 
 inline String String::New(napi_env env, const char16_t* val) {
-  (void)env;
-  (void)val;
-  throw std::runtime_error("TODO");
+  std::string u8{std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(val)};
+  return {env, {env->rt, jsi::String::createFromUtf8(env->rt, u8)}};
 }
 
 inline String String::New(napi_env env, const char* val, size_t length) {
-  return String(env, {env->rt, jsi::String::createFromUtf8(env->rt, reinterpret_cast<const uint8_t*>(val), length)});
+  return {env, {env->rt, jsi::String::createFromUtf8(env->rt, reinterpret_cast<const uint8_t*>(val), length)}};
 }
 
 inline String String::New(napi_env env, const char16_t* val, size_t length) {
-  (void)env;
-  (void)val;
-  (void)length;
-  throw std::runtime_error("TODO");
+  std::string u8{std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(val, val + length)};
+  return {env, {env->rt, jsi::String::createFromUtf8(env->rt, u8)}};
 }
 
 inline String::String(napi_env env, jsi::Value value)
