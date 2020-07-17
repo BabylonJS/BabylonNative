@@ -22,9 +22,10 @@
 #include <sstream>
 #include <thread>
 #include <clocale>
+#include <codecvt>
 
 namespace facebook {
-namespace jsc {
+namespace jsc2 {
 
 namespace detail {
 class ArgsConverter;
@@ -33,8 +34,8 @@ class ArgsConverter;
 class JSCRuntime;
 
 struct Lock {
-  void lock(const jsc::JSCRuntime &) const {}
-  void unlock(const jsc::JSCRuntime &) const {}
+  void lock(const jsc2::JSCRuntime &) const {}
+  void unlock(const jsc2::JSCRuntime &) const {}
 };
 
 class JSCRuntime : public jsi::Runtime {
@@ -674,25 +675,10 @@ jsi::String JSCRuntime::createStringFromUtf8(
     const uint8_t *str,
     size_t length) {
 
-  std::vector<JSChar> chars(length);
+  auto u8 = reinterpret_cast<const char*>(str);
+  std::u16string chars = std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(u8, u8 + length);
 
-  {
-    const char *from = reinterpret_cast<const char *>(str);
-    char16_t *to = reinterpret_cast<char16_t*>(chars.data());
-
-    std::locale::global(std::locale("en_US.UTF-8"));
-    auto& facet = std::use_facet<std::codecvt<char16_t, char, std::mbstate_t>>(std::locale());
-    std::mbstate_t state{};
-    const char *from_next;
-    char16_t *to_next;
-    auto result = facet.in(state, from, from + length, from_next, to, to + length, to_next);
-    if (result != std::codecvt_base::ok) {
-      throw std::invalid_argument{"Invalid unicode string"};
-    }
-    chars.resize(to_next - to);
-  }
-
-  JSStringRef stringRef = JSStringCreateWithCharacters(chars.data(), chars.size());
+  JSStringRef stringRef = JSStringCreateWithCharacters(reinterpret_cast<JSChar*>(chars.data()), chars.size());
   auto result = createString(stringRef);
   JSStringRelease(stringRef);
   return result;

@@ -16,7 +16,7 @@
 #include <JavaScriptCore/JavaScript.h>
 
 namespace facebook {
-namespace jsc {
+namespace jsc2 {
 
 std::unique_ptr<jsi::Runtime> makeJSCRuntime(JSGlobalContextRef ctx);
 

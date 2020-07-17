@@ -39,7 +39,7 @@ namespace Babylon
     public:
         // This class must be constructed from the JavaScript thread
         Native(facebook::jsi::Runtime* jsiRuntime, ANativeWindow* windowPtr)
-            : m_jsiRuntime{ facebook::jsc::makeJSCRuntime(facebook::jsc::getJSGlobalContextRefFromJSCRuntime(*jsiRuntime)) }
+            : m_jsiRuntime{ facebook::jsc2::makeJSCRuntime(facebook::jsc2::getJSGlobalContextRefFromJSCRuntime(*jsiRuntime)) }
             , m_env{ Napi::Attach<facebook::jsi::Runtime&>(*m_jsiRuntime) }
         {
             auto looper_scheduler = std::make_shared<looper_scheduler_t>(looper_scheduler_t::get_for_current_thread());
