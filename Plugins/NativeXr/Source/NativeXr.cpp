@@ -572,11 +572,9 @@ namespace Babylon
             {
                 auto position = m_position.Value();
                 auto orientation = m_orientation.Value();
-                return
-                {
+                return {
                     {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
-                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}
-                };
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
             }
 
         private:
@@ -970,7 +968,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});	
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
             }
 
             static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
@@ -1076,7 +1074,7 @@ namespace Babylon
                 rigidTransform->Update(m_nativeAnchor.Pose);
 
                 Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return napiSpace;
+                return std::move(napiSpace);
             }
 
             // Forward declaration of delete, as this relies on the XRFrame implementation.
@@ -1214,7 +1212,7 @@ namespace Babylon
                 XRPose* pose = XRPose::Unwrap(napiPose);
                 pose->Update(info, m_hitResult.Pose);
 
-                return napiPose;
+                return std::move(napiPose);
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
@@ -1427,19 +1425,20 @@ namespace Babylon
 
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-                if (xrSpace != nullptr)
-                {
-                    Napi::Object napiPose = XRPose::New(info);
-                    XRPose* pose = XRPose::Unwrap(napiPose);
-                    pose->Update(xrSpace->GetTransform());
-                    return napiPose;
-                }
-                else
+                if (info[0].IsExternal())
                 {
                     const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
                     m_transform.Update(space, false);
                     return m_jsPose.Value();
+                }
+                else
+                {
+                    auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
+                    assert(xrSpace != nullptr);
+                    Napi::Object napiPose = XRPose::New(info);
+                    XRPose* pose = XRPose::Unwrap(napiPose);
+                    pose->Update(xrSpace->GetTransform());
+                    return std::move(napiPose);
                 }
             }
 
@@ -1474,7 +1473,7 @@ namespace Babylon
                     results[i++] = currentResult;
                 }
 
-                return results;
+                return std::move(results);
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info)
@@ -1494,7 +1493,7 @@ namespace Babylon
                     anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
                 }
 
-                return anchorSet;
+                return std::move(anchorSet);
             }
 
             void UpdateAnchors()
@@ -1989,7 +1988,7 @@ namespace Babylon
 
                 auto renderTargetTexture = m_jsRenderTargetTextures[XREye::EyeToIndex(eye)].Value();
                 renderTargetTexture.Get("_texture").As<Napi::Object>().Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session.GetFrameBufferForEye(eye)));
-                return renderTargetTexture;
+                return std::move(renderTargetTexture);
             }
         };
 
