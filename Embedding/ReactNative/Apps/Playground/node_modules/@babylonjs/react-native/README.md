@@ -6,7 +6,7 @@ This quick overview will help you understand the constructs provided by Babylon 
 
 ### Dependencies
 
-This package has several **peer dependencies**. If these dependencies are unmet, the `react-native` build will emit warnings. Be sure to add these dependencies to your project.
+This package has several **peer dependencies**. If these dependencies are unmet, `npm install` will emit warnings. Be sure to add these dependencies to your project.
 
 The `react-native-permissions` dependency is required for XR capabilities of Babylon.js (to request camera permissions automatically). Be sure to follow the `react-native-permissions` [instructions](https://github.com/react-native-community/react-native-permissions#setup) to update your `Podfile` and `Info.plist` (iOS) and/or `AndroidManifest.xml` (Android).
 
@@ -21,6 +21,14 @@ The minimum Android SDK version is 18. This must be set as `minSdkVersion` in th
 ### iOS Configuration
 
 The minimum deployment target version is 12. This must be set as `iOS Deployment Target` in the consuming project's `project.pbxproj`, and must also be set as `platform` in the consuming project's `podfile`.
+
+When running from XCode (with the debugger attached), `API Metal Validation` must be disabled:
+
+1. From within XCode, select from the main menu `Product -> Scheme -> Edit Scheme...`
+1. Ensure the target for your app is selected in the upper left corner of the window.
+1. Select `Run` from the scheme list.
+1. Select the `Options` tab.
+1. Change `API Metal Validation` to `Disabled`.
 
 ### `useEngine`
 

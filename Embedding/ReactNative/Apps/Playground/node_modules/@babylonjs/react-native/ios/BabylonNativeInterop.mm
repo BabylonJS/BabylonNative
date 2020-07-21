@@ -50,8 +50,9 @@ static NSMutableArray* activeTouches;
                     [BabylonNativeInterop setCurrentView:mtkView];
                     currentNativeInstance->Refresh((__bridge void*)currentView, width, height);
                 } else {
-                    // TODO: Figure out why resizing causes the app to crash
-                    //currentNativeInstance->Resize(width, height);
+                    // NOTE: This will cause Metal API Validation to fail if it is enabled when the debugger is attached, which stops app execution.
+                    // For now, be sure to disable Metal API Validation under Product->Scheme->Edit Scheme.
+                    currentNativeInstance->Resize(width, height);
                 }
             }
         }];

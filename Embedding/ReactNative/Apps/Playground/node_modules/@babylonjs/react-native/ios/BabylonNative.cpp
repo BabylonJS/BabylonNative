@@ -45,11 +45,10 @@ namespace Babylon
     Native::Native(facebook::jsi::Runtime* jsiRuntime, void* windowPtr, size_t width, size_t height)
         : m_impl{ std::make_unique<Native::Impl>(jsiRuntime) }
     {
-        // TODO: We should initialize graphics on the UI thread, but for some reason this causes the app to crash
-//        dispatch_sync(dispatch_get_main_queue(), ^{
-//            Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);            
-//        });
-        
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+        });
+
         auto run_loop_scheduler = std::make_shared<arcana::run_loop_scheduler>(arcana::run_loop_scheduler::get_for_current_thread());
 
         JsRuntime::DispatchFunctionT dispatchFunction{[env = m_impl->env, run_loop_scheduler = std::move(run_loop_scheduler)](std::function<void(Napi::Env)> func)
@@ -64,7 +63,6 @@ namespace Babylon
 
         Polyfills::Window::Initialize(m_impl->env);
 
-        Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
         Plugins::NativeWindow::Initialize(m_impl->env, windowPtr, width, height);
         Plugins::NativeEngine::Initialize(m_impl->env);
         Plugins::NativeXr::Initialize(m_impl->env);
@@ -84,10 +82,7 @@ namespace Babylon
 
     void Native::Resize(size_t width, size_t height)
     {
-        m_impl->runtime->Dispatch([width, height](Napi::Env env)
-        {
-            Plugins::NativeWindow::UpdateSize(env, width, height);
-        });
+        Plugins::NativeWindow::UpdateSize(m_impl->env, width, height);
     }
 
     void Native::SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)
