@@ -1273,7 +1273,7 @@ namespace Babylon
                 rigidTransform->Update(m_nativePlane.Center);
 
                 Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return napiSpace;
+                return std::move(napiSpace);
             }
 
             Napi::Value GetPolygon(const Napi::CallbackInfo& info)
@@ -1285,24 +1285,24 @@ namespace Babylon
                     auto polygonPoint = Napi::Object::New(info.Env());
                     if (m_nativePlane.PolygonFormat == xr::PolygonFormat::XZ)
                     {
-                        int polygonIndex = 2 * i;
+                        size_t polygonIndex = 2 * i;
                         polygonPoint.Set("x", m_nativePlane.Polygon[polygonIndex]);
                         polygonPoint.Set("y", 0);
                         polygonPoint.Set("z", m_nativePlane.Polygon[polygonIndex + 1]);
                     }
                     else
                     {
-                        int polygonIndex = 3 * i;
+                        size_t polygonIndex = 3 * i;
                         polygonPoint.Set("x", m_nativePlane.Polygon[polygonIndex]);
                         polygonPoint.Set("y", m_nativePlane.Polygon[polygonIndex + 1]);
                         polygonPoint.Set("z", m_nativePlane.Polygon[polygonIndex + 2]);
 
                     }
 
-                    polygonArray.Set(i, polygonPoint);
+                    polygonArray.Set((int)i, polygonPoint);
                 }
 
-                return polygonArray;
+                return std::move(polygonArray);
             }
 
             Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
@@ -1536,7 +1536,7 @@ namespace Babylon
 
                 // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
-                return worldInformationObj;
+                return std::move(worldInformationObj);
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)

@@ -66,6 +66,11 @@ namespace {
  */
 @implementation SessionDelegate {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
+    
+    NSLock *planeLock;
+    std::set<ARPlaneAnchor*> updatedPlanes;
+    std::vector<ARPlaneAnchor*> deletedPlanes;
+    
     CVMetalTextureCacheRef textureCache;
     CVMetalTextureRef _cameraTextureY;
     CVMetalTextureRef _cameraTextureCbCr;
@@ -99,6 +104,22 @@ namespace {
 }
 
 /**
+ Returns the set of all updated planes since the last time we consumed plane updates.
+ */
+-(std::set<ARPlaneAnchor*>&) GetUpdatedPlanes
+{
+    return updatedPlanes;
+}
+
+/**
+ Returns the vcetor containing all deleted planes since the last time we consumed plane updates.
+ */
+-(std::vector<ARPlaneAnchor*>&) GetDeletedPlanes
+{
+    return deletedPlanes;
+}
+
+/**
  Initializes this session delgate with the given frame views and metal graphics context.
  */
 - (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext {
@@ -110,7 +131,18 @@ namespace {
         throw std::runtime_error{"Unable to create Texture Cache"};
     }
     
+    updatedPlanes = {};
+    deletedPlanes = {};
+    planeLock = [[NSLock alloc] init];
     return self;
+}
+
+-(void) LockPlanes {
+    [planeLock lock];
+}
+
+-(void) UnlockPlanes {
+    [planeLock unlock];
 }
 
 /**
@@ -299,6 +331,39 @@ namespace {
     frameView.Space.Pose.Position = { displayOrientedTransform.columns[3][0]
         , displayOrientedTransform.columns[3][1]
         , displayOrientedTransform.columns[3][2] };
+}
+
+- (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    [self LockPlanes];
+    for (ARAnchor* newAnchor : anchors) {
+        if ([newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+            updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
+        }
+    }
+    
+    [self UnlockPlanes];
+}
+
+- (void)session:(ARSession *)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    [self LockPlanes];
+        for (ARAnchor* updatedAnchor : anchors) {
+            if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
+            }
+        }
+    
+    [self UnlockPlanes];
+}
+
+- (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    [self LockPlanes];
+    for (ARAnchor* removedAnchor : anchors) {
+        if ([removedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+            deletedPlanes.push_back((ARPlaneAnchor*)removedAnchor);
+        }
+    }
+    
+    [self UnlockPlanes];
 }
 
 -(void)cleanupTextures {
@@ -775,6 +840,22 @@ namespace xr {
         }
         
         /**
+         Updates existing planes in place, gets the list of created planes, and removed planes.
+         */
+        void UpdatePlanes(std::map<NativePlanePtr, Plane*>&,  std::vector<Plane>&, std::vector<Plane*>&)
+        {
+            
+        }
+        
+        /**
+         Cleans up the given native plane, and clears its memory out.
+         */
+        void CleanupPlane(Plane*)
+        {
+            
+        }
+        
+        /**
          Deallocates the native ARKit anchor object, and removes it from the anchor list.
          */
         void CleanupAnchor(ARAnchor* arAnchor) {
@@ -870,6 +951,16 @@ namespace xr {
 
     void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const {
         m_impl->sessionImpl.DeleteAnchor(anchor);
+    }
+
+    void System::Session::Frame::UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    {
+        m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
+    }
+
+    void System::Session::Frame::CleanupPlane(Plane* plane) const
+    {
+        m_impl->sessionImpl.CleanupPlane(plane);
     }
 
     System::System(const char* appName)
