@@ -911,7 +911,7 @@ namespace xr
                     // This is a new plane, create it and initialize its values.
                     Plane plane{};
                     plane.Updated = true;
-                    plane.NativePlane = reinterpret_cast<NativePlaneIdentifier>(trackable);
+                    plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(trackable);
                     RawToPose(rawPose, plane.Center);
                     plane.Polygon = polygon;
                     planeBuffers.insert(polygon);
@@ -945,7 +945,7 @@ namespace xr
         // Cleans up a plane. Called when a plane gets deleted.
         void CleanupPlane(Plane* plane)
         {
-            ArTrackable_release(reinterpret_cast<ArTrackable*>(plane->NativePlane));
+            ArTrackable_release(reinterpret_cast<ArTrackable*>(plane->NativePlaneId));
 
             if (plane->Polygon != nullptr)
             {

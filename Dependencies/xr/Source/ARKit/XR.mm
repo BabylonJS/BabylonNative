@@ -916,7 +916,7 @@ namespace xr {
                         Plane plane{};
                         plane.Updated = true;
                         [updatedPlane.identifier retain];
-                        plane.NativePlane = reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier);
+                        plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier);
                         plane.Center = TransformToPose(updatedPlane.transform);
                         plane.Polygon = polygon;
                         planeBuffers.insert(polygon);
@@ -967,7 +967,7 @@ namespace xr {
          Cleans up the given native plane, and clears its memory out.
          */
         void CleanupPlane(Plane* plane) {
-            auto planeIdentifier = (reinterpret_cast<NSUUID*>(plane->NativePlane));
+            auto planeIdentifier = (reinterpret_cast<NSUUID*>(plane->NativePlaneId));
             [planeIdentifier release];
 
             if (plane->Polygon != nullptr) {

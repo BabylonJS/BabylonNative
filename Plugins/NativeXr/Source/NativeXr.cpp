@@ -1546,7 +1546,7 @@ namespace Babylon
                 // Loop over our Planes, and create a mapping of native plane pointers to xr::planes.
                 for (auto & [plane, planeNapiValue] : m_trackedPlanes)
                 {
-                    std::pair<xr::NativePlaneIdentifier, xr::Plane*> pair = {plane->NativePlane, plane};
+                    std::pair<xr::NativePlaneIdentifier, xr::Plane*> pair = {plane->NativePlaneId, plane};
                     existingNativePlaneMap.insert(pair);
                 }
 

@@ -116,7 +116,7 @@ namespace xr
         float* Polygon{};
         size_t PolygonSize{0};
         PolygonFormat PolygonFormat{};
-        NativePlaneIdentifier NativePlane{};
+        NativePlaneIdentifier NativePlaneId{};
         bool Updated;
     };
 
