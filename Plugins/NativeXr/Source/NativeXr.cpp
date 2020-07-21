@@ -1541,12 +1541,12 @@ namespace Babylon
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                std::map<xr::NativePlanePtr, xr::Plane*> existingNativePlaneMap;
+                std::map<xr::NativePlaneIdentifier, xr::Plane*> existingNativePlaneMap;
 
                 // Loop over our Planes, and create a mapping of native plane pointers to xr::planes.
                 for (auto & [plane, planeNapiValue] : m_trackedPlanes)
                 {
-                    std::pair<xr::NativePlanePtr, xr::Plane*> pair = {plane->NativePlane, plane};
+                    std::pair<xr::NativePlaneIdentifier, xr::Plane*> pair = {plane->NativePlane, plane};
                     existingNativePlaneMap.insert(pair);
                 }
 

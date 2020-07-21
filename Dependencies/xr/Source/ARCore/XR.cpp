@@ -38,24 +38,6 @@ namespace xr
 {
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID = 8435;
-    const float FLOAT_COMPARISON_THRESHHOLD = .01f;
-
-    bool operator==(const Pose& lhs, const Pose& rhs)
-    {
-        return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHHOLD
-               && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHHOLD
-               && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHHOLD
-               && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHHOLD
-               && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHHOLD
-               && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHHOLD
-               && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHHOLD;
-    }
-
-    bool operator!=(const Pose& lhs, const Pose& rhs)
-    {
-        return !(lhs == rhs);
-    }
-
     struct System::Impl
     {
         Impl(const std::string& /*applicationName*/)
@@ -819,7 +801,7 @@ namespace xr
             }
         }
 
-        void UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
+        void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
         {
             ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
@@ -835,14 +817,14 @@ namespace xr
             }
 
             // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
-            for (auto & [nativePlanePtr, plane] : existingPlanes)
+            for (auto & [NativePlaneIdentifier, plane] : existingPlanes)
             {
                 // Mark each plane as unupdated this frame.
                 plane->Updated = false;
 
                 // Check if the plane has been subsumed, and if we should stop tracking it.
                 ArPlane* subsumingPlane = nullptr;
-                auto* planeTrackable = reinterpret_cast<ArPlane*>(nativePlanePtr);
+                auto* planeTrackable = reinterpret_cast<ArPlane*>(NativePlaneIdentifier);
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
 
                 // Plane has been subsumed, stop tracking it explicitly.
@@ -889,7 +871,7 @@ namespace xr
                 ArPlane_getPolygon(session, planeTrackable, polygon);
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
-                auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlanePtr>(trackable));
+                auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(trackable));
                 if (planeIterator != existingPlanes.end())
                 {
                     // Mark the plane as updated
@@ -929,7 +911,7 @@ namespace xr
                     // This is a new plane, create it and initialize its values.
                     Plane plane{};
                     plane.Updated = true;
-                    plane.NativePlane = reinterpret_cast<NativePlanePtr>(trackable);
+                    plane.NativePlane = reinterpret_cast<NativePlaneIdentifier>(trackable);
                     RawToPose(rawPose, plane.Center);
                     plane.Polygon = polygon;
                     planeBuffers.insert(polygon);
@@ -1102,7 +1084,7 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }

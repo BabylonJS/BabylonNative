@@ -60,6 +60,23 @@ namespace xr
         } Orientation;
     };
 
+    const float FLOAT_COMPARISON_THRESHOLD = .01f;
+    bool operator==(const Pose& lhs, const Pose& rhs)
+    {
+        return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
+    }
+
+    bool operator!=(const Pose& lhs, const Pose& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
     using NativeTrackablePtr = void*;
     struct HitResult
     {
@@ -92,14 +109,14 @@ namespace xr
         bool IsValid{true};
     };
 
-    using NativePlanePtr = void*;
+    using NativePlaneIdentifier = void*;
     struct Plane
     {
         Pose Center{};
         float* Polygon{};
         size_t PolygonSize{0};
         PolygonFormat PolygonFormat{};
-        NativePlanePtr NativePlane{};
+        NativePlaneIdentifier NativePlane{};
         bool Updated;
     };
 
@@ -174,7 +191,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                void UpdatePlanes(std::map<NativePlanePtr, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
+                void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
                 void CleanupPlane(Plane* plane) const;
 
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
