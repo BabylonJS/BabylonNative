@@ -66,6 +66,20 @@ namespace {
         
         return poseTransform;
     }
+
+    bool operator==(const Pose& lhs, const Pose& rhs) {
+        return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
+               && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
+    }
+
+    bool operator!=(const Pose& lhs, const Pose& rhs) {
+        return !(lhs == rhs);
+    }
 }
 
 /**
@@ -532,18 +546,17 @@ namespace xr {
             });
 
             // If the singleton session and configuraiton have not yet been created, create them here now.
-            if (session == nil) {
-                session = [ARSession new];
-                configuration = [ARWorldTrackingConfiguration new];
-                configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
-                configuration.lightEstimationEnabled = false;
-                configuration.worldAlignment = ARWorldAlignmentGravity;
-            }
+            session = [ARSession new];
+            auto configuration = [ARWorldTrackingConfiguration new];
+            configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
+            configuration.lightEstimationEnabled = false;
+            configuration.worldAlignment = ARWorldAlignmentGravity;
             
             metalDevice = id<MTLDevice>(graphicsContext);
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
             session.delegate = sessionDelegate;
             [session runWithConfiguration:configuration];
+            [configuration release];
 
             id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
@@ -589,9 +602,9 @@ namespace xr {
 
             CleanupAnchor(nil);
             CleanupAllPlaneBuffers();
-            [session pause];
-            session.delegate = nil;
             [sessionDelegate release];
+            [session pause];
+            [session release];
             [pipelineState release];
             dispatch_sync(dispatch_get_main_queue(), ^{
                 [xrView removeFromSuperview]; });
@@ -870,12 +883,14 @@ namespace xr {
                 for (ARPlaneAnchor* updatedPlane : *updatedPlanes) {
                     // Dynamically allocate the polygon array, and fill it in.
                     auto geometry = updatedPlane.geometry;
-                    auto polygonSize = geometry.boundaryVertexCount * 3;
-                    float* polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize));
-                    for (NSUInteger i = 0; i < polygonSize; i += 3) {
-                        polygon[i] = geometry.boundaryVertices[i].x;
-                        polygon[i + 1] = geometry.boundaryVertices[i].y;
-                        polygon[i + 2] = geometry.boundaryVertices[i].z;
+                    auto polygonSize = geometry.boundaryVertexCount;
+                                            
+                    float* polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize * 3));
+                    for (NSUInteger i = 0; i < polygonSize; i++) {
+                        NSUInteger polygonIndex =  i * 3;
+                        polygon[polygonIndex] = geometry.boundaryVertices[i].x;
+                        polygon[polygonIndex + 1] = geometry.boundaryVertices[i].y;
+                        polygon[polygonIndex + 2] = geometry.boundaryVertices[i].z;
                     }
 
                     // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
@@ -908,8 +923,7 @@ namespace xr {
                         // Store the polygon.
                         plane->Polygon = polygon;
                         planeBuffers.insert(polygon);
-                        plane->PolygonSize = polygonSize / 2;
-                        plane->PolygonFormat = PolygonFormat::XZ;
+                        plane->PolygonSize = polygonSize;
                     }
                     else {
                         // This is a new plane, create it and initialize its values.
@@ -920,7 +934,8 @@ namespace xr {
                         plane.Center = TransformToPose(updatedPlane.transform);
                         plane.Polygon = polygon;
                         planeBuffers.insert(polygon);
-                        plane.PolygonSize = polygonSize / 2;
+                        plane.PolygonSize = polygonSize;
+                        plane.PolygonFormat = PolygonFormat::XYZ;
                         newPlanes.push_back(plane);
                     }
                     
@@ -949,12 +964,12 @@ namespace xr {
         bool CheckIfPlaneWasUpdated(Plane* existingPlane, float* newPolygon, size_t newPolygonSize, Pose& newCenter) {
             // First check if the center has changed, or the polygon size has changed.
             if (existingPlane->Center != newCenter
-                || existingPlane->PolygonSize * 2 != newPolygonSize) {
+                || existingPlane->PolygonSize != newPolygonSize) {
                 return true;
             }
 
             // Next loop over the polygon and check if any points have changed.
-            for (size_t i = 0; i < newPolygonSize; i++) {
+            for (size_t i = 0; i < newPolygonSize * 3; i++) {
                 if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD) {
                     return true;
                 }
@@ -1001,8 +1016,7 @@ namespace xr {
         }
 
         private:
-            inline static ARSession* session{};
-            inline static ARWorldTrackingConfiguration* configuration{};
+            ARSession* session{};
             MTKView* xrView{};
             bool sessionEnded{ false };
             id<MTLDevice> metalDevice{};

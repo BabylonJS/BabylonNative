@@ -60,23 +60,7 @@ namespace xr
         } Orientation;
     };
 
-    const float FLOAT_COMPARISON_THRESHOLD = .01f;
-    bool operator==(const Pose& lhs, const Pose& rhs)
-    {
-        return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
-    }
-
-    bool operator!=(const Pose& lhs, const Pose& rhs)
-    {
-        return !(lhs == rhs);
-    }
-
+    const float FLOAT_COMPARISON_THRESHOLD = .02f;
     using NativeTrackablePtr = void*;
     struct HitResult
     {

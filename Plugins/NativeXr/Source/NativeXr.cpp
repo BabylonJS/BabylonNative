@@ -891,33 +891,33 @@ namespace Babylon
             {
                 xr::Ray nativeRay{{0, 0, 0}, {0, 0, -1}};
                 auto originObject = m_origin.Value();
-                if (originObject.HasOwnProperty("x"))
+                if (originObject.Has("x"))
                 {
                     nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
                 }
 
-                if (originObject.HasOwnProperty("y"))
+                if (originObject.Has("y"))
                 {
                     nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
                 }
 
-                if (originObject.HasOwnProperty("z"))
+                if (originObject.Has("z"))
                 {
                     nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
                 }
 
                 auto directionObject = m_direction.Value();
-                if (directionObject.HasOwnProperty("x"))
+                if (directionObject.Has("x"))
                 {
                     nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
                 }
 
-                if (directionObject.HasOwnProperty("y"))
+                if (directionObject.Has("y"))
                 {
                     nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
                 }
 
-                if (directionObject.HasOwnProperty("z"))
+                if (directionObject.Has("z"))
                 {
                     nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
                 }
@@ -1117,7 +1117,7 @@ namespace Babylon
             {
                 auto options = info[0].As<Napi::Object>();
 
-                if (options.HasOwnProperty("space"))
+                if (options.Has("space"))
                 {
                     auto spaceValue = options.Get("space");
 
@@ -1128,7 +1128,7 @@ namespace Babylon
                     }
                 }
 
-                if (options.HasOwnProperty("offsetRay"))
+                if (options.Has("offsetRay"))
                 {
                     m_offsetRay = Napi::Persistent(options.Get("offsetRay").As<Napi::Object>());
                     hasOffsetRay = true;
@@ -1581,6 +1581,7 @@ namespace Babylon
                     {
                         auto xrPlane = XRPlane::Unwrap(planeNapiValue.Value());
                         xrPlane->SetLastUpdatedTime(timestamp);
+                        plane->Updated = false;
                     }
                 }
             }
