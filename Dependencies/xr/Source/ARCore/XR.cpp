@@ -949,7 +949,7 @@ namespace xr
             // Next loop over the polygon and check if any points have changed.
             for (size_t i = 0; i < newPolygonSize; i++)
             {
-                if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHHOLD)
+                if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD)
                 {
                     return true;
                 }
