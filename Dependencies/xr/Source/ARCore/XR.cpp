@@ -867,12 +867,8 @@ namespace xr
                 {
                     // This is a new plane, create it and initialize its values.
                     Plane plane{};
-                    plane.Updated = true;
                     plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(trackable);
-                    RawToPose(rawPose, plane.Center);
-                    plane.Polygon = polygon;
-                    planeBuffers.insert(polygon);
-                    plane.PolygonSize = polygonSize / 2;
+                    UpdateExistingPlane(&plane, rawPose, polygon, polygonSize);
                     newPlanes.push_back(plane);
                 }
             }

@@ -35,13 +35,6 @@ namespace xr
         size_t Height{};
     };
 
-    struct Point
-    {
-        float X{};
-        float Y{};
-        float Z{};
-    };
-    
     struct Pose
     {
         struct
