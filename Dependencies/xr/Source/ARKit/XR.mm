@@ -16,8 +16,7 @@ namespace {
     } XRVertex;
 
     struct ARAnchorComparer {
-        bool operator()(const ARPlaneAnchor* lhs, const ARPlaneAnchor* rhs) const
-        {
+        bool operator()(const ARPlaneAnchor* lhs, const ARPlaneAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
         }
     };
@@ -66,20 +65,6 @@ namespace {
         
         return poseTransform;
     }
-
-    bool operator==(const Pose& lhs, const Pose& rhs) {
-        return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
-               && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
-    }
-
-    bool operator!=(const Pose& lhs, const Pose& rhs) {
-        return !(lhs == rhs);
-    }
 }
 
 /**
@@ -127,16 +112,14 @@ namespace {
 /**
  Returns the set of all updated planes since the last time we consumed plane updates.
  */
--(std::set<ARPlaneAnchor*, ARAnchorComparer>*) GetUpdatedPlanes
-{
+-(std::set<ARPlaneAnchor*, ARAnchorComparer>*) GetUpdatedPlanes {
     return &updatedPlanes;
 }
 
 /**
- Returns the vcetor containing all deleted planes since the last time we consumed plane updates.
+ Returns the vector containing all deleted planes since the last time we consumed plane updates.
  */
--(std::vector<ARPlaneAnchor*>*) GetDeletedPlanes
-{
+-(std::vector<ARPlaneAnchor*>*) GetDeletedPlanes {
     return &deletedPlanes;
 }
 
@@ -372,16 +355,16 @@ namespace {
 
 - (void)session:(ARSession *)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     [self LockPlanes];
-        for (ARAnchor* updatedAnchor : anchors) {
-            if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-                auto insertResult = updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
-                
-                // We need to keep the pointer alive, so mark the anchor as retained.
-                if (insertResult.second) {
-                    [updatedAnchor retain];
-                }
+    for (ARAnchor* updatedAnchor : anchors) {
+        if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+            auto insertResult = updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
+            
+            // We need to keep the pointer alive, so mark the anchor as retained.
+            if (insertResult.second) {
+                [updatedAnchor retain];
             }
         }
+    }
     
     [self UnlockPlanes];
 }
@@ -499,6 +482,20 @@ namespace xr {
             }
             return lib;
         }
+    
+        bool operator==(const Pose& lhs, const Pose& rhs) {
+            return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
+        }
+
+        bool operator!=(const Pose& lhs, const Pose& rhs) {
+            return !(lhs == rhs);
+        }
     }
     
     struct System::Impl {
@@ -556,6 +553,7 @@ namespace xr {
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
             session.delegate = sessionDelegate;
             [session runWithConfiguration:configuration];
+                
             [configuration release];
 
             id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
@@ -876,7 +874,6 @@ namespace xr {
          */
         void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
             [sessionDelegate LockPlanes];
-            
             @try {
                 // First lets go and update all planes that have been updated since the last frame.
                 auto updatedPlanes = [sessionDelegate GetUpdatedPlanes];
@@ -896,54 +893,29 @@ namespace xr {
                     // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
                     auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier));
                     if (planeIterator != existingPlanes.end()) {
-                        // Mark the plane as updated
-                        auto plane = planeIterator->second;
-
-                        // Grab the new center
-                        Pose newCenter = TransformToPose(updatedPlane.transform);
-
-                        // Plane was not actually updated, free the polygon buffer, and continue to the next plane.
-                        if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter)) {
-                            free(polygon);
-                            [updatedPlane release];
-                            continue;
-                        }
-
-                        // Mark the plane as updated, and grab the new center.
-                        plane->Updated = true;
-                        plane->Center = newCenter;
-
-                        // Clean up the old plane buffer, and remove it from the set of allocated buffers.
-                        if (plane->Polygon != nullptr) {
-                            free(plane->Polygon);
-                            planeBuffers.erase(plane->Polygon);
-                            plane->Polygon = nullptr;
-                        }
-
-                        // Store the polygon.
-                        plane->Polygon = polygon;
-                        planeBuffers.insert(polygon);
-                        plane->PolygonSize = polygonSize;
+                        UpdatePlane(planeIterator->second, updatedPlane, polygon, polygonSize);
                     }
                     else {
                         // This is a new plane, create it and initialize its values.
                         Plane plane{};
-                        plane.Updated = true;
                         [updatedPlane.identifier retain];
                         plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier);
-                        plane.Center = TransformToPose(updatedPlane.transform);
-                        plane.Polygon = polygon;
-                        planeBuffers.insert(polygon);
-                        plane.PolygonSize = polygonSize;
                         plane.PolygonFormat = PolygonFormat::XYZ;
+                        
+                        // Fill in the polygon, and center pose.
+                        UpdatePlane(&plane, updatedPlane, polygon, polygonSize);
+
+                        // Add it to the list of newly created planes.
                         newPlanes.push_back(plane);
                     }
                     
                     [updatedPlane release];
                 }
                 
+                // Clear the list of updated planes to start building up for the next frame update.
                 updatedPlanes->clear();
                 
+                // Now loop over all deleted planes find them in the existing planes map and if the entry exists add it to the list of removed planes.
                 auto removedPlanes = [sessionDelegate GetDeletedPlanes];
                 for (ARPlaneAnchor* removedPlane: *removedPlanes) {
                     // Find the plane in the set of existing planes.
@@ -955,6 +927,7 @@ namespace xr {
                     [removedPlane release];
                 }
                 
+                // Clear the list of removed frames to start building up for the next plane update.
                 removedPlanes->clear();
             } @finally {
                 [sessionDelegate UnlockPlanes];
@@ -1053,9 +1026,37 @@ namespace xr {
             return hitResult;
         }
         
+        void UpdatePlane(Plane* plane, ARPlaneAnchor* planeAnchor, float* polygon, size_t polygonSize) {
+            Pose newCenter = TransformToPose(planeAnchor.transform);
+
+            // If the plane was not actually updated, free the polygon buffer, and return.
+            if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter)) {
+                free(polygon);
+                [planeAnchor release];
+                return;
+            }
+
+            // Mark the plane as updated, and grab the new center.
+            plane->Updated = true;
+            
+            // Update the center of the plane
+            plane->Center = newCenter;
+
+            // Clean up the old plane buffer, and remove it from the set of allocated buffers.
+            if (plane->Polygon != nullptr) {
+                free(plane->Polygon);
+                planeBuffers.erase(plane->Polygon);
+                plane->Polygon = nullptr;
+            }
+
+            // Store the polygon.
+            plane->Polygon = polygon;
+            planeBuffers.insert(polygon);
+            plane->PolygonSize = polygonSize;
+        }
+        
         // Clean up all allocated plane buffers, called when the session gets disposed.
-        void CleanupAllPlaneBuffers()
-        {
+        void CleanupAllPlaneBuffers() {
             auto bufferIter = planeBuffers.begin();
             while (bufferIter != planeBuffers.end())
             {
