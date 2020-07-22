@@ -64,7 +64,8 @@ android {
                         '-DSPIRV_CROSS_CLI=OFF',
                         "-DANDROID_JSC_LIBPATH=${extractedLibDir}/jni",
                         "-DANDROID_JSC_INCPATH=${jscIncDir}",
-                        "-DARCORE_LIBPATH=${extractedLibDir}/jni"
+                        "-DARCORE_LIBPATH=${extractedLibDir}/jni",
+                        "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/"
             }
         }
         ndk {

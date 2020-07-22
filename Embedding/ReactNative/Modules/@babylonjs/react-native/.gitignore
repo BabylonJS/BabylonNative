@@ -48,3 +48,4 @@ CMakeCache.txt
 cmake_install.cmake
 ReactNativeBabylon.xcodeproj
 *.tgz
+jsi

@@ -10,13 +10,8 @@ function exec(command, workingDirectory = '.', logCommand = true) {
     log(command);
   }
 
-  shelljs.pushd('-q', workingDirectory);
-  try {
-    if (shelljs.exec(command, {fatal: true}).code) {
-      throw `'${command}' finished with non-zero exit code.`;
-    }
-  } finally {
-    shelljs.popd('-q');
+  if (shelljs.exec(command, {fatal: true, cwd: workingDirectory}).code) {
+    throw `'${command}' finished with non-zero exit code.`;
   }
 }
 

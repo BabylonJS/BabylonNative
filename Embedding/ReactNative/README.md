@@ -24,7 +24,7 @@ If you are interested in making contributions, be sure to also review [CONTRIBUT
 
 ### **Preparing a new Repo**
 
-**Required Tools:** [git](https://git-scm.com/), [Yarn](https://classic.yarnpkg.com/en/docs/install)
+**Required Tools:** [git](https://git-scm.com/), [Node.js](https://nodejs.org/en/download/)
 
 Step 1 for all development environments and targets is to clone the repo. Use a git-enabled terminal to follow the steps below.
 
@@ -43,7 +43,7 @@ The Playground sample/test app is a standard React Native app, and as such also 
 
 ```
 cd Apps/Playground
-yarn install
+npm install
 ```
 
 For iOS, CocoaPods are also used, and these must be installed.

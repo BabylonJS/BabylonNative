@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "4.2.0-alpha.21",
-    "@babylonjs/react-native": "./node_modules/@babylonjs/react-native",
+    "@babylonjs/react-native": "file:../../Modules/@babylonjs/react-native",
     "@react-native-community/slider": "^2.0.9",
     "logkitty": "^0.7.1",
     "react": "16.13.1",
