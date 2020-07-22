@@ -902,7 +902,7 @@ namespace xr {
                         plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier);
                         plane.PolygonFormat = PolygonFormat::XYZ;
                         
-                        // Fill in the polygon, and center pose.
+                        // Fill in the polygon and center pose.
                         UpdatePlane(&plane, updatedPlane, polygon, polygonSize);
 
                         // Add it to the list of newly created planes.
@@ -1032,7 +1032,6 @@ namespace xr {
             // If the plane was not actually updated, free the polygon buffer, and return.
             if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter)) {
                 free(polygon);
-                [planeAnchor release];
                 return;
             }
 
