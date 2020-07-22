@@ -38,6 +38,7 @@ namespace xr
 {
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID = 8435;
+
     struct System::Impl
     {
         Impl(const std::string& /*applicationName*/)
@@ -315,6 +316,9 @@ namespace xr
             return task;
         }
 
+        /**
+         * Compare two poses and determine if they are approximately equal.
+         **/
         bool operator==(const Pose& lhs, const Pose& rhs)
         {
             return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
@@ -633,15 +637,7 @@ namespace xr
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay)
         {
-            ArCamera* camera{};
-            ArFrame_acquireCamera(session, frame, &camera);
-
-            // Get the tracking state
-            ArTrackingState trackingState{};
-            ArCamera_getTrackingState(session, camera, &trackingState);
-
-            // If not tracking, back out and return.
-            if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING)
+            if (!IsTracking())
             {
                 return;
             }
@@ -819,41 +815,16 @@ namespace xr
 
         void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
         {
-            ArCamera* camera{};
-            ArFrame_acquireCamera(session, frame, &camera);
-
-            // Get the tracking state
-            ArTrackingState trackingState{};
-            ArCamera_getTrackingState(session, camera, &trackingState);
-
-            // If not tracking, back out and return.
-            if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING)
+            if (!IsTracking())
             {
                 return;
             }
 
             // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
-            for (auto & [NativePlaneIdentifier, plane] : existingPlanes)
-            {
-                // Mark each plane as unupdated this frame.
-                plane->Updated = false;
+            CheckForSubsumedPlanes(existingPlanes, deletedPlanes);
 
-                // Check if the plane has been subsumed, and if we should stop tracking it.
-                ArPlane* subsumingPlane = nullptr;
-                auto* planeTrackable = reinterpret_cast<ArPlane*>(NativePlaneIdentifier);
-                ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
-
-                // Plane has been subsumed, stop tracking it explicitly.
-                if (subsumingPlane != nullptr)
-                {
-                    deletedPlanes.push_back(plane);
-                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
-                }
-            }
-
-            // Next check for updated planes, and update their pose and polygon.
-            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
-            
+            // Next check for updated planes, and update their pose and polygon or create a new plane if it does not yet exist.
+            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);            
             int32_t size{};
             ArTrackableList_getSize(session, trackableList, &size);
             for (int i = 0; i < size; i++)
@@ -863,7 +834,7 @@ namespace xr
                 ArTrackableList_acquireItem(session, trackableList, i, &trackable);
                 auto planeTrackable = reinterpret_cast<ArPlane*>(trackable);
 
-                // Check if this plane has been subsumed. If so skip it.
+                // Check if this plane has been subsumed. If so skip it as we are about to delete this plane.
                 ArPlane* subsumingPlane = nullptr;
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
                 if (subsumingPlane != nullptr)
@@ -890,37 +861,7 @@ namespace xr
                 auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(trackable));
                 if (planeIterator != existingPlanes.end())
                 {
-                    // Mark the plane as updated
-                    auto plane = planeIterator->second;
-
-                    // Grab the new center
-                    Pose newCenter{};
-                    RawToPose(rawPose, newCenter);
-
-                    // Plane was not actually updated, free the polygon buffer, and continue to the next plane.
-                    if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter))
-                    {
-                        free(polygon);
-                        continue;
-                    }
-
-                    // Mark the plane as updated, and grab the new center.
-                    plane->Updated = true;
-                    plane->Center = newCenter;
-
-                    // Clean up the old plane buffer, and remove it from the set of allocated buffers.
-                    if (plane->Polygon != nullptr)
-                    {
-                        free(plane->Polygon);
-                        planeBuffers.erase(plane->Polygon);
-                        plane->Polygon = nullptr;
-                    }
-
-                    // Store the polygon.
-                    plane->Polygon = polygon;
-                    planeBuffers.insert(polygon);
-                    plane->PolygonSize = polygonSize / 2;
-                    plane->PolygonFormat = PolygonFormat::XZ;
+                    UpdateExistingPlane(planeIterator->second, rawPose, polygon, polygonSize);
                 }
                 else
                 {
@@ -1060,6 +1001,71 @@ namespace xr
                 free(*bufferIter);
                 bufferIter = planeBuffers.erase(bufferIter);
             }
+        }
+
+        /**
+         * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
+         **/
+        void CheckForSubsumedPlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane*>& subsumedPlanes)
+        {
+            for (auto & [NativePlaneIdentifier, plane] : existingPlanes)
+            {
+                // Check if the plane has been subsumed, and if we should stop tracking it.
+                ArPlane* subsumingPlane = nullptr;
+                auto* planeTrackable = reinterpret_cast<ArPlane*>(NativePlaneIdentifier);
+                ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
+
+                // Plane has been subsumed, stop tracking it explicitly.
+                if (subsumingPlane != nullptr)
+                {
+                    subsumedPlanes.push_back(plane);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                }
+            }
+        }
+
+        void UpdateExistingPlane(Plane* plane, const float rawPose[], float* polygon, size_t polygonSize)
+        {
+            // Grab the new center
+            Pose newCenter{};
+            RawToPose(rawPose, newCenter);
+
+            // Plane was not actually updated, free the polygon buffer, and return.
+            if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter))
+            {
+                free(polygon);
+                return;
+            }
+
+            // Mark the plane as updated, and grab the new center.
+            plane->Updated = true;
+            plane->Center = newCenter;
+
+            // Clean up the old plane buffer, and remove it from the set of allocated buffers.
+            if (plane->Polygon != nullptr)
+            {
+                free(plane->Polygon);
+                planeBuffers.erase(plane->Polygon);
+                plane->Polygon = nullptr;
+            }
+
+            // Store the polygon.
+            plane->Polygon = polygon;
+            planeBuffers.insert(polygon);
+            plane->PolygonSize = polygonSize / 2;
+            plane->PolygonFormat = PolygonFormat::XZ;
+        }
+
+        /**
+         * Checks whether the AR camera is currently tracking.
+         **/
+        bool IsTracking()
+        {
+            ArCamera* camera{};
+            ArTrackingState trackingState{};
+            ArFrame_acquireCamera(session, frame, &camera);
+            ArCamera_getTrackingState(session, camera, &trackingState);
+            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
         }
     };
 

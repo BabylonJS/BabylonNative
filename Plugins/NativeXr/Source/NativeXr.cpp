@@ -8,7 +8,6 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
-#include <map>
 #include <set>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
@@ -1296,7 +1295,6 @@ namespace Babylon
                         polygonPoint.Set("x", m_nativePlane.Polygon[polygonIndex]);
                         polygonPoint.Set("y", m_nativePlane.Polygon[polygonIndex + 1]);
                         polygonPoint.Set("z", m_nativePlane.Polygon[polygonIndex + 2]);
-
                     }
 
                     polygonArray.Set((int)i, polygonPoint);
@@ -1312,7 +1310,7 @@ namespace Babylon
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
-            
+
             // The underlying native plane.
             xr::Plane m_nativePlane{};
         };
@@ -1385,7 +1383,7 @@ namespace Babylon
                 xrAnchor->SetAnchor(nativeAnchor);
 
                 // Add the anchor to the list of tracked anchors.
-                m_trackedAnchors.push_back(napiAnchor.Value());
+                m_trackedAnchors.push_back(std::move(napiAnchor));
 
                 // Resolve the promise with the newly created anchor.
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
@@ -1403,7 +1401,7 @@ namespace Babylon
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
-            std::vector<Napi::Value> m_trackedAnchors{};
+            std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::map<xr::Plane*, Napi::ObjectReference> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
@@ -1488,9 +1486,9 @@ namespace Babylon
                 Napi::Object anchorSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
                 // Loop over the list of tracked anchors, and add them to the set.
-                for (Napi::Value napiValue : m_trackedAnchors)
+                for (const Napi::ObjectReference& napiAnchorRef : m_trackedAnchors)
                 {
-                    anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
+                    anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiAnchorRef.Value()});
                 }
 
                 return std::move(anchorSet);
@@ -1499,10 +1497,10 @@ namespace Babylon
             void UpdateAnchors()
             {
                 // Loop over all anchors and update their state.
-                std::vector<Napi::Value>::iterator anchorIter = m_trackedAnchors.begin();
+                std::vector<Napi::ObjectReference>::iterator anchorIter = m_trackedAnchors.begin();
                 while (anchorIter != m_trackedAnchors.end())
                 {
-                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).As<Napi::Object>());
+                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).Value());
                     xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
 
                     // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
@@ -1529,7 +1527,7 @@ namespace Babylon
                 Napi::Object planeSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
                 // Loop over the list of tracked planes, and add them to the set.
-                for (const auto & [plane, planeNapiValue] : m_trackedPlanes)
+                for (const auto& [plane, planeNapiValue] : m_trackedPlanes)
                 {
                     planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue.Value()});
                 }
@@ -1543,14 +1541,14 @@ namespace Babylon
             {
                 std::map<xr::NativePlaneIdentifier, xr::Plane*> existingNativePlaneMap;
 
-                // Loop over our Planes, and create a mapping of native plane pointers to xr::planes.
-                for (auto & [plane, planeNapiValue] : m_trackedPlanes)
+                // Loop over our Planes, and create a mapping of native plane identifiers to xr::planes.
+                for (auto& [plane, planeNapiValue] : m_trackedPlanes)
                 {
                     std::pair<xr::NativePlaneIdentifier, xr::Plane*> pair = {plane->NativePlaneId, plane};
                     existingNativePlaneMap.insert(pair);
                 }
 
-                // Call update to update planes, fetch new planes, and get the list of deleted planes.
+                // Call update to update existing planes, find new planes, and get the list of deleted planes.
                 std::vector<xr::Plane> newPlanes{};
                 std::vector<xr::Plane*> deletedPlanes{};
                 m_frame->UpdatePlanes(existingNativePlaneMap, newPlanes, deletedPlanes);
@@ -1564,18 +1562,18 @@ namespace Babylon
                     m_trackedPlanes.erase(trackedPlaneIterator);
                 }
 
-                // Next loop over the list of new planes, initialize the wrapper object and insert.
-                for(auto newPlane : newPlanes)
+                // Next loop over the list of new planes, initialize the JS object and insert it into our map.
+                for (auto newPlane : newPlanes)
                 {
-                    auto napiPlane = Napi::Persistent(XRPlane::New(env));   
+                    auto napiPlane = Napi::Persistent(XRPlane::New(env));
                     auto xrPlane = XRPlane::Unwrap(napiPlane.Value());
                     xrPlane->SetNativePlane(newPlane);
 
                     m_trackedPlanes.insert({xrPlane->GetNativePlane(), std::move(napiPlane)});
                 }
-                
+
                 // Finally update the timestamp of any planes that have been updated in the last frame.
-                for (auto & [plane, planeNapiValue] : m_trackedPlanes)
+                for (auto& [plane, planeNapiValue] : m_trackedPlanes)
                 {
                     if (plane->Updated)
                     {
@@ -1622,7 +1620,7 @@ namespace Babylon
                         InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
-                        InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState)
+                        InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1848,8 +1846,8 @@ namespace Babylon
                     func->Call({Napi::Value::From(env, m_timestamp), m_jsXRFrame.Value()});
                 });
 
-                // Return value should be a request ID to allow for requesting cancellation, this is unused in Babylon.js currently.
-                // Just pass our "timestamp" as that uniquely identifies the frame.
+                // The return value should be a request ID to allow for requesting cancellation, this is unused in Babylon.js currently.
+                // For now just pass our "timestamp" as that uniquely identifies the frame.
                 return Napi::Value::From(info.Env(), m_timestamp++);
             }
 
