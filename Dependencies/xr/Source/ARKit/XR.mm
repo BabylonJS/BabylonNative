@@ -483,18 +483,15 @@ namespace xr {
             return lib;
         }
     
-        bool operator==(const Pose& lhs, const Pose& rhs) {
-            return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
-        }
-
-        bool operator!=(const Pose& lhs, const Pose& rhs) {
-            return !(lhs == rhs);
+        constexpr float FLOAT_COMPARISON_THRESHOLD = 0.02f;
+        bool PoseWasMeaningfullyUpdated(const Pose& lhs, const Pose& rhs) {
+            return abs(lhs.Position.X - rhs.Position.X) > FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Position.Y - rhs.Position.Y) > FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Position.Z - rhs.Position.Z) > FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.X - rhs.Orientation.X) > FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.Y - rhs.Orientation.Y) > FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.Z - rhs.Orientation.Z) > FLOAT_COMPARISON_THRESHOLD
+                   && abs(lhs.Orientation.W - rhs.Orientation.W) > FLOAT_COMPARISON_THRESHOLD;
         }
     }
     
@@ -599,7 +596,6 @@ namespace xr {
             }
 
             CleanupAnchor(nil);
-            CleanupAllPlaneBuffers();
             [sessionDelegate release];
             [session pause];
             [session release];
@@ -881,32 +877,31 @@ namespace xr {
                     // Dynamically allocate the polygon array, and fill it in.
                     auto geometry = updatedPlane.geometry;
                     auto polygonSize = geometry.boundaryVertexCount;
-                                            
-                    float* polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize * 3));
+                    
+                    planePolygonBuffer.clear();
+                    planePolygonBuffer.resize(polygonSize * 3);
                     for (NSUInteger i = 0; i < polygonSize; i++) {
                         NSUInteger polygonIndex =  i * 3;
-                        polygon[polygonIndex] = geometry.boundaryVertices[i].x;
-                        polygon[polygonIndex + 1] = geometry.boundaryVertices[i].y;
-                        polygon[polygonIndex + 2] = geometry.boundaryVertices[i].z;
+                        planePolygonBuffer[polygonIndex] = geometry.boundaryVertices[i].x;
+                        planePolygonBuffer[polygonIndex + 1] = geometry.boundaryVertices[i].y;
+                        planePolygonBuffer[polygonIndex + 2] = geometry.boundaryVertices[i].z;
                     }
 
                     // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
                     auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier));
                     if (planeIterator != existingPlanes.end()) {
-                        UpdatePlane(planeIterator->second, updatedPlane, polygon, polygonSize);
+                        UpdatePlane(planeIterator->second, updatedPlane, planePolygonBuffer, polygonSize);
                     }
                     else {
                         // This is a new plane, create it and initialize its values.
-                        Plane plane{};
+                        newPlanes.push_back({});
+                        auto& plane = newPlanes.back();
                         [updatedPlane.identifier retain];
                         plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier);
                         plane.PolygonFormat = PolygonFormat::XYZ;
                         
                         // Fill in the polygon and center pose.
-                        UpdatePlane(&plane, updatedPlane, polygon, polygonSize);
-
-                        // Add it to the list of newly created planes.
-                        newPlanes.push_back(plane);
+                        UpdatePlane(&plane, updatedPlane, planePolygonBuffer, polygonSize);
                     }
                     
                     [updatedPlane release];
@@ -934,15 +929,15 @@ namespace xr {
             }
         }
 
-        bool CheckIfPlaneWasUpdated(Plane* existingPlane, float* newPolygon, size_t newPolygonSize, Pose& newCenter) {
+        bool CheckIfPlaneWasUpdated(Plane* existingPlane, std::vector<float>& newPolygon, Pose& newCenter) {
             // First check if the center has changed, or the polygon size has changed.
-            if (existingPlane->Center != newCenter
-                || existingPlane->PolygonSize != newPolygonSize) {
+            if (PoseWasMeaningfullyUpdated(existingPlane->Center, newCenter)
+                || existingPlane->Polygon.size() != newPolygon.size()) {
                 return true;
             }
 
             // Next loop over the polygon and check if any points have changed.
-            for (size_t i = 0; i < newPolygonSize * 3; i++) {
+            for (size_t i = 0; i < existingPlane->Polygon.size(); i++) {
                 if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD) {
                     return true;
                 }
@@ -952,17 +947,11 @@ namespace xr {
         }
 
         /**
-         Cleans up the given native plane, and clears its memory out.
+         Cleans up the given native plane.
          */
         void CleanupPlane(Plane* plane) {
             auto planeIdentifier = (reinterpret_cast<NSUUID*>(plane->NativePlaneId));
             [planeIdentifier release];
-
-            if (plane->Polygon != nullptr) {
-                free(plane->Polygon);
-                planeBuffers.erase(plane->Polygon);
-                plane->Polygon = nullptr;
-            }
         }
         
         /**
@@ -1003,7 +992,7 @@ namespace xr {
             vector_uint2 viewportSize{};
             id<MTLCommandQueue> commandQueue;
             std::vector<ARAnchor*> nativeAnchors{};
-            std::set<float*> planeBuffers{};
+            std::vector<float> planePolygonBuffer{};
         
         /*
          Helper function to translate a world transform into a hit test result.
@@ -1026,12 +1015,11 @@ namespace xr {
             return hitResult;
         }
         
-        void UpdatePlane(Plane* plane, ARPlaneAnchor* planeAnchor, float* polygon, size_t polygonSize) {
+        void UpdatePlane(Plane* plane, ARPlaneAnchor* planeAnchor, std::vector<float>& newPolygon, size_t polygonSize) {
             Pose newCenter = TransformToPose(planeAnchor.transform);
 
             // If the plane was not actually updated, free the polygon buffer, and return.
-            if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter)) {
-                free(polygon);
+            if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter)) {
                 return;
             }
 
@@ -1041,27 +1029,9 @@ namespace xr {
             // Update the center of the plane
             plane->Center = newCenter;
 
-            // Clean up the old plane buffer, and remove it from the set of allocated buffers.
-            if (plane->Polygon != nullptr) {
-                free(plane->Polygon);
-                planeBuffers.erase(plane->Polygon);
-                plane->Polygon = nullptr;
-            }
-
             // Store the polygon.
-            plane->Polygon = polygon;
-            planeBuffers.insert(polygon);
+            plane->Polygon.swap(newPolygon);
             plane->PolygonSize = polygonSize;
-        }
-        
-        // Clean up all allocated plane buffers, called when the session gets disposed.
-        void CleanupAllPlaneBuffers() {
-            auto bufferIter = planeBuffers.begin();
-            while (bufferIter != planeBuffers.end())
-            {
-                free(*bufferIter);
-                bufferIter = planeBuffers.erase(bufferIter);
-            }
         }
     };
 
