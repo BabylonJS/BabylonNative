@@ -317,22 +317,18 @@ namespace xr
         }
 
         /**
-         * Compare two poses and determine if they are approximately equal.
+         * Compare two poses and determine if there is a meaningful difference between them.
          **/
-        bool operator==(const Pose& lhs, const Pose& rhs)
+        constexpr float FLOAT_COMPARISON_THRESHOLD = 0.02f;
+        bool PoseWasMeaningfullyUpdated(const Pose& lhs, const Pose& rhs)
         {
-            return abs(lhs.Position.X - rhs.Position.X) < FLOAT_COMPARISON_THRESHOLD
-                && abs(lhs.Position.Y - rhs.Position.Y) < FLOAT_COMPARISON_THRESHOLD
-                && abs(lhs.Position.Z - rhs.Position.Z) < FLOAT_COMPARISON_THRESHOLD
-                && abs(lhs.Orientation.X - rhs.Orientation.X) < FLOAT_COMPARISON_THRESHOLD
-                && abs(lhs.Orientation.Y - rhs.Orientation.Y) < FLOAT_COMPARISON_THRESHOLD
-                && abs(lhs.Orientation.Z - rhs.Orientation.Z) < FLOAT_COMPARISON_THRESHOLD
-                && abs(lhs.Orientation.W - rhs.Orientation.W) < FLOAT_COMPARISON_THRESHOLD;
-        }
-
-        bool operator!=(const Pose& lhs, const Pose& rhs)
-        {
-            return !(lhs == rhs);
+            return abs(lhs.Position.X - rhs.Position.X) > FLOAT_COMPARISON_THRESHOLD
+                || abs(lhs.Position.Y - rhs.Position.Y) > FLOAT_COMPARISON_THRESHOLD
+                || abs(lhs.Position.Z - rhs.Position.Z) > FLOAT_COMPARISON_THRESHOLD
+                || abs(lhs.Orientation.X - rhs.Orientation.X) > FLOAT_COMPARISON_THRESHOLD
+                || abs(lhs.Orientation.Y - rhs.Orientation.Y) > FLOAT_COMPARISON_THRESHOLD
+                || abs(lhs.Orientation.Z - rhs.Orientation.Z) > FLOAT_COMPARISON_THRESHOLD
+                || abs(lhs.Orientation.W - rhs.Orientation.W) > FLOAT_COMPARISON_THRESHOLD;
         }
     }
 
@@ -357,7 +353,6 @@ namespace xr
             {
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
-                CleanupAllPlaneBuffers();
                 ArPose_destroy(cameraPose);
                 ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
@@ -849,42 +844,41 @@ namespace xr
                 ArPlane_getCenterPose(session, planeTrackable, tempPose);
                 ArPose_getPoseRaw(session, tempPose, rawPose);
 
-                // Dynamically allocate the polygon array, and fill it in.
+                // Dynamically allocate the polygon vector, and fill it in.
                 int32_t polygonSize;
                 ArPlane_getPolygonSize(session, planeTrackable, &polygonSize);
-                float* polygon = reinterpret_cast<float*>(malloc(sizeof(float) * polygonSize));
-
-                // Get the polygon.
-                ArPlane_getPolygon(session, planeTrackable, polygon);
+                planePolygonBuffer.clear();
+                planePolygonBuffer.resize(polygonSize);
+                ArPlane_getPolygon(session, planeTrackable, planePolygonBuffer.data());
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
                 auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(trackable));
                 if (planeIterator != existingPlanes.end())
                 {
-                    UpdateExistingPlane(planeIterator->second, rawPose, polygon, polygonSize);
+                    UpdateExistingPlane(planeIterator->second, rawPose, planePolygonBuffer, polygonSize);
                 }
                 else
                 {
                     // This is a new plane, create it and initialize its values.
-                    Plane plane{};
+                    newPlanes.push_back({});
+                    auto& plane = newPlanes.back();
                     plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(trackable);
-                    UpdateExistingPlane(&plane, rawPose, polygon, polygonSize);
-                    newPlanes.push_back(plane);
+                    UpdateExistingPlane(&plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
         }
 
-        bool CheckIfPlaneWasUpdated(Plane* existingPlane, float* newPolygon, size_t newPolygonSize, Pose& newCenter)
+        bool CheckIfPlaneWasUpdated(Plane* existingPlane, std::vector<float>& newPolygon, Pose& newCenter)
         {
             // First check if the center has changed, or the polygon size has changed.
-            if (existingPlane->Center != newCenter
-                || existingPlane->PolygonSize * 2 != newPolygonSize)
+            if (PoseWasMeaningfullyUpdated(existingPlane->Center, newCenter)
+                || existingPlane->Polygon.size() != newPolygon.size())
             {
                 return true;
             }
 
-            // Next loop over the polygon and check if any points have changed.
-            for (size_t i = 0; i < newPolygonSize; i++)
+            // Next loop over the polygon and check if any points have meaningfully changed.
+            for (size_t i = 0; i < newPolygon.size(); i++)
             {
                 if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD)
                 {
@@ -899,13 +893,6 @@ namespace xr
         void CleanupPlane(Plane* plane)
         {
             ArTrackable_release(reinterpret_cast<ArTrackable*>(plane->NativePlaneId));
-
-            if (plane->Polygon != nullptr)
-            {
-                free(plane->Polygon);
-                planeBuffers.erase(plane->Polygon);
-                plane->Polygon = nullptr;
-            }
         }
 
     private:
@@ -913,7 +900,7 @@ namespace xr
         bool sessionEnded{false};
         std::vector<ArTrackable*> frameTrackables{};
         std::vector<ArAnchor*> arCoreAnchors{};
-        std::set<float*> planeBuffers{};
+        std::vector<float> planePolygonBuffer{};
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -988,17 +975,6 @@ namespace xr
             pose.Position.Z = rawPose[6];
         }
 
-        // Clean up all allocated plane buffers, called when the session gets disposed.
-        void CleanupAllPlaneBuffers()
-        {
-            auto bufferIter = planeBuffers.begin();
-            while (bufferIter != planeBuffers.end())
-            {
-                free(*bufferIter);
-                bufferIter = planeBuffers.erase(bufferIter);
-            }
-        }
-
         /**
          * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
          **/
@@ -1020,16 +996,15 @@ namespace xr
             }
         }
 
-        void UpdateExistingPlane(Plane* plane, const float rawPose[], float* polygon, size_t polygonSize)
+        void UpdateExistingPlane(Plane* plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
         {
             // Grab the new center
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
 
             // Plane was not actually updated, free the polygon buffer, and return.
-            if (!CheckIfPlaneWasUpdated(plane, polygon, polygonSize, newCenter))
+            if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter))
             {
-                free(polygon);
                 return;
             }
 
@@ -1037,17 +1012,10 @@ namespace xr
             plane->Updated = true;
             plane->Center = newCenter;
 
-            // Clean up the old plane buffer, and remove it from the set of allocated buffers.
-            if (plane->Polygon != nullptr)
-            {
-                free(plane->Polygon);
-                planeBuffers.erase(plane->Polygon);
-                plane->Polygon = nullptr;
-            }
+            // Swap the old polygon with the new one.
+            plane->Polygon.swap(newPolygon);
 
-            // Store the polygon.
-            plane->Polygon = polygon;
-            planeBuffers.insert(polygon);
+            // Set the polygon size, and format.
             plane->PolygonSize = polygonSize / 2;
             plane->PolygonFormat = PolygonFormat::XZ;
         }

@@ -890,36 +890,14 @@ namespace Babylon
             {
                 xr::Ray nativeRay{{0, 0, 0}, {0, 0, -1}};
                 auto originObject = m_origin.Value();
-                if (originObject.Has("x"))
-                {
-                    nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
-                }
-
-                if (originObject.Has("y"))
-                {
-                    nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
-                }
-
-                if (originObject.Has("z"))
-                {
-                    nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
-                }
+                nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
+                nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
+                nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
 
                 auto directionObject = m_direction.Value();
-                if (directionObject.Has("x"))
-                {
-                    nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
-                }
-
-                if (directionObject.Has("y"))
-                {
-                    nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
-                }
-
-                if (directionObject.Has("z"))
-                {
-                    nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
-                }
+                nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
+                nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
+                nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
 
                 return nativeRay;
             }
@@ -1256,7 +1234,7 @@ namespace Babylon
 
             void SetNativePlane(xr::Plane& plane)
             {
-                m_nativePlane = plane;
+                m_nativePlane = std::move(plane);
             }
 
             xr::Plane* GetNativePlane()

@@ -53,7 +53,6 @@ namespace xr
         } Orientation;
     };
 
-    const float FLOAT_COMPARISON_THRESHOLD = .02f;
     using NativeTrackablePtr = void*;
     struct HitResult
     {
@@ -90,7 +89,7 @@ namespace xr
     struct Plane
     {
         Pose Center{};
-        float* Polygon{};
+        std::vector<float> Polygon{};
         size_t PolygonSize{0};
         PolygonFormat PolygonFormat{};
         NativePlaneIdentifier NativePlaneId{};
