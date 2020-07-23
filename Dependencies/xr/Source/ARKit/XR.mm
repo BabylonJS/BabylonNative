@@ -918,23 +918,6 @@ namespace xr {
             }
         }
 
-        bool CheckIfPlaneWasUpdated(Plane* existingPlane, std::vector<float>& newPolygon, Pose& newCenter) {
-            // First check if the center has changed, or the polygon size has changed.
-            if (PoseWasMeaningfullyUpdated(existingPlane->Center, newCenter)
-                || existingPlane->Polygon.size() != newPolygon.size()) {
-                return true;
-            }
-
-            // Next loop over the polygon and check if any points have changed.
-            for (size_t i = 0; i < existingPlane->Polygon.size(); i++) {
-                if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         /**
          Cleans up the given native plane.
          */
