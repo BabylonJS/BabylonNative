@@ -858,7 +858,7 @@ namespace xr {
         /**
          Updates existing planes in place, gets the list of created planes, and removed planes.
          */
-        void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
+        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
             [sessionDelegate LockPlanes];
             @try {
                 // First lets go and update all planes that have been updated since the last frame.
@@ -1060,7 +1060,7 @@ namespace xr {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }
