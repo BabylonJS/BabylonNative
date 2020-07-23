@@ -8,7 +8,6 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>
 #include <thread>
-#include <set>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -844,7 +843,7 @@ namespace xr
                 auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(planeTrackable));
                 if (planeIterator != existingPlanes.end())
                 {
-                    UpdateExistingPlane(planeIterator->second, rawPose, planePolygonBuffer, polygonSize);
+                    UpdatePlane(planeIterator->second, rawPose, planePolygonBuffer, polygonSize);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
                 }
                 else
@@ -853,7 +852,7 @@ namespace xr
                     newPlanes.push_back({});
                     auto& plane = newPlanes.back();
                     plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(planeTrackable);
-                    UpdateExistingPlane(&plane, rawPose, planePolygonBuffer, polygonSize);
+                    UpdatePlane(&plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
         }
@@ -965,13 +964,13 @@ namespace xr
             }
         }
 
-        void UpdateExistingPlane(Plane* plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
+        void UpdatePlane(Plane* plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
         {
             // Grab the new center
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
 
-            // Plane was not actually updated, free the polygon buffer, and return.
+            // Plane was not actually updated return.
             if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter))
             {
                 return;
