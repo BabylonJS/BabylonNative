@@ -529,7 +529,7 @@ namespace xr {
                 viewportSize.y = MainView.bounds.size.height * scale;
             });
 
-            // If the singleton session and configuraiton have not yet been created, create them here now.
+            // Create the ARSession enable plane detection, and disable lighting estimation.
             session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
             configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
