@@ -825,12 +825,15 @@ namespace xr
             for (int i = 0; i < size; i++)
             {
                 // Get the plane.
-                ArTrackable* trackable;
-                ArTrackableList_acquireItem(session, trackableList, i, &trackable);
-                auto planeTrackable = reinterpret_cast<ArPlane*>(trackable);
+                ArPlane* planeTrackable{};
+                {
+                    ArTrackable* trackable{};
+                    ArTrackableList_acquireItem(session, trackableList, i, &trackable);
+                    planeTrackable = reinterpret_cast<ArPlane*>(trackable);
+                }
 
                 // Check if this plane has been subsumed. If so skip it as we are about to delete this plane.
-                ArPlane* subsumingPlane = nullptr;
+                ArPlane* subsumingPlane{};
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
                 if (subsumingPlane != nullptr)
                 {
@@ -852,7 +855,7 @@ namespace xr
                 ArPlane_getPolygon(session, planeTrackable, planePolygonBuffer.data());
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
-                auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(trackable));
+                auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(planeTrackable));
                 if (planeIterator != existingPlanes.end())
                 {
                     UpdateExistingPlane(planeIterator->second, rawPose, planePolygonBuffer, polygonSize);

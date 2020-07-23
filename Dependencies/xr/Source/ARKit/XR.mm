@@ -73,7 +73,7 @@ namespace {
 @implementation SessionDelegate {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
     
-    NSLock *planeLock;
+    NSLock* planeLock;
     std::set<ARPlaneAnchor*,ARAnchorComparer> updatedPlanes;
     std::vector<ARPlaneAnchor*> deletedPlanes;
     
@@ -891,8 +891,7 @@ namespace xr {
                     auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier));
                     if (planeIterator != existingPlanes.end()) {
                         UpdatePlane(planeIterator->second, updatedPlane, planePolygonBuffer, polygonSize);
-                    }
-                    else {
+                    } else {
                         // This is a new plane, create it and initialize its values.
                         newPlanes.push_back({});
                         auto& plane = newPlanes.back();
