@@ -867,7 +867,7 @@ namespace xr
         throw std::runtime_error("Anchors not yet implemented for OpenXR.");
     }
 
-    void System::Session::Frame::UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>&, std::vector<Plane>&, std::vector<Plane*>&) const
+    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>&, std::vector<Plane>&, std::vector<Plane*>&) const
     {
         throw std::runtime_error("Planes not yet implemented for OpenXR.");
     }
