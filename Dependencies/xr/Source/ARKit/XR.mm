@@ -529,7 +529,7 @@ namespace xr {
                 viewportSize.y = MainView.bounds.size.height * scale;
             });
 
-            // If the singleton session and configuraiton have not yet been created, create them here now.
+            // Create the ARSession enable plane detection, and disable lighting estimation.
             session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
             configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
@@ -858,7 +858,7 @@ namespace xr {
         /**
          Updates existing planes in place, gets the list of created planes, and removed planes.
          */
-        void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
+        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
             [sessionDelegate LockPlanes];
             @try {
                 // First lets go and update all planes that have been updated since the last frame.
@@ -916,23 +916,6 @@ namespace xr {
             } @finally {
                 [sessionDelegate UnlockPlanes];
             }
-        }
-
-        bool CheckIfPlaneWasUpdated(Plane* existingPlane, std::vector<float>& newPolygon, Pose& newCenter) {
-            // First check if the center has changed, or the polygon size has changed.
-            if (PoseWasMeaningfullyUpdated(existingPlane->Center, newCenter)
-                || existingPlane->Polygon.size() != newPolygon.size()) {
-                return true;
-            }
-
-            // Next loop over the polygon and check if any points have changed.
-            for (size_t i = 0; i < existingPlane->Polygon.size(); i++) {
-                if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD) {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         /**
@@ -1060,7 +1043,7 @@ namespace xr {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }
