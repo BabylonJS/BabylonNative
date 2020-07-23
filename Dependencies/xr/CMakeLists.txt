@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
-set(SOURCES "Include/XR.h")
+set(SOURCES "Include/XR.h"
+            "Include/XRHelpers.h")
 
 if (ANDROID)
     set(SOURCES ${SOURCES}

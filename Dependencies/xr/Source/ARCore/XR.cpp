@@ -1,4 +1,5 @@
 #include <XR.h>
+#include <XRHelpers.h>
 
 #include <assert.h>
 #include <optional>
@@ -314,21 +315,6 @@ namespace xr
             }
 
             return task;
-        }
-
-        /**
-         * Compare two poses and determine if there is a meaningful difference between them.
-         **/
-        constexpr float FLOAT_COMPARISON_THRESHOLD = 0.02f;
-        bool PoseWasMeaningfullyUpdated(const Pose& lhs, const Pose& rhs)
-        {
-            return abs(lhs.Position.X - rhs.Position.X) > FLOAT_COMPARISON_THRESHOLD
-                || abs(lhs.Position.Y - rhs.Position.Y) > FLOAT_COMPARISON_THRESHOLD
-                || abs(lhs.Position.Z - rhs.Position.Z) > FLOAT_COMPARISON_THRESHOLD
-                || abs(lhs.Orientation.X - rhs.Orientation.X) > FLOAT_COMPARISON_THRESHOLD
-                || abs(lhs.Orientation.Y - rhs.Orientation.Y) > FLOAT_COMPARISON_THRESHOLD
-                || abs(lhs.Orientation.Z - rhs.Orientation.Z) > FLOAT_COMPARISON_THRESHOLD
-                || abs(lhs.Orientation.W - rhs.Orientation.W) > FLOAT_COMPARISON_THRESHOLD;
         }
     }
 
@@ -808,7 +794,7 @@ namespace xr
             }
         }
 
-        void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
+        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
         {
             if (!IsTracking())
             {
@@ -837,7 +823,7 @@ namespace xr
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
                 if (subsumingPlane != nullptr)
                 {
-                    ArTrackable_release(trackable);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                     continue;
                 }
@@ -859,37 +845,17 @@ namespace xr
                 if (planeIterator != existingPlanes.end())
                 {
                     UpdateExistingPlane(planeIterator->second, rawPose, planePolygonBuffer, polygonSize);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
                 }
                 else
                 {
                     // This is a new plane, create it and initialize its values.
                     newPlanes.push_back({});
                     auto& plane = newPlanes.back();
-                    plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(trackable);
+                    plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(planeTrackable);
                     UpdateExistingPlane(&plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
-        }
-
-        bool CheckIfPlaneWasUpdated(Plane* existingPlane, std::vector<float>& newPolygon, Pose& newCenter)
-        {
-            // First check if the center has changed, or the polygon size has changed.
-            if (PoseWasMeaningfullyUpdated(existingPlane->Center, newCenter)
-                || existingPlane->Polygon.size() != newPolygon.size())
-            {
-                return true;
-            }
-
-            // Next loop over the polygon and check if any points have meaningfully changed.
-            for (size_t i = 0; i < newPolygon.size(); i++)
-            {
-                if (abs(existingPlane->Polygon[i] - newPolygon[i]) > FLOAT_COMPARISON_THRESHOLD)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         // Cleans up a plane. Called when a plane gets deleted.
@@ -981,7 +947,7 @@ namespace xr
         /**
          * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
          **/
-        void CheckForSubsumedPlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane*>& subsumedPlanes)
+        void CheckForSubsumedPlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane*>& subsumedPlanes)
         {
             for (auto & [NativePlaneIdentifier, plane] : existingPlanes)
             {
@@ -1073,7 +1039,7 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }

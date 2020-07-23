@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <unordered_map>
 #include <arcana/threading/task.h>
 
 namespace xr
@@ -167,7 +168,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                void UpdatePlanes(std::map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
+                void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
                 void CleanupPlane(Plane* plane) const;
 
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;

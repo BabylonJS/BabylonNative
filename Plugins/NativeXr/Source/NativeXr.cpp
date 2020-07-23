@@ -1380,7 +1380,7 @@ namespace Babylon
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
-            std::map<xr::Plane*, Napi::ObjectReference> m_trackedPlanes{};
+            std::unordered_map<xr::Plane*, Napi::ObjectReference> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1517,7 +1517,7 @@ namespace Babylon
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                std::map<xr::NativePlaneIdentifier, xr::Plane*> existingNativePlaneMap{};
+                std::unordered_map<xr::NativePlaneIdentifier, xr::Plane*> existingNativePlaneMap{};
 
                 // Loop over our Planes, and create a mapping of native plane identifiers to xr::planes.
                 for (auto& [plane, planeNapiValue] : m_trackedPlanes)

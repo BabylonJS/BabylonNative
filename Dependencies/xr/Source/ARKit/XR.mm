@@ -1,4 +1,5 @@
 #import <XR.h>
+#include <XRHelpers.h>
 
 #import <UIKit/UIKit.h>
 #import <ARKit/ARKit.h>
@@ -481,17 +482,6 @@ namespace xr {
                 throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
             }
             return lib;
-        }
-    
-        constexpr float FLOAT_COMPARISON_THRESHOLD = 0.02f;
-        bool PoseWasMeaningfullyUpdated(const Pose& lhs, const Pose& rhs) {
-            return abs(lhs.Position.X - rhs.Position.X) > FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Position.Y - rhs.Position.Y) > FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Position.Z - rhs.Position.Z) > FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.X - rhs.Orientation.X) > FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.Y - rhs.Orientation.Y) > FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.Z - rhs.Orientation.Z) > FLOAT_COMPARISON_THRESHOLD
-                   && abs(lhs.Orientation.W - rhs.Orientation.W) > FLOAT_COMPARISON_THRESHOLD;
         }
     }
     
