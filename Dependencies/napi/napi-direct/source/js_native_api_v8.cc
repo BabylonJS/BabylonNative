@@ -51,6 +51,8 @@
     (out) = v8::type::New((buffer), (byte_offset), (length));                  \
   } while (0)
 
+#pragma warning(disable: 4100 4267)
+
 namespace v8impl {
 
 namespace {

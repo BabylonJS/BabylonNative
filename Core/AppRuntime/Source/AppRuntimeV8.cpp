@@ -1,5 +1,6 @@
 #include "AppRuntime.h"
 
+#pragma warning(disable : 4100 4267)
 #include <v8.h>
 #include <libplatform/libplatform.h>
 
