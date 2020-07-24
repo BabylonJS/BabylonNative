@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12)
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
 set(SOURCES "Include/XR.h"
-            "Include/XRHelpers.h")
+            "Source/Shared/XRHelpers.h")
 
 if (ANDROID)
     set(SOURCES ${SOURCES}
@@ -56,5 +56,6 @@ target_link_libraries(xr
     PUBLIC arcana)
 
 target_include_directories(xr PUBLIC "Include")
+target_include_directories(xr PRIVATE "Source/Shared")
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
