@@ -793,7 +793,7 @@ namespace xr
             }
         }
 
-        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
+        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
         {
             if (!IsTracking())
             {
@@ -852,7 +852,7 @@ namespace xr
                     newPlanes.push_back({});
                     auto& plane = newPlanes.back();
                     plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(planeTrackable);
-                    UpdatePlane(&plane, rawPose, planePolygonBuffer, polygonSize);
+                    UpdatePlane(plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
         }
@@ -946,7 +946,7 @@ namespace xr
         /**
          * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
          **/
-        void CheckForSubsumedPlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane*>& subsumedPlanes)
+        void CheckForSubsumedPlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane*>& subsumedPlanes)
         {
             for (auto & [NativePlaneIdentifier, plane] : existingPlanes)
             {
@@ -958,13 +958,13 @@ namespace xr
                 // Plane has been subsumed, stop tracking it explicitly.
                 if (subsumingPlane != nullptr)
                 {
-                    subsumedPlanes.push_back(plane);
+                    subsumedPlanes.push_back(&plane);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                 }
             }
         }
 
-        void UpdatePlane(Plane* plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
+        void UpdatePlane(Plane& plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
         {
             // Grab the new center
             Pose newCenter{};
@@ -977,15 +977,15 @@ namespace xr
             }
 
             // Mark the plane as updated, and grab the new center.
-            plane->Updated = true;
-            plane->Center = newCenter;
+            plane.Updated = true;
+            plane.Center = newCenter;
 
             // Swap the old polygon with the new one.
-            plane->Polygon.swap(newPolygon);
+            plane.Polygon.swap(newPolygon);
 
             // Set the polygon size, and format.
-            plane->PolygonSize = polygonSize / 2;
-            plane->PolygonFormat = PolygonFormat::XZ;
+            plane.PolygonSize = polygonSize / 2;
+            plane.PolygonFormat = PolygonFormat::XZ;
         }
 
         /**
@@ -1038,7 +1038,7 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }

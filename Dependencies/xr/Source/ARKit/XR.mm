@@ -858,7 +858,7 @@ namespace xr {
         /**
          Updates existing planes in place, gets the list of created planes, and removed planes.
          */
-        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
+        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
             [sessionDelegate LockPlanes];
             @try {
                 // First lets go and update all planes that have been updated since the last frame.
@@ -890,7 +890,7 @@ namespace xr {
                         plane.PolygonFormat = PolygonFormat::XYZ;
                         
                         // Fill in the polygon and center pose.
-                        UpdatePlane(&plane, updatedPlane, planePolygonBuffer, polygonSize);
+                        UpdatePlane(plane, updatedPlane, planePolygonBuffer, polygonSize);
                     }
                     
                     [updatedPlane release];
@@ -905,7 +905,7 @@ namespace xr {
                     // Find the plane in the set of existing planes.
                     auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(removedPlane.identifier));
                     if (planeIterator != existingPlanes.end()) {
-                        deletedPlanes.push_back(planeIterator->second);
+                        deletedPlanes.push_back(&(planeIterator->second));
                     }
                     
                     [removedPlane release];
@@ -987,7 +987,7 @@ namespace xr {
             return hitResult;
         }
         
-        void UpdatePlane(Plane* plane, ARPlaneAnchor* planeAnchor, std::vector<float>& newPolygon, size_t polygonSize) {
+        void UpdatePlane(Plane& plane, ARPlaneAnchor* planeAnchor, std::vector<float>& newPolygon, size_t polygonSize) {
             Pose newCenter = TransformToPose(planeAnchor.transform);
 
             // If the plane was not actually updated, free the polygon buffer, and return.
@@ -996,14 +996,14 @@ namespace xr {
             }
 
             // Mark the plane as updated, and grab the new center.
-            plane->Updated = true;
+            plane.Updated = true;
             
             // Update the center of the plane
-            plane->Center = newCenter;
+            plane.Center = newCenter;
 
             // Store the polygon.
-            plane->Polygon.swap(newPolygon);
-            plane->PolygonSize = polygonSize;
+            plane.Polygon.swap(newPolygon);
+            plane.PolygonSize = polygonSize;
         }
     };
 
@@ -1043,7 +1043,7 @@ namespace xr {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane*>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }
