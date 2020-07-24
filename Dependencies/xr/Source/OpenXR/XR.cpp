@@ -564,6 +564,9 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
+        , Planes { {} } // NYI
+        , UpdatedPlanes{} // NYI
+        , RemovedPlanes{} // NYI
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         auto session = m_impl->sessionImpl.Session;
@@ -867,8 +870,8 @@ namespace xr
         throw std::runtime_error("Anchors not yet implemented for OpenXR.");
     }
 
-    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>&, std::vector<Plane>&, std::vector<Plane*>&) const
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
-        throw std::runtime_error("Planes not yet implemented for OpenXR.");
+        // NYI
     }
 }

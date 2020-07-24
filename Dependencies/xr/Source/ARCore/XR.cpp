@@ -325,6 +325,7 @@ namespace xr
         std::vector<Frame::Plane> Planes;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
+        bool PlaneDetectionEnabled{ false };
 
         Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
             : SystemImpl{ systemImpl }
@@ -796,7 +797,7 @@ namespace xr
 
         void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
         {
-            if (!IsTracking())
+            if (!IsTracking() || !PlaneDetectionEnabled)
             {
                 return;
             }
@@ -949,7 +950,7 @@ namespace xr
             auto planeMapIterator = planeMap.begin();
             while (planeMapIterator != planeMap.end())
             {
-                auto [arPlane, planeId] = *planeMapIterator;
+                auto [arPlane, planeID] = *planeMapIterator;
 
                 // Check if the plane has been subsumed, and if we should stop tracking it.
                 ArPlane* subsumingPlane = nullptr;
@@ -958,9 +959,9 @@ namespace xr
                 // Plane has been subsumed, stop tracking it explicitly.
                 if (subsumingPlane != nullptr)
                 {
-                    subsumedPlanes.push_back(planeId);
-                    Planes[planeId].Polygon.clear();
-                    Planes[planeId].PolygonSize = 0;
+                    subsumedPlanes.push_back(planeID);
+                    Planes[planeID].Polygon.clear();
+                    Planes[planeID].PolygonSize = 0;
                     planeMapIterator = planeMap.erase(planeMapIterator);                    
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
@@ -1162,5 +1163,10 @@ namespace xr
     {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
+    }
+
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
+    {
+        m_impl->PlaneDetectionEnabled = enabled;
     }
 }

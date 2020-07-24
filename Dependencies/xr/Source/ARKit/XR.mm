@@ -77,6 +77,7 @@ namespace {
     NSLock* planeLock;
     std::set<ARPlaneAnchor*,ARAnchorComparer> updatedPlanes;
     std::vector<ARPlaneAnchor*> deletedPlanes;
+    bool planeDetectionEnabled;
     
     CVMetalTextureCacheRef textureCache;
     CVMetalTextureRef _cameraTextureY;
@@ -122,6 +123,10 @@ namespace {
  */
 -(std::vector<ARPlaneAnchor*>*) GetDeletedPlanes {
     return &deletedPlanes;
+}
+
+-(void) SetPlaneDetectionEnabled:(bool)enabled {
+    planeDetectionEnabled = enabled;
 }
 
 /**
@@ -339,6 +344,10 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    if (!planeDetectionEnabled) {
+        return;
+    }
+
     [self LockPlanes];
     for (ARAnchor* newAnchor : anchors) {
         if ([newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
@@ -355,6 +364,10 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    if (!planeDetectionEnabled) {
+        return;
+    }
+
     [self LockPlanes];
     for (ARAnchor* updatedAnchor : anchors) {
         if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
@@ -371,6 +384,10 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    if (!planeDetectionEnabled) {
+        return;
+    }
+
     [self LockPlanes];
     for (ARAnchor* removedAnchor : anchors) {
         if ([removedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
@@ -503,6 +520,7 @@ namespace xr {
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
+        std::vector<Frame::Plane> Planes;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
@@ -856,14 +874,19 @@ namespace xr {
         }
         
         /**
-         Updates existing planes in place, gets the list of created planes, and removed planes.
+         Updates existing planes in place, gets the list of updated/created plane IDs, and removed plane IDs.
          */
-        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes,  std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes) {
+        void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes) {
+            if (!planeDetectionEnabled)
+            {
+                return;
+            }
+            
             [sessionDelegate LockPlanes];
             @try {
                 // First lets go and update all planes that have been updated since the last frame.
-                auto updatedPlanes = [sessionDelegate GetUpdatedPlanes];
-                for (ARPlaneAnchor* updatedPlane : *updatedPlanes) {
+                auto updatedARKitPlanes = [sessionDelegate GetUpdatedPlanes];
+                for (ARPlaneAnchor* updatedPlane : *updatedARKitPlanes) {
                     // Dynamically allocate the polygon array, and fill it in.
                     auto geometry = updatedPlane.geometry;
                     auto polygonSize = geometry.boundaryVertexCount;
@@ -878,47 +901,49 @@ namespace xr {
                     }
 
                     // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
-                    auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier));
-                    if (planeIterator != existingPlanes.end()) {
-                        UpdatePlane(planeIterator->second, updatedPlane, planePolygonBuffer, polygonSize);
+                    auto planeIterator = planeMap.find(updatedPlane.identifier);
+                    if (planeIterator != planeMap.end()) {
+                        UpdatePlane(updatedPlanes, Planes[planeIterator->second], updatedPlane, planePolygonBuffer, polygonSize);
                     } else {
                         // This is a new plane, create it and initialize its values.
-                        newPlanes.push_back({});
-                        auto& plane = newPlanes.back();
+                        Planes.emplace_back();
+                        auto& plane = Planes.back();
                         [updatedPlane.identifier retain];
-                        plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(updatedPlane.identifier);
-                        plane.PolygonFormat = PolygonFormat::XYZ;
+                        plane.ID = nextPlaneID++;
+                        planeMap.insert({updatedPlane.identifier, plane.ID});
                         
                         // Fill in the polygon and center pose.
-                        UpdatePlane(plane, updatedPlane, planePolygonBuffer, polygonSize);
+                        UpdatePlane(updatedPlanes, plane, updatedPlane, planePolygonBuffer, polygonSize);
                     }
                     
                     [updatedPlane release];
                 }
                 
                 // Clear the list of updated planes to start building up for the next frame update.
-                updatedPlanes->clear();
+                updatedARKitPlanes->clear();
                 
                 // Now loop over all deleted planes find them in the existing planes map and if the entry exists add it to the list of removed planes.
-                auto removedPlanes = [sessionDelegate GetDeletedPlanes];
-                for (ARPlaneAnchor* removedPlane: *removedPlanes) {
+                auto removedARKitPlanes = [sessionDelegate GetDeletedPlanes];
+                for (ARPlaneAnchor* removedPlane: *removedARKitPlanes) {
                     // Find the plane in the set of existing planes.
-                    auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(removedPlane.identifier));
-                    if (planeIterator != existingPlanes.end()) {
-                        // Release the held ref to the native plane ID as it is no longer needed
-                        auto& foundPlane = planeIterator->second;
-                        auto planeIdentifier = (reinterpret_cast<NSUUID*>(foundPlane.NativePlaneId));
-                        foundPlane.NativePlaneId = nil;
-                        [planeIdentifier release];
+                    auto planeIterator = planeMap.find(removedPlane.identifier);
+                    if (planeIterator != planeMap.end()) {
+                        // Release the held ref to the native plane ID and clean up its polygon as it is no longer needed.
+                        auto [nativePlaneID, planeID] = *planeIterator;
+                        deletedPlanes.push_back(planeID);
 
-                        deletedPlanes.push_back(&(foundPlane));
+                        auto& plane = Planes[planeID];
+                        plane.Polygon.clear();
+                        plane.PolygonSize = 0;
+                        planeMap.erase(planeIterator);
+                        [nativePlaneID release];
                     }
                     
                     [removedPlane release];
                 }
                 
                 // Clear the list of removed frames to start building up for the next plane update.
-                removedPlanes->clear();
+                removedARKitPlanes->clear();
             } @finally {
                 [sessionDelegate UnlockPlanes];
             }
@@ -946,6 +971,12 @@ namespace xr {
                 }
             }
         }
+        
+        void SetPlaneDetectionEnabled(bool enabled)
+        {
+            planeDetectionEnabled = enabled;
+            [sessionDelegate SetPlaneDetectionEnabled:enabled];
+        }
 
         private:
             ARSession* session{};
@@ -963,6 +994,9 @@ namespace xr {
             id<MTLCommandQueue> commandQueue;
             std::vector<ARAnchor*> nativeAnchors{};
             std::vector<float> planePolygonBuffer{};
+            std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
+            Frame::Plane::Identifier nextPlaneID = 0;
+            bool planeDetectionEnabled{ false };
         
         /*
          Helper function to translate a world transform into a hit test result.
@@ -985,16 +1019,13 @@ namespace xr {
             return hitResult;
         }
         
-        void UpdatePlane(Plane& plane, ARPlaneAnchor* planeAnchor, std::vector<float>& newPolygon, size_t polygonSize) {
+        void UpdatePlane(std::vector<Frame::Plane::Identifier>& updatedPlanes, Frame::Plane& plane, ARPlaneAnchor* planeAnchor, std::vector<float>& newPolygon, size_t polygonSize) {
             Pose newCenter = TransformToPose(planeAnchor.transform);
 
             // If the plane was not actually updated, free the polygon buffer, and return.
             if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter)) {
                 return;
             }
-
-            // Mark the plane as updated, and grab the new center.
-            plane.Updated = true;
             
             // Update the center of the plane
             plane.Center = newCenter;
@@ -1002,6 +1033,8 @@ namespace xr {
             // Store the polygon.
             plane.Polygon.swap(newPolygon);
             plane.PolygonSize = polygonSize;
+            plane.PolygonFormat = PolygonFormat::XYZ;
+            updatedPlanes.push_back(plane.ID);
         }
     };
 
@@ -1016,9 +1049,13 @@ namespace xr {
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
+        , Planes{ sessionImpl.Planes }
+        , UpdatedPlanes{}
+        , RemovedPlanes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
+        m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
     }
 
     System::Session::Frame::~Frame() {
@@ -1039,11 +1076,6 @@ namespace xr {
 
     void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const {
         m_impl->sessionImpl.DeleteAnchor(anchor);
-    }
-
-    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
-    {
-        m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
     }
 
     System::System(const char* appName)
@@ -1090,5 +1122,10 @@ namespace xr {
     void System::Session::SetDepthsNearFar(float depthNear, float depthFar) {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
+    }
+
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
+    {
+        m_impl->SetPlaneDetectionEnabled(enabled);
     }
 }

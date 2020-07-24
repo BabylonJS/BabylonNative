@@ -213,6 +213,11 @@ namespace Babylon
         {
             m_session->SetDepthsNearFar(depthNear, depthFar);
         }
+        
+        void SetPlaneDetectionEnabled(bool enabled)
+        {
+            m_session->SetPlaneDetectionEnabled(enabled);
+        }
 
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
@@ -1339,7 +1344,7 @@ namespace Babylon
                 m_jsPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, bool planeDetectionEnabled, uint32_t timestamp)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
@@ -1348,11 +1353,8 @@ namespace Babylon
                 // Update anchor positions.
                 UpdateAnchors();
 
-                if (planeDetectionEnabled)
-                {
-                    // Update planes.
-                    UpdatePlanes(env, timestamp);
-                }
+                // Update planes.
+                UpdatePlanes(env, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -1529,27 +1531,27 @@ namespace Babylon
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
                 // First loop over deleted planes and remove them from our JS mapping.
-                for (auto planeId : m_frame->RemovedPlanes)
+                for (auto planeID : m_frame->RemovedPlanes)
                 {
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planeId);
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
                     assert(trackedPlaneIterator != m_trackedPlanes.end());
                     m_trackedPlanes.erase(trackedPlaneIterator);
                 }
 
                 // Next loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
-                for (auto planeId : m_frame->UpdatedPlanes)
+                for (auto planeID : m_frame->UpdatedPlanes)
                 {
                     XRPlane* xrPlane{};
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planeId);
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
 
                     // Plane does not yet exist create the JS object and insert it into the map.
                     if (trackedPlaneIterator == m_trackedPlanes.end())
                     {
                         auto napiPlane = Napi::Persistent(XRPlane::New(env));
                         xrPlane = XRPlane::Unwrap(napiPlane.Value());
-                        xrPlane->SetNativePlaneId(planeId);
+                        xrPlane->SetNativePlaneId(planeID);
                         xrPlane->SetXRFrame(this);
-                        m_trackedPlanes.insert({planeId, std::move(napiPlane)});
+                        m_trackedPlanes.insert({planeID, std::move(napiPlane)});
                     }
                     else
                     {
@@ -1696,7 +1698,6 @@ namespace Babylon
             XRFrame& m_xrFrame;
             JsRuntimeScheduler m_runtimeScheduler;
             uint32_t m_timestamp{0};
-            bool m_planeDetectionEnabled{false};
 
             std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
@@ -1823,7 +1824,7 @@ namespace Babylon
                 m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
-                    m_xrFrame.Update(env, frame, m_planeDetectionEnabled, m_timestamp);
+                    m_xrFrame.Update(env, frame, m_timestamp);
                     func->Call({Napi::Value::From(env, m_timestamp), m_jsXRFrame.Value()});
                 });
 
@@ -1837,7 +1838,8 @@ namespace Babylon
                 auto optionsObj = info[0].As<Napi::Object>();
                 if (optionsObj.Has("planeDetectionState"))
                 {
-                    m_planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
+                    bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
+                    m_xr.SetPlaneDetectionEnabled(planeDetectionEnabled);
                 }
             }
 
