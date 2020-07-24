@@ -604,7 +604,7 @@ namespace xr
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
                 glBindSampler(1, 0);
 
-                // Draw the quadnip
+                // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
                 // Present to the screen
