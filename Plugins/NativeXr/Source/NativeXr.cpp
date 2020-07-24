@@ -1536,7 +1536,6 @@ namespace Babylon
                 {
                     auto trackedPlaneIterator = m_trackedPlanes.find(planePtr);
                     assert(trackedPlaneIterator != m_trackedPlanes.end());
-                    m_frame->CleanupPlane(trackedPlaneIterator->first);
                     m_trackedPlanes.erase(trackedPlaneIterator);
                 }
 

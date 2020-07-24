@@ -871,9 +871,4 @@ namespace xr
     {
         throw std::runtime_error("Planes not yet implemented for OpenXR.");
     }
-
-    void System::Session::Frame::CleanupPlane(Plane*) const
-    {
-        throw std::runtime_error("Planes not yet implemented for OpenXR.");
-    }
 }

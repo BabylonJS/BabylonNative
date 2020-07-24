@@ -905,7 +905,13 @@ namespace xr {
                     // Find the plane in the set of existing planes.
                     auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(removedPlane.identifier));
                     if (planeIterator != existingPlanes.end()) {
-                        deletedPlanes.push_back(&(planeIterator->second));
+                        // Release the held ref to the native plane ID as it is no longer needed
+                        auto foundPlane = planeIterator->second;
+                        auto planeIdentifier = (reinterpret_cast<NSUUID*>(foundPlane.NativePlaneId));
+                        foundPlane.NativePlaneIdentifier = nil;
+                        [planeIdentifier release];
+
+                        deletedPlanes.push_back(&(foundPlane));
                     }
                     
                     [removedPlane release];
@@ -918,14 +924,6 @@ namespace xr {
             }
         }
 
-        /**
-         Cleans up the given native plane.
-         */
-        void CleanupPlane(Plane* plane) {
-            auto planeIdentifier = (reinterpret_cast<NSUUID*>(plane->NativePlaneId));
-            [planeIdentifier release];
-        }
-        
         /**
          Deallocates the native ARKit anchor object, and removes it from the anchor list.
          */
@@ -1046,11 +1044,6 @@ namespace xr {
     void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
-    }
-
-    void System::Session::Frame::CleanupPlane(Plane* plane) const
-    {
-        m_impl->sessionImpl.CleanupPlane(plane);
     }
 
     System::System(const char* appName)

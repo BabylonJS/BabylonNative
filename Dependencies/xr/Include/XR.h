@@ -169,7 +169,6 @@ namespace xr
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
                 void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
-                void CleanupPlane(Plane* plane) const;
 
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;

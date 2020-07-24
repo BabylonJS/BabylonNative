@@ -857,12 +857,6 @@ namespace xr
             }
         }
 
-        // Cleans up a plane. Called when a plane gets deleted.
-        void CleanupPlane(Plane* plane)
-        {
-            ArTrackable_release(reinterpret_cast<ArTrackable*>(plane->NativePlaneId));
-        }
-
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
@@ -958,6 +952,8 @@ namespace xr
                 // Plane has been subsumed, stop tracking it explicitly.
                 if (subsumingPlane != nullptr)
                 {
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(plane.NativePlaneId));
+                    plane.NativePlaneId = nullptr;
                     subsumedPlanes.push_back(&plane);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                 }
@@ -1041,11 +1037,6 @@ namespace xr
     void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
     {
         m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
-    }
-
-    void System::Session::Frame::CleanupPlane(Plane* plane) const
-    {
-        m_impl->sessionImpl.CleanupPlane(plane);
     }
 
     System::Session::Frame::~Frame()
