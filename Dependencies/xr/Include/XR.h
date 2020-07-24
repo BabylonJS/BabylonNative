@@ -163,13 +163,13 @@ namespace xr
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<Plane>& Planes;
+                std::vector<Plane::Identifier>UpdatedPlanes;
+                std::vector<Plane::Identifier>RemovedPlanes;
 
                 Frame(System::Session::Impl&);
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                void UpdatePlanes(std::vector<Plane::Identifier>& updatedPlanes, std::vector<Plane::Identifier>& removedPlanes) const;
-
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;

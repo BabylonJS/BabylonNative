@@ -1528,13 +1528,8 @@ namespace Babylon
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                // Call update to update existing planes, find new planes, and get the list of deleted planes.
-                std::vector<xr::System::Session::Frame::Plane::Identifier> updatedPlanes{};
-                std::vector<xr::System::Session::Frame::Plane::Identifier> deletedPlanes{};
-                m_frame->UpdatePlanes(updatedPlanes, deletedPlanes);
-
                 // First loop over deleted planes and remove them from our JS mapping.
-                for (auto planeId : deletedPlanes)
+                for (auto planeId : m_frame->RemovedPlanes)
                 {
                     auto trackedPlaneIterator = m_trackedPlanes.find(planeId);
                     assert(trackedPlaneIterator != m_trackedPlanes.end());
@@ -1542,7 +1537,7 @@ namespace Babylon
                 }
 
                 // Next loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
-                for (auto planeId : updatedPlanes)
+                for (auto planeId : m_frame->UpdatedPlanes)
                 {
                     XRPlane* xrPlane{};
                     auto trackedPlaneIterator = m_trackedPlanes.find(planeId);

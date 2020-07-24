@@ -604,7 +604,7 @@ namespace xr
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
                 glBindSampler(1, 0);
 
-                // Draw the quad
+                // Draw the quadnip
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
                 // Present to the screen
@@ -959,6 +959,8 @@ namespace xr
                 if (subsumingPlane != nullptr)
                 {
                     subsumedPlanes.push_back(planeId);
+                    Planes[planeId].Polygon.clear();
+                    Planes[planeId].PolygonSize = 0;
                     planeMapIterator = planeMap.erase(planeMapIterator);                    
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
@@ -1021,8 +1023,11 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , Planes{ sessionImpl.Planes }
+        , UpdatedPlanes{}
+        , RemovedPlanes{}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
+        m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
     }
 
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
@@ -1044,12 +1049,7 @@ namespace xr
     {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
-
-    void System::Session::Frame::UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes) const
-    {
-        m_impl->sessionImpl.UpdatePlanes(updatedPlanes, deletedPlanes);
-    }
-
+    
     System::Session::Frame::~Frame()
     {
         m_impl->sessionImpl.CleanupFrameTrackables();
