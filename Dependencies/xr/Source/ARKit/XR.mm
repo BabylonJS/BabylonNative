@@ -906,9 +906,9 @@ namespace xr {
                     auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(removedPlane.identifier));
                     if (planeIterator != existingPlanes.end()) {
                         // Release the held ref to the native plane ID as it is no longer needed
-                        auto foundPlane = planeIterator->second;
+                        auto& foundPlane = planeIterator->second;
                         auto planeIdentifier = (reinterpret_cast<NSUUID*>(foundPlane.NativePlaneId));
-                        foundPlane.NativePlaneIdentifier = nil;
+                        foundPlane.NativePlaneId = nil;
                         [planeIdentifier release];
 
                         deletedPlanes.push_back(&(foundPlane));

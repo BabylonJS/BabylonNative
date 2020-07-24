@@ -1543,7 +1543,7 @@ namespace Babylon
                 for (auto newPlane : newPlanes)
                 {
                     auto napiPlane = Napi::Persistent(XRPlane::New(env));
-                    auto xrPlane = XRPlane::Unwrap(napiPlane.Value());
+                    auto* xrPlane = XRPlane::Unwrap(napiPlane.Value());
                     xrPlane->SetNativePlane(newPlane);
 
                     m_trackedPlanes.insert({xrPlane->GetNativePlane(), std::move(napiPlane)});
@@ -1554,7 +1554,7 @@ namespace Babylon
                 {
                     if (plane->Updated)
                     {
-                        auto xrPlane = XRPlane::Unwrap(planeNapiValue.Value());
+                        auto* xrPlane = XRPlane::Unwrap(planeNapiValue.Value());
                         xrPlane->SetLastUpdatedTime(timestamp);
                         plane->Updated = false;
                     }
