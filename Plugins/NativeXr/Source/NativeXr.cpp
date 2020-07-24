@@ -1232,22 +1232,24 @@ namespace Babylon
                 m_lastUpdatedTimestamp = timestamp;
             }
 
-            void SetNativePlane(xr::Plane& plane)
+            void SetNativePlaneId(xr::System::Session::Frame::Plane::Identifier planeID)
             {
-                m_nativePlane = std::move(plane);
+                m_nativePlaneID = planeID;
             }
 
-            xr::Plane* GetNativePlane()
+            void SetXRFrame(XRFrame* frame)
             {
-                return &m_nativePlane;
+                m_frame = frame;
             }
 
         private:
+            xr::System::Session::Frame::Plane& GetPlane();
+
             Napi::Value GetPlaneSpace(const Napi::CallbackInfo& info)
             {
                 Napi::Object napiTransform = XRRigidTransform::New(info);
                 XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-                rigidTransform->Update(m_nativePlane.Center);
+                rigidTransform->Update(GetPlane().Center);
 
                 Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
                 return std::move(napiSpace);
@@ -1256,23 +1258,24 @@ namespace Babylon
             Napi::Value GetPolygon(const Napi::CallbackInfo& info)
             {
                 // Translate the polygon from a native array to a JS array.
-                auto polygonArray = Napi::Array::New(info.Env(), m_nativePlane.PolygonSize);
-                for (size_t i = 0; i < m_nativePlane.PolygonSize; i++)
+                auto& nativePlane = GetPlane();
+                auto polygonArray = Napi::Array::New(info.Env(), nativePlane.PolygonSize);
+                for (size_t i = 0; i < nativePlane.PolygonSize; i++)
                 {
                     auto polygonPoint = Napi::Object::New(info.Env());
-                    if (m_nativePlane.PolygonFormat == xr::PolygonFormat::XZ)
+                    if (nativePlane.PolygonFormat == xr::PolygonFormat::XZ)
                     {
                         size_t polygonIndex = 2 * i;
-                        polygonPoint.Set("x", m_nativePlane.Polygon[polygonIndex]);
+                        polygonPoint.Set("x", nativePlane.Polygon[polygonIndex]);
                         polygonPoint.Set("y", 0);
-                        polygonPoint.Set("z", m_nativePlane.Polygon[polygonIndex + 1]);
+                        polygonPoint.Set("z", nativePlane.Polygon[polygonIndex + 1]);
                     }
                     else
                     {
                         size_t polygonIndex = 3 * i;
-                        polygonPoint.Set("x", m_nativePlane.Polygon[polygonIndex]);
-                        polygonPoint.Set("y", m_nativePlane.Polygon[polygonIndex + 1]);
-                        polygonPoint.Set("z", m_nativePlane.Polygon[polygonIndex + 2]);
+                        polygonPoint.Set("x", nativePlane.Polygon[polygonIndex]);
+                        polygonPoint.Set("y", nativePlane.Polygon[polygonIndex + 1]);
+                        polygonPoint.Set("z", nativePlane.Polygon[polygonIndex + 2]);
                     }
 
                     polygonArray.Set((int)i, polygonPoint);
@@ -1290,7 +1293,10 @@ namespace Babylon
             uint32_t m_lastUpdatedTimestamp{0};
 
             // The underlying native plane.
-            xr::Plane m_nativePlane{};
+            xr::System::Session::Frame::Plane::Identifier m_nativePlaneID{};
+
+            // Pointer to the XRFrame object.
+            XRFrame* m_frame{};
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
@@ -1375,12 +1381,17 @@ namespace Babylon
                 m_frame->DeleteAnchor(nativeAnchor);
             }
 
+            xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
+            {
+                return m_frame->Planes[planeID];
+            }
+
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
-            std::unordered_map<xr::Plane*, Napi::ObjectReference> m_trackedPlanes{};
+            std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1517,47 +1528,40 @@ namespace Babylon
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                std::unordered_map<xr::NativePlaneIdentifier, xr::Plane&> existingNativePlaneMap{};
-
-                // Loop over our Planes, and create a mapping of native plane identifiers to xr::planes.
-                for (auto& [plane, planeNapiValue] : m_trackedPlanes)
-                {
-                    std::pair<xr::NativePlaneIdentifier, xr::Plane&> pair = {plane->NativePlaneId, *plane};
-                    existingNativePlaneMap.insert(pair);
-                }
-
                 // Call update to update existing planes, find new planes, and get the list of deleted planes.
-                std::vector<xr::Plane> newPlanes{};
-                std::vector<xr::Plane*> deletedPlanes{};
-                m_frame->UpdatePlanes(existingNativePlaneMap, newPlanes, deletedPlanes);
+                std::vector<xr::System::Session::Frame::Plane::Identifier> updatedPlanes{};
+                std::vector<xr::System::Session::Frame::Plane::Identifier> deletedPlanes{};
+                m_frame->UpdatePlanes(updatedPlanes, deletedPlanes);
 
                 // First loop over deleted planes and remove them from our JS mapping.
-                for (auto planePtr : deletedPlanes)
+                for (auto planeId : deletedPlanes)
                 {
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planePtr);
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeId);
                     assert(trackedPlaneIterator != m_trackedPlanes.end());
                     m_trackedPlanes.erase(trackedPlaneIterator);
                 }
 
-                // Next loop over the list of new planes, initialize the JS object and insert it into our map.
-                for (auto newPlane : newPlanes)
+                // Next loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
+                for (auto planeId : updatedPlanes)
                 {
-                    auto napiPlane = Napi::Persistent(XRPlane::New(env));
-                    auto* xrPlane = XRPlane::Unwrap(napiPlane.Value());
-                    xrPlane->SetNativePlane(newPlane);
+                    XRPlane* xrPlane{};
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeId);
 
-                    m_trackedPlanes.insert({xrPlane->GetNativePlane(), std::move(napiPlane)});
-                }
-
-                // Finally update the timestamp of any planes that have been updated in the last frame.
-                for (auto& [plane, planeNapiValue] : m_trackedPlanes)
-                {
-                    if (plane->Updated)
+                    // Plane does not yet exist create the JS object and insert it into the map.
+                    if (trackedPlaneIterator == m_trackedPlanes.end())
                     {
-                        auto* xrPlane = XRPlane::Unwrap(planeNapiValue.Value());
-                        xrPlane->SetLastUpdatedTime(timestamp);
-                        plane->Updated = false;
+                        auto napiPlane = Napi::Persistent(XRPlane::New(env));
+                        xrPlane = XRPlane::Unwrap(napiPlane.Value());
+                        xrPlane->SetNativePlaneId(planeId);
+                        xrPlane->SetXRFrame(this);
+                        m_trackedPlanes.insert({planeId, std::move(napiPlane)});
                     }
+                    else
+                    {
+                        xrPlane = XRPlane::Unwrap(trackedPlaneIterator->second.Value());
+                    }
+
+                    xrPlane->SetLastUpdatedTime(timestamp);
                 }
             }
         };
@@ -1572,6 +1576,11 @@ namespace Babylon
         void XRAnchor::Delete(const Napi::CallbackInfo&)
         {
             m_frame->DeleteNativeAnchor(m_nativeAnchor);
+        }
+
+        xr::System::Session::Frame::Plane& XRPlane::GetPlane()
+        {
+            return m_frame->GetPlaneFromID(m_nativePlaneID);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface

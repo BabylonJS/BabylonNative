@@ -86,17 +86,6 @@ namespace xr
         bool IsValid{true};
     };
 
-    using NativePlaneIdentifier = void*;
-    struct Plane
-    {
-        Pose Center{};
-        std::vector<float> Polygon{};
-        size_t PolygonSize{0};
-        PolygonFormat PolygonFormat{};
-        NativePlaneIdentifier NativePlaneId{};
-        bool Updated;
-    };
-
     class System
     {
     public:
@@ -161,14 +150,25 @@ namespace xr
                     static inline Identifier NEXT_ID{ 0 };
                 };
 
+                struct Plane
+                {
+                    using Identifier = size_t;
+                    Identifier ID{ 0 };
+                    Pose Center{};
+                    std::vector<float> Polygon{};
+                    size_t PolygonSize{0};
+                    PolygonFormat PolygonFormat{};
+                };
+
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
+                std::vector<Plane>& Planes;
 
                 Frame(System::Session::Impl&);
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray) const;
-                void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const;
+                void UpdatePlanes(std::vector<Plane::Identifier>& updatedPlanes, std::vector<Plane::Identifier>& removedPlanes) const;
 
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;

@@ -322,6 +322,7 @@ namespace xr
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
+        std::vector<Frame::Plane> Planes;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
@@ -393,7 +394,7 @@ namespace xr
             ArHitResultList_create(session, &hitResultList);
             ArHitResult_create(session, &hitResult);
 
-            // Cerate the trackable list used to process planes.
+            // Create the trackable list used to process planes.
             ArTrackableList_create(session, &trackableList);
 
             // Create the reusable ARCore ArPose used for short term operations
@@ -793,7 +794,7 @@ namespace xr
             }
         }
 
-        void UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& deletedPlanes)
+        void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
         {
             if (!IsTracking())
             {
@@ -801,7 +802,7 @@ namespace xr
             }
 
             // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
-            CheckForSubsumedPlanes(existingPlanes, deletedPlanes);
+            CheckForSubsumedPlanes(deletedPlanes);
 
             // Next check for updated planes, and update their pose and polygon or create a new plane if it does not yet exist.
             ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);            
@@ -840,19 +841,20 @@ namespace xr
                 ArPlane_getPolygon(session, planeTrackable, planePolygonBuffer.data());
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
-                auto planeIterator = existingPlanes.find(reinterpret_cast<NativePlaneIdentifier>(planeTrackable));
-                if (planeIterator != existingPlanes.end())
+                auto planeIterator = planeMap.find(planeTrackable);
+                if (planeIterator != planeMap.end())
                 {
-                    UpdatePlane(planeIterator->second, rawPose, planePolygonBuffer, polygonSize);
+                    UpdatePlane(updatedPlanes, Planes[planeIterator->second], rawPose, planePolygonBuffer, polygonSize);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
                 }
                 else
                 {
                     // This is a new plane, create it and initialize its values.
-                    newPlanes.emplace_back();
-                    auto& plane = newPlanes.back();
-                    plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(planeTrackable);
-                    UpdatePlane(plane, rawPose, planePolygonBuffer, polygonSize);
+                    Planes.emplace_back();
+                    auto& plane = Planes.back();
+                    plane.ID = nextPlaneID++;
+                    planeMap.insert({planeTrackable, plane.ID});
+                    UpdatePlane(updatedPlanes, plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
         }
@@ -863,6 +865,8 @@ namespace xr
         std::vector<ArTrackable*> frameTrackables{};
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
+        std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
+        Frame::Plane::Identifier nextPlaneID = 0;
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -940,27 +944,33 @@ namespace xr
         /**
          * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
          **/
-        void CheckForSubsumedPlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane*>& subsumedPlanes)
+        void CheckForSubsumedPlanes(std::vector<Frame::Plane::Identifier>& subsumedPlanes)
         {
-            for (auto & [NativePlaneIdentifier, plane] : existingPlanes)
+            auto planeMapIterator = planeMap.begin();
+            while (planeMapIterator != planeMap.end())
             {
+                auto [arPlane, planeId] = *planeMapIterator;
+
                 // Check if the plane has been subsumed, and if we should stop tracking it.
                 ArPlane* subsumingPlane = nullptr;
-                auto* planeTrackable = reinterpret_cast<ArPlane*>(NativePlaneIdentifier);
-                ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
+                ArPlane_acquireSubsumedBy(session, arPlane, &subsumingPlane);
 
                 // Plane has been subsumed, stop tracking it explicitly.
                 if (subsumingPlane != nullptr)
                 {
-                    ArTrackable_release(reinterpret_cast<ArTrackable*>(plane.NativePlaneId));
-                    plane.NativePlaneId = nullptr;
-                    subsumedPlanes.push_back(&plane);
+                    subsumedPlanes.push_back(planeId);
+                    planeMapIterator = planeMap.erase(planeMapIterator);                    
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                }
+                else
+                {
+                    planeMapIterator++;
                 }
             }
         }
 
-        void UpdatePlane(Plane& plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
+        void UpdatePlane(std::vector<Frame::Plane::Identifier>& updatedPlanes, Frame::Plane& plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
         {
             // Grab the new center
             Pose newCenter{};
@@ -972,8 +982,7 @@ namespace xr
                 return;
             }
 
-            // Mark the plane as updated, and grab the new center.
-            plane.Updated = true;
+            // Update the center pose.
             plane.Center = newCenter;
 
             // Swap the old polygon with the new one.
@@ -982,6 +991,7 @@ namespace xr
             // Set the polygon size, and format.
             plane.PolygonSize = polygonSize / 2;
             plane.PolygonFormat = PolygonFormat::XZ;
+            updatedPlanes.push_back(plane.ID);
         }
 
         /**
@@ -1009,7 +1019,8 @@ namespace xr
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
-        , InputSources{ sessionImpl.InputSources}
+        , InputSources{ sessionImpl.InputSources }
+        , Planes{ sessionImpl.Planes }
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
     }
@@ -1034,9 +1045,9 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    void System::Session::Frame::UpdatePlanes(std::unordered_map<NativePlaneIdentifier, Plane&>& existingPlanes, std::vector<Plane>& newPlanes, std::vector<Plane*>& removedPlanes) const
+    void System::Session::Frame::UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes) const
     {
-        m_impl->sessionImpl.UpdatePlanes(existingPlanes, newPlanes, removedPlanes);
+        m_impl->sessionImpl.UpdatePlanes(updatedPlanes, deletedPlanes);
     }
 
     System::Session::Frame::~Frame()

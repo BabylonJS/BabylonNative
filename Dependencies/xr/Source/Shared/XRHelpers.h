@@ -18,7 +18,7 @@ namespace xr
 			|| abs(lhs.Orientation.W - rhs.Orientation.W) > FLOAT_COMPARISON_THRESHOLD;
 	}
 	
-	bool CheckIfPlaneWasUpdated(Plane& existingPlane, std::vector<float>& newPolygon, Pose& newCenter)
+	bool CheckIfPlaneWasUpdated(xr::System::Session::Frame::Plane& existingPlane, std::vector<float>& newPolygon, Pose& newCenter)
 	{
 		// First check if the center has changed, or the polygon size has changed.
 		if (PoseWasMeaningfullyUpdated(existingPlane.Center, newCenter)
