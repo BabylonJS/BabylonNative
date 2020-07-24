@@ -51,6 +51,10 @@
     (out) = v8::type::New((buffer), (byte_offset), (length));                  \
   } while (0)
 
+#ifndef __clang__
+#pragma warning(disable: 4100 4267)
+#endif
+
 namespace v8impl {
 
 namespace {
