@@ -849,7 +849,7 @@ namespace xr
                 else
                 {
                     // This is a new plane, create it and initialize its values.
-                    newPlanes.push_back({});
+                    newPlanes.emplace_back();
                     auto& plane = newPlanes.back();
                     plane.NativePlaneId = reinterpret_cast<NativePlaneIdentifier>(planeTrackable);
                     UpdatePlane(plane, rawPose, planePolygonBuffer, polygonSize);
