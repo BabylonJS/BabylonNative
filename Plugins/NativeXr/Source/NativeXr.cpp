@@ -1323,6 +1323,7 @@ namespace Babylon
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
+                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1526,6 +1527,19 @@ namespace Babylon
                 // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
                 return std::move(worldInformationObj);
+            }
+
+            Napi::Value GetFeaturePointCloud(const Napi::CallbackInfo& info)
+            {
+                // Get feature points from native.
+                std::vector<float>& pointCloud = m_frame->FeaturePointCloud;
+                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size());
+                for (size_t i = 0; i < pointCloud.size(); i++)
+                {
+                    polygonArray.Set((int)i, pointCloud[i]);
+                }
+
+                return featurePointArray;
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)

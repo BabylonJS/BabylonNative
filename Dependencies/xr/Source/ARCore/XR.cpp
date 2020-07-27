@@ -323,6 +323,7 @@ namespace xr
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
         std::vector<Frame::Plane> Planes;
+        std::vector<float> FeaturePointCloud;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -860,6 +861,40 @@ namespace xr
             }
         }
 
+        void UpdateFeaturePointCloud()
+        {
+            if (!IsTracking())
+            {
+                return;
+            }
+
+            // Get the feature point cloud from ArCore.
+            ArPointCloud* pointCloud;
+            size_t numberOfPoints;
+            float* pointCloudData;
+            ArFrame_acquirePointCloud(session, frame, &pointCloud);
+            try
+            {
+                ArPointCloud_getNumberOfPoints(session, pointCloud, &numberOfPoints);
+                ArPointCloud_getData(session, pointCloud, &pointCloudData);
+
+                FeaturePointCloud.resize(numberOfPoints * 4);
+                for (size_t i = 0; i < numberOfPoints * 4; i++)
+                {
+                    FeaturePointCloud[i] = pointCloudData[i];
+                }
+            }
+            catch
+            {
+                // Release the point cloud to free its memory.
+                ArPointCloud_release(pointCloud);
+                throw;
+            }
+
+            // Release the point cloud to free its memory.
+            ArPointCloud_release(pointCloud);
+        }
+
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
@@ -1024,6 +1059,7 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , Planes{ sessionImpl.Planes }
+        , FeaturePointCloud{ sessionImpl.FeaturePoints }
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }

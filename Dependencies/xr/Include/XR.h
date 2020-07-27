@@ -163,6 +163,8 @@ namespace xr
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<Plane>& Planes;
+                std::vector<float>& FeaturePointCloud;
+                
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
 
