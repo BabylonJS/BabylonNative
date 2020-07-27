@@ -869,22 +869,29 @@ namespace xr
             }
 
             // Get the feature point cloud from ArCore.
-            ArPointCloud* pointCloud;
-            size_t numberOfPoints;
-            float* pointCloudData;
-            ArFrame_acquirePointCloud(session, frame, &pointCloud);
+            ArPointCloud* pointCloud = nullptr;
+            int32_t numberOfPoints;
+            const float* pointCloudData = nullptr;
+            ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);
+
+            if (status != AR_SUCCESS)
+            {
+                FeaturePointCloud.clear();
+                return;
+            }
+
             try
             {
                 ArPointCloud_getNumberOfPoints(session, pointCloud, &numberOfPoints);
                 ArPointCloud_getData(session, pointCloud, &pointCloudData);
 
                 FeaturePointCloud.resize(numberOfPoints * 4);
-                for (size_t i = 0; i < numberOfPoints * 4; i++)
+                for (int32_t i = 0; i < numberOfPoints * 4; i++)
                 {
                     FeaturePointCloud[i] = pointCloudData[i];
                 }
             }
-            catch
+            catch(std::exception)
             {
                 // Release the point cloud to free its memory.
                 ArPointCloud_release(pointCloud);
@@ -1059,12 +1066,13 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , Planes{ sessionImpl.Planes }
-        , FeaturePointCloud{ sessionImpl.FeaturePoints }
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+        m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const

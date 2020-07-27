@@ -1536,7 +1536,7 @@ namespace Babylon
                 auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size());
                 for (size_t i = 0; i < pointCloud.size(); i++)
                 {
-                    polygonArray.Set((int)i, pointCloud[i]);
+                    featurePointArray.Set((int)i, Napi::Value::From(info.Env(), pointCloud[i]));
                 }
 
                 return featurePointArray;
