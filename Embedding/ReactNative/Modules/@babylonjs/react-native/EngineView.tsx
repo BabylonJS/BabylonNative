@@ -92,7 +92,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
 
     if (!failedInitialization) {
         return (
-            <View style={props.style}>
+            <View style={[props.style, {overflow: "hidden"}]}>
                 <NativeEngineView style={{flex: 1}} />
                 { fps && <Text style={{color: 'yellow', position: 'absolute', margin: 10, right: 0, top: 0}}>FPS: {Math.round(fps)}</Text> }
             </View>
