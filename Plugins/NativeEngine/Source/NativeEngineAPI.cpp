@@ -27,7 +27,7 @@ namespace Babylon::Plugins::NativeEngine
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
         auto& window = Plugins::Internal::NativeWindow::GetFromJavaScript(env);
-        window.Resize(width, height);
+        window.Resize(width, height, windowPtr);
         // flush bgfx so the resize (and swapchain update) happens here
         bgfx::frame();
     }
