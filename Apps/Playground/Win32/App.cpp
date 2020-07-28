@@ -119,7 +119,7 @@ namespace
 
             // Initialize NativeEngine plugin.
             //Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
-            Babylon::Plugins::NativeEngine::Initialize(env);
+            Babylon::Plugins::NativeEngine::Initialize(env, *graphics);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);

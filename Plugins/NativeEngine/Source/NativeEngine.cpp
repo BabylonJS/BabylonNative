@@ -585,7 +585,7 @@ namespace Babylon
         bgfx::shutdown();
     }
 
-    void NativeEngine::Initialize(Napi::Env env)
+    void NativeEngine::Initialize(Napi::Env env, NativeGraphics& graphics)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
@@ -665,7 +665,9 @@ namespace Babylon
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
             });
 
-        env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+        auto nativeObject = env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
+        nativeObject.Set(JS_NATIVE_GRAPHICS_NAME, Napi::External<NativeGraphics>::New(env, &graphics));
+        nativeObject.Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
@@ -677,6 +679,7 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
+        , m_nativeGraphicsImpl{NativeGraphics::Impl::GetImpl(*info.Env().Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_NATIVE_GRAPHICS_NAME).As<Napi::External<NativeGraphics>>().Data())}
         , m_engineState{BGFX_STATE_DEFAULT}
         , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
@@ -740,11 +743,16 @@ namespace Babylon
             m_requestAnimationFrameCalback = Napi::Persistent(callback);
         }
 
+        m_nativeGraphicsImpl.AddRenderWorkTask(arcana::task_from_result<std::exception_ptr>());
+        m_nativeGraphicsImpl.GetRenderTask().then(m_runtimeScheduler, m_cancelSource, [this]() {
+            GetFrameBufferManager().Reset();
+        });
+
         m_runtime.Dispatch([this](Napi::Env env) {
             try
             {
                 m_requestAnimationFrameCalback.Call({});
-                EndFrame();
+                m_nativeGraphicsImpl.Render();
             }
             catch (const std::exception& ex)
             {

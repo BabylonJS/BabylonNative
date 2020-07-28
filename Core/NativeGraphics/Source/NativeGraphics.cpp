@@ -1,10 +1,4 @@
-#include "NativeGraphics.h"
-
-#include <arcana/threading/dispatcher.h>
-#include <arcana/threading/task.h>
-
-#include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
+#include "NativeGraphicsImpl.h"
 
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 
@@ -20,80 +14,70 @@ namespace Babylon
     {
     }
 
-    struct NativeGraphics::Impl
-    {
-        ~Impl();
-
-        // TODO: Populate this with something, probably not a pointer.
-        std::unique_ptr<bgfx::CallbackI> BgfxCallback{};
-
-        arcana::manual_dispatcher<128> Dispatcher{};
-        arcana::task_completion_source<void, std::exception_ptr> RenderTaskCompletionSource{};
-
-        std::vector<arcana::task<void, std::exception_ptr>> RenderWorkTasks{};
-        std::mutex RenderWorkTasksMutex{};
-
-        void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
-        {
-            std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
-            RenderWorkTasks.push_back(std::move(renderWorkTask));
-        }
-
-        arcana::task<void, std::exception_ptr> GetRenderTask()
-        {
-            return RenderTaskCompletionSource.as_task();
-        }
-
-        void Render()
-        {
-            bool rendered = false;
-            RenderTask([this, &rendered]() mutable {
-                bgfx::frame();
-                
-                rendered = true;
-                auto oldRenderTaskCompletionSource = RenderTaskCompletionSource;
-                RenderTaskCompletionSource = {};
-                oldRenderTaskCompletionSource.complete();
-            });
-            while (!rendered)
-            {
-                Dispatcher.blocking_tick(arcana::cancellation::none());
-            }
-        }
-
-        arcana::task<void, std::exception_ptr> RenderTask(std::function<void()> render)
-        {
-            bool anyTasks{};
-            arcana::task<void, std::exception_ptr> whenAllTask{};
-            {
-                std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
-                anyTasks = RenderWorkTasks.empty();
-                if (anyTasks)
-                {
-                    whenAllTask = arcana::when_all<std::exception_ptr>(RenderWorkTasks);
-                    RenderWorkTasks.clear();
-                }
-            }
-
-            if (!anyTasks)
-            {
-                return arcana::make_task(Dispatcher, arcana::cancellation::none(), std::move(render));
-            }
-            else
-            {
-                return whenAllTask.then(Dispatcher, arcana::cancellation::none(), [this, render = std::move(render)]() mutable {
-                    return RenderTask(std::move(render));
-                });
-            }
-        }
-    };
-
     NativeGraphics::Impl::~Impl()
     {
         bgfx::shutdown();
     }
 
-    NativeGraphics::NativeGraphics() = default;
+    void NativeGraphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
+    {
+        std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
+        RenderWorkTasks.push_back(std::move(renderWorkTask));
+    }
+
+    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetRenderTask()
+    {
+        return RenderTaskCompletionSource.as_task();
+    }
+
+    void NativeGraphics::Impl::Render()
+    {
+        bool rendered = false;
+        RenderTask([this, &rendered]() mutable {
+            bgfx::frame();
+
+            rendered = true;
+            auto oldRenderTaskCompletionSource = RenderTaskCompletionSource;
+            RenderTaskCompletionSource = {};
+            oldRenderTaskCompletionSource.complete();
+        });
+        while (!rendered)
+        {
+            Dispatcher.blocking_tick(arcana::cancellation::none());
+        }
+    }
+
+    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::RenderTask(std::function<void()> render)
+    {
+        bool anyTasks{};
+        arcana::task<void, std::exception_ptr> whenAllTask{};
+        {
+            std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
+            anyTasks = RenderWorkTasks.empty();
+            if (anyTasks)
+            {
+                whenAllTask = arcana::when_all<std::exception_ptr>(RenderWorkTasks);
+                RenderWorkTasks.clear();
+            }
+        }
+
+        if (!anyTasks)
+        {
+            return arcana::make_task(Dispatcher, arcana::cancellation::none(), std::move(render));
+        }
+        else
+        {
+            return whenAllTask.then(Dispatcher, arcana::cancellation::none(), [this, render = std::move(render)]() mutable {
+                return RenderTask(std::move(render));
+            });
+        }
+    }
+
+    NativeGraphics::NativeGraphics()
+        : m_impl{std::make_unique<NativeGraphics::Impl>()}
+    {
+    }
+
     NativeGraphics::~NativeGraphics() = default;
 
     template<>

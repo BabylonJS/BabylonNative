@@ -8,9 +8,10 @@ namespace Babylon
 {
     class NativeGraphics
     {
-        struct Impl;
-
     public:
+        struct Impl;
+        friend Impl;
+
         ~NativeGraphics();
 
         class CallbackTicket
