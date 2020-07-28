@@ -338,6 +338,7 @@ namespace xr
         {
             if (isInitialized)
             {
+                Planes.clear();
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
@@ -830,7 +831,7 @@ namespace xr
                 }
 
                 // Get the center pose.
-                std::array<float, 7> rawPose{};
+                float rawPose[7]{};
                 ArPlane_getCenterPose(session, planeTrackable, tempPose);
                 ArPose_getPoseRaw(session, tempPose, rawPose);
 
@@ -845,7 +846,7 @@ namespace xr
                 auto planeIterator = planeMap.find(planeTrackable);
                 if (planeIterator != planeMap.end())
                 {
-                    UpdatePlane(updatedPlanes, Planes[planeIterator->second], rawPose, planePolygonBuffer, polygonSize);
+                    UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), rawPose, planePolygonBuffer, polygonSize);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
                 }
                 else
@@ -853,11 +854,24 @@ namespace xr
                     // This is a new plane, create it and initialize its values.
                     Planes.emplace_back();
                     auto& plane = Planes.back();
-                    plane.ID = nextPlaneID++;
                     planeMap.insert({planeTrackable, plane.ID});
                     UpdatePlane(updatedPlanes, plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
+        }
+
+        Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
+        {
+            // Loop over the plane vector and find the correct plane.
+            for (Frame::Plane& plane : Planes)
+            {
+                if (plane.ID == planeID)
+                {
+                    return plane;
+                }
+            }
+
+            throw std::runtime_error{"Tried to get non-existent plane."};
         }
 
     private:
@@ -867,7 +881,6 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
-        Frame::Plane::Identifier nextPlaneID = 0;
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -960,9 +973,12 @@ namespace xr
                 if (subsumingPlane != nullptr)
                 {
                     subsumedPlanes.push_back(planeID);
-                    Planes[planeID].Polygon.clear();
-                    Planes[planeID].PolygonSize = 0;
-                    planeMapIterator = planeMap.erase(planeMapIterator);                    
+
+                    auto& plane = GetPlaneByID(planeID);
+                    plane.Polygon.clear();
+                    plane.PolygonSize = 0;
+                    
+                    planeMapIterator = planeMap.erase(planeMapIterator);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                 }
@@ -1050,7 +1066,12 @@ namespace xr
     {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
-    
+
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
+    {
+        return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
     System::Session::Frame::~Frame()
     {
         m_impl->sessionImpl.CleanupFrameTrackables();

@@ -176,6 +176,7 @@ namespace xr
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
+                Plane& GetPlaneByID(Plane::Identifier) const;
 
             private:
                 struct Impl;

@@ -603,6 +603,7 @@ namespace xr {
                 ActiveFrameViews[0].DepthTexturePointer = nil;
             }
 
+            Planes.clear();
             CleanupAnchor(nil);
             [sessionDelegate release];
             [session pause];
@@ -903,13 +904,12 @@ namespace xr {
                     // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
                     auto planeIterator = planeMap.find(updatedPlane.identifier);
                     if (planeIterator != planeMap.end()) {
-                        UpdatePlane(updatedPlanes, Planes[planeIterator->second], updatedPlane, planePolygonBuffer, polygonSize);
+                        UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), updatedPlane, planePolygonBuffer, polygonSize);
                     } else {
                         // This is a new plane, create it and initialize its values.
                         Planes.emplace_back();
                         auto& plane = Planes.back();
                         [updatedPlane.identifier retain];
-                        plane.ID = nextPlaneID++;
                         planeMap.insert({updatedPlane.identifier, plane.ID});
                         
                         // Fill in the polygon and center pose.
@@ -932,7 +932,7 @@ namespace xr {
                         auto [nativePlaneID, planeID] = *planeIterator;
                         deletedPlanes.push_back(planeID);
 
-                        auto& plane = Planes[planeID];
+                        auto& plane = GetPlaneByID(planeID);
                         plane.Polygon.clear();
                         plane.PolygonSize = 0;
                         planeMap.erase(planeIterator);
@@ -947,6 +947,20 @@ namespace xr {
             } @finally {
                 [sessionDelegate UnlockPlanes];
             }
+        }
+
+        Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
+        {
+            // Loop over the plane vector and find the correct plane.
+            for (Frame::Plane& plane : Planes)
+            {
+                if (plane.ID == planeID)
+                {
+                    return plane;
+                }
+            }
+
+            throw std::runtime_error{"Tried to get non-existent plane."};
         }
 
         /**
@@ -995,7 +1009,6 @@ namespace xr {
             std::vector<ARAnchor*> nativeAnchors{};
             std::vector<float> planePolygonBuffer{};
             std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
-            Frame::Plane::Identifier nextPlaneID = 0;
             bool planeDetectionEnabled{ false };
         
         /*
@@ -1076,6 +1089,10 @@ namespace xr {
 
     void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const {
         m_impl->sessionImpl.DeleteAnchor(anchor);
+    }
+
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
+        return m_impl->sessionImpl.GetPlaneByID(planeID);
     }
 
     System::System(const char* appName)

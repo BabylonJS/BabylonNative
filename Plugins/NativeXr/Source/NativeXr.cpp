@@ -1385,7 +1385,7 @@ namespace Babylon
 
             xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
             {
-                return m_frame->Planes[planeID];
+                return m_frame->GetPlaneByID(planeID);
             }
 
         private:
