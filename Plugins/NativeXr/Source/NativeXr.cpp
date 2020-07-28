@@ -281,6 +281,8 @@ namespace Babylon
             m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
             m_frame.reset();
         } while (!shouldEndSession);
+        // Clear frameBufferData and destroy bgfx FrameBuffers
+        m_texturesToFrameBuffers.clear();
         m_session.reset();
     }
 
