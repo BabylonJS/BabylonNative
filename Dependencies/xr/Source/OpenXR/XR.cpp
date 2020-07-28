@@ -215,6 +215,7 @@ namespace xr
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
+            std::vector<Frame::Plane> Planes{};
         } ActionResources{};
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -564,6 +565,9 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
+        , Planes { sessionImpl.ActionResources.Planes } // NYI
+        , UpdatedPlanes{} // NYI
+        , RemovedPlanes{} // NYI
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         auto session = m_impl->sessionImpl.Session;
@@ -865,5 +869,15 @@ namespace xr
     void System::Session::Frame::DeleteAnchor(Anchor&) const
     {
         throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+    }
+
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier) const
+    {
+        throw std::runtime_error("Planes not yet implemented for OpenXR.");
+    }
+
+    void System::Session::SetPlaneDetectionEnabled(bool) const
+    {
+        assert(!enabled);
     }
 }

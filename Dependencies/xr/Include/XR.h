@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
+#include <unordered_map>
 #include <arcana/threading/task.h>
 
 namespace xr
@@ -20,6 +22,12 @@ namespace xr
         IMMERSIVE_AR,
         INLINE,
         INVALID
+    };
+
+    enum class PolygonFormat
+    {
+        XZ,
+        XYZ
     };
 
     struct Size
@@ -142,8 +150,24 @@ namespace xr
                     static inline Identifier NEXT_ID{ 0 };
                 };
 
+                struct Plane
+                {
+                    using Identifier = size_t;
+                    const Identifier ID{ NEXT_ID++ };
+                    Pose Center{};
+                    std::vector<float> Polygon{};
+                    size_t PolygonSize{0};
+                    PolygonFormat PolygonFormat{};
+                
+                private:
+                    static inline Identifier NEXT_ID{0};
+                };
+
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
+                std::vector<Plane>& Planes;
+                std::vector<Plane::Identifier>UpdatedPlanes;
+                std::vector<Plane::Identifier>RemovedPlanes;
 
                 Frame(System::Session::Impl&);
                 ~Frame();
@@ -152,6 +176,7 @@ namespace xr
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
+                Plane& GetPlaneByID(Plane::Identifier) const;
 
             private:
                 struct Impl;
@@ -169,6 +194,7 @@ namespace xr
             void RequestEndSession();
             Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
+            void SetPlaneDetectionEnabled(bool enabled)const;
 
         private:
             std::unique_ptr<Impl> m_impl{};
