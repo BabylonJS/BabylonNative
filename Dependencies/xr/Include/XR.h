@@ -153,11 +153,14 @@ namespace xr
                 struct Plane
                 {
                     using Identifier = size_t;
-                    Identifier ID{ 0 };
+                    const Identifier ID{ NEXT_ID++ };
                     Pose Center{};
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
                     PolygonFormat PolygonFormat{};
+                
+                private:
+                    static inline Identifier NEXT_ID{0};
                 };
 
                 std::vector<View>& Views;

@@ -321,8 +321,8 @@ namespace xr
     {
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
-        std::vector<Frame::InputSource> InputSources;
-        std::vector<Frame::Plane> Planes;
+        std::vector<Frame::InputSource> InputSources{};
+        std::vector<Frame::Plane> Planes{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -830,7 +830,7 @@ namespace xr
                 }
 
                 // Get the center pose.
-                float rawPose[7]{};
+                std::array<float, 7> rawPose{};
                 ArPlane_getCenterPose(session, planeTrackable, tempPose);
                 ArPose_getPoseRaw(session, tempPose, rawPose);
 

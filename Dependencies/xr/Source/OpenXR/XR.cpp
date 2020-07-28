@@ -873,6 +873,6 @@ namespace xr
 
     void System::Session::SetPlaneDetectionEnabled(bool) const
     {
-        // NYI
+        assert(!enabled);
     }
 }
