@@ -28,6 +28,8 @@ namespace Babylon::Plugins::NativeEngine
 
         auto& window = Plugins::Internal::NativeWindow::GetFromJavaScript(env);
         window.Resize(width, height);
+        // flush bgfx so the resize (and swapchain update) happens here
+        bgfx::frame();
     }
 
     void DeinitializeGraphics()
