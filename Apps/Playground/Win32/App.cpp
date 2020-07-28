@@ -10,6 +10,7 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/NativeGraphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -25,6 +26,7 @@ HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+std::unique_ptr<Babylon::NativeGraphics> graphics{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 // Forward declarations of functions included in this code module:
@@ -82,8 +84,8 @@ namespace
 
         if (runtime)
         {
+            graphics.reset();
             runtime.reset();
-            Babylon::Plugins::NativeEngine::DeinitializeGraphics();
         }
     }
 
@@ -99,8 +101,12 @@ namespace
             return;
         }
 
+        auto width = static_cast<size_t>(rect.right - rect.left);
+        auto height = static_cast<size_t>(rect.bottom - rect.top);
+        graphics = Babylon::NativeGraphics::InitializeFromWindow<void*>(hWnd, width, height);
+
         // Initialize console plugin.
-        runtime->Dispatch([rect, hWnd](Napi::Env env) {
+        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
@@ -109,12 +115,10 @@ namespace
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeWindow plugin.
-            auto width = static_cast<size_t>(rect.right - rect.left);
-            auto height = static_cast<size_t>(rect.bottom - rect.top);
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            //Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize NativeXr plugin.

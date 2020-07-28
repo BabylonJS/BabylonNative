@@ -11,6 +11,8 @@ namespace Babylon
         struct Impl;
 
     public:
+        ~NativeGraphics();
+
         class CallbackTicket
         {
             friend NativeGraphics::Impl;
@@ -27,10 +29,10 @@ namespace Babylon
         };
 
         template<typename NativeWindowT>
-        static NativeGraphics InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
+        static std::unique_ptr<NativeGraphics> InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
         NativeGraphics(const NativeGraphics&) = delete;
-        NativeGraphics(NativeGraphics&&) = default;
+        NativeGraphics(NativeGraphics&&) = delete;
         
         template<typename NativeWindowT>
         void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
