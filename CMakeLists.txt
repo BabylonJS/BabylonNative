@@ -32,6 +32,12 @@ add_subdirectory(Core EXCLUDE_FROM_ALL)
 add_subdirectory(Plugins EXCLUDE_FROM_ALL)
 add_subdirectory(Polyfills EXCLUDE_FROM_ALL)
 
+if(DEFINED EXTENSIONS_DIRS)
+    foreach(extensionDir IN LISTS EXTENSIONS_DIRS)
+        add_subdirectory(${extensionDir} "Extensions" EXCLUDE_FROM_ALL)
+    endforeach()
+endif()
+
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
     add_subdirectory(Apps EXCLUDE_FROM_ALL)
