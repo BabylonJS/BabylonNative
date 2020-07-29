@@ -159,7 +159,7 @@ CreateBoxAsync().then(function () {
                     var pcs= new BABYLON.PointsCloudSystem("pcs", 1000, scene);
                     xrFeaturePointsModule.onFeaturePointsAvailableObservable.add((getFeaturePoints) => {
                         // Once a second regenerate feature points
-                        if (frameCounter++ % 120 == 0) {
+                        if (frameCounter++ % 60 == 0) {
                             var featurePoints = [...getFeaturePoints()];
                             var featurePointFunc = function(particle, i, s)  {
                                 try {
