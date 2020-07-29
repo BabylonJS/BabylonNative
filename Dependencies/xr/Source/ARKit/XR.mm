@@ -327,12 +327,12 @@ namespace {
   [super dealloc];
 }
 
-- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size {
+- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize)size {
     _viewportSize.width = size.width;
     _viewportSize.height = size.height;
 }
 
-- (void)drawInMTKView:(MTKView *)view {
+- (void)drawInMTKView:(MTKView *)__unused view {
 }
 
 - (CGSize)viewSize {
