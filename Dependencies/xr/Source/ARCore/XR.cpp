@@ -888,7 +888,14 @@ namespace xr
                 FeaturePointCloud.resize(numberOfPoints * 4);
                 for (int32_t i = 0; i < numberOfPoints * 4; i++)
                 {
-                    FeaturePointCloud[i] = pointCloudData[i];
+                    if (i % 4 == 2)
+                    {
+                        FeaturePointCloud[i] = -1 * pointCloudData[i];
+                    }
+                    else
+                    {
+                        FeaturePointCloud[i] = pointCloudData[i];
+                    }
                 }
             }
             catch(std::exception)
