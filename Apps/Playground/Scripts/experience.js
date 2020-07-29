@@ -160,7 +160,7 @@ CreateBoxAsync().then(function () {
                     xrFeaturePointsModule.onFeaturePointsAvailableObservable.add((getFeaturePoints) => {
                         // Once a second regenerate feature points
                         if (frameCounter++ % 60 == 0) {
-                            var featurePoints = [...getFeaturePoints()];
+                            var featurePoints = getFeaturePoints();
                             var featurePointFunc = function(particle, i, s)  {
                                 try {
                                     particle.position = featurePoints[i].position.clone();
@@ -178,8 +178,11 @@ CreateBoxAsync().then(function () {
 
                                 for (var i = 0; i < featurePoints.length; i++)
                                 {
+                                    var colorMat = new BABYLON.StandardMaterial("colorMat", scene);
+                                    colorMat.diffuseColor = new BABYLON.Color3(featurePoints[i].confidenceValue, 0, 0);
                                     var mesh = BABYLON.Mesh.CreateBox("point", .01, scene);
                                     mesh.position = featurePoints[i].position.clone();
+                                    mesh.material = colorMat;
                                 }
                             }
                         }
