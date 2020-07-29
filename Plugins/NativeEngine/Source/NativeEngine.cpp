@@ -735,37 +735,52 @@ namespace Babylon
         return Napi::External<NativeEngine>::New(info.Env(), this);
     }
 
+    
+    template<typename SchedulerT>
+    arcana::task<void, std::exception_ptr> NativeEngine::GetRequestAnimationFrameTask(SchedulerT& scheduler, Napi::FunctionReference& callback)
+    {
+        return arcana::make_task(scheduler, m_cancelSource, [this, callback = std::move(callback)] {
+            if (m_requestAnimationFrameCalback.IsEmpty() ||
+                m_requestAnimationFrameCalback.Value() != callback.Value())
+            {
+                m_requestAnimationFrameCalback = Napi::Persistent(callback.Value());
+            }
+
+            try
+            {
+                m_requestAnimationFrameCalback.Call({});
+                GetFrameBufferManager().Reset();
+            }
+            catch (const std::exception& ex)
+            {
+                m_runtime.Dispatch([ex](Napi::Env env) {
+                    Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
+                });
+            }
+        });
+    }
+
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         auto callback = info[0].As<Napi::Function>();
+        bool renderOnJavaScript = false;
 
-        m_nativeGraphicsImpl.GetRenderTask().then(m_runtimeScheduler, m_cancelSource, [this, callback = Napi::Persistent(callback)]() mutable {
-            auto requestAnimationFrameInnerTask = arcana::make_task(m_runtimeScheduler, m_cancelSource, [this, callback = std::move(callback)]() {
-                if (m_requestAnimationFrameCalback.IsEmpty() ||
-                    m_requestAnimationFrameCalback.Value() != callback.Value())
-                {
-                    m_requestAnimationFrameCalback = Napi::Persistent(callback.Value());
-                }
-
-                try
-                {
-                    m_requestAnimationFrameCalback.Call({});
-
-                    GetFrameBufferManager().Reset();
-                }
-                catch (const std::exception& ex)
-                {
-                    m_runtime.Dispatch([ex](Napi::Env env) {
-                        Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
-                    });
-                }
-            });
-            m_nativeGraphicsImpl.AddRenderWorkTask(requestAnimationFrameInnerTask);
-            return requestAnimationFrameInnerTask;
+        m_nativeGraphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this, callback = Napi::Persistent(callback), renderOnJavaScript]() mutable {
+            if (renderOnJavaScript)
+            {
+                m_nativeGraphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(arcana::inline_scheduler, callback));
+            }
+            else
+            {
+                m_nativeGraphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(m_runtimeScheduler, callback));
+            }
         });
-        /*Dispatch([this]() {
-            m_nativeGraphicsImpl.Render();
-        });*/
+        if (renderOnJavaScript)
+        {
+            Dispatch([this] {
+                m_nativeGraphicsImpl.Render();
+            });
+        }
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)

@@ -23,12 +23,14 @@ namespace Babylon
         std::unique_ptr<bgfx::CallbackI> BgfxCallback{};
 
         arcana::manual_dispatcher<128> Dispatcher{};
+        arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> RenderTaskCompletionSource{};
 
         std::vector<arcana::task<void, std::exception_ptr>> RenderWorkTasks{};
         std::mutex RenderWorkTasksMutex{};
 
         void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
+        arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
         arcana::task<void, std::exception_ptr> GetRenderTask();
         void Render();
 

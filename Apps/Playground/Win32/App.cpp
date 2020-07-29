@@ -272,11 +272,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    if (graphics != nullptr)
-    {
-        graphics->Render();
-    }
-
     switch (message)
     {
         case WM_SYSCOMMAND:
@@ -337,6 +332,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (wParam == 'R')
             {
                 RefreshBabylon(hWnd);
+            }
+            else if (wParam == 'P')
+            {
+                if (graphics != nullptr)
+                {
+                    graphics->Render();
+                }
             }
             break;
         }

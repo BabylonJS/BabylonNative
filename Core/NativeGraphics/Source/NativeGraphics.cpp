@@ -15,6 +15,11 @@ namespace Babylon
         RenderWorkTasks.push_back(std::move(renderWorkTask));
     }
 
+    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetBeforeRenderTask()
+    {
+        return BeforeRenderTaskCompletionSource.as_task();
+    }
+
     arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetRenderTask()
     {
         return RenderTaskCompletionSource.as_task();
@@ -22,6 +27,10 @@ namespace Babylon
 
     void NativeGraphics::Impl::Render()
     {
+        auto oldBeforeRenderTaskCompletionSource = BeforeRenderTaskCompletionSource;
+        BeforeRenderTaskCompletionSource = {};
+        oldBeforeRenderTaskCompletionSource.complete();
+
         bool finished = false;
         bool workDone = false;
         RenderTask(finished, workDone);
