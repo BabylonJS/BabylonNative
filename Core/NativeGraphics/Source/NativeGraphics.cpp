@@ -4,16 +4,6 @@
 
 namespace Babylon
 {
-    struct NativeGraphics::CallbackTicket::Impl
-    {
-        // TODO: Contain the ticket or whatever.
-    };
-
-    NativeGraphics::CallbackTicket::CallbackTicket()
-        : m_impl{std::make_unique<NativeGraphics::CallbackTicket::Impl>()}
-    {
-    }
-
     NativeGraphics::Impl::~Impl()
     {
         bgfx::shutdown();

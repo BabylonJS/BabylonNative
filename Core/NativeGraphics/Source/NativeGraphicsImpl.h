@@ -12,12 +12,12 @@ namespace Babylon
 {
     struct NativeGraphics::Impl
     {
-        ~Impl();
-
         static NativeGraphics::Impl& GetImpl(NativeGraphics& graphics)
         {
             return *graphics.m_impl;
         }
+
+        ~Impl();
 
         // TODO: Populate this with something, probably not a pointer.
         std::unique_ptr<bgfx::CallbackI> BgfxCallback{};
@@ -31,6 +31,8 @@ namespace Babylon
         void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
         arcana::task<void, std::exception_ptr> GetRenderTask();
         void Render();
+
+    private:
         arcana::task<void, std::exception_ptr> RenderTask(std::function<void()> render);
     };
 }

@@ -737,28 +737,28 @@ namespace Babylon
     {
         auto callback = info[0].As<Napi::Function>();
 
-        if (m_requestAnimationFrameCalback.IsEmpty() ||
-            m_requestAnimationFrameCalback.Value() != callback)
-        {
-            m_requestAnimationFrameCalback = Napi::Persistent(callback);
-        }
+        m_nativeGraphicsImpl.AddRenderWorkTask(arcana::make_task(m_runtimeScheduler, m_cancelSource, [this, callback = Napi::Persistent(callback)]() {
+            if (m_requestAnimationFrameCalback.IsEmpty() ||
+                m_requestAnimationFrameCalback.Value() != callback.Value())
+            {
+                m_requestAnimationFrameCalback = Napi::Persistent(callback.Value());
+            }
 
-        m_nativeGraphicsImpl.AddRenderWorkTask(arcana::task_from_result<std::exception_ptr>());
-        m_nativeGraphicsImpl.GetRenderTask().then(m_runtimeScheduler, m_cancelSource, [this]() {
-            GetFrameBufferManager().Reset();
-        });
-
-        m_runtime.Dispatch([this](Napi::Env env) {
             try
             {
                 m_requestAnimationFrameCalback.Call({});
+
+                GetFrameBufferManager().Reset();
                 m_nativeGraphicsImpl.Render();
             }
             catch (const std::exception& ex)
             {
-                Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
+                m_runtime.Dispatch([ex](Napi::Env env) {
+                    Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
+                });
             }
-        });
+        }));
+        m_nativeGraphicsImpl.GetRenderTask().then(m_runtimeScheduler, m_cancelSource, []() {});
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)

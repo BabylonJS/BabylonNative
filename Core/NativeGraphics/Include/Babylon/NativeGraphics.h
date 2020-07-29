@@ -14,21 +14,6 @@ namespace Babylon
 
         ~NativeGraphics();
 
-        class CallbackTicket
-        {
-            friend NativeGraphics::Impl;
-
-        public:
-            CallbackTicket(const CallbackTicket&) = delete;
-            CallbackTicket(CallbackTicket&&) = default;
-
-        private:
-            struct Impl;
-            std::unique_ptr<Impl> m_impl{};
-
-            CallbackTicket();
-        };
-
         template<typename NativeWindowT>
         static std::unique_ptr<NativeGraphics> InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
