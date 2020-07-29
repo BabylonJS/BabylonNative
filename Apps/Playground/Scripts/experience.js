@@ -4,12 +4,12 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = false;
+var ar = true;
 var xrHitTest = false;
 var text = false;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
+    BABYLON.Mesh.CreateBox("box1", 0.02);
     return Promise.resolve();
 }
 
@@ -132,6 +132,7 @@ CreateBoxAsync().then(function () {
         scene.render();
     });
 
+    var frameCounter = 0;
     if (vr || ar) {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
@@ -150,6 +151,40 @@ CreateBoxAsync().then(function () {
                     });
                 }
                 else {
+                    const xrFeaturePointsModule = xr.baseExperience.featuresManager.enableFeature(
+                        BABYLON.WebXRFeatureName.FEATURE_POINTS,
+                        "latest",
+                        {});
+
+                    var pcs= new BABYLON.PointsCloudSystem("pcs", 1000, scene);
+                    xrFeaturePointsModule.onFeaturePointsAvailableObservable.add((getFeaturePoints) => {
+                        // Once a second regenerate feature points
+                        if (frameCounter++ % 120 == 0) {
+                            var featurePoints = [...getFeaturePoints()];
+                            var featurePointFunc = function(particle, i, s)  {
+                                try {
+                                    particle.position = featurePoints[i].position.clone();
+                                }
+                                catch (ex)
+                                {
+                                    console.log(ex.message);
+                                }
+                            }
+
+                            if (featurePoints.length > 0)
+                            {
+                                /*pcs.addPoints(featurePoints.length, featurePointFunc);
+                                pcs.buildMeshAsync();*/
+
+                                for (var i = 0; i < featurePoints.length; i++)
+                                {
+                                    var mesh = BABYLON.Mesh.CreateBox("point", .01, scene);
+                                    mesh.position = featurePoints[i].position.clone();
+                                }
+                            }
+                        }
+                    });
+
                     setTimeout(function () {
                         scene.meshes[0].position.z = 2;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
