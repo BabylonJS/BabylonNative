@@ -22,28 +22,31 @@ namespace Babylon
 
     void NativeGraphics::Impl::Render()
     {
-        bool rendered = false;
-        RenderTask([this, &rendered]() mutable {
-            bgfx::frame();
-
-            rendered = true;
-            auto oldRenderTaskCompletionSource = RenderTaskCompletionSource;
-            RenderTaskCompletionSource = {};
-            oldRenderTaskCompletionSource.complete();
-        });
-        while (!rendered)
+        bool finished = false;
+        bool workDone = false;
+        RenderTask(finished, workDone);
+        while (!finished)
         {
             Dispatcher.blocking_tick(arcana::cancellation::none());
         }
+
+        if (workDone)
+        {
+            bgfx::frame();
+        }
+
+        auto oldRenderTaskCompletionSource = RenderTaskCompletionSource;
+        RenderTaskCompletionSource = {};
+        oldRenderTaskCompletionSource.complete();
     }
 
-    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::RenderTask(std::function<void()> render)
+    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::RenderTask(bool& finished, bool& workDone)
     {
         bool anyTasks{};
         arcana::task<void, std::exception_ptr> whenAllTask{};
         {
             std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
-            anyTasks = RenderWorkTasks.empty();
+            anyTasks = !RenderWorkTasks.empty();
             if (anyTasks)
             {
                 whenAllTask = arcana::when_all<std::exception_ptr>(RenderWorkTasks);
@@ -51,14 +54,17 @@ namespace Babylon
             }
         }
 
+        workDone = workDone || anyTasks;
+
         if (!anyTasks)
         {
-            return arcana::make_task(Dispatcher, arcana::cancellation::none(), std::move(render));
+            finished = true;
+            return arcana::task_from_result<std::exception_ptr>();
         }
         else
         {
-            return whenAllTask.then(Dispatcher, arcana::cancellation::none(), [this, render = std::move(render)]() mutable {
-                return RenderTask(std::move(render));
+            return whenAllTask.then(Dispatcher, arcana::cancellation::none(), [this, &finished, &workDone]() mutable {
+                return RenderTask(finished, workDone);
             });
         }
     }
@@ -107,5 +113,10 @@ namespace Babylon
         pd.backBufferDS = nullptr;
         bgfx::setPlatformData(pd);
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    }
+
+    void NativeGraphics::Render()
+    {
+        m_impl->Render();
     }
 }

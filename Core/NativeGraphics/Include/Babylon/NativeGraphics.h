@@ -23,6 +23,8 @@ namespace Babylon
         template<typename NativeWindowT>
         void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
+        void Render();
+
     private:
         NativeGraphics();
 

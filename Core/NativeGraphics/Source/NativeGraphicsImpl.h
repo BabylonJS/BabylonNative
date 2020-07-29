@@ -33,6 +33,6 @@ namespace Babylon
         void Render();
 
     private:
-        arcana::task<void, std::exception_ptr> RenderTask(std::function<void()> render);
+        arcana::task<void, std::exception_ptr> RenderTask(bool& finished, bool& workDone);
     };
 }

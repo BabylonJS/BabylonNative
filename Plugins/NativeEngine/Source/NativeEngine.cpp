@@ -10,6 +10,8 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <windows.h>
+
 // TODO: this needs to be fixed in bgfx
 namespace bgfx
 {
@@ -737,28 +739,33 @@ namespace Babylon
     {
         auto callback = info[0].As<Napi::Function>();
 
-        m_nativeGraphicsImpl.AddRenderWorkTask(arcana::make_task(m_runtimeScheduler, m_cancelSource, [this, callback = Napi::Persistent(callback)]() {
-            if (m_requestAnimationFrameCalback.IsEmpty() ||
-                m_requestAnimationFrameCalback.Value() != callback.Value())
-            {
-                m_requestAnimationFrameCalback = Napi::Persistent(callback.Value());
-            }
+        m_nativeGraphicsImpl.GetRenderTask().then(m_runtimeScheduler, m_cancelSource, [this, callback = Napi::Persistent(callback)]() mutable {
+            auto requestAnimationFrameInnerTask = arcana::make_task(m_runtimeScheduler, m_cancelSource, [this, callback = std::move(callback)]() {
+                if (m_requestAnimationFrameCalback.IsEmpty() ||
+                    m_requestAnimationFrameCalback.Value() != callback.Value())
+                {
+                    m_requestAnimationFrameCalback = Napi::Persistent(callback.Value());
+                }
 
-            try
-            {
-                m_requestAnimationFrameCalback.Call({});
+                try
+                {
+                    m_requestAnimationFrameCalback.Call({});
 
-                GetFrameBufferManager().Reset();
-                m_nativeGraphicsImpl.Render();
-            }
-            catch (const std::exception& ex)
-            {
-                m_runtime.Dispatch([ex](Napi::Env env) {
-                    Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
-                });
-            }
-        }));
-        m_nativeGraphicsImpl.GetRenderTask().then(m_runtimeScheduler, m_cancelSource, []() {});
+                    GetFrameBufferManager().Reset();
+                }
+                catch (const std::exception& ex)
+                {
+                    m_runtime.Dispatch([ex](Napi::Env env) {
+                        Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
+                    });
+                }
+            });
+            m_nativeGraphicsImpl.AddRenderWorkTask(requestAnimationFrameInnerTask);
+            return requestAnimationFrameInnerTask;
+        });
+        /*Dispatch([this]() {
+            m_nativeGraphicsImpl.Render();
+        });*/
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
