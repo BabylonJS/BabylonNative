@@ -84,16 +84,14 @@ namespace
 
         if (runtime)
         {
-            graphics.reset();
             runtime.reset();
+            graphics.reset();
         }
     }
 
     void RefreshBabylon(HWND hWnd)
     {
         Uninitialize();
-
-        runtime = std::make_unique<Babylon::AppRuntime>();
 
         RECT rect;
         if (!GetWindowRect(hWnd, &rect))
@@ -105,8 +103,9 @@ namespace
         auto height = static_cast<size_t>(rect.bottom - rect.top);
         graphics = Babylon::NativeGraphics::InitializeFromWindow<void*>(hWnd, width, height);
 
-        // Initialize console plugin.
+        runtime = std::make_unique<Babylon::AppRuntime>();
         runtime->Dispatch([width, height, hWnd](Napi::Env env) {
+            // Initialize console plugin.
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
