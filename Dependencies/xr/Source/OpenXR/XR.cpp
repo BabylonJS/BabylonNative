@@ -875,4 +875,10 @@ namespace xr
     {
         // NYI
     }
+
+    bool System::Session::SetFeaturePointCloudEnabled(bool) const
+    {
+        // Point cloud system not yet supported.
+        return false;
+    }
 }

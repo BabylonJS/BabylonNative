@@ -1618,6 +1618,7 @@ namespace Babylon
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
                         InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
+                        InstanceMethod("setFeaturePointCloudEnabled", &XRSession::SetFeaturePointCloudEnabled)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1855,6 +1856,14 @@ namespace Babylon
                     bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
                     m_xr.SetPlaneDetectionEnabled(planeDetectionEnabled);
                 }
+            }
+
+            Napi::Value SetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
+            {
+                bool featurePointCloudEnabled = optionsObj.Get("planeDetectionState").ToBoolean();
+                bool enabled = m_xr.SetFeaturePointCloudEnabled(featurePointCloudEnabled);
+
+                return Napi::Value::From(info.Env(), enabled);
             }
 
             Napi::Value End(const Napi::CallbackInfo& info)

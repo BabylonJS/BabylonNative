@@ -327,6 +327,7 @@ namespace xr
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
+        bool FeaturePointCloudEnabled{ false };
 
         Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
             : SystemImpl{ systemImpl }
@@ -863,7 +864,7 @@ namespace xr
 
         void UpdateFeaturePointCloud()
         {
-            if (!IsTracking())
+            if (!IsTracking() || !FeaturePointCloudEnabled)
             {
                 return;
             }
@@ -1219,5 +1220,12 @@ namespace xr
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
         m_impl->PlaneDetectionEnabled = enabled;
+    }
+
+    bool System::Session::SetFeaturePointCloudEnabled(bool) const
+    {
+        // Point cloud system not yet supported.
+        m_impl->FeaturePointCloudEnabled = enabled;
+        return enabled;
     }
 }
