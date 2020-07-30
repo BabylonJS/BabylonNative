@@ -219,6 +219,15 @@ demo app, click on the project selector and find "Playground" in the list of pos
 selections. The "Play" button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
 
+For macOS 11.0 Big Sur and ARM based CPU, you'll need to use XCode 12.
+Also, The CMake command line is different to indicate the use of other architecture:
+
+```
+cmake -G Xcode .. "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
+```
+
+If Cmake is not available on your platform, you'll have to clone it and build it. [CMake repo](https://gitlab.kitware.com/cmake/cmake)
+
 ### **Building on macOS, Targeting iOS**
 
 **Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer, 
