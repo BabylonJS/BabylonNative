@@ -878,6 +878,6 @@ namespace xr
 
     void System::Session::SetPlaneDetectionEnabled(bool) const
     {
-        assert(!enabled);
+        throw std::runtime_error("Planes not yet implemented for OpenXR");
     }
 }
