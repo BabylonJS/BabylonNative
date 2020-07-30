@@ -219,6 +219,11 @@ namespace Babylon
             m_session->SetPlaneDetectionEnabled(enabled);
         }
 
+        bool SetFeaturePointCloudEnabled(bool enabled)
+        {
+            return m_session->SetFeaturePointCloudEnabled(enabled);
+        }
+
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};

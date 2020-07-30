@@ -6,10 +6,11 @@ var rtt = false;
 var vr = false;
 var ar = true;
 var xrHitTest = false;
+var xrFeaturePoints = true;
 var text = false;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.02);
+    BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
 }
 
@@ -132,7 +133,6 @@ CreateBoxAsync().then(function () {
         scene.render();
     });
 
-    var frameCounter = 0;
     if (vr || ar) {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
@@ -151,47 +151,41 @@ CreateBoxAsync().then(function () {
                     });
                 }
                 else {
+                    setTimeout(function () {
+                        scene.meshes[0].position.z = 2;
+                        scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
+                    }, 5000);
+                }
+
+                if (xrFeaturePoints) {
+                    var frameCounter = 0;
                     const xrFeaturePointsModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.FEATURE_POINTS,
                         "latest",
                         {});
 
-                    var pcs= new BABYLON.PointsCloudSystem("pcs", 1000, scene);
+                    var featurePointMeshes = [];
                     xrFeaturePointsModule.onFeaturePointsAvailableObservable.add((getFeaturePoints) => {
-                        // Once a second regenerate feature points
-                        if (frameCounter++ % 60 == 0) {
-                            var featurePoints = getFeaturePoints();
-                            var featurePointFunc = function(particle, i, s)  {
-                                try {
-                                    particle.position = featurePoints[i].position.clone();
-                                }
-                                catch (ex)
-                                {
-                                    console.log(ex.message);
-                                }
+                        // Once every 30 frames display feature points
+                        if (frameCounter++ % 30 == 0) {
+                            while (featurePointMeshes.length > 0) {
+                                var mesh = featurePointMeshes.pop();
+                                mesh.dispose();
                             }
 
-                            if (featurePoints.length > 0)
-                            {
-                                /*pcs.addPoints(featurePoints.length, featurePointFunc);
-                                pcs.buildMeshAsync();*/
-
-                                for (var i = 0; i < featurePoints.length; i++)
-                                {
+                            var featurePoints = getFeaturePoints();
+                            if (featurePoints.length > 0) {
+                                for (var i = 0; i < featurePoints.length; i++) {
                                     var colorMat = new BABYLON.StandardMaterial("colorMat", scene);
                                     colorMat.diffuseColor = new BABYLON.Color3(featurePoints[i].confidenceValue, 0, 0);
                                     var mesh = BABYLON.Mesh.CreateBox("point", .01, scene);
                                     mesh.position = featurePoints[i].position.clone();
                                     mesh.material = colorMat;
+                                    featurePointMeshes.push(mesh);
                                 }
                             }
                         }
                     });
-
-                    setTimeout(function () {
-                        scene.meshes[0].position.z = 2;
-                        scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
-                    }, 5000);
                 }
 
                 xr.baseExperience.enterXRAsync(vr ? "immersive-vr" : "immersive-ar", "unbounded", xr.renderTarget);
