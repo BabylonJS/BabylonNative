@@ -1860,7 +1860,7 @@ namespace Babylon
 
             Napi::Value SetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
             {
-                bool featurePointCloudEnabled = optionsObj.Get("planeDetectionState").ToBoolean();
+                bool featurePointCloudEnabled = info[0].ToBoolean();
                 bool enabled = m_xr.SetFeaturePointCloudEnabled(featurePointCloudEnabled);
 
                 return Napi::Value::From(info.Env(), enabled);
