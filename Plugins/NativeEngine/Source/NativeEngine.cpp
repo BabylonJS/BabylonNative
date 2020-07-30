@@ -763,7 +763,7 @@ namespace Babylon
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         auto callback = info[0].As<Napi::Function>();
-        bool renderOnJavaScript = false;
+        bool renderOnJavaScript = true;
 
         m_nativeGraphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this, callback = Napi::Persistent(callback), renderOnJavaScript]() mutable {
             if (renderOnJavaScript)
@@ -778,7 +778,7 @@ namespace Babylon
         if (renderOnJavaScript)
         {
             Dispatch([this] {
-                m_nativeGraphicsImpl.Render();
+                m_nativeGraphicsImpl.AdvanceFrame();
             });
         }
     }

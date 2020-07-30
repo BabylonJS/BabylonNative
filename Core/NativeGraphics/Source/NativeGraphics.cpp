@@ -4,6 +4,34 @@
 
 namespace Babylon
 {
+    NativeGraphics::Frame::Frame(NativeGraphics::Impl& graphicsImpl)
+        : m_graphicsImpl{graphicsImpl}
+    {
+        auto oldBeforeRenderTaskCompletionSource = m_graphicsImpl.BeforeRenderTaskCompletionSource;
+        m_graphicsImpl.BeforeRenderTaskCompletionSource = {};
+        oldBeforeRenderTaskCompletionSource.complete();
+    }
+
+    NativeGraphics::Frame::~Frame()
+    {
+        bool finished = false;
+        bool workDone = false;
+        m_graphicsImpl.RenderTask(finished, workDone);
+        while (!finished)
+        {
+            m_graphicsImpl.Dispatcher.blocking_tick(arcana::cancellation::none());
+        }
+
+        if (workDone)
+        {
+            bgfx::frame();
+        }
+
+        auto oldRenderTaskCompletionSource = m_graphicsImpl.RenderTaskCompletionSource;
+        m_graphicsImpl.RenderTaskCompletionSource = {};
+        oldRenderTaskCompletionSource.complete();
+    }
+
     NativeGraphics::Impl::~Impl()
     {
         bgfx::shutdown();
@@ -23,30 +51,6 @@ namespace Babylon
     arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetRenderTask()
     {
         return RenderTaskCompletionSource.as_task();
-    }
-
-    void NativeGraphics::Impl::Render()
-    {
-        auto oldBeforeRenderTaskCompletionSource = BeforeRenderTaskCompletionSource;
-        BeforeRenderTaskCompletionSource = {};
-        oldBeforeRenderTaskCompletionSource.complete();
-
-        bool finished = false;
-        bool workDone = false;
-        RenderTask(finished, workDone);
-        while (!finished)
-        {
-            Dispatcher.blocking_tick(arcana::cancellation::none());
-        }
-
-        if (workDone)
-        {
-            bgfx::frame();
-        }
-
-        auto oldRenderTaskCompletionSource = RenderTaskCompletionSource;
-        RenderTaskCompletionSource = {};
-        oldRenderTaskCompletionSource.complete();
     }
 
     arcana::task<void, std::exception_ptr> NativeGraphics::Impl::RenderTask(bool& finished, bool& workDone)
@@ -124,8 +128,13 @@ namespace Babylon
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
-    void NativeGraphics::Render()
+    std::unique_ptr<NativeGraphics::Frame> NativeGraphics::Impl::AdvanceFrame()
     {
-        m_impl->Render();
+        return std::make_unique<NativeGraphics::Frame>(*this);
+    }
+
+    std::unique_ptr<NativeGraphics::Frame> NativeGraphics::AdvanceFrame()
+    {
+        return m_impl->AdvanceFrame();
     }
 }

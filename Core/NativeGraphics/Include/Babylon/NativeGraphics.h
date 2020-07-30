@@ -9,7 +9,7 @@ namespace Babylon
     class NativeGraphics
     {
     public:
-        struct Impl;
+        class Impl;
         friend Impl;
 
         ~NativeGraphics();
@@ -17,16 +17,26 @@ namespace Babylon
         template<typename NativeWindowT>
         static std::unique_ptr<NativeGraphics> InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
-        NativeGraphics(const NativeGraphics&) = delete;
-        NativeGraphics(NativeGraphics&&) = delete;
-        
         template<typename NativeWindowT>
         void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
-        void Render();
+        struct Frame
+        {
+            Frame(NativeGraphics::Impl& graphicsImpl);
+            ~Frame();
+
+            Frame(const Frame&) = delete;
+            Frame(Frame&&) = delete;
+
+        private:
+            NativeGraphics::Impl& m_graphicsImpl;
+        };
+        std::unique_ptr<Frame> AdvanceFrame();
 
     private:
         NativeGraphics();
+        NativeGraphics(const NativeGraphics&) = delete;
+        NativeGraphics(NativeGraphics&&) = delete;
 
         std::unique_ptr<Impl> m_impl{};
     };

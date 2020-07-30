@@ -335,10 +335,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             else if (wParam == 'P')
             {
-                if (graphics != nullptr)
+                /*if (graphics != nullptr)
                 {
-                    graphics->Render();
-                }
+                    graphics->AdvanceFrame();
+                }*/
             }
             break;
         }
