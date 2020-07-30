@@ -469,7 +469,11 @@ namespace Babylon
         void UpdateSize(size_t width, size_t height);
 
         template<typename SchedulerT>
-        arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT& scheduler, Napi::FunctionReference& callback);
+        arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
+        
+        void ScheduleRender();
+        bool m_isRenderScheduled{false};
+        const bool m_renderOnJavaScriptThread{true}; // TODO: Not this.
 
         arcana::cancellation_source m_cancelSource{};
 
