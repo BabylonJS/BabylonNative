@@ -33,6 +33,8 @@ namespace Babylon
         };
         std::unique_ptr<Frame> AdvanceFrame();
 
+        void UpdateSize(size_t width, size_t height);
+
     private:
         NativeGraphics();
         NativeGraphics(const NativeGraphics&) = delete;

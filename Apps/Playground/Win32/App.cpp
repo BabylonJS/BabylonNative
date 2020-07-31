@@ -159,6 +159,8 @@ namespace
 
     void UpdateWindowSize(size_t width, size_t height)
     {
+        graphics->UpdateSize(width, height);
+        // graphics->AdvanceFrame();
         runtime->Dispatch([width, height](Napi::Env env) {
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });

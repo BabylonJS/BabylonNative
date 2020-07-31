@@ -27,8 +27,8 @@ namespace Babylon
             bgfx::frame();
         }
 
-        auto oldRenderTaskCompletionSource = m_graphicsImpl.RenderTaskCompletionSource;
-        m_graphicsImpl.RenderTaskCompletionSource = {};
+        auto oldRenderTaskCompletionSource = m_graphicsImpl.AfterRenderTaskCompletionSource;
+        m_graphicsImpl.AfterRenderTaskCompletionSource = {};
         oldRenderTaskCompletionSource.complete();
     }
 
@@ -48,9 +48,9 @@ namespace Babylon
         return BeforeRenderTaskCompletionSource.as_task();
     }
 
-    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetRenderTask()
+    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetAfterRenderTask()
     {
-        return RenderTaskCompletionSource.as_task();
+        return AfterRenderTaskCompletionSource.as_task();
     }
 
     arcana::task<void, std::exception_ptr> NativeGraphics::Impl::RenderTask(bool& finished, bool& workDone)
@@ -80,6 +80,11 @@ namespace Babylon
                 return RenderTask(finished, workDone);
             });
         }
+    }
+
+    std::unique_ptr<NativeGraphics::Frame> NativeGraphics::Impl::AdvanceFrame()
+    {
+        return std::make_unique<NativeGraphics::Frame>(*this);
     }
 
     NativeGraphics::NativeGraphics()
@@ -128,13 +133,28 @@ namespace Babylon
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
-    std::unique_ptr<NativeGraphics::Frame> NativeGraphics::Impl::AdvanceFrame()
-    {
-        return std::make_unique<NativeGraphics::Frame>(*this);
-    }
-
     std::unique_ptr<NativeGraphics::Frame> NativeGraphics::AdvanceFrame()
     {
         return m_impl->AdvanceFrame();
+    }
+
+    void NativeGraphics::UpdateSize(size_t width, size_t height)
+    {
+        m_impl->GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [width, height] {
+            const auto w = static_cast<uint16_t>(width);
+            const auto h = static_cast<uint16_t>(height);
+
+            auto bgfxStats = bgfx::getStats();
+            if (w != bgfxStats->width || h != bgfxStats->height)
+            {
+                bgfx::reset(w, h, BGFX_RESET_FLAGS);
+                bgfx::setViewRect(0, 0, 0, w, h);
+#ifdef __APPLE__
+                bgfx::frame();
+#else
+                    bgfx::touch(0);
+#endif
+            }
+        });
     }
 }

@@ -24,7 +24,7 @@ namespace Babylon
 
         void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
-        arcana::task<void, std::exception_ptr> GetRenderTask();
+        arcana::task<void, std::exception_ptr> GetAfterRenderTask();
 
     private:
         friend NativeGraphics::Frame;
@@ -34,7 +34,7 @@ namespace Babylon
 
         arcana::manual_dispatcher<128> Dispatcher{};
         arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> RenderTaskCompletionSource{};
+        arcana::task_completion_source<void, std::exception_ptr> AfterRenderTaskCompletionSource{};
 
         std::vector<arcana::task<void, std::exception_ptr>> RenderWorkTasks{};
         std::mutex RenderWorkTasksMutex{};
