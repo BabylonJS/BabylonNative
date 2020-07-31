@@ -187,7 +187,6 @@ CreateBoxAsync().then(function () {
                                 featurePointMeshes.push(mesh);
                             } else if (frameCounter % 60 == 0) {
                                 // Existing point update it in place.
-                                console.log("Updating point");
                                 featurePointMeshes[pointId].material.emissiveColor = new BABYLON.Color3(1, 1 - featurePointCloud[pointId].confidenceValue, 1 - featurePointCloud[pointId].confidenceValue);
                             }
                         }
