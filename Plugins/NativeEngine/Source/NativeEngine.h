@@ -366,7 +366,6 @@ namespace Babylon
         {
             const VertexBufferData* data{};
             uint32_t startVertex{};
-            bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
 
         std::vector<VertexBuffer> vertexBuffers{};

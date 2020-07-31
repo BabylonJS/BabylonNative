@@ -503,6 +503,7 @@ namespace Babylon
                     },
                     &m_bytes);
 
+                vertexLayoutHandle = bgfx::createVertexLayout(layout);
                 m_handle = bgfx::createVertexBuffer(memory, layout);
             };
             const auto dynamic = [&layout, this](auto handle) {
@@ -518,6 +519,7 @@ namespace Babylon
                     },
                     &m_bytes);
 
+                vertexLayoutHandle = bgfx::createVertexLayout(layout);
                 m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
@@ -544,8 +546,9 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex, bgfx::VertexLayoutHandle layout) const
+        void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex) const
         {
+            bgfx::VertexLayoutHandle layout{ vertexLayoutHandle };
             const auto nonDynamic = [index, startVertex, layout](auto handle) {
                 bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
             };
@@ -557,6 +560,7 @@ namespace Babylon
 
     private:
         std::vector<uint8_t> m_bytes{};
+        bgfx::VertexLayoutHandle vertexLayoutHandle{};
     };
 
     void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
@@ -784,7 +788,7 @@ namespace Babylon
         vertexLayout.end();
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
-        vertexBufferData->SetAsBgfxVertexBuffer(static_cast<uint8_t>(location), 0, bgfx::createVertexLayout(vertexLayout));
+        vertexBufferData->SetAsBgfxVertexBuffer(static_cast<uint8_t>(location), 0);
     }
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
@@ -797,7 +801,7 @@ namespace Babylon
         for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
         {
             const auto& vertexBuffer = vertexBuffers[index];
-            vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
+            vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex);
         }
     }
 
@@ -871,7 +875,7 @@ namespace Babylon
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
+        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride});
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
