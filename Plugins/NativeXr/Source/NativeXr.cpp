@@ -1547,7 +1547,7 @@ namespace Babylon
                     featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.y));
                     featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.z));
                     featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.confidenceValue));
-                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.id));
+                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
                 }
 
                 return featurePointArray;

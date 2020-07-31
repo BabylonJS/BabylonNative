@@ -899,7 +899,7 @@ namespace xr
                     featurePoint.y = pointCloudData[dataIndex + 1];
                     featurePoint.z = -1 * pointCloudData[dataIndex + 2];
                     featurePoint.confidenceValue = pointCloudData[dataIndex + 3];
-                    featurePoint.id = pointCloudIDs[i];
+                    featurePoint.ID = pointCloudIDs[i];
                 }
             }
             catch (std::exception)

@@ -92,7 +92,7 @@ namespace xr
         float y{};
         float z{};
         float confidenceValue{};
-        int32_t id{};
+        int64_t ID{};
     };
 
     class System
