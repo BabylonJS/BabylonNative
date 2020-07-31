@@ -323,7 +323,7 @@ namespace xr
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
         std::vector<Frame::Plane> Planes;
-        std::vector<float> FeaturePointCloud;
+        std::vector<FeaturePoint> FeaturePointCloud;
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -340,6 +340,7 @@ namespace xr
         {
             if (isInitialized)
             {
+                Planes.clear();
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
@@ -847,7 +848,7 @@ namespace xr
                 auto planeIterator = planeMap.find(planeTrackable);
                 if (planeIterator != planeMap.end())
                 {
-                    UpdatePlane(updatedPlanes, Planes[planeIterator->second], rawPose, planePolygonBuffer, polygonSize);
+                    UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), rawPose, planePolygonBuffer, polygonSize);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
                 }
                 else
@@ -855,7 +856,6 @@ namespace xr
                     // This is a new plane, create it and initialize its values.
                     Planes.emplace_back();
                     auto& plane = Planes.back();
-                    plane.ID = nextPlaneID++;
                     planeMap.insert({planeTrackable, plane.ID});
                     UpdatePlane(updatedPlanes, plane, rawPose, planePolygonBuffer, polygonSize);
                 }
@@ -870,9 +870,10 @@ namespace xr
             }
 
             // Get the feature point cloud from ArCore.
-            ArPointCloud* pointCloud = nullptr;
+            ArPointCloud *pointCloud = nullptr;
             int32_t numberOfPoints;
-            const float* pointCloudData = nullptr;
+            const int32_t* pointCloudIDs = nullptr;
+            const float *pointCloudData = nullptr;
             ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);
 
             if (status != AR_SUCCESS)
@@ -885,21 +886,23 @@ namespace xr
             {
                 ArPointCloud_getNumberOfPoints(session, pointCloud, &numberOfPoints);
                 ArPointCloud_getData(session, pointCloud, &pointCloudData);
+                ArPointCloud_getPointIds(session, pointCloud, &pointCloudIDs);
 
-                FeaturePointCloud.resize(numberOfPoints * 4);
-                for (int32_t i = 0; i < numberOfPoints * 4; i++)
+                FeaturePointCloud.resize(numberOfPoints);
+                for (int32_t i = 0; i < numberOfPoints; i++)
                 {
-                    if (i % 4 == 2)
-                    {
-                        FeaturePointCloud[i] = -1 * pointCloudData[i];
-                    }
-                    else
-                    {
-                        FeaturePointCloud[i] = pointCloudData[i];
-                    }
+                    FeaturePointCloud.emplace_back();
+                    auto& featurePoint = FeaturePointCloud.back();
+
+                    int32_t dataIndex = i * 4;
+                    featurePoint.x = pointCloudData[dataIndex];
+                    featurePoint.y = pointCloudData[dataIndex + 1];
+                    featurePoint.z = -1 * pointCloudData[dataIndex + 2];
+                    featurePoint.confidenceValue = pointCloudData[dataIndex + 3];
+                    featurePoint.id = pointCloudIDs[i];
                 }
             }
-            catch(std::exception)
+            catch (std::exception)
             {
                 // Release the point cloud to free its memory.
                 ArPointCloud_release(pointCloud);
@@ -910,6 +913,20 @@ namespace xr
             ArPointCloud_release(pointCloud);
         }
 
+        Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
+        {
+            // Loop over the plane vector and find the correct plane.
+            for (Frame::Plane& plane : Planes)
+            {
+                if (plane.ID == planeID)
+                {
+                    return plane;
+                }
+            }
+
+            throw std::runtime_error{"Tried to get non-existent plane."};
+        }
+
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
@@ -917,7 +934,6 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
-        Frame::Plane::Identifier nextPlaneID = 0;
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -1010,9 +1026,12 @@ namespace xr
                 if (subsumingPlane != nullptr)
                 {
                     subsumedPlanes.push_back(planeID);
-                    Planes[planeID].Polygon.clear();
-                    Planes[planeID].PolygonSize = 0;
-                    planeMapIterator = planeMap.erase(planeMapIterator);                    
+
+                    auto& plane = GetPlaneByID(planeID);
+                    plane.Polygon.clear();
+                    plane.PolygonSize = 0;
+                    
+                    planeMapIterator = planeMap.erase(planeMapIterator);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                 }
@@ -1102,7 +1121,12 @@ namespace xr
     {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
-    
+
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
+    {
+        return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
     System::Session::Frame::~Frame()
     {
         m_impl->sessionImpl.CleanupFrameTrackables();

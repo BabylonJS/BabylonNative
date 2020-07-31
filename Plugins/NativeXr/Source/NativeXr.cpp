@@ -1391,7 +1391,7 @@ namespace Babylon
 
             xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
             {
-                return m_frame->Planes[planeID];
+                return m_frame->GetPlaneByID(planeID);
             }
 
         private:
@@ -1537,11 +1537,17 @@ namespace Babylon
             Napi::Value GetFeaturePointCloud(const Napi::CallbackInfo& info)
             {
                 // Get feature points from native.
-                std::vector<float>& pointCloud = m_frame->FeaturePointCloud;
-                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size());
+                std::vector<xr::FeaturePoint>& pointCloud = m_frame->FeaturePointCloud;
+                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size() * 5);
                 for (size_t i = 0; i < pointCloud.size(); i++)
                 {
-                    featurePointArray.Set((int)i, Napi::Value::From(info.Env(), pointCloud[i]));
+                    size_t pointIndex = i * 5;
+                    auto& featurePoint = pointCloud[i];
+                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.x));
+                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.y));
+                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.z));
+                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.confidenceValue));
+                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.id));
                 }
 
                 return featurePointArray;

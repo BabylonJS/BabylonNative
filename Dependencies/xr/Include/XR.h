@@ -86,6 +86,15 @@ namespace xr
         bool IsValid{true};
     };
 
+    struct FeaturePoint
+    {
+        float x{};
+        float y{};
+        float z{};
+        float confidenceValue{};
+        int32_t id{};
+    };
+
     class System
     {
     public:
@@ -153,17 +162,20 @@ namespace xr
                 struct Plane
                 {
                     using Identifier = size_t;
-                    Identifier ID{ 0 };
+                    const Identifier ID{ NEXT_ID++ };
                     Pose Center{};
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
                     PolygonFormat PolygonFormat{};
+                
+                private:
+                    static inline Identifier NEXT_ID{0};
                 };
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<Plane>& Planes;
-                std::vector<float>& FeaturePointCloud;
+                std::vector<FeaturePoint>& FeaturePointCloud;
                 
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
@@ -175,6 +187,7 @@ namespace xr
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
+                Plane& GetPlaneByID(Plane::Identifier) const;
 
             private:
                 struct Impl;

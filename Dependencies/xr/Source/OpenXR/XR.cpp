@@ -871,9 +871,14 @@ namespace xr
         throw std::runtime_error("Anchors not yet implemented for OpenXR.");
     }
 
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier) const
+    {
+        throw std::runtime_error("Planes not yet implemented for OpenXR.");
+    }
+
     void System::Session::SetPlaneDetectionEnabled(bool) const
     {
-        // NYI
+        throw std::runtime_error("Planes not yet implemented for OpenXR");
     }
 
     bool System::Session::SetFeaturePointCloudEnabled(bool) const
