@@ -158,7 +158,6 @@ CreateBoxAsync().then(function () {
                 }
 
                 if (xrFeaturePoints) {
-                    var frameCounter = 0;
                     const xrFeaturePointsModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.FEATURE_POINTS,
                         "latest",
@@ -168,7 +167,6 @@ CreateBoxAsync().then(function () {
                     xrFeaturePointsModule.onFeaturePointsUpdatedObservable.add((updatedPointIds) => {
                         // Grab a ref to the feature point cloud.
                         var featurePointCloud = xrFeaturePointsModule.featurePointCloud;
-                        frameCounter++;
 
                         // Update feature points, draw new ones or update existing feature points.
                         for (var i = 0; i < updatedPointIds.length ; i++) {
@@ -185,7 +183,7 @@ CreateBoxAsync().then(function () {
                                 mesh.position = featurePoint.position;
                                 mesh.material = colorMat;
                                 featurePointMeshes.push(mesh);
-                            } else if (frameCounter % 60 == 0) {
+                            } {
                                 // Existing point update it in place.
                                 featurePointMeshes[pointId].material.emissiveColor = new BABYLON.Color3(1, 1 - featurePointCloud[pointId].confidenceValue, 1 - featurePointCloud[pointId].confidenceValue);
                             }
