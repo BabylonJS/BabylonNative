@@ -773,7 +773,6 @@ namespace Babylon
         VertexBufferData* vertexBufferData = info[0].As<Napi::External<VertexBufferData>>().Data();
 
         const uint32_t location = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
         const uint32_t byteStride = info[3].As<Napi::Number>().Uint32Value();
         const uint32_t numElements = info[4].As<Napi::Number>().Uint32Value();
         const uint32_t type = info[5].As<Napi::Number>().Uint32Value();
