@@ -165,24 +165,23 @@ CreateBoxAsync().then(function () {
                         {});
 
                     var featurePointMeshes = [];
-                    xrFeaturePointsModule.onFeaturePointsAvailableObservable.add((getFeaturePoints) => {
-                        // Once every 30 frames display feature points
-                        if (frameCounter++ % 30 == 0) {
-                            while (featurePointMeshes.length > 0) {
-                                var mesh = featurePointMeshes.pop();
-                                mesh.dispose();
+                    xrFeaturePointsModule.onFeaturePointsUpdatedObservable.add((featurePoints) => {
+                        // Once every 60 frames update feature points
+                        if (frameCounter++ % 60 == 0) {
+                            // Update the color of existing feature points.
+                            for (var i = 0; i < featurePointMeshes.length; i++)
+                            {
+                                featurePointMeshes[i].material.diffuseColor = new BABYLON.Color3(featurePoints[i].confidenceValue, 0, 0);
                             }
 
-                            var featurePoints = getFeaturePoints();
-                            if (featurePoints.length > 0) {
-                                for (var i = 0; i < featurePoints.length; i++) {
-                                    var colorMat = new BABYLON.StandardMaterial("colorMat", scene);
-                                    colorMat.diffuseColor = new BABYLON.Color3(featurePoints[i].confidenceValue, 0, 0);
-                                    var mesh = BABYLON.Mesh.CreateBox("point", .01, scene);
-                                    mesh.position = featurePoints[i].position.clone();
-                                    mesh.material = colorMat;
-                                    featurePointMeshes.push(mesh);
-                                }
+                            // Draw newly discovered feature points.
+                            for (var i = featurePointMeshes.length; i < featurePoints.length && i < 1000; i++) {
+                                var colorMat = new BABYLON.StandardMaterial("colorMat", scene);
+                                colorMat.diffuseColor = new BABYLON.Color3(featurePoints[i].confidenceValue, 0, 0);
+                                var mesh = BABYLON.Mesh.CreateBox("point", .01, scene);
+                                mesh.position = featurePoints[i].position;
+                                mesh.material = colorMat;
+                                featurePointMeshes.push(mesh);
                             }
                         }
                     });

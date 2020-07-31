@@ -88,11 +88,13 @@ namespace xr
 
     struct FeaturePoint
     {
+        using Identifier = size_t;
+
         float x{};
         float y{};
         float z{};
         float confidenceValue{};
-        int64_t ID{};
+        Identifier ID{};
     };
 
     class System

@@ -899,7 +899,19 @@ namespace xr
                     featurePoint.y = pointCloudData[dataIndex + 1];
                     featurePoint.z = -1 * pointCloudData[dataIndex + 2];
                     featurePoint.confidenceValue = pointCloudData[dataIndex + 3];
-                    featurePoint.ID = pointCloudIDs[i];
+
+                    // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
+                    const int32_t id = pointCloudIDs[i];
+                    auto featurePointIterator = featurePointIDMap.find(id);
+                    if (featurePointIterator != featurePointIDMap.end())
+                    {
+                        featurePoint.ID = featurePointIterator->second;
+                    }
+                    else
+                    {
+                        featurePoint.ID = nextFeaturePointID++;
+                        featurePointIDMap.insert({id, featurePoint.ID});
+                    }
                 }
             }
             catch (std::exception)
@@ -934,6 +946,8 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
+        FeaturePoint::Identifier nextFeaturePointID = 0;
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
