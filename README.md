@@ -226,7 +226,7 @@ Also, The CMake command line is different to indicate the use of other architect
 cmake -G Xcode .. "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
 ```
 
-If Cmake is not available on your platform, you'll have to clone it and build it. [CMake repo](https://gitlab.kitware.com/cmake/cmake)
+If CMake is not available on your platform, you'll have to clone it and build it. [CMake repo](https://gitlab.kitware.com/cmake/cmake)
 
 ### **Building on macOS, Targeting iOS**
 
