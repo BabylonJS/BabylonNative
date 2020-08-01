@@ -37,8 +37,13 @@ namespace Babylon::Plugins::Internal
     {
     }
 
-    void NativeWindow::Resize(size_t newWidth, size_t newHeight)
+    void NativeWindow::Resize(size_t newWidth, size_t newHeight, void* newWindowPtr)
     {
+        if (newWindowPtr != nullptr && newWindowPtr != m_windowPtr)
+        {
+            m_windowPtr = newWindowPtr;
+        }
+
         if (newWidth != m_width || newHeight != m_height)
         {
             m_width = newWidth;

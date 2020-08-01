@@ -286,6 +286,8 @@ namespace Babylon
             m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
             m_frame.reset();
         } while (!shouldEndSession);
+        // Clear frameBufferData and destroy bgfx FrameBuffers
+        m_texturesToFrameBuffers.clear();
         m_session.reset();
     }
 
@@ -302,6 +304,11 @@ namespace Babylon
             auto it = m_texturesToFrameBuffers.find(texPtr);
             if (it != m_texturesToFrameBuffers.end())
             {
+                if (&m_engineImpl->GetFrameBufferManager().GetBound() == it->second.get())
+                {
+                    // bind back buffer because currently bound FrameBuffer will be destroyed
+                    m_engineImpl->GetFrameBufferManager().Unbind(it->second.get());
+                }
                 m_texturesToFrameBuffers.erase(it);
             }
         });
