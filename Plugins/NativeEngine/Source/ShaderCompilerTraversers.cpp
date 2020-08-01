@@ -136,6 +136,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                 for (const auto& [name, symbol] : traverser.m_uniformNameToSymbol)
                 {
+
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
                     {
@@ -144,6 +145,10 @@ namespace Babylon::ShaderCompilerTraversers
                     else if (type.isVector())
                     {
                         publicType.setVector(type.getVectorSize());
+                    }
+                    else
+                    {
+                        publicType.setVector(1);
                     }
 
                     if (type.getArraySizes())
