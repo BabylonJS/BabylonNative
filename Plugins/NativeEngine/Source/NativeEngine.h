@@ -258,7 +258,8 @@ namespace Babylon
 
         void Unbind(FrameBufferData* data)
         {
-            assert(m_boundFrameBuffer == data);
+            // this assert is commented because of an issue with XR described here : https://github.com/BabylonJS/BabylonNative/issues/344
+            //assert(m_boundFrameBuffer == data);
             (void)data;
             m_boundFrameBuffer = m_backBuffer;
         }
@@ -366,7 +367,6 @@ namespace Babylon
         {
             const VertexBufferData* data{};
             uint32_t startVertex{};
-            bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
 
         std::vector<VertexBuffer> vertexBuffers{};
@@ -461,6 +461,7 @@ namespace Babylon
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
         void GetFramebufferData(const Napi::CallbackInfo& info);
+        void BindBuffer(const Napi::CallbackInfo& info);
         Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
 
         void UpdateSize(size_t width, size_t height);
