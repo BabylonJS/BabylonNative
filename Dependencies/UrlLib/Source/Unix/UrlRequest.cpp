@@ -135,7 +135,7 @@ namespace UrlLib
                                 curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &codep);
 
                                 // codep 0 for file access
-                                if (codep == 0|| codep == 200) 
+                                if (codep == 0 || codep == 200) 
                                 {
                                     request->m_statusCode = UrlStatusCode::Ok;
                                 }
