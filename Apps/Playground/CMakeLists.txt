@@ -115,7 +115,8 @@ target_link_to_dependencies(Playground
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
-    ${ADDITIONAL_LIBRARIES})
+    ${ADDITIONAL_LIBRARIES}
+    ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
 if(WIN32)
     target_link_to_dependencies(Playground
