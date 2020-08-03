@@ -80,7 +80,7 @@ namespace UrlLib
             CurlMulti()
             : m_multiHandle(curl_multi_init())
             {
-                assert(m_multiHandle != NULL);
+                assert(m_multiHandle != nullptr);
                 curl_multi_setopt(m_multiHandle, CURLMOPT_MAX_TOTAL_CONNECTIONS, 200);
                 curl_multi_setopt(m_multiHandle, CURLMOPT_MAX_HOST_CONNECTIONS, 6L);
                 std::thread([this](){
