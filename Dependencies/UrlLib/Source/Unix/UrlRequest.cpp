@@ -121,7 +121,7 @@ namespace UrlLib
                     }
                     
                     // See how the transfers went
-                    CURLMsg *m = NULL;
+                    CURLMsg* m = nullptr;
                     while ((m = curl_multi_info_read(m_multiHandle, &msgsLeft))) 
                     {
                         if (m->msg == CURLMSG_DONE) 
