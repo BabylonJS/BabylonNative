@@ -15,7 +15,7 @@ namespace Babylon::Plugins::Internal
 
         NativeWindow(const Napi::CallbackInfo& info);
 
-        void Resize(size_t newWidth, size_t newHeight);
+        void Resize(size_t newWidth, size_t newHeight, void* newWindowPtr = nullptr);
 
         using OnResizeCallback = std::function<void(size_t, size_t)>;
         using OnResizeCallbackTicket = arcana::weak_table<OnResizeCallback>::ticket;

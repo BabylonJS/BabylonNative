@@ -107,9 +107,18 @@ project would require the deletion of only three lines of C++ code and two lines
 code. With this resolved, the only variable that has not been discussed yet is where, with 
 respect to the Babylon Native repository, an added component might be placed.
 
-There are, at present, two ways to build Babylon Native such that you can extend its 
-functionality. The first and more straightforward of these approaches is to simply fork
-the Babylon Native repository and modify it. This will allow you to add new components 
+There are, at present, three ways to build Babylon Native such that you can extend its 
+functionality. The first and, by far, most straightforward of these approaches is to 
+create your extension in an entirely separate repository and reference it with CMake
+using the `EXTENSIONS_DIRS` argument. This will allow your extension to be built in an
+entirely separate Git repository while still working in the Babylon Native repository
+as though your extension were included there. The only residual impact of this will be
+a small amount of integration code in your extension's CMakeLists.txt adding your 
+targets to a list upon which the Playground app will depend. A quick-start guide to
+building extensions this way is included [below](#creating-new-babylon-native-components).
+
+Another reasonably straightforward approach to extending Babylon Native is to simply 
+fork the main repository and modify it. This will allow you to add new components 
 right alongside the provided ones. For example, a new `ComputeShaders` plugin could be
 placed in the `Plugins` folder, following the same pattern as `NativeEngine`. That 
 `ComputeShaders` plugin could even be housed in a separate Git repository; that repository
@@ -118,7 +127,7 @@ reuse and share components across many different Babylon Native projects. This p
 touches on the "components as submodules" concept discussed more deeply in the 
 [Babylon Native build system](BuildSystem.md) documentation.
 
-The second way to extend Babylon Native's capabilities does not require modifying the
+The third way to extend Babylon Native's capabilities does not require modifying the
 Babylon Native repository itself. Instead, an external project can be created which 
 consumes the entire Babylon Native repository as a submodule; new components can then be
 added as subfolders/submodules of that outermost repository. The folder structure for 
@@ -155,6 +164,24 @@ Which is the correct approach for any particular project will depend on the scen
 
 ## Creating New Babylon Native Components
 
+### Quick-Start Guide
+
+1. Clone Babylon Native: `git clone https://github.com/BabylonJS/BabylonNative`
+2. Create a new `ExtensionName` repository based on the 
+[Babylon Native Extension Template](https://github.com/syntheticmagus/BabylonNativeExtensionTemplate)
+3. Clone your new `ExtensionName` repository adjacent to your Babylon Native clone
+4. Change the extension's name in your new repository's CMakeLists.txt file, along
+with any other desired changes.
+5. Provide the `EXTENSIONS_DIRS` CMake argument when configuring Babylon Native: for 
+example, from BabylonNative/Build, `cmake -D EXTENSIONS_DIRS="../ExtensionName" ..`
+(note that the argument is a relative path from the CMake source folder, not from
+your configuration step's current folder)
+6. Your new extension should now appear in your configured Babylon Native project,
+where you should be able to work on it and test it in the Playground app as though it
+were one of the provided Babylon Native components.
+
+### Other Options
+
 There are many possible approaches to creating a new component to be used in Babylon
 Native. If the component you have in mind is intended for use in a specific app -- for
 example, if you are creating a `CustomPlugin` plugin because you are actively working
@@ -164,8 +191,9 @@ own repository and including it as a submodule later when the component is ready
 
 However, if your intent is to create a new component and you do not already have an
 app to consume it (either because you simply intend to make functionality available or
-because your intended consuming app isn't under development yet), then we recommend 
-adopting the first of the two approaches outlined in the section above: build your
+because your intended consuming app isn't under development yet) and you don't want to 
+use the extension mechanism outlined in the quick-start guide above, then we recommend 
+adopting the third of the approaches outlined in the section above: build your
 component in its own repository from the start, incorporating it into a modified Babylon
 Native fork where you can use the Playground app to easily test it cross-platform.
 The following steps show an example of how to quickly get started developing in this way.
