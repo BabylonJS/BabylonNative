@@ -1,7 +1,3 @@
-#if _MSC_VER 
-#pragma warning( disable : 4100 ) // unreferenced formal parameter in glslang header
-#endif
-
 #include "ShaderCompiler.h"
 #include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
@@ -40,7 +36,8 @@ namespace Babylon
             parser->parse();
 
             auto compiler = std::make_unique<spirv_cross::CompilerHLSL>(parser->get_parsed_ir());
-            compiler->set_hlsl_options({40});
+
+            compiler->set_hlsl_options({40, true});
 
             for (const auto& attribute : attributes)
             {

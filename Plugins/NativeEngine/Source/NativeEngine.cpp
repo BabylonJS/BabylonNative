@@ -503,6 +503,7 @@ namespace Babylon
                     },
                     &m_bytes);
 
+                m_vertexLayoutHandle = bgfx::createVertexLayout(layout);
                 m_handle = bgfx::createVertexBuffer(memory, layout);
             };
             const auto dynamic = [&layout, this](auto handle) {
@@ -518,6 +519,7 @@ namespace Babylon
                     },
                     &m_bytes);
 
+                m_vertexLayoutHandle = bgfx::createVertexLayout(layout);
                 m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
@@ -544,8 +546,9 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex, bgfx::VertexLayoutHandle layout) const
+        void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex) const
         {
+            bgfx::VertexLayoutHandle layout{ m_vertexLayoutHandle };
             const auto nonDynamic = [index, startVertex, layout](auto handle) {
                 bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
             };
@@ -557,6 +560,7 @@ namespace Babylon
 
     private:
         std::vector<uint8_t> m_bytes{};
+        bgfx::VertexLayoutHandle m_vertexLayoutHandle{};
     };
 
     void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
@@ -663,6 +667,7 @@ namespace Babylon
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+                InstanceMethod("bindBuffer", &NativeEngine::BindBuffer),
             });
 
         env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
@@ -763,6 +768,28 @@ namespace Babylon
         delete info[0].As<Napi::External<VertexArray>>().Data();
     }
 
+    void NativeEngine::BindBuffer(const Napi::CallbackInfo& info)
+    {
+        VertexBufferData* vertexBufferData = info[0].As<Napi::External<VertexBufferData>>().Data();
+
+        const uint32_t location = info[1].As<Napi::Number>().Uint32Value();
+        const uint32_t byteStride = info[3].As<Napi::Number>().Uint32Value();
+        const uint32_t numElements = info[4].As<Napi::Number>().Uint32Value();
+        const uint32_t type = info[5].As<Napi::Number>().Uint32Value();
+        const bool normalized = info[6].As<Napi::Boolean>().Value();
+
+        bgfx::VertexLayout vertexLayout{};
+        vertexLayout.begin();
+        const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
+        const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
+        vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
+        vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+        vertexLayout.end();
+
+        vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
+        vertexBufferData->SetAsBgfxVertexBuffer(static_cast<uint8_t>(location), 0);
+    }
+
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
         const auto& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
@@ -773,7 +800,7 @@ namespace Babylon
         for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
         {
             const auto& vertexBuffer = vertexBuffers[index];
-            vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
+            vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex);
         }
     }
 
@@ -847,7 +874,7 @@ namespace Babylon
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
+        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride});
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
@@ -1017,7 +1044,7 @@ namespace Babylon
             }
         }
 
-        return uniforms;
+        return std::move(uniforms);
     }
 
     Napi::Value NativeEngine::GetAttributes(const Napi::CallbackInfo& info)
@@ -1037,7 +1064,7 @@ namespace Babylon
             attributes[index] = Napi::Value::From(info.Env(), location);
         }
 
-        return attributes;
+        return std::move(attributes);
     }
 
     void NativeEngine::SetProgram(const Napi::CallbackInfo& info)
@@ -1563,13 +1590,20 @@ namespace Babylon
         m_frameBufferManager.Unbind(frameBufferData);
     }
 
-    void NativeEngine::DrawIndexed(const Napi::CallbackInfo& /*info*/)
+    void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
-        //const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         //const auto elementStart = info[1].As<Napi::Number>().Int32Value();
         //const auto elementCount = info[2].As<Napi::Number>().Int32Value();
 
         // TODO: handle viewport
+
+        // TODO: support other fill modes
+        uint64_t fillModeState = 0; //indexed tri list
+        if (fillMode == 2)
+        {
+            fillModeState |= BGFX_STATE_PT_POINTS;
+        }
 
         for (const auto& it : m_currentProgram->Uniforms)
         {
@@ -1577,7 +1611,7 @@ namespace Babylon
             bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
-        bgfx::setState(m_engineState);
+        bgfx::setState(m_engineState | fillModeState);
 #if (ANDROID)
         // TODO : find why we need to discard state on Android
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
@@ -1586,15 +1620,10 @@ namespace Babylon
 #endif
     }
 
-    void NativeEngine::Draw(const Napi::CallbackInfo& /*info*/)
+    void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
-        //const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        //const auto elementStart = info[1].As<Napi::Number>().Int32Value();
-        //const auto elementCount = info[2].As<Napi::Number>().Int32Value();
-
-        // STUB: Stub.
-        // bgfx::submit(), right?  Which means we have to preserve here the state of
-        // which program is being worked on.
+        bgfx::discard(BGFX_DISCARD_INDEX_BUFFER);
+        DrawIndexed(info);
     }
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
@@ -1648,45 +1677,13 @@ namespace Babylon
             static_cast<uint16_t>(height * backbufferHeight));
     }
 
-    Napi::Value NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
+    void NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
     {
         bgfx::FrameBufferHandle fbh = BGFX_INVALID_HANDLE;
+        const auto callback = info[0].As<Napi::Function>();
+
+        s_bgfxCallback.addScreenShotCallback(callback);
         bgfx::requestScreenShot(fbh, "GetImageData");
-
-        while (s_bgfxCallback.m_screenShotBitmap.empty())
-        {
-            bgfx::frame();
-        }
-        const uint32_t x = info[0].As<Napi::Number>().Uint32Value();
-        const uint32_t y = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t width = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t height = info[3].As<Napi::Number>().Uint32Value();
-
-        auto imageData = new ImageData();
-        //const auto buffer = info[0].As<Napi::ArrayBuffer>();
-
-        imageData->Image.reset(bimg::imageAlloc(&m_allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false));
-
-        auto bitmap = static_cast<uint8_t*>(imageData->Image->m_data);
-
-        uint32_t sourceWidth = bgfx::getStats()->width;
-        //uint32_t sourceHeight = bgfx::getStats()->height;
-
-        for (auto py = y; py < (y + height); py++)
-        {
-            for (auto px = x; px < (x + width); px++)
-            {
-                // bgfx screenshot is BGRA
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 2];
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 1];
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 0];
-                *bitmap++ = s_bgfxCallback.m_screenShotBitmap[(py * sourceWidth + px) * 4 + 3];
-            }
-        }
-
-        s_bgfxCallback.m_screenShotBitmap.clear();
-
-        return Napi::External<ImageData>::New(info.Env(), imageData);
     }
 
     Napi::Value NativeEngine::GetRenderAPI(const Napi::CallbackInfo& info)

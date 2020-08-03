@@ -23,7 +23,7 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        set(ADDITIONAL_LIBRARIES PRIVATE z)
+        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
         set(SOURCES
             ${SOURCES}
             "iOS/AppDelegate.swift"
@@ -115,7 +115,8 @@ target_link_to_dependencies(Playground
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
-    ${ADDITIONAL_LIBRARIES})
+    ${ADDITIONAL_LIBRARIES}
+    ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
 if(WIN32)
     target_link_to_dependencies(Playground

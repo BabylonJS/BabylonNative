@@ -2,11 +2,15 @@ cmake_minimum_required(VERSION 3.12)
 
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
-set(SOURCES "Include/XR.h")
+set(SOURCES "Include/XR.h"
+            "Source/Shared/XRHelpers.h")
 
 if (ANDROID)
     set(SOURCES ${SOURCES}
         "Source/ARCore/XR.cpp")
+elseif (IOS)
+    set(SOURCES ${SOURCES}
+        "Source/ARKit/XR.mm")
 else()
     add_subdirectory(Dependencies/OpenXR-SDK)
 
@@ -35,6 +39,8 @@ if (ANDROID)
     set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/arcore-android-sdk/libraries/glm)
 
     target_link_libraries(xr PRIVATE glm arcore GSL AndroidExtensions)
+elseif (IOS)    
+    target_link_libraries(xr PRIVATE "-framework ARKit")
 else()
     if(WIN32)
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")
@@ -50,5 +56,6 @@ target_link_libraries(xr
     PUBLIC arcana)
 
 target_include_directories(xr PUBLIC "Include")
+target_include_directories(xr PRIVATE "Source/Shared")
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

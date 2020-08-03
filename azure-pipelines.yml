@@ -34,6 +34,7 @@ jobs:
       scheme: 'Playground'
       sdk: 'macosx'
       useXcpretty: false
+      configuration: Release
     displayName: 'Build macOS'
     
 - job: iOS
@@ -65,6 +66,7 @@ jobs:
       scheme: 'Playground'
       sdk: 'iphoneos'
       useXcpretty: false
+      configuration: Release
     displayName: 'Build iOS'
     
 - job: win32_x64
@@ -233,7 +235,7 @@ jobs:
         gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
-        tasks: 'assembleDebug'
+        tasks: 'assembleRelease'
     displayName: 'Build androidV8 Playground'
   - task: Gradle@2
     inputs:
@@ -242,7 +244,7 @@ jobs:
         gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
-        tasks: 'assembleDebug'
+        tasks: 'assembleRelease'
     displayName: 'Build androidV8 Validation Tests'
   - script: |
       echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
@@ -296,7 +298,7 @@ jobs:
         gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
-        tasks: 'assembleDebug'
+        tasks: 'assembleRelease'
     displayName: 'Build androidJSC'
   - task: Gradle@2
     inputs:
@@ -305,7 +307,7 @@ jobs:
         gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
-        tasks: 'assembleDebug'
+        tasks: 'assembleRelease'
     displayName: 'Build androidJSC Validation Tests'
   - script: |
       echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'
@@ -334,6 +336,7 @@ jobs:
     displayName: 'Publish Tests AndroidJSC Results'
     
 - job: Ubuntu_Clang8_JSC
+  timeoutInMinutes: 20
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -355,8 +358,23 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
       ninja
     displayName: 'Build X11'
+  - script: |
+      export DISPLAY=:99
+      Xvfb :99 -screen 0 1600x900x24 &
+      sleep 3
+      cd build/Apps/ValidationTests
+      mkdir Errors
+      mkdir Results
+      ./ValidationTests
+    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_Clang8_JSC Rendered Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Ubuntu_Clang8_JSC Results'
     
 - job: Ubuntu_GCC9_JSC
+  timeoutInMinutes: 20
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -378,4 +396,18 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
       ninja
     displayName: 'Build X11'
+  - script: |
+      export DISPLAY=:99
+      Xvfb :99 -screen 0 1600x900x24 &
+      sleep 3
+      cd build/Apps/ValidationTests
+      mkdir Errors
+      mkdir Results
+      ./ValidationTests
+    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
 

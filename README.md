@@ -52,6 +52,10 @@ but are expected to be supported in the future. Note that this list is not exhau
 This section will be updated frequently. If you have any questions, please reach out
 to us on [the Babylon forum](https://forum.babylonjs.com).
 
+## Documentation
+
+Babylon Native documentation is available in this repo. From extending Babylon Native using your very own features to debugging the rendering on iOS, [you'll find extensive documentation here.](Documentation/Readme.md)
+
 ## Build System and Extensions
 
 The Babylon Native build system strives for simplicity, modularity, and scalability
@@ -214,6 +218,15 @@ the top-left corner of the Xcode window. For example, to build and run the Playg
 demo app, click on the project selector and find "Playground" in the list of possible
 selections. The "Play" button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
+
+For macOS 11.0 Big Sur and ARM based CPU, you'll need to use XCode 12.
+Also, The CMake command line is different to indicate the use of other architecture:
+
+```
+cmake -G Xcode .. "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
+```
+
+If CMake is not available on your platform, you'll have to clone it and build it. [CMake repo](https://gitlab.kitware.com/cmake/cmake)
 
 ### **Building on macOS, Targeting iOS**
 

@@ -4,6 +4,7 @@
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeWindow.h>
+#import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
@@ -23,7 +24,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 {
 }
 
-- (void)init:(void*)CALayerPtr width:(int)inWidth height:(int)inHeight
+- (void)init:(void*)view width:(int)inWidth height:(int)inHeight
 {
     runtime.reset();
     inputBuffer.reset();
@@ -34,7 +35,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     // Initialize NativeWindow plugin
     float width = inWidth;
     float height = inHeight;
-    void* windowPtr = CALayerPtr;
+    void* windowPtr = view;
     Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
@@ -44,6 +45,9 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
         Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
         Babylon::Plugins::NativeEngine::Initialize(env);
+
+        // Initialize NativeXr plugin.
+        Babylon::Plugins::NativeXr::Initialize(env);
 
         auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
         inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);

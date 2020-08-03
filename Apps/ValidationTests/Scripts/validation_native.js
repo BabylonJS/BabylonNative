@@ -8,8 +8,7 @@ var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
 
-function compare(test, canvasImageData, referenceImage) {
-    var renderData = TestUtils.getImageData(canvasImageData);
+function compare(test, renderData, referenceImage) {
     var size = renderData.length;
     var referenceData = TestUtils.getImageData(referenceImage);
     var differencesCount = 0;
@@ -47,24 +46,25 @@ function compare(test, canvasImageData, referenceImage) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done) {
-    var canvasImageData = engine._native.getFramebufferData(0, 0, testWidth, testHeight);
-    var testRes = true;
-    // Visual check
-    if (!test.onlyVisual) {
-        if (compare(test, canvasImageData, referenceImage)) {
-            testRes = false;
-            console.log('failed');
-        } else {
-            testRes = true;
-            console.log('validated');
+    /*var canvasImageData =*/ engine._native.getFramebufferData(function (screenshot) { 
+        var testRes = true;
+        // Visual check
+        if (!test.onlyVisual) {
+            if (compare(test, screenshot, referenceImage)) {
+                testRes = false;
+                console.log('failed');
+            } else {
+                testRes = true;
+                console.log('validated');
+            }
         }
-    }
 
-    currentScene.dispose();
-    currentScene = null;
-    engine.setHardwareScalingLevel(1);
+        currentScene.dispose();
+        currentScene = null;
+        engine.setHardwareScalingLevel(1);
 
-    done(testRes);
+        done(testRes);
+    });
 }
 
 function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done) {

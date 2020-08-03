@@ -95,6 +95,7 @@ namespace Babylon
         1,     // maxTaskWorkGroupSizeY_NV
         1,     // maxTaskWorkGroupSizeZ_NV
         4,     // maxMeshViewCountNV
+        1,     // maxDualSourceDrawBuffersEXT
 
         // limits
         {
