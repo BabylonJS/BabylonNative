@@ -503,7 +503,7 @@ namespace Babylon
                     },
                     &m_bytes);
 
-                vertexLayoutHandle = bgfx::createVertexLayout(layout);
+                m_vertexLayoutHandle = bgfx::createVertexLayout(layout);
                 m_handle = bgfx::createVertexBuffer(memory, layout);
             };
             const auto dynamic = [&layout, this](auto handle) {
@@ -519,7 +519,7 @@ namespace Babylon
                     },
                     &m_bytes);
 
-                vertexLayoutHandle = bgfx::createVertexLayout(layout);
+                m_vertexLayoutHandle = bgfx::createVertexLayout(layout);
                 m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
@@ -548,7 +548,7 @@ namespace Babylon
 
         void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex) const
         {
-            bgfx::VertexLayoutHandle layout{ vertexLayoutHandle };
+            bgfx::VertexLayoutHandle layout{ m_vertexLayoutHandle };
             const auto nonDynamic = [index, startVertex, layout](auto handle) {
                 bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
             };
@@ -560,7 +560,7 @@ namespace Babylon
 
     private:
         std::vector<uint8_t> m_bytes{};
-        bgfx::VertexLayoutHandle vertexLayoutHandle{};
+        bgfx::VertexLayoutHandle m_vertexLayoutHandle{};
     };
 
     void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
@@ -1604,7 +1604,6 @@ namespace Babylon
         {
             fillModeState |= BGFX_STATE_PT_POINTS;
         }
-
 
         for (const auto& it : m_currentProgram->Uniforms)
         {
