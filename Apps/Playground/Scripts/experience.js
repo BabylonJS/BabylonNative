@@ -163,30 +163,37 @@ CreateBoxAsync().then(function () {
                         "latest",
                         {});
 
-                    var featurePointMeshes = [];
-                    xrFeaturePointsModule.onFeaturePointsUpdatedObservable.add((updatedPointIds) => {
-                        // Grab a ref to the feature point cloud.
-                        var featurePointCloud = xrFeaturePointsModule.featurePointCloud;
+                    var pcs= new BABYLON.PointsCloudSystem("pcs", 5, scene);
+                    var featurePointInitFunc = function (particle, i, s) {
+                        particle.position = new BABYLON.Vector3(0, -5, 0);
+                    }
 
-                        // Update feature points, draw new ones or update existing feature points.
-                        for (var i = 0; i < updatedPointIds.length ; i++) {
-                            var pointId = updatedPointIds[i];
-                            if (pointId > 1000) {
-                                continue;
-                            } else if (pointId >= featurePointMeshes.length) {
-                                // New point to draw add it as a new point.
-                                var featurePoint = featurePointCloud[pointId];
-                                var colorMat = new BABYLON.StandardMaterial("colorMat", scene);
-                                colorMat.disableLighting = true;
-                                colorMat.emissiveColor = new BABYLON.Color3(1, 1 - featurePointCloud[pointId].confidenceValue, 1 - featurePointCloud[pointId].confidenceValue);
-                                var mesh = BABYLON.Mesh.CreateBox("point", .01, scene);
-                                mesh.position = featurePoint.position;
-                                mesh.material = colorMat;
-                                featurePointMeshes.push(mesh);
-                            } {
-                                // Existing point update it in place.
-                                featurePointMeshes[pointId].material.emissiveColor = new BABYLON.Color3(1, 1 - featurePointCloud[pointId].confidenceValue, 1 - featurePointCloud[pointId].confidenceValue);
-                            }
+                    pcs.addPoints(3000, featurePointInitFunc);
+                    pcs.buildMeshAsync().then((mesh) => {
+                        mesh.alwaysSelectAsActiveMesh = true;
+                    });
+
+                    pcs.updateParticle = function (particle) {
+                        var featurePointCloud = xrFeaturePointsModule.featurePointCloud;
+                        var index = particle.idx;
+                        if (index >= featurePointCloud.length)
+                        {
+                            // Hide the particle not currently in use.
+                            particle.position = new BABYLON.Vector3(-100, -100, -100);
+                        }
+                        else
+                        {
+                            particle.position = featurePointCloud[index].position;
+                            particle.color = new BABYLON.Color4(1, 1 - featurePointCloud[index].confidenceValue, 1 - featurePointCloud[index].confidenceValue, 1);
+                        }
+
+                        return particle;
+                    }
+
+                    var frameCounter = 0;
+                    xrFeaturePointsModule.onFeaturePointsUpdatedObservable.add((updatedPointIds) => {
+                        if (++frameCounter % 30 == 0) {
+                            pcs.setParticles();
                         }
                     });
                 }

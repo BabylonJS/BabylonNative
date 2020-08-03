@@ -6,7 +6,7 @@
 #import <ARKit/ARConfiguration.h>
 #import <MetalKit/MetalKit.h>
 
-@interface SessionDelegate : NSObject <ARSessionDelegate>
+@interface SessionDelegate : NSObject <ARSessionDelegate, MTKViewDelegate>
 @end
 
 namespace {
@@ -82,7 +82,8 @@ namespace {
     CVMetalTextureCacheRef textureCache;
     CVMetalTextureRef _cameraTextureY;
     CVMetalTextureRef _cameraTextureCbCr;
-    
+    CGSize _viewportSize;
+
     UIInterfaceOrientation cameraUVReferenceOrientation;
     CGSize cameraUVReferenceSize;
 }
@@ -132,10 +133,11 @@ namespace {
 /**
  Initializes this session delgate with the given frame views and metal graphics context.
  */
-- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext {
+- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext viewportSize:(CGSize)viewportSize {
     self = [super init];
     self->activeFrameViews = activeFrameViews;
-    
+    self->_viewportSize = viewportSize;
+
     CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, graphicsContext, nil, &textureCache);
     if (err) {
         throw std::runtime_error{"Unable to create Texture Cache"};
@@ -423,6 +425,18 @@ namespace {
   [super dealloc];
 }
 
+- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize)size {
+    _viewportSize.width = size.width;
+    _viewportSize.height = size.height;
+}
+
+- (void)drawInMTKView:(MTKView *)__unused view {
+}
+
+- (CGSize)viewSize {
+    return _viewportSize;
+}
+
 @end
 namespace xr {
     namespace {
@@ -536,6 +550,7 @@ namespace xr {
                 xrView.userInteractionEnabled = false;
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+                xrView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
@@ -555,8 +570,10 @@ namespace xr {
             configuration.worldAlignment = ARWorldAlignmentGravity;
             
             metalDevice = id<MTLDevice>(graphicsContext);
-            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
+            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice viewportSize:CGSizeMake(viewportSize.x, viewportSize.y)];
             session.delegate = sessionDelegate;
+            xrView.delegate = sessionDelegate;
+                
             [session runWithConfiguration:configuration];
                 
             [configuration release];
@@ -616,7 +633,10 @@ namespace xr {
             xrView = nil;
         }
 
-        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession) {
+        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
+            auto viewSize = [sessionDelegate viewSize];
+            viewportSize.x = viewSize.width;
+            viewportSize.y = viewSize.height;
             uint32_t width = viewportSize.x;
             uint32_t height = viewportSize.y;
             shouldEndSession = sessionEnded;
@@ -626,6 +646,7 @@ namespace xr {
                 // Color texture
                 {
                     if (ActiveFrameViews[0].ColorTexturePointer != nil) {
+                        deletedTextureCallback(ActiveFrameViews[0].ColorTexturePointer);
                         id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                         [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
                         [oldColorTexture release];
@@ -1124,8 +1145,8 @@ namespace xr {
         // Free textures
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)>) {
-        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
+        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureCallback);
     }
 
     void System::Session::RequestEndSession() {
