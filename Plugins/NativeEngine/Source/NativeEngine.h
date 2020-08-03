@@ -258,7 +258,8 @@ namespace Babylon
 
         void Unbind(FrameBufferData* data)
         {
-            assert(m_boundFrameBuffer == data);
+            // this assert is commented because of an issue with XR described here : https://github.com/BabylonJS/BabylonNative/issues/344
+            //assert(m_boundFrameBuffer == data);
             (void)data;
             m_boundFrameBuffer = m_backBuffer;
         }
