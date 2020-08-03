@@ -4,9 +4,9 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = true;
+var ar = false;
 var xrHitTest = false;
-var xrFeaturePoints = true;
+var xrFeaturePoints = false;
 var text = false;
 
 function CreateBoxAsync() {
