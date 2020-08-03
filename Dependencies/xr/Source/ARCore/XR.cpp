@@ -871,7 +871,7 @@ namespace xr
 
             // Get the feature point cloud from ArCore.
             ArPointCloud *pointCloud = nullptr;
-            int32_t numberOfPoints;
+            int32_t numberOfPoints = 0;
             const int32_t* pointCloudIDs = nullptr;
             const float *pointCloudData = nullptr;
             ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);

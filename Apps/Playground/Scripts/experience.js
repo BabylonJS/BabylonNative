@@ -176,13 +176,11 @@ CreateBoxAsync().then(function () {
                     pcs.updateParticle = function (particle) {
                         var featurePointCloud = xrFeaturePointsModule.featurePointCloud;
                         var index = particle.idx;
-                        if (index >= featurePointCloud.length)
-                        {
+                        if (index >= featurePointCloud.length) {
                             // Hide the particle not currently in use.
                             particle.position = new BABYLON.Vector3(-100, -100, -100);
                         }
-                        else
-                        {
+                        else {
                             particle.position = featurePointCloud[index].position;
                             particle.color = new BABYLON.Color4(1, 1 - featurePointCloud[index].confidenceValue, 1 - featurePointCloud[index].confidenceValue, 1);
                         }
