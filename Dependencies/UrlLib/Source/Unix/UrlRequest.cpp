@@ -126,7 +126,7 @@ namespace UrlLib
                     {
                         if (m->msg == CURLMSG_DONE) 
                         {
-                            CURL *handle = m->easy_handle;
+                            CURL* handle = m->easy_handle;
                             UrlRequest::Impl *request;
                             curl_easy_getinfo(handle, CURLINFO_PRIVATE, &request);
                             if (m->data.result == CURLE_OK) 
