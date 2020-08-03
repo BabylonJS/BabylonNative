@@ -216,6 +216,7 @@ namespace xr
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::Plane> Planes{};
+            std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -566,6 +567,7 @@ namespace xr
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
         , Planes { sessionImpl.ActionResources.Planes } // NYI
+        , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedPlanes{} // NYI
         , RemovedPlanes{} // NYI
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
