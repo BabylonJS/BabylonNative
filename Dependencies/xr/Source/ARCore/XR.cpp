@@ -321,7 +321,7 @@ namespace xr
     {
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
-        std::vector<Frame::InputSource> InputSources;
+        std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -809,7 +809,7 @@ namespace xr
             CheckForSubsumedPlanes(deletedPlanes);
 
             // Next check for updated planes, and update their pose and polygon or create a new plane if it does not yet exist.
-            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);            
+            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
             int32_t size{};
             ArTrackableList_getSize(session, trackableList, &size);
             for (int i = 0; i < size; i++)
@@ -893,8 +893,11 @@ namespace xr
                 {
                     FeaturePointCloud.emplace_back();
                     auto& featurePoint = FeaturePointCloud.back();
-
                     int32_t dataIndex = i * 4;
+
+                    // Grab the position and confidence value from the point cloud.
+                    // Reflect the point across the Z axis, as we want to report this
+                    // value in camera space.
                     featurePoint.x = pointCloudData[dataIndex];
                     featurePoint.y = pointCloudData[dataIndex + 1];
                     featurePoint.z = -1 * pointCloudData[dataIndex + 2];
