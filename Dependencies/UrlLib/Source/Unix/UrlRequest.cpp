@@ -83,13 +83,15 @@ namespace UrlLib
                 assert(m_multiHandle != nullptr);
                 curl_multi_setopt(m_multiHandle, CURLMOPT_MAX_TOTAL_CONNECTIONS, 200);
                 curl_multi_setopt(m_multiHandle, CURLMOPT_MAX_HOST_CONNECTIONS, 6L);
-                std::thread([this](){
+                m_thread = std::thread([this](){
                     Loop();
-                }).detach();
+                });
             }
 
             ~CurlMulti()
             {
+                m_cancelSource.cancel();
+                m_thread.join();
                 auto errCode = curl_multi_cleanup(m_multiHandle);
                 assert(errCode == CURLM_OK);
             }
@@ -106,10 +108,11 @@ namespace UrlLib
             CURLM* m_multiHandle;
             // can't add new handle when curl is inside a callback. To be certain, a mutex is used when performing calls.
             std::mutex m_mutex;
-
+            arcana::cancellation_source m_cancelSource{};
+            std::thread m_thread;
             void Loop()
             {
-                while (true) 
+                while (!m_cancelSource.cancelled())
                 {
                     int stillRunning;
                     int numfds;
