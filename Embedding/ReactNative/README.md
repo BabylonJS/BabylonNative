@@ -115,22 +115,7 @@ After having run the above commands, you can also open `Apps/Playground/ios/Play
 
 ### **Building the NPM Package**
 
-An NPM package can be built in two different ways: as source, and as binaries. Source is useful if you want to debug the Babylon React Native source in the context of the project consuming it, though configuration is a bit more involved. Binaries are useful in that they simplify configuration in the consuming app, though they cannot be debugged so easily. The binary package is what is published to [npmjs.org](https://www.npmjs.com/package/@babylonjs/react-native).
-
-#### Source Package
-
-If you want to test using a local build of the source-based NPM package with your own React Native app, you can do so with the `npm pack` command on either Mac or Windows.
-
-```
-cd Apps/Playground/node_modules/@babylonjs/react-native
-npm pack
-```
-
-This will produce a zipped local NPM source-based package that can be installed into a React Native application for testing purposes. Note that when testing a source based package for iOS, the XCode project needs to be generated with `CMake` as described [above](#ios).
-
-#### Binary Package
-
-If you want to test using a local build of the binary-based NPM package with your own React Native app, you can do so with a `gulp` command on a Mac (this requires a Mac as it builds binaries for both iOS and Android).
+If you want to test using a local build of the NPM package with your own React Native app, you can do so with a `gulp` command on a Mac (this requires a Mac as it builds binaries for both iOS and Android).
 
 ```
 cd Package
@@ -138,7 +123,25 @@ npm install
 gulp pack
 ```
 
-This will produce a zipped local NPM binary-based package that can be installed into a React Native application for testing purposes.
+The NPM package will be built into the `Package` directory where the `gulp` command was run. Once the local NPM package has been built, it can be installed into a project using `npm`.
+
+```
+cd <directory of your React Native app>
+npm install <root directory of your BabylonReactNative clone>/Package/Assembled/babylonjs-react-native-0.0.1.tgz
+```
+
+### **Debugging in Context**
+
+If you want to consume `@babylonjs/react-native` as source in your React Native app (for debugging or for iterating on the code when making a contribution), you can install the package source directory as an npm package.
+
+```
+cd <directory of your React Native app>
+npm install <root directory of your BabylonReactNative clone>/Modules/@babylonjs/react-native
+cd ios
+pod install
+```
+
+This will create a symbolic link in your `node_modules` directory to the `@babylonjs/react-native` source directory. For iOS the XCode project needs to be generated with `CMake` as described [above](#ios) and added to your `xcworkspace`.
 
 ## Security
 

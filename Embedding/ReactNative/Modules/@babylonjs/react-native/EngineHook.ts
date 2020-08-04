@@ -66,7 +66,48 @@ export function useEngine(): Engine | undefined {
                     }
                 }
 
-                setEngine(engine = new NativeEngine());
+                engine = new NativeEngine();
+
+                // NOTE: This is a workaround for https://github.com/BabylonJS/BabylonReactNative/issues/60
+                let heartbeat: NodeJS.Timeout | null;
+                const startHeartbeat = () => {
+                    if (!heartbeat) {
+                        heartbeat = setInterval(() => {}, 10);
+                    }
+                };
+                const stopHeartbeat = () => {
+                    if (heartbeat) {
+                        clearInterval(heartbeat);
+                        heartbeat = null;
+                    }
+                }
+                startHeartbeat();
+
+                let renderLoopCount = 0;
+
+                const originalRunRenderLoop: (...args: any[]) => void = engine.runRenderLoop;
+                engine.runRenderLoop = function(...args: any[]): void {
+                    originalRunRenderLoop.apply(this, args);
+                    if (++renderLoopCount == 1) {
+                        stopHeartbeat();
+                    }
+                }
+
+                const originalStopRenderLoop: (...args: any[]) => void = engine.stopRenderLoop;
+                engine.stopRenderLoop = function(...args: any[]): void {
+                    if (--renderLoopCount == 0) {
+                        startHeartbeat();
+                    }
+                    originalStopRenderLoop.apply(this, args);
+                }
+
+                const originalDipose = engine.dispose;
+                engine.dispose = function() {
+                    originalDipose.apply(this);
+                    stopHeartbeat();
+                };
+
+                setEngine(engine);
             }
         })();
 
