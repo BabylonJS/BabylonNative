@@ -136,7 +136,6 @@ namespace Babylon::ShaderCompilerTraversers
 
                 for (const auto& [name, symbol] : traverser.m_uniformNameToSymbol)
                 {
-
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
                     {
