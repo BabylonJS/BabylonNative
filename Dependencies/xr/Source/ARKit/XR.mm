@@ -1169,7 +1169,7 @@ namespace xr {
         m_impl->SetPlaneDetectionEnabled(enabled);
     }
 
-    bool System::Session::SetFeaturePointCloudEnabled(bool) const
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
     {
         // Point cloud system not yet supported.
         return false;

@@ -219,9 +219,9 @@ namespace Babylon
             m_session->SetPlaneDetectionEnabled(enabled);
         }
 
-        bool SetFeaturePointCloudEnabled(bool enabled)
+        bool TrySetFeaturePointCloudEnabled(bool enabled)
         {
-            return m_session->SetFeaturePointCloudEnabled(enabled);
+            return m_session->TrySetFeaturePointCloudEnabled(enabled);
         }
 
     private:
@@ -1550,10 +1550,10 @@ namespace Babylon
                 {
                     int pointIndex = (int) i * 5;
                     auto& featurePoint = pointCloud[i];
-                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.x));
-                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.y));
-                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.z));
-                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.confidenceValue));
+                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.X));
+                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.Y));
+                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.Z));
+                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.ConfidenceValue));
                     featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
                 }
 
@@ -1636,7 +1636,7 @@ namespace Babylon
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
                         InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
-                        InstanceMethod("setFeaturePointCloudEnabled", &XRSession::SetFeaturePointCloudEnabled)
+                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1876,10 +1876,10 @@ namespace Babylon
                 }
             }
 
-            Napi::Value SetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
+            Napi::Value TrySetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
             {
                 bool featurePointCloudEnabled = info[0].ToBoolean();
-                bool enabled = m_xr.SetFeaturePointCloudEnabled(featurePointCloudEnabled);
+                bool enabled = m_xr.TrySetFeaturePointCloudEnabled(featurePointCloudEnabled);
 
                 return Napi::Value::From(info.Env(), enabled);
             }

@@ -898,10 +898,10 @@ namespace xr
                     // Grab the position and confidence value from the point cloud.
                     // Reflect the point across the Z axis, as we want to report this
                     // value in camera space.
-                    featurePoint.x = pointCloudData[dataIndex];
-                    featurePoint.y = pointCloudData[dataIndex + 1];
-                    featurePoint.z = -1 * pointCloudData[dataIndex + 2];
-                    featurePoint.confidenceValue = pointCloudData[dataIndex + 3];
+                    featurePoint.X = pointCloudData[dataIndex];
+                    featurePoint.Y = pointCloudData[dataIndex + 1];
+                    featurePoint.Z = -1 * pointCloudData[dataIndex + 2];
+                    featurePoint.ConfidenceValue = pointCloudData[dataIndex + 3];
 
                     // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
                     const int32_t id = pointCloudIDs[i];
@@ -1263,7 +1263,7 @@ namespace xr
         m_impl->PlaneDetectionEnabled = enabled;
     }
 
-    bool System::Session::SetFeaturePointCloudEnabled(bool enabled) const
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool enabled) const
     {
         // Point cloud system not yet supported.
         m_impl->FeaturePointCloudEnabled = enabled;

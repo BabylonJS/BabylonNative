@@ -883,7 +883,7 @@ namespace xr
         throw std::runtime_error("Planes not yet implemented for OpenXR");
     }
 
-    bool System::Session::SetFeaturePointCloudEnabled(bool) const
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
     {
         // Point cloud system not yet supported.
         return false;
