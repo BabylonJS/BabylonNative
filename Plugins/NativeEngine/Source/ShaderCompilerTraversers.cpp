@@ -399,6 +399,17 @@ namespace Babylon::ShaderCompilerTraversers
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
+                // UVs are effectively a special kind of generic attribute since they both use
+                // are implemented using texture coordinates, so we preprocess to pre-count the
+                // number of UV coordinate variables to prevent collisions.
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
+                    {
+                        traverser.m_genericAttributesRunningCount++;
+                    }
+                }
+
                 for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
                     const auto& type = symbol->getType();
@@ -424,7 +435,7 @@ namespace Babylon::ShaderCompilerTraversers
                 makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
-            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10}; // TODO: Is this right? There are returnable values in the list that are larger than 10.
+            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
             unsigned int m_genericAttributesRunningCount{0};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
