@@ -25,14 +25,14 @@
   "readmeFilename": "README.md",
   "peerDependencies": {
     "@babylonjs/core": "^4.2.0-alpha.30",
-    "react": "^16.8.1",
-    "react-native": ">=0.60.0-rc.0 <1.0.x",
+    "react": "^16.13.1",
+    "react-native": "^0.63.1",
     "react-native-permissions": "^2.1.4"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",
     "@types/react": "^16.9.32",
-    "@types/react-native": "^0.62.1",
+    "@types/react-native": "^0.63.1",
     "@types/react-test-renderer": "^16.9.2",
     "typescript": "^3.8.3"
   }
