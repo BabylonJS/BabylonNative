@@ -1,5 +1,4 @@
 #include "BabylonNative.h"
-#include "../JSCRuntime.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -10,10 +9,9 @@
 
 #include <arcana/threading/task_schedulers.h>
 
-#include <JavaScriptCore/JavaScript.h>
 #include <jsi/jsi.h>
 
-#include <CoreFoundation/CFRunLoop.h>
+#include <CoreFoundation/CoreFoundation.h>
 
 #include <optional>
 #include <sstream>
@@ -27,16 +25,10 @@ namespace Babylon
     {
     public:
         Impl(facebook::jsi::Runtime* jsiRuntime)
-            : m_jsiRuntime{ facebook::jsc2::makeJSCRuntime(facebook::jsc2::getJSGlobalContextRefFromJSCRuntime(*jsiRuntime)) }
-            , env{ Napi::Attach<facebook::jsi::Runtime&>(*m_jsiRuntime) }
+            : env{ Napi::Attach<facebook::jsi::Runtime&>(*jsiRuntime) }
         {
         }
 
-    private:
-        // custom jsi runtime based on custom jsc runtime
-        std::unique_ptr<facebook::jsi::Runtime> m_jsiRuntime;
-
-    public:
         Napi::Env env;
         JsRuntime* runtime{};
         Plugins::NativeInput* nativeInput{};

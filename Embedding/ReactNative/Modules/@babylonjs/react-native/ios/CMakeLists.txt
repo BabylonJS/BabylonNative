@@ -22,10 +22,7 @@ add_subdirectory(${BABYLON_NATIVE_DIR} ${BABYLON_NATIVE_DIR}/build/ios/)
 
 add_library(BabylonNative
     ${CMAKE_CURRENT_LIST_DIR}/BabylonNative.h
-    ${CMAKE_CURRENT_LIST_DIR}/BabylonNative.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/../JSCRuntime.cpp)
-
-find_library(JSCORE_LIBRARY JavaScriptCore)
+    ${CMAKE_CURRENT_LIST_DIR}/BabylonNative.cpp)
 
 target_compile_definitions(BabylonNative PRIVATE UNICODE)
 target_compile_definitions(BabylonNative PRIVATE _UNICODE)
@@ -41,8 +38,7 @@ target_link_libraries(BabylonNative
     NativeEngine
     NativeInput
     NativeXr
-    Window
-    ${JSCORE_LIBRARY})
+    Window)
 
 # TODO: For some reason these don't work, so we specify these in the CMake command line args.
 set_target_properties(BabylonNative PROPERTIES

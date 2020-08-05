@@ -35,10 +35,7 @@ set(BABYLON_NATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../submodules/BabylonNative")
 add_subdirectory(${BABYLON_NATIVE_DIR} ${BABYLON_NATIVE_DIR}/build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
 add_library(BabylonNative SHARED
-    src/main/cpp/BabylonNativeInterop.cpp
-    ../JSCRuntime.cpp)
-
-target_include_directories(BabylonNative PRIVATE ${ANDROID_JSC_INCPATH})
+    src/main/cpp/BabylonNativeInterop.cpp)
 
 target_link_libraries(BabylonNative
     GLESv3
@@ -54,5 +51,4 @@ target_link_libraries(BabylonNative
     NativeEngine
     NativeInput
     NativeXr
-    Window
-    "${ANDROID_JSC_LIBPATH}/${ANDROID_ABI}/libjsc.so")
+    Window)

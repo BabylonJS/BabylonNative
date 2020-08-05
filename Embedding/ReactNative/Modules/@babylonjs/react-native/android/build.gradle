@@ -23,7 +23,6 @@ def safeExtGet(prop, fallback) {
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
-def jscIncDir = "${buildDir}/JSC/include"
 def extractedLibDir = "${buildDir}/lib"
 
 buildscript {
@@ -62,8 +61,6 @@ android {
                 arguments '-DANDROID_STL=c++_static',
                         '-DENABLE_GLSLANG_BINARIES=OFF',
                         '-DSPIRV_CROSS_CLI=OFF',
-                        "-DANDROID_JSC_LIBPATH=${extractedLibDir}/jni",
-                        "-DANDROID_JSC_INCPATH=${jscIncDir}",
                         "-DARCORE_LIBPATH=${extractedLibDir}/jni",
                         "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/"
             }
@@ -108,7 +105,6 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'com.google.ar:core:1.14.0'
 
-    natives 'org.webkit:android-jsc:+'
     natives 'com.google.ar:core:1.14.0'
 }
 
@@ -207,20 +203,9 @@ tasks.whenTaskAdded { task ->
     }
 }
 
-task copyFiles {
-    copy
-    {
-        from "${rootDir}/../node_modules/jsc-android/dist/include"
-        include "*"
-        into "${jscIncDir}/JavaScriptCore"
-    }
-}
-
 task validateSdk {
     def minSdkVersion = safeExtGet('minSdkVersion', DEFAULT_MIN_SDK_VERSION)
     if (minSdkVersion < DEFAULT_MIN_SDK_VERSION) {
         throw new GradleException("minSdkVersion must be at least ${DEFAULT_MIN_SDK_VERSION} but is currently ${minSdkVersion}")
     }
 }
-
-preBuild.dependsOn(copyFiles)
