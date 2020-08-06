@@ -713,9 +713,10 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space&, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, gsl::span<const xr::System::Session::Frame::View> views)
             {
-                // Update the transform.
+                // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
+                // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
                 if (views.size() > 0)
                 {
                     m_transform.Update(views[0].Space, true);
@@ -1416,8 +1417,7 @@ namespace Babylon
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-
-                m_xrViewerPose.Update(info, {{{0, 0, 0}, {0, 0, 0, 1}}}, m_frame->Views);
+                m_xrViewerPose.Update(info, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
