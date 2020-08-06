@@ -713,10 +713,13 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space& space, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space&, gsl::span<const xr::System::Session::Frame::View> views)
             {
                 // Update the transform.
-                m_transform.Update(space, true);
+                if (views.size() > 0)
+                {
+                    m_transform.Update(views[0].Space, true);
+                }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
