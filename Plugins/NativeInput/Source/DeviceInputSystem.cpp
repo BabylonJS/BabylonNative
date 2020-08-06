@@ -18,6 +18,7 @@ namespace Babylon::Plugins
                     InstanceAccessor("onDeviceDisconnected", &DeviceInputSystem::GetOnDeviceDisconnected, &DeviceInputSystem::SetOnDeviceDisconnected),
                     InstanceAccessor("onInputChanged", &DeviceInputSystem::GetOnInputChanged, &DeviceInputSystem::SetOnInputChanged),
                     InstanceMethod("pollInput", &DeviceInputSystem::PollInput),
+                    InstanceMethod("dispose", &DeviceInputSystem::Dispose),
                 })
         };
 
@@ -106,5 +107,14 @@ namespace Babylon::Plugins
         {
             throw Napi::Error::New(Env(), exception.what());
         }
+    }
+
+    Napi::Value NativeInput::Impl::DeviceInputSystem::Dispose(const Napi::CallbackInfo& info)
+    {
+        m_onDeviceConnected.Reset();
+        m_onDeviceDisconnected.Reset();
+        m_onInputChanged.Reset();
+
+        return info.Env().Undefined();
     }
 }

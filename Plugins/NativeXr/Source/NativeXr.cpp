@@ -1905,6 +1905,7 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
+                        InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1937,6 +1938,11 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
+            }
+
+            Napi::Value Dispose(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
         };
 
