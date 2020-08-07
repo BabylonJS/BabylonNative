@@ -411,7 +411,7 @@ namespace Babylon
 
         struct XREye
         {
-            // static constexpr auto NONE{"none"};
+            static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
 
@@ -423,6 +423,8 @@ namespace Babylon
                         return LEFT;
                     case 1:
                         return RIGHT;
+                    case 2:
+                        return NONE;
                     default:
                         throw std::exception{/* Unsupported idx */};
                 }
