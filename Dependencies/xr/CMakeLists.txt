@@ -16,7 +16,11 @@ else()
 
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp"
-        "Source/OpenXR/XrPlatformCommon.h")
+        "Source/OpenXR/XrPlatformCommon.h"
+        "Source/OpenXR/XrUtility/XrExtensions.h"
+        "Source/OpenXR/XrUtility/XrViewConfiguration.h"
+        "Source/OpenXR/XrUtility/XrEnumerate.h"
+        "Source/OpenXR/XrUtility/XrStruct.h")
 
     if(WIN32)
         set(SOURCES ${SOURCES} "Source/OpenXR/Windows/XrPlatform.h")
