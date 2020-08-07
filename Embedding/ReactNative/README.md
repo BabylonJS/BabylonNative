@@ -10,7 +10,10 @@ This project provides Babylon Native integration into React Native.
 Babylon React Native is in the early phase of its development, and has the following limitations:
 
 1. Android and iOS support only - support for Windows is planned, but the timeline is currently unknown.
-1. JavaScriptCore (JSC) only - the published @babylonjs/react-native package is configured specifically for JSC, though it is possible to rebuild it and target other JavaScript engines supported by React Native. In the future, the published package will directly support all JavaScript engines that can be used with React Native.
+1. Touch input only - mouse, keyboard, and controllers are not yet supported.
+1. Single view only - multiple views are not yet supported (only a single view can be displayed).
+
+It is also worth noting that Babylon React Native relies heavily on newer React Native constructs including JSI to get the performance characteristics required for real time rendering. JSI allows for direct synchronous communication between native code and JavaScript code, but is incompatible with "remote debugging." If you need to debug your JavaScript code that uses Babylon React Native, you should enable Hermes and use "direct debugging" (e.g. chrome://inspect or edge://inspect). See the [React Native documentation](https://reactnative.dev/docs/hermes) for more info.
 
 ## Usage
 
