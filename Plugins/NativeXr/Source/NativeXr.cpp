@@ -1608,6 +1608,7 @@ namespace Babylon
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
+                        InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
                         InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
                         InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
@@ -1709,7 +1710,7 @@ namespace Babylon
             JsRuntimeScheduler m_runtimeScheduler;
             uint32_t m_timestamp{0};
 
-            std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
+            std::vector<std::pair<std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
@@ -1724,6 +1725,19 @@ namespace Babylon
                 m_eventNamesAndCallbacks.emplace_back(
                     info[0].As<Napi::String>().Utf8Value(),
                     Napi::Persistent(info[1].As<Napi::Function>()));
+            }
+
+            void RemoveEventListener(const Napi::CallbackInfo& info)
+            {
+                auto name = info[0].As<Napi::String>().Utf8Value();
+                auto callback = info[1].As<Napi::Function>();
+                m_eventNamesAndCallbacks.erase(std::remove_if(
+                    m_eventNamesAndCallbacks.begin(),
+                    m_eventNamesAndCallbacks.end(),
+                    [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener)
+                {
+                    return listener.first == name && listener.second.Value() == callback;
+                }), m_eventNamesAndCallbacks.end());
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
