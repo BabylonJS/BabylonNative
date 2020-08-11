@@ -718,10 +718,14 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space& space, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, gsl::span<const xr::System::Session::Frame::View> views)
             {
-                // Update the transform.
-                m_transform.Update(space, true);
+                // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
+                // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
+                if (views.size() > 0)
+                {
+                    m_transform.Update(views[0].Space, true);
+                }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
@@ -1419,8 +1423,7 @@ namespace Babylon
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-
-                m_xrViewerPose.Update(info, {{{0, 0, 0}, {0, 0, 0, 1}}}, m_frame->Views);
+                m_xrViewerPose.Update(info, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -1630,6 +1633,7 @@ namespace Babylon
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
+                        InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
                         InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
                         InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
@@ -1732,7 +1736,7 @@ namespace Babylon
             JsRuntimeScheduler m_runtimeScheduler;
             uint32_t m_timestamp{0};
 
-            std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
+            std::vector<std::pair<std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
@@ -1747,6 +1751,19 @@ namespace Babylon
                 m_eventNamesAndCallbacks.emplace_back(
                     info[0].As<Napi::String>().Utf8Value(),
                     Napi::Persistent(info[1].As<Napi::Function>()));
+            }
+
+            void RemoveEventListener(const Napi::CallbackInfo& info)
+            {
+                auto name = info[0].As<Napi::String>().Utf8Value();
+                auto callback = info[1].As<Napi::Function>();
+                m_eventNamesAndCallbacks.erase(std::remove_if(
+                    m_eventNamesAndCallbacks.begin(),
+                    m_eventNamesAndCallbacks.end(),
+                    [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener)
+                {
+                    return listener.first == name && listener.second.Value() == callback;
+                }), m_eventNamesAndCallbacks.end());
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
@@ -1925,6 +1942,7 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
+                        InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1957,6 +1975,11 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
+            }
+
+            Napi::Value Dispose(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
         };
 

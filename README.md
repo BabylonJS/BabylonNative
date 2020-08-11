@@ -249,6 +249,12 @@ the following command:
 cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF ..
 ```
 
+To enable bitcode support, add this option to the cmake command line parameters:
+
+```
+-DENABLE_BITCODE=ON
+```
+
 CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
 Please be patient; this process can take several minutes. When the process is 
 completed, open the project by double-clicking on it in Finder or by entering the 
