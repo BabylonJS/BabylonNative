@@ -4,8 +4,8 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = false;
-var xrHitTest = false;
+var ar = true;
+var xrHitTest = true;
 var text = false;
 
 function CreateBoxAsync() {
@@ -139,7 +139,7 @@ CreateBoxAsync().then(function () {
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HIT_TEST,
                         "latest",
-                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}});
+                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}, entityTypes: ["plane"]});
 
                     xrHitTestModule.onHitTestResultObservable.add((results) => {
                         if (results.length) {

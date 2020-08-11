@@ -618,7 +618,7 @@ namespace xr
             }
         }
 
-        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay)
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType validHitTestTypes)
         {
             if (!IsTracking())
             {
@@ -670,23 +670,44 @@ namespace xr
                 ArHitResultList_getItem(session, hitResultList, i, hitResult);
                 ArHitResult_acquireTrackable(session, hitResult, &trackable);
                 ArTrackable_getType(session, trackable, &trackableType);
+                bool hitTestQualified = false;
+
                 if (trackableType == AR_TRACKABLE_PLANE)
                 {
-                    int32_t isPoseInPolygon{};
+                    // Get the hit result pose.
                     ArHitResult_getHitPose(session, hitResult, tempPose);
-                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
 
-                    if (isPoseInPolygon != 0)
+                    // If we are only hit testing against planes then mark the hit test as qualified otherwise check
+                    // if the hit result is inside the plane mesh.
+                    if ((validHitTestTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE)
                     {
-                        float rawPose[7]{};
-                        ArPose_getPoseRaw(session, tempPose, rawPose);
-                        HitResult hitResult{};
-                        RawToPose(rawPose, hitResult.Pose);
-
-                        hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
-                        filteredResults.push_back(hitResult);
-                        frameTrackables.push_back(trackable);
+                        hitTestQualified = true;
                     }
+                    else if ((validHitTestTypes & xr::HitTestTrackableType::MESH) != xr::HitTestTrackableType::NONE)
+                    {
+                        int32_t isPoseInPolygon{};
+                        ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
+                        hitTestQualified = isPoseInPolygon != 0;
+                    }
+                }
+                else if (trackableType == AR_TRACKABLE_POINT && (validHitTestTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE)
+                {
+                    // Hit a feature point, which is valid for this hit test.
+                    // Mark the result as qualified, and pull out the pose.
+                    hitTestQualified = true;
+                    ArHitResult_getHitPose(session, hitResult, tempPose);
+                }
+
+                if (hitTestQualified)
+                {
+                    float rawPose[7]{};
+                    ArPose_getPoseRaw(session, tempPose, rawPose);
+                    HitResult hitResult{};
+                    RawToPose(rawPose, hitResult.Pose);
+
+                    hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
+                    filteredResults.push_back(hitResult);
+                    frameTrackables.push_back(trackable);
                 }
             }
         }
@@ -1047,9 +1068,9 @@ namespace xr
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
     {
-        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
+        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
