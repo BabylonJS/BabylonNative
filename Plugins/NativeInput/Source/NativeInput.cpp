@@ -64,7 +64,7 @@ namespace Babylon::Plugins
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
             const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<std::optional<int32_t>>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
 
             SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs);
             SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs);
@@ -76,7 +76,7 @@ namespace Babylon::Plugins
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
             const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<std::optional<int32_t>>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
 
             SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs);
             SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs);
@@ -98,7 +98,7 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
     {
         m_runtimeScheduler([pointerId, x, y, this]() {
-            std::vector<std::optional<int32_t>>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
             SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs);
             SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs);
         });
@@ -119,7 +119,7 @@ namespace Babylon::Plugins
         return m_inputChangedCallbacks.insert(std::move(callback));
     }
 
-    const std::optional<int32_t> NativeInput::Impl::PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex)
+    const int32_t NativeInput::Impl::PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex)
     {
         auto it = m_inputs.find({deviceType, deviceSlot});
         if (it == m_inputs.end())
@@ -140,12 +140,12 @@ namespace Babylon::Plugins
         return device.at(inputIndex);
     }
 
-    std::vector<std::optional<int32_t>>& NativeInput::Impl::GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices)
+    std::vector<int32_t>& NativeInput::Impl::GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices)
     {
         uint32_t inputIndex = *std::max_element(inputIndices.begin(), inputIndices.end());
 
         auto previousSize = m_inputs.size();
-        std::vector<std::optional<int32_t>>& deviceInputs{m_inputs[{deviceType, deviceSlot}]};
+        std::vector<int32_t>& deviceInputs{m_inputs[{deviceType, deviceSlot}]};
         auto newSize = m_inputs.size();
 
         if (newSize != previousSize)
@@ -170,7 +170,7 @@ namespace Babylon::Plugins
         }
     }
 
-    void NativeInput::Impl::SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<std::optional<int32_t>>& deviceInputs)
+    void NativeInput::Impl::SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs)
     {
         std::optional<uint32_t> previousState = deviceInputs[inputIndex];
         if (previousState != inputState)

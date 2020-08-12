@@ -38,7 +38,7 @@ namespace Babylon::Plugins
         DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);
         DeviceStatusChangedCallbackTicket AddDeviceDisconnectedCallback(DeviceStatusChangedCallback&& callback);
         InputStateChangedCallbackTicket AddInputChangedCallback(InputStateChangedCallback&& callback);
-        const std::optional<int32_t> PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex);
+        const int32_t PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex);
 
     private:
         using InputMapKey = std::pair<DeviceType, int32_t>;
@@ -51,12 +51,12 @@ namespace Babylon::Plugins
             }
         };
 
-        std::vector<std::optional<int32_t>>& GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices);
+        std::vector<int32_t>& GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices);
         void RemoveInputMap(DeviceType deviceType, int32_t deviceSlot);
-        void SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<std::optional<int32_t>>& deviceInputs);
+        void SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs);
 
         JsRuntimeScheduler m_runtimeScheduler;
-        std::unordered_map<InputMapKey, std::vector<std::optional<int32_t>>, InputMapKeyHash> m_inputs{};
+        std::unordered_map<InputMapKey, std::vector<int32_t>, InputMapKeyHash> m_inputs{};
         arcana::weak_table<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
         arcana::weak_table<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};
         arcana::weak_table<InputStateChangedCallback> m_inputChangedCallbacks{};
