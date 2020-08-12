@@ -674,9 +674,6 @@ namespace xr
 
                 if (trackableType == AR_TRACKABLE_PLANE)
                 {
-                    // Get the hit result pose.
-                    ArHitResult_getHitPose(session, hitResult, tempPose);
-
                     // If we are only hit testing against planes then mark the hit test as qualified otherwise check
                     // if the hit result is inside the plane mesh.
                     if ((validHitTestTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE)
@@ -686,6 +683,7 @@ namespace xr
                     else if ((validHitTestTypes & xr::HitTestTrackableType::MESH) != xr::HitTestTrackableType::NONE)
                     {
                         int32_t isPoseInPolygon{};
+                        ArHitResult_getHitPose(session, hitResult, tempPose);
                         ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
                         hitTestQualified = isPoseInPolygon != 0;
                     }
@@ -695,12 +693,12 @@ namespace xr
                     // Hit a feature point, which is valid for this hit test.
                     // Mark the result as qualified, and pull out the pose.
                     hitTestQualified = true;
-                    ArHitResult_getHitPose(session, hitResult, tempPose);
                 }
 
                 if (hitTestQualified)
                 {
                     float rawPose[7]{};
+                    ArHitResult_getHitPose(session, hitResult, tempPose);
                     ArPose_getPoseRaw(session, tempPose, rawPose);
                     HitResult hitResult{};
                     RawToPose(rawPose, hitResult.Pose);
