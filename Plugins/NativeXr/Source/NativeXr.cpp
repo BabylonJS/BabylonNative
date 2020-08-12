@@ -1142,15 +1142,15 @@ namespace Babylon
                         const auto entityType = entityTypeArray.Get(i).As<Napi::String>().Utf8Value();
                         if (entityType == XRHitTestTrackableType::POINT)
                         {
-                            m_entityTypes = m_entityTypes | xr::HitTestTrackableType::POINT;
+                            m_entityTypes |= xr::HitTestTrackableType::POINT;
                         }
                         else if (entityType == XRHitTestTrackableType::PLANE)
                         {
-                            m_entityTypes = m_entityTypes | xr::HitTestTrackableType::PLANE;
+                            m_entityTypes |= xr::HitTestTrackableType::PLANE;
                         }
                         else if (entityType == XRHitTestTrackableType::MESH)
                         {
-                            m_entityTypes = m_entityTypes | xr::HitTestTrackableType::MESH;
+                            m_entityTypes |= xr::HitTestTrackableType::MESH;
                         }
                     }
                 }

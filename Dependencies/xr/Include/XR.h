@@ -39,12 +39,18 @@ namespace xr
 
     constexpr enum HitTestTrackableType operator |(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
     {
-        return (enum HitTestTrackableType)(uint32_t(selfValue) | uint32_t(inValue));
+        return static_cast<const enum HitTestTrackableType>(std::underlying_type_t<HitTestTrackableType>(selfValue) | std::underlying_type_t<HitTestTrackableType>(inValue));
     }
 
     constexpr enum HitTestTrackableType operator &(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
     {
-        return (enum HitTestTrackableType)(uint32_t(selfValue) & uint32_t(inValue));
+        return static_cast<const enum HitTestTrackableType>(std::underlying_type_t<HitTestTrackableType>(selfValue) & std::underlying_type_t<HitTestTrackableType>(inValue));
+    }
+
+    constexpr enum HitTestTrackableType& operator |=(enum HitTestTrackableType& selfValue, const enum HitTestTrackableType inValue)
+    {
+        selfValue = selfValue | inValue;
+        return selfValue;
     }
 
     struct Size
