@@ -440,6 +440,10 @@ namespace Babylon
                 {
                     return 1;
                 }
+                else if (eye == NONE)
+                {
+                    return 2;
+                }
                 else
                 {
                     throw std::exception{/* Unsupported eye */};
@@ -628,6 +632,7 @@ namespace Babylon
                         InstanceAccessor("eye", &XRView::GetEye, nullptr),
                         InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
                         InstanceAccessor("transform", &XRView::GetTransform, nullptr),
+                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -644,10 +649,11 @@ namespace Babylon
                 , m_eye{XREye::IndexToEye(m_eyeIdx)}
                 , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
                 , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info))}
+                , m_isFirstPersonObserver{ false }
             {
             }
 
-            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space)
+            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space, bool isFirstPersonObserver)
             {
                 if (eyeIdx != m_eyeIdx)
                 {
@@ -658,6 +664,8 @@ namespace Babylon
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
                 XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
+                
+                m_isFirstPersonObserver = isFirstPersonObserver;
             }
 
         private:
@@ -665,6 +673,7 @@ namespace Babylon
             gsl::czstring<> m_eye{};
             Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
             Napi::ObjectReference m_rigidTransform{};
+            bool m_isFirstPersonObserver{};
 
             Napi::Value GetEye(const Napi::CallbackInfo& info)
             {
@@ -679,6 +688,11 @@ namespace Babylon
             Napi::Value GetTransform(const Napi::CallbackInfo&)
             {
                 return m_rigidTransform.Value();
+            }
+
+            Napi::Value IsFirstPersonObserver(const Napi::CallbackInfo& info)
+            {
+                return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
             }
         };
 
@@ -749,7 +763,7 @@ namespace Babylon
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
                 {
                     const auto& view = views[idx];
-                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space);
+                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space, view.IsFirstPersonObserver);
                 }
             }
 
@@ -1984,7 +1998,7 @@ namespace Babylon
 
         private:
             Napi::ObjectReference m_jsSession{};
-            std::array<Napi::ObjectReference, 2> m_jsRenderTargetTextures;
+            std::array<Napi::ObjectReference, 3> m_jsRenderTargetTextures;
             XRSession& m_session;
 
             Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)

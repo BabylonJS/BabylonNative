@@ -308,9 +308,39 @@ namespace xr
 
         Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
         {
-            // TODO: update this to correct process
-            const auto& swapchain = RenderResources.ColorSwapchains.at(HmdImpl.PrimaryViewConfigurationType).at(viewIndex);
-            return{ static_cast<size_t>(swapchain.Width), static_cast<size_t>(swapchain.Height) };
+            auto primaryViewConfigTypeSwapchainCount = RenderResources.ColorSwapchains.at(HmdImpl.PrimaryViewConfigurationType).size();
+            if (viewIndex < primaryViewConfigTypeSwapchainCount)
+            {
+                const auto& swapchain = RenderResources.ColorSwapchains.at(HmdImpl.PrimaryViewConfigurationType).at(viewIndex);
+                return{ static_cast<size_t>(swapchain.Width), static_cast<size_t>(swapchain.Height) };
+            }
+            else if (HmdImpl.Extensions->SecondaryViewConfigurationSupported &&
+                HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+            {
+                size_t secondaryViewIndex = viewIndex - primaryViewConfigTypeSwapchainCount;
+                for (const auto& viewConfigType : HmdImpl.SupportedSecondaryViewConfigurationTypes)
+                {
+                    const auto& state = RenderResources.ViewStates.at(viewConfigType);
+                    if (state.Views.size() <= secondaryViewIndex)
+                    {
+                        secondaryViewIndex -= state.Views.size();
+                        continue;
+                    }
+
+                    const auto& viewConfig = state.ViewConfigViews.at(secondaryViewIndex);
+                    const Size viewSize = { viewConfig.recommendedImageRectWidth, viewConfig.recommendedImageRectHeight };
+                    if (RenderResources.ColorSwapchains.count(viewConfigType) > 0 &&
+                        RenderResources.ColorSwapchains.at(viewConfigType).size() > secondaryViewIndex)
+                    {
+                        const auto& swapchain = RenderResources.ColorSwapchains.at(viewConfigType).at(secondaryViewIndex);
+                        assert(swapchain.Width == viewSize.Width && swapchain.Height == viewSize.Height);
+                    }
+
+                    return viewSize;
+                }
+            }
+
+            throw std::exception{/*unknown view index*/ };
         }
 
         void PopulateSwapchains(ViewConfigurationState& viewState)
@@ -328,6 +358,7 @@ namespace xr
             for (uint32_t idx = 0; idx < viewCount; ++idx)
             {
                 const XrViewConfigurationView& view = viewState.ViewConfigViews[idx];
+
                 RenderResources.ColorSwapchains[viewState.Type].push_back(
                     CreateSwapchain(Session,
                         colorSwapchainFormat,
@@ -336,7 +367,8 @@ namespace xr
                         1,
                         view.recommendedSwapchainSampleCount,
                         0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT));
+                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                        viewState.Type));
                 RenderResources.DepthSwapchains[viewState.Type].push_back(
                     CreateSwapchain(Session,
                         depthSwapchainFormat,
@@ -345,7 +377,8 @@ namespace xr
                         1,
                         view.recommendedSwapchainSampleCount,
                         0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                        viewState.Type));
             }
         }
 
@@ -474,7 +507,8 @@ namespace xr
             uint32_t arraySize,
             uint32_t sampleCount,
             XrSwapchainCreateFlags createFlags,
-            XrSwapchainUsageFlags usageFlags)
+            XrSwapchainUsageFlags usageFlags,
+            XrViewConfigurationType viewConfigType)
         {
             Swapchain swapchain;
             swapchain.Format = format;
@@ -492,6 +526,13 @@ namespace xr
             swapchainCreateInfo.sampleCount = sampleCount;
             swapchainCreateInfo.createFlags = createFlags;
             swapchainCreateInfo.usageFlags = usageFlags;
+
+            XrSecondaryViewConfigurationSwapchainCreateInfoMSFT secondaryViewConfigCreateInfo{
+                XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT};
+            if (HmdImpl.Extensions->SecondaryViewConfigurationSupported) {
+                secondaryViewConfigCreateInfo.viewConfigurationType = viewConfigType;
+                swapchainCreateInfo.next = &secondaryViewConfigCreateInfo;
+            }
 
             XrCheck(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Handle));
 
@@ -758,12 +799,19 @@ namespace xr
                 viewState.Active = secondaryViewConfigState.active;
                 if (viewState.Active)
                 {
-                    viewState.ViewConfigViews = EnumerateViewConfigurationViews(
+                    std::vector<XrViewConfigurationView> viewConfigViews = EnumerateViewConfigurationViews(
                         sessionImpl.HmdImpl.Instance,
                         sessionImpl.HmdImpl.SystemId,
                         secondaryViewConfigState.viewConfigurationType);
                     
-                    sessionImpl.PopulateSwapchains(viewState);
+                    if (sessionImpl.RenderResources.ColorSwapchains.at(viewState.Type).size() < viewConfigViews.size() ||
+                        sessionImpl.RenderResources.DepthSwapchains.at(viewState.Type).size() < viewConfigViews.size() ||
+                        IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
+                    {
+                        OutputDebugStringW(L"Created new view for mixed reality capture");
+                        viewState.ViewConfigViews = std::move(viewConfigViews);
+                        sessionImpl.PopulateSwapchains(viewState);
+                    }
                 }
                 else
                 {
@@ -858,7 +906,11 @@ namespace xr
 
                             // Populate the struct that consuming code will use for rendering.
                             auto& view = Views[index];
+
                             m_impl->PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, view);
+
+                            // Set is first person observer flag to true.
+                            view.IsFirstPersonObserver = true;
 
                             renderResources.ProjectionLayerViews[viewConfigType][idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
                             auto& projectionLayerView = renderResources.ProjectionLayerViews[viewConfigType][idx];
