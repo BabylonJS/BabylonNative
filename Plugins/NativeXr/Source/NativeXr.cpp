@@ -1156,10 +1156,10 @@ namespace Babylon
                     }
                 }
 
-                // Default to PLANE to match WebXR on Android
+                // Default to MESH if unspecified.
                 if (m_entityTypes == xr::HitTestTrackableType::NONE)
                 {
-                    m_entityTypes = xr::HitTestTrackableType::PLANE;
+                    m_entityTypes = xr::HitTestTrackableType::MESH;
                 }
             }
 

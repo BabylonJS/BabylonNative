@@ -4,8 +4,8 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = true;
-var xrHitTest = true;
+var ar = false;
+var xrHitTest = false;
 var text = false;
 
 function CreateBoxAsync() {
@@ -136,11 +136,13 @@ CreateBoxAsync().then(function () {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
                 if (xrHitTest) {
+                    // Create the hit test module. OffsetRay specifies the target direction, and entityTypes can be any combination of "mesh", "plane", and "polygon".
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HIT_TEST,
                         "latest",
-                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}, entityTypes: ["plane"]});
+                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}, entityTypes: ["mesh"]});
 
+                    // When we receive hit test results, if there were any valid hits move the position of the mesh to the hit test point.
                     xrHitTestModule.onHitTestResultObservable.add((results) => {
                         if (results.length) {
                             scene.meshes[0].position.x = results[0].position.x;
