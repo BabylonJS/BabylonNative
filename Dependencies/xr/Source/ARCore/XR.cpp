@@ -667,35 +667,33 @@ namespace xr
                 ArTrackableType trackableType{};
                 ArTrackable* trackable;
 
+                bool hitTestResultValid = false;
                 ArHitResultList_getItem(session, hitResultList, i, hitResult);
                 ArHitResult_acquireTrackable(session, hitResult, &trackable);
                 ArTrackable_getType(session, trackable, &trackableType);
-                bool hitTestQualified = false;
-
                 if (trackableType == AR_TRACKABLE_PLANE)
                 {
-                    // If we are only hit testing against planes then mark the hit test as qualified otherwise check
+                    // If we are only hit testing against planes then mark the hit test as valid otherwise check
                     // if the hit result is inside the plane mesh.
                     if ((validHitTestTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE)
                     {
-                        hitTestQualified = true;
+                        hitTestResultValid = true;
                     }
                     else if ((validHitTestTypes & xr::HitTestTrackableType::MESH) != xr::HitTestTrackableType::NONE)
                     {
                         int32_t isPoseInPolygon{};
                         ArHitResult_getHitPose(session, hitResult, tempPose);
                         ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
-                        hitTestQualified = isPoseInPolygon != 0;
+                        hitTestResultValid = isPoseInPolygon != 0;
                     }
                 }
                 else if (trackableType == AR_TRACKABLE_POINT && (validHitTestTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE)
                 {
-                    // Hit a feature point, which is valid for this hit test.
-                    // Mark the result as qualified, and pull out the pose.
-                    hitTestQualified = true;
+                    // Hit a feature point, which is valid for this hit test source.
+                    hitTestResultValid = true;
                 }
 
-                if (hitTestQualified)
+                if (hitTestResultValid)
                 {
                     float rawPose[7]{};
                     ArHitResult_getHitPose(session, hitResult, tempPose);

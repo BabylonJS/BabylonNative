@@ -1137,7 +1137,6 @@ namespace Babylon
                 if (options.Has("entityTypes"))
                 {
                     const auto entityTypeArray = options.Get("entityTypes").As<Napi::Array>();
-
                     for (uint32_t i = 0; i < entityTypeArray.Length(); i++)
                     {
                         const auto entityType = entityTypeArray.Get(i).As<Napi::String>().Utf8Value();

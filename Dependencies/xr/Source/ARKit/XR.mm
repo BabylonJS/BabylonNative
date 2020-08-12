@@ -816,7 +816,7 @@ namespace xr {
                 }
             }
         }
-                
+
         /**
          Create an ARKit anchor for the given pose.
          */
