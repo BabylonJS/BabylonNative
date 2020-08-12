@@ -32,9 +32,9 @@ namespace xr
 
     enum class HitTestTrackableType {
         NONE = 0,
-        POINT = 1,
-        PLANE = 2,
-        MESH = 4,
+        POINT = 1 << 0,
+        PLANE = 1 << 1,
+        MESH = 1 << 2,
     };
 
     constexpr enum HitTestTrackableType operator |(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
