@@ -1189,7 +1189,7 @@ namespace Babylon
             bool hasOffsetRay = false;
             Napi::ObjectReference m_offsetRay;
 
-            xr::HitTestTrackableType m_entityTypes = xr::HitTestTrackableType::NONE;
+            xr::HitTestTrackableType m_entityTypes{xr::HitTestTrackableType::NONE};
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface

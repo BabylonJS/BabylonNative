@@ -667,7 +667,7 @@ namespace xr
                 ArTrackableType trackableType{};
                 ArTrackable* trackable;
 
-                bool hitTestResultValid = false;
+                bool hitTestResultValid{false};
                 ArHitResultList_getItem(session, hitResultList, i, hitResult);
                 ArHitResult_acquireTrackable(session, hitResult, &trackable);
                 ArTrackable_getType(session, trackable, &trackableType);
@@ -683,7 +683,7 @@ namespace xr
                     {
                         int32_t isPoseInPolygon{};
                         ArHitResult_getHitPose(session, hitResult, tempPose);
-                        ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
+                        ArPlane_isPoseInPolygon(session, reinterpret_cast<ArPlane*>(trackable), tempPose, &isPoseInPolygon);
                         hitTestResultValid = isPoseInPolygon != 0;
                     }
                 }
