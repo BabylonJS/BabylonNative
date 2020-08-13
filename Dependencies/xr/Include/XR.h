@@ -30,6 +30,29 @@ namespace xr
         XYZ
     };
 
+    enum class HitTestTrackableType {
+        NONE = 0,
+        POINT = 1 << 0,
+        PLANE = 1 << 1,
+        MESH = 1 << 2,
+    };
+
+    constexpr enum HitTestTrackableType operator |(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
+    {
+        return static_cast<const enum HitTestTrackableType>(std::underlying_type_t<HitTestTrackableType>(selfValue) | std::underlying_type_t<HitTestTrackableType>(inValue));
+    }
+
+    constexpr enum HitTestTrackableType operator &(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
+    {
+        return static_cast<const enum HitTestTrackableType>(std::underlying_type_t<HitTestTrackableType>(selfValue) & std::underlying_type_t<HitTestTrackableType>(inValue));
+    }
+
+    constexpr enum HitTestTrackableType& operator |=(enum HitTestTrackableType& selfValue, const enum HitTestTrackableType inValue)
+    {
+        selfValue = selfValue | inValue;
+        return selfValue;
+    }
+
     struct Size
     {
         size_t Width{};
@@ -172,7 +195,7 @@ namespace xr
                 Frame(System::Session::Impl&);
                 ~Frame();
 
-                void GetHitTestResults(std::vector<HitResult>&, Ray) const;
+                void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;

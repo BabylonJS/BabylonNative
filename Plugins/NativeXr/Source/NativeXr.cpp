@@ -409,6 +409,13 @@ namespace Babylon
             static constexpr auto UNBOUNDED{"unbounded"};
         };
 
+        struct XRHitTestTrackableType
+        {
+            static constexpr auto POINT{"point"};
+            static constexpr auto PLANE{"plane"};
+            static constexpr auto MESH{"mesh"};
+        };
+
         struct XREye
         {
             // static constexpr auto NONE{"none"};
@@ -1126,6 +1133,33 @@ namespace Babylon
                     m_offsetRay = Napi::Persistent(options.Get("offsetRay").As<Napi::Object>());
                     hasOffsetRay = true;
                 }
+
+                if (options.Has("entityTypes"))
+                {
+                    const auto entityTypeArray = options.Get("entityTypes").As<Napi::Array>();
+                    for (uint32_t i = 0; i < entityTypeArray.Length(); i++)
+                    {
+                        const auto entityType = entityTypeArray.Get(i).As<Napi::String>().Utf8Value();
+                        if (entityType == XRHitTestTrackableType::POINT)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::POINT;
+                        }
+                        else if (entityType == XRHitTestTrackableType::PLANE)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::PLANE;
+                        }
+                        else if (entityType == XRHitTestTrackableType::MESH)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::MESH;
+                        }
+                    }
+                }
+
+                // Default to MESH if unspecified.
+                if (m_entityTypes == xr::HitTestTrackableType::NONE)
+                {
+                    m_entityTypes = xr::HitTestTrackableType::MESH;
+                }
             }
 
             XRRay* OffsetRay()
@@ -1136,6 +1170,11 @@ namespace Babylon
             XRReferenceSpace* Space()
             {
                 return hasSpace ? XRReferenceSpace::Unwrap(m_space.Value()) : nullptr;
+            }
+
+            xr::HitTestTrackableType GetEntityTypes()
+            {
+                return m_entityTypes;
             }
 
         private:
@@ -1149,6 +1188,8 @@ namespace Babylon
 
             bool hasOffsetRay = false;
             Napi::ObjectReference m_offsetRay;
+
+            xr::HitTestTrackableType m_entityTypes{xr::HitTestTrackableType::NONE};
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
@@ -1457,7 +1498,7 @@ namespace Babylon
 
                 // Get the native results
                 std::vector<xr::HitResult> nativeHitResults{};
-                m_frame->GetHitTestResults(nativeHitResults, nativeRay);
+                m_frame->GetHitTestResults(nativeHitResults, nativeRay, hitTestSource->GetEntityTypes());
 
                 // Translate those results into a napi array.
                 auto results = Napi::Array::New(info.Env(), nativeHitResults.size());
