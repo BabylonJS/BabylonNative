@@ -268,16 +268,13 @@ namespace Babylon::ShaderCompilerTraversers
                     TType newType{publicType};
                     symbol->setType(newType);
 
-                    if (!isLinkerObject(this->path))
-                    {
-                        auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
-                        auto* parent = this->getParentNode();
+                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion) {
                         if (auto* aggregate = parent->getAsAggregate())
                         {
                             auto& sequence = aggregate->getSequence();
                             for (size_t idx = 0; idx < sequence.size(); ++idx)
                             {
-                                if (sequence[idx] == symbol)
+                                if (sequence[idx] == node)
                                 {
                                     sequence[idx] = shapeConversion;
                                 }
@@ -285,7 +282,7 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                         else if (auto* binary = parent->getAsBinaryNode())
                         {
-                            if (binary->getLeft() == symbol)
+                            if (binary->getLeft() == node)
                             {
                                 binary->setLeft(shapeConversion);
                             }
@@ -301,6 +298,36 @@ namespace Babylon::ShaderCompilerTraversers
                         else
                         {
                             throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
+                        }
+                    };
+
+                    if (!isLinkerObject(this->path))
+                    {
+                        auto* parent = this->getParentNode();
+                        if (symbol->isArray())
+                        {
+                            if (auto* binary = parent->getAsBinaryNode())
+                            {
+                                delete oldType;
+                                oldType = binary->getType().clone();
+                                auto* binType = newType.clone();
+                                binType->clearArraySizes();
+                                binary->setType(*binType);
+                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, binary);
+
+                                assert(this->path.size() > 1);
+                                auto* grandparent = this->path[this->path.size() - 2];
+                                injectShapeConversion(binary, grandparent, shapeConversion);
+                            }
+                            else
+                            {
+                                throw std::runtime_error{"Cannot replace symbol: array indexing handler unimplemented"};
+                            }
+                        }
+                        else
+                        {
+                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
+                            injectShapeConversion(symbol, parent, shapeConversion);
                         }
                     }
 

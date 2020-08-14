@@ -740,7 +740,7 @@ namespace xr
         }
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>&, Ray) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>&, Ray, xr::HitTestTrackableType) const {
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 
