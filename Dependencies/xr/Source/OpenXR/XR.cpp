@@ -325,15 +325,7 @@ namespace xr
                     }
 
                     const auto& viewConfig = state.ViewConfigViews.at(secondaryViewIndex);
-                    const Size viewSize = { viewConfig.recommendedImageRectWidth, viewConfig.recommendedImageRectHeight };
-                    if (RenderResources.ColorSwapchains.count(viewConfigType) > 0 &&
-                        RenderResources.ColorSwapchains.at(viewConfigType).size() > secondaryViewIndex)
-                    {
-                        const auto& swapchain = RenderResources.ColorSwapchains.at(viewConfigType).at(secondaryViewIndex);
-                        assert(swapchain.Width == viewSize.Width && swapchain.Height == viewSize.Height);
-                    }
-
-                    return viewSize;
+                    return { viewConfig.recommendedImageRectWidth, viewConfig.recommendedImageRectHeight };
                 }
             }
 
