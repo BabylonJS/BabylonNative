@@ -219,6 +219,11 @@ namespace Babylon
             m_session->SetPlaneDetectionEnabled(enabled);
         }
 
+        bool TrySetFeaturePointCloudEnabled(bool enabled)
+        {
+            return m_session->TrySetFeaturePointCloudEnabled(enabled);
+        }
+
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
@@ -1375,6 +1380,7 @@ namespace Babylon
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
+                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1579,6 +1585,25 @@ namespace Babylon
                 return std::move(worldInformationObj);
             }
 
+            Napi::Value GetFeaturePointCloud(const Napi::CallbackInfo& info)
+            {
+                // Get feature points from native.
+                std::vector<xr::FeaturePoint>& pointCloud = m_frame->FeaturePointCloud;
+                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size() * 5);
+                for (size_t i = 0; i < pointCloud.size(); i++)
+                {
+                    int pointIndex = (int) i * 5;
+                    auto& featurePoint = pointCloud[i];
+                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.X));
+                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.Y));
+                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.Z));
+                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.ConfidenceValue));
+                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
+                }
+
+                return featurePointArray;
+            }
+
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
                 // First loop over deleted planes and remove them from our JS mapping.
@@ -1656,6 +1681,7 @@ namespace Babylon
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
                         InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
+                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1906,6 +1932,14 @@ namespace Babylon
                     bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
                     m_xr.SetPlaneDetectionEnabled(planeDetectionEnabled);
                 }
+            }
+
+            Napi::Value TrySetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
+            {
+                bool featurePointCloudEnabled = info[0].ToBoolean();
+                bool enabled = m_xr.TrySetFeaturePointCloudEnabled(featurePointCloudEnabled);
+
+                return Napi::Value::From(info.Env(), enabled);
             }
 
             Napi::Value End(const Napi::CallbackInfo& info)

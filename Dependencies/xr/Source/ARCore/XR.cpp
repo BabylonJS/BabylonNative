@@ -323,9 +323,11 @@ namespace xr
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
+        std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
+        bool FeaturePointCloudEnabled{ false };
 
         Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
             : SystemImpl{ systemImpl }
@@ -824,7 +826,7 @@ namespace xr
             CheckForSubsumedPlanes(deletedPlanes);
 
             // Next check for updated planes, and update their pose and polygon or create a new plane if it does not yet exist.
-            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);            
+            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
             int32_t size{};
             ArTrackableList_getSize(session, trackableList, &size);
             for (int i = 0; i < size; i++)
@@ -877,6 +879,72 @@ namespace xr
             }
         }
 
+        void UpdateFeaturePointCloud()
+        {
+            if (!IsTracking() || !FeaturePointCloudEnabled)
+            {
+                return;
+            }
+
+            // Get the feature point cloud from ArCore.
+            ArPointCloud *pointCloud = nullptr;
+            int32_t numberOfPoints = 0;
+            const int32_t* pointCloudIDs = nullptr;
+            const float *pointCloudData = nullptr;
+            ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);
+
+            if (status != AR_SUCCESS)
+            {
+                FeaturePointCloud.clear();
+                return;
+            }
+
+            try
+            {
+                ArPointCloud_getNumberOfPoints(session, pointCloud, &numberOfPoints);
+                ArPointCloud_getData(session, pointCloud, &pointCloudData);
+                ArPointCloud_getPointIds(session, pointCloud, &pointCloudIDs);
+
+                FeaturePointCloud.resize(numberOfPoints);
+                for (int32_t i = 0; i < numberOfPoints; i++)
+                {
+                    FeaturePointCloud.emplace_back();
+                    auto& featurePoint = FeaturePointCloud.back();
+                    int32_t dataIndex = i * 4;
+
+                    // Grab the position and confidence value from the point cloud.
+                    // Reflect the point across the Z axis, as we want to report this
+                    // value in camera space.
+                    featurePoint.X = pointCloudData[dataIndex];
+                    featurePoint.Y = pointCloudData[dataIndex + 1];
+                    featurePoint.Z = -1 * pointCloudData[dataIndex + 2];
+                    featurePoint.ConfidenceValue = pointCloudData[dataIndex + 3];
+
+                    // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
+                    const int32_t id = pointCloudIDs[i];
+                    auto featurePointIterator = featurePointIDMap.find(id);
+                    if (featurePointIterator != featurePointIDMap.end())
+                    {
+                        featurePoint.ID = featurePointIterator->second;
+                    }
+                    else
+                    {
+                        featurePoint.ID = nextFeaturePointID++;
+                        featurePointIDMap.insert({id, featurePoint.ID});
+                    }
+                }
+            }
+            catch (std::exception)
+            {
+                // Release the point cloud to free its memory.
+                ArPointCloud_release(pointCloud);
+                throw;
+            }
+
+            // Release the point cloud to free its memory.
+            ArPointCloud_release(pointCloud);
+        }
+
         Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
         {
             // Loop over the plane vector and find the correct plane.
@@ -898,6 +966,8 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
+        FeaturePoint::Identifier nextFeaturePointID = 0;
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -1057,11 +1127,13 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , Planes{ sessionImpl.Planes }
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+        m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
@@ -1206,5 +1278,12 @@ namespace xr
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
         m_impl->PlaneDetectionEnabled = enabled;
+    }
+
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool enabled) const
+    {
+        // Point cloud system not yet supported.
+        m_impl->FeaturePointCloudEnabled = enabled;
+        return enabled;
     }
 }

@@ -534,7 +534,8 @@ namespace xr {
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
-        std::vector<Frame::Plane> Planes;
+        std::vector<Frame::Plane> Planes{};
+        std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
@@ -1130,6 +1131,7 @@ namespace xr {
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
         , Planes{ sessionImpl.Planes }
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
@@ -1211,5 +1213,11 @@ namespace xr {
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
         m_impl->SetPlaneDetectionEnabled(enabled);
+    }
+
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
+    {
+        // Point cloud system not yet supported.
+        return false;
     }
 }
