@@ -24,4 +24,4 @@
 	url = https://github.com/google-ar/arcore-android-sdk
 [submodule "Dependencies/xr/Dependencies/OpenXR-MixedReality"]
 	path = Dependencies/xr/Dependencies/OpenXR-MixedReality
-	url = https://github.com/microsoft/OpenXR-MixedReality.git
+	url = https://github.com/chrisfromwork/OpenXR-MixedReality.git

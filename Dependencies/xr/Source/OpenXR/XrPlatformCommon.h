@@ -5,6 +5,11 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
+#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrEnumerate.h"
+#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrExtensions.h"
+#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrStruct.h"
+#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrViewConfiguration.h"
+
 #include <assert.h>
 #include <stdexcept>
 

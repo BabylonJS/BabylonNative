@@ -8,7 +8,6 @@
 #define XR_USE_GRAPHICS_API_D3D11
 
 #include <XrPlatformCommon.h>
-#include <XrUtility/XrExtensions.h>
 #include <XR.h>
 
 #include <array>

@@ -1,9 +1,6 @@
 #include <XR.h>
 
 #include <XrPlatform.h>
-#include <XrUtility/XrViewConfiguration.h>
-#include <XrUtility/XrExtensions.h>
-#include <XrUtility/XrStruct.h>
 
 #include <assert.h>
 #include <optional>
