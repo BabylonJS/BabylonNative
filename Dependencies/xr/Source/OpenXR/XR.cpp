@@ -245,6 +245,7 @@ namespace xr
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::Plane> Planes{};
+            std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -746,6 +747,7 @@ namespace xr
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
         , Planes { sessionImpl.ActionResources.Planes } // NYI
+        , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedPlanes{} // NYI
         , RemovedPlanes{} // NYI
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
@@ -989,7 +991,7 @@ namespace xr
         }
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>&, Ray) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>&, Ray, xr::HitTestTrackableType) const {
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 
@@ -1143,5 +1145,11 @@ namespace xr
     void System::Session::SetPlaneDetectionEnabled(bool) const
     {
         throw std::runtime_error("Planes not yet implemented for OpenXR");
+    }
+
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
+    {
+        // Point cloud system not yet supported.
+        return false;
     }
 }

@@ -219,6 +219,11 @@ namespace Babylon
             m_session->SetPlaneDetectionEnabled(enabled);
         }
 
+        bool TrySetFeaturePointCloudEnabled(bool enabled)
+        {
+            return m_session->TrySetFeaturePointCloudEnabled(enabled);
+        }
+
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
         xr::System m_system{};
@@ -407,6 +412,13 @@ namespace Babylon
             // static constexpr auto LOCAL_FLOOR{"local-floor"};
             // static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
             static constexpr auto UNBOUNDED{"unbounded"};
+        };
+
+        struct XRHitTestTrackableType
+        {
+            static constexpr auto POINT{"point"};
+            static constexpr auto PLANE{"plane"};
+            static constexpr auto MESH{"mesh"};
         };
 
         struct XREye
@@ -729,10 +741,14 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space& space, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, gsl::span<const xr::System::Session::Frame::View> views)
             {
-                // Update the transform.
-                m_transform.Update(space, true);
+                // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
+                // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
+                if (views.size() > 0)
+                {
+                    m_transform.Update(views[0].Space, true);
+                }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
@@ -1138,6 +1154,33 @@ namespace Babylon
                     m_offsetRay = Napi::Persistent(options.Get("offsetRay").As<Napi::Object>());
                     hasOffsetRay = true;
                 }
+
+                if (options.Has("entityTypes"))
+                {
+                    const auto entityTypeArray = options.Get("entityTypes").As<Napi::Array>();
+                    for (uint32_t i = 0; i < entityTypeArray.Length(); i++)
+                    {
+                        const auto entityType = entityTypeArray.Get(i).As<Napi::String>().Utf8Value();
+                        if (entityType == XRHitTestTrackableType::POINT)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::POINT;
+                        }
+                        else if (entityType == XRHitTestTrackableType::PLANE)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::PLANE;
+                        }
+                        else if (entityType == XRHitTestTrackableType::MESH)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::MESH;
+                        }
+                    }
+                }
+
+                // Default to MESH if unspecified.
+                if (m_entityTypes == xr::HitTestTrackableType::NONE)
+                {
+                    m_entityTypes = xr::HitTestTrackableType::MESH;
+                }
             }
 
             XRRay* OffsetRay()
@@ -1148,6 +1191,11 @@ namespace Babylon
             XRReferenceSpace* Space()
             {
                 return hasSpace ? XRReferenceSpace::Unwrap(m_space.Value()) : nullptr;
+            }
+
+            xr::HitTestTrackableType GetEntityTypes()
+            {
+                return m_entityTypes;
             }
 
         private:
@@ -1161,6 +1209,8 @@ namespace Babylon
 
             bool hasOffsetRay = false;
             Napi::ObjectReference m_offsetRay;
+
+            xr::HitTestTrackableType m_entityTypes{xr::HitTestTrackableType::NONE};
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
@@ -1346,6 +1396,7 @@ namespace Babylon
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
+                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1429,8 +1480,7 @@ namespace Babylon
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-
-                m_xrViewerPose.Update(info, {{{0, 0, 0}, {0, 0, 0, 1}}}, m_frame->Views);
+                m_xrViewerPose.Update(info, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -1470,7 +1520,7 @@ namespace Babylon
 
                 // Get the native results
                 std::vector<xr::HitResult> nativeHitResults{};
-                m_frame->GetHitTestResults(nativeHitResults, nativeRay);
+                m_frame->GetHitTestResults(nativeHitResults, nativeRay, hitTestSource->GetEntityTypes());
 
                 // Translate those results into a napi array.
                 auto results = Napi::Array::New(info.Env(), nativeHitResults.size());
@@ -1551,6 +1601,25 @@ namespace Babylon
                 return std::move(worldInformationObj);
             }
 
+            Napi::Value GetFeaturePointCloud(const Napi::CallbackInfo& info)
+            {
+                // Get feature points from native.
+                std::vector<xr::FeaturePoint>& pointCloud = m_frame->FeaturePointCloud;
+                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size() * 5);
+                for (size_t i = 0; i < pointCloud.size(); i++)
+                {
+                    int pointIndex = (int) i * 5;
+                    auto& featurePoint = pointCloud[i];
+                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.X));
+                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.Y));
+                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.Z));
+                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.ConfidenceValue));
+                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
+                }
+
+                return featurePointArray;
+            }
+
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
                 // First loop over deleted planes and remove them from our JS mapping.
@@ -1628,6 +1697,7 @@ namespace Babylon
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
                         InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
+                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1880,6 +1950,14 @@ namespace Babylon
                 }
             }
 
+            Napi::Value TrySetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
+            {
+                bool featurePointCloudEnabled = info[0].ToBoolean();
+                bool enabled = m_xr.TrySetFeaturePointCloudEnabled(featurePointCloudEnabled);
+
+                return Napi::Value::From(info.Env(), enabled);
+            }
+
             Napi::Value End(const Napi::CallbackInfo& info)
             {
                 m_xr.Dispatch([this]() {
@@ -1921,6 +1999,7 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
+                        InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1953,6 +2032,11 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
+            }
+
+            Napi::Value Dispose(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
         };
 

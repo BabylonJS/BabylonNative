@@ -145,6 +145,10 @@ namespace Babylon::ShaderCompilerTraversers
                     {
                         publicType.setVector(type.getVectorSize());
                     }
+                    else
+                    {
+                        publicType.setVector(1);
+                    }
 
                     if (type.getArraySizes())
                     {
@@ -264,16 +268,13 @@ namespace Babylon::ShaderCompilerTraversers
                     TType newType{publicType};
                     symbol->setType(newType);
 
-                    if (!isLinkerObject(this->path))
-                    {
-                        auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
-                        auto* parent = this->getParentNode();
+                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion) {
                         if (auto* aggregate = parent->getAsAggregate())
                         {
                             auto& sequence = aggregate->getSequence();
                             for (size_t idx = 0; idx < sequence.size(); ++idx)
                             {
-                                if (sequence[idx] == symbol)
+                                if (sequence[idx] == node)
                                 {
                                     sequence[idx] = shapeConversion;
                                 }
@@ -281,7 +282,7 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                         else if (auto* binary = parent->getAsBinaryNode())
                         {
-                            if (binary->getLeft() == symbol)
+                            if (binary->getLeft() == node)
                             {
                                 binary->setLeft(shapeConversion);
                             }
@@ -297,6 +298,36 @@ namespace Babylon::ShaderCompilerTraversers
                         else
                         {
                             throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
+                        }
+                    };
+
+                    if (!isLinkerObject(this->path))
+                    {
+                        auto* parent = this->getParentNode();
+                        if (symbol->isArray())
+                        {
+                            if (auto* binary = parent->getAsBinaryNode())
+                            {
+                                delete oldType;
+                                oldType = binary->getType().clone();
+                                auto* binType = newType.clone();
+                                binType->clearArraySizes();
+                                binary->setType(*binType);
+                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, binary);
+
+                                assert(this->path.size() > 1);
+                                auto* grandparent = this->path[this->path.size() - 2];
+                                injectShapeConversion(binary, grandparent, shapeConversion);
+                            }
+                            else
+                            {
+                                throw std::runtime_error{"Cannot replace symbol: array indexing handler unimplemented"};
+                            }
+                        }
+                        else
+                        {
+                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
+                            injectShapeConversion(symbol, parent, shapeConversion);
                         }
                     }
 
@@ -394,6 +425,17 @@ namespace Babylon::ShaderCompilerTraversers
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
+                // UVs are effectively a special kind of generic attribute since they both use
+                // are implemented using texture coordinates, so we preprocess to pre-count the
+                // number of UV coordinate variables to prevent collisions.
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
+                    {
+                        traverser.m_genericAttributesRunningCount++;
+                    }
+                }
+
                 for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
                     const auto& type = symbol->getType();
@@ -419,7 +461,7 @@ namespace Babylon::ShaderCompilerTraversers
                 makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
-            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10}; // TODO: Is this right? There are returnable values in the list that are larger than 10.
+            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
             unsigned int m_genericAttributesRunningCount{0};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};

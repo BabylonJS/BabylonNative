@@ -357,6 +357,14 @@ namespace Babylon
 
     struct VertexArray final
     {
+        ~VertexArray()
+        {
+            for (auto& vertexBuffer : vertexBuffers)
+            {
+                bgfx::destroy(vertexBuffer.vertexLayoutHandle);
+            }
+        }
+
         struct IndexBuffer
         {
             const IndexBufferData* data{};
@@ -368,6 +376,7 @@ namespace Babylon
         {
             const VertexBufferData* data{};
             uint32_t startVertex{};
+            bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
 
         std::vector<VertexBuffer> vertexBuffers{};
@@ -462,7 +471,6 @@ namespace Babylon
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
         void GetFramebufferData(const Napi::CallbackInfo& info);
-        void BindBuffer(const Napi::CallbackInfo& info);
         Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
 
         void UpdateSize(size_t width, size_t height);
