@@ -805,7 +805,6 @@ namespace xr
                         sessionImpl.RenderResources.DepthSwapchains.at(viewState.Type).size() < viewConfigViews.size() ||
                         IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
                     {
-                        OutputDebugStringW(L"Created new view for mixed reality capture");
                         viewState.ViewConfigViews = std::move(viewConfigViews);
                         sessionImpl.PopulateSwapchains(viewState);
                     }
