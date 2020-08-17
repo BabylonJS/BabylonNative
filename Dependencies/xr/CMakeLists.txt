@@ -17,10 +17,10 @@ else()
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp"
         "Source/OpenXR/XrPlatformCommon.h"
-        "Source/OpenXR/XrUtility/XrExtensions.h"
-        "Source/OpenXR/XrUtility/XrViewConfiguration.h"
-        "Source/OpenXR/XrUtility/XrEnumerate.h"
-        "Source/OpenXR/XrUtility/XrStruct.h")
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrExtensions.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrViewConfiguration.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrEnumerate.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrStruct.h")
 
     if(WIN32)
         set(SOURCES ${SOURCES} "Source/OpenXR/Windows/XrPlatform.h")
