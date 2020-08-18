@@ -1601,7 +1601,7 @@ namespace Babylon
                     featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
                 }
 
-                return featurePointArray;
+                return std::move(featurePointArray);
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
