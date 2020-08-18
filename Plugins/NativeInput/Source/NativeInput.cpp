@@ -119,7 +119,7 @@ namespace Babylon::Plugins
         return m_inputChangedCallbacks.insert(std::move(callback));
     }
 
-    const int32_t NativeInput::Impl::PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex)
+    int32_t NativeInput::Impl::PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex)
     {
         auto it = m_inputs.find({deviceType, deviceSlot});
         if (it == m_inputs.end())

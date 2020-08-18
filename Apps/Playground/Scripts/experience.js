@@ -6,6 +6,7 @@ var rtt = false;
 var vr = false;
 var ar = false;
 var xrHitTest = false;
+var xrFeaturePoints = false;
 var text = false;
 
 function CreateBoxAsync() {
@@ -136,11 +137,13 @@ CreateBoxAsync().then(function () {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
                 if (xrHitTest) {
+                    // Create the hit test module. OffsetRay specifies the target direction, and entityTypes can be any combination of "mesh", "plane", and "point".
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HIT_TEST,
                         "latest",
-                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}});
+                         {offsetRay: {origin: {x: 0, y: 0, z: 0}, direction: {x: 0, y: 0, z: -1}}, entityTypes: ["mesh"]});
 
+                    // When we receive hit test results, if there were any valid hits move the position of the mesh to the hit test point.
                     xrHitTestModule.onHitTestResultObservable.add((results) => {
                         if (results.length) {
                             scene.meshes[0].position.x = results[0].position.x;
@@ -154,6 +157,66 @@ CreateBoxAsync().then(function () {
                         scene.meshes[0].position.z = 2;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                     }, 5000);
+                }
+
+                // Below is an example of how to process feature points.
+                if (xrFeaturePoints) {
+                    // First we attach the feature point system feature the XR experience.
+                    const xrFeaturePointsModule = xr.baseExperience.featuresManager.enableFeature(
+                        BABYLON.WebXRFeatureName.FEATURE_POINTS,
+                        "latest",
+                        {});
+
+                    // Next We create the point cloud system which we will use to display feature points.
+                    var pcs= new BABYLON.PointsCloudSystem("pcs", 5, scene);
+                    var featurePointInitFunc = function (particle, i, s) {
+                        particle.position = new BABYLON.Vector3(0, -5, 0);
+                    }
+
+                    // Add some starting points and build the mesh.
+                    pcs.addPoints(3000, featurePointInitFunc);
+                    pcs.buildMeshAsync().then((mesh) => {
+                        mesh.alwaysSelectAsActiveMesh = true;
+                    });
+
+                    // Define the logic for how to display a particular particle in the particle system
+                    // which represents a feature point.
+                    pcs.updateParticle = function (particle) {
+                        // Grab the feature point cloud from the xrFeaturePointsModule.
+                        var featurePointCloud = xrFeaturePointsModule.featurePointCloud;
+
+                        // Find the index of this particle in the particle system. If there exists a
+                        // mapping to a feature point then display its position, otherwise hide it somewhere far away.
+                        var index = particle.idx;
+                        if (index >= featurePointCloud.length) {
+                            // Hide the particle not currently in use.
+                            particle.position = new BABYLON.Vector3(-100, -100, -100);
+                        }
+                        else {
+                            // To display a feature point set its position to the position of the feature point
+                            // and set its color on the scale from white->red where white = least confident and
+                            // red = most confident.
+                            particle.position = featurePointCloud[index].position;
+                            particle.color = new BABYLON.Color4(1, 1 - featurePointCloud[index].confidenceValue, 1 - featurePointCloud[index].confidenceValue, 1);
+                        }
+
+                        return particle;
+                    }
+
+                    // Listen for changes in feature points both being added and updated, and only update
+                    // our display every 60 changes to the feature point cloud to avoid slowdowns.
+                    var featurePointChangeCounter = 0;
+                    xrFeaturePointsModule.onFeaturePointsAddedObservable.add((addedPointIds) => {
+                        if (++featurePointChangeCounter % 60 == 0) {
+                            pcs.setParticles();
+                        }
+                    });
+
+                    xrFeaturePointsModule.onFeaturePointsUpdatedObservable.add((updatedPointIds) => {
+                        if (++featurePointChangeCounter % 60 == 0) {
+                            pcs.setParticles();
+                        }
+                    });
                 }
 
                 xr.baseExperience.enterXRAsync(vr ? "immersive-vr" : "immersive-ar", "unbounded", xr.renderTarget);

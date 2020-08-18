@@ -534,7 +534,8 @@ namespace xr {
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
-        std::vector<Frame::Plane> Planes;
+        std::vector<Frame::Plane> Planes{};
+        std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
@@ -805,53 +806,18 @@ namespace xr {
             }
         }
 
-        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const {
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
             @autoreleasepool {
                 if (session != nil && session.currentFrame != nil && session.currentFrame.camera != nil && [session.currentFrame.camera trackingState] == ARTrackingStateNormal) {
                     if (@available(iOS 13.0, *)) {
-                        // Push the camera origin into a simd_float3.
-                        auto cameraOrigin = simd_make_float3(
-                                                             ActiveFrameViews[0].Space.Pose.Position.X,
-                                                             ActiveFrameViews[0].Space.Pose.Position.Y,
-                                                             ActiveFrameViews[0].Space.Pose.Position.Z);
-                        
-                        // Push the camera direction into a simd_quaternion.
-                        auto cameraDirection = simd_quaternion(
-                                                               ActiveFrameViews[0].Space.Pose.Orientation.X,
-                                                               ActiveFrameViews[0].Space.Pose.Orientation.Y,
-                                                               ActiveFrameViews[0].Space.Pose.Orientation.Z,
-                                                               ActiveFrameViews[0].Space.Pose.Orientation.W);
-                        
-                        // Load the offset ray and direction into simd equivalents.
-                        auto offsetOrigin = simd_make_float3(offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z);
-                        auto offsetDirection = simd_make_float3(offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z);
-
-                        // Construct the ARRaycast query compositing the camera and offset ray origin + direction targetting existing plane geometry.
-                        auto raycastQuery = [[ARRaycastQuery alloc]
-                                             initWithOrigin:(cameraOrigin + offsetOrigin)
-                                             direction:simd_act(cameraDirection, offsetDirection)
-                                             allowingTarget:ARRaycastTargetExistingPlaneGeometry
-                                             alignment:ARRaycastTargetAlignmentAny];
-                        
-                        // Perform the actual raycast.
-                        auto rayCastResults = [session raycast:raycastQuery];
-                        [raycastQuery release];
-                        
-                        // Process the results and push them into the results list.
-                        for (ARRaycastResult* result in rayCastResults) {
-                            filteredResults.push_back(transformToHitResult(result.worldTransform));
-                        }
+                        GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                     } else {
-                        // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
-                        auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(ARHitTestResultTypeExistingPlane)];
-                        for (ARHitTestResult* result in hitTestResults) {
-                            filteredResults.push_back(transformToHitResult(result.worldTransform));
-                        }
+                        GetHitTestResultsLegacy(filteredResults, trackableTypes);
                     }
                 }
             }
         }
-        
+
         /**
          Create an ARKit anchor for the given pose.
          */
@@ -1070,6 +1036,87 @@ namespace xr {
             plane.PolygonFormat = PolygonFormat::XYZ;
             updatedPlanes.push_back(plane.ID);
         }
+                
+        // For iOS 13.0 and up make use of the ARRaycastQuery protocol for raycasting against all target trackable types.
+        API_AVAILABLE(ios(13.0))
+        void GetHitTestResultsForiOS13(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const{
+            // Push the camera origin into a simd_float3.
+            auto cameraOrigin = simd_make_float3(
+                                                 ActiveFrameViews[0].Space.Pose.Position.X,
+                                                 ActiveFrameViews[0].Space.Pose.Position.Y,
+                                                 ActiveFrameViews[0].Space.Pose.Position.Z);
+            
+            // Push the camera direction into a simd_quaternion.
+            auto cameraDirection = simd_quaternion(
+                                                   ActiveFrameViews[0].Space.Pose.Orientation.X,
+                                                   ActiveFrameViews[0].Space.Pose.Orientation.Y,
+                                                   ActiveFrameViews[0].Space.Pose.Orientation.Z,
+                                                   ActiveFrameViews[0].Space.Pose.Orientation.W);
+            
+            // Load the offset ray and direction into simd equivalents.
+            auto offsetOrigin = simd_make_float3(offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z);
+            auto offsetDirection = simd_make_float3(offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z);
+            auto rayOrigin = cameraOrigin + offsetOrigin;
+            auto rayDirection = simd_act(cameraDirection, offsetDirection);
+            
+            // Check which types we are meant to raycast against and perform their respective queries.
+            if ((trackableTypes & xr::HitTestTrackableType::MESH) != xr::HitTestTrackableType::NONE) {
+                PerformRaycastQueryAgainstTarget(filteredResults, ARRaycastTargetExistingPlaneGeometry, rayOrigin, rayDirection);
+            }
+            
+            if ((trackableTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE) {
+                PerformRaycastQueryAgainstTarget(filteredResults, ARRaycastTargetEstimatedPlane, rayOrigin, rayDirection);
+            }
+            
+            if ((trackableTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE) {
+                PerformRaycastQueryAgainstTarget(filteredResults, ARRaycastTargetExistingPlaneInfinite, rayOrigin, rayDirection);
+            }
+        }
+        
+        API_AVAILABLE(ios(13.0))
+        void PerformRaycastQueryAgainstTarget(std::vector<HitResult>& filteredResults, ARRaycastTarget targetType, simd_float3 origin, simd_float3 direction) const {
+            auto raycastQuery = [[ARRaycastQuery alloc]
+                                 initWithOrigin:origin
+                                 direction:direction
+                                 allowingTarget:targetType
+                                 alignment:ARRaycastTargetAlignmentAny];
+            
+            // Perform the actual raycast.
+            auto rayCastResults = [session raycast:raycastQuery];
+            [raycastQuery release];
+            
+            // Process the results and push them into the results list.
+            for (ARRaycastResult* result in rayCastResults) {
+                filteredResults.push_back(transformToHitResult(result.worldTransform));
+            }
+        }
+        
+        // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
+        void GetHitTestResultsLegacy(std::vector<HitResult>& filteredResults, xr::HitTestTrackableType trackableTypes) const {
+            // First set the type filter based on the requested trackable types.
+            ARHitTestResultType typeFilter = 0;
+            if ((trackableTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE) {
+                typeFilter |= ARHitTestResultTypeFeaturePoint;
+            }
+            
+            if ((trackableTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE) {
+                typeFilter |= ARHitTestResultTypeExistingPlane;
+            }
+
+            if ((trackableTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE) {
+                if (@available(iOS 11.3, *)) {
+                    typeFilter |= ARHitTestResultTypeExistingPlaneUsingGeometry;
+                } else {
+                    typeFilter |= ARHitTestResultTypeExistingPlaneUsingExtent;
+                }
+            }
+
+            // Now perform the actual hit test and process the results
+            auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            for (ARHitTestResult* result in hitTestResults) {
+                filteredResults.push_back(transformToHitResult(result.worldTransform));
+            }
+        }
     };
 
     struct System::Session::Frame::Impl {
@@ -1084,6 +1131,7 @@ namespace xr {
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
         , Planes{ sessionImpl.Planes }
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
@@ -1096,8 +1144,8 @@ namespace xr {
         m_impl->sessionImpl.DrawFrame();
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const {
-        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
+        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr) const {
@@ -1165,5 +1213,11 @@ namespace xr {
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
         m_impl->SetPlaneDetectionEnabled(enabled);
+    }
+
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
+    {
+        // Point cloud system not yet supported.
+        return false;
     }
 }
