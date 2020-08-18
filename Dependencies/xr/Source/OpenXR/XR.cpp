@@ -997,18 +997,41 @@ namespace xr
 
     System::Session::Frame::~Frame()
     {
-        // EndFrame can submit mutiple layers, but we only support one at the moment.
-        XrCompositionLayerBaseHeader* layersPtr{};
+        std::vector<XrCompositionLayerProjection> layers{};
 
-        // The projection layer consists of projection layer views.
-        // This must be declared out here because layers is a vector of pointer, so the layer struct
-        // must not go out of scope before xrEndFrame() is called.
-        XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+        XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
+        frameEndInfo.displayTime = m_impl->displayTime;
+        frameEndInfo.environmentBlendMode = m_impl->sessionImpl.HmdImpl.ViewProperties.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).BlendMode;
+
+        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo{
+            XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT};
+        std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
+
+        // Chain secondary view configuration layers data to endFrameInfo
+        if (m_impl->sessionImpl.HmdImpl.Extensions->SecondaryViewConfigurationSupported &&
+            m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0) {
+            for (auto& secondaryViewConfigType : m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes) {
+                auto& secondaryViewConfig = m_impl->sessionImpl.RenderResources.ViewStates.at(secondaryViewConfigType);
+                if (secondaryViewConfig.Active) {
+                    activeSecondaryViewConfigLayerInfos.emplace_back(
+                        XrSecondaryViewConfigurationLayerInfoMSFT{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_LAYER_INFO_MSFT,
+                                                                  nullptr,
+                                                                  secondaryViewConfigType,
+                                                                  m_impl->sessionImpl.HmdImpl.ViewProperties.at(secondaryViewConfigType).BlendMode });
+                }
+            }
+
+            if (activeSecondaryViewConfigLayerInfos.size() > 0) {
+                frameEndSecondaryViewConfigInfo.viewConfigurationCount = (uint32_t)activeSecondaryViewConfigLayerInfos.size();
+                frameEndSecondaryViewConfigInfo.viewConfigurationLayersInfo = activeSecondaryViewConfigLayerInfos.data();
+                xr::InsertExtensionStruct(frameEndInfo, frameEndSecondaryViewConfigInfo);
+            }
+        }
 
         if (m_impl->shouldRender)
         {
             auto& renderResources = m_impl->sessionImpl.RenderResources;
-        
+
             XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 
             for (const auto& [type, swapchains] : renderResources.ColorSwapchains)
@@ -1032,18 +1055,38 @@ namespace xr
                     }
                 }
             }
-        
+
+            layers.resize(1 + activeSecondaryViewConfigLayerInfos.size());
+
             // Inform the runtime to consider alpha channel during composition
             // The primary display on Hololens has additive environment blend mode. It will ignore alpha channel.
             // But mixed reality capture has alpha blend mode display and use alpha channel to blend content to environment.
-            layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-        
-            // TODO - validate what all is needed here
-            layer.space = m_impl->sessionImpl.SceneSpace;
-            layer.viewCount = static_cast<uint32_t>(renderResources.ProjectionLayerViews.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).size());
-            layer.views = renderResources.ProjectionLayerViews.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).data();
-        
-            layersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer);
+            layers[0] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+            auto& primaryLayer = layers[0];
+            primaryLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+            primaryLayer.space = m_impl->sessionImpl.SceneSpace;
+            primaryLayer.viewCount = static_cast<uint32_t>(renderResources.ProjectionLayerViews.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).size());
+            primaryLayer.views = renderResources.ProjectionLayerViews.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).data();
+            auto layersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&primaryLayer);
+            frameEndInfo.layerCount = 1;
+            frameEndInfo.layers = &layersPtr;
+                    
+            if (m_impl->sessionImpl.HmdImpl.Extensions->SecondaryViewConfigurationSupported &&
+                activeSecondaryViewConfigLayerInfos.size() > 0) {
+
+                for (size_t i = 0; i < activeSecondaryViewConfigLayerInfos.size(); i++) {
+                    XrSecondaryViewConfigurationLayerInfoMSFT& secondaryViewLayerInfo = activeSecondaryViewConfigLayerInfos.at(i);
+                    layers[i + 1] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+                    XrCompositionLayerProjection& secondaryViewLayer = layers.at(i + 1);
+                    secondaryViewLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+                    secondaryViewLayer.space = m_impl->sessionImpl.SceneSpace;
+                    secondaryViewLayer.viewCount = static_cast<uint32_t>(renderResources.ProjectionLayerViews.at(secondaryViewLayerInfo.viewConfigurationType).size());
+                    secondaryViewLayer.views = renderResources.ProjectionLayerViews.at(secondaryViewLayerInfo.viewConfigurationType).data();
+                    secondaryViewLayerInfo.layerCount = 1;
+                    XrCompositionLayerBaseHeader* secondaryLayersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&secondaryViewLayer);
+                    secondaryViewLayerInfo.layers = &secondaryLayersPtr;
+                }
+            }
         }
 
 #ifdef _DEBUG
@@ -1058,13 +1101,7 @@ namespace xr
             texture->SetPrivateData({0xD4544440, 0x90B9, 0x4815, 0x8B, 0x99, 0x18, 0xC0, 0x23, 0xA5, 0x73, 0xF1}, sizeof(dummy), &dummy);
         }
 #endif
-
-        // Submit the composition layers for the predicted display time.
-        XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
-        frameEndInfo.displayTime = m_impl->displayTime;
-        frameEndInfo.environmentBlendMode = m_impl->sessionImpl.HmdImpl.ViewProperties.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).BlendMode;
-        frameEndInfo.layerCount = m_impl->shouldRender ? 1 : 0;
-        frameEndInfo.layers = &layersPtr;
+        
         XrAssert(xrEndFrame(m_impl->sessionImpl.Session, &frameEndInfo));
     }
 
