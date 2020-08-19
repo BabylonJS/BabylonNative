@@ -10,8 +10,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
-    "@babylonjs/core": "4.2.0-alpha.31",
-    "@babylonjs/loaders": "4.2.0-alpha.31",
+    "@babylonjs/core": "4.2.0-alpha.33",
+    "@babylonjs/loaders": "4.2.0-alpha.33",
     "@babylonjs/react-native": "file:../../Modules/@babylonjs/react-native",
     "@react-native-community/slider": "^2.0.9",
     "logkitty": "^0.7.1",
