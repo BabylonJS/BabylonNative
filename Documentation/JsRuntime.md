@@ -34,7 +34,7 @@ By avoiding taking a dependency on any of these implementation-level
 specifics, Babylon Native enables the creation of a `JsRuntime` (and, 
 likewise, Babylon Native components which depend on `JsRuntime`) in a 
 wide variety of circumstances. Several of these usages are discussed in 
-more detail [below](#usages).
+more detail [below](#usages-owning-and-"piggybacking"-babylon-native-apps).
 
 Without any specific knowledge of implementation details, then, 
 `JsRuntime` must answer two fundamental questions for dependent Babylon
@@ -77,7 +77,7 @@ engine with a JavaScript thread, then there must be _some way_ to get onto
 that thread. `Dispatch(...)` provides a unified, reliable, and thread-safe
 way to encapsulate that assumption, and the actual implementation of the
 `std::function` that does the dispatching is entirely dependent on the
-[usage](#usages).
+[usage](#usages-owning-and-"piggybacking"-babylon-native-apps).
 
 What little functionality does exist in the implementation of `JsRuntime`
 is almost entirely constructors, and the reason for this implementation is
