@@ -259,6 +259,33 @@ namespace xr
             std::vector<Frame::Plane> Planes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
+            
+        struct HandJointData {
+            void InitializeXRHandJoints()
+            {
+                locations.jointCount = XR_HAND_JOINT_COUNT_EXT;
+                locations.jointLocations = jointLocations;
+            };
+
+            XrHandJointLocationEXT jointLocations[XR_HAND_JOINT_COUNT_EXT];
+            XrHandJointLocationsEXT locations{XR_TYPE_HAND_JOINT_LOCATIONS_EXT};
+        };
+
+        struct HandInfo {
+            XrHandEXT hand{};
+            XrHandTrackerEXT handTracker{};
+            XrSpace handSpace{};
+
+            HandJointData handJointData{};
+        };
+        
+        struct
+        {
+            XrBool32 supportsHandTracking{ false };
+            XrBool32 HandsInitialized{ false };
+
+            std::array<HandInfo, 2> handsInfo;
+        } HandData;
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -317,7 +344,9 @@ namespace xr
         void RequestEndSession()
         {
             const auto& session = HmdImpl.Context.Session();
-            xrRequestExitSession(session);
+
+            UninitializeHandResources();
+            xrRequestExitSession(Session);
         }
 
         Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
@@ -485,9 +514,14 @@ namespace xr
 
         void InitializeRenderResources(XrInstance instance, XrSystemId systemId)
         {
-            // Read graphics properties for preferred swapchain length and logging.
-            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
+            // Read graphics properties for preferred swapchain length and logging, and hand tracking availability.
+            XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties{ XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
+            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES, &handTrackingSystemProperties };
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
+
+            // Initialize the hand resources
+            HandData.supportsHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Extensions->HandTrackingSupported;
+            InitializeHandResources();
 
             const XrViewConfigurationType primaryType = HmdImpl.PrimaryViewConfigurationType;
             auto& primaryRenderResource = RenderResources.ResourceMap[primaryType];
@@ -499,6 +533,44 @@ namespace xr
 
             // Create the swapchains for the primary view configuration type. Secondary view configuration type swapchains will be populated once activated.
             PopulateSwapchains(primaryRenderResource.ViewState);
+        }
+
+        void InitializeHandResources()
+        {
+            if (!HandData.supportsHandTracking)
+            {
+                return;
+            }
+
+            constexpr std::array<XrHandEXT, 2> HANDEDNESS_EXT{XR_HAND_LEFT_EXT, XR_HAND_RIGHT_EXT};
+            XrHandTrackerCreateInfoEXT trackerCreateInfo{XR_TYPE_HAND_TRACKER_CREATE_INFO_EXT};
+            trackerCreateInfo.handJointSet = XR_HAND_JOINT_SET_DEFAULT_EXT;
+
+            for (int i = 0; i < HandData.handsInfo.size(); i++)
+            {
+                // Create the hand trackers
+                HandData.handsInfo[i].hand = HANDEDNESS_EXT[i];
+                trackerCreateInfo.hand = HANDEDNESS_EXT[i];
+                XrCheck(HmdImpl.Extensions->xrCreateHandTrackerEXT(Session, &trackerCreateInfo, &HandData.handsInfo[i].handTracker));
+                    
+                // Preallocate joint buffers
+                HandData.handsInfo[i].handJointData.InitializeXRHandJoints();
+            }
+
+            HandData.HandsInitialized = true;
+        }
+
+        void UninitializeHandResources()
+        {
+            if (HandData.HandsInitialized)
+            {
+                for (HandInfo handInfo : HandData.handsInfo)
+                {
+                    HmdImpl.Extensions->xrDestroyHandTrackerEXT(handInfo.handTracker);
+                }
+
+                HandData.HandsInitialized = false;
+            }
         }
 
         void InitializeActionResources(XrInstance instance)
@@ -1098,6 +1170,60 @@ namespace xr
                         inputSource.AimSpace.Pose.Orientation.Y = location.pose.orientation.y;
                         inputSource.AimSpace.Pose.Orientation.Z = location.pose.orientation.z;
                         inputSource.AimSpace.Pose.Orientation.W = location.pose.orientation.w;
+                    }
+                }
+                
+                // Get joint data
+                if (sessionImpl.HandData.HandsInitialized)
+                {
+                    XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
+                    jointLocateInfo.baseSpace = m_impl->sessionImpl.SceneSpace;
+                    jointLocateInfo.time = m_impl->displayTime;
+
+                    auto handInfo = sessionImpl.HandData.handsInfo[idx];
+                    XrCheck(sessionImpl.HmdImpl.Extensions->xrLocateHandJointsEXT(handInfo.handTracker, &jointLocateInfo, &handInfo.handJointData.locations));
+                    
+                    auto& inputSource = InputSources[idx];
+                    inputSource.JointsTrackedThisFrame = handInfo.handJointData.locations.isActive;
+                        
+                    // Set up the handJoints vector, skipping the palm joint as webXR doesn't support it
+                    // xrLocateHandJointsEXT will always return the full joint set (or an error), so jointCount should never change
+                    if (inputSource.HandJoints.size() != handInfo.handJointData.locations.jointCount - 1)
+                    {
+                        inputSource.HandJoints = std::vector<JointSpace>(handInfo.handJointData.locations.jointCount - 1);
+                        assert(inputSource.HandJoints.size() == handInfo.handJointData.locations.jointCount - 1);
+                    }
+                    
+                    // Set the joints to tracked, and populate the fields. Otherwise, set joints to untracked
+                    if (inputSource.JointsTrackedThisFrame)
+                    {
+                        constexpr XrSpaceLocationFlags RequiredFlags =
+                            XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                            XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+                            XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
+                            XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+
+                        for (uint32_t i = 0; i < handInfo.handJointData.locations.jointCount - 1; i++)
+                        {
+                            auto joint = handInfo.handJointData.jointLocations[i + 1];
+
+                            inputSource.HandJoints[i].PoseRadius = joint.radius;
+                            inputSource.HandJoints[i].Pose.Position.X = joint.pose.position.x;
+                            inputSource.HandJoints[i].Pose.Position.Y = joint.pose.position.y;
+                            inputSource.HandJoints[i].Pose.Position.Z = joint.pose.position.z;
+                            inputSource.HandJoints[i].Pose.Orientation.X = joint.pose.orientation.x;
+                            inputSource.HandJoints[i].Pose.Orientation.Y = joint.pose.orientation.y;
+                            inputSource.HandJoints[i].Pose.Orientation.Z = joint.pose.orientation.z;
+                            inputSource.HandJoints[i].Pose.Orientation.W = joint.pose.orientation.w;
+                            inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
+                        }
+                    }
+                    else
+                    {
+                        for (auto& joint : inputSource.HandJoints)
+                        {
+                            joint.PoseTracked = false;
+                        }
                     }
                 }
             }

@@ -134,6 +134,61 @@ namespace
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
     }
 
+    void SetXRHandInputSource(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    {
+        // Don't set hands up if hand data isn't supported/available
+        if (!inputSource.JointsTrackedThisFrame)
+        {
+            return;
+        }
+
+        constexpr const size_t HAND_JOINT_COUNT{25};
+        constexpr std::array<const char*, HAND_JOINT_COUNT> HAND_JOINT_NAMES{
+            "WRIST",
+
+            "THUMB_METACARPAL",
+            "THUMB_PHALANX_PROXIMAL",
+            "THUMB_PHALANX_DISTAL",
+            "THUMB_PHALANX_TIP",
+
+            "INDEX_METACARPAL",
+            "INDEX_PHALANX_PROXIMAL",
+            "INDEX_PHALANX_INTERMEDIATE",
+            "INDEX_PHALANX_DISTAL",
+            "INDEX_PHALANX_TIP",
+
+            "MIDDLE_METACARPAL",
+            "MIDDLE_PHALANX_PROXIMAL",
+            "MIDDLE_PHALANX_INTERMEDIATE",
+            "MIDDLE_PHALANX_DISTAL",
+            "MIDDLE_PHALANX_TIP",
+
+            "RING_METACARPAL",
+            "RING_PHALANX_PROXIMAL",
+            "RING_PHALANX_INTERMEDIATE",
+            "RING_PHALANX_DISTAL",
+            "RING_PHALANX_TIP",
+
+            "LITTLE_METACARPAL",
+            "LITTLE_PHALANX_PROXIMAL",
+            "LITTLE_PHALANX_INTERMEDIATE",
+            "LITTLE_PHALANX_DISTAL",
+            "LITTLE_PHALANX_TIP"};
+
+        auto env = jsInputSource.Env();
+        auto handJointCollection = Napi::Array::New(env, HAND_JOINT_COUNT);
+
+        for (size_t i = 0; i < HAND_JOINT_COUNT; i++)
+        {
+            auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
+            handJointCollection.Set((int)i, napiJoint);
+            handJointCollection.Set(Napi::String::New(env, HAND_JOINT_NAMES[i]), (int)i);
+        }
+
+        handJointCollection.Set("length", (int)HAND_JOINT_COUNT);
+        jsInputSource.Set("hand", handJointCollection);
+    }
+
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
     {
         constexpr std::array<const char*, 2> HANDEDNESS_STRINGS{
@@ -145,6 +200,7 @@ namespace
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
         SetXRInputSourceSpaces(jsInputSource, inputSource);
+        SetXRHandInputSource(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
@@ -1395,6 +1451,7 @@ namespace Babylon
                         InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                        InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
@@ -1415,8 +1472,10 @@ namespace Babylon
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
                 m_jsPose.Set("transform", m_jsTransform.Value());
+                m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
             void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
@@ -1473,6 +1532,7 @@ namespace Babylon
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
+            Napi::ObjectReference m_jsJointPose{};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
@@ -1502,6 +1562,24 @@ namespace Babylon
                     XRPose* pose = XRPose::Unwrap(napiPose);
                     pose->Update(xrSpace->GetTransform());
                     return std::move(napiPose);
+                }
+            }
+
+            Napi::Value GetJointPose(const Napi::CallbackInfo& info)
+            {
+                assert(info[0].IsExternal());
+
+                const auto& jointSpace = *info[0].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
+
+                if (jointSpace.PoseTracked)
+                {
+                    m_transform.Update(jointSpace, false);
+                    m_jsJointPose.Set("radius", jointSpace.PoseRadius);
+                    return m_jsJointPose.Value();
+                }
+                else
+                {
+                    return info.Env().Undefined();
                 }
             }
 
@@ -2215,6 +2293,9 @@ namespace Babylon
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
+
+            // XRHand needs to be defined in order to use hand tracking, but we don't actually need the interface
+            env.Global().Set("XRHand", true);
         }
     }
 }

@@ -140,6 +140,12 @@ namespace xr
                     Pose Pose;
                 };
 
+                struct JointSpace : Space
+                {
+                    bool PoseTracked{ false };
+                    float PoseRadius{};
+                };
+
                 struct View
                 {
                     Space Space{};
@@ -178,9 +184,11 @@ namespace xr
 
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
+                    bool JointsTrackedThisFrame{};
                     Space GripSpace{};
                     Space AimSpace{};
                     HandednessEnum Handedness{};
+                    std::vector<JointSpace> HandJoints{};
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
