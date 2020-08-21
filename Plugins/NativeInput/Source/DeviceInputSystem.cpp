@@ -100,8 +100,8 @@ namespace Babylon::Plugins
         uint32_t inputIndex = info[2].As<Napi::Number>().Uint32Value();
         try
         {
-            std::optional<int32_t> inputValue = m_nativeInput.PollInput(static_cast<DeviceType>(deviceType), deviceSlot, inputIndex);
-            return inputValue ? Napi::Value::From(Env(), *inputValue) : Env().Null();
+            int32_t inputValue = m_nativeInput.PollInput(static_cast<DeviceType>(deviceType), deviceSlot, inputIndex);
+            return Napi::Value::From(Env(), inputValue);
         }
         catch (const std::runtime_error& exception)
         {
