@@ -156,12 +156,10 @@ namespace Babylon
 
         void Update() const
         {
-            // TODO revert this workaround
             bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
-            // Don't do any of this because it clears the extra view and hides stuff
             // discard any previous set state
-            // bgfx::discard();
-            // bgfx::touch(m_viewId);
+            bgfx::discard();
+            bgfx::touch(m_viewId);
         }
 
         uint16_t m_viewId{};
