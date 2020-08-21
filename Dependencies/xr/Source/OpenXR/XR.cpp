@@ -343,14 +343,12 @@ namespace xr
             SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
 
             uint32_t viewCount = static_cast<uint32_t>(viewState.Views.size());
-            RenderResources.ColorSwapchains[viewState.Type] = {};
-            RenderResources.DepthSwapchains[viewState.Type] = {};
+            RenderResources.ColorSwapchains[viewState.Type].resize(viewCount);
+            RenderResources.DepthSwapchains[viewState.Type].resize(viewCount);
             for (uint32_t idx = 0; idx < viewCount; ++idx)
             {
                 const XrViewConfigurationView& view = viewState.ViewConfigViews[idx];
-
-                RenderResources.ColorSwapchains[viewState.Type].push_back(
-                    CreateSwapchain(Session,
+                    PopulateSwapchain(Session,
                         colorSwapchainFormat,
                         view.recommendedImageRectWidth,
                         view.recommendedImageRectHeight,
@@ -358,9 +356,9 @@ namespace xr
                         view.recommendedSwapchainSampleCount,
                         0,
                         XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
-                        viewState.Type));
-                RenderResources.DepthSwapchains[viewState.Type].push_back(
-                    CreateSwapchain(Session,
+                        viewState.Type,
+                        RenderResources.ColorSwapchains[viewState.Type][idx]);
+                    PopulateSwapchain(Session,
                         depthSwapchainFormat,
                         view.recommendedImageRectWidth,
                         view.recommendedImageRectHeight,
@@ -368,13 +366,13 @@ namespace xr
                         view.recommendedSwapchainSampleCount,
                         0,
                         XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                        viewState.Type));
+                        viewState.Type,
+                        RenderResources.DepthSwapchains[viewState.Type][idx]);
             }
         }
 
         void CleanupSwapchains(ViewConfigurationState& viewState)
         {
-            // TODO - unclear if this is the appropriate way to cleanup a swap chain. seems wrong
             RenderResources.ColorSwapchains[viewState.Type].clear();
             RenderResources.DepthSwapchains[viewState.Type].clear();
         }
@@ -490,7 +488,7 @@ namespace xr
             XrCheck(xrAttachSessionActionSets(Session, &attachInfo));
         }
 
-        Swapchain CreateSwapchain(XrSession session,
+        void PopulateSwapchain(XrSession session,
             SwapchainFormat format,
             int32_t width,
             int32_t height,
@@ -498,9 +496,9 @@ namespace xr
             uint32_t sampleCount,
             XrSwapchainCreateFlags createFlags,
             XrSwapchainUsageFlags usageFlags,
-            XrViewConfigurationType viewConfigType)
+            XrViewConfigurationType viewConfigType,
+            Swapchain& swapchain)
         {
-            Swapchain swapchain;
             swapchain.Format = format;
             swapchain.Width = width;
             swapchain.Height = height;
@@ -517,9 +515,12 @@ namespace xr
             swapchainCreateInfo.createFlags = createFlags;
             swapchainCreateInfo.usageFlags = usageFlags;
 
-            XrSecondaryViewConfigurationSwapchainCreateInfoMSFT secondaryViewConfigCreateInfo{
-                XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT};
-            if (HmdImpl.Extensions->SecondaryViewConfigurationSupported) {
+            XrSecondaryViewConfigurationSwapchainCreateInfoMSFT secondaryViewConfigCreateInfo
+            {
+                XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT
+            };
+            if (HmdImpl.Extensions->SecondaryViewConfigurationSupported)
+            {
                 secondaryViewConfigCreateInfo.viewConfigurationType = viewConfigType;
                 swapchainCreateInfo.next = &secondaryViewConfigCreateInfo;
             }
@@ -531,8 +532,6 @@ namespace xr
             swapchain.Images.resize(chainLength, { SWAPCHAIN_IMAGE_TYPE_ENUM });
             XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &chainLength,
                 reinterpret_cast<XrSwapchainImageBaseHeader*>(swapchain.Images.data())));
-
-            return swapchain;
         }
 
         void SelectSwapchainPixelFormats(SwapchainFormat& colorFormat, SwapchainFormat& depthFormat)
@@ -585,8 +584,10 @@ namespace xr
                 XrSessionBeginInfo sessionBeginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
                 sessionBeginInfo.primaryViewConfigurationType = HmdImpl.PrimaryViewConfigurationType;
 
-                XrSecondaryViewConfigurationSessionBeginInfoMSFT secondaryViewConfigInfo{
-                    XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SESSION_BEGIN_INFO_MSFT };
+                XrSecondaryViewConfigurationSessionBeginInfoMSFT secondaryViewConfigInfo
+                {
+                    XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SESSION_BEGIN_INFO_MSFT
+                };
 
                 if (HmdImpl.Extensions->SecondaryViewConfigurationSupported &&
                     HmdImpl.Extensions->FirstPersonObserverSupported &&
@@ -677,12 +678,9 @@ namespace xr
             assert(viewCountOutput == renderResources.ColorSwapchains[viewConfigType].size());
             assert(viewCountOutput == renderResources.DepthSwapchains[viewConfigType].size());
 
-            // TODO check if these declarations are needed
-            renderResources.ProjectionLayerViews[viewConfigType] = {};
             renderResources.ProjectionLayerViews[viewConfigType].resize(viewCountOutput);
             if (sessionImpl.HmdImpl.Extensions->DepthExtensionSupported)
             {
-                renderResources.DepthInfoViews[viewConfigType] = {};
                 renderResources.DepthInfoViews[viewConfigType].resize(viewCountOutput);
             }
         }
@@ -1003,8 +1001,10 @@ namespace xr
         frameEndInfo.displayTime = m_impl->displayTime;
         frameEndInfo.environmentBlendMode = m_impl->sessionImpl.HmdImpl.ViewProperties.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).BlendMode;
 
-        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo{
-            XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT};
+        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo
+        {
+            XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT
+        };
         std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
 
         // Chain secondary view configuration layers data to endFrameInfo
@@ -1014,10 +1014,13 @@ namespace xr
                 auto& secondaryViewConfig = m_impl->sessionImpl.RenderResources.ViewStates.at(secondaryViewConfigType);
                 if (secondaryViewConfig.Active) {
                     activeSecondaryViewConfigLayerInfos.emplace_back(
-                        XrSecondaryViewConfigurationLayerInfoMSFT{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_LAYER_INFO_MSFT,
-                                                                  nullptr,
-                                                                  secondaryViewConfigType,
-                                                                  m_impl->sessionImpl.HmdImpl.ViewProperties.at(secondaryViewConfigType).BlendMode });
+                        XrSecondaryViewConfigurationLayerInfoMSFT
+                        {
+                            XR_TYPE_SECONDARY_VIEW_CONFIGURATION_LAYER_INFO_MSFT,
+                            nullptr,
+                            secondaryViewConfigType,
+                            m_impl->sessionImpl.HmdImpl.ViewProperties.at(secondaryViewConfigType).BlendMode
+                        });
                 }
             }
 
