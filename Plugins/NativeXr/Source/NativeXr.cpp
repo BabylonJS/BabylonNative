@@ -426,6 +426,7 @@ namespace Babylon
             static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
+            static constexpr size_t MAX_EYE_INDEX = 3;
 
             static auto IndexToEye(size_t idx)
             {
@@ -2082,7 +2083,7 @@ namespace Babylon
 
         private:
             Napi::ObjectReference m_jsSession{};
-            std::array<Napi::ObjectReference, 3> m_jsRenderTargetTextures;
+            std::array<Napi::ObjectReference, XREye::MAX_EYE_INDEX> m_jsRenderTargetTextures;
             XRSession& m_session;
 
             Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
