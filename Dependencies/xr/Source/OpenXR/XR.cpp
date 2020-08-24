@@ -336,7 +336,8 @@ namespace xr
                 }
             }
 
-            throw std::exception{/*unknown view index*/ };
+            // On emulators, SecondaryViewConfigurationTypes aren't populated but still need a size
+            return { 0, 0 };
         }
 
         void PopulateSwapchains(ViewConfigurationState& viewState)
