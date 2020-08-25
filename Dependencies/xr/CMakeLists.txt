@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
-set(SOURCES "Include/XR.h")
+set(SOURCES "Include/XR.h"
+            "Source/Shared/XRHelpers.h")
 
 if (ANDROID)
     set(SOURCES ${SOURCES}
@@ -15,7 +16,13 @@ else()
 
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp"
-        "Source/OpenXR/XrPlatformCommon.h")
+        "Source/OpenXR/XrPlatformCommon.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrToString.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrError.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrExtensions.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrViewConfiguration.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrEnumerate.h"
+        "Dependencies/OpenXR-MixedReality/shared/XrUtility/XrStruct.h")
 
     if(WIN32)
         set(SOURCES ${SOURCES} "Source/OpenXR/Windows/XrPlatform.h")
@@ -55,5 +62,6 @@ target_link_libraries(xr
     PUBLIC arcana)
 
 target_include_directories(xr PUBLIC "Include")
+target_include_directories(xr PRIVATE "Source/Shared")
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

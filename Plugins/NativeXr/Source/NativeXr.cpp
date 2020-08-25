@@ -213,6 +213,16 @@ namespace Babylon
         {
             m_session->SetDepthsNearFar(depthNear, depthFar);
         }
+        
+        void SetPlaneDetectionEnabled(bool enabled)
+        {
+            m_session->SetPlaneDetectionEnabled(enabled);
+        }
+
+        bool TrySetFeaturePointCloudEnabled(bool enabled)
+        {
+            return m_session->TrySetFeaturePointCloudEnabled(enabled);
+        }
 
     private:
         std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
@@ -281,6 +291,8 @@ namespace Babylon
             m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
             m_frame.reset();
         } while (!shouldEndSession);
+        // Clear frameBufferData and destroy bgfx FrameBuffers
+        m_texturesToFrameBuffers.clear();
         m_session.reset();
     }
 
@@ -297,6 +309,11 @@ namespace Babylon
             auto it = m_texturesToFrameBuffers.find(texPtr);
             if (it != m_texturesToFrameBuffers.end())
             {
+                if (&m_engineImpl->GetFrameBufferManager().GetBound() == it->second.get())
+                {
+                    // bind back buffer because currently bound FrameBuffer will be destroyed
+                    m_engineImpl->GetFrameBufferManager().Unbind(it->second.get());
+                }
                 m_texturesToFrameBuffers.erase(it);
             }
         });
@@ -397,11 +414,19 @@ namespace Babylon
             static constexpr auto UNBOUNDED{"unbounded"};
         };
 
+        struct XRHitTestTrackableType
+        {
+            static constexpr auto POINT{"point"};
+            static constexpr auto PLANE{"plane"};
+            static constexpr auto MESH{"mesh"};
+        };
+
         struct XREye
         {
-            // static constexpr auto NONE{"none"};
+            static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
+            static constexpr size_t MAX_EYE_INDEX = 3;
 
             static auto IndexToEye(size_t idx)
             {
@@ -411,6 +436,8 @@ namespace Babylon
                         return LEFT;
                     case 1:
                         return RIGHT;
+                    case 2:
+                        return NONE;
                     default:
                         throw std::exception{/* Unsupported idx */};
                 }
@@ -425,6 +452,10 @@ namespace Babylon
                 else if (eye == RIGHT)
                 {
                     return 1;
+                }
+                else if (eye == NONE)
+                {
+                    return 2;
                 }
                 else
                 {
@@ -614,6 +645,7 @@ namespace Babylon
                         InstanceAccessor("eye", &XRView::GetEye, nullptr),
                         InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
                         InstanceAccessor("transform", &XRView::GetTransform, nullptr),
+                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -630,10 +662,11 @@ namespace Babylon
                 , m_eye{XREye::IndexToEye(m_eyeIdx)}
                 , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
                 , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info))}
+                , m_isFirstPersonObserver{ false }
             {
             }
 
-            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space)
+            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space, bool isFirstPersonObserver)
             {
                 if (eyeIdx != m_eyeIdx)
                 {
@@ -644,6 +677,8 @@ namespace Babylon
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
                 XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
+                
+                m_isFirstPersonObserver = isFirstPersonObserver;
             }
 
         private:
@@ -651,6 +686,7 @@ namespace Babylon
             gsl::czstring<> m_eye{};
             Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
             Napi::ObjectReference m_rigidTransform{};
+            bool m_isFirstPersonObserver{};
 
             Napi::Value GetEye(const Napi::CallbackInfo& info)
             {
@@ -665,6 +701,11 @@ namespace Babylon
             Napi::Value GetTransform(const Napi::CallbackInfo&)
             {
                 return m_rigidTransform.Value();
+            }
+
+            Napi::Value IsFirstPersonObserver(const Napi::CallbackInfo& info)
+            {
+                return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
             }
         };
 
@@ -701,10 +742,14 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space& space, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, gsl::span<const xr::System::Session::Frame::View> views)
             {
-                // Update the transform.
-                m_transform.Update(space, true);
+                // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
+                // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
+                if (views.size() > 0)
+                {
+                    m_transform.Update(views[0].Space, true);
+                }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
@@ -735,7 +780,7 @@ namespace Babylon
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
                 {
                     const auto& view = views[idx];
-                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space);
+                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space, view.IsFirstPersonObserver);
                 }
             }
 
@@ -890,36 +935,14 @@ namespace Babylon
             {
                 xr::Ray nativeRay{{0, 0, 0}, {0, 0, -1}};
                 auto originObject = m_origin.Value();
-                if (originObject.HasOwnProperty("x"))
-                {
-                    nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
-                }
-
-                if (originObject.HasOwnProperty("y"))
-                {
-                    nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
-                }
-
-                if (originObject.HasOwnProperty("z"))
-                {
-                    nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
-                }
+                nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
+                nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
+                nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
 
                 auto directionObject = m_direction.Value();
-                if (directionObject.HasOwnProperty("x"))
-                {
-                    nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
-                }
-
-                if (directionObject.HasOwnProperty("y"))
-                {
-                    nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
-                }
-
-                if (directionObject.HasOwnProperty("z"))
-                {
-                    nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
-                }
+                nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
+                nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
+                nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
 
                 return nativeRay;
             }
@@ -1116,7 +1139,7 @@ namespace Babylon
             {
                 auto options = info[0].As<Napi::Object>();
 
-                if (options.HasOwnProperty("space"))
+                if (options.Has("space"))
                 {
                     auto spaceValue = options.Get("space");
 
@@ -1127,10 +1150,37 @@ namespace Babylon
                     }
                 }
 
-                if (options.HasOwnProperty("offsetRay"))
+                if (options.Has("offsetRay"))
                 {
                     m_offsetRay = Napi::Persistent(options.Get("offsetRay").As<Napi::Object>());
                     hasOffsetRay = true;
+                }
+
+                if (options.Has("entityTypes"))
+                {
+                    const auto entityTypeArray = options.Get("entityTypes").As<Napi::Array>();
+                    for (uint32_t i = 0; i < entityTypeArray.Length(); i++)
+                    {
+                        const auto entityType = entityTypeArray.Get(i).As<Napi::String>().Utf8Value();
+                        if (entityType == XRHitTestTrackableType::POINT)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::POINT;
+                        }
+                        else if (entityType == XRHitTestTrackableType::PLANE)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::PLANE;
+                        }
+                        else if (entityType == XRHitTestTrackableType::MESH)
+                        {
+                            m_entityTypes |= xr::HitTestTrackableType::MESH;
+                        }
+                    }
+                }
+
+                // Default to MESH if unspecified.
+                if (m_entityTypes == xr::HitTestTrackableType::NONE)
+                {
+                    m_entityTypes = xr::HitTestTrackableType::MESH;
                 }
             }
 
@@ -1144,6 +1194,11 @@ namespace Babylon
                 return hasSpace ? XRReferenceSpace::Unwrap(m_space.Value()) : nullptr;
             }
 
+            xr::HitTestTrackableType GetEntityTypes()
+            {
+                return m_entityTypes;
+            }
+
         private:
             void Cancel(const Napi::CallbackInfo& /*info*/)
             {
@@ -1155,6 +1210,8 @@ namespace Babylon
 
             bool hasOffsetRay = false;
             Napi::ObjectReference m_offsetRay;
+
+            xr::HitTestTrackableType m_entityTypes{xr::HitTestTrackableType::NONE};
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
@@ -1217,6 +1274,110 @@ namespace Babylon
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
         };
 
+        // Implementation of the XRPlane interface: https://github.com/immersive-web/real-world-geometry/blob/master/plane-detection-explainer.md
+        class XRPlane : public Napi::ObjectWrap<XRPlane>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRPlane";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
+                        InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
+                        InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::Env& env)
+            {
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRPlane(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRPlane>{info}
+            {
+            }
+
+            void SetLastUpdatedTime(uint32_t timestamp)
+            {
+                m_lastUpdatedTimestamp = timestamp;
+            }
+
+            void SetNativePlaneId(xr::System::Session::Frame::Plane::Identifier planeID)
+            {
+                m_nativePlaneID = planeID;
+            }
+
+            void SetXRFrame(XRFrame* frame)
+            {
+                m_frame = frame;
+            }
+
+        private:
+            xr::System::Session::Frame::Plane& GetPlane();
+
+            Napi::Value GetPlaneSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+                rigidTransform->Update(GetPlane().Center);
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
+                return std::move(napiSpace);
+            }
+
+            Napi::Value GetPolygon(const Napi::CallbackInfo& info)
+            {
+                // Translate the polygon from a native array to a JS array.
+                auto& nativePlane = GetPlane();
+                auto polygonArray = Napi::Array::New(info.Env(), nativePlane.PolygonSize);
+                for (size_t i = 0; i < nativePlane.PolygonSize; i++)
+                {
+                    auto polygonPoint = Napi::Object::New(info.Env());
+                    if (nativePlane.PolygonFormat == xr::PolygonFormat::XZ)
+                    {
+                        size_t polygonIndex = 2 * i;
+                        polygonPoint.Set("x", nativePlane.Polygon[polygonIndex]);
+                        polygonPoint.Set("y", 0);
+                        polygonPoint.Set("z", nativePlane.Polygon[polygonIndex + 1]);
+                    }
+                    else
+                    {
+                        size_t polygonIndex = 3 * i;
+                        polygonPoint.Set("x", nativePlane.Polygon[polygonIndex]);
+                        polygonPoint.Set("y", nativePlane.Polygon[polygonIndex + 1]);
+                        polygonPoint.Set("z", nativePlane.Polygon[polygonIndex + 2]);
+                    }
+
+                    polygonArray.Set((int)i, polygonPoint);
+                }
+
+                return std::move(polygonArray);
+            }
+
+            Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
+            }
+
+            // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
+            uint32_t m_lastUpdatedTimestamp{0};
+
+            // The underlying native plane.
+            xr::System::Session::Frame::Plane::Identifier m_nativePlaneID{};
+
+            // Pointer to the XRFrame object.
+            XRFrame* m_frame{};
+        };
+
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -1235,6 +1396,8 @@ namespace Babylon
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
+                        InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
+                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1256,7 +1419,7 @@ namespace Babylon
                 m_jsPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const xr::System::Session::Frame& frame)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
@@ -1264,6 +1427,9 @@ namespace Babylon
 
                 // Update anchor positions.
                 UpdateAnchors();
+
+                // Update planes.
+                UpdatePlanes(env, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -1278,7 +1444,7 @@ namespace Babylon
                 xrAnchor->SetAnchor(nativeAnchor);
 
                 // Add the anchor to the list of tracked anchors.
-                m_trackedAnchors.push_back(napiAnchor.Value());
+                m_trackedAnchors.push_back(std::move(napiAnchor));
 
                 // Resolve the promise with the newly created anchor.
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
@@ -1292,11 +1458,17 @@ namespace Babylon
                 m_frame->DeleteAnchor(nativeAnchor);
             }
 
+            xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
+            {
+                return m_frame->GetPlaneByID(planeID);
+            }
+
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
-            std::vector<Napi::Value> m_trackedAnchors{};
+            std::vector<Napi::ObjectReference> m_trackedAnchors{};
+            std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1309,8 +1481,7 @@ namespace Babylon
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-
-                m_xrViewerPose.Update(info, {{{0, 0, 0}, {0, 0, 0, 1}}}, m_frame->Views);
+                m_xrViewerPose.Update(info, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -1350,7 +1521,7 @@ namespace Babylon
 
                 // Get the native results
                 std::vector<xr::HitResult> nativeHitResults{};
-                m_frame->GetHitTestResults(nativeHitResults, nativeRay);
+                m_frame->GetHitTestResults(nativeHitResults, nativeRay, hitTestSource->GetEntityTypes());
 
                 // Translate those results into a napi array.
                 auto results = Napi::Array::New(info.Env(), nativeHitResults.size());
@@ -1380,9 +1551,9 @@ namespace Babylon
                 Napi::Object anchorSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
                 // Loop over the list of tracked anchors, and add them to the set.
-                for (Napi::Value napiValue : m_trackedAnchors)
+                for (const Napi::ObjectReference& napiAnchorRef : m_trackedAnchors)
                 {
-                    anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiValue});
+                    anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiAnchorRef.Value()});
                 }
 
                 return std::move(anchorSet);
@@ -1391,10 +1562,10 @@ namespace Babylon
             void UpdateAnchors()
             {
                 // Loop over all anchors and update their state.
-                std::vector<Napi::Value>::iterator anchorIter = m_trackedAnchors.begin();
+                std::vector<Napi::ObjectReference>::iterator anchorIter = m_trackedAnchors.begin();
                 while (anchorIter != m_trackedAnchors.end())
                 {
-                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).As<Napi::Object>());
+                    XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).Value());
                     xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
 
                     // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
@@ -1411,6 +1582,78 @@ namespace Babylon
                     }
                 }
             }
+
+            Napi::Value GetWorldInformation(const Napi::CallbackInfo& info)
+            {
+                // Create a JavaScript object that stores all world information.
+                Napi::Object worldInformationObj = Napi::Object::New(info.Env());
+
+                // Create a set to contain all of the currently tracked planes.
+                Napi::Object planeSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
+
+                // Loop over the list of tracked planes, and add them to the set.
+                for (const auto& [plane, planeNapiValue] : m_trackedPlanes)
+                {
+                    planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue.Value()});
+                }
+
+                // Pass the world information object back to the caller.
+                worldInformationObj.Set("detectedPlanes", planeSet);
+                return std::move(worldInformationObj);
+            }
+
+            Napi::Value GetFeaturePointCloud(const Napi::CallbackInfo& info)
+            {
+                // Get feature points from native.
+                std::vector<xr::FeaturePoint>& pointCloud = m_frame->FeaturePointCloud;
+                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size() * 5);
+                for (size_t i = 0; i < pointCloud.size(); i++)
+                {
+                    int pointIndex = (int) i * 5;
+                    auto& featurePoint = pointCloud[i];
+                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.X));
+                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.Y));
+                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.Z));
+                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.ConfidenceValue));
+                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
+                }
+
+                return std::move(featurePointArray);
+            }
+
+            void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
+            {
+                // First loop over deleted planes and remove them from our JS mapping.
+                for (auto planeID : m_frame->RemovedPlanes)
+                {
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
+                    assert(trackedPlaneIterator != m_trackedPlanes.end());
+                    m_trackedPlanes.erase(trackedPlaneIterator);
+                }
+
+                // Next loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
+                for (auto planeID : m_frame->UpdatedPlanes)
+                {
+                    XRPlane* xrPlane{};
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
+
+                    // Plane does not yet exist create the JS object and insert it into the map.
+                    if (trackedPlaneIterator == m_trackedPlanes.end())
+                    {
+                        auto napiPlane = Napi::Persistent(XRPlane::New(env));
+                        xrPlane = XRPlane::Unwrap(napiPlane.Value());
+                        xrPlane->SetNativePlaneId(planeID);
+                        xrPlane->SetXRFrame(this);
+                        m_trackedPlanes.insert({planeID, std::move(napiPlane)});
+                    }
+                    else
+                    {
+                        xrPlane = XRPlane::Unwrap(trackedPlaneIterator->second.Value());
+                    }
+
+                    xrPlane->SetLastUpdatedTime(timestamp);
+                }
+            }
         };
 
         // Creates an anchor from a hit result.
@@ -1423,6 +1666,11 @@ namespace Babylon
         void XRAnchor::Delete(const Napi::CallbackInfo&)
         {
             m_frame->DeleteNativeAnchor(m_nativeAnchor);
+        }
+
+        xr::System::Session::Frame::Plane& XRPlane::GetPlane()
+        {
+            return m_frame->GetPlaneFromID(m_nativePlaneID);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
@@ -1443,11 +1691,14 @@ namespace Babylon
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
+                        InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
                         InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
                         InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
+                        InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
+                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1541,8 +1792,9 @@ namespace Babylon
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
             JsRuntimeScheduler m_runtimeScheduler;
+            uint32_t m_timestamp{0};
 
-            std::vector<std::pair<const std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
+            std::vector<std::pair<std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
@@ -1557,6 +1809,19 @@ namespace Babylon
                 m_eventNamesAndCallbacks.emplace_back(
                     info[0].As<Napi::String>().Utf8Value(),
                     Napi::Persistent(info[1].As<Napi::Function>()));
+            }
+
+            void RemoveEventListener(const Napi::CallbackInfo& info)
+            {
+                auto name = info[0].As<Napi::String>().Utf8Value();
+                auto callback = info[1].As<Napi::Function>();
+                m_eventNamesAndCallbacks.erase(std::remove_if(
+                    m_eventNamesAndCallbacks.begin(),
+                    m_eventNamesAndCallbacks.end(),
+                    [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener)
+                {
+                    return listener.first == name && listener.second.Value() == callback;
+                }), m_eventNamesAndCallbacks.end());
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
@@ -1667,12 +1932,31 @@ namespace Babylon
                 m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
-                    m_xrFrame.Update(frame);
-                    func->Call({Napi::Value::From(env, -1), m_jsXRFrame.Value()});
+                    m_xrFrame.Update(env, frame, m_timestamp);
+                    func->Call({Napi::Value::From(env, m_timestamp), m_jsXRFrame.Value()});
                 });
 
-                // TODO: Timestamp, I think? Or frame handle? Look up what this return value is and return the right thing.
-                return Napi::Value::From(info.Env(), 0);
+                // The return value should be a request ID to allow for requesting cancellation, this is unused in Babylon.js currently.
+                // For now just pass our "timestamp" as that uniquely identifies the frame.
+                return Napi::Value::From(info.Env(), m_timestamp++);
+            }
+
+            void UpdateWorldTrackingState(const Napi::CallbackInfo& info)
+            {
+                auto optionsObj = info[0].As<Napi::Object>();
+                if (optionsObj.Has("planeDetectionState"))
+                {
+                    bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
+                    m_xr.SetPlaneDetectionEnabled(planeDetectionEnabled);
+                }
+            }
+
+            Napi::Value TrySetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
+            {
+                bool featurePointCloudEnabled = info[0].ToBoolean();
+                bool enabled = m_xr.TrySetFeaturePointCloudEnabled(featurePointCloudEnabled);
+
+                return Napi::Value::From(info.Env(), enabled);
             }
 
             Napi::Value End(const Napi::CallbackInfo& info)
@@ -1716,6 +2000,7 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
+                        InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1748,6 +2033,11 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
+            }
+
+            Napi::Value Dispose(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
         };
 
@@ -1793,7 +2083,7 @@ namespace Babylon
 
         private:
             Napi::ObjectReference m_jsSession{};
-            std::array<Napi::ObjectReference, 2> m_jsRenderTargetTextures;
+            std::array<Napi::ObjectReference, XREye::MAX_EYE_INDEX> m_jsRenderTargetTextures;
             XRSession& m_session;
 
             Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
@@ -1916,6 +2206,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRPlane::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);

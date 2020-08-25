@@ -115,7 +115,8 @@ target_link_to_dependencies(Playground
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
-    ${ADDITIONAL_LIBRARIES})
+    ${ADDITIONAL_LIBRARIES}
+    ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
 if(WIN32)
     target_link_to_dependencies(Playground
@@ -140,8 +141,6 @@ if(APPLE)
 
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 9.0
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.iOS"
-
-            XCODE_ATTRIBUTE_ENABLE_BITCODE NO
 
             XCODE_ATTRIBUTE_SWIFT_VERSION "4.0"
             XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/LibNativeBridge.h"

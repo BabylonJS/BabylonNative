@@ -1,4 +1,5 @@
 #include <XR.h>
+#include <XRHelpers.h>
 
 #include <assert.h>
 #include <optional>
@@ -320,9 +321,13 @@ namespace xr
     {
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
-        std::vector<Frame::InputSource> InputSources;
+        std::vector<Frame::InputSource> InputSources{};
+        std::vector<Frame::Plane> Planes{};
+        std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
+        bool PlaneDetectionEnabled{ false };
+        bool FeaturePointCloudEnabled{ false };
 
         Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
             : SystemImpl{ systemImpl }
@@ -335,12 +340,14 @@ namespace xr
         {
             if (isInitialized)
             {
+                Planes.clear();
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
                 ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
                 ArHitResultList_destroy(hitResultList);
+                ArTrackableList_destroy(trackableList);
                 ArFrame_destroy(frame);
                 ArSession_destroy(session);
 
@@ -390,6 +397,9 @@ namespace xr
             // Create the hit result list, and hit result.
             ArHitResultList_create(session, &hitResultList);
             ArHitResult_create(session, &hitResult);
+
+            // Create the trackable list used to process planes.
+            ArTrackableList_create(session, &trackableList);
 
             // Create the reusable ARCore ArPose used for short term operations
             // (i.e. pulling out hit test results, and updating anchors)
@@ -610,17 +620,9 @@ namespace xr
             }
         }
 
-        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay)
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType validHitTestTypes)
         {
-            ArCamera* camera{};
-            ArFrame_acquireCamera(session, frame, &camera);
-
-            // Get the tracking state
-            ArTrackingState trackingState{};
-            ArCamera_getTrackingState(session, camera, &trackingState);
-
-            // If not tracking, back out and return.
-            if (trackingState != ArTrackingState::AR_TRACKING_STATE_TRACKING)
+            if (!IsTracking())
             {
                 return;
             }
@@ -667,26 +669,43 @@ namespace xr
                 ArTrackableType trackableType{};
                 ArTrackable* trackable;
 
+                bool hitTestResultValid{false};
                 ArHitResultList_getItem(session, hitResultList, i, hitResult);
                 ArHitResult_acquireTrackable(session, hitResult, &trackable);
                 ArTrackable_getType(session, trackable, &trackableType);
                 if (trackableType == AR_TRACKABLE_PLANE)
                 {
-                    int32_t isPoseInPolygon{};
-                    ArHitResult_getHitPose(session, hitResult, tempPose);
-                    ArPlane_isPoseInPolygon(session, (ArPlane*) trackable, tempPose, &isPoseInPolygon);
-
-                    if (isPoseInPolygon != 0)
+                    // If we are only hit testing against planes then mark the hit test as valid otherwise check
+                    // if the hit result is inside the plane mesh.
+                    if ((validHitTestTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE)
                     {
-                        float rawPose[7]{};
-                        ArPose_getPoseRaw(session, tempPose, rawPose);
-                        HitResult hitResult{};
-                        RawToPose(rawPose, hitResult.Pose);
-
-                        hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
-                        filteredResults.push_back(hitResult);
-                        frameTrackables.push_back(trackable);
+                        hitTestResultValid = true;
                     }
+                    else if ((validHitTestTypes & xr::HitTestTrackableType::MESH) != xr::HitTestTrackableType::NONE)
+                    {
+                        int32_t isPoseInPolygon{};
+                        ArHitResult_getHitPose(session, hitResult, tempPose);
+                        ArPlane_isPoseInPolygon(session, reinterpret_cast<ArPlane*>(trackable), tempPose, &isPoseInPolygon);
+                        hitTestResultValid = isPoseInPolygon != 0;
+                    }
+                }
+                else if (trackableType == AR_TRACKABLE_POINT && (validHitTestTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE)
+                {
+                    // Hit a feature point, which is valid for this hit test source.
+                    hitTestResultValid = true;
+                }
+
+                if (hitTestResultValid)
+                {
+                    float rawPose[7]{};
+                    ArHitResult_getHitPose(session, hitResult, tempPose);
+                    ArPose_getPoseRaw(session, tempPose, rawPose);
+                    HitResult hitResult{};
+                    RawToPose(rawPose, hitResult.Pose);
+
+                    hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
+                    filteredResults.push_back(hitResult);
+                    frameTrackables.push_back(trackable);
                 }
             }
         }
@@ -796,11 +815,159 @@ namespace xr
             }
         }
 
+        void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
+        {
+            if (!IsTracking() || !PlaneDetectionEnabled)
+            {
+                return;
+            }
+
+            // First check if any existing planes have been subsumed by another plane, if so add them to the list of deleted planes
+            CheckForSubsumedPlanes(deletedPlanes);
+
+            // Next check for updated planes, and update their pose and polygon or create a new plane if it does not yet exist.
+            ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
+            int32_t size{};
+            ArTrackableList_getSize(session, trackableList, &size);
+            for (int i = 0; i < size; i++)
+            {
+                // Get the plane.
+                ArPlane* planeTrackable{};
+                {
+                    ArTrackable* trackable{};
+                    ArTrackableList_acquireItem(session, trackableList, i, &trackable);
+                    planeTrackable = reinterpret_cast<ArPlane*>(trackable);
+                }
+
+                // Check if this plane has been subsumed. If so skip it as we are about to delete this plane.
+                ArPlane* subsumingPlane{};
+                ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
+                if (subsumingPlane != nullptr)
+                {
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                    continue;
+                }
+
+                // Get the center pose.
+                float rawPose[7]{};
+                ArPlane_getCenterPose(session, planeTrackable, tempPose);
+                ArPose_getPoseRaw(session, tempPose, rawPose);
+
+                // Dynamically allocate the polygon vector, and fill it in.
+                int32_t polygonSize;
+                ArPlane_getPolygonSize(session, planeTrackable, &polygonSize);
+                planePolygonBuffer.clear();
+                planePolygonBuffer.resize(polygonSize);
+                ArPlane_getPolygon(session, planeTrackable, planePolygonBuffer.data());
+
+                // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
+                auto planeIterator = planeMap.find(planeTrackable);
+                if (planeIterator != planeMap.end())
+                {
+                    UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), rawPose, planePolygonBuffer, polygonSize);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
+                }
+                else
+                {
+                    // This is a new plane, create it and initialize its values.
+                    Planes.emplace_back();
+                    auto& plane = Planes.back();
+                    planeMap.insert({planeTrackable, plane.ID});
+                    UpdatePlane(updatedPlanes, plane, rawPose, planePolygonBuffer, polygonSize);
+                }
+            }
+        }
+
+        void UpdateFeaturePointCloud()
+        {
+            if (!IsTracking() || !FeaturePointCloudEnabled)
+            {
+                return;
+            }
+
+            // Get the feature point cloud from ArCore.
+            ArPointCloud *pointCloud = nullptr;
+            int32_t numberOfPoints = 0;
+            const int32_t* pointCloudIDs = nullptr;
+            const float *pointCloudData = nullptr;
+            ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);
+
+            if (status != AR_SUCCESS)
+            {
+                FeaturePointCloud.clear();
+                return;
+            }
+
+            try
+            {
+                ArPointCloud_getNumberOfPoints(session, pointCloud, &numberOfPoints);
+                ArPointCloud_getData(session, pointCloud, &pointCloudData);
+                ArPointCloud_getPointIds(session, pointCloud, &pointCloudIDs);
+
+                FeaturePointCloud.resize(numberOfPoints);
+                for (int32_t i = 0; i < numberOfPoints; i++)
+                {
+                    FeaturePointCloud.emplace_back();
+                    auto& featurePoint = FeaturePointCloud.back();
+                    int32_t dataIndex = i * 4;
+
+                    // Grab the position and confidence value from the point cloud.
+                    // Reflect the point across the Z axis, as we want to report this
+                    // value in camera space.
+                    featurePoint.X = pointCloudData[dataIndex];
+                    featurePoint.Y = pointCloudData[dataIndex + 1];
+                    featurePoint.Z = -1 * pointCloudData[dataIndex + 2];
+                    featurePoint.ConfidenceValue = pointCloudData[dataIndex + 3];
+
+                    // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
+                    const int32_t id = pointCloudIDs[i];
+                    auto featurePointIterator = featurePointIDMap.find(id);
+                    if (featurePointIterator != featurePointIDMap.end())
+                    {
+                        featurePoint.ID = featurePointIterator->second;
+                    }
+                    else
+                    {
+                        featurePoint.ID = nextFeaturePointID++;
+                        featurePointIDMap.insert({id, featurePoint.ID});
+                    }
+                }
+            }
+            catch (std::exception)
+            {
+                // Release the point cloud to free its memory.
+                ArPointCloud_release(pointCloud);
+                throw;
+            }
+
+            // Release the point cloud to free its memory.
+            ArPointCloud_release(pointCloud);
+        }
+
+        Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
+        {
+            // Loop over the plane vector and find the correct plane.
+            for (Frame::Plane& plane : Planes)
+            {
+                if (plane.ID == planeID)
+                {
+                    return plane;
+                }
+            }
+
+            throw std::runtime_error{"Tried to get non-existent plane."};
+        }
+
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
         std::vector<ArTrackable*> frameTrackables{};
         std::vector<ArAnchor*> arCoreAnchors{};
+        std::vector<float> planePolygonBuffer{};
+        std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
+        FeaturePoint::Identifier nextFeaturePointID = 0;
 
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
@@ -812,6 +979,7 @@ namespace xr
         ArPose* tempPose{};
         ArHitResultList* hitResultList{};
         ArHitResult* hitResult{};
+        ArTrackableList* trackableList{};
 
         float CameraFrameUVs[VERTEX_COUNT * 2]{};
 
@@ -873,6 +1041,76 @@ namespace xr
             pose.Position.Y = rawPose[5];
             pose.Position.Z = rawPose[6];
         }
+
+        /**
+         * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
+         **/
+        void CheckForSubsumedPlanes(std::vector<Frame::Plane::Identifier>& subsumedPlanes)
+        {
+            auto planeMapIterator = planeMap.begin();
+            while (planeMapIterator != planeMap.end())
+            {
+                auto [arPlane, planeID] = *planeMapIterator;
+
+                // Check if the plane has been subsumed, and if we should stop tracking it.
+                ArPlane* subsumingPlane = nullptr;
+                ArPlane_acquireSubsumedBy(session, arPlane, &subsumingPlane);
+
+                // Plane has been subsumed, stop tracking it explicitly.
+                if (subsumingPlane != nullptr)
+                {
+                    subsumedPlanes.push_back(planeID);
+
+                    auto& plane = GetPlaneByID(planeID);
+                    plane.Polygon.clear();
+                    plane.PolygonSize = 0;
+                    
+                    planeMapIterator = planeMap.erase(planeMapIterator);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                }
+                else
+                {
+                    planeMapIterator++;
+                }
+            }
+        }
+
+        void UpdatePlane(std::vector<Frame::Plane::Identifier>& updatedPlanes, Frame::Plane& plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
+        {
+            // Grab the new center
+            Pose newCenter{};
+            RawToPose(rawPose, newCenter);
+
+            // Plane was not actually updated return.
+            if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter))
+            {
+                return;
+            }
+
+            // Update the center pose.
+            plane.Center = newCenter;
+
+            // Swap the old polygon with the new one.
+            plane.Polygon.swap(newPolygon);
+
+            // Set the polygon size, and format.
+            plane.PolygonSize = polygonSize / 2;
+            plane.PolygonFormat = PolygonFormat::XZ;
+            updatedPlanes.push_back(plane.ID);
+        }
+
+        /**
+         * Checks whether the AR camera is currently tracking.
+         **/
+        bool IsTracking()
+        {
+            ArCamera* camera{};
+            ArTrackingState trackingState{};
+            ArFrame_acquireCamera(session, frame, &camera);
+            ArCamera_getTrackingState(session, camera, &trackingState);
+            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
+        }
     };
 
     struct System::Session::Frame::Impl
@@ -887,14 +1125,20 @@ namespace xr
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
-        , InputSources{ sessionImpl.InputSources}
+        , InputSources{ sessionImpl.InputSources }
+        , Planes{ sessionImpl.Planes }
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , UpdatedPlanes{}
+        , RemovedPlanes{}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
+        m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+        m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay) const
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
     {
-        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay);
+        m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
@@ -910,6 +1154,11 @@ namespace xr
     void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const
     {
         m_impl->sessionImpl.DeleteAnchor(anchor);
+    }
+
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
+    {
+        return m_impl->sessionImpl.GetPlaneByID(planeID);
     }
 
     System::Session::Frame::~Frame()
@@ -1024,5 +1273,17 @@ namespace xr
     {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
+    }
+
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
+    {
+        m_impl->PlaneDetectionEnabled = enabled;
+    }
+
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool enabled) const
+    {
+        // Point cloud system not yet supported.
+        m_impl->FeaturePointCloudEnabled = enabled;
+        return enabled;
     }
 }

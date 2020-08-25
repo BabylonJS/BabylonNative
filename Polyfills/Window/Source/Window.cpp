@@ -1,6 +1,7 @@
 #include "Window.h"
 #include <basen.hpp>
 #include <chrono>
+#include <iterator>
 
 namespace Babylon::Polyfills::Internal
 {
