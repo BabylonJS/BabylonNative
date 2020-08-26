@@ -7,7 +7,7 @@
 #include <d3d11.h>
 #define XR_USE_GRAPHICS_API_D3D11
 
-#include <XrPlatformCommon.h>
+#include <OpenXR/XrPlatformCommon.h>
 #include <XR.h>
 
 #include <array>
