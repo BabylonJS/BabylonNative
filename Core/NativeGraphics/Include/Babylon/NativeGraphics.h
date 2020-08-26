@@ -10,7 +10,6 @@ namespace Babylon
     {
     public:
         class Impl;
-        friend Impl;
 
         ~NativeGraphics();
 

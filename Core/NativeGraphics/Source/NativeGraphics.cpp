@@ -123,7 +123,7 @@ namespace Babylon
     template<>
     void NativeGraphics::ReinitializeFromWindow<void*>(void* windowPtr, size_t width, size_t height)
     {
-        bgfx::PlatformData pd;
+        bgfx::PlatformData pd{};
         pd.ndt = nullptr;
         pd.nwh = windowPtr;
         pd.context = nullptr;
