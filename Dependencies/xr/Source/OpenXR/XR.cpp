@@ -69,7 +69,8 @@ namespace xr
     bool XrSessionContext::IsInitialized() const
     {
         return ContextImpl->session != XR_NULL_HANDLE &&
-            ContextImpl->sceneSpace != XR_NULL_HANDLE;
+            ContextImpl->sceneSpace != XR_NULL_HANDLE &&
+            ContextImpl->state != XrSessionState::XR_SESSION_STATE_UNKNOWN;
     }
     XrTime XrSessionContext::GetDisplayTime() const { return ContextImpl->GetDisplayTime(); }
     const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->extensions; }
