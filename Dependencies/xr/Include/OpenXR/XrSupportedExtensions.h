@@ -54,7 +54,7 @@ namespace xr
             return false;
         };
 
-        bool IsExtensionSupported(const std::string& extensionName)
+        bool IsExtensionSupported(const std::string& extensionName) const
         {
             return m_supportedExtensionNames.count(extensionName) > 0;
         }

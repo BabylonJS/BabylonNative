@@ -2,14 +2,14 @@
 
 #include <XR.h>
 
-// Use OpenXR-MixedReality headers to include openxr preview extensions
-#include <../Dependencies/OpenXR-MixedReality/openxr_preview/include/openxr/openxr.h>
-#include <../Dependencies/OpenXR-MixedReality/openxr_preview/include/openxr/openxr_platform.h>
+// Note: these headers are from OpenXR-MixedReality not OpenXR-SDK
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
 
-#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrEnumerate.h"
-#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrExtensions.h"
-#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrStruct.h"
-#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrViewConfiguration.h"
+#include <XrEnumerate.h>
+#include <XrExtensions.h>
+#include <XrStruct.h>
+#include <XrViewConfiguration.h>
 
 #include <assert.h>
 #include <stdexcept>
