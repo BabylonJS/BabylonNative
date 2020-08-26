@@ -1,5 +1,7 @@
 set(SOURCES
     "Include/Babylon/NativeGraphics.h"
+    "Source/BgfxCallback.cpp"
+    "Source/BgfxCallback.h"
     "Source/NativeGraphics.cpp"
     "Source/NativeGraphicsImpl.h")
 

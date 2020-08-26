@@ -12,8 +12,6 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
-    "Source/BgfxCallback.cpp"
-    "Source/BgfxCallback.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"

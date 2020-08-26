@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/NativeGraphics.h>
+#include "BgfxCallback.h"
 
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
@@ -26,11 +27,10 @@ namespace Babylon
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
         arcana::task<void, std::exception_ptr> GetAfterRenderTask();
 
+        BgfxCallback BgfxCallback{};
+
     private:
         friend NativeGraphics::Frame;
-
-        // TODO: Populate this with something, probably not a pointer.
-        std::unique_ptr<bgfx::CallbackI> BgfxCallback{};
 
         arcana::manual_dispatcher<128> Dispatcher{};
         arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};
