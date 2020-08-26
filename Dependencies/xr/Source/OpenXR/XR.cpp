@@ -31,35 +31,31 @@ namespace xr
     struct XrSessionContext::Impl
     {
         XrSessionContext::Impl()
-			: instance()
-			, systemId()
-			, session(nullptr)
-			, state(XrSessionState::XR_SESSION_STATE_UNKNOWN)
-			, extensions(std::make_unique<XrSupportedExtensions>()) {}
+            : extensions(std::make_unique<XrSupportedExtensions>()) {}
 
-		void PopulateExtensions()
-		{
-			if (instance == XR_NULL_HANDLE)
-			{
-				throw std::exception(/*Attempted to populate extensions when instance was null*/);
-			}
+        void PopulateExtensions()
+        {
+            if (instance == XR_NULL_HANDLE)
+            {
+                throw std::exception(/*Attempted to populate extensions when instance was null*/);
+            }
 
-			extensions->PopulateDispatchTable(instance);
-		}
+            extensions->PopulateDispatchTable(instance);
+        }
 
-		XrTime GetDisplayTime()
-		{
-			return displayTime;
-		}
+        XrTime GetDisplayTime()
+        {
+            return displayTime;
+        }
 
-		XrInstance instance{ XR_NULL_HANDLE };
-		XrSystemId systemId{ XR_NULL_SYSTEM_ID };
-		XrSession session{ XR_NULL_HANDLE };
+        XrInstance instance{ XR_NULL_HANDLE };
+        XrSystemId systemId{ XR_NULL_SYSTEM_ID };
+        XrSession session{ XR_NULL_HANDLE };
         XrSpace sceneSpace{ XR_NULL_HANDLE };
         XrReferenceSpaceType sceneSpaceType{};
-		std::atomic<XrSessionState> state{};
-		std::atomic<XrTime> displayTime{};
-		std::unique_ptr<XrSupportedExtensions> extensions;
+        std::atomic<XrSessionState> state{ XrSessionState::XR_SESSION_STATE_UNKNOWN };
+        std::atomic<XrTime> displayTime{};
+        std::unique_ptr<XrSupportedExtensions> extensions;
     };
 
     XrSessionContext::XrSessionContext()

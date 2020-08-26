@@ -24,9 +24,9 @@ else()
     endif()
 
     set(SOURCES ${SOURCES}
-	"Include/OpenXR/XrPlatformCommon.h"
-	"Include/OpenXR/XrRegistry.h"
-	"Include/OpenXR/XrSupportedExtensions.h")
+        "Include/OpenXR/XrPlatformCommon.h"
+        "Include/OpenXR/XrRegistry.h"
+        "Include/OpenXR/XrSupportedExtensions.h")
 endif()
 
 add_library(xr ${SOURCES})
