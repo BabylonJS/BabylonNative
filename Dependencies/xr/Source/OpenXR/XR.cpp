@@ -1,8 +1,8 @@
 #include <XR.h>
 
-#include "OpenXR/Windows/XrPlatform.h"
-#include "OpenXR/XrRegistry.h"
-#include "OpenXR/XrSupportedExtensions.h"
+#include "Windows/XrPlatform.h"
+#include "XrRegistry.h"
+#include "XrSupportedExtensions.h"
 
 #include <assert.h>
 #include <optional>
