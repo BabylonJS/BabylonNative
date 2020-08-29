@@ -162,6 +162,8 @@ namespace xr
 
                     float DepthNearZ{};
                     float DepthFarZ{};
+
+                    bool IsFirstPersonObserver{ false };
                 };
 
                 struct InputSource
