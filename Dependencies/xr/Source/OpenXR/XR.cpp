@@ -389,13 +389,17 @@ namespace xr
 
         Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable, XrTime time)
         {
-            auto& apiExtensions = HmdImpl.Extensions;
+            const auto& apiExtensions = *HmdImpl.Extensions;
 
-            if (!apiExtensions->SpatialAnchorSupported)
+            if (!apiExtensions.SpatialAnchorSupported)
+            {
                 throw std::runtime_error("Spatial anchors are not supported for this device.");
+            }
 
             if (trackable != nullptr)
+            {
                 throw std::runtime_error("Anchors created from hit test results not yet implemented for OpenXR.");
+            }
 
             auto anchorSpace = std::make_shared<OpenXRAnchorSpace>();
 
@@ -405,15 +409,15 @@ namespace xr
                                       pose.Position.X, pose.Position.Y, pose.Position.Z };
             anchorCreateInfo.time = time;
 
-            CHECK_XRCMD(apiExtensions->xrCreateSpatialAnchorMSFT(
+            CHECK_XRCMD(apiExtensions.xrCreateSpatialAnchorMSFT(
                 Session,
                 &anchorCreateInfo,
-                anchorSpace->Anchor.Put(apiExtensions->xrDestroySpatialAnchorMSFT)));
+                anchorSpace->Anchor.Put(apiExtensions.xrDestroySpatialAnchorMSFT)));
 
             XrSpatialAnchorSpaceCreateInfoMSFT anchorSpaceCreateInfo{XR_TYPE_SPATIAL_ANCHOR_SPACE_CREATE_INFO_MSFT};
             anchorSpaceCreateInfo.anchor = anchorSpace->Anchor.Get();
             anchorSpaceCreateInfo.poseInAnchorSpace = xr::math::Pose::Identity();
-            CHECK_XRCMD(apiExtensions->xrCreateSpatialAnchorSpaceMSFT(Session, &anchorSpaceCreateInfo, anchorSpace->Space.Put()));
+            CHECK_XRCMD(apiExtensions.xrCreateSpatialAnchorSpaceMSFT(Session, &anchorSpaceCreateInfo, anchorSpace->Space.Put()));
 
             const auto nativeAnchorPtr = reinterpret_cast<NativeAnchorPtr>(anchorSpace.get());
             openXRAnchors[nativeAnchorPtr] = anchorSpace;
@@ -422,7 +426,14 @@ namespace xr
 
         void UpdateAnchor(Anchor& anchor, XrTime time) const
         {
-            auto anchorSpace = openXRAnchors.at(anchor.NativeAnchor);
+            const auto anchorEntry = openXRAnchors.find(anchor.NativeAnchor);
+            if (anchorEntry == openXRAnchors.end())
+            {
+                throw std::runtime_error("Could not find this anchor in the OpenXR collection. "
+                    "Perhaps the anchor was deleted or the anchor was created with a different XR implementation.");
+            }
+
+            auto anchorSpace = anchorEntry->second;
 
             XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
             auto spaceLocationResult = xrLocateSpace(anchorSpace->Space.Get(), SceneSpace, time, &spaceLocation);
