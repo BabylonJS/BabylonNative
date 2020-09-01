@@ -387,8 +387,86 @@ namespace xr
             renderResource.DepthSwapchains.clear();
         }
 
+        Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable, XrTime time)
+        {
+            const auto& apiExtensions = *HmdImpl.Extensions;
+
+            if (!apiExtensions.SpatialAnchorSupported)
+            {
+                throw std::runtime_error("Spatial anchors are not supported for this device.");
+            }
+
+            if (trackable != nullptr)
+            {
+                throw std::runtime_error("Anchors created from hit test results not yet implemented for OpenXR.");
+            }
+
+            auto anchorSpace = std::make_shared<OpenXRAnchorSpace>();
+
+            XrSpatialAnchorCreateInfoMSFT anchorCreateInfo{XR_TYPE_SPATIAL_ANCHOR_CREATE_INFO_MSFT};
+            anchorCreateInfo.space = SceneSpace;
+            anchorCreateInfo.pose = { pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W,
+                                      pose.Position.X, pose.Position.Y, pose.Position.Z };
+            anchorCreateInfo.time = time;
+
+            CHECK_XRCMD(apiExtensions.xrCreateSpatialAnchorMSFT(
+                Session,
+                &anchorCreateInfo,
+                anchorSpace->Anchor.Put(apiExtensions.xrDestroySpatialAnchorMSFT)));
+
+            XrSpatialAnchorSpaceCreateInfoMSFT anchorSpaceCreateInfo{XR_TYPE_SPATIAL_ANCHOR_SPACE_CREATE_INFO_MSFT};
+            anchorSpaceCreateInfo.anchor = anchorSpace->Anchor.Get();
+            anchorSpaceCreateInfo.poseInAnchorSpace = xr::math::Pose::Identity();
+            CHECK_XRCMD(apiExtensions.xrCreateSpatialAnchorSpaceMSFT(Session, &anchorSpaceCreateInfo, anchorSpace->Space.Put()));
+
+            const auto nativeAnchorPtr = reinterpret_cast<NativeAnchorPtr>(anchorSpace.get());
+            openXRAnchors[nativeAnchorPtr] = anchorSpace;
+            return { pose, nativeAnchorPtr };
+        }
+
+        void UpdateAnchor(Anchor& anchor, XrTime time) const
+        {
+            const auto anchorEntry = openXRAnchors.find(anchor.NativeAnchor);
+            if (anchorEntry == openXRAnchors.end())
+            {
+                throw std::runtime_error("Could not find this anchor in the OpenXR collection. "
+                    "Perhaps the anchor was deleted or the anchor was created with a different XR implementation.");
+            }
+
+            auto anchorSpace = anchorEntry->second;
+
+            XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
+            auto spaceLocationResult = xrLocateSpace(anchorSpace->Space.Get(), SceneSpace, time, &spaceLocation);
+            if (XR_FAILED(spaceLocationResult))
+            {
+                anchor.IsValid = false;
+                return;
+            }
+
+            if (xr::math::Pose::IsPoseValid(spaceLocation)) 
+            {
+                anchor.Pose = {
+                    spaceLocation.pose.position.x, spaceLocation.pose.position.y, spaceLocation.pose.position.z,
+                    spaceLocation.pose.orientation.x, spaceLocation.pose.orientation.y, spaceLocation.pose.orientation.z, spaceLocation.pose.orientation.w 
+                };
+            }
+        }
+
+        void DeleteAnchor(Anchor& anchor)
+        {
+            openXRAnchors.erase(anchor.NativeAnchor);
+        }
+
     private:
         static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
+
+        struct OpenXRAnchorSpace
+        {
+            xr::SpatialAnchorHandle Anchor;
+            xr::SpaceHandle Space;
+        };
+
+        std::unordered_map<NativeAnchorPtr, std::shared_ptr<OpenXRAnchorSpace>> openXRAnchors{};
 
         void InitializeRenderResources(XrInstance instance, XrSystemId systemId)
         {
@@ -1167,19 +1245,19 @@ namespace xr
         m_impl->DepthFarZ = depthFar;
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose, NativeTrackablePtr) const
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
     {
-        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+        return m_impl->sessionImpl.CreateAnchor(pose, trackable, m_impl->displayTime);
     }
 
-    void System::Session::Frame::UpdateAnchor(Anchor&) const
+    void System::Session::Frame::UpdateAnchor(Anchor& anchor) const
     {
-        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+        m_impl->sessionImpl.UpdateAnchor(anchor, m_impl->displayTime);
     }
 
-    void System::Session::Frame::DeleteAnchor(Anchor&) const
+    void System::Session::Frame::DeleteAnchor(Anchor& anchor) const
     {
-        throw std::runtime_error("Anchors not yet implemented for OpenXR.");
+        m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier) const
