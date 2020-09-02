@@ -304,10 +304,10 @@ namespace {
     
     // Create the display orientation quaternion based on the current orientation of the device.
     if (orientation == UIInterfaceOrientationLandscapeRight) {
-        displayOrientationQuat = simd_quaternion((float)M_PI, simd_make_float3(0, 0, 1));
+        displayOrientationQuat = simd_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
     }
     else if (orientation == UIInterfaceOrientationLandscapeLeft) {
-        displayOrientationQuat = simd_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        displayOrientationQuat = simd_quaternion((float)M_PI, simd_make_float3(0, 0, 1));
     }
     else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
         displayOrientationQuat = simd_quaternion((float)M_PI * -.5f, simd_make_float3(0, 0, 1));
