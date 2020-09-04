@@ -656,6 +656,21 @@ namespace xr {
             [xrView dealloc];
             xrView = nil;
         }
+        
+        // After the ARSession starts, it takes a little time before AR frames become available. This function just makes it easy to roll this into CreateAsync.
+        arcana::task<void, std::exception_ptr> WhenReady() {
+            __block arcana::task_completion_source<void, std::exception_ptr> tcs;
+            CFRunLoopRef mainRunLoop = CFRunLoopGetMain();
+            const auto intervalInSeconds = 0.033;
+            CFRunLoopTimerRef timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), intervalInSeconds, 0, 0, ^(CFRunLoopTimerRef timer){
+                if ([session currentFrame] != nil) {
+                    CFRunLoopRemoveTimer(mainRunLoop, timer, kCFRunLoopCommonModes);
+                    tcs.complete();
+                }
+            });
+            CFRunLoopAddTimer(mainRunLoop, timer, kCFRunLoopCommonModes);
+            return tcs.as_task();
+        }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
             auto viewSize = [sessionDelegate viewSize];
@@ -1222,7 +1237,10 @@ namespace xr {
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window) {
-        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, window));
+        auto session = std::make_shared<System::Session>(system, graphicsDevice, window);
+        return session->m_impl->WhenReady().then(arcana::inline_scheduler, arcana::cancellation::none(), [session] {
+            return session;
+        });
     }
 
     System::Session::Session(System& system, void* graphicsDevice, void* window)
