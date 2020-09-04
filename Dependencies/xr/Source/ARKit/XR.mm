@@ -88,6 +88,14 @@ namespace {
     CGSize cameraUVReferenceSize;
 }
 
+- (CVMetalTextureRef)GetCameraTextureYRef {
+    return _cameraTextureY;
+}
+
+- (CVMetalTextureRef)GetCameraTextureCbCrRef {
+    return _cameraTextureCbCr;
+}
+
 /**
  Returns the camera Y texture, the caller is responsible for freeing this texture.
  */
@@ -115,18 +123,18 @@ namespace {
 /**
  Returns the set of all updated planes since the last time we consumed plane updates.
  */
--(std::set<ARPlaneAnchor*, ARAnchorComparer>*) GetUpdatedPlanes {
+- (std::set<ARPlaneAnchor*, ARAnchorComparer>*) GetUpdatedPlanes {
     return &updatedPlanes;
 }
 
 /**
  Returns the vector containing all deleted planes since the last time we consumed plane updates.
  */
--(std::vector<ARPlaneAnchor*>*) GetDeletedPlanes {
+- (std::vector<ARPlaneAnchor*>*) GetDeletedPlanes {
     return &deletedPlanes;
 }
 
--(void) SetPlaneDetectionEnabled:(bool)enabled {
+- (void) SetPlaneDetectionEnabled:(bool)enabled {
     planeDetectionEnabled = enabled;
 }
 
@@ -149,11 +157,11 @@ namespace {
     return self;
 }
 
--(void) LockPlanes {
+- (void) LockPlanes {
     [planeLock lock];
 }
 
--(void) UnlockPlanes {
+- (void) UnlockPlanes {
     [planeLock unlock];
 }
 
@@ -161,6 +169,7 @@ namespace {
  Returns the orientation of the app based on the current status bar orientation.
 */
 - (UIInterfaceOrientation)orientation {
+//    return UIInterfaceOrientationPortrait;
     auto sharedApplication = [UIApplication sharedApplication];
     auto window = sharedApplication.windows.firstObject;
     if (@available(iOS 13.0, *)) {
@@ -168,7 +177,7 @@ namespace {
     }
     else {
         return [[UIApplication sharedApplication] statusBarOrientation];
-    }	
+    }
 }
 
 /**
@@ -183,7 +192,10 @@ namespace {
  Implementation of the ARSessionDelegate protocol. Called every frame during the active ARKit session.  Updates the AR Camera texture, and Camera pose.
  If a size change is detected also sets the UVs, and FoV values.
 */
-- (void)session:(ARSession *)__unused session didUpdateFrame:(ARFrame *)frame {
+//- (void)session:(ARSession *) session didUpdateFrame:(ARFrame *)frame {
+//    [self session:session _didUpdateFrame:frame];
+//}
+- (void)session:(ARSession *)__unused session _didUpdateFrame:(ARFrame *)frame {
     @autoreleasepool{
         // Update both metal textures used by the renderer to display the camera image.
         CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
@@ -531,6 +543,19 @@ namespace xr {
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
+        void Test()
+        {
+            ARFrame* currentFrame = [session currentFrame];
+            NSTimeInterval __unused timestamp = currentFrame.timestamp;
+            [sessionDelegate session:session _didUpdateFrame:currentFrame];
+            
+//            CFRunLoopRef mainRunLoop = CFRunLoopGetMain();
+//            CFRunLoopPerformBlock(mainRunLoop, kCFRunLoopCommonModes, ^{
+//                Test();
+//            });
+//            CFRunLoopWakeUp(mainRunLoop);
+        }
+        
         Impl(System::Impl& systemImpl, void* graphicsContext, void* window)
             : SystemImpl{ systemImpl } {
             metalDevice = id<MTLDevice>(graphicsContext);
@@ -566,6 +591,12 @@ namespace xr {
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice viewportSize:CGSizeMake(viewportSize.x, viewportSize.y)];
             session.delegate = sessionDelegate;
             xrView.delegate = sessionDelegate;
+                
+//            CFRunLoopRef mainRunLoop = CFRunLoopGetMain();
+//            CFRunLoopTimerRef timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), 0.016, 0, 0, ^(CFRunLoopTimerRef){
+//                Test();
+//            });
+//            CFRunLoopAddTimer(mainRunLoop, timer, kCFRunLoopCommonModes);
                 
             [session runWithConfiguration:configuration];
                 
@@ -634,6 +665,16 @@ namespace xr {
             uint32_t height = viewportSize.y;
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
+
+            //while ([session currentFrame] == nil) {}
+//            ARFrame* currentFrame = [session currentFrame];
+//            NSTimeInterval __unused timestamp = currentFrame.timestamp;
+//            [sessionDelegate session:session _didUpdateFrame:currentFrame];
+
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                ARFrame* currentFrame = [session currentFrame];
+                [sessionDelegate session:session _didUpdateFrame:currentFrame];
+            });
             
             if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) {
                 // Color texture
@@ -707,7 +748,7 @@ namespace xr {
                     
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
-                    [commandBuffer waitUntilCompleted];
+                    //[commandBuffer waitUntilCompleted];
                 }
             }
             
@@ -735,16 +776,21 @@ namespace xr {
                 
                 id<MTLTexture> cameraTextureY = nil;
                 id<MTLTexture> cameraTextureCbCr = nil;
+//                CVBufferRef cameraTextureYRef = CVBufferRetain([sessionDelegate GetCameraTextureYRef]);
+//                CVBufferRef cameraTextureCbCrRef = CVBufferRetain([sessionDelegate GetCameraTextureCbCrRef]);
                 @synchronized(sessionDelegate) {
                     cameraTextureY = [sessionDelegate GetCameraTextureY];
                     cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
                 }
                 
                 [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+//                    CVBufferRelease(cameraTextureYRef);
+//                    CVBufferRelease(cameraTextureCbCrRef);
+                    
                     if (cameraTextureY != nil) {
                         [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
                     }
-                    
+
                     if (cameraTextureCbCr != nil) {
                         [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                     }
@@ -783,6 +829,7 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    //[commandBuffer waitUntilCompleted];
                 }
                 @catch (NSException* exception) {
                     if (cameraTextureY != nil) {
