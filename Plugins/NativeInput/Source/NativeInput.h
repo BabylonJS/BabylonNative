@@ -53,7 +53,7 @@ namespace Babylon::Plugins
 
         std::vector<int32_t>& GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices);
         void RemoveInputMap(DeviceType deviceType, int32_t deviceSlot);
-        void SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs);
+        void SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs, bool raiseEvents);
 
         JsRuntimeScheduler m_runtimeScheduler;
         std::unordered_map<InputMapKey, std::vector<int32_t>, InputMapKeyHash> m_inputs{};
