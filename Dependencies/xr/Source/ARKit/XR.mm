@@ -197,20 +197,20 @@ namespace {
         // Update both metal textures used by the renderer to display the camera image.
         CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
         CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
-        
+
         // Swap the camera textures, do this under synchronization lock to prevent null access.
         @synchronized(self) {
             [self cleanupTextures];
             _cameraTextureY = newCameraTextureY;
             _cameraTextureCbCr = newCameraTextureCbCr;
         }
-         
+
         // Check if our orientation or size has changed and update camera UVs if necessary.
         if ([self checkAndUpdateCameraUVs:frame]) {
             // If our camera UVs updated, then also update the FoV to match the updated UVs.
             [self updateFoV:frame.camera];
         }
-        
+
         // Finally update the XR pose based on the current transform from ARKit.
         [self updateDisplayOrientedPose:(frame.camera)];
     }
