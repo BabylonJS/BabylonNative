@@ -635,7 +635,9 @@ namespace xr {
             xrView = nil;
         }
         
-        // After the ARSession starts, it takes a little time before AR frames become available. This function just makes it easy to roll this into CreateAsync.
+        /**
+         After the ARSession starts, it takes a little time before AR frames become available. This function just makes it easy to roll this into CreateAsync.
+         */
         arcana::task<void, std::exception_ptr> WhenReady() {
             __block arcana::task_completion_source<void, std::exception_ptr> tcs;
             CFRunLoopRef mainRunLoop = CFRunLoopGetMain();
