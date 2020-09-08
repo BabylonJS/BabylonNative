@@ -19,7 +19,7 @@ are external libraries, and many of them are included as submodules.
 
 [Arcana](https://github.com/microsoft/arcana.cpp) is a collection of C++ 
 utilities. Most prominently, it includes an open-source and cross-platform 
-task and asynchrony system modelled after the 
+task and asynchrony system modeled after the 
 [PPL](https://docs.microsoft.com/en-us/cpp/parallel/concrt/parallel-patterns-library-ppl?view=vs-2019), 
 which Babylon Native makes extensive use of internally. Babylon Native also 
 makes internal use of several other utilities and data structures provided 
@@ -58,11 +58,14 @@ Babylon Native API.
 
 N-API is an integration layer that allows C and C++ native libraries to 
 interface with JavaScript engines in an engine-agnostic manner. Babylon
-Native's consumption of N-API is a heavily-modified spinoff of the 
-original [Node.js Addon API](https://github.com/nodejs/node-addon-api).
-N-API types -- particularly the `Env` type -- are central to Babylon Native
-and **are** exposed as part of the contract of most Babylon Native 
-components.
+Native uses a modified subset of the original 
+[node-addon-api](https://github.com/nodejs/node-addon-api) and the 
+JavaScript part of 
+[N-API](https://github.com/nodejs/node/blob/master/src/js_native_api.h) to 
+be able to target multiple JavaScript deployment configurations from the
+same codebase. N-API types -- particularly the `Env` type -- are central 
+to Babylon Native and **are** exposed as part of the contract of most 
+Babylon Native components.
 
 ### SPIRV-Cross
 
@@ -242,5 +245,4 @@ The ValidationTests app is exactly what its name implies: it is a mechanism
 for easily running validation tests to ensure Babylon Native continues to 
 run and render correctly under expected circumstances. The ValidationTests
 are designed to be run by the Babylon Native team as part of common 
-workflows and CI and are not intended to be highly customizable. The only
-supported platform for the validation tests is Win32.
+workflows and CI and are not intended to be highly customizable.

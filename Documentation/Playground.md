@@ -22,8 +22,8 @@ obvious.
 Though designed to execute experience.js by default, the Playground app is 
 also capable of loading and executing arbitrary JavaScript files. How this 
 is done varies by platform -- Win32 allows JS files to be passed as 
-command line arguments while UWP allows them to be executed via protocal 
-invocation, for example -- but the behavior is the same on all platforms
+command line arguments while UWP allows them to be executed via protocol 
+activation, for example -- but the behavior is the same on all platforms
 where invocation is supported: the app will first load the Babylon.js 
 scripts (Babylon itself, the glTF loaders, etc.), then execute the 
 requested external JS file, then execute a special "playground runner" 
