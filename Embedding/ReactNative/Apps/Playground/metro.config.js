@@ -26,7 +26,7 @@ function getModuleMappings() {
         if (!path.isAbsolute(linkPath)) {
           linkPath = path.resolve(directory, linkPath);
         }
-        const linkStat = fs.lstatSync(linkPath);
+        const linkStat = fs.statSync(linkPath);
         if (linkStat.isDirectory()) {
           const packagePath = path.resolve(linkPath, "package.json");
           if (fs.existsSync(packagePath)) {

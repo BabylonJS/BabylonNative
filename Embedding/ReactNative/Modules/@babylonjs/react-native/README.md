@@ -10,10 +10,6 @@ This package has several **peer dependencies**. If these dependencies are unmet,
 
 The `react-native-permissions` dependency is required for XR capabilities of Babylon.js (to request camera permissions automatically). Be sure to follow the `react-native-permissions` [instructions](https://github.com/react-native-community/react-native-permissions#setup) to update your `Podfile` and `Info.plist` (iOS) and/or `AndroidManifest.xml` (Android).
 
-### C++ Build Requirements
-
-This package includes C++ source, so platform specific tooling to build C++ code must be installed.
-
 ### Android Configuration
 
 The minimum Android SDK version is 18. This must be set as `minSdkVersion` in the consuming project's `build.gradle` file.
