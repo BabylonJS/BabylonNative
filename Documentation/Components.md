@@ -67,6 +67,17 @@ same codebase. N-API types -- particularly the `Env` type -- are central
 to Babylon Native and **are** exposed as part of the contract of most 
 Babylon Native components.
 
+(See [this thread](https://github.com/nodejs/abi-stable-node/issues/354) 
+for additional context. There is also 
+[work](https://github.com/nodejs/node-addon-api/issues/399) needed to factor out the 
+JavaScript part of node-addon-api.
+Some small modifications were made to [the code](../Dependencies/napi) to 
+avoid node dependencies and improve performance. The Chakra version 
+[js_native_api_chakra.cc](./Dependencies/napi/source/js_native_api_chakra.cc) came from 
+[node_api_jsrt.cc](https://github.com/nodejs/node-chakracore/blob/master/src/node_api_jsrt.cc) 
+and was modified to target Chakra directly. We will work on submitting these changes 
+to the public version.)
+
 ### SPIRV-Cross
 
 [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) is a Khronos
