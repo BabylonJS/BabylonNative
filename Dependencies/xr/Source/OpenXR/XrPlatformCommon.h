@@ -9,6 +9,8 @@
 #include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrExtensions.h"
 #include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrStruct.h"
 #include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrViewConfiguration.h"
+#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrHandle.h"
+#include "../Dependencies/OpenXR-MixedReality/shared/XrUtility/XrMath.h"
 
 #include <assert.h>
 #include <stdexcept>
