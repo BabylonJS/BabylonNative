@@ -10,6 +10,8 @@
 #include <XrExtensions.h>
 #include <XrStruct.h>
 #include <XrViewConfiguration.h>
+#include <XrHandle.h>
+#include <XrMath.h>
 
 #include <assert.h>
 #include <stdexcept>
