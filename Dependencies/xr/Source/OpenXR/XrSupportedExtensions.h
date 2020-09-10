@@ -1,8 +1,5 @@
-#pragma warning ( push )
-// Momentarily disable warnings related to consuming OpenXR-MixedReality to avoid build breaks
-#pragma warning ( disable : 4003 ) 
 #include "Windows/XrPlatform.h"
-#pragma warning ( pop )
+#include <unordered_set>
 
 #ifndef XR_SUPPORTED_EXTENSIONS
 #define XR_SUPPORTED_EXTENSIONS
@@ -18,7 +15,7 @@ namespace xr
             m_extensionProperties.resize(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
             XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, m_extensionProperties.data()));
 
-            // D3D11 extension is required for this sample, so check if it's supported.
+            // D3D11 extension is required, so check if it's supported.
             for (const char* extensionName : REQUIRED_EXTENSIONS)
             {
                 if (!TryEnableExtension(extensionName))
@@ -68,7 +65,7 @@ namespace xr
 
     private:
         std::vector<XrExtensionProperties> m_extensionProperties{};
-        std::set<std::string> m_supportedExtensionNames;
+        std::unordered_set<std::string> m_supportedExtensionNames{};
     };
 }
 #endif
