@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef XR_WINDOWS_PLATFORM
-#define XR_WINDOWS_PLATFORM
-
 #include <d3d11.h>
 
 #ifndef XR_USE_GRAPHICS_API_D3D11
@@ -66,5 +63,3 @@ namespace xr
         XR_KHR_D3D11_ENABLE_EXTENSION_NAME
     };
 }
-
-#endif

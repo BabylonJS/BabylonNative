@@ -31,31 +31,26 @@ namespace xr
     struct XrSessionContext::Impl
     {
         XrSessionContext::Impl()
-            : extensions(std::make_unique<XrSupportedExtensions>()) {}
+            : Extensions(std::make_unique<XrSupportedExtensions>()) {}
 
         void PopulateExtensions()
         {
-            if (instance.Get() == XR_NULL_HANDLE)
+            if (Instance.Get() == XR_NULL_HANDLE)
             {
                 throw std::exception(/*Attempted to populate extensions when instance was null*/);
             }
 
-            extensions->PopulateDispatchTable(instance.Get());
+            Extensions->PopulateDispatchTable(Instance.Get());
         }
 
-        XrTime GetDisplayTime()
-        {
-            return displayTime;
-        }
-
-        InstanceHandle instance;
-        XrSystemId systemId{ XR_NULL_SYSTEM_ID };
-        SessionHandle session;
-        SpaceHandle sceneSpace;
-        XrReferenceSpaceType sceneSpaceType{};
-        std::atomic<XrSessionState> state{ XrSessionState::XR_SESSION_STATE_UNKNOWN };
-        std::atomic<XrTime> displayTime{};
-        std::unique_ptr<XrSupportedExtensions> extensions;
+        InstanceHandle Instance;
+        XrSystemId SystemId{ XR_NULL_SYSTEM_ID };
+        SessionHandle Session;
+        SpaceHandle SceneSpace;
+        XrReferenceSpaceType SceneSpaceType{};
+        std::atomic<XrSessionState> State{ XrSessionState::XR_SESSION_STATE_UNKNOWN };
+        std::atomic<XrTime> DisplayTime{};
+        std::unique_ptr<XrSupportedExtensions> Extensions;
     };
 
     XrSessionContext::XrSessionContext()
@@ -64,24 +59,24 @@ namespace xr
     XrSessionContext::~XrSessionContext() {}
     bool XrSessionContext::IsInitialized() const
     {
-        return ContextImpl->session.Get() != XR_NULL_HANDLE &&
-            ContextImpl->sceneSpace.Get() != XR_NULL_HANDLE &&
-            ContextImpl->state != XrSessionState::XR_SESSION_STATE_UNKNOWN;
+        return ContextImpl->Session.Get() != XR_NULL_HANDLE &&
+            ContextImpl->SceneSpace.Get() != XR_NULL_HANDLE &&
+            ContextImpl->State != XrSessionState::XR_SESSION_STATE_UNKNOWN;
     }
-    XrInstance XrSessionContext::Instance() const { return ContextImpl->instance.Get(); }
-    XrSystemId XrSessionContext::SystemId() const { return ContextImpl->systemId; }
-    XrTime XrSessionContext::DisplayTime() const { return ContextImpl->GetDisplayTime(); }
-    const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->extensions; }
-    const XrSession XrSessionContext::Session() const { return ContextImpl->session.Get(); }
-    const XrSessionState XrSessionContext::State() const { return ContextImpl->state; }
-    const XrSpace XrSessionContext::Space() const { return ContextImpl->sceneSpace.Get(); }
+    XrInstance XrSessionContext::Instance() const { return ContextImpl->Instance.Get(); }
+    XrSystemId XrSessionContext::SystemId() const { return ContextImpl->SystemId; }
+    XrTime XrSessionContext::DisplayTime() const { return ContextImpl->DisplayTime; }
+    const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->Extensions; }
+    const XrSession XrSessionContext::Session() const { return ContextImpl->Session.Get(); }
+    const XrSessionState XrSessionContext::State() const { return ContextImpl->State; }
+    const XrSpace XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
 
     struct System::Impl
     {
         static constexpr XrFormFactor FORM_FACTOR{ XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY };
 
-        const XrSessionContext& m_context;
-        
+        const XrSessionContext& Context;
+
         static constexpr XrViewConfigurationType PrimaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
         std::vector<XrViewConfigurationType> SupportedSecondaryViewConfigurationTypes{};
         const std::vector<XrEnvironmentBlendMode> SupportedEnvironmentBlendModes = {
@@ -95,25 +90,25 @@ namespace xr
 
         Impl(const std::string& applicationName)
             : ApplicationName{ applicationName }
-            , m_context(XrRegistry::Context())
+            , Context(XrRegistry::Context())
         {}
 
         bool IsInitialized() const
         {
-            return m_context.ContextImpl->instance.Get() != XR_NULL_HANDLE && m_context.ContextImpl->systemId != XR_NULL_SYSTEM_ID;
+            return Context.ContextImpl->Instance.Get() != XR_NULL_HANDLE && Context.ContextImpl->SystemId != XR_NULL_SYSTEM_ID;
         }
 
         bool TryInitialize()
         {
             assert(!IsInitialized());
 
-            if (m_context.ContextImpl->instance.Get() == XR_NULL_HANDLE)
+            if (Context.ContextImpl->Instance.Get() == XR_NULL_HANDLE)
             {
                 InitializeXrInstanceAndExtensions();
             }
 
-            assert(m_context.ContextImpl->extensions != nullptr);
-            assert(m_context.ContextImpl->systemId == XR_NULL_SYSTEM_ID);
+            assert(Context.ContextImpl->Extensions != nullptr);
+            assert(Context.ContextImpl->SystemId == XR_NULL_SYSTEM_ID);
 
             return TryInitializeXrSystemIdAndViewProperties();
         }
@@ -122,8 +117,8 @@ namespace xr
         // Phase one of initialization. Cannot fail without crashing.
         void InitializeXrInstanceAndExtensions()
         {
-            auto& extensions = m_context.ContextImpl->extensions;
-            auto& instanceHandle = m_context.ContextImpl->instance;
+            auto& extensions = Context.ContextImpl->Extensions;
+            auto& instanceHandle = Context.ContextImpl->Instance;
             
             XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
             createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions->Names.size());
@@ -132,13 +127,13 @@ namespace xr
             strcpy_s(createInfo.applicationInfo.applicationName, ApplicationName.c_str());
             XrCheck(xrCreateInstance(&createInfo, instanceHandle.Put()));
 
-            m_context.ContextImpl->PopulateExtensions();
+            Context.ContextImpl->PopulateExtensions();
         }
 
         void InitializeViewConfigurations()
         {
-            const auto& instance = m_context.Instance();
-            const auto& systemId = m_context.SystemId();
+            const auto& instance = Context.Instance();
+            const auto& systemId = Context.SystemId();
             
             assert(instance != XR_NULL_HANDLE);
             assert(systemId != XR_NULL_SYSTEM_ID);
@@ -160,8 +155,8 @@ namespace xr
         // Phase two of initialization. Can fail and be retried without crashing.
         bool TryInitializeXrSystemIdAndViewProperties()
         {
-            const auto& instance = m_context.Instance();
-            auto& systemId = m_context.ContextImpl->systemId;
+            const auto& instance = Context.Instance();
+            auto& systemId = Context.ContextImpl->SystemId;
 
             XrSystemGetInfo systemInfo{ XR_TYPE_SYSTEM_GET_INFO };
             systemInfo.formFactor = FORM_FACTOR;
@@ -262,13 +257,13 @@ namespace xr
             : HmdImpl{ hmdImpl }
         {
             assert(HmdImpl.IsInitialized());
-            const auto& context = HmdImpl.m_context;
+            const auto& context = HmdImpl.Context;
             const auto& instance = context.Instance();
             const auto& systemId = context.SystemId();
             const auto& extensions = context.Extensions();
-            auto& sessionHandle = context.ContextImpl->session;
-            auto& sceneSpaceHandle = context.ContextImpl->sceneSpace;
-            auto& sceneSpaceType = context.ContextImpl->sceneSpaceType;
+            auto& sessionHandle = context.ContextImpl->Session;
+            auto& sceneSpaceHandle = context.ContextImpl->SceneSpace;
+            auto& sceneSpaceType = context.ContextImpl->SceneSpaceType;
 
             // Create the session
             auto graphicsBinding = CreateGraphicsBinding(*extensions, instance, systemId, graphicsContext);
@@ -311,7 +306,7 @@ namespace xr
 
         void RequestEndSession()
         {
-            const auto& session = HmdImpl.m_context.Session();
+            const auto& session = HmdImpl.Context.Session();
             xrRequestExitSession(session);
         }
 
@@ -324,7 +319,7 @@ namespace xr
                 const auto& swapchain = primaryRenderResource.ColorSwapchains.at(viewIndex);
                 return{ static_cast<size_t>(swapchain.Width), static_cast<size_t>(swapchain.Height) };
             }
-            else if (HmdImpl.m_context.Extensions()->SecondaryViewConfigurationSupported &&
+            else if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported &&
                 HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
             {
                 size_t secondaryViewIndex = viewIndex - primaryViewConfigTypeSwapchainCount;
@@ -348,7 +343,7 @@ namespace xr
 
         void PopulateSwapchains(ViewConfigurationState& viewState)
         {
-            const auto& session = HmdImpl.m_context.Session();
+            const auto& session = HmdImpl.Context.Session();
             assert(viewState.Views.size() > 0);
 
             // Select color and depth swapchain pixel formats
@@ -396,9 +391,9 @@ namespace xr
 
         Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable, XrTime time)
         {
-            const auto& session = HmdImpl.m_context.Session();
-            const auto& apiExtensions = *HmdImpl.m_context.Extensions();
-            const auto& sceneSpace = HmdImpl.m_context.Space();
+            const auto& session = HmdImpl.Context.Session();
+            const auto& apiExtensions = *HmdImpl.Context.Extensions();
+            const auto& sceneSpace = HmdImpl.Context.Space();
 
             if (!apiExtensions.SpatialAnchorSupported)
             {
@@ -435,7 +430,7 @@ namespace xr
 
         void UpdateAnchor(Anchor& anchor, XrTime time) const
         {
-            const auto& sceneSpace = HmdImpl.m_context.Space();
+            const auto& sceneSpace = HmdImpl.Context.Space();
             const auto anchorEntry = openXRAnchors.find(anchor.NativeAnchor);
             if (anchorEntry == openXRAnchors.end())
             {
@@ -498,7 +493,7 @@ namespace xr
 
         void InitializeActionResources(XrInstance instance)
         {
-            const auto& session = HmdImpl.m_context.Session();
+            const auto& session = HmdImpl.Context.Session();
 
             // Create action set
             XrActionSetCreateInfo actionSetInfo{ XR_TYPE_ACTION_SET_CREATE_INFO };
@@ -612,7 +607,7 @@ namespace xr
             {
                 XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT
             };
-            if (HmdImpl.m_context.Extensions()->SecondaryViewConfigurationSupported)
+            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported)
             {
                 secondaryViewConfigCreateInfo.viewConfigurationType = viewConfigType;
                 swapchainCreateInfo.next = &secondaryViewConfigCreateInfo;
@@ -629,7 +624,7 @@ namespace xr
 
         void SelectSwapchainPixelFormats(SwapchainFormat& colorFormat, SwapchainFormat& depthFormat)
         {
-            const auto& session = HmdImpl.m_context.Session();
+            const auto& session = HmdImpl.Context.Session();
 
             // Query runtime preferred swapchain formats. Two-call idiom.
             uint32_t swapchainFormatCount;
@@ -665,14 +660,14 @@ namespace xr
         {
             // Reset buffer header for every xrPollEvent function call.
             buffer = { XR_TYPE_EVENT_DATA_BUFFER };
-            const XrResult xr = xrPollEvent(HmdImpl.m_context.Instance(), &buffer);
+            const XrResult xr = xrPollEvent(HmdImpl.Context.Instance(), &buffer);
             return xr != XR_EVENT_UNAVAILABLE;
         }
 
         void ProcessSessionState(bool& exitRenderLoop, bool& requestRestart)
         {
-            const auto& session = HmdImpl.m_context.Session();
-            const auto& sessionState = HmdImpl.m_context.State();
+            const auto& session = HmdImpl.Context.Session();
+            const auto& sessionState = HmdImpl.Context.State();
             
             switch (sessionState)
             {
@@ -687,8 +682,8 @@ namespace xr
                     XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SESSION_BEGIN_INFO_MSFT
                 };
 
-                if (HmdImpl.m_context.Extensions()->SecondaryViewConfigurationSupported &&
-                    HmdImpl.m_context.Extensions()->FirstPersonObserverSupported &&
+                if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported &&
+                    HmdImpl.Context.Extensions()->FirstPersonObserverSupported &&
                     HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
                 {
                     secondaryViewConfigInfo.viewConfigurationCount = static_cast<uint32_t>(HmdImpl.SupportedSecondaryViewConfigurationTypes.size());
@@ -717,7 +712,7 @@ namespace xr
 
         void ProcessEvents(bool& exitRenderLoop, bool& requestRestart)
         {
-            auto& sessionState = HmdImpl.m_context.ContextImpl->state;
+            auto& sessionState = HmdImpl.Context.ContextImpl->State;
             exitRenderLoop = false;
             requestRestart = false;
 
@@ -735,7 +730,7 @@ namespace xr
                     return;
                 case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
                     const auto stateEvent = *reinterpret_cast<const XrEventDataSessionStateChanged*>(header);
-                    assert(HmdImpl.m_context.Session() != XR_NULL_HANDLE && HmdImpl.m_context.Session() == stateEvent.session);
+                    assert(HmdImpl.Context.Session() != XR_NULL_HANDLE && HmdImpl.Context.Session() == stateEvent.session);
                     sessionState = stateEvent.state;
                     ProcessSessionState(exitRenderLoop, requestRestart);
                     break;
@@ -761,7 +756,7 @@ namespace xr
 
         void LocateViews(const XrViewConfigurationType viewConfigType, uint32_t& viewCountOutput)
         {
-            const auto& context = sessionImpl.HmdImpl.m_context;
+            const auto& context = sessionImpl.HmdImpl.Context;
             const auto& session = context.Session();
             const auto& sceneSpace = context.Space();
             const auto displayTime = context.DisplayTime();
@@ -852,8 +847,8 @@ namespace xr
         , RemovedPlanes{} // NYI
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
-        const auto& session = m_impl->sessionImpl.HmdImpl.m_context.Session();
-        auto& displayTime = m_impl->sessionImpl.HmdImpl.m_context.ContextImpl->displayTime;
+        const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
+        auto& displayTime = m_impl->sessionImpl.HmdImpl.Context.ContextImpl->DisplayTime;
         auto& renderResources = m_impl->sessionImpl.RenderResources;
 
         XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
@@ -893,8 +888,8 @@ namespace xr
                 if (viewState.Active)
                 {
                     std::vector<XrViewConfigurationView> viewConfigViews = EnumerateViewConfigurationViews(
-                        sessionImpl.HmdImpl.m_context.Instance(),
-                        sessionImpl.HmdImpl.m_context.SystemId(),
+                        sessionImpl.HmdImpl.Context.Instance(),
+                        sessionImpl.HmdImpl.Context.SystemId(),
                         secondaryViewConfigState.viewConfigurationType);
                     
                     if (renderResource.ColorSwapchains.size() < viewConfigViews.size() ||
@@ -915,7 +910,7 @@ namespace xr
         // Only render when session is visible. otherwise submit zero layers
         if (m_impl->shouldRender)
         {
-            const auto& context = sessionImpl.HmdImpl.m_context;
+            const auto& context = sessionImpl.HmdImpl.Context;
             const auto& sceneSpace = context.Space();
             const auto depthSupported = context.Extensions()->DepthExtensionSupported;
 
@@ -1106,7 +1101,7 @@ namespace xr
     System::Session::Frame::~Frame()
     {
         std::vector<XrCompositionLayerProjection> layers{};
-        const auto& context = m_impl->sessionImpl.HmdImpl.m_context;
+        const auto& context = m_impl->sessionImpl.HmdImpl.Context;
         const auto& session = context.Session();
         const auto& sceneSpace = context.Space();
         const auto& extensions = context.Extensions();
@@ -1278,13 +1273,13 @@ namespace xr
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
     {
-        const auto displayTime = m_impl->sessionImpl.HmdImpl.m_context.DisplayTime();
+        const auto displayTime = m_impl->sessionImpl.HmdImpl.Context.DisplayTime();
         return m_impl->sessionImpl.CreateAnchor(pose, trackable, displayTime);
     }
 
     void System::Session::Frame::UpdateAnchor(Anchor& anchor) const
     {
-        const auto displayTime = m_impl->sessionImpl.HmdImpl.m_context.DisplayTime();
+        const auto displayTime = m_impl->sessionImpl.HmdImpl.Context.DisplayTime();
         m_impl->sessionImpl.UpdateAnchor(anchor, displayTime);
     }
 

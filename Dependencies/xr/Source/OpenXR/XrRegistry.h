@@ -2,8 +2,6 @@
 
 #include "XrSupportedExtensions.h"
 
-#ifndef XR_REGISTRY
-#define XR_REGISTRY
 namespace xr
 {
     struct XrSessionContext
@@ -35,4 +33,3 @@ namespace xr
         static XrSessionContext s_context;
     };
 }
-#endif
