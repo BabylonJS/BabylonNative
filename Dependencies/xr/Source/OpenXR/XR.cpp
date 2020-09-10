@@ -35,12 +35,12 @@ namespace xr
 
         void PopulateExtensions()
         {
-            if (instance == XR_NULL_HANDLE)
+            if (instance.Get() == XR_NULL_HANDLE)
             {
                 throw std::exception(/*Attempted to populate extensions when instance was null*/);
             }
 
-            extensions->PopulateDispatchTable(instance);
+            extensions->PopulateDispatchTable(instance.Get());
         }
 
         XrTime GetDisplayTime()
@@ -48,10 +48,10 @@ namespace xr
             return displayTime;
         }
 
-        XrInstance instance{ XR_NULL_HANDLE };
+        InstanceHandle instance;
         XrSystemId systemId{ XR_NULL_SYSTEM_ID };
-        XrSession session{ XR_NULL_HANDLE };
-        XrSpace sceneSpace{ XR_NULL_HANDLE };
+        SessionHandle session;
+        SpaceHandle sceneSpace;
         XrReferenceSpaceType sceneSpaceType{};
         std::atomic<XrSessionState> state{ XrSessionState::XR_SESSION_STATE_UNKNOWN };
         std::atomic<XrTime> displayTime{};
@@ -64,17 +64,17 @@ namespace xr
     XrSessionContext::~XrSessionContext() {}
     bool XrSessionContext::IsInitialized() const
     {
-        return ContextImpl->session != XR_NULL_HANDLE &&
-            ContextImpl->sceneSpace != XR_NULL_HANDLE &&
+        return ContextImpl->session.Get() != XR_NULL_HANDLE &&
+            ContextImpl->sceneSpace.Get() != XR_NULL_HANDLE &&
             ContextImpl->state != XrSessionState::XR_SESSION_STATE_UNKNOWN;
     }
-    XrInstance XrSessionContext::Instance() const { return ContextImpl->instance; }
+    XrInstance XrSessionContext::Instance() const { return ContextImpl->instance.Get(); }
     XrSystemId XrSessionContext::SystemId() const { return ContextImpl->systemId; }
     XrTime XrSessionContext::DisplayTime() const { return ContextImpl->GetDisplayTime(); }
     const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->extensions; }
-    const XrSession& XrSessionContext::Session() const { return ContextImpl->session; }
+    const XrSession XrSessionContext::Session() const { return ContextImpl->session.Get(); }
     const XrSessionState XrSessionContext::State() const { return ContextImpl->state; }
-    const XrSpace& XrSessionContext::Space() const { return ContextImpl->sceneSpace; }
+    const XrSpace XrSessionContext::Space() const { return ContextImpl->sceneSpace.Get(); }
 
     struct System::Impl
     {
@@ -100,14 +100,14 @@ namespace xr
 
         bool IsInitialized() const
         {
-            return m_context.ContextImpl->instance != XR_NULL_HANDLE && m_context.ContextImpl->systemId != XR_NULL_SYSTEM_ID;
+            return m_context.ContextImpl->instance.Get() != XR_NULL_HANDLE && m_context.ContextImpl->systemId != XR_NULL_SYSTEM_ID;
         }
 
         bool TryInitialize()
         {
             assert(!IsInitialized());
 
-            if (m_context.ContextImpl->instance == XR_NULL_HANDLE)
+            if (m_context.ContextImpl->instance.Get() == XR_NULL_HANDLE)
             {
                 InitializeXrInstanceAndExtensions();
             }
@@ -123,14 +123,14 @@ namespace xr
         void InitializeXrInstanceAndExtensions()
         {
             auto& extensions = m_context.ContextImpl->extensions;
-            auto& instance = m_context.ContextImpl->instance;
+            auto& instanceHandle = m_context.ContextImpl->instance;
             
             XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
             createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions->Names.size());
             createInfo.enabledExtensionNames = extensions->Names.data();
             createInfo.applicationInfo = { "", 1, "OpenXR Sample", 1, XR_CURRENT_API_VERSION };
             strcpy_s(createInfo.applicationInfo.applicationName, ApplicationName.c_str());
-            XrCheck(xrCreateInstance(&createInfo, &instance));
+            XrCheck(xrCreateInstance(&createInfo, instanceHandle.Put()));
 
             m_context.ContextImpl->PopulateExtensions();
         }
@@ -266,8 +266,8 @@ namespace xr
             const auto& instance = context.Instance();
             const auto& systemId = context.SystemId();
             const auto& extensions = context.Extensions();
-            auto& session = context.ContextImpl->session;
-            auto& sceneSpace = context.ContextImpl->sceneSpace;
+            auto& sessionHandle = context.ContextImpl->session;
+            auto& sceneSpaceHandle = context.ContextImpl->sceneSpace;
             auto& sceneSpaceType = context.ContextImpl->sceneSpaceType;
 
             // Create the session
@@ -275,7 +275,7 @@ namespace xr
             XrSessionCreateInfo createInfo{ XR_TYPE_SESSION_CREATE_INFO };
             createInfo.next = &graphicsBinding;
             createInfo.systemId = systemId;
-            XrCheck(xrCreateSession(instance, &createInfo, &session));
+            XrCheck(xrCreateSession(instance, &createInfo, sessionHandle.Put()));
 
             // Initialize scene space
             if (extensions->UnboundedRefSpaceSupported)
@@ -289,7 +289,7 @@ namespace xr
             XrReferenceSpaceCreateInfo spaceCreateInfo{ XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
             spaceCreateInfo.referenceSpaceType = sceneSpaceType;
             spaceCreateInfo.poseInReferenceSpace = IDENTITY_TRANSFORM;
-            XrCheck(xrCreateReferenceSpace(session, &spaceCreateInfo, &sceneSpace));
+            XrCheck(xrCreateReferenceSpace(sessionHandle.Get(), &spaceCreateInfo, sceneSpaceHandle.Put()));
 
             InitializeRenderResources(instance, systemId);
             InitializeActionResources(instance);

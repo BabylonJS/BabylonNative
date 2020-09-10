@@ -15,9 +15,9 @@ namespace xr
         XrSystemId SystemId() const;
         XrTime DisplayTime() const;
         const std::unique_ptr<XrSupportedExtensions>& Extensions() const;
-        const XrSession& Session() const;
+        const XrSession Session() const;
         const XrSessionState State() const;
-        const XrSpace& Space() const;
+        const XrSpace Space() const;
 
         struct Impl;
         std::unique_ptr<Impl> ContextImpl;
