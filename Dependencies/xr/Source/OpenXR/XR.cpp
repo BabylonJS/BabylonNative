@@ -717,7 +717,6 @@ namespace xr
 
         void ProcessEvents(bool& exitRenderLoop, bool& requestRestart)
         {
-            const auto& session = HmdImpl.m_context.Session();
             auto& sessionState = HmdImpl.m_context.ContextImpl->state;
             exitRenderLoop = false;
             requestRestart = false;
@@ -735,11 +734,14 @@ namespace xr
                     requestRestart = false;
                     return;
                 case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
+                {
+                    const auto& session = HmdImpl.m_context.Session();
                     const auto stateEvent = *reinterpret_cast<const XrEventDataSessionStateChanged*>(header);
                     assert(session != XR_NULL_HANDLE && session == stateEvent.session);
                     sessionState = stateEvent.state;
                     ProcessSessionState(exitRenderLoop, requestRestart);
-                    break;
+                }
+                break;
                 case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
                 case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
                 default:
