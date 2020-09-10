@@ -1,15 +1,17 @@
 #pragma once
 
-#ifdef XR_USE_GRAPHICS_API_D3D11
-#error "XrPlatform.h must not be included more than once."
+#include <d3d11.h>
+
+#ifndef XR_USE_GRAPHICS_API_D3D11
+#define XR_USE_GRAPHICS_API_D3D11
 #endif
 
-#include <d3d11.h>
-#define XR_USE_GRAPHICS_API_D3D11
+#ifndef XR_USE_PLATFORM_WIN32
+#define XR_USE_PLATFORM_WIN32
+#endif
 
 #include <XrPlatformCommon.h>
 #include <XR.h>
-
 #include <array>
 
 namespace xr
