@@ -6,38 +6,38 @@
 
 namespace Babylon
 {
-    class NativeGraphics
+    class Graphics
     {
     public:
         class Impl;
 
-        ~NativeGraphics();
+        ~Graphics();
 
         template<typename NativeWindowT>
-        static std::unique_ptr<NativeGraphics> InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
+        static std::unique_ptr<Graphics> InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
         template<typename NativeWindowT>
         void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
         struct Frame
         {
-            Frame(NativeGraphics::Impl& graphicsImpl);
+            Frame(Graphics::Impl& graphicsImpl);
             ~Frame();
 
             Frame(const Frame&) = delete;
             Frame(Frame&&) = delete;
 
         private:
-            NativeGraphics::Impl& m_graphicsImpl;
+            Graphics::Impl& m_graphicsImpl;
         };
         std::unique_ptr<Frame> AdvanceFrame();
 
         void UpdateSize(size_t width, size_t height);
 
     private:
-        NativeGraphics();
-        NativeGraphics(const NativeGraphics&) = delete;
-        NativeGraphics(NativeGraphics&&) = delete;
+        Graphics();
+        Graphics(const Graphics&) = delete;
+        Graphics(Graphics&&) = delete;
 
         std::unique_ptr<Impl> m_impl{};
     };

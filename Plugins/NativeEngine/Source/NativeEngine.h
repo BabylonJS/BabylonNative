@@ -6,7 +6,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
-#include <NativeGraphicsImpl.h>
+#include <GraphicsImpl.h>
 
 #include <NativeWindow.h>
 
@@ -386,7 +386,7 @@ namespace Babylon
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
-        static constexpr auto JS_NATIVE_GRAPHICS_NAME = "_NativeGraphics";
+        static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
@@ -395,7 +395,7 @@ namespace Babylon
 
         static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
         static void DeinitializeWindow();
-        static void Initialize(Napi::Env, NativeGraphics&);
+        static void Initialize(Napi::Env, Graphics&);
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
@@ -492,7 +492,7 @@ namespace Babylon
 
         JsRuntime& m_runtime;
         JsRuntimeScheduler m_runtimeScheduler;
-        NativeGraphics::Impl& m_nativeGraphicsImpl;
+        Graphics::Impl& m_graphicsImpl;
 
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;

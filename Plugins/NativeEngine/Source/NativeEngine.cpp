@@ -587,7 +587,7 @@ namespace Babylon
         bgfx::shutdown();
     }
 
-    void NativeEngine::Initialize(Napi::Env env, NativeGraphics& graphics)
+    void NativeEngine::Initialize(Napi::Env env, Graphics& graphics)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
@@ -668,7 +668,7 @@ namespace Babylon
             });
 
         auto nativeObject = env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
-        nativeObject.Set(JS_NATIVE_GRAPHICS_NAME, Napi::External<NativeGraphics>::New(env, &graphics));
+        nativeObject.Set(JS_GRAPHICS_NAME, Napi::External<Graphics>::New(env, &graphics));
         nativeObject.Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
     }
 
@@ -681,7 +681,7 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
-        , m_nativeGraphicsImpl{NativeGraphics::Impl::GetImpl(*info.Env().Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_NATIVE_GRAPHICS_NAME).As<Napi::External<NativeGraphics>>().Data())}
+        , m_graphicsImpl{Graphics::Impl::GetImpl(*info.Env().Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_GRAPHICS_NAME).As<Napi::External<Graphics>>().Data())}
         , m_engineState{BGFX_STATE_DEFAULT}
         , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
@@ -737,20 +737,20 @@ namespace Babylon
         {
             m_isRenderScheduled = true;
 
-            m_nativeGraphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this]() mutable {
+            m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this]() mutable {
                 if (m_renderOnJavaScriptThread)
                 {
-                    m_nativeGraphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(arcana::inline_scheduler));
+                    m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(arcana::inline_scheduler));
                 }
                 else
                 {
-                    m_nativeGraphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(m_runtimeScheduler));
+                    m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(m_runtimeScheduler));
                 }
             });
             if (m_renderOnJavaScriptThread)
             {
                 Dispatch([this] {
-                    m_nativeGraphicsImpl.AdvanceFrame();
+                    m_graphicsImpl.AdvanceFrame();
                 });
             }
         }

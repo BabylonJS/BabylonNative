@@ -10,7 +10,7 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/NativeGraphics.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -26,7 +26,7 @@ HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::NativeGraphics> graphics{};
+std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 // Forward declarations of functions included in this code module:
@@ -101,7 +101,7 @@ namespace
 
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
-        graphics = Babylon::NativeGraphics::InitializeFromWindow<void*>(hWnd, width, height);
+        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, width, height);
 
         runtime = std::make_unique<Babylon::AppRuntime>();
         runtime->Dispatch([width, height, hWnd](Napi::Env env) {

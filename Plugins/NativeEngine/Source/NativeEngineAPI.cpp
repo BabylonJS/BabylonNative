@@ -10,7 +10,7 @@ namespace Babylon::Plugins::NativeEngine
         Babylon::NativeEngine::InitializeWindow(windowPtr, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
-    void Initialize(Napi::Env env, NativeGraphics& graphics)
+    void Initialize(Napi::Env env, Graphics& graphics)
     {
         Babylon::NativeEngine::Initialize(env, graphics);
     }

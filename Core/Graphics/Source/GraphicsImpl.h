@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/NativeGraphics.h>
+#include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
 
 #include <arcana/threading/dispatcher.h>
@@ -11,17 +11,17 @@
 
 namespace Babylon
 {
-    class NativeGraphics::Impl
+    class Graphics::Impl
     {
     public:
-        static NativeGraphics::Impl& GetImpl(NativeGraphics& graphics)
+        static Graphics::Impl& GetImpl(Graphics& graphics)
         {
             return *graphics.m_impl;
         }
 
         ~Impl();
 
-        std::unique_ptr<NativeGraphics::Frame> AdvanceFrame();
+        std::unique_ptr<Graphics::Frame> AdvanceFrame();
 
         void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
@@ -30,7 +30,7 @@ namespace Babylon
         BgfxCallback BgfxCallback{};
 
     private:
-        friend NativeGraphics::Frame;
+        friend Graphics::Frame;
 
         arcana::manual_dispatcher<128> Dispatcher{};
         arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};

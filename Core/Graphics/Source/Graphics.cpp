@@ -1,10 +1,10 @@
-#include "NativeGraphicsImpl.h"
+#include "GraphicsImpl.h"
 
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 
 namespace Babylon
 {
-    NativeGraphics::Frame::Frame(NativeGraphics::Impl& graphicsImpl)
+    Graphics::Frame::Frame(Graphics::Impl& graphicsImpl)
         : m_graphicsImpl{graphicsImpl}
     {
         auto oldBeforeRenderTaskCompletionSource = m_graphicsImpl.BeforeRenderTaskCompletionSource;
@@ -12,7 +12,7 @@ namespace Babylon
         oldBeforeRenderTaskCompletionSource.complete();
     }
 
-    NativeGraphics::Frame::~Frame()
+    Graphics::Frame::~Frame()
     {
         bool finished = false;
         bool workDone = false;
@@ -32,28 +32,28 @@ namespace Babylon
         oldRenderTaskCompletionSource.complete();
     }
 
-    NativeGraphics::Impl::~Impl()
+    Graphics::Impl::~Impl()
     {
         bgfx::shutdown();
     }
 
-    void NativeGraphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
+    void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
     {
         std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
         RenderWorkTasks.push_back(std::move(renderWorkTask));
     }
 
-    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetBeforeRenderTask()
+    arcana::task<void, std::exception_ptr> Graphics::Impl::GetBeforeRenderTask()
     {
         return BeforeRenderTaskCompletionSource.as_task();
     }
 
-    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::GetAfterRenderTask()
+    arcana::task<void, std::exception_ptr> Graphics::Impl::GetAfterRenderTask()
     {
         return AfterRenderTaskCompletionSource.as_task();
     }
 
-    arcana::task<void, std::exception_ptr> NativeGraphics::Impl::RenderTask(bool& finished, bool& workDone)
+    arcana::task<void, std::exception_ptr> Graphics::Impl::RenderTask(bool& finished, bool& workDone)
     {
         bool anyTasks{};
         arcana::task<void, std::exception_ptr> whenAllTask{};
@@ -82,22 +82,22 @@ namespace Babylon
         }
     }
 
-    std::unique_ptr<NativeGraphics::Frame> NativeGraphics::Impl::AdvanceFrame()
+    std::unique_ptr<Graphics::Frame> Graphics::Impl::AdvanceFrame()
     {
-        return std::make_unique<NativeGraphics::Frame>(*this);
+        return std::make_unique<Graphics::Frame>(*this);
     }
 
-    NativeGraphics::NativeGraphics()
-        : m_impl{std::make_unique<NativeGraphics::Impl>()}
+    Graphics::Graphics()
+        : m_impl{std::make_unique<Graphics::Impl>()}
     {
     }
 
-    NativeGraphics::~NativeGraphics() = default;
+    Graphics::~Graphics() = default;
 
     template<>
-    std::unique_ptr<NativeGraphics> NativeGraphics::InitializeFromWindow<void*>(void* nativeWindowPtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::InitializeFromWindow<void*>(void* nativeWindowPtr, size_t width, size_t height)
     {
-        std::unique_ptr<NativeGraphics> graphics{new NativeGraphics()};
+        std::unique_ptr<Graphics> graphics{new Graphics()};
 
         // Initialize bgfx.
         bgfx::Init init{};
@@ -121,7 +121,7 @@ namespace Babylon
     }
 
     template<>
-    void NativeGraphics::ReinitializeFromWindow<void*>(void* windowPtr, size_t width, size_t height)
+    void Graphics::ReinitializeFromWindow<void*>(void* windowPtr, size_t width, size_t height)
     {
         bgfx::PlatformData pd{};
         pd.ndt = nullptr;
@@ -133,12 +133,12 @@ namespace Babylon
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
-    std::unique_ptr<NativeGraphics::Frame> NativeGraphics::AdvanceFrame()
+    std::unique_ptr<Graphics::Frame> Graphics::AdvanceFrame()
     {
         return m_impl->AdvanceFrame();
     }
 
-    void NativeGraphics::UpdateSize(size_t width, size_t height)
+    void Graphics::UpdateSize(size_t width, size_t height)
     {
         m_impl->GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [width, height] {
             const auto w = static_cast<uint16_t>(width);

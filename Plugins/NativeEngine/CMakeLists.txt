@@ -29,7 +29,7 @@ target_include_directories(NativeEngine PUBLIC "Include")
 
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
-    INTERFACE NativeGraphics
+    INTERFACE Graphics
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg
@@ -38,7 +38,7 @@ target_link_to_dependencies(NativeEngine
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
     PRIVATE NativeWindowInternal
-    PRIVATE NativeGraphicsInternal)
+    PRIVATE GraphicsInternal)
 warnings_as_errors(NativeEngine)
 
 if(APPLE)
@@ -67,4 +67,4 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
     INTERFACE NativeWindowInternal
-    INTERFACE NativeGraphicsInternal)
+    INTERFACE GraphicsInternal)
