@@ -3,7 +3,7 @@ var currentScene;
 var config;
 var justOnce;
 var threshold = 25;
-var errorRatio = 2.5;
+var errorRatio = 0.0;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;

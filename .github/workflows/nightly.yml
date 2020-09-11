@@ -26,8 +26,8 @@ jobs:
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="Release" -p:Platform=x64
     - name: Run Validation Tests
-      run: cd buildWin32_x64/Apps/ValidationTests && ls &&
-          mkdir Results && ls &&
-          mkdir Errors && ls &&
-          cd Release && ls &&
+      run: cd buildWin32_x64/Apps/ValidationTests &&
+          mkdir Results &&
+          mkdir Errors &&
+          cd Release &&
           ./ValidationTests.exe
