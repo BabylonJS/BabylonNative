@@ -16,8 +16,8 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Make Solution
-      run: mkdir buildWin32_x64
-        cd buildWin32_x64
+      run: mkdir buildWin32_x64 && 
+        cd buildWin32_x64 &&
         cmake -G "Visual Studio 16 2019" -A x64 ..
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.1
@@ -28,8 +28,8 @@ jobs:
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="Release" -p:Platform=x64
     - name: Run Validation Tests
-      run: cd buildWin32_x64\Apps\ValidationTests
-          mkdir Results
-          mkdir Errors
-          cd Release
+      run: cd buildWin32_x64\Apps\ValidationTests &&
+          mkdir Results &&
+          mkdir Errors &&
+          cd Release &&
           ValidationTests
