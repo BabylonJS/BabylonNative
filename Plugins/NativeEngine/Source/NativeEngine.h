@@ -161,7 +161,6 @@ namespace Babylon
             bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
             // discard any previous set state
             bgfx::discard();
-            bgfx::touch(m_viewId);
         }
 
         uint16_t m_viewId{};

@@ -311,7 +311,7 @@ namespace Babylon
                 const auto& type = compiler.get_type(uniformBuffer.base_type_id);
                 assert(type.basetype == spirv_cross::SPIRType::BaseType::Struct);
 
-                info.ByteSize = static_cast<uint16_t>(compiler.get_declared_struct_size(type));
+                info.ByteSize = static_cast<uint16_t>(type.member_types.empty() ? 0 : compiler.get_declared_struct_size(type));
 
                 info.Uniforms.resize(type.member_types.size());
                 for (uint32_t index = 0; index < type.member_types.size(); ++index)
