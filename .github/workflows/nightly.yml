@@ -22,12 +22,12 @@ jobs:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.1
     - name: Download babylonjs
-      run: curl.exe -O Apps\BabylonScripts/babylon.max.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
+      run: curl.exe -o Apps\BabylonScripts/babylon.max.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="Release" -p:Platform=x64
     - name: Run Validation Tests
-      run: cd buildWin32_x64\Apps\ValidationTests &&
-          mkdir Results &&
-          mkdir Errors &&
-          cd Release &&
+      run: cd buildWin32_x64/Apps/ValidationTests && ls &&
+          mkdir Results && ls &&
+          mkdir Errors && ls &&
+          cd Release && ls &&
           ValidationTests
