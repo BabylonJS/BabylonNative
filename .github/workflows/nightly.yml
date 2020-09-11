@@ -1,0 +1,35 @@
+name: Nightly build
+
+on: #  change here for cron 
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+      with:
+        submodules: 'recursive'
+    - name: Make Solution
+      run: mkdir buildWin32_x64
+        cd buildWin32_x64
+        cmake -G "Visual Studio 16 2019" -A x64 ..
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.1
+    - name: Download babylonjs
+      uses: wei/wget@v1
+      with:
+        args: -O Apps\BabylonScripts/babylon.max.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
+    - name: Build Win32
+      run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="Release" -p:Platform=x64
+    - name: Run Validation Tests
+      run: cd buildWin32_x64\Apps\ValidationTests
+          mkdir Results
+          mkdir Errors
+          cd Release
+          ValidationTests
