@@ -30,4 +30,4 @@ jobs:
           mkdir Results && ls &&
           mkdir Errors && ls &&
           cd Release && ls &&
-          ValidationTests
+          ./ValidationTests.exe
