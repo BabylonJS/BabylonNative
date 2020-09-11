@@ -24,9 +24,9 @@ namespace xr
 
             return swapchainImageIndex;
         };
-    }
 
-    XrSessionContext XrRegistry::s_context{};
+        std::unique_ptr<XrSessionContext> globalXrSessionContext{};
+    }
 
     struct XrSessionContext::Impl
     {
@@ -70,6 +70,16 @@ namespace xr
     const XrSession XrSessionContext::Session() const { return ContextImpl->Session.Get(); }
     const XrSessionState XrSessionContext::State() const { return ContextImpl->State; }
     const XrSpace XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
+
+    const XrSessionContext& XrRegistry::Context()
+    {
+        if (globalXrSessionContext == nullptr)
+        {
+            globalXrSessionContext = std::make_unique<XrSessionContext>();
+        }
+
+        return *globalXrSessionContext;
+    }
 
     struct System::Impl
     {

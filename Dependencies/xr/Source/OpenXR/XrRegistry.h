@@ -23,13 +23,6 @@ namespace xr
 
     struct XrRegistry
     {
-    public:
-        static const XrSessionContext& Context()
-        {
-            return s_context;
-        }
-
-    private:
-        static XrSessionContext s_context;
+        static const XrSessionContext& Context();
     };
 }
