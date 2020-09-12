@@ -750,7 +750,7 @@ namespace Babylon
             if (m_renderOnJavaScriptThread)
             {
                 Dispatch([this] {
-                    m_graphicsImpl.AdvanceFrame();
+                    m_graphicsImpl.RenderCurrentFrame();
                 });
             }
         }

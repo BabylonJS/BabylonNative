@@ -4,34 +4,6 @@
 
 namespace Babylon
 {
-    Graphics::Frame::Frame(Graphics::Impl& graphicsImpl)
-        : m_graphicsImpl{graphicsImpl}
-    {
-        auto oldBeforeRenderTaskCompletionSource = m_graphicsImpl.BeforeRenderTaskCompletionSource;
-        m_graphicsImpl.BeforeRenderTaskCompletionSource = {};
-        oldBeforeRenderTaskCompletionSource.complete();
-    }
-
-    Graphics::Frame::~Frame()
-    {
-        bool finished = false;
-        bool workDone = false;
-        m_graphicsImpl.RenderTask(finished, workDone);
-        while (!finished)
-        {
-            m_graphicsImpl.Dispatcher.blocking_tick(arcana::cancellation::none());
-        }
-
-        if (workDone)
-        {
-            bgfx::frame();
-        }
-
-        auto oldRenderTaskCompletionSource = m_graphicsImpl.AfterRenderTaskCompletionSource;
-        m_graphicsImpl.AfterRenderTaskCompletionSource = {};
-        oldRenderTaskCompletionSource.complete();
-    }
-
     Graphics::Impl::~Impl()
     {
         bgfx::shutdown();
@@ -53,7 +25,47 @@ namespace Babylon
         return AfterRenderTaskCompletionSource.as_task();
     }
 
-    arcana::task<void, std::exception_ptr> Graphics::Impl::RenderTask(bool& finished, bool& workDone)
+    void Graphics::Impl::StartRenderingCurrentFrame()
+    {
+        if (m_rendering)
+        {
+            throw std::runtime_error{"Current frame cannot be started before prior frame has been finished."};
+        }
+        m_rendering = true;
+
+        auto oldBeforeRenderTaskCompletionSource = BeforeRenderTaskCompletionSource;
+        BeforeRenderTaskCompletionSource = {};
+        oldBeforeRenderTaskCompletionSource.complete();
+    }
+
+    void Graphics::Impl::FinishRenderingCurrentFrame()
+    {
+        if (!m_rendering)
+        {
+            throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
+        }
+
+        bool finished = false;
+        bool workDone = false;
+        RenderCurrentFrameAsync(finished, workDone);
+        while (!finished)
+        {
+            Dispatcher.blocking_tick(arcana::cancellation::none());
+        }
+
+        if (workDone)
+        {
+            bgfx::frame();
+        }
+
+        auto oldRenderTaskCompletionSource = AfterRenderTaskCompletionSource;
+        AfterRenderTaskCompletionSource = {};
+        oldRenderTaskCompletionSource.complete();
+
+        m_rendering = false;
+    }
+
+    arcana::task<void, std::exception_ptr> Graphics::Impl::RenderCurrentFrameAsync(bool& finished, bool& workDone)
     {
         bool anyTasks{};
         arcana::task<void, std::exception_ptr> whenAllTask{};
@@ -77,14 +89,9 @@ namespace Babylon
         else
         {
             return whenAllTask.then(Dispatcher, arcana::cancellation::none(), [this, &finished, &workDone]() mutable {
-                return RenderTask(finished, workDone);
+                return RenderCurrentFrameAsync(finished, workDone);
             });
         }
-    }
-
-    std::unique_ptr<Graphics::Frame> Graphics::Impl::AdvanceFrame()
-    {
-        return std::make_unique<Graphics::Frame>(*this);
     }
 
     Graphics::Graphics()
@@ -133,9 +140,14 @@ namespace Babylon
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
-    std::unique_ptr<Graphics::Frame> Graphics::AdvanceFrame()
+    void Graphics::StartRenderingCurrentFrame()
     {
-        return m_impl->AdvanceFrame();
+        m_impl->StartRenderingCurrentFrame();
+    }
+
+    void Graphics::FinishRenderingCurrentFrame()
+    {
+        m_impl->FinishRenderingCurrentFrame();
     }
 
     void Graphics::UpdateSize(size_t width, size_t height)

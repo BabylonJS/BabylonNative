@@ -19,18 +19,14 @@ namespace Babylon
         template<typename NativeWindowT>
         void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
-        struct Frame
+        void StartRenderingCurrentFrame();
+        void FinishRenderingCurrentFrame();
+        
+        void RenderCurrentFrame()
         {
-            Frame(Graphics::Impl& graphicsImpl);
-            ~Frame();
-
-            Frame(const Frame&) = delete;
-            Frame(Frame&&) = delete;
-
-        private:
-            Graphics::Impl& m_graphicsImpl;
-        };
-        std::unique_ptr<Frame> AdvanceFrame();
+            StartRenderingCurrentFrame();
+            FinishRenderingCurrentFrame();
+        }
 
         void UpdateSize(size_t width, size_t height);
 

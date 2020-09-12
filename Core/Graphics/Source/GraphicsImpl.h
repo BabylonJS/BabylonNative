@@ -21,16 +21,23 @@ namespace Babylon
 
         ~Impl();
 
-        std::unique_ptr<Graphics::Frame> AdvanceFrame();
-
         void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
         arcana::task<void, std::exception_ptr> GetAfterRenderTask();
 
+        void StartRenderingCurrentFrame();
+        void FinishRenderingCurrentFrame();
+
+        void RenderCurrentFrame()
+        {
+            StartRenderingCurrentFrame();
+            FinishRenderingCurrentFrame();
+        }
+
         BgfxCallback BgfxCallback{};
 
     private:
-        friend Graphics::Frame;
+        bool m_rendering{false};
 
         arcana::manual_dispatcher<128> Dispatcher{};
         arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};
@@ -39,6 +46,6 @@ namespace Babylon
         std::vector<arcana::task<void, std::exception_ptr>> RenderWorkTasks{};
         std::mutex RenderWorkTasksMutex{};
 
-        arcana::task<void, std::exception_ptr> RenderTask(bool& finished, bool& workDone);
+        arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone);
     };
 }

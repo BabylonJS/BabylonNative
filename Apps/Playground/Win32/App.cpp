@@ -334,13 +334,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 RefreshBabylon(hWnd);
             }
-            /*else if (wParam == 'P')
-            {
-                if (graphics != nullptr)
-                {
-                    graphics->AdvanceFrame();
-                }
-            }*/
             break;
         }
         case WM_MOUSEMOVE:
