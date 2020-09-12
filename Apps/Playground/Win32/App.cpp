@@ -27,7 +27,7 @@ WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -80,11 +80,18 @@ namespace
 
     void Uninitialize()
     {
-        inputBuffer.reset();
+        if (inputBuffer)
+        {
+            inputBuffer.reset();
+        }
 
         if (runtime)
         {
             runtime.reset();
+        }
+
+        if (graphics)
+        {
             graphics.reset();
         }
     }
@@ -101,9 +108,11 @@ namespace
 
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
-        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, width, height);
 
+        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, width, height);
         runtime = std::make_unique<Babylon::AppRuntime>();
+        inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
+
         runtime->Dispatch([width, height, hWnd](Napi::Env env) {
             // Initialize console plugin.
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -123,9 +132,8 @@ namespace
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
 
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-            inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-            InputManager::Initialize(jsRuntime, *inputBuffer);
+            
+            InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 
         // Scripts are copied to the parent of the executable due to CMake issues.
