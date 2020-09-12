@@ -13,13 +13,13 @@ namespace Babylon
 {
     class Graphics::Impl
     {
-    public:
-        static Graphics::Impl& GetImpl(Graphics& graphics)
-        {
-            return *graphics.m_impl;
-        }
+        static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
+    public:
         ~Impl();
+
+        void AddToJavaScript(Napi::Env);
+        static Impl& GetFromJavaScript(Napi::Env);
 
         void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();

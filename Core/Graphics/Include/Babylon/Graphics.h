@@ -19,6 +19,8 @@ namespace Babylon
         template<typename NativeWindowT>
         void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
 
+        void AddToJavaScript(Napi::Env);
+
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
         

@@ -140,6 +140,25 @@ namespace Babylon
         bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 
+    void Graphics::Impl::AddToJavaScript(Napi::Env env)
+    {
+        JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
+    }
+
+    Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
+    {
+        return *JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Get(JS_GRAPHICS_NAME)
+            .As<Napi::External<Graphics::Impl>>()
+            .Data();
+    }
+
+    void Graphics::AddToJavaScript(Napi::Env env)
+    {
+        m_impl->AddToJavaScript(env);
+    }
+
     void Graphics::StartRenderingCurrentFrame()
     {
         m_impl->StartRenderingCurrentFrame();

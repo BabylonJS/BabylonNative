@@ -587,7 +587,7 @@ namespace Babylon
         bgfx::shutdown();
     }
 
-    void NativeEngine::Initialize(Napi::Env env, Graphics& graphics)
+    void NativeEngine::Initialize(Napi::Env env)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
@@ -667,9 +667,7 @@ namespace Babylon
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
             });
 
-        auto nativeObject = env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
-        nativeObject.Set(JS_GRAPHICS_NAME, Napi::External<Graphics>::New(env, &graphics));
-        nativeObject.Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
@@ -681,7 +679,7 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{m_runtime}
-        , m_graphicsImpl{Graphics::Impl::GetImpl(*info.Env().Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_GRAPHICS_NAME).As<Napi::External<Graphics>>().Data())}
+        , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_engineState{BGFX_STATE_DEFAULT}
         , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {

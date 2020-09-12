@@ -117,8 +117,8 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            //Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
-            Babylon::Plugins::NativeEngine::Initialize(env, *graphics);
+            graphics->AddToJavaScript(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
@@ -160,7 +160,6 @@ namespace
     void UpdateWindowSize(size_t width, size_t height)
     {
         graphics->UpdateSize(width, height);
-        // graphics->AdvanceFrame();
         runtime->Dispatch([width, height](Napi::Env env) {
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
