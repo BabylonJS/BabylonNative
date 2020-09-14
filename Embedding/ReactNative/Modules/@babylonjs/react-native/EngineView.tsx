@@ -37,6 +37,7 @@ export interface EngineViewCallbacks {
 
 export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineViewProps) => {
     const [failedInitialization, setFailedInitialization] = useState(false);
+    const [appState, setAppState] = useState(AppState.currentState);
     const [fps, setFps] = useState<number>();
     const engineViewRef = useRef<Component<NativeEngineViewProps>>(null);
     const snapshotPromise = useRef<{promise: Promise<string>, resolve: (data: string) => void}>();
@@ -50,34 +51,36 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
     }, []);
 
     useEffect(() => {
-        if (props.camera) {
+        const onAppStateChanged = (appState: AppStateStatus) => {
+            setAppState(appState);
+        };
+
+        AppState.addEventListener("change", onAppStateChanged);
+
+        return () => {
+            AppState.removeEventListener("change", onAppStateChanged);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (props.camera && appState === "active") {
             const engine = props.camera.getScene().getEngine();
 
             if (!IsEngineDisposed(engine)) {
-                const onAppStateChanged = (appState: AppStateStatus) => {
-                    if (appState === "active") {
-                        engine.runRenderLoop(() => {
-                            for (let scene of engine.scenes) {
-                                scene.render();
-                            }
-                        });
-                    } else {
-                        engine.stopRenderLoop();
+                engine.runRenderLoop(() => {
+                    for (let scene of engine.scenes) {
+                        scene.render();
                     }
-                };
-
-                onAppStateChanged(AppState.currentState);
-                AppState.addEventListener("change", onAppStateChanged);
+                });
 
                 return () => {
                     if (!IsEngineDisposed(engine)) {
                         engine.stopRenderLoop();
                     }
-                    AppState.removeEventListener("change", onAppStateChanged);
                 };
             }
         }
-    }, [props.camera]);
+    }, [props.camera, appState]);
 
     useEffect(() => {
         if (props.camera && (props.displayFrameRate ?? __DEV__)) {

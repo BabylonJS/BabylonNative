@@ -66,13 +66,12 @@ export function useEngine(): Engine | undefined {
     const [engine, setEngine] = useState<Engine>();
 
     useEffect(() => {
-        let engine: Engine | undefined;
         let disposed = false;
 
         (async () => {
             if (await BabylonModule.initialize() && !disposed)
             {
-                engine = new NativeEngine();
+                const engine = new NativeEngine();
 
                 // NOTE: This is a workaround for https://github.com/BabylonJS/BabylonReactNative/issues/60
                 let heartbeat: NodeJS.Timeout | null;
@@ -119,9 +118,12 @@ export function useEngine(): Engine | undefined {
 
         return () => {
             disposed = true;
-            if (engine) {
-                DisposeEngine(engine);
-            }
+            setEngine(engine => {
+                if (engine) {
+                    DisposeEngine(engine);
+                }
+                return undefined;
+            })
         };
     }, []);
 
