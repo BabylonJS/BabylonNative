@@ -133,6 +133,7 @@ Assembled/android/src/main/java
 Assembled/android/src/main/java/com
 Assembled/android/src/main/java/com/reactlibrary
 Assembled/android/src/main/java/com/reactlibrary/BabylonNativeInterop.java
+Assembled/android/src/main/java/com/reactlibrary/SnapshotDataReturnedEvent.java
 Assembled/android/src/main/java/com/reactlibrary/BabylonModule.java
 Assembled/android/src/main/java/com/reactlibrary/BabylonPackage.java
 Assembled/android/src/main/java/com/reactlibrary/EngineViewManager.java
