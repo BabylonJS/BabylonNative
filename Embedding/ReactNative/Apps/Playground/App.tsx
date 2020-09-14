@@ -6,14 +6,15 @@
  */
 
 import React, { useState, FunctionComponent, useEffect, useCallback } from 'react';
-import { SafeAreaView, StatusBar, Button, View, Text, ViewProps } from 'react-native';
+import { SafeAreaView, StatusBar, Button, View, Text, ViewProps, Image } from 'react-native';
 
-import { EngineView, useEngine } from '@babylonjs/react-native';
-import { Scene, Vector3, Mesh, ArcRotateCamera, Camera, PBRMetallicRoughnessMaterial, Color3, TargetCamera, WebXRSessionManager } from '@babylonjs/core';
+import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-native';
+import { Scene, Vector3, Mesh, ArcRotateCamera, Camera, PBRMetallicRoughnessMaterial, Color3, TargetCamera, WebXRSessionManager, Engine } from '@babylonjs/core';
 import Slider from '@react-native-community/slider';
 
 const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
   const defaultScale = 1;
+  const enableSnapshots = false;
 
   const engine = useEngine();
   const [toggleView, setToggleView] = useState(false);
@@ -22,6 +23,8 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
   const [scene, setScene] = useState<Scene>();
   const [xrSession, setXrSession] = useState<WebXRSessionManager>();
   const [scale, setScale] = useState<number>(defaultScale);
+  const [snapshotData, setSnapshotData] = useState<string>();
+  const [engineViewCallbacks, setEngineViewCallbacks] = useState<EngineViewCallbacks>();
 
   useEffect(() => {
     if (engine) {
@@ -65,12 +68,22 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
           // TODO: Figure out why getFrontPosition stopped working
           //box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
           const cameraRay = scene.activeCamera!.getForwardRay(1);
-          box.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length)); 
+          box.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length));
           box.rotate(Vector3.Up(), 3.14159);
         }
       }
     })();
   }, [box, scene, xrSession]);
+
+  const onInitialized = useCallback(async(engineViewCallbacks: EngineViewCallbacks) => {
+    setEngineViewCallbacks(engineViewCallbacks);
+  }, [engine]);
+
+  const onSnapshot = useCallback(async () => {
+    if (engineViewCallbacks) {
+      setSnapshotData("data:image/jpeg;base64," + await engineViewCallbacks.takeSnapshot());
+    }
+  }, [engineViewCallbacks]);
 
   return (
     <>
@@ -79,7 +92,13 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
         <Button title={ xrSession ? "Stop XR" : "Start XR"} onPress={onToggleXr} />
         { !toggleView &&
           <View style={{flex: 1}}>
-            <EngineView style={props.style} camera={camera} />
+            { enableSnapshots && 
+              <View style ={{flex: 1}}>
+                <Button title={"Take Snapshot"} onPress={onSnapshot}/>
+                <Image style={{flex: 1}} source={{uri: snapshotData }} />
+              </View>
+            }
+            <EngineView style={props.style} camera={camera} onInitialized={onInitialized} />
             <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} value={defaultScale} onValueChange={setScale} />
           </View>
         }

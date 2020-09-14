@@ -1,5 +1,5 @@
-import React, { FunctionComponent, Component, useEffect, useState } from 'react';
-import { requireNativeComponent, NativeModules, ViewProps, AppState, AppStateStatus, View, Text } from 'react-native';
+import React, { Component, FunctionComponent, SyntheticEvent, useCallback, useEffect, useState, useRef } from 'react';
+import { requireNativeComponent, NativeModules, ViewProps, AppState, AppStateStatus, View, Text, findNodeHandle, UIManager } from 'react-native';
 import { Camera } from '@babylonjs/core';
 import { IsEngineDisposed } from './EngineHelpers';
 import { BabylonModule } from './BabylonModule';
@@ -17,6 +17,7 @@ if (EngineViewManager && EngineViewManager.setJSThread && !isRemoteDebuggingEnab
 }
 
 interface NativeEngineViewProps extends ViewProps {
+    onSnapshotDataReturned: (event: SyntheticEvent) => void;
 }
 
 const NativeEngineView: {
@@ -27,11 +28,18 @@ const NativeEngineView: {
 export interface EngineViewProps extends ViewProps {
     camera?: Camera;
     displayFrameRate?: boolean;
+    onInitialized?: (view: EngineViewCallbacks) => void;
+}
+
+export interface EngineViewCallbacks {
+    takeSnapshot: () => Promise<string>;
 }
 
 export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineViewProps) => {
     const [failedInitialization, setFailedInitialization] = useState(false);
     const [fps, setFps] = useState<number>();
+    const engineViewRef = useRef<Component<NativeEngineViewProps>>(null);
+    const snapshotPromise = useRef<{promise: Promise<string>, resolve: (data: string) => void}>();
 
     useEffect(() => {
         (async () => {
@@ -90,10 +98,50 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
         setFps(undefined);
     }, [props.camera, props.displayFrameRate]);
 
+    // Call onInitialized if provided, and include the callback for takeSnapshot.
+    useEffect(() => {
+        if (props.onInitialized) {
+            props.onInitialized({
+                takeSnapshot: (): Promise<string> => {
+                    if (!snapshotPromise.current) {
+                        let resolveFunction: ((data: string) => void) | undefined;
+                        const promise = new Promise<string>((resolutionFunc) => {
+                            resolveFunction = resolutionFunc;
+                        });
+
+                        // Resolution functions should always be initialized.
+                        if (resolveFunction) {
+                            snapshotPromise.current = { promise: promise, resolve: resolveFunction };
+                        }
+                        else {
+                            throw "Resolution functions not initialized after snapshot promise creation.";
+                        }
+
+                        UIManager.dispatchViewManagerCommand(
+                            findNodeHandle(engineViewRef.current),
+                            "takeSnapshot",
+                            []);
+                    }
+
+                    return snapshotPromise.current.promise;
+                }
+            });
+        }
+    }, [props.onInitialized]);
+
+    // Handle snapshot data returned.
+    const snapshotDataReturnedHandler = useCallback((event: SyntheticEvent) => {
+        const { data } = event.nativeEvent;
+        if (snapshotPromise.current) {
+            snapshotPromise.current.resolve(data);
+            snapshotPromise.current = undefined;
+        }
+    }, []);
+
     if (!failedInitialization) {
         return (
             <View style={[props.style, {overflow: "hidden"}]}>
-                <NativeEngineView style={{flex: 1}} />
+                <NativeEngineView ref={engineViewRef} style={{flex: 1}} onSnapshotDataReturned={snapshotDataReturnedHandler} />
                 { fps && <Text style={{color: 'yellow', position: 'absolute', margin: 10, right: 0, top: 0}}>FPS: {Math.round(fps)}</Text> }
             </View>
         );
