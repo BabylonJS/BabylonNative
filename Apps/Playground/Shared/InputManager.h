@@ -60,13 +60,13 @@ public:
     {
         Napi::HandleScope scope{ env };
 
-        Napi::Function func = Napi::ObjectWrap<InputManager<RuntimeT>>::DefineClass(
+        Napi::Function func = Napi::ObjectWrap<InputManager>::DefineClass(
             env,
             "InputManager",
             {
-                InstanceAccessor("pointerX", &InputManager::PointerX, nullptr),
-                InstanceAccessor("pointerY", &InputManager::PointerY, nullptr),
-                InstanceAccessor("isPointerDown", &InputManager::IsPointerDown, nullptr),
+                Napi::ObjectWrap<InputManager>::InstanceAccessor("pointerX", &InputManager::PointerX, nullptr),
+                Napi::ObjectWrap<InputManager>::InstanceAccessor("pointerY", &InputManager::PointerY, nullptr),
+                Napi::ObjectWrap<InputManager>::InstanceAccessor("isPointerDown", &InputManager::IsPointerDown, nullptr),
             },
             &buffer);
 
