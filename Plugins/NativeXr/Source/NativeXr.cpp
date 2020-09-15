@@ -207,8 +207,18 @@ namespace Babylon
 
                 BeginFrame();
 
-                // TODO: This only works in the render-on-the-JS-thread case.
-                callback(*m_frame);
+                if (m_engineImpl->AutomaticRenderingEnabled)
+                {
+                    m_graphicsImpl.AddRenderWorkTask(arcana::make_task(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                        callback(*m_frame);
+                    }));
+                }
+                else
+                {
+                    m_graphicsImpl.AddRenderWorkTask(arcana::make_task(m_engineImpl->RuntimeScheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                        callback(*m_frame);
+                    }));
+                }
                 
                 m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this] {
                     // Note: we are guaranteed to be on the render thread again.
