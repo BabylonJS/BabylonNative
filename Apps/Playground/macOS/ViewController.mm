@@ -92,7 +92,7 @@ std::unique_ptr<InputManager::InputBuffer<Babylon::AppRuntime>> inputBuffer{};
 
     inputBuffer.reset();
     runtime.reset();
-    Babylon::Plugins::NativeEngine::DeinitializeGraphics();
+    graphics.reset();
 }
 
 - (void)setRepresentedObject:(id)representedObject {
