@@ -60,7 +60,7 @@ public:
     {
         Napi::HandleScope scope{ env };
 
-        Napi::Function func = DefineClass(
+        Napi::Function func = Napi::ObjectWrap<InputManager<RuntimeT>>::DefineClass(
             env,
             "InputManager",
             {
