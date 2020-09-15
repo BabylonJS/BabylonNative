@@ -120,8 +120,7 @@ namespace
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
-
-            
+                        
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 

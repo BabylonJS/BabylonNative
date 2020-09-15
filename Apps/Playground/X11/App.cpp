@@ -76,7 +76,7 @@ namespace
             graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
-            InputManager::Initialize(env, *inputBuffer);
+            InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 
 

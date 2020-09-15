@@ -93,7 +93,7 @@ extern "C"
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                InputManager::Initialize(env, *g_inputBuffer);
+                InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
             });
 
             g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);

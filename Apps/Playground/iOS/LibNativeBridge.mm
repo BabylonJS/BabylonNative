@@ -53,7 +53,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        InputManager::Initialize(env, *inputBuffer);
+        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
