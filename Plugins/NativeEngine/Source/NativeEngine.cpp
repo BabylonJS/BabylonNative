@@ -1708,13 +1708,6 @@ namespace Babylon
         return Napi::Value::From(info.Env(), static_cast<int>(bgfx::getRendererType()));
     }
 
-    void NativeEngine::EndFrame()
-    {
-        GetFrameBufferManager().Reset();
-
-        bgfx::frame();
-    }
-
     void NativeEngine::Dispatch(std::function<void()> function)
     {
         m_runtime.Dispatch([function = std::move(function)](Napi::Env) {

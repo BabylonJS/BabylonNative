@@ -399,7 +399,6 @@ namespace Babylon
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
-        void EndFrame(); // TODO: Remove this.
 
         void ScheduleRender();
 
