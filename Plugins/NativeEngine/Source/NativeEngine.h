@@ -398,7 +398,9 @@ namespace Babylon
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
-        void EndFrame();
+        void EndFrame(); // TODO: Remove this.
+
+        void ScheduleRender();
 
     private:
         void Dispose();
@@ -478,7 +480,6 @@ namespace Babylon
         template<typename SchedulerT>
         arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
         
-        void ScheduleRender();
         bool m_isRenderScheduled{false};
         const bool m_renderOnJavaScriptThread{true}; // TODO: Not this.
 
