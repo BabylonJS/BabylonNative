@@ -80,20 +80,9 @@ namespace
 
     void Uninitialize()
     {
-        if (inputBuffer)
-        {
-            inputBuffer.reset();
-        }
-
-        if (runtime)
-        {
-            runtime.reset();
-        }
-
-        if (graphics)
-        {
-            graphics.reset();
-        }
+        inputBuffer.reset();
+        runtime.reset();
+        graphics.reset();
     }
 
     void RefreshBabylon(HWND hWnd)

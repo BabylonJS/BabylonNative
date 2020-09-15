@@ -86,15 +86,8 @@ namespace
 
     void Uninitialize()
     {
-        if (runtime)
-        {
-            runtime.reset();
-        }
-
-        if (graphics)
-        {
-            graphics.reset();
-        }
+        runtime.reset();
+        graphics.reset();
     }
 
     void Initialize(HWND hWnd)
