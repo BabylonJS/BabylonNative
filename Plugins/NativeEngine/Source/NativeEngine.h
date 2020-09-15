@@ -393,8 +393,6 @@ namespace Babylon
         NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime, Plugins::Internal::NativeWindow& nativeWindow);
         ~NativeEngine();
 
-        static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
-        static void DeinitializeWindow();
         static void Initialize(Napi::Env, bool autoRender);
 
         FrameBufferManager& GetFrameBufferManager();
@@ -498,7 +496,6 @@ namespace Babylon
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
 
-        static inline BgfxCallback s_bgfxCallback{};
         FrameBufferManager m_frameBufferManager{};
 
         Plugins::Internal::NativeWindow::NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;

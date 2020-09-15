@@ -561,32 +561,6 @@ namespace Babylon
         std::vector<uint8_t> m_bytes{};
     };
 
-    void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
-    {
-        // Initialize bgfx.
-        bgfx::Init init{};
-        init.platformData.nwh = nativeWindowPtr;
-        bgfx::setPlatformData(init.platformData);
-#if (ANDROID)
-        init.type = bgfx::RendererType::OpenGLES;
-#else
-        init.type = bgfx::RendererType::Direct3D11;
-#endif
-        init.resolution.width = width;
-        init.resolution.height = height;
-        init.resolution.reset = BGFX_RESET_FLAGS;
-        init.callback = &s_bgfxCallback;
-        bgfx::init(init);
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-        bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
-        bgfx::touch(0);
-    }
-
-    void NativeEngine::DeinitializeWindow()
-    {
-        bgfx::shutdown();
-    }
-
     void NativeEngine::Initialize(Napi::Env env, bool autoRender)
     {
         // Initialize the JavaScript side.
@@ -1699,7 +1673,7 @@ namespace Babylon
         bgfx::FrameBufferHandle fbh = BGFX_INVALID_HANDLE;
         const auto callback = info[0].As<Napi::Function>();
 
-        s_bgfxCallback.addScreenShotCallback(callback);
+        m_graphicsImpl.BgfxCallback.addScreenShotCallback(callback);
         bgfx::requestScreenShot(fbh, "GetImageData");
     }
 
