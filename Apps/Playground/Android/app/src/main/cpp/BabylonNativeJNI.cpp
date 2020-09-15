@@ -24,7 +24,7 @@ namespace
 {
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
-    std::unique_ptr<InputManager::InputBuffer<Babylon::AppRuntime>> g_inputBuffer{};
+    std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
 
