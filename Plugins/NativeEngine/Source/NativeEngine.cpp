@@ -10,8 +10,6 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
-#include <windows.h>
-
 // TODO: this needs to be fixed in bgfx
 namespace bgfx
 {
