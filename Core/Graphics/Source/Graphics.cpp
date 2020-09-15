@@ -118,7 +118,7 @@ namespace Babylon
         init.resolution.width = static_cast<uint32_t>(width);
         init.resolution.height = static_cast<uint32_t>(height);
         init.resolution.reset = BGFX_RESET_FLAGS;
-        init.callback = &graphics->m_impl->BgfxCallback;
+        init.callback = &graphics->m_impl->Callback;
         bgfx::init(init);
         bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
         bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));

@@ -34,7 +34,7 @@ namespace Babylon
             FinishRenderingCurrentFrame();
         }
 
-        BgfxCallback BgfxCallback{};
+        BgfxCallback Callback{};
 
     private:
         bool m_rendering{false};

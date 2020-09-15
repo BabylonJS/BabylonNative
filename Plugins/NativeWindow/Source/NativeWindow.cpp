@@ -16,7 +16,6 @@ namespace Babylon::Plugins::Internal
             JS_CLASS_NAME,
             {});
 
-        auto global = env.Global();
         auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
         auto jsWindow = constructor.New({Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height)});
 
