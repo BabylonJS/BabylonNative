@@ -39,9 +39,9 @@ extern "C"
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
         g_scriptLoader.reset();
+        g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
-        g_graphics.reset();
     }
 
     JNIEXPORT void JNICALL
@@ -61,12 +61,13 @@ extern "C"
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
             
-            g_graphics = Babylon::Graphics::InitializeFromWindow<void*>(window, width, height);
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
+                g_graphics = Babylon::Graphics::InitializeFromWindow<void*>(window, width, height);
+
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
                     switch (level)
@@ -112,7 +113,9 @@ extern "C"
         if (g_runtime)
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-            g_graphics->Reinitialize(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
+            g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
+                g_graphics->ReinitializeFromWindow<void*>(window, width, height);
+            });
         }
     }
 
