@@ -1580,16 +1580,16 @@ namespace Babylon
         switch (fillMode)
         {
         case 2: // MATERIAL_PointFillMode
-            fillModeState |= BGFX_STATE_PT_POINTS;
+            fillModeState = BGFX_STATE_PT_POINTS;
             break;
         case 4: // MATERIAL_LineListDrawMode
-            fillModeState |= BGFX_STATE_PT_LINES;
+            fillModeState = BGFX_STATE_PT_LINES;
             break;
         case 6: // MATERIAL_LineStripDrawMode
-            fillModeState |= BGFX_STATE_PT_LINESTRIP;
+            fillModeState = BGFX_STATE_PT_LINESTRIP;
             break;
         case 7: // MATERIAL_TriangleStripDrawMode
-            fillModeState |= BGFX_STATE_PT_TRISTRIP;
+            fillModeState = BGFX_STATE_PT_TRISTRIP;
             break;
         }
 
