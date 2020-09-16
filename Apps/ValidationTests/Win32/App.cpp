@@ -29,8 +29,8 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::AppRuntime> runtime{};
 
 // 600, 400 mandatory size for CI tests
 static const int TEST_WIDTH = 600;
