@@ -51,17 +51,18 @@ namespace
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         // Ensure state is properly disposed.
+        graphics.reset();
         inputBuffer.reset();
         runtime.reset();
-        graphics.reset();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-        graphics = Babylon::Graphics::InitializeFromWindow((void*)(uintptr_t)window, width, height);
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         // Initialize console plugin.
         runtime->Dispatch([width, height, window](Napi::Env env) {
+            graphics = Babylon::Graphics::InitializeFromWindow((void*)(uintptr_t)window, width, height);
+            
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
@@ -105,8 +106,8 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        graphics->UpdateSize(width, height);
         runtime->Dispatch([width, height](Napi::Env env) {
+            graphics->UpdateSize(width, height);
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
     }
