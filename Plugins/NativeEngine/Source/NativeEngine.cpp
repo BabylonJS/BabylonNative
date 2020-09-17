@@ -309,7 +309,7 @@ namespace Babylon
                 const auto& type = compiler.get_type(uniformBuffer.base_type_id);
                 assert(type.basetype == spirv_cross::SPIRType::BaseType::Struct);
 
-                info.ByteSize = static_cast<uint16_t>(compiler.get_declared_struct_size(type));
+                info.ByteSize = static_cast<uint16_t>(type.member_types.empty() ? 0 : compiler.get_declared_struct_size(type));
 
                 info.Uniforms.resize(type.member_types.size());
                 for (uint32_t index = 0; index < type.member_types.size(); ++index)
@@ -1094,10 +1094,10 @@ namespace Babylon
 
     void NativeEngine::SetDepthTest(const Napi::CallbackInfo& info)
     {
-        const auto enable = info[0].As<Napi::Boolean>().Value();
+        const auto depthTest = info[0].As<Napi::Number>().Uint32Value();
 
         m_engineState &= ~BGFX_STATE_DEPTH_TEST_MASK;
-        m_engineState |= enable ? BGFX_STATE_DEPTH_TEST_LESS : BGFX_STATE_DEPTH_TEST_ALWAYS;
+        m_engineState |= depthTest;
     }
 
     Napi::Value NativeEngine::GetDepthWrite(const Napi::CallbackInfo& info)
@@ -1577,9 +1577,20 @@ namespace Babylon
 
         // TODO: support other fill modes
         uint64_t fillModeState = 0; //indexed tri list
-        if (fillMode == 2)
+        switch (fillMode)
         {
-            fillModeState |= BGFX_STATE_PT_POINTS;
+        case 2: // MATERIAL_PointFillMode
+            fillModeState = BGFX_STATE_PT_POINTS;
+            break;
+        case 4: // MATERIAL_LineListDrawMode
+            fillModeState = BGFX_STATE_PT_LINES;
+            break;
+        case 6: // MATERIAL_LineStripDrawMode
+            fillModeState = BGFX_STATE_PT_LINESTRIP;
+            break;
+        case 7: // MATERIAL_TriangleStripDrawMode
+            fillModeState = BGFX_STATE_PT_TRISTRIP;
+            break;
         }
 
         for (const auto& it : m_currentProgram->Uniforms)
