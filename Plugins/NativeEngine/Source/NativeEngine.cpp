@@ -1094,10 +1094,10 @@ namespace Babylon
 
     void NativeEngine::SetDepthTest(const Napi::CallbackInfo& info)
     {
-        const auto enable = info[0].As<Napi::Boolean>().Value();
+        const auto depthTest = info[0].As<Napi::Number>().Uint32Value();
 
         m_engineState &= ~BGFX_STATE_DEPTH_TEST_MASK;
-        m_engineState |= enable ? BGFX_STATE_DEPTH_TEST_LESS : BGFX_STATE_DEPTH_TEST_ALWAYS;
+        m_engineState |= depthTest;
     }
 
     Napi::Value NativeEngine::GetDepthWrite(const Napi::CallbackInfo& info)
@@ -1577,9 +1577,20 @@ namespace Babylon
 
         // TODO: support other fill modes
         uint64_t fillModeState = 0; //indexed tri list
-        if (fillMode == 2)
+        switch (fillMode)
         {
-            fillModeState |= BGFX_STATE_PT_POINTS;
+        case 2: // MATERIAL_PointFillMode
+            fillModeState = BGFX_STATE_PT_POINTS;
+            break;
+        case 4: // MATERIAL_LineListDrawMode
+            fillModeState = BGFX_STATE_PT_LINES;
+            break;
+        case 6: // MATERIAL_LineStripDrawMode
+            fillModeState = BGFX_STATE_PT_LINESTRIP;
+            break;
+        case 7: // MATERIAL_TriangleStripDrawMode
+            fillModeState = BGFX_STATE_PT_TRISTRIP;
+            break;
         }
 
         for (const auto& it : m_currentProgram->Uniforms)
