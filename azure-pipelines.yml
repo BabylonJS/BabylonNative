@@ -334,7 +334,7 @@ jobs:
       pathtoPublish: 'build/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
     condition: succeeded()
-  - task: PublishBuildArtifacts@2
+  - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
       pathtoPublish: 'build/Apps/ValidationTests/Errors'
