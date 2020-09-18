@@ -127,66 +127,61 @@ namespace
         }
     }
 
-    void SetXRInputSourceSpaces(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
         jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
-    }
 
-    void SetXRHandInputSource(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
-    {
-        // Don't set hands up if hand data isn't supported/available
-        if (!inputSource.JointsTrackedThisFrame)
+        // Don't set hands up unless hand data is supported/available
+        if (inputSource.JointsTrackedThisFrame)
         {
-            return;
+            constexpr std::array<const char*, 25> HAND_JOINT_NAMES
+            {
+                "WRIST",
+
+                "THUMB_METACARPAL",
+                "THUMB_PHALANX_PROXIMAL",
+                "THUMB_PHALANX_DISTAL",
+                "THUMB_PHALANX_TIP",
+
+                "INDEX_METACARPAL",
+                "INDEX_PHALANX_PROXIMAL",
+                "INDEX_PHALANX_INTERMEDIATE",
+                "INDEX_PHALANX_DISTAL",
+                "INDEX_PHALANX_TIP",
+
+                "MIDDLE_METACARPAL",
+                "MIDDLE_PHALANX_PROXIMAL",
+                "MIDDLE_PHALANX_INTERMEDIATE",
+                "MIDDLE_PHALANX_DISTAL",
+                "MIDDLE_PHALANX_TIP",
+
+                "RING_METACARPAL",
+                "RING_PHALANX_PROXIMAL",
+                "RING_PHALANX_INTERMEDIATE",
+                "RING_PHALANX_DISTAL",
+                "RING_PHALANX_TIP",
+
+                "LITTLE_METACARPAL",
+                "LITTLE_PHALANX_PROXIMAL",
+                "LITTLE_PHALANX_INTERMEDIATE",
+                "LITTLE_PHALANX_DISTAL",
+                "LITTLE_PHALANX_TIP"
+            };
+
+            auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
+
+            for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
+            {
+                auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
+                handJointCollection.Set(static_cast<int>(i), napiJoint);
+                handJointCollection.Set(Napi::String::New(env, HAND_JOINT_NAMES[i]), static_cast<int>(i));
+            }
+
+            handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
+            jsInputSource.Set("hand", handJointCollection);
         }
-
-        constexpr const size_t HAND_JOINT_COUNT{25};
-        constexpr std::array<const char*, HAND_JOINT_COUNT> HAND_JOINT_NAMES{
-            "WRIST",
-
-            "THUMB_METACARPAL",
-            "THUMB_PHALANX_PROXIMAL",
-            "THUMB_PHALANX_DISTAL",
-            "THUMB_PHALANX_TIP",
-
-            "INDEX_METACARPAL",
-            "INDEX_PHALANX_PROXIMAL",
-            "INDEX_PHALANX_INTERMEDIATE",
-            "INDEX_PHALANX_DISTAL",
-            "INDEX_PHALANX_TIP",
-
-            "MIDDLE_METACARPAL",
-            "MIDDLE_PHALANX_PROXIMAL",
-            "MIDDLE_PHALANX_INTERMEDIATE",
-            "MIDDLE_PHALANX_DISTAL",
-            "MIDDLE_PHALANX_TIP",
-
-            "RING_METACARPAL",
-            "RING_PHALANX_PROXIMAL",
-            "RING_PHALANX_INTERMEDIATE",
-            "RING_PHALANX_DISTAL",
-            "RING_PHALANX_TIP",
-
-            "LITTLE_METACARPAL",
-            "LITTLE_PHALANX_PROXIMAL",
-            "LITTLE_PHALANX_INTERMEDIATE",
-            "LITTLE_PHALANX_DISTAL",
-            "LITTLE_PHALANX_TIP"};
-
-        auto env = jsInputSource.Env();
-        auto handJointCollection = Napi::Array::New(env, HAND_JOINT_COUNT);
-
-        for (size_t i = 0; i < HAND_JOINT_COUNT; i++)
-        {
-            auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
-            handJointCollection.Set((int)i, napiJoint);
-            handJointCollection.Set(Napi::String::New(env, HAND_JOINT_NAMES[i]), (int)i);
-        }
-
-        handJointCollection.Set("length", (int)HAND_JOINT_COUNT);
-        jsInputSource.Set("hand", handJointCollection);
     }
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
@@ -199,8 +194,7 @@ namespace
         auto jsInputSource = Napi::Object::New(env);
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
-        SetXRInputSourceSpaces(jsInputSource, inputSource);
-        SetXRHandInputSource(jsInputSource, inputSource);
+        SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
@@ -1950,7 +1944,7 @@ namespace Babylon
                     {
                         // Ensure the correct spaces are associated with the existing input source.
                         auto val = found->second.Value();
-                        SetXRInputSourceSpaces(val, inputSource);
+                        SetXRInputSourceData(val, inputSource);
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)

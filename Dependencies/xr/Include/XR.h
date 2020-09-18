@@ -142,8 +142,8 @@ namespace xr
 
                 struct JointSpace : Space
                 {
-                    bool PoseTracked{ false };
                     float PoseRadius{};
+                    bool PoseTracked{ false };
                 };
 
                 struct View

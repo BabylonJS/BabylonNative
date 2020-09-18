@@ -259,32 +259,25 @@ namespace xr
             std::vector<Frame::Plane> Planes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
-            
-        struct HandJointData {
-            void InitializeXRHandJoints()
-            {
-                locations.jointCount = XR_HAND_JOINT_COUNT_EXT;
-                locations.jointLocations = jointLocations;
-            };
 
-            XrHandJointLocationEXT jointLocations[XR_HAND_JOINT_COUNT_EXT];
-            XrHandJointLocationsEXT locations{XR_TYPE_HAND_JOINT_LOCATIONS_EXT};
-        };
+        struct HandInfo
+        {
+            XrHandEXT Hand{};
+            XrHandTrackerEXT HandTracker{};
 
-        struct HandInfo {
-            XrHandEXT hand{};
-            XrHandTrackerEXT handTracker{};
-            XrSpace handSpace{};
+            XrHandJointLocationEXT JointLocations[XR_HAND_JOINT_COUNT_EXT]{};
+            XrHandJointLocationsEXT Locations{XR_TYPE_HAND_JOINT_LOCATIONS_EXT, nullptr, false, XR_HAND_JOINT_COUNT_EXT, JointLocations};
 
-            HandJointData handJointData{};
+            // WebXR specs do not include joint 0, the palm joint, but OpenXR does
+            static constexpr uint32_t UNUSED_HAND_JOINT_OFFSET{ 1 };
         };
         
         struct
         {
-            XrBool32 supportsHandTracking{ false };
-            XrBool32 HandsInitialized{ false };
+            std::array<HandInfo, 2> HandsInfo{};
 
-            std::array<HandInfo, 2> handsInfo;
+            XrBool32 SupportsHandTracking{ false };
+            XrBool32 HandsInitialized{ false };
         } HandData;
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -327,6 +320,19 @@ namespace xr
             InitializeActionResources(instance);
         }
 
+        ~Impl()
+        {
+            if (HandData.HandsInitialized)
+            {
+                for (const HandInfo& handInfo : HandData.HandsInfo)
+                {
+                    XrCheck(HmdImpl.Extensions->xrDestroyHandTrackerEXT(handInfo.HandTracker));
+                }
+
+                HandData.HandsInitialized = false;
+            }
+        }
+
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
         {
             ProcessEvents(shouldEndSession, shouldRestartSession);
@@ -344,9 +350,7 @@ namespace xr
         void RequestEndSession()
         {
             const auto& session = HmdImpl.Context.Session();
-
-            UninitializeHandResources();
-            xrRequestExitSession(Session);
+            xrRequestExitSession(session);
         }
 
         Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
@@ -520,7 +524,7 @@ namespace xr
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
             // Initialize the hand resources
-            HandData.supportsHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Extensions->HandTrackingSupported;
+            HandData.SupportsHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Extensions->HandTrackingSupported;
             InitializeHandResources();
 
             const XrViewConfigurationType primaryType = HmdImpl.PrimaryViewConfigurationType;
@@ -537,7 +541,7 @@ namespace xr
 
         void InitializeHandResources()
         {
-            if (!HandData.supportsHandTracking)
+            if (!HandData.SupportsHandTracking || HandData.HandsInitialized)
             {
                 return;
             }
@@ -546,31 +550,15 @@ namespace xr
             XrHandTrackerCreateInfoEXT trackerCreateInfo{XR_TYPE_HAND_TRACKER_CREATE_INFO_EXT};
             trackerCreateInfo.handJointSet = XR_HAND_JOINT_SET_DEFAULT_EXT;
 
-            for (int i = 0; i < HandData.handsInfo.size(); i++)
+            for (int i = 0; i < HandData.HandsInfo.size(); i++)
             {
                 // Create the hand trackers
-                HandData.handsInfo[i].hand = HANDEDNESS_EXT[i];
+                HandData.HandsInfo[i].Hand = HANDEDNESS_EXT[i];
                 trackerCreateInfo.hand = HANDEDNESS_EXT[i];
-                XrCheck(HmdImpl.Extensions->xrCreateHandTrackerEXT(Session, &trackerCreateInfo, &HandData.handsInfo[i].handTracker));
-                    
-                // Preallocate joint buffers
-                HandData.handsInfo[i].handJointData.InitializeXRHandJoints();
+                XrCheck(HmdImpl.Extensions->xrCreateHandTrackerEXT(Session, &trackerCreateInfo, &HandData.HandsInfo[i].HandTracker));
             }
 
             HandData.HandsInitialized = true;
-        }
-
-        void UninitializeHandResources()
-        {
-            if (HandData.HandsInitialized)
-            {
-                for (HandInfo handInfo : HandData.handsInfo)
-                {
-                    HmdImpl.Extensions->xrDestroyHandTrackerEXT(handInfo.handTracker);
-                }
-
-                HandData.HandsInitialized = false;
-            }
         }
 
         void InitializeActionResources(XrInstance instance)
@@ -1180,18 +1168,20 @@ namespace xr
                     jointLocateInfo.baseSpace = m_impl->sessionImpl.SceneSpace;
                     jointLocateInfo.time = m_impl->displayTime;
 
-                    auto handInfo = sessionImpl.HandData.handsInfo[idx];
-                    XrCheck(sessionImpl.HmdImpl.Extensions->xrLocateHandJointsEXT(handInfo.handTracker, &jointLocateInfo, &handInfo.handJointData.locations));
+                    auto handInfo = sessionImpl.HandData.HandsInfo[idx];
+                    XrCheck(sessionImpl.HmdImpl.Extensions->xrLocateHandJointsEXT(handInfo.HandTracker, &jointLocateInfo, &handInfo.Locations));
                     
                     auto& inputSource = InputSources[idx];
-                    inputSource.JointsTrackedThisFrame = handInfo.handJointData.locations.isActive;
+                    inputSource.JointsTrackedThisFrame = handInfo.Locations.isActive;
                         
                     // Set up the handJoints vector, skipping the palm joint as webXR doesn't support it
+                    uint32_t JointCountWithoutPalm = handInfo.Locations.jointCount - handInfo.UNUSED_HAND_JOINT_OFFSET;
+
                     // xrLocateHandJointsEXT will always return the full joint set (or an error), so jointCount should never change
-                    if (inputSource.HandJoints.size() != handInfo.handJointData.locations.jointCount - 1)
+                    // We have to wait until here to initialize the vector though, as we don't "know" the number of joints until an input report comes in
+                    if (inputSource.HandJoints.size() != JointCountWithoutPalm)
                     {
-                        inputSource.HandJoints = std::vector<JointSpace>(handInfo.handJointData.locations.jointCount - 1);
-                        assert(inputSource.HandJoints.size() == handInfo.handJointData.locations.jointCount - 1);
+                        inputSource.HandJoints = std::vector<JointSpace>(JointCountWithoutPalm);
                     }
                     
                     // Set the joints to tracked, and populate the fields. Otherwise, set joints to untracked
@@ -1203,9 +1193,9 @@ namespace xr
                             XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
                             XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
 
-                        for (uint32_t i = 0; i < handInfo.handJointData.locations.jointCount - 1; i++)
+                        for (uint32_t i = 0; i < JointCountWithoutPalm; i++)
                         {
-                            auto joint = handInfo.handJointData.jointLocations[i + 1];
+                            auto joint = handInfo.JointLocations[i + handInfo.UNUSED_HAND_JOINT_OFFSET];
 
                             inputSource.HandJoints[i].PoseRadius = joint.radius;
                             inputSource.HandJoints[i].Pose.Position.X = joint.pose.position.x;
