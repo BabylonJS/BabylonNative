@@ -108,8 +108,12 @@ namespace Babylon
             }
         }
 
-        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, bool /*isFragment*/, std::unordered_map<std::string, UniformInfo>& cache)
+        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, UniformInfo>& cache)
         {
+#if ANDROID
+            uint8_t stage{0};
+#endif
+
             for (const spirv_cross::Resource& sampler : samplers)
             {
                 AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
@@ -121,7 +125,12 @@ namespace Babylon
                 AppendBytes(bytes, static_cast<uint16_t>(0));
                 AppendBytes(bytes, static_cast<uint16_t>(0));
 
+#if ANDROID
+                (void)compiler;
+                cache[sampler.name].Stage = stage++;
+#else
                 cache[sampler.name].Stage = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
+#endif
             }
         }
 
@@ -904,7 +913,7 @@ namespace Babylon
 
                 AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
                 AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-                AppendSamplers(vertexBytes, compiler, samplers, false, programData->VertexUniformNameToInfo);
+                AppendSamplers(vertexBytes, compiler, samplers, programData->VertexUniformNameToInfo);
 
                 AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
                 AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
@@ -949,8 +958,9 @@ namespace Babylon
                 const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
                 const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
 #if __APPLE__
-                // with metal, we bind images and not samplers
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
+#elif ANDROID
+                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
@@ -962,7 +972,7 @@ namespace Babylon
 
                 AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
                 AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-                AppendSamplers(fragmentBytes, compiler, samplers, true, programData->FragmentUniformNameToInfo);
+                AppendSamplers(fragmentBytes, compiler, samplers, programData->FragmentUniformNameToInfo);
 
                 AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
                 AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
