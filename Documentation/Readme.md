@@ -22,4 +22,4 @@
 
 ## Continuous Integration
 
-[All about the checks that are run for each pull request](ContinuousIntegration.md)
+[All about the validation checks for each pull request.](ContinuousIntegration.md)
