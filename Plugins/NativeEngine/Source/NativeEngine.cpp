@@ -442,14 +442,14 @@ namespace Babylon
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
-
-        void SetBgfxIndexBuffer() const
+        
+        void SetBgfxIndexBuffer(uint32_t firstIndex, uint32_t numIndices) const
         {
-            constexpr auto nonDynamic = [](auto handle) {
-                bgfx::setIndexBuffer(handle);
+            const auto nonDynamic = [firstIndex, numIndices](auto handle) {
+                bgfx::setIndexBuffer(handle, firstIndex, numIndices);
             };
-            constexpr auto dynamic = [](auto handle) {
-                bgfx::setIndexBuffer(handle);
+            const auto dynamic = [firstIndex, numIndices](auto handle) {
+                bgfx::setIndexBuffer(handle, firstIndex, numIndices);
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -770,10 +770,7 @@ namespace Babylon
         const auto& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
 
         // a vertex array might not have an index buffer associated with
-        if (vertexArray.indexBuffer.data)
-        {
-            vertexArray.indexBuffer.data->SetBgfxIndexBuffer();
-        }
+        m_currentBoundIndexBuffer = vertexArray.indexBuffer.data;
 
         const auto& vertexBuffers = vertexArray.vertexBuffers;
         for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
@@ -1572,10 +1569,15 @@ namespace Babylon
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        //const auto elementStart = info[1].As<Napi::Number>().Int32Value();
-        //const auto elementCount = info[2].As<Napi::Number>().Int32Value();
+        const auto elementStart = info[1].As<Napi::Number>().Int32Value();
+        const auto elementCount = info[2].As<Napi::Number>().Int32Value();
 
         // TODO: handle viewport
+
+        if (m_currentBoundIndexBuffer)
+        {
+            m_currentBoundIndexBuffer->SetBgfxIndexBuffer(elementStart, elementCount);
+        }
 
         // TODO: support other fill modes
         uint64_t fillModeState = 0; //indexed tri list
@@ -1613,6 +1615,7 @@ namespace Babylon
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
         bgfx::discard(BGFX_DISCARD_INDEX_BUFFER);
+        m_currentBoundIndexBuffer = nullptr;
         DrawIndexed(info);
     }
 
