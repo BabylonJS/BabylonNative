@@ -103,6 +103,13 @@ jobs:
       artifactName: 'Win32_x64 Rendered Pictures'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Win32_x64 Results'
+    condition: succeeded()
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x64 Error Pictures'
+      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
+    displayName: 'Publish Tests Win32_x64 Errors'
+    condition: failed()
     
 - job: win32_x86
   timeoutInMinutes: 20 
@@ -138,6 +145,14 @@ jobs:
       artifactName: 'Win32_x86 Rendered Pictures'
       pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Win32_x86 Results'
+    condition: succeeded()
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x86 Error Pictures'
+      pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Errors'
+    displayName: 'Publish Tests Win32_x86 Errors'
+    condition: failed()
+
     
 - job: uwp_x64    
   pool:
@@ -295,7 +310,14 @@ jobs:
       artifactName: 'Ubuntu_Clang8_JSC Rendered Pictures'
       pathtoPublish: 'build/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Ubuntu_Clang8_JSC Results'
-    
+    condition: succeeded()
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_Clang8_JSC Error Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Errors'
+    displayName: 'Publish Tests Ubuntu_Clang8_JSC Errors'
+    condition: failed()
+
 - job: Ubuntu_GCC9_JSC
   timeoutInMinutes: 20
   pool:
