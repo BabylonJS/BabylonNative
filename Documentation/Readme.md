@@ -19,3 +19,7 @@
 ## Extending Babylon Native
 
 [Babylon Native's extensive plugin system allows you to add and expose functionalities. Here is how.](Extending.md)
+
+## Continuous Integration
+
+[All about the checks that are run for each pull request](ContinuousIntegration.md)
