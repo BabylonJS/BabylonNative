@@ -117,7 +117,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
                             snapshotPromise.current = { promise: promise, resolve: resolveFunction };
                         }
                         else {
-                            throw "Resolution functions not initialized after snapshot promise creation.";
+                            throw new Error("Resolution functions not initialized after snapshot promise creation.");
                         }
 
                         UIManager.dispatchViewManagerCommand(
@@ -149,9 +149,14 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
             </View>
         );
     } else {
+        const message = "Could not initialize Babylon Native.";
+        if (!__DEV__) {
+            throw new Error(message);
+        }
+
         return (
             <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                <Text style={{fontSize: 24}}>Could not initialize Babylon Native.</Text>
+                <Text style={{fontSize: 24}}>{message}</Text>
                 { isRemoteDebuggingEnabled && <Text style={{fontSize: 12}}>React Native remote debugging does not work with Babylon Native.</Text> }
             </View>
         );

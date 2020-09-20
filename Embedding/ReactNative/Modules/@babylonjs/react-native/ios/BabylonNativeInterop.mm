@@ -43,8 +43,7 @@ static NSMutableArray* activeTouches;
 
         [jsRunLoop performBlock:^{
             if (bridge != currentBridge) {
-                currentBridge = bridge;
-                [BabylonNativeInterop setCurrentNativeInstance:mtkView width:width height:height];
+                [BabylonNativeInterop setCurrentNativeInstance:bridge mtkView:mtkView width:width height:height];
             } else if (currentNativeInstance) {
                 if (mtkView != currentView) {
                     [BabylonNativeInterop setCurrentView:mtkView];
@@ -104,6 +103,7 @@ static NSMutableArray* activeTouches;
 }
 
 + (void)whenInitialized:(RCTBridge*)bridge resolve:(RCTPromiseResolveBlock)resolve {
+    const std::lock_guard<std::mutex> lock(mapMutex);
     if (bridge == currentBridge) {
         resolve([NSNumber numberWithUnsignedLong:reinterpret_cast<uintptr_t>(currentNativeInstance.get())]);
     } else {
@@ -116,16 +116,20 @@ static NSMutableArray* activeTouches;
     activeTouches = [NSMutableArray new];
 }
 
-+ (void)setCurrentNativeInstance:(MTKView*)mtkView width:(int)width height:(int)height {
++ (void)setCurrentNativeInstance:(RCTBridge*)bridge mtkView:(MTKView*)mtkView width:(int)width height:(int)height {
     [BabylonNativeInterop setCurrentView:mtkView];
 
-    const std::lock_guard<std::mutex> lock(mapMutex);
+    {
+        const std::lock_guard<std::mutex> lock(mapMutex);
 
-    currentNativeInstance.reset();
+        currentBridge = bridge;
 
-    jsi::Runtime* jsiRuntime = GetJSIRuntime(currentBridge);
-    if (jsiRuntime) {
-        currentNativeInstance = std::make_unique<Babylon::Native>(GetJSIRuntime(currentBridge), (__bridge void*)mtkView, width, height);
+        currentNativeInstance.reset();
+
+        jsi::Runtime* jsiRuntime = GetJSIRuntime(currentBridge);
+        if (jsiRuntime) {
+            currentNativeInstance = std::make_unique<Babylon::Native>(GetJSIRuntime(currentBridge), (__bridge void*)mtkView, width, height);
+        }
     }
 
     auto initializationPromisesIterator = initializationPromises.find((__bridge void*)currentBridge);
