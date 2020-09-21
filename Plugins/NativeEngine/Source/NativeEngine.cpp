@@ -709,8 +709,6 @@ namespace Babylon
             bgfx::setViewRect(0, 0, 0, w, h);
 #ifdef __APPLE__
             bgfx::frame();
-#elif __linux__
-            bgfx::discard();
 #else
             bgfx::touch(0);
 #endif
