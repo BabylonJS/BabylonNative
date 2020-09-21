@@ -326,7 +326,7 @@ namespace xr
             {
                 for (const HandInfo& handInfo : HandData.HandsInfo)
                 {
-                    XrCheck(HmdImpl.Extensions->xrDestroyHandTrackerEXT(handInfo.HandTracker));
+                    XrCheck(HmdImpl.Context.Extensions()->xrDestroyHandTrackerEXT(handInfo.HandTracker));
                 }
 
                 HandData.HandsInitialized = false;
@@ -524,7 +524,7 @@ namespace xr
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
             // Initialize the hand resources
-            HandData.SupportsHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Extensions->HandTrackingSupported;
+            HandData.SupportsHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
             InitializeHandResources();
 
             const XrViewConfigurationType primaryType = HmdImpl.PrimaryViewConfigurationType;
@@ -546,6 +546,7 @@ namespace xr
                 return;
             }
 
+            const auto& session = HmdImpl.Context.Session();
             constexpr std::array<XrHandEXT, 2> HANDEDNESS_EXT{XR_HAND_LEFT_EXT, XR_HAND_RIGHT_EXT};
             XrHandTrackerCreateInfoEXT trackerCreateInfo{XR_TYPE_HAND_TRACKER_CREATE_INFO_EXT};
             trackerCreateInfo.handJointSet = XR_HAND_JOINT_SET_DEFAULT_EXT;
@@ -555,7 +556,7 @@ namespace xr
                 // Create the hand trackers
                 HandData.HandsInfo[i].Hand = HANDEDNESS_EXT[i];
                 trackerCreateInfo.hand = HANDEDNESS_EXT[i];
-                XrCheck(HmdImpl.Extensions->xrCreateHandTrackerEXT(Session, &trackerCreateInfo, &HandData.HandsInfo[i].HandTracker));
+                XrCheck(HmdImpl.Context.Extensions()->xrCreateHandTrackerEXT(session, &trackerCreateInfo, &HandData.HandsInfo[i].HandTracker));
             }
 
             HandData.HandsInitialized = true;
@@ -1165,11 +1166,11 @@ namespace xr
                 if (sessionImpl.HandData.HandsInitialized)
                 {
                     XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
-                    jointLocateInfo.baseSpace = m_impl->sessionImpl.SceneSpace;
-                    jointLocateInfo.time = m_impl->displayTime;
+                    jointLocateInfo.baseSpace = sceneSpace;
+                    jointLocateInfo.time = displayTime;
 
                     auto handInfo = sessionImpl.HandData.HandsInfo[idx];
-                    XrCheck(sessionImpl.HmdImpl.Extensions->xrLocateHandJointsEXT(handInfo.HandTracker, &jointLocateInfo, &handInfo.Locations));
+                    XrCheck(sessionImpl.HmdImpl.Context.Extensions()->xrLocateHandJointsEXT(handInfo.HandTracker, &jointLocateInfo, &handInfo.Locations));
                     
                     auto& inputSource = InputSources[idx];
                     inputSource.JointsTrackedThisFrame = handInfo.Locations.isActive;
