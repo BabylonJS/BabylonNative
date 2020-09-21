@@ -551,7 +551,7 @@ namespace xr
             XrHandTrackerCreateInfoEXT trackerCreateInfo{XR_TYPE_HAND_TRACKER_CREATE_INFO_EXT};
             trackerCreateInfo.handJointSet = XR_HAND_JOINT_SET_DEFAULT_EXT;
 
-            for (int i = 0; i < HandData.HandsInfo.size(); i++)
+            for (size_t i = 0; i < HandData.HandsInfo.size(); i++)
             {
                 // Create the hand trackers
                 HandData.HandsInfo[i].Hand = HANDEDNESS_EXT[i];
