@@ -513,5 +513,11 @@ namespace Babylon
         std::vector<float> m_scratch{};
         
         Napi::FunctionReference m_requestAnimationFrameCalback{};
+
+        // webgl/opengl draw call parameters allow to set first index and number of indices used for that call
+        // but with bgfx, those parameters must be set when binding the index buffer
+        // at the time of webgl binding, we don't know those values yet
+        // so a pointer to the to-bind buffer is kept and the buffer is bound to bgfx at the time of the drawcall
+        const IndexBufferData* m_currentBoundIndexBuffer{};
     };
 }

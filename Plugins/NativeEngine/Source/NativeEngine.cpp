@@ -108,8 +108,12 @@ namespace Babylon
             }
         }
 
-        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, bool /*isFragment*/, std::unordered_map<std::string, UniformInfo>& cache)
+        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, UniformInfo>& cache)
         {
+#if ANDROID
+            uint8_t stage{0};
+#endif
+
             for (const spirv_cross::Resource& sampler : samplers)
             {
                 AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
@@ -121,7 +125,12 @@ namespace Babylon
                 AppendBytes(bytes, static_cast<uint16_t>(0));
                 AppendBytes(bytes, static_cast<uint16_t>(0));
 
+#if ANDROID
+                (void)compiler;
+                cache[sampler.name].Stage = stage++;
+#else
                 cache[sampler.name].Stage = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
+#endif
             }
         }
 
@@ -442,14 +451,14 @@ namespace Babylon
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
-
-        void SetBgfxIndexBuffer() const
+        
+        void SetBgfxIndexBuffer(uint32_t firstIndex, uint32_t numIndices) const
         {
-            constexpr auto nonDynamic = [](auto handle) {
-                bgfx::setIndexBuffer(handle);
+            const auto nonDynamic = [firstIndex, numIndices](auto handle) {
+                bgfx::setIndexBuffer(handle, firstIndex, numIndices);
             };
-            constexpr auto dynamic = [](auto handle) {
-                bgfx::setIndexBuffer(handle);
+            const auto dynamic = [firstIndex, numIndices](auto handle) {
+                bgfx::setIndexBuffer(handle, firstIndex, numIndices);
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -780,10 +789,7 @@ namespace Babylon
         const auto& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
 
         // a vertex array might not have an index buffer associated with
-        if (vertexArray.indexBuffer.data)
-        {
-            vertexArray.indexBuffer.data->SetBgfxIndexBuffer();
-        }
+        m_currentBoundIndexBuffer = vertexArray.indexBuffer.data;
 
         const auto& vertexBuffers = vertexArray.vertexBuffers;
         for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
@@ -919,7 +925,7 @@ namespace Babylon
 
                 AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
                 AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-                AppendSamplers(vertexBytes, compiler, samplers, false, programData->VertexUniformNameToInfo);
+                AppendSamplers(vertexBytes, compiler, samplers, programData->VertexUniformNameToInfo);
 
                 AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
                 AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
@@ -964,8 +970,9 @@ namespace Babylon
                 const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
                 const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
 #if __APPLE__
-                // with metal, we bind images and not samplers
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
+#elif ANDROID
+                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
@@ -977,7 +984,7 @@ namespace Babylon
 
                 AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
                 AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-                AppendSamplers(fragmentBytes, compiler, samplers, true, programData->FragmentUniformNameToInfo);
+                AppendSamplers(fragmentBytes, compiler, samplers, programData->FragmentUniformNameToInfo);
 
                 AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
                 AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
@@ -1582,10 +1589,15 @@ namespace Babylon
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        //const auto elementStart = info[1].As<Napi::Number>().Int32Value();
-        //const auto elementCount = info[2].As<Napi::Number>().Int32Value();
+        const auto elementStart = info[1].As<Napi::Number>().Int32Value();
+        const auto elementCount = info[2].As<Napi::Number>().Int32Value();
 
         // TODO: handle viewport
+
+        if (m_currentBoundIndexBuffer)
+        {
+            m_currentBoundIndexBuffer->SetBgfxIndexBuffer(elementStart, elementCount);
+        }
 
         // TODO: support other fill modes
         uint64_t fillModeState = 0; //indexed tri list
@@ -1623,6 +1635,7 @@ namespace Babylon
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
         bgfx::discard(BGFX_DISCARD_INDEX_BUFFER);
+        m_currentBoundIndexBuffer = nullptr;
         DrawIndexed(info);
     }
 
