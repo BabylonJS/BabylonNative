@@ -138,7 +138,7 @@ function runTest(index, done) {
             }
 
             var snippetUrl = "https://snippet.babylonjs.com";
-            var pgRoot = "/Playground"
+            var pgRoot = "https://playground.babylonjs.com";
 
             var retryTime = 500;
             var maxRetry = 5;
