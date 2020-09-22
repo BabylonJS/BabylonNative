@@ -568,33 +568,7 @@ namespace Babylon
         std::vector<uint8_t> m_bytes{};
     };
 
-    void NativeEngine::InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height)
-    {
-        // Initialize bgfx.
-        bgfx::Init init{};
-        init.platformData.nwh = nativeWindowPtr;
-        bgfx::setPlatformData(init.platformData);
-#if (ANDROID)
-        init.type = bgfx::RendererType::OpenGLES;
-#else
-        init.type = bgfx::RendererType::Direct3D11;
-#endif
-        init.resolution.width = width;
-        init.resolution.height = height;
-        init.resolution.reset = BGFX_RESET_FLAGS;
-        init.callback = &s_bgfxCallback;
-        bgfx::init(init);
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-        bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
-        bgfx::touch(0);
-    }
-
-    void NativeEngine::DeinitializeWindow()
-    {
-        bgfx::shutdown();
-    }
-
-    void NativeEngine::Initialize(Napi::Env env)
+    void NativeEngine::Initialize(Napi::Env env, bool autoRender)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
@@ -672,20 +646,23 @@ namespace Babylon
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+                InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))
             });
 
-        env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
-        : NativeEngine(info, Plugins::Internal::NativeWindow::GetFromJavaScript(info.Env()))
+        : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()), Plugins::Internal::NativeWindow::GetFromJavaScript(info.Env()))
     {
     }
 
-    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, Plugins::Internal::NativeWindow& nativeWindow)
+    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime, Plugins::Internal::NativeWindow& nativeWindow)
         : Napi::ObjectWrap<NativeEngine>{info}
-        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_runtimeScheduler{m_runtime}
+        , AutomaticRenderingEnabled{info.This().As<Napi::Object>().Get(JS_AUTO_RENDER_PROPERTY_NAME).ToBoolean()}
+        , RuntimeScheduler{runtime}
+        , m_runtime{runtime}
+        , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_engineState{BGFX_STATE_DEFAULT}
         , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
@@ -712,6 +689,51 @@ namespace Babylon
 #else
             bgfx::touch(0);
 #endif
+        }
+    }
+
+    template<typename SchedulerT>
+    arcana::task<void, std::exception_ptr> NativeEngine::GetRequestAnimationFrameTask(SchedulerT& scheduler)
+    {
+        return arcana::make_task(scheduler, m_cancelSource, [this] {
+            m_isRenderScheduled = false;
+
+            try
+            {
+                m_requestAnimationFrameCalback.Call({});
+                GetFrameBufferManager().Reset();
+            }
+            catch (const std::exception& ex)
+            {
+                m_runtime.Dispatch([ex](Napi::Env env) {
+                    Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
+                });
+            }
+        });
+    }
+
+    void NativeEngine::ScheduleRender()
+    {
+        if (!m_isRenderScheduled)
+        {
+            m_isRenderScheduled = true;
+
+            m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this]() mutable {
+                if (AutomaticRenderingEnabled)
+                {
+                    m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(arcana::inline_scheduler));
+                }
+                else
+                {
+                    m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(RuntimeScheduler));
+                }
+            });
+            if (AutomaticRenderingEnabled)
+            {
+                Dispatch([this] {
+                    m_graphicsImpl.RenderCurrentFrame();
+                });
+            }
         }
     }
 
@@ -749,17 +771,7 @@ namespace Babylon
             m_requestAnimationFrameCalback = Napi::Persistent(callback);
         }
 
-        m_runtime.Dispatch([this](Napi::Env env) {
-            try
-            {
-                m_requestAnimationFrameCalback.Call({});
-                EndFrame();
-            }
-            catch (const std::exception& ex)
-            {
-                Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
-            }
-        });
+        ScheduleRender();
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
@@ -1327,7 +1339,7 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(m_runtimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](bimg::ImageContainer* image) {
+            .then(RuntimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](bimg::ImageContainer* image) {
                 CreateTextureFromImage(texture, image);
             })
             .then(arcana::inline_scheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
@@ -1366,7 +1378,7 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(m_runtimeScheduler, m_cancelSource,
+            .then(RuntimeScheduler, m_cancelSource,
                 [texture, dataRef = Napi::Persistent(data), generateMips](const std::vector<bimg::ImageContainer*>& images) {
                     CreateCubeTextureFromImages(texture, images, generateMips);
                 })
@@ -1406,10 +1418,10 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(m_runtimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](std::vector<bimg::ImageContainer*> images) {
+            .then(RuntimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, true);
             })
-            .then(m_runtimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
+            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
                 onSuccessRef.Call({Napi::Value::From(Env(), true)});
             })
             .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
@@ -1683,20 +1695,13 @@ namespace Babylon
         bgfx::FrameBufferHandle fbh = BGFX_INVALID_HANDLE;
         const auto callback = info[0].As<Napi::Function>();
 
-        s_bgfxCallback.addScreenShotCallback(callback);
+        m_graphicsImpl.Callback.addScreenShotCallback(callback);
         bgfx::requestScreenShot(fbh, "GetImageData");
     }
 
     Napi::Value NativeEngine::GetRenderAPI(const Napi::CallbackInfo& info)
     {
         return Napi::Value::From(info.Env(), static_cast<int>(bgfx::getRendererType()));
-    }
-
-    void NativeEngine::EndFrame()
-    {
-        GetFrameBufferManager().Reset();
-
-        bgfx::frame();
     }
 
     void NativeEngine::Dispatch(std::function<void()> function)
