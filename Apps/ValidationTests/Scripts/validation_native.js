@@ -2,13 +2,11 @@ var engine;
 var currentScene;
 var config;
 var justOnce;
-var threshold = 25;
-var errorRatio = 8.0;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
 
-function compare(test, renderData, referenceImage) {
+function compare(test, renderData, referenceImage, threshold, errorRatio) {
     var size = renderData.length;
     var referenceData = TestUtils.getImageData(referenceImage);
     var differencesCount = 0;
@@ -50,7 +48,10 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {
-            if (compare(test, screenshot, referenceImage)) {
+
+            var defaultErrorRatio = 2.5
+
+            if (compare(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
                 testRes = false;
                 console.log('failed');
             } else {

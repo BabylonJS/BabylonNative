@@ -55,7 +55,8 @@
             "title": "GLTF Material Alpha Blend",
             "playgroundId": "#DS8AA7#18",
             "replace": "__folder__, Material_AlphaBlend, __page__, 0",
-            "referenceImage": "gltfMaterialAlphaBlend.png"
+            "referenceImage": "gltfMaterialAlphaBlend.png",
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Material Alpha Mask",
@@ -109,13 +110,15 @@
             "title": "GLTF Mesh Primitive Mode (0)",
             "playgroundId": "#DS8AA7#18",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0",
-            "referenceImage": "gltfMeshPrimitiveMode0.png"
+            "referenceImage": "gltfMeshPrimitiveMode0.png",
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Mesh Primitive Mode (1)",
             "playgroundId": "#DS8AA7#18",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1",
-            "referenceImage": "gltfMeshPrimitiveMode1.png"
+            "referenceImage": "gltfMeshPrimitiveMode1.png",
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Mesh Primitives",
@@ -163,7 +166,8 @@
             "title": "GLTF Texture Sampler (0)",
             "playgroundId": "#DS8AA7#18",
             "replace": "__folder__, Texture_Sampler, __page__, 0",
-            "referenceImage": "gltfTextureSampler0.png"
+            "referenceImage": "gltfTextureSampler0.png",
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Texture Sampler (1)",

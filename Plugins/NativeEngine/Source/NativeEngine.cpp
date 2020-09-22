@@ -110,7 +110,7 @@ namespace Babylon
 
         void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, UniformInfo>& cache)
         {
-#if ANDROID
+#if APIOpenGL
             uint8_t stage{0};
 #endif
 
@@ -125,7 +125,7 @@ namespace Babylon
                 AppendBytes(bytes, static_cast<uint16_t>(0));
                 AppendBytes(bytes, static_cast<uint16_t>(0));
 
-#if ANDROID
+#if APIOpenGL
                 (void)compiler;
                 cache[sampler.name].Stage = stage++;
 #else
@@ -959,7 +959,7 @@ namespace Babylon
                 const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
 #if __APPLE__
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#elif ANDROID
+#elif APIOpenGL
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
                 const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
@@ -1579,7 +1579,6 @@ namespace Babylon
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto elementStart = info[1].As<Napi::Number>().Int32Value();
         const auto elementCount = info[2].As<Napi::Number>().Int32Value();
-
         // TODO: handle viewport
 
         if (m_currentBoundIndexBuffer)
