@@ -68,7 +68,11 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)resize:(int)inWidth height:(int)inHeight
 {
-    graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+    if (graphics)
+    {
+        graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+    }
+    
     if (runtime) 
     {
         runtime->Dispatch([inWidth, inHeight](Napi::Env env)

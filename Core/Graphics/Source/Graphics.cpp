@@ -149,9 +149,9 @@ namespace Babylon
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Get(JS_GRAPHICS_NAME)
-            .As<Napi::External<Graphics::Impl>>()
-            .Data();
+                    .Get(JS_GRAPHICS_NAME)
+                    .As<Napi::External<Graphics::Impl>>()
+                    .Data();
     }
 
     void Graphics::AddToJavaScript(Napi::Env env)
@@ -183,7 +183,7 @@ namespace Babylon
 #ifdef __APPLE__
                 bgfx::frame();
 #else
-                    bgfx::touch(0);
+                bgfx::touch(0);
 #endif
             }
         });

@@ -112,20 +112,9 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
-    if (m_inputBuffer)
-    {
-        m_inputBuffer.reset();
-    }
-
-    if (m_runtime)
-    {
-        m_runtime.reset();
-    }
-
-    if (m_graphics)
-    {
-        m_graphics.reset();
-    }
+    m_inputBuffer.reset();
+    m_runtime.reset();
+    m_graphics.reset();
 }
 
 // Application lifecycle event handlers.
