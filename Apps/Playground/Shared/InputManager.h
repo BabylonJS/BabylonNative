@@ -1,18 +1,17 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
-#include <napi/napi.h>
 #include <napi/env.h>
 #include <functional>
 
-class InputManager final : public Napi::ObjectWrap<InputManager>
+template<typename RuntimeT>
+class InputManager final : public Napi::ObjectWrap<InputManager<RuntimeT>>
 {
 public:
     class InputBuffer
     {
     public:
-        InputBuffer(Babylon::JsRuntime& runtime)
-            : m_runtime{ runtime }
+        InputBuffer(RuntimeT& rt)
+            : m_runtime{ rt }
         {}
         InputBuffer(const InputBuffer&) = delete;
         InputBuffer& operator=(const InputBuffer&) = delete;
@@ -50,39 +49,51 @@ public:
         }
 
     private:
-        Babylon::JsRuntime& m_runtime;
+        RuntimeT& m_runtime;
 
         int m_pointerX{};
         int m_pointerY{};
         bool m_isPointerDown{};
     };
 
-    static void Initialize(Babylon::JsRuntime& runtime, InputBuffer& inputBuffer)
+    static void Initialize(Napi::Env env, InputBuffer& buffer)
     {
-        runtime.Dispatch([data = &inputBuffer](Napi::Env env)
-        {
-            Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{ env };
 
-            Napi::Function func = DefineClass(
-                env,
-                "InputManager",
-                {
-                    InstanceAccessor("pointerX", &InputManager::PointerX, nullptr),
-                    InstanceAccessor("pointerY", &InputManager::PointerY, nullptr),
-                    InstanceAccessor("isPointerDown", &InputManager::IsPointerDown, nullptr),
-                },
-                data);
+        Napi::Function func = Napi::ObjectWrap<InputManager>::DefineClass(
+            env,
+            "InputManager",
+            {
+                Napi::ObjectWrap<InputManager>::InstanceAccessor("pointerX", &InputManager::PointerX, nullptr),
+                Napi::ObjectWrap<InputManager>::InstanceAccessor("pointerY", &InputManager::PointerY, nullptr),
+                Napi::ObjectWrap<InputManager>::InstanceAccessor("isPointerDown", &InputManager::IsPointerDown, nullptr),
+            },
+            &buffer);
 
-            env.Global().Set("InputManager", func);
-        });
+        env.Global().Set("InputManager", func);
     }
 
-    explicit InputManager(const Napi::CallbackInfo& info);
+    explicit InputManager(const Napi::CallbackInfo& info)
+        : Napi::ObjectWrap<InputManager>{info}
+        , m_buffer{static_cast<InputBuffer*>(info.Data())}
+    {
+    }
 
 private:
     InputBuffer* m_buffer{};
 
-    Napi::Value PointerX(const Napi::CallbackInfo&);
-    Napi::Value PointerY(const Napi::CallbackInfo&);
-    Napi::Value IsPointerDown(const Napi::CallbackInfo&);
+    Napi::Value PointerX(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_buffer->GetPointerX());
+    }
+
+    Napi::Value PointerY(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_buffer->GetPointerY());
+    }
+
+    Napi::Value IsPointerDown(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_buffer->IsPointerDown());
+    }
 };
