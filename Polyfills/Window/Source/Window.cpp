@@ -24,7 +24,7 @@ namespace Babylon::Polyfills::Internal
             {});
 
         auto global = env.Global();
-        auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
+        auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
         auto jsWindow = constructor.New({});
 
         // Need a reference or it's destroyed when loading babylon.material.js
@@ -57,7 +57,7 @@ namespace Babylon::Polyfills::Internal
 
     Window& Window::GetFromJavaScript(Napi::Env env)
     {
-        return *Window::Unwrap(env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_WINDOW_NAME).As<Napi::Object>());
+        return *Window::Unwrap(JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_WINDOW_NAME).As<Napi::Object>());
     }
 
     Window::Window(const Napi::CallbackInfo& info)

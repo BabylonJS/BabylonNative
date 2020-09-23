@@ -11,7 +11,6 @@ set(SCRIPTS
     "Scripts/playground_runner.js")
 
 set(SOURCES
-    "Shared/InputManager.cpp"
     "Shared/InputManager.h")
 
 if(APPLE)

@@ -10,6 +10,7 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -20,8 +21,9 @@
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
 
+std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 namespace
 {
@@ -48,15 +50,19 @@ namespace
         std::vector<std::string> scripts(argv + 1, argv + argc);
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
-        // Ensure this is properly disposed.
+        // Ensure state is properly disposed.
+        graphics.reset();
         inputBuffer.reset();
-
-        // Separately call reset and make_unique to ensure prior runtime is destroyed before new one is created.
         runtime.reset();
+
+        // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
         runtime = std::make_unique<Babylon::AppRuntime>();
+        inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         // Initialize console plugin.
         runtime->Dispatch([width, height, window](Napi::Env env) {
+            graphics = Babylon::Graphics::InitializeFromWindow((void*)(uintptr_t)window, width, height);
+            
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
@@ -68,12 +74,10 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)(uintptr_t)window, width, height);
+            graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-            inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-            InputManager::Initialize(jsRuntime, *inputBuffer);
+            InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 
 
@@ -103,6 +107,7 @@ namespace
     void UpdateWindowSize(float width, float height)
     {
         runtime->Dispatch([width, height](Napi::Env env) {
+            graphics->UpdateSize(width, height);
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
     }

@@ -1,6 +1,7 @@
 #import "ViewController.h"
 
 #import <Babylon/AppRuntime.h>
+#import <Babylon/Graphics.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeWindow.h>
 #import <Babylon/Polyfills/Window.h>
@@ -8,8 +9,9 @@
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
 
+std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 @implementation ViewController
 
@@ -19,8 +21,9 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 - (void)refreshBabylon {
     // reset
-    runtime.reset();
     inputBuffer.reset();
+    runtime.reset();
+    graphics.reset();
 
     // parse command line arguments
     NSArray *arguments = [[NSProcessInfo processInfo] arguments];
@@ -30,9 +33,6 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     [arguments enumerateObjectsUsingBlock:^(NSString * _Nonnull obj, NSUInteger /*idx*/, BOOL * _Nonnull /*stop*/) {
         scripts.push_back([obj UTF8String]);
     }];
-
-    // Create the AppRuntime
-    runtime = std::make_unique<Babylon::AppRuntime>();
     
     // Initialize NativeWindow plugin
     NSSize size = [self view].frame.size;
@@ -40,7 +40,10 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
     float height = size.height;
     NSWindow* nativeWindow = [[self view] window];
     void* windowPtr = (__bridge void*)nativeWindow;
-    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+
+    graphics = Babylon::Graphics::InitializeFromWindow(windowPtr, width, height);
+    runtime = std::make_unique<Babylon::AppRuntime>();
+    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
@@ -48,11 +51,11 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
+
+        graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
         
-        auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-        inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-        InputManager::Initialize(jsRuntime, *inputBuffer);
+        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
     
     Babylon::ScriptLoader loader{ *runtime };
@@ -89,7 +92,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
     inputBuffer.reset();
     runtime.reset();
-    Babylon::Plugins::NativeEngine::DeinitializeGraphics();
+    graphics.reset();
 }
 
 - (void)setRepresentedObject:(id)representedObject {
@@ -105,6 +108,7 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
         NSSize size = [self view].frame.size;
         float width = size.width;
         float height = size.height;
+        graphics->UpdateSize(width, height);
         runtime->Dispatch([width, height](Napi::Env env)
         {
             Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(width), static_cast<size_t>(height));
