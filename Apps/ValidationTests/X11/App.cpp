@@ -20,6 +20,7 @@
 static const char* s_applicationName  = "BabylonNative Validation Tests";
 static const char* s_applicationClass = "Validation Tests";
 
+std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 
 static const int width = 600;
@@ -49,12 +50,16 @@ namespace
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
-        // Separately call reset and make_unique to ensure prior runtime is destroyed before new one is created.
+        // Separately call reset and make_unique to ensure state is destroyed before new one is created.
+        graphics.reset();
         runtime.reset();
+
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
         runtime->Dispatch([window](Napi::Env env) {
+            graphics = Babylon::Graphics::InitializeFromWindow((void*)(uintptr_t)window, width, height);
+            
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
@@ -68,7 +73,7 @@ namespace
             Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics((void*)(uintptr_t)window, width, height);
+            graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
         });
 
@@ -84,6 +89,7 @@ namespace
     void UpdateWindowSize(float width, float height)
     {
         runtime->Dispatch([width, height](Napi::Env env) {
+            graphics->UpdateSize(static_cast<size_t>(width), static_cast<size_t>(height));
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
     }

@@ -6,6 +6,8 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
+#include <GraphicsImpl.h>
+
 #include <NativeWindow.h>
 
 #include <napi/napi.h>
@@ -384,19 +386,22 @@ namespace Babylon
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
+        static constexpr auto JS_AUTO_RENDER_PROPERTY_NAME = "_AUTO_RENDER";
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
-        NativeEngine(const Napi::CallbackInfo& info, Plugins::Internal::NativeWindow& nativeWindow);
+        NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime, Plugins::Internal::NativeWindow& nativeWindow);
         ~NativeEngine();
 
-        static void InitializeWindow(void* nativeWindowPtr, uint32_t width, uint32_t height);
-        static void DeinitializeWindow();
-        static void Initialize(Napi::Env);
+        static void Initialize(Napi::Env, bool autoRender);
 
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
-        void EndFrame();
+
+        void ScheduleRender();
+
+        const bool AutomaticRenderingEnabled{};
+        JsRuntimeScheduler RuntimeScheduler;
 
     private:
         void Dispose();
@@ -473,6 +478,11 @@ namespace Babylon
 
         void UpdateSize(size_t width, size_t height);
 
+        template<typename SchedulerT>
+        arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
+        
+        bool m_isRenderScheduled{false};
+
         arcana::cancellation_source m_cancelSource{};
 
         ShaderCompiler m_shaderCompiler;
@@ -481,12 +491,11 @@ namespace Babylon
         arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;
-        JsRuntimeScheduler m_runtimeScheduler;
+        Graphics::Impl& m_graphicsImpl;
 
         bx::DefaultAllocator m_allocator;
         uint64_t m_engineState;
 
-        static inline BgfxCallback s_bgfxCallback{};
         FrameBufferManager m_frameBufferManager{};
 
         Plugins::Internal::NativeWindow::NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
