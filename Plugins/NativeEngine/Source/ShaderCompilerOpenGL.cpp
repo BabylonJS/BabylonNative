@@ -38,13 +38,9 @@ namespace Babylon
 
             spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
 
-#if ANDROID
             options.version = 300;
             options.es = true;
-#else
-            options.version = 330;
-            options.es = false;
-#endif
+
             compiler->set_common_options(options);
 
             glsl = compiler->compile();
