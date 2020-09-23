@@ -148,33 +148,6 @@ namespace Babylon
             }
         }
 
-        enum class WebGLAttribType
-        {
-            BYTE = 5120,
-            UNSIGNED_BYTE = 5121,
-            SHORT = 5122,
-            UNSIGNED_SHORT = 5123,
-            INT = 5124,
-            UNSIGNED_INT = 5125,
-            FLOAT = 5126
-        };
-
-        bgfx::AttribType::Enum ConvertAttribType(WebGLAttribType type)
-        {
-            switch (type)
-            {
-                case WebGLAttribType::UNSIGNED_BYTE:
-                    return bgfx::AttribType::Uint8;
-                case WebGLAttribType::SHORT:
-                    return bgfx::AttribType::Int16;
-                case WebGLAttribType::FLOAT:
-                    return bgfx::AttribType::Float;
-                default: // avoid "warning: 4 enumeration values not handled"
-                    throw std::exception();
-                    break;
-            }
-        }
-
         // Must match constants.ts in Babylon.js.
         constexpr std::array<uint64_t, 11> ALPHA_MODE{
             // ALPHA_DISABLE
@@ -677,6 +650,10 @@ namespace Babylon
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
                 
+                InstanceValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
+                InstanceValue("ATTRIB_TYPE_INT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int16))),
+                InstanceValue("ATTRIB_TYPE_FLOAT", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Float))),
+
                 InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))
             });
 
@@ -893,7 +870,7 @@ namespace Babylon
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-        const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
+        const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
         vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
         vertexLayout.end();
