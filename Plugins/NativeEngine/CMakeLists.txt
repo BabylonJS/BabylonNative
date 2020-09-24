@@ -17,11 +17,12 @@ set(SOURCES
     "Source/NativeEngine.h"
     "Source/ResourceLimits.cpp"
     "Source/ResourceLimits.h"
-    "Source/ShaderCompiler.cpp"
-    "Source/ShaderCompiler${GRAPHICS_API}.cpp"
     "Source/ShaderCompiler.h"
+    "Source/ShaderCompilerCommon.h"
+    "Source/ShaderCompilerCommon.cpp"
     "Source/ShaderCompilerTraversers.cpp"
-    "Source/ShaderCompilerTraversers.h")
+    "Source/ShaderCompilerTraversers.h"
+    "Source/ShaderCompiler${GRAPHICS_API}.cpp")
 
 add_library(NativeEngine ${SOURCES})
 

@@ -1,6 +1,4 @@
 #include "NativeEngine.h"
-#include <spirv_cross.hpp>
-#include <spirv_parser.hpp>
 #include "ShaderCompiler.h"
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -8,23 +6,12 @@
 #include <napi/env.h>
 
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 
-// TODO: this needs to be fixed in bgfx
-namespace bgfx
-{
-    uint16_t attribToId(Attrib::Enum _attr);
-}
-
-#define BGFX_UNIFORM_FRAGMENTBIT UINT8_C(0x10) // Copy-pasta from bgfx_p.h
-#define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20)  // Copy-pasta from bgfx_p.h
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
-
-#include <bx/math.h>
 
 #include <queue>
 #include <regex>
@@ -35,119 +22,6 @@ namespace Babylon
 {
     namespace
     {
-        template<typename AppendageT>
-        inline void AppendBytes(std::vector<uint8_t>& bytes, const AppendageT appendage)
-        {
-            auto ptr = reinterpret_cast<const uint8_t*>(&appendage);
-            auto stride = static_cast<std::ptrdiff_t>(sizeof(AppendageT));
-            bytes.insert(bytes.end(), ptr, ptr + stride);
-        }
-
-        template<typename AppendageT = std::string&>
-        inline void AppendBytes(std::vector<uint8_t>& bytes, const std::string& string)
-        {
-            auto ptr = reinterpret_cast<const uint8_t*>(string.data());
-            auto stride = static_cast<std::ptrdiff_t>(string.length());
-            bytes.insert(bytes.end(), ptr, ptr + stride);
-        }
-
-        template<typename ElementT>
-        inline void AppendBytes(std::vector<uint8_t>& bytes, const gsl::span<ElementT>& data)
-        {
-            auto ptr = reinterpret_cast<const uint8_t*>(data.data());
-            auto stride = static_cast<std::ptrdiff_t>(data.size() * sizeof(ElementT));
-            bytes.insert(bytes.end(), ptr, ptr + stride);
-        }
-
-        struct NonSamplerUniformsInfo
-        {
-            struct Uniform
-            {
-                enum class TypeEnum
-                {
-                    Vec4,
-                    Mat4
-                };
-
-                std::string Name{};
-                uint32_t Offset{};
-                uint16_t RegisterSize{};
-                TypeEnum Type{};
-            };
-
-            uint16_t ByteSize{};
-            std::vector<Uniform> Uniforms{};
-        };
-
-        void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
-        {
-            const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
-
-            for (const auto& uniform : uniformBuffer.Uniforms)
-            {
-                bgfx::UniformType::Enum bgfxType;
-
-                switch (uniform.Type)
-                {
-                    case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
-                        bgfxType = bgfx::UniformType::Vec4;
-                        break;
-                    case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
-                        bgfxType = bgfx::UniformType::Mat4;
-                        break;
-                    default:
-                        throw std::runtime_error{"Unrecognized uniform type."};
-                }
-
-                AppendBytes(bytes, static_cast<uint8_t>(uniform.Name.size()));
-                AppendBytes(bytes, uniform.Name);
-                AppendBytes(bytes, static_cast<uint8_t>(bgfxType | fragmentBit));
-                AppendBytes(bytes, static_cast<uint8_t>(0)); // Value "num" not used by D3D11 pipeline.
-                AppendBytes(bytes, static_cast<uint16_t>(uniform.Offset));
-                AppendBytes(bytes, static_cast<uint16_t>(uniform.RegisterSize));
-            }
-        }
-
-        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, UniformInfo>& cache)
-        {
-#if ANDROID
-            uint8_t stage{0};
-#endif
-
-            for (const spirv_cross::Resource& sampler : samplers)
-            {
-                AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
-                AppendBytes(bytes, sampler.name);
-                AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
-
-                // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
-                AppendBytes(bytes, static_cast<uint8_t>(0));
-                AppendBytes(bytes, static_cast<uint16_t>(0));
-                AppendBytes(bytes, static_cast<uint16_t>(0));
-
-#if ANDROID
-                (void)compiler;
-                cache[sampler.name].Stage = stage++;
-#else
-                cache[sampler.name].Stage = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
-#endif
-            }
-        }
-
-        void CacheUniformHandles(bgfx::ShaderHandle shader, std::unordered_map<std::string, UniformInfo>& cache)
-        {
-            const auto MAX_UNIFORMS = 256;
-            bgfx::UniformHandle uniforms[MAX_UNIFORMS];
-            auto numUniforms = bgfx::getShaderUniforms(shader, uniforms, MAX_UNIFORMS);
-
-            bgfx::UniformInfo info{};
-            for (uint8_t idx = 0; idx < numUniforms; idx++)
-            {
-                bgfx::getUniformInfo(uniforms[idx], info);
-                cache[info.name].Handle = uniforms[idx];
-            }
-        }
-
         namespace TextureSampling
         {
             constexpr auto NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
@@ -268,90 +142,6 @@ namespace Babylon
             texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
             texture->Width = width;
             texture->Height = height;
-        }
-
-        NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler)
-        {
-            NonSamplerUniformsInfo info{};
-
-            const auto& resources = compiler.get_shader_resources();
-            if (resources.uniform_buffers.size() == 1)
-            {
-                const auto& uniformBuffer = resources.uniform_buffers[0];
-                const auto& type = compiler.get_type(uniformBuffer.base_type_id);
-                assert(type.basetype == spirv_cross::SPIRType::BaseType::Struct);
-
-                info.ByteSize = static_cast<uint16_t>(type.member_types.empty() ? 0 : compiler.get_declared_struct_size(type));
-
-                info.Uniforms.resize(type.member_types.size());
-                for (uint32_t index = 0; index < type.member_types.size(); ++index)
-                {
-                    auto& uniform = info.Uniforms[index];
-
-                    uniform.Name = compiler.get_member_name(uniformBuffer.base_type_id, index);
-                    uniform.Offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
-                    
-                    const auto spirType = compiler.get_type(type.member_types[index]);
-                    if (spirType.columns == 1 && 1 <= spirType.vecsize && spirType.vecsize <= 4)
-                    {
-                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4;
-                        uniform.RegisterSize = 1;
-                    }
-                    else if (spirType.columns == 4 && spirType.vecsize == 4)
-                    {
-                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
-                        uniform.RegisterSize = 4;
-                    }
-                    else
-                    {
-                        throw std::runtime_error{"Unrecognized uniform type."};
-                    }
-
-                    for (const auto size : spirType.array)
-                    {
-                        uniform.RegisterSize *= static_cast<uint16_t>(size);
-                    }
-                }
-            }
-            else
-            {
-                info.ByteSize = 0;
-                parser.get_parsed_ir().for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
-                    auto& type = compiler.get_type_from_variable(id);
-                    if (var.storage == spv::StorageClassUniformConstant &&
-                        type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
-                        type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
-                    {
-                        auto& uniform = info.Uniforms.emplace_back();
-                        uniform.Name = compiler.get_name(id);
-                        uniform.Offset = 0; // Not actually used for anything by OpenGL.
-                        
-                        if (type.columns == 1 && 1 <= type.vecsize && type.vecsize <= 4)
-                        {
-                            uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4;
-                            uniform.RegisterSize = 1;
-                        }
-                        else if (type.columns == 4 && type.vecsize == 4)
-                        {
-                            uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
-                            uniform.RegisterSize = 4;
-                        }
-                        else
-                        {
-                            throw std::runtime_error{"Unrecognized uniform type."};
-                        }
-
-                        for (const auto size : type.array)
-                        {
-                            uniform.RegisterSize *= static_cast<uint16_t>(size);
-                        }
-
-                        info.ByteSize += 4 * uniform.RegisterSize;
-                    }
-                });
-            }
-
-            return info;
         }
     }
 
@@ -903,123 +693,35 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
-        const auto vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const auto fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
+        const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
-        auto programData = std::make_unique<ProgramData>();
+        std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
+        ShaderCompiler::BgfxShaderInfo shaderInfo{m_shaderCompiler.Compile(vertexSource, fragmentSource)};
 
-        std::vector<uint8_t> vertexBytes{};
-        std::vector<uint8_t> fragmentBytes{};
-        std::unordered_map<std::string, uint32_t> attributeLocations;
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos)
+        {
+            auto numUniforms = bgfx::getShaderUniforms(shader);
+            std::vector<bgfx::UniformHandle> uniforms{numUniforms};
+            bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
-        m_shaderCompiler.Compile(vertexSource, fragmentSource, [&](ShaderCompiler::ShaderInfo vertexShaderInfo, ShaderCompiler::ShaderInfo fragmentShaderInfo) {
-            constexpr uint8_t BGFX_SHADER_BIN_VERSION = 6;
-
-            // These hashes are generated internally by BGFX's custom shader compilation pipeline,
-            // which we don't have access to.  Fortunately, however, they aren't used for anything
-            // crucial; they just have to match.
-            constexpr uint32_t vertexOutputsHash = 0xBAD1DEA;
-            constexpr uint32_t fragmentInputsHash = vertexOutputsHash;
-
+            for (uint8_t index = 0; index < numUniforms; index++)
             {
-                const auto& compiler = *vertexShaderInfo.Compiler;
-                const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-                auto uniformsInfo = CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler);
-#if (BGFX_CONFIG_RENDERER_METAL)
-                // with metal, we bind images and not samplers
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#else
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
-#endif
-                size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
-
-                AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
-                AppendBytes(vertexBytes, vertexOutputsHash);
-                AppendBytes(vertexBytes, fragmentInputsHash);
-
-                AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
-                AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-                AppendSamplers(vertexBytes, compiler, samplers, programData->VertexUniformNameToInfo);
-
-                AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
-                AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
-                AppendBytes(vertexBytes, static_cast<uint8_t>(0));
-
-                AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
-                for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
-                {
-                    const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-                    AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-
-                    std::string attributeName = stageInput.name;
-                    if (attributeName == "a_position")
-                        attributeName = "position";
-                    else if (attributeName == "a_normal")
-                        attributeName = "normal";
-                    else if (attributeName == "a_tangent")
-                        attributeName = "tangent";
-                    else if (attributeName == "a_texcoord0")
-                        attributeName = "uv";
-                    else if (attributeName == "a_texcoord1")
-                        attributeName = "uv2";
-                    else if (attributeName == "a_texcoord2")
-                        attributeName = "uv3";
-                    else if (attributeName == "a_texcoord3")
-                        attributeName = "uv4";
-                    else if (attributeName == "a_color0")
-                        attributeName = "color";
-                    else if (attributeName == "a_indices")
-                        attributeName = "matricesIndices";
-                    else if (attributeName == "a_weight")
-                        attributeName = "matricesWeights";
-
-                    attributeLocations[attributeName] = location;
-                }
-
-                AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
+                bgfx::UniformInfo info{};
+                bgfx::getUniformInfo(uniforms[index], info);
+                auto itStage = uniformStages.find(info.name);
+                uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
             }
+        }};
 
-            {
-                const spirv_cross::Compiler& compiler = *fragmentShaderInfo.Compiler;
-                const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-                const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
-#if __APPLE__
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#elif ANDROID
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
-#else
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
-#endif
-                size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
+        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
+        InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos);
+        programData->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
-                AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
-                AppendBytes(fragmentBytes, vertexOutputsHash);
-                AppendBytes(fragmentBytes, fragmentInputsHash);
-
-                AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
-                AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-                AppendSamplers(fragmentBytes, compiler, samplers, programData->FragmentUniformNameToInfo);
-
-                AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
-                AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
-                AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
-
-                // Fragment shaders don't have attributes.
-                AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
-
-                AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
-            }
-        });
-
-        auto vertexShader = bgfx::createShader(bgfx::copy(vertexBytes.data(), static_cast<uint32_t>(vertexBytes.size())));
-        CacheUniformHandles(vertexShader, programData->VertexUniformNameToInfo);
-        programData->AttributeLocations = std::move(attributeLocations);
-
-        auto fragmentShader = bgfx::createShader(bgfx::copy(fragmentBytes.data(), static_cast<uint32_t>(fragmentBytes.size())));
-        CacheUniformHandles(fragmentShader, programData->FragmentUniformNameToInfo);
+        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
+        InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos);
 
         programData->Program = bgfx::createProgram(vertexShader, fragmentShader, true);
-
         auto* rawProgramData = programData.get();
         auto ticket = m_programDataCollection.insert(std::move(programData));
         auto finalizer = [ticket = std::move(ticket)](Napi::Env, ProgramData*) {};
@@ -1037,14 +739,14 @@ namespace Babylon
         {
             const auto name = names[index].As<Napi::String>().Utf8Value();
 
-            auto vertexFound = program->VertexUniformNameToInfo.find(name);
-            auto fragmentFound = program->FragmentUniformNameToInfo.find(name);
+            auto vertexFound = program->VertexUniformInfos.find(name);
+            auto fragmentFound = program->FragmentUniformInfos.find(name);
 
-            if (vertexFound != program->VertexUniformNameToInfo.end())
+            if (vertexFound != program->VertexUniformInfos.end())
             {
                 uniforms[index] = Napi::External<UniformInfo>::New(info.Env(), &vertexFound->second);
             }
-            else if (fragmentFound != program->FragmentUniformNameToInfo.end())
+            else if (fragmentFound != program->FragmentUniformInfos.end())
             {
                 uniforms[index] = Napi::External<UniformInfo>::New(info.Env(), &fragmentFound->second);
             }
@@ -1062,7 +764,7 @@ namespace Babylon
         const auto program = info[0].As<Napi::External<ProgramData>>().Data();
         const auto names = info[1].As<Napi::Array>();
 
-        const auto& attributeLocations = program->AttributeLocations;
+        const auto& attributeLocations = program->VertexAttributeLocations;
 
         auto length = names.Length();
         auto attributes = Napi::Array::New(info.Env(), length);
@@ -1164,15 +866,15 @@ namespace Babylon
 
     void NativeEngine::SetInt(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(&value, 1));
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1));
     }
 
     template<int size, typename arrayType>
     void NativeEngine::SetTypeArrayN(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto array = info[1].As<arrayType>();
 
         size_t elementLength = array.ElementLength();
@@ -1189,13 +891,13 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformData->Handle, m_scratch, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, elementLength / size);
     }
 
     template<int size>
     void NativeEngine::SetFloatN(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const float values[] = {
             info[1].As<Napi::Number>().FloatValue(),
             (size > 1) ? info[2].As<Napi::Number>().FloatValue() : 0.f,
@@ -1203,13 +905,13 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformData->Handle, values);
+        m_currentProgram->SetUniform(uniformInfo->Handle, values);
     }
 
     template<int size>
     void NativeEngine::SetMatrixN(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto matrix = info[1].As<Napi::Float32Array>();
 
         const size_t elementLength = matrix.ElementLength();
@@ -1228,11 +930,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrixValues.data(), 16));
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16));
         }
         else
         {
-            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrix.Data(), elementLength));
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength));
         }
     }
 
@@ -1278,13 +980,13 @@ namespace Babylon
 
     void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto matricesArray = info[1].As<Napi::Float32Array>();
 
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformData->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1507,10 +1209,10 @@ namespace Babylon
 
     void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto texture = info[1].As<Napi::External<TextureData>>().Data();
 
-        bgfx::setTexture(uniformData->Stage, uniformData->Handle, texture->Handle, texture->Flags);
+        bgfx::setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle, texture->Flags);
     }
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
