@@ -1,4 +1,5 @@
 #include "ShaderCompiler.h"
+#include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
@@ -67,7 +68,7 @@ namespace Babylon
         glslang::FinalizeProcess();
     }
 
-    void ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, std::function<void(ShaderInfo, ShaderInfo)> onCompiled)
+    ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
 
@@ -101,10 +102,8 @@ namespace Babylon
         std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
-        uint8_t* strVertex = (uint8_t*)vertexGLSL.data();
-        uint8_t* strFragment = (uint8_t*)fragmentGLSL.data();
-        onCompiled(
-            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size())},
-            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size())});
+        return ShaderCompilerCommon::CreateBgfxShader(
+            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size())},
+            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size())});
     }
 }
