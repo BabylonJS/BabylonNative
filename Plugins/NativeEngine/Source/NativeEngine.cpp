@@ -680,12 +680,12 @@ namespace Babylon
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
         const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
-        auto programData = std::make_unique<ProgramData>();
-        ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
+        std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
+        ShaderCompiler::BgfxShaderInfo shaderInfo{m_shaderCompiler.Compile(vertexSource, fragmentSource)};
 
-        static auto InitUniformInfos = [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos)
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos)
         {
             auto numUniforms = bgfx::getShaderUniforms(shader);
             std::vector<bgfx::UniformHandle> uniforms{numUniforms};
@@ -698,7 +698,7 @@ namespace Babylon
                 auto itStage = uniformStages.find(info.name);
                 uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
             }
-        };
+        }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
         InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos);
