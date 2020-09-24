@@ -98,7 +98,6 @@ namespace Babylon
 
         glslang::TShader fragmentShader{EShLangFragment};
         AddShader(program, fragmentShader, fragmentSource);
-        InvertYDerivativeOperands(fragmentShader);
 
         glslang::SpvVersion spv{};
         spv.spv = 0x10000;
@@ -115,6 +114,7 @@ namespace Babylon
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);
