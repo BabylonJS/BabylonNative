@@ -621,6 +621,7 @@ namespace Babylon
                 InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
+                InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -1311,6 +1312,44 @@ namespace Babylon
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
+    }
+
+    Napi::Value NativeEngine::CreateDepthTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        //uint32_t formatIndex = info[3].As<Napi::Number>().Uint32Value();
+        //int samplingMode = info[4].As<Napi::Number>().Uint32Value();
+        /*bool generateStencilBuffer = info[5].As<Napi::Boolean>();
+        bool generateDepth = info[6].As<Napi::Boolean>();
+        bool generateMips = info[7].As<Napi::Boolean>();
+        */
+        bgfx::FrameBufferHandle frameBufferHandle{};
+        
+            auto depthStencilFormat = bgfx::TextureFormat::D32;
+        /*    if (generateStencilBuffer)
+            {
+                depthStencilFormat = bgfx::TextureFormat::D24S8;
+            }
+            */
+            //assert(bgfx::isTextureValid(0, false, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT));
+            ///assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
+
+            std::array<bgfx::TextureHandle, 1> textures{
+                //bgfx::createTexture2D(width, height, generateMips, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(width, height, false/*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT) };
+            std::array<bgfx::Attachment, textures.size()> attachments{};
+            for (size_t idx = 0; idx < attachments.size(); ++idx)
+            {
+                attachments[idx].init(textures[idx]);
+            }
+            frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
+        //}
+
+        texture->Handle = bgfx::getTexture(frameBufferHandle);
+
+        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
