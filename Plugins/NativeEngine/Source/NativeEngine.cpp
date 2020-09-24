@@ -148,6 +148,21 @@ namespace Babylon
             }
         }
 
+        namespace TextureSampling
+        {
+            constexpr auto NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
+            constexpr auto BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
+            constexpr auto TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
+            constexpr auto ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
+            constexpr auto POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
+            constexpr auto TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
+            constexpr auto MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
+            constexpr auto MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
+            constexpr auto MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
+            constexpr auto MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
+            constexpr auto MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
+        }
+
         namespace AlphaMode
         {
             constexpr uint64_t DISABLE = 0x0;
@@ -595,17 +610,17 @@ namespace Babylon
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
 
-                InstanceValue("SAMPLER_NEAREST", Napi::Number::From(env, BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT)),                                 // nearest is mag = nearest and min = nearest and mip = linear
-                InstanceValue("SAMPLER_BILINEAR", Napi::Number::From(env, BGFX_SAMPLER_MIP_POINT)),                                                         // Bilinear is mag = linear and min = linear and mip = nearest
-                InstanceValue("SAMPLER_TRILINEAR", Napi::Number::From(env, 0)),                                                                             // Trilinear is mag = linear and min = linear and mip = linear
-                InstanceValue("SAMPLER_ANISOTROPIC", Napi::Number::From(env, BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT)),    // mag = nearest and min = nearest and mip = nearest
-                InstanceValue("SAMPLER_POINT_COMPARE", Napi::Number::From(env, BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT)),                           // mag = nearest and min = linear and mip = nearest
-                InstanceValue("SAMPLER_TRILINEAR_COMPARE", Napi::Number::From(env, BGFX_SAMPLER_MAG_POINT)),                                                // mag = nearest and min = linear and mip = linear
-                InstanceValue("SAMPLER_MINBILINEAR_MAGPOINT", Napi::Number::From(env, BGFX_SAMPLER_MAG_POINT)),                                             // mag = nearest and min = linear and mip = none
-                InstanceValue("SAMPLER_MINPOINT_MAGPOINT_MIPLINEAR", Napi::Number::From(env, BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT)),             // mag = nearest and min = nearest and mip = none
-                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPPOINT", Napi::Number::From(env, BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT)),             // mag = linear and min = nearest and mip = nearest
-                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPLINEAR", Napi::Number::From(env, BGFX_SAMPLER_MIN_POINT)),                                     // mag = linear and min = nearest and mip = linear
-                InstanceValue("SAMPLER_MINLINEAR_MAGPOINT_MIPPOINT", Napi::Number::From(env, 0)),                                                           // mag = linear and min = linear and mip = none
+                InstanceValue("SAMPLER_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST)),
+                InstanceValue("SAMPLER_BILINEAR", Napi::Number::From(env, TextureSampling::BILINEAR)),
+                InstanceValue("SAMPLER_TRILINEAR", Napi::Number::From(env, TextureSampling::TRILINEAR)),
+                InstanceValue("SAMPLER_ANISOTROPIC", Napi::Number::From(env, TextureSampling::ANISOTROPIC)),
+                InstanceValue("SAMPLER_POINT_COMPARE", Napi::Number::From(env, TextureSampling::POINT_COMPARE)),
+                InstanceValue("SAMPLER_TRILINEAR_COMPARE", Napi::Number::From(env, TextureSampling::TRILINEAR_COMPARE)),
+                InstanceValue("SAMPLER_MINBILINEAR_MAGPOINT", Napi::Number::From(env, TextureSampling::MINBILINEAR_MAGPOINT)),
+                InstanceValue("SAMPLER_MINPOINT_MAGPOINT_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGPOINT_MIPLINEAR)),
+                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPPOINT", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPPOINT)),
+                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPLINEAR)),
+                InstanceValue("SAMPLER_MINLINEAR_MAGPOINT_MIPPOINT", Napi::Number::From(env, TextureSampling::MINLINEAR_MAGPOINT_MIPPOINT)),
 
                 InstanceValue("DEPTH_TEST_LESS", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LESS)),
                 InstanceValue("DEPTH_TEST_LEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LEQUAL)),
