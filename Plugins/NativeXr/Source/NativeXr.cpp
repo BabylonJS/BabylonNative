@@ -1443,6 +1443,8 @@ namespace Babylon
                     initList.push_back(StaticValue(HAND_JOINT_NAMES[i], Napi::Value::From(env, i)));
                 }
 
+                initList.push_back(StaticAccessor("length", &XRHand::GetLength, nullptr));
+
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
@@ -1460,6 +1462,12 @@ namespace Babylon
             XRHand(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRHand>{info}
             {
+            }
+
+        private:
+            static Napi::Value GetLength(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
             }
         };
 
