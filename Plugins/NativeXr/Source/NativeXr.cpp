@@ -1428,6 +1428,60 @@ namespace Babylon
             XRFrame* m_frame{};
         };
 
+        class XRHand : public Napi::ObjectWrap<XRHand>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRHand";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        StaticValue("WRIST", Napi::Value::From(env, 0)),
+                        StaticValue("THUMB_METACARPAL", Napi::Value::From(env, 1)),
+                        StaticValue("THUMB_PHALANX_PROXIMAL", Napi::Value::From(env, 2)),
+                        StaticValue("THUMB_PHALANX_DISTAL", Napi::Value::From(env, 3)),
+                        StaticValue("THUMB_PHALANX_TIP", Napi::Value::From(env, 4)),
+                        StaticValue("INDEX_METACARPAL", Napi::Value::From(env, 5)),
+                        StaticValue("INDEX_PHALANX_PROXIMAL", Napi::Value::From(env, 6)),
+                        StaticValue("INDEX_PHALANX_INTERMEDIATE", Napi::Value::From(env, 7)),
+                        StaticValue("INDEX_PHALANX_DISTAL", Napi::Value::From(env, 8)),
+                        StaticValue("INDEX_PHALANX_TIP", Napi::Value::From(env, 9)),
+                        StaticValue("MIDDLE_METACARPAL", Napi::Value::From(env, 10)),
+                        StaticValue("MIDDLE_PHALANX_PROXIMAL", Napi::Value::From(env, 11)),
+                        StaticValue("MIDDLE_PHALANX_INTERMEDIATE", Napi::Value::From(env, 12)),
+                        StaticValue("MIDDLE_PHALANX_DISTAL", Napi::Value::From(env, 13)),
+                        StaticValue("MIDDLE_PHALANX_TIP", Napi::Value::From(env, 14)),
+                        StaticValue("RING_METACARPAL", Napi::Value::From(env, 15)),
+                        StaticValue("RING_PHALANX_PROXIMAL", Napi::Value::From(env, 16)),
+                        StaticValue("RING_PHALANX_INTERMEDIATE", Napi::Value::From(env, 17)),
+                        StaticValue("RING_PHALANX_DISTAL", Napi::Value::From(env, 18)),
+                        StaticValue("RING_PHALANX_TIP", Napi::Value::From(env, 19)),
+                        StaticValue("LITTLE_METACARPAL", Napi::Value::From(env, 20)),
+                        StaticValue("LITTLE_PHALANX_PROXIMAL", Napi::Value::From(env, 21)),
+                        StaticValue("LITTLE_PHALANX_INTERMEDIATE", Napi::Value::From(env, 22)),
+                        StaticValue("LITTLE_PHALANX_DISTAL", Napi::Value::From(env, 23)),
+                        StaticValue("LITTLE_PHALANX_TIP", Napi::Value::From(env, 24))
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRHand(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRHand>{info}
+            {
+            }
+        };
+
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -2278,6 +2332,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRHand::Initialize(env);
             XRPlane::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
@@ -2287,9 +2342,6 @@ namespace Babylon
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
-
-            // XRHand needs to be defined in order to use hand tracking, but we don't actually need the interface
-            env.Global().Set("XRHand", true);
         }
     }
 }
