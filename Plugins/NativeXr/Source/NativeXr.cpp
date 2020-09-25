@@ -127,6 +127,40 @@ namespace
         }
     }
 
+    constexpr std::array<const char*, 25> HAND_JOINT_NAMES
+    {
+        "WRIST",
+
+        "THUMB_METACARPAL",
+        "THUMB_PHALANX_PROXIMAL",
+        "THUMB_PHALANX_DISTAL",
+        "THUMB_PHALANX_TIP",
+
+        "INDEX_METACARPAL",
+        "INDEX_PHALANX_PROXIMAL",
+        "INDEX_PHALANX_INTERMEDIATE",
+        "INDEX_PHALANX_DISTAL",
+        "INDEX_PHALANX_TIP",
+
+        "MIDDLE_METACARPAL",
+        "MIDDLE_PHALANX_PROXIMAL",
+        "MIDDLE_PHALANX_INTERMEDIATE",
+        "MIDDLE_PHALANX_DISTAL",
+        "MIDDLE_PHALANX_TIP",
+
+        "RING_METACARPAL",
+        "RING_PHALANX_PROXIMAL",
+        "RING_PHALANX_INTERMEDIATE",
+        "RING_PHALANX_DISTAL",
+        "RING_PHALANX_TIP",
+
+        "LITTLE_METACARPAL",
+        "LITTLE_PHALANX_PROXIMAL",
+        "LITTLE_PHALANX_INTERMEDIATE",
+        "LITTLE_PHALANX_DISTAL",
+        "LITTLE_PHALANX_TIP"
+    };
+
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
@@ -136,40 +170,6 @@ namespace
         // Don't set hands up unless hand data is supported/available
         if (inputSource.JointsTrackedThisFrame)
         {
-            constexpr std::array<const char*, 25> HAND_JOINT_NAMES
-            {
-                "WRIST",
-
-                "THUMB_METACARPAL",
-                "THUMB_PHALANX_PROXIMAL",
-                "THUMB_PHALANX_DISTAL",
-                "THUMB_PHALANX_TIP",
-
-                "INDEX_METACARPAL",
-                "INDEX_PHALANX_PROXIMAL",
-                "INDEX_PHALANX_INTERMEDIATE",
-                "INDEX_PHALANX_DISTAL",
-                "INDEX_PHALANX_TIP",
-
-                "MIDDLE_METACARPAL",
-                "MIDDLE_PHALANX_PROXIMAL",
-                "MIDDLE_PHALANX_INTERMEDIATE",
-                "MIDDLE_PHALANX_DISTAL",
-                "MIDDLE_PHALANX_TIP",
-
-                "RING_METACARPAL",
-                "RING_PHALANX_PROXIMAL",
-                "RING_PHALANX_INTERMEDIATE",
-                "RING_PHALANX_DISTAL",
-                "RING_PHALANX_TIP",
-
-                "LITTLE_METACARPAL",
-                "LITTLE_PHALANX_PROXIMAL",
-                "LITTLE_PHALANX_INTERMEDIATE",
-                "LITTLE_PHALANX_DISTAL",
-                "LITTLE_PHALANX_TIP"
-            };
-
             auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
 
             for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
@@ -1437,36 +1437,19 @@ namespace Babylon
             {
                 Napi::HandleScope scope{env};
 
+                std::vector<Napi::ClassPropertyDescriptor<XRHand>> initList = {};
+                for (int i = 0; i < HAND_JOINT_NAMES.size(); i++)
+                {
+                    initList.push_back(StaticValue(HAND_JOINT_NAMES[i], Napi::Value::From(env, i)));
+                }
+
+                initList.push_back(InstanceAccessor("length", &XRHand::GetLength, nullptr));
+
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {
-                        StaticValue("WRIST", Napi::Value::From(env, 0)),
-                        StaticValue("THUMB_METACARPAL", Napi::Value::From(env, 1)),
-                        StaticValue("THUMB_PHALANX_PROXIMAL", Napi::Value::From(env, 2)),
-                        StaticValue("THUMB_PHALANX_DISTAL", Napi::Value::From(env, 3)),
-                        StaticValue("THUMB_PHALANX_TIP", Napi::Value::From(env, 4)),
-                        StaticValue("INDEX_METACARPAL", Napi::Value::From(env, 5)),
-                        StaticValue("INDEX_PHALANX_PROXIMAL", Napi::Value::From(env, 6)),
-                        StaticValue("INDEX_PHALANX_INTERMEDIATE", Napi::Value::From(env, 7)),
-                        StaticValue("INDEX_PHALANX_DISTAL", Napi::Value::From(env, 8)),
-                        StaticValue("INDEX_PHALANX_TIP", Napi::Value::From(env, 9)),
-                        StaticValue("MIDDLE_METACARPAL", Napi::Value::From(env, 10)),
-                        StaticValue("MIDDLE_PHALANX_PROXIMAL", Napi::Value::From(env, 11)),
-                        StaticValue("MIDDLE_PHALANX_INTERMEDIATE", Napi::Value::From(env, 12)),
-                        StaticValue("MIDDLE_PHALANX_DISTAL", Napi::Value::From(env, 13)),
-                        StaticValue("MIDDLE_PHALANX_TIP", Napi::Value::From(env, 14)),
-                        StaticValue("RING_METACARPAL", Napi::Value::From(env, 15)),
-                        StaticValue("RING_PHALANX_PROXIMAL", Napi::Value::From(env, 16)),
-                        StaticValue("RING_PHALANX_INTERMEDIATE", Napi::Value::From(env, 17)),
-                        StaticValue("RING_PHALANX_DISTAL", Napi::Value::From(env, 18)),
-                        StaticValue("RING_PHALANX_TIP", Napi::Value::From(env, 19)),
-                        StaticValue("LITTLE_METACARPAL", Napi::Value::From(env, 20)),
-                        StaticValue("LITTLE_PHALANX_PROXIMAL", Napi::Value::From(env, 21)),
-                        StaticValue("LITTLE_PHALANX_INTERMEDIATE", Napi::Value::From(env, 22)),
-                        StaticValue("LITTLE_PHALANX_DISTAL", Napi::Value::From(env, 23)),
-                        StaticValue("LITTLE_PHALANX_TIP", Napi::Value::From(env, 24))
-                    });
+                    initList
+                    );
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1480,8 +1463,94 @@ namespace Babylon
                 : Napi::ObjectWrap<XRHand>{info}
             {
             }
-        };
+        private:
 
+            Napi::Value GetLength(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
+            }
+        };
+        /*
+        class XRHand2 : public Napi::ObjectWrap<XRHand2>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRHand2";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+
+
+            auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
+
+            for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
+            {
+            //    auto napiJoint = Napi::External<xr::System::Session::Frame::JointSpace>::New(env, &inputSource.HandJoints[i]);
+            //    handJointCollection.Set(static_cast<int>(i), napiJoint);
+                handJointCollection.Set(Napi::String::New(env, HAND_JOINT_NAMES[i]), static_cast<int>(i));
+            }
+
+            handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
+
+
+
+
+                env.Global().Set(JS_CLASS_NAME, handJointCollection);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            static Napi::Object New(const Napi::Env& env)
+            {
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRHand2(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRHand2>{info}
+            {
+            }
+        private:
+           // Napi::ObjectReference m_jsJointPose{};
+            static constexpr std::array<const char*, 25> HAND_JOINT_NAMES
+            {
+                "WRIST",
+
+                "THUMB_METACARPAL",
+                "THUMB_PHALANX_PROXIMAL",
+                "THUMB_PHALANX_DISTAL",
+                "THUMB_PHALANX_TIP",
+
+                "INDEX_METACARPAL",
+                "INDEX_PHALANX_PROXIMAL",
+                "INDEX_PHALANX_INTERMEDIATE",
+                "INDEX_PHALANX_DISTAL",
+                "INDEX_PHALANX_TIP",
+
+                "MIDDLE_METACARPAL",
+                "MIDDLE_PHALANX_PROXIMAL",
+                "MIDDLE_PHALANX_INTERMEDIATE",
+                "MIDDLE_PHALANX_DISTAL",
+                "MIDDLE_PHALANX_TIP",
+
+                "RING_METACARPAL",
+                "RING_PHALANX_PROXIMAL",
+                "RING_PHALANX_INTERMEDIATE",
+                "RING_PHALANX_DISTAL",
+                "RING_PHALANX_TIP",
+
+                "LITTLE_METACARPAL",
+                "LITTLE_PHALANX_PROXIMAL",
+                "LITTLE_PHALANX_INTERMEDIATE",
+                "LITTLE_PHALANX_DISTAL",
+                "LITTLE_PHALANX_TIP"
+            };
+            
+        };
+        */
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -2333,6 +2402,7 @@ namespace Babylon
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
             XRHand::Initialize(env);
+         //   XRHand2::Initialize(env);
             XRPlane::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
