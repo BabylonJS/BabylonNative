@@ -144,7 +144,14 @@ namespace Babylon
             for (uint8_t idx = 0; idx < numUniforms; idx++)
             {
                 bgfx::getUniformInfo(uniforms[idx], info);
-                cache[info.name].Handle = uniforms[idx];
+                bool YFlip{false};
+                if (!bgfx::getCaps()->originBottomLeft)
+                {
+                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
+                }
+                auto& cacheRef = cache[info.name];
+                cacheRef.Handle = uniforms[idx];
+                cacheRef.YFlip = YFlip;
             }
         }
 
@@ -1153,7 +1160,7 @@ namespace Babylon
     {
         const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(&value, 1));
+        m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(&value, 1), uniformData->YFlip);
     }
 
     template<int size, typename arrayType>
@@ -1176,7 +1183,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformData->Handle, m_scratch, elementLength / size);
+        m_currentProgram->SetUniform(uniformData->Handle, m_scratch, uniformData->YFlip, elementLength / size);
     }
 
     template<int size>
@@ -1190,7 +1197,7 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformData->Handle, values);
+        m_currentProgram->SetUniform(uniformData->Handle, values, uniformData->YFlip);
     }
 
     template<int size>
@@ -1215,11 +1222,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrixValues.data(), 16));
+            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrixValues.data(), 16), uniformData->YFlip);
         }
         else
         {
-            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrix.Data(), elementLength));
+            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrix.Data(), elementLength), uniformData->YFlip);
         }
     }
 
@@ -1271,7 +1278,7 @@ namespace Babylon
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformData->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
+        m_currentProgram->SetUniform(uniformData->Handle, gsl::span(matricesArray.Data(), elementLength), uniformData->YFlip, elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1319,33 +1326,14 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        //uint32_t formatIndex = info[3].As<Napi::Number>().Uint32Value();
-        //int samplingMode = info[4].As<Napi::Number>().Uint32Value();
-        /*bool generateStencilBuffer = info[5].As<Napi::Boolean>();
-        bool generateDepth = info[6].As<Napi::Boolean>();
-        bool generateMips = info[7].As<Napi::Boolean>();
-        */
         bgfx::FrameBufferHandle frameBufferHandle{};
-        
-            auto depthStencilFormat = bgfx::TextureFormat::D32;
-        /*    if (generateStencilBuffer)
-            {
-                depthStencilFormat = bgfx::TextureFormat::D24S8;
-            }
-            */
-            //assert(bgfx::isTextureValid(0, false, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT));
-            ///assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
-            std::array<bgfx::TextureHandle, 1> textures{
-                //bgfx::createTexture2D(width, height, generateMips, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, false/*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT) };
-            std::array<bgfx::Attachment, textures.size()> attachments{};
-            for (size_t idx = 0; idx < attachments.size(); ++idx)
-            {
-                attachments[idx].init(textures[idx]);
-            }
-            frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-        //}
+        // This is WIP
+        auto depthStencilFormat = bgfx::TextureFormat::D32;
+        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false/*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT) };
+        bgfx::Attachment attachment;
+        attachment.init(textureHandle);
+        frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
 
@@ -1655,13 +1643,56 @@ namespace Babylon
             break;
         }
 
-        for (const auto& it : m_currentProgram->Uniforms)
+        if (m_frameBufferManager.IsRenderingToTarget() && (!bgfx::getCaps()->originBottomLeft))
         {
-            const ProgramData::UniformValue& value = it.second;
-            bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            // UV coordinates system are different between OpenGL and Direct3D/Metal
+            // This is not an issue with loaded textures (png/jpg...) because
+            // texel rows bytes are also using a different convention
+            // see https://www.puredevsoftware.com/blog/2018/03/17/texture-coordinates-d3d-vs-opengl/
+            // for render to texture, as the texel bytes are not reversed, sampling a RTT for
+            // post process or shadows will result in inversion on V axis (Y)
+            // to compensate for that, any matrix that is used to project onto clip-space has
+            // to be flipped.
+            // The involved matrices are determined by name and a boolean YFlip is set to true.
+            // When rendering to texture, those matrices are flipped and set as uniform datas.
+            // But because flipping clip-space coordinates also flips triangles winding,
+            // Culling also has to be flipped.
+            for (const auto& it : m_currentProgram->Uniforms)
+            {
+                const ProgramData::UniformValue& value = it.second;
+                if (value.YFlip)
+                {
+                    float tmpMatrix[16];
+                    static const float flipMatrix[16] = { 1.f, 0.f, 0.f, 0.f,
+                        0.f,-1.f, 0.f, 0.f,
+                        0.f, 0.f, 1.f, 0.f,
+                        0.f, 0.f, 0.f, 1.f };
+                    bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
+                    bgfx::setUniform({ it.first }, tmpMatrix, value.ElementLength);
+                }
+                else
+                {
+                    bgfx::setUniform({ it.first }, value.Data.data(), value.ElementLength);
+                }
+            }
+            // change culling
+            uint64_t m_engineStateYFlipped = m_engineState;
+            if (m_engineStateYFlipped & ~BGFX_STATE_CULL_MASK)
+            {
+                m_engineStateYFlipped ^= BGFX_STATE_CULL_MASK;
+            }
+            bgfx::setState(m_engineStateYFlipped | fillModeState);
         }
-
-        bgfx::setState(m_engineState | fillModeState);
+        else
+        {
+            for (const auto& it : m_currentProgram->Uniforms)
+            {
+                const ProgramData::UniformValue& value = it.second;
+                bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            }
+            bgfx::setState(m_engineState | fillModeState);
+        }
+        
 #if (ANDROID)
         // TODO : find why we need to discard state on Android
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
