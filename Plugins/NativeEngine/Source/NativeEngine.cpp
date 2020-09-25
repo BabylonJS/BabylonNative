@@ -24,17 +24,17 @@ namespace Babylon
     {
         namespace TextureSampling
         {
-            constexpr auto NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
-            constexpr auto BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
-            constexpr auto TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
-            constexpr auto ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
-            constexpr auto POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
-            constexpr auto TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
-            constexpr auto MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
-            constexpr auto MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
-            constexpr auto MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
-            constexpr auto MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
-            constexpr auto MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
+            constexpr uint32_t NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
+            constexpr uint32_t BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
+            constexpr uint32_t ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
+            constexpr uint32_t POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
+            constexpr uint32_t MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
+            constexpr uint32_t MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
+            constexpr uint32_t MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
         }
 
         namespace AlphaMode
