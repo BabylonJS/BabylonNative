@@ -1,24 +1,26 @@
 #pragma once
 
-#ifdef XR_USE_GRAPHICS_API_D3D11
-#error "XrPlatform.h must not be included more than once."
+#include <d3d11.h>
+
+#ifndef XR_USE_GRAPHICS_API_D3D11
+#define XR_USE_GRAPHICS_API_D3D11
 #endif
 
-#include <d3d11.h>
-#define XR_USE_GRAPHICS_API_D3D11
+#ifndef XR_USE_PLATFORM_WIN32
+#define XR_USE_PLATFORM_WIN32
+#endif
 
 #include <XrPlatformCommon.h>
 #include <XR.h>
-
 #include <array>
 
 namespace xr
 {
-    inline auto CreateGraphicsBinding(XrInstance instance, XrSystemId systemId, void* graphicsDevice)
+    inline auto CreateGraphicsBinding(const ExtensionDispatchTable& extensions, XrInstance instance, XrSystemId systemId, void* graphicsDevice)
     {
         // Create the D3D11 device for the adapter associated with the system.
         XrGraphicsRequirementsD3D11KHR graphicsRequirements{ XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
-        XrCheck(xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
+        XrCheck(extensions.xrGetD3D11GraphicsRequirementsKHR(instance, systemId, &graphicsRequirements));
 
         XrGraphicsBindingD3D11KHR graphicsBinding{ XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
         graphicsBinding.device = reinterpret_cast<ID3D11Device*>(graphicsDevice);

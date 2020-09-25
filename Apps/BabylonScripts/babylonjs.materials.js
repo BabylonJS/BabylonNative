@@ -147,7 +147,7 @@ PERFORMANCE OF THIS SOFTWARE.
 var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
     return extendStatics(d, b);
 };
 
@@ -233,13 +233,16 @@ function __generator(thisArg, body) {
     }
 }
 
-function __createBinding(o, m, k, k2) {
+var __createBinding = Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
-}
+});
 
-function __exportStar(m, exports) {
-    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) exports[p] = m[p];
+function __exportStar(m, o) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(o, p)) __createBinding(o, m, p);
 }
 
 function __values(o) {
@@ -320,11 +323,17 @@ function __makeTemplateObject(cooked, raw) {
     return cooked;
 };
 
+var __setModuleDefault = Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+};
+
 function __importStar(mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result.default = mod;
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
     return result;
 }
 
@@ -914,7 +923,7 @@ var CustomMaterial = /** @class */ (function (_super) {
             this._newUniformInstances = {};
         }
         if (param) {
-            if (kind.indexOf("sampler") == -1) {
+            if (kind.indexOf("sampler") != -1) {
                 this._newSamplerInstances[kind + "-" + name] = param;
             }
             else {
@@ -1171,7 +1180,7 @@ var PBRCustomMaterial = /** @class */ (function (_super) {
             this._newUniformInstances = {};
         }
         if (param) {
-            if (kind.indexOf("sampler") == -1) {
+            if (kind.indexOf("sampler") != -1) {
                 this._newSamplerInstances[kind + "-" + name] = param;
             }
             else {
@@ -1837,7 +1846,7 @@ var FurMaterial = /** @class */ (function (_super) {
         set: function (furTime) {
             this._furTime = furTime;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     FurMaterial.prototype.needAlphaBlending = function () {
@@ -4729,7 +4738,7 @@ var ShadowOnlyMaterial = /** @class */ (function (_super) {
         set: function (light) {
             this._activeLight = light;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     ShadowOnlyMaterial.prototype._getFirstShadowLightForMesh = function (mesh) {
@@ -6974,7 +6983,7 @@ var WaterMaterial = /** @class */ (function (_super) {
         get: function () {
             return true;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(WaterMaterial.prototype, "useLogarithmicDepth", {
@@ -6985,7 +6994,7 @@ var WaterMaterial = /** @class */ (function (_super) {
             this._useLogarithmicDepth = value && this.getScene().getEngine().getCaps().fragmentDepthSupported;
             this._markAllSubMeshesAsMiscDirty();
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(WaterMaterial.prototype, "refractionTexture", {
@@ -6993,14 +7002,14 @@ var WaterMaterial = /** @class */ (function (_super) {
         get: function () {
             return this._refractionRTT;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(WaterMaterial.prototype, "reflectionTexture", {
         get: function () {
             return this._reflectionRTT;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     // Methods
@@ -7028,7 +7037,7 @@ var WaterMaterial = /** @class */ (function (_super) {
         get: function () {
             return !(this._refractionRTT && this._refractionRTT.refreshRate === 0);
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     WaterMaterial.prototype.needAlphaBlending = function () {

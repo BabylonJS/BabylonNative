@@ -12,18 +12,17 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
-    "Source/BgfxCallback.cpp"
-    "Source/BgfxCallback.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/ResourceLimits.cpp"
     "Source/ResourceLimits.h"
-    "Source/ShaderCompiler.cpp"
-    "Source/ShaderCompiler${GRAPHICS_API}.cpp"
     "Source/ShaderCompiler.h"
+    "Source/ShaderCompilerCommon.h"
+    "Source/ShaderCompilerCommon.cpp"
     "Source/ShaderCompilerTraversers.cpp"
-    "Source/ShaderCompilerTraversers.h")
+    "Source/ShaderCompilerTraversers.h"
+    "Source/ShaderCompiler${GRAPHICS_API}.cpp")
 
 add_library(NativeEngine ${SOURCES})
 
@@ -31,6 +30,7 @@ target_include_directories(NativeEngine PUBLIC "Include")
 
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
+    INTERFACE Graphics
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg
@@ -38,7 +38,8 @@ target_link_to_dependencies(NativeEngine
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE NativeWindowInternal)
+    PRIVATE NativeWindowInternal
+    PRIVATE GraphicsInternal)
 warnings_as_errors(NativeEngine)
 
 if(APPLE)
@@ -66,4 +67,5 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE glslang
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
-    INTERFACE NativeWindowInternal)
+    INTERFACE NativeWindowInternal
+    INTERFACE GraphicsInternal)

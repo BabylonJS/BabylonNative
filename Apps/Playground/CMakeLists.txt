@@ -11,7 +11,6 @@ set(SCRIPTS
     "Scripts/playground_runner.js")
 
 set(SOURCES
-    "Shared/InputManager.cpp"
     "Shared/InputManager.h")
 
 if(APPLE)
@@ -141,8 +140,6 @@ if(APPLE)
 
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 9.0
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.iOS"
-
-            XCODE_ATTRIBUTE_ENABLE_BITCODE NO
 
             XCODE_ATTRIBUTE_SWIFT_VERSION "4.0"
             XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/LibNativeBridge.h"

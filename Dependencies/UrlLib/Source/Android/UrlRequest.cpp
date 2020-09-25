@@ -79,7 +79,13 @@ namespace UrlLib
                             LoadAsset(assetsManager, path.data(), m_responseBuffer);
                             break;
                         }
+                        default:
+                        {
+                            throw std::runtime_error{"Invalid response type"};
+                        }
                     }
+
+                    m_statusCode = UrlStatusCode::Ok;
                 }
                 else
                 {
@@ -112,6 +118,10 @@ namespace UrlLib
                         {
                             m_responseBuffer = byteArrayOutputStream.ToByteArray();
                             break;
+                        }
+                        default:
+                        {
+                            throw std::runtime_error{"Invalid response type"};
                         }
                     }
 

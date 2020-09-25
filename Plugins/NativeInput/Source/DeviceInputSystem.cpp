@@ -18,6 +18,7 @@ namespace Babylon::Plugins
                     InstanceAccessor("onDeviceDisconnected", &DeviceInputSystem::GetOnDeviceDisconnected, &DeviceInputSystem::SetOnDeviceDisconnected),
                     InstanceAccessor("onInputChanged", &DeviceInputSystem::GetOnInputChanged, &DeviceInputSystem::SetOnInputChanged),
                     InstanceMethod("pollInput", &DeviceInputSystem::PollInput),
+                    InstanceMethod("dispose", &DeviceInputSystem::Dispose),
                 })
         };
 
@@ -99,12 +100,21 @@ namespace Babylon::Plugins
         uint32_t inputIndex = info[2].As<Napi::Number>().Uint32Value();
         try
         {
-            std::optional<int32_t> inputValue = m_nativeInput.PollInput(static_cast<DeviceType>(deviceType), deviceSlot, inputIndex);
-            return inputValue ? Napi::Value::From(Env(), *inputValue) : Env().Null();
+            int32_t inputValue = m_nativeInput.PollInput(static_cast<DeviceType>(deviceType), deviceSlot, inputIndex);
+            return Napi::Value::From(Env(), inputValue);
         }
         catch (const std::runtime_error& exception)
         {
             throw Napi::Error::New(Env(), exception.what());
         }
+    }
+
+    Napi::Value NativeInput::Impl::DeviceInputSystem::Dispose(const Napi::CallbackInfo& info)
+    {
+        m_onDeviceConnected.Reset();
+        m_onDeviceDisconnected.Reset();
+        m_onInputChanged.Reset();
+
+        return info.Env().Undefined();
     }
 }
