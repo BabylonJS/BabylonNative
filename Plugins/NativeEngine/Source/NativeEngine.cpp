@@ -1,6 +1,4 @@
 #include "NativeEngine.h"
-#include <spirv_cross.hpp>
-#include <spirv_parser.hpp>
 #include "ShaderCompiler.h"
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -8,16 +6,7 @@
 #include <napi/env.h>
 
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 
-// TODO: this needs to be fixed in bgfx
-namespace bgfx
-{
-    uint16_t attribToId(Attrib::Enum _attr);
-}
-
-#define BGFX_UNIFORM_FRAGMENTBIT UINT8_C(0x10) // Copy-pasta from bgfx_p.h
-#define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20)  // Copy-pasta from bgfx_p.h
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 
 #include <bimg/bimg.h>
@@ -35,192 +24,35 @@ namespace Babylon
 {
     namespace
     {
-        template<typename AppendageT>
-        inline void AppendBytes(std::vector<uint8_t>& bytes, const AppendageT appendage)
+        namespace TextureSampling
         {
-            auto ptr = reinterpret_cast<const uint8_t*>(&appendage);
-            auto stride = static_cast<std::ptrdiff_t>(sizeof(AppendageT));
-            bytes.insert(bytes.end(), ptr, ptr + stride);
+            constexpr uint32_t NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
+            constexpr uint32_t BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
+            constexpr uint32_t ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
+            constexpr uint32_t POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
+            constexpr uint32_t MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
+            constexpr uint32_t MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
+            constexpr uint32_t MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
         }
 
-        template<typename AppendageT = std::string&>
-        inline void AppendBytes(std::vector<uint8_t>& bytes, const std::string& string)
+        namespace AlphaMode
         {
-            auto ptr = reinterpret_cast<const uint8_t*>(string.data());
-            auto stride = static_cast<std::ptrdiff_t>(string.length());
-            bytes.insert(bytes.end(), ptr, ptr + stride);
+            constexpr uint64_t DISABLE = 0x0;
+            constexpr uint64_t ADD = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t COMBINE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t SUBTRACT = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t MULTIPLY = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_DST_COLOR, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t MAXIMIZED = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t ONEONE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t PREMULTIPLIED = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t PREMULTIPLIED_PORTERDUFF = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+            constexpr uint64_t INTERPOLATE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR, BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR);
+            constexpr uint64_t SCREENMODE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
         }
-
-        template<typename ElementT>
-        inline void AppendBytes(std::vector<uint8_t>& bytes, const gsl::span<ElementT>& data)
-        {
-            auto ptr = reinterpret_cast<const uint8_t*>(data.data());
-            auto stride = static_cast<std::ptrdiff_t>(data.size() * sizeof(ElementT));
-            bytes.insert(bytes.end(), ptr, ptr + stride);
-        }
-
-        struct NonSamplerUniformsInfo
-        {
-            struct Uniform
-            {
-                enum class TypeEnum
-                {
-                    Vec4,
-                    Mat4
-                };
-
-                std::string Name{};
-                uint32_t Offset{};
-                uint16_t RegisterSize{};
-                TypeEnum Type{};
-            };
-
-            uint16_t ByteSize{};
-            std::vector<Uniform> Uniforms{};
-        };
-
-        void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
-        {
-            const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
-
-            for (const auto& uniform : uniformBuffer.Uniforms)
-            {
-                bgfx::UniformType::Enum bgfxType;
-
-                switch (uniform.Type)
-                {
-                    case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
-                        bgfxType = bgfx::UniformType::Vec4;
-                        break;
-                    case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
-                        bgfxType = bgfx::UniformType::Mat4;
-                        break;
-                    default:
-                        throw std::runtime_error{"Unrecognized uniform type."};
-                }
-
-                AppendBytes(bytes, static_cast<uint8_t>(uniform.Name.size()));
-                AppendBytes(bytes, uniform.Name);
-                AppendBytes(bytes, static_cast<uint8_t>(bgfxType | fragmentBit));
-                AppendBytes(bytes, static_cast<uint8_t>(0)); // Value "num" not used by D3D11 pipeline.
-                AppendBytes(bytes, static_cast<uint16_t>(uniform.Offset));
-                AppendBytes(bytes, static_cast<uint16_t>(uniform.RegisterSize));
-            }
-        }
-
-        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, UniformInfo>& cache)
-        {
-#if APIOpenGL
-            uint8_t stage{0};
-#endif
-
-            for (const spirv_cross::Resource& sampler : samplers)
-            {
-                AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
-                AppendBytes(bytes, sampler.name);
-                AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
-
-                // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
-                AppendBytes(bytes, static_cast<uint8_t>(0));
-                AppendBytes(bytes, static_cast<uint16_t>(0));
-                AppendBytes(bytes, static_cast<uint16_t>(0));
-
-#if APIOpenGL
-                (void)compiler;
-                cache[sampler.name].Stage = stage++;
-#else
-                cache[sampler.name].Stage = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
-#endif
-            }
-        }
-
-        void CacheUniformHandles(bgfx::ShaderHandle shader, std::unordered_map<std::string, UniformInfo>& cache)
-        {
-            const auto MAX_UNIFORMS = 256;
-            bgfx::UniformHandle uniforms[MAX_UNIFORMS];
-            auto numUniforms = bgfx::getShaderUniforms(shader, uniforms, MAX_UNIFORMS);
-
-            bgfx::UniformInfo info{};
-            for (uint8_t idx = 0; idx < numUniforms; idx++)
-            {
-                bgfx::getUniformInfo(uniforms[idx], info);
-                bool YFlip{false};
-                if (!bgfx::getCaps()->originBottomLeft)
-                {
-                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
-                }
-                auto& cacheRef = cache[info.name];
-                cacheRef.Handle = uniforms[idx];
-                cacheRef.YFlip = YFlip;
-            }
-        }
-
-        enum class WebGLAttribType
-        {
-            BYTE = 5120,
-            UNSIGNED_BYTE = 5121,
-            SHORT = 5122,
-            UNSIGNED_SHORT = 5123,
-            INT = 5124,
-            UNSIGNED_INT = 5125,
-            FLOAT = 5126
-        };
-
-        bgfx::AttribType::Enum ConvertAttribType(WebGLAttribType type)
-        {
-            switch (type)
-            {
-                case WebGLAttribType::UNSIGNED_BYTE:
-                    return bgfx::AttribType::Uint8;
-                case WebGLAttribType::SHORT:
-                    return bgfx::AttribType::Int16;
-                case WebGLAttribType::FLOAT:
-                    return bgfx::AttribType::Float;
-                default: // avoid "warning: 4 enumeration values not handled"
-                    throw std::exception();
-                    break;
-            }
-        }
-
-        // Must match constants.ts in Babylon.js.
-        constexpr std::array<uint64_t, 11> ALPHA_MODE{
-            // ALPHA_DISABLE
-            0x0,
-
-            // ALPHA_ADD: SRC ALPHA * SRC + DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_COMBINE: SRC ALPHA * SRC + (1 - SRC ALPHA) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_SUBTRACT: DEST - SRC * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_MULTIPLY: SRC * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_DST_COLOR, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_MAXIMIZED: SRC ALPHA * SRC + (1 - SRC) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_ONEONE: SRC + DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_PREMULTIPLIED: SRC + (1 - SRC ALPHA) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_PREMULTIPLIED_PORTERDUFF: SRC + (1 - SRC ALPHA) * DEST, (1 - SRC ALPHA) * DEST ALPHA
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
-
-            // ALPHA_INTERPOLATE: CST * SRC + (1 - CST) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR, BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR),
-
-            // ALPHA_SCREENMODE: SRC + (1 - SRC) * DEST, SRC ALPHA + (1 - SRC ALPHA) * DEST ALPHA
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
-        };
-
-        constexpr std::array<bgfx::TextureFormat::Enum, 2> TEXTURE_FORMAT{
-            bgfx::TextureFormat::RGBA8,
-            bgfx::TextureFormat::RGBA32F};
 
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
@@ -312,90 +144,6 @@ namespace Babylon
             texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
             texture->Width = width;
             texture->Height = height;
-        }
-
-        NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler)
-        {
-            NonSamplerUniformsInfo info{};
-
-            const auto& resources = compiler.get_shader_resources();
-            if (resources.uniform_buffers.size() == 1)
-            {
-                const auto& uniformBuffer = resources.uniform_buffers[0];
-                const auto& type = compiler.get_type(uniformBuffer.base_type_id);
-                assert(type.basetype == spirv_cross::SPIRType::BaseType::Struct);
-
-                info.ByteSize = static_cast<uint16_t>(type.member_types.empty() ? 0 : compiler.get_declared_struct_size(type));
-
-                info.Uniforms.resize(type.member_types.size());
-                for (uint32_t index = 0; index < type.member_types.size(); ++index)
-                {
-                    auto& uniform = info.Uniforms[index];
-
-                    uniform.Name = compiler.get_member_name(uniformBuffer.base_type_id, index);
-                    uniform.Offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
-                    
-                    const auto spirType = compiler.get_type(type.member_types[index]);
-                    if (spirType.columns == 1 && 1 <= spirType.vecsize && spirType.vecsize <= 4)
-                    {
-                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4;
-                        uniform.RegisterSize = 1;
-                    }
-                    else if (spirType.columns == 4 && spirType.vecsize == 4)
-                    {
-                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
-                        uniform.RegisterSize = 4;
-                    }
-                    else
-                    {
-                        throw std::runtime_error{"Unrecognized uniform type."};
-                    }
-
-                    for (const auto size : spirType.array)
-                    {
-                        uniform.RegisterSize *= static_cast<uint16_t>(size);
-                    }
-                }
-            }
-            else
-            {
-                info.ByteSize = 0;
-                parser.get_parsed_ir().for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
-                    auto& type = compiler.get_type_from_variable(id);
-                    if (var.storage == spv::StorageClassUniformConstant &&
-                        type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
-                        type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
-                    {
-                        auto& uniform = info.Uniforms.emplace_back();
-                        uniform.Name = compiler.get_name(id);
-                        uniform.Offset = 0; // Not actually used for anything by OpenGL.
-                        
-                        if (type.columns == 1 && 1 <= type.vecsize && type.vecsize <= 4)
-                        {
-                            uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4;
-                            uniform.RegisterSize = 1;
-                        }
-                        else if (type.columns == 4 && type.vecsize == 4)
-                        {
-                            uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
-                            uniform.RegisterSize = 4;
-                        }
-                        else
-                        {
-                            throw std::runtime_error{"Unrecognized uniform type."};
-                        }
-
-                        for (const auto size : type.array)
-                        {
-                            uniform.RegisterSize *= static_cast<uint16_t>(size);
-                        }
-
-                        info.ByteSize += 4 * uniform.RegisterSize;
-                    }
-                });
-            }
-
-            return info;
         }
     }
 
@@ -654,6 +402,57 @@ namespace Babylon
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+
+                InstanceValue("SAMPLER_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST)),
+                InstanceValue("SAMPLER_BILINEAR", Napi::Number::From(env, TextureSampling::BILINEAR)),
+                InstanceValue("SAMPLER_TRILINEAR", Napi::Number::From(env, TextureSampling::TRILINEAR)),
+                InstanceValue("SAMPLER_ANISOTROPIC", Napi::Number::From(env, TextureSampling::ANISOTROPIC)),
+                InstanceValue("SAMPLER_POINT_COMPARE", Napi::Number::From(env, TextureSampling::POINT_COMPARE)),
+                InstanceValue("SAMPLER_TRILINEAR_COMPARE", Napi::Number::From(env, TextureSampling::TRILINEAR_COMPARE)),
+                InstanceValue("SAMPLER_MINBILINEAR_MAGPOINT", Napi::Number::From(env, TextureSampling::MINBILINEAR_MAGPOINT)),
+                InstanceValue("SAMPLER_MINPOINT_MAGPOINT_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGPOINT_MIPLINEAR)),
+                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPPOINT", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPPOINT)),
+                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPLINEAR)),
+                InstanceValue("SAMPLER_MINLINEAR_MAGPOINT_MIPPOINT", Napi::Number::From(env, TextureSampling::MINLINEAR_MAGPOINT_MIPPOINT)),
+
+                InstanceValue("DEPTH_TEST_LESS", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LESS)),
+                InstanceValue("DEPTH_TEST_LEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LEQUAL)),
+                InstanceValue("DEPTH_TEST_EQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_EQUAL)),
+                InstanceValue("DEPTH_TEST_GEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_GEQUAL)),
+                InstanceValue("DEPTH_TEST_GREATER", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_GREATER)),
+                InstanceValue("DEPTH_TEST_NOTEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_NOTEQUAL)),
+                InstanceValue("DEPTH_TEST_NEVER", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_NEVER)),
+                InstanceValue("DEPTH_TEST_ALWAYS", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_ALWAYS)),
+
+                InstanceValue("CLEAR_FLAG_COLOR", Napi::Number::From(env, BGFX_CLEAR_COLOR)),
+                InstanceValue("CLEAR_FLAG_DEPTH", Napi::Number::From(env, BGFX_CLEAR_DEPTH)),
+                InstanceValue("CLEAR_FLAG_STENCIL", Napi::Number::From(env, BGFX_CLEAR_STENCIL)),
+
+                InstanceValue("ADDRESS_MODE_WRAP", Napi::Number::From(env, 0)),
+                InstanceValue("ADDRESS_MODE_MIRROR", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
+                InstanceValue("ADDRESS_MODE_CLAMP", Napi::Number::From(env, BGFX_SAMPLER_U_CLAMP)),
+                InstanceValue("ADDRESS_MODE_BORDER", Napi::Number::From(env, BGFX_SAMPLER_U_BORDER)),
+                InstanceValue("ADDRESS_MODE_MIRROR_ONCE", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
+
+                InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
+                InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
+                
+                InstanceValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
+                InstanceValue("ATTRIB_TYPE_INT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int16))),
+                InstanceValue("ATTRIB_TYPE_FLOAT", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Float))),
+
+                InstanceValue("ALPHA_DISABLE", Napi::Number::From(env, AlphaMode::DISABLE)),
+                InstanceValue("ALPHA_ADD", Napi::Number::From(env, AlphaMode::ADD)),
+                InstanceValue("ALPHA_COMBINE", Napi::Number::From(env, AlphaMode::COMBINE)),
+                InstanceValue("ALPHA_SUBTRACT", Napi::Number::From(env, AlphaMode::SUBTRACT)),
+                InstanceValue("ALPHA_MULTIPLY", Napi::Number::From(env, AlphaMode::MULTIPLY)),
+                InstanceValue("ALPHA_MAXIMIZED", Napi::Number::From(env, AlphaMode::MAXIMIZED)),
+                InstanceValue("ALPHA_ONEONE", Napi::Number::From(env, AlphaMode::ONEONE)),
+                InstanceValue("ALPHA_PREMULTIPLIED", Napi::Number::From(env, AlphaMode::PREMULTIPLIED)),
+                InstanceValue("ALPHA_PREMULTIPLIED_PORTERDUFF", Napi::Number::From(env, AlphaMode::PREMULTIPLIED_PORTERDUFF)),
+                InstanceValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
+                InstanceValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
+
                 InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))
             });
 
@@ -870,7 +669,7 @@ namespace Babylon
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-        const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
+        const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
         vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
         vertexLayout.end();
@@ -897,123 +696,41 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
-        const auto vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const auto fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
+        const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
-        auto programData = std::make_unique<ProgramData>();
+        std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
+        ShaderCompiler::BgfxShaderInfo shaderInfo{m_shaderCompiler.Compile(vertexSource, fragmentSource)};
 
-        std::vector<uint8_t> vertexBytes{};
-        std::vector<uint8_t> fragmentBytes{};
-        std::unordered_map<std::string, uint32_t> attributeLocations;
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos)
+        {
+            auto numUniforms = bgfx::getShaderUniforms(shader);
+            std::vector<bgfx::UniformHandle> uniforms{numUniforms};
+            bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
-        m_shaderCompiler.Compile(vertexSource, fragmentSource, [&](ShaderCompiler::ShaderInfo vertexShaderInfo, ShaderCompiler::ShaderInfo fragmentShaderInfo) {
-            constexpr uint8_t BGFX_SHADER_BIN_VERSION = 6;
-
-            // These hashes are generated internally by BGFX's custom shader compilation pipeline,
-            // which we don't have access to.  Fortunately, however, they aren't used for anything
-            // crucial; they just have to match.
-            constexpr uint32_t vertexOutputsHash = 0xBAD1DEA;
-            constexpr uint32_t fragmentInputsHash = vertexOutputsHash;
-
+            for (uint8_t index = 0; index < numUniforms; index++)
             {
-                const auto& compiler = *vertexShaderInfo.Compiler;
-                const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-                auto uniformsInfo = CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler);
-#if (BGFX_CONFIG_RENDERER_METAL)
-                // with metal, we bind images and not samplers
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#else
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
-#endif
-                size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
-
-                AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
-                AppendBytes(vertexBytes, vertexOutputsHash);
-                AppendBytes(vertexBytes, fragmentInputsHash);
-
-                AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
-                AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-                AppendSamplers(vertexBytes, compiler, samplers, programData->VertexUniformNameToInfo);
-
-                AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
-                AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
-                AppendBytes(vertexBytes, static_cast<uint8_t>(0));
-
-                AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
-                for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+                bgfx::UniformInfo info{};
+                bgfx::getUniformInfo(uniforms[index], info);
+                auto itStage = uniformStages.find(info.name);
+                uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
+                bool YFlip{ false };
+                if (!bgfx::getCaps()->originBottomLeft)
                 {
-                    const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-                    AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-
-                    std::string attributeName = stageInput.name;
-                    if (attributeName == "a_position")
-                        attributeName = "position";
-                    else if (attributeName == "a_normal")
-                        attributeName = "normal";
-                    else if (attributeName == "a_tangent")
-                        attributeName = "tangent";
-                    else if (attributeName == "a_texcoord0")
-                        attributeName = "uv";
-                    else if (attributeName == "a_texcoord1")
-                        attributeName = "uv2";
-                    else if (attributeName == "a_texcoord2")
-                        attributeName = "uv3";
-                    else if (attributeName == "a_texcoord3")
-                        attributeName = "uv4";
-                    else if (attributeName == "a_color0")
-                        attributeName = "color";
-                    else if (attributeName == "a_indices")
-                        attributeName = "matricesIndices";
-                    else if (attributeName == "a_weight")
-                        attributeName = "matricesWeights";
-
-                    attributeLocations[attributeName] = location;
+                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
                 }
-
-                AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
+                uniformInfos[info.name].YFlip = YFlip;
             }
+        }};
 
-            {
-                const spirv_cross::Compiler& compiler = *fragmentShaderInfo.Compiler;
-                const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-                const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
-#if __APPLE__
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#elif APIOpenGL
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
-#else
-                const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
-#endif
-                size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
+        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
+        InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos);
+        programData->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
-                AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
-                AppendBytes(fragmentBytes, vertexOutputsHash);
-                AppendBytes(fragmentBytes, fragmentInputsHash);
-
-                AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
-                AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-                AppendSamplers(fragmentBytes, compiler, samplers, programData->FragmentUniformNameToInfo);
-
-                AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
-                AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
-                AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
-
-                // Fragment shaders don't have attributes.
-                AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
-
-                AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
-            }
-        });
-
-        auto vertexShader = bgfx::createShader(bgfx::copy(vertexBytes.data(), static_cast<uint32_t>(vertexBytes.size())));
-        CacheUniformHandles(vertexShader, programData->VertexUniformNameToInfo);
-        programData->AttributeLocations = std::move(attributeLocations);
-
-        auto fragmentShader = bgfx::createShader(bgfx::copy(fragmentBytes.data(), static_cast<uint32_t>(fragmentBytes.size())));
-        CacheUniformHandles(fragmentShader, programData->FragmentUniformNameToInfo);
+        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
+        InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos);
 
         programData->Program = bgfx::createProgram(vertexShader, fragmentShader, true);
-
         auto* rawProgramData = programData.get();
         auto ticket = m_programDataCollection.insert(std::move(programData));
         auto finalizer = [ticket = std::move(ticket)](Napi::Env, ProgramData*) {};
@@ -1031,14 +748,14 @@ namespace Babylon
         {
             const auto name = names[index].As<Napi::String>().Utf8Value();
 
-            auto vertexFound = program->VertexUniformNameToInfo.find(name);
-            auto fragmentFound = program->FragmentUniformNameToInfo.find(name);
+            auto vertexFound = program->VertexUniformInfos.find(name);
+            auto fragmentFound = program->FragmentUniformInfos.find(name);
 
-            if (vertexFound != program->VertexUniformNameToInfo.end())
+            if (vertexFound != program->VertexUniformInfos.end())
             {
                 uniforms[index] = Napi::External<UniformInfo>::New(info.Env(), &vertexFound->second);
             }
-            else if (fragmentFound != program->FragmentUniformNameToInfo.end())
+            else if (fragmentFound != program->FragmentUniformInfos.end())
             {
                 uniforms[index] = Napi::External<UniformInfo>::New(info.Env(), &fragmentFound->second);
             }
@@ -1056,7 +773,7 @@ namespace Babylon
         const auto program = info[0].As<Napi::External<ProgramData>>().Data();
         const auto names = info[1].As<Napi::Array>();
 
-        const auto& attributeLocations = program->AttributeLocations;
+        const auto& attributeLocations = program->VertexAttributeLocations;
 
         auto length = names.Length();
         auto attributes = Napi::Array::New(info.Env(), length);
@@ -1150,23 +867,23 @@ namespace Babylon
 
     void NativeEngine::SetBlendMode(const Napi::CallbackInfo& info)
     {
-        const auto blendMode = info[0].As<Napi::Number>().Int32Value();
+        const auto blendMode = info[0].As<Napi::Number>().Int64Value();
 
         m_engineState &= ~BGFX_STATE_BLEND_MASK;
-        m_engineState |= ALPHA_MODE[blendMode];
+        m_engineState |= blendMode;
     }
 
     void NativeEngine::SetInt(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(&value, 1), uniformData->YFlip);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1), uniformInfo->YFlip);
     }
 
     template<int size, typename arrayType>
     void NativeEngine::SetTypeArrayN(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto array = info[1].As<arrayType>();
 
         size_t elementLength = array.ElementLength();
@@ -1183,13 +900,13 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformData->Handle, m_scratch, uniformData->YFlip, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, uniformInfo->YFlip, elementLength / size);
     }
 
     template<int size>
     void NativeEngine::SetFloatN(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const float values[] = {
             info[1].As<Napi::Number>().FloatValue(),
             (size > 1) ? info[2].As<Napi::Number>().FloatValue() : 0.f,
@@ -1197,13 +914,13 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformData->Handle, values, uniformData->YFlip);
+        m_currentProgram->SetUniform(uniformInfo->Handle, values, uniformInfo->YFlip);
     }
 
     template<int size>
     void NativeEngine::SetMatrixN(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto matrix = info[1].As<Napi::Float32Array>();
 
         const size_t elementLength = matrix.ElementLength();
@@ -1222,11 +939,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrixValues.data(), 16), uniformData->YFlip);
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16), uniformInfo->YFlip);
         }
         else
         {
-            m_currentProgram->SetUniform(uniformData->Handle, gsl::make_span(matrix.Data(), elementLength), uniformData->YFlip);
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength), uniformInfo->YFlip);
         }
     }
 
@@ -1272,13 +989,13 @@ namespace Babylon
 
     void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto matricesArray = info[1].As<Napi::Float32Array>();
 
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformData->Handle, gsl::span(matricesArray.Data(), elementLength), uniformData->YFlip, elementLength / 16);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), uniformInfo->YFlip, elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1476,20 +1193,6 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         auto filter = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
 
-        constexpr std::array<uint32_t, 12> bgfxFiltering = {
-            BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT,                          // nearest is mag = nearest and min = nearest and mip = linear
-            BGFX_SAMPLER_MIP_POINT,                                                   // Bilinear is mag = linear and min = linear and mip = nearest
-            0,                                                                        // Trilinear is mag = linear and min = linear and mip = linear
-            BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT, // mag = nearest and min = nearest and mip = nearest
-            BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT,                          // mag = nearest and min = linear and mip = nearest
-            BGFX_SAMPLER_MAG_POINT,                                                   // mag = nearest and min = linear and mip = linear
-            BGFX_SAMPLER_MAG_POINT,                                                   // mag = nearest and min = linear and mip = none
-            BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT,                          // mag = nearest and min = nearest and mip = none
-            BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT,                          // mag = linear and min = nearest and mip = nearest
-            BGFX_SAMPLER_MIN_POINT,                                                   // mag = linear and min = nearest and mip = linear
-            0,                                                                        // mag = linear and min = linear and mip = none
-            BGFX_SAMPLER_MIN_POINT};                                                  // mag = linear and min = nearest and mip = none
-
         texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
 
         if (texture->AnisotropicLevel > 1)
@@ -1498,7 +1201,7 @@ namespace Babylon
         }
         else
         {
-            texture->Flags |= bgfxFiltering[filter];
+            texture->Flags |= filter;
         }
     }
 
@@ -1509,11 +1212,9 @@ namespace Babylon
         auto addressModeV = static_cast<uint32_t>(info[2].As<Napi::Number>().Uint32Value());
         auto addressModeW = static_cast<uint32_t>(info[3].As<Napi::Number>().Uint32Value());
 
-        constexpr std::array<uint32_t, 3> bgfxSamplers = {0, BGFX_SAMPLER_U_CLAMP, BGFX_SAMPLER_U_MIRROR};
-
-        uint32_t addressMode = bgfxSamplers[addressModeU] +
-            (bgfxSamplers[addressModeV] << BGFX_SAMPLER_V_SHIFT) +
-            (bgfxSamplers[addressModeW] << BGFX_SAMPLER_W_SHIFT);
+        uint32_t addressMode = addressModeU +
+            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+            (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
         texture->Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
         texture->Flags |= addressMode;
@@ -1536,10 +1237,10 @@ namespace Babylon
 
     void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
     {
-        const auto uniformData = info[0].As<Napi::External<UniformInfo>>().Data();
+        const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto texture = info[1].As<Napi::External<TextureData>>().Data();
 
-        bgfx::setTexture(uniformData->Stage, uniformData->Handle, texture->Handle, texture->Flags);
+        bgfx::setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle, texture->Flags);
     }
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
@@ -1553,7 +1254,7 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        uint32_t formatIndex = info[3].As<Napi::Number>().Uint32Value();
+        auto format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
         //int samplingMode = info[4].As<Napi::Number>().Uint32Value();
         bool generateStencilBuffer = info[5].As<Napi::Boolean>();
         bool generateDepth = info[6].As<Napi::Boolean>();
@@ -1566,7 +1267,7 @@ namespace Babylon
         }
         else if (!generateStencilBuffer && !generateDepth)
         {
-            frameBufferHandle = bgfx::createFrameBuffer(width, height, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT);
+            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
         }
         else
         {
@@ -1576,11 +1277,11 @@ namespace Babylon
                 depthStencilFormat = bgfx::TextureFormat::D24S8;
             }
 
-            assert(bgfx::isTextureValid(0, false, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT));
+            assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, generateMips, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT),
                 bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)

@@ -291,14 +291,6 @@ namespace Babylon
         bool m_renderingToTarget{false};
     };
 
-    struct UniformInfo final
-    {
-        uint8_t Stage{};
-        // uninitilized bgfx resource is BGFX_INVALID_HANDLE. 0 can be a valid handle.
-        bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
-        bool YFlip{false};
-    };
-
     struct TextureData final
     {
         ~TextureData()
@@ -328,6 +320,13 @@ namespace Babylon
         std::unique_ptr<bimg::ImageContainer> Image;
     };
 
+    struct UniformInfo final
+    {
+        uint8_t Stage{};
+        bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
+        bool YFlip{ false };
+    };
+
     struct ProgramData final
     {
         ProgramData() = default;
@@ -339,9 +338,9 @@ namespace Babylon
             bgfx::destroy(Program);
         }
 
-        std::unordered_map<std::string, uint32_t> AttributeLocations{};
-        std::unordered_map<std::string, UniformInfo> VertexUniformNameToInfo{};
-        std::unordered_map<std::string, UniformInfo> FragmentUniformNameToInfo{};
+        std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
+        std::unordered_map<std::string, UniformInfo> VertexUniformInfos{};
+        std::unordered_map<std::string, UniformInfo> FragmentUniformInfos{};
 
         bgfx::ProgramHandle Program{};
 
