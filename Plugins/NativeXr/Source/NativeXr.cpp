@@ -211,7 +211,7 @@ namespace Babylon
     class NativeXr
     {
     public:
-        NativeXr();
+        NativeXr(Napi::Env);
         ~NativeXr();
 
         arcana::cancellation_source& GetCancellationSource();
@@ -235,17 +235,45 @@ namespace Babylon
 
         void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
         {
-            Dispatch([this, callback = std::move(callback)]() {
+            // Note: we are guaranteed to be on the JavaScript thread.
+
+            if (m_isFrameScheduled)
+            {
+                return; // Why is this ever being called twice in the same frame?
+            }
+            m_isFrameScheduled = true;
+
+            m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                // Note: we are guaranteed to be on the render thread.
+                m_isFrameScheduled = false;
+
                 // Early out if there's no session available.
                 if (m_session == nullptr)
                 {
                     return;
                 }
+                
+                m_engineImpl->ScheduleRender();
 
                 BeginFrame();
-                callback(*m_frame);
-                m_engineImpl->EndFrame();
-                EndFrame();
+
+                if (m_engineImpl->AutomaticRenderingEnabled)
+                {
+                    m_graphicsImpl.AddRenderWorkTask(arcana::make_task(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                        callback(*m_frame);
+                    }));
+                }
+                else
+                {
+                    m_graphicsImpl.AddRenderWorkTask(arcana::make_task(m_engineImpl->RuntimeScheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                        callback(*m_frame);
+                    }));
+                }
+                
+                m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this] {
+                    // Note: we are guaranteed to be on the render thread again.
+                    EndFrame();
+                });
             });
         }
 
@@ -281,14 +309,17 @@ namespace Babylon
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         ClearState m_clearState{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
+        Graphics::Impl& m_graphicsImpl;
         NativeEngine* m_engineImpl{};
         arcana::cancellation_source m_cancellationSource{};
+        bool m_isFrameScheduled{false};
 
         void BeginFrame();
         void EndFrame();
     };
 
-    NativeXr::NativeXr()
+    NativeXr::NativeXr(Napi::Env env)
+        : m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
     {
     }
 
@@ -1850,6 +1881,7 @@ namespace Babylon
 
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{info}
+                , m_xr{info.Env()}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
@@ -1903,7 +1935,7 @@ namespace Babylon
             }
 
         private:
-            NativeXr m_xr{};
+            NativeXr m_xr;
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
             JsRuntimeScheduler m_runtimeScheduler;

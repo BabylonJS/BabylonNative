@@ -14,6 +14,7 @@
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -28,6 +29,7 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 
 // 600, 400 mandatory size for CI tests
@@ -84,16 +86,15 @@ namespace
 
     void Uninitialize()
     {
-        if (runtime)
-        {
-            runtime.reset();
-            Babylon::Plugins::NativeEngine::DeinitializeGraphics();
-        }
+        runtime.reset();
+        graphics.reset();
     }
 
     void Initialize(HWND hWnd)
     {
+        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
         runtime = std::make_unique<Babylon::AppRuntime>();
+
         // Initialize console plugin.
         runtime->Dispatch([hWnd](Napi::Env env)
             {
@@ -115,7 +116,7 @@ namespace
                 Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
                 // Initialize NativeEngine plugin.
-                Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+                graphics->AddToJavaScript(env);
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::TestUtils::CreateInstance(env, hWnd);

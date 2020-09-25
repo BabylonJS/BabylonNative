@@ -10,6 +10,7 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -25,7 +26,8 @@ HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -79,19 +81,13 @@ namespace
     void Uninitialize()
     {
         inputBuffer.reset();
-
-        if (runtime)
-        {
-            runtime.reset();
-            Babylon::Plugins::NativeEngine::DeinitializeGraphics();
-        }
+        runtime.reset();
+        graphics.reset();
     }
 
     void RefreshBabylon(HWND hWnd)
     {
         Uninitialize();
-
-        runtime = std::make_unique<Babylon::AppRuntime>();
 
         RECT rect;
         if (!GetWindowRect(hWnd, &rect))
@@ -99,8 +95,15 @@ namespace
             return;
         }
 
-        // Initialize console plugin.
-        runtime->Dispatch([rect, hWnd](Napi::Env env) {
+        auto width = static_cast<size_t>(rect.right - rect.left);
+        auto height = static_cast<size_t>(rect.bottom - rect.top);
+
+        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, width, height);
+        runtime = std::make_unique<Babylon::AppRuntime>();
+        inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
+
+        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
+            // Initialize console plugin.
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
@@ -109,20 +112,16 @@ namespace
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeWindow plugin.
-            auto width = static_cast<size_t>(rect.right - rect.left);
-            auto height = static_cast<size_t>(rect.bottom - rect.top);
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
             // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::InitializeGraphics(hWnd, width, height);
+            graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
-
-            auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-            inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-            InputManager::Initialize(jsRuntime, *inputBuffer);
+                        
+            InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 
         // Scripts are copied to the parent of the executable due to CMake issues.
@@ -156,6 +155,7 @@ namespace
 
     void UpdateWindowSize(size_t width, size_t height)
     {
+        graphics->UpdateSize(width, height);
         runtime->Dispatch([width, height](Napi::Env env) {
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
