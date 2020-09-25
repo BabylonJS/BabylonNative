@@ -324,7 +324,7 @@ namespace Babylon
     {
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
-        bool YFlip{ false };
+        bool YFlip{false};
     };
 
     struct ProgramData final
