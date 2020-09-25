@@ -22,72 +22,35 @@ namespace Babylon
 {
     namespace
     {
-        enum class WebGLAttribType
+        namespace TextureSampling
         {
-            BYTE = 5120,
-            UNSIGNED_BYTE = 5121,
-            SHORT = 5122,
-            UNSIGNED_SHORT = 5123,
-            INT = 5124,
-            UNSIGNED_INT = 5125,
-            FLOAT = 5126
-        };
-
-        bgfx::AttribType::Enum ConvertAttribType(WebGLAttribType type)
-        {
-            switch (type)
-            {
-                case WebGLAttribType::UNSIGNED_BYTE:
-                    return bgfx::AttribType::Uint8;
-                case WebGLAttribType::SHORT:
-                    return bgfx::AttribType::Int16;
-                case WebGLAttribType::FLOAT:
-                    return bgfx::AttribType::Float;
-                default: // avoid "warning: 4 enumeration values not handled"
-                    throw std::exception();
-                    break;
-            }
+            constexpr uint32_t NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
+            constexpr uint32_t BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
+            constexpr uint32_t ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
+            constexpr uint32_t POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
+            constexpr uint32_t MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
+            constexpr uint32_t MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
+            constexpr uint32_t MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
         }
 
-        // Must match constants.ts in Babylon.js.
-        constexpr std::array<uint64_t, 11> ALPHA_MODE{
-            // ALPHA_DISABLE
-            0x0,
-
-            // ALPHA_ADD: SRC ALPHA * SRC + DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_COMBINE: SRC ALPHA * SRC + (1 - SRC ALPHA) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_SUBTRACT: DEST - SRC * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_MULTIPLY: SRC * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_DST_COLOR, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_MAXIMIZED: SRC ALPHA * SRC + (1 - SRC) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_ONEONE: SRC + DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_PREMULTIPLIED: SRC + (1 - SRC ALPHA) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE),
-
-            // ALPHA_PREMULTIPLIED_PORTERDUFF: SRC + (1 - SRC ALPHA) * DEST, (1 - SRC ALPHA) * DEST ALPHA
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
-
-            // ALPHA_INTERPOLATE: CST * SRC + (1 - CST) * DEST
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR, BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR),
-
-            // ALPHA_SCREENMODE: SRC + (1 - SRC) * DEST, SRC ALPHA + (1 - SRC ALPHA) * DEST ALPHA
-            BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA),
-        };
-
-        constexpr std::array<bgfx::TextureFormat::Enum, 2> TEXTURE_FORMAT{
-            bgfx::TextureFormat::RGBA8,
-            bgfx::TextureFormat::RGBA32F};
+        namespace AlphaMode
+        {
+            constexpr uint64_t DISABLE = 0x0;
+            constexpr uint64_t ADD = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t COMBINE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t SUBTRACT = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t MULTIPLY = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_DST_COLOR, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t MAXIMIZED = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t ONEONE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t PREMULTIPLIED = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t PREMULTIPLIED_PORTERDUFF = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+            constexpr uint64_t INTERPOLATE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR, BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR);
+            constexpr uint64_t SCREENMODE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+        }
 
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
@@ -436,6 +399,57 @@ namespace Babylon
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+
+                InstanceValue("SAMPLER_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST)),
+                InstanceValue("SAMPLER_BILINEAR", Napi::Number::From(env, TextureSampling::BILINEAR)),
+                InstanceValue("SAMPLER_TRILINEAR", Napi::Number::From(env, TextureSampling::TRILINEAR)),
+                InstanceValue("SAMPLER_ANISOTROPIC", Napi::Number::From(env, TextureSampling::ANISOTROPIC)),
+                InstanceValue("SAMPLER_POINT_COMPARE", Napi::Number::From(env, TextureSampling::POINT_COMPARE)),
+                InstanceValue("SAMPLER_TRILINEAR_COMPARE", Napi::Number::From(env, TextureSampling::TRILINEAR_COMPARE)),
+                InstanceValue("SAMPLER_MINBILINEAR_MAGPOINT", Napi::Number::From(env, TextureSampling::MINBILINEAR_MAGPOINT)),
+                InstanceValue("SAMPLER_MINPOINT_MAGPOINT_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGPOINT_MIPLINEAR)),
+                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPPOINT", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPPOINT)),
+                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPLINEAR)),
+                InstanceValue("SAMPLER_MINLINEAR_MAGPOINT_MIPPOINT", Napi::Number::From(env, TextureSampling::MINLINEAR_MAGPOINT_MIPPOINT)),
+
+                InstanceValue("DEPTH_TEST_LESS", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LESS)),
+                InstanceValue("DEPTH_TEST_LEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LEQUAL)),
+                InstanceValue("DEPTH_TEST_EQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_EQUAL)),
+                InstanceValue("DEPTH_TEST_GEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_GEQUAL)),
+                InstanceValue("DEPTH_TEST_GREATER", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_GREATER)),
+                InstanceValue("DEPTH_TEST_NOTEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_NOTEQUAL)),
+                InstanceValue("DEPTH_TEST_NEVER", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_NEVER)),
+                InstanceValue("DEPTH_TEST_ALWAYS", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_ALWAYS)),
+
+                InstanceValue("CLEAR_FLAG_COLOR", Napi::Number::From(env, BGFX_CLEAR_COLOR)),
+                InstanceValue("CLEAR_FLAG_DEPTH", Napi::Number::From(env, BGFX_CLEAR_DEPTH)),
+                InstanceValue("CLEAR_FLAG_STENCIL", Napi::Number::From(env, BGFX_CLEAR_STENCIL)),
+
+                InstanceValue("ADDRESS_MODE_WRAP", Napi::Number::From(env, 0)),
+                InstanceValue("ADDRESS_MODE_MIRROR", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
+                InstanceValue("ADDRESS_MODE_CLAMP", Napi::Number::From(env, BGFX_SAMPLER_U_CLAMP)),
+                InstanceValue("ADDRESS_MODE_BORDER", Napi::Number::From(env, BGFX_SAMPLER_U_BORDER)),
+                InstanceValue("ADDRESS_MODE_MIRROR_ONCE", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
+
+                InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
+                InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
+                
+                InstanceValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
+                InstanceValue("ATTRIB_TYPE_INT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int16))),
+                InstanceValue("ATTRIB_TYPE_FLOAT", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Float))),
+
+                InstanceValue("ALPHA_DISABLE", Napi::Number::From(env, AlphaMode::DISABLE)),
+                InstanceValue("ALPHA_ADD", Napi::Number::From(env, AlphaMode::ADD)),
+                InstanceValue("ALPHA_COMBINE", Napi::Number::From(env, AlphaMode::COMBINE)),
+                InstanceValue("ALPHA_SUBTRACT", Napi::Number::From(env, AlphaMode::SUBTRACT)),
+                InstanceValue("ALPHA_MULTIPLY", Napi::Number::From(env, AlphaMode::MULTIPLY)),
+                InstanceValue("ALPHA_MAXIMIZED", Napi::Number::From(env, AlphaMode::MAXIMIZED)),
+                InstanceValue("ALPHA_ONEONE", Napi::Number::From(env, AlphaMode::ONEONE)),
+                InstanceValue("ALPHA_PREMULTIPLIED", Napi::Number::From(env, AlphaMode::PREMULTIPLIED)),
+                InstanceValue("ALPHA_PREMULTIPLIED_PORTERDUFF", Napi::Number::From(env, AlphaMode::PREMULTIPLIED_PORTERDUFF)),
+                InstanceValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
+                InstanceValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
+
                 InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))
             });
 
@@ -652,7 +666,7 @@ namespace Babylon
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-        const bgfx::AttribType::Enum attribType = ConvertAttribType(static_cast<WebGLAttribType>(type));
+        const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
         vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
         vertexLayout.end();
@@ -844,10 +858,10 @@ namespace Babylon
 
     void NativeEngine::SetBlendMode(const Napi::CallbackInfo& info)
     {
-        const auto blendMode = info[0].As<Napi::Number>().Int32Value();
+        const auto blendMode = info[0].As<Napi::Number>().Int64Value();
 
         m_engineState &= ~BGFX_STATE_BLEND_MASK;
-        m_engineState |= ALPHA_MODE[blendMode];
+        m_engineState |= blendMode;
     }
 
     void NativeEngine::SetInt(const Napi::CallbackInfo& info)
@@ -1151,20 +1165,6 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         auto filter = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
 
-        constexpr std::array<uint32_t, 12> bgfxFiltering = {
-            BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT,                          // nearest is mag = nearest and min = nearest and mip = linear
-            BGFX_SAMPLER_MIP_POINT,                                                   // Bilinear is mag = linear and min = linear and mip = nearest
-            0,                                                                        // Trilinear is mag = linear and min = linear and mip = linear
-            BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT, // mag = nearest and min = nearest and mip = nearest
-            BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT,                          // mag = nearest and min = linear and mip = nearest
-            BGFX_SAMPLER_MAG_POINT,                                                   // mag = nearest and min = linear and mip = linear
-            BGFX_SAMPLER_MAG_POINT,                                                   // mag = nearest and min = linear and mip = none
-            BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT,                          // mag = nearest and min = nearest and mip = none
-            BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT,                          // mag = linear and min = nearest and mip = nearest
-            BGFX_SAMPLER_MIN_POINT,                                                   // mag = linear and min = nearest and mip = linear
-            0,                                                                        // mag = linear and min = linear and mip = none
-            BGFX_SAMPLER_MIN_POINT};                                                  // mag = linear and min = nearest and mip = none
-
         texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
 
         if (texture->AnisotropicLevel > 1)
@@ -1173,7 +1173,7 @@ namespace Babylon
         }
         else
         {
-            texture->Flags |= bgfxFiltering[filter];
+            texture->Flags |= filter;
         }
     }
 
@@ -1184,11 +1184,9 @@ namespace Babylon
         auto addressModeV = static_cast<uint32_t>(info[2].As<Napi::Number>().Uint32Value());
         auto addressModeW = static_cast<uint32_t>(info[3].As<Napi::Number>().Uint32Value());
 
-        constexpr std::array<uint32_t, 3> bgfxSamplers = {0, BGFX_SAMPLER_U_CLAMP, BGFX_SAMPLER_U_MIRROR};
-
-        uint32_t addressMode = bgfxSamplers[addressModeU] +
-            (bgfxSamplers[addressModeV] << BGFX_SAMPLER_V_SHIFT) +
-            (bgfxSamplers[addressModeW] << BGFX_SAMPLER_W_SHIFT);
+        uint32_t addressMode = addressModeU +
+            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+            (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
         texture->Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
         texture->Flags |= addressMode;
@@ -1228,7 +1226,7 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        uint32_t formatIndex = info[3].As<Napi::Number>().Uint32Value();
+        auto format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
         //int samplingMode = info[4].As<Napi::Number>().Uint32Value();
         bool generateStencilBuffer = info[5].As<Napi::Boolean>();
         bool generateDepth = info[6].As<Napi::Boolean>();
@@ -1241,7 +1239,7 @@ namespace Babylon
         }
         else if (!generateStencilBuffer && !generateDepth)
         {
-            frameBufferHandle = bgfx::createFrameBuffer(width, height, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT);
+            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
         }
         else
         {
@@ -1251,11 +1249,11 @@ namespace Babylon
                 depthStencilFormat = bgfx::TextureFormat::D24S8;
             }
 
-            assert(bgfx::isTextureValid(0, false, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT));
+            assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, generateMips, 1, TEXTURE_FORMAT[formatIndex], BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT),
                 bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
