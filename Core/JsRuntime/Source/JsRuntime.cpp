@@ -19,7 +19,7 @@ namespace Babylon
         }
 
         auto jsNative = Napi::Object::New(env);
-        global.Set(JS_NATIVE_NAME, jsNative);
+        env.Global().Set(NativeObject::JS_NATIVE_NAME, jsNative);
 
         Napi::Value jsRuntime = Napi::External<JsRuntime>::New(env, this, [](Napi::Env, JsRuntime* runtime) { delete runtime; });
         jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
@@ -33,8 +33,7 @@ namespace Babylon
 
     JsRuntime& JsRuntime::GetFromJavaScript(Napi::Env env)
     {
-        return *env.Global()
-                    .Get(JS_NATIVE_NAME)
+        return *NativeObject::GetFromJavaScript(env)
                     .As<Napi::Object>()
                     .Get(JS_RUNTIME_NAME)
                     .As<Napi::External<JsRuntime>>()

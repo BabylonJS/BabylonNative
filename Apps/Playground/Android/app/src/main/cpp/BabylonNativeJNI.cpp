@@ -10,6 +10,7 @@
 
 #include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeWindow.h>
@@ -21,8 +22,9 @@
 
 namespace
 {
+    std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
-    std::unique_ptr<InputManager::InputBuffer> g_inputBuffer{};
+    std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
 
@@ -37,9 +39,9 @@ extern "C"
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
         g_scriptLoader.reset();
+        g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
-        Babylon::Plugins::NativeEngine::DeinitializeGraphics();
     }
 
     JNIEXPORT void JNICALL
@@ -47,8 +49,6 @@ extern "C"
     {
         if (!g_runtime)
         {
-            g_runtime = std::make_unique<Babylon::AppRuntime>();
-
             JavaVM* javaVM{};
             if (env->GetJavaVM(&javaVM) != JNI_OK)
             {
@@ -60,9 +60,14 @@ extern "C"
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
+            
+            g_runtime = std::make_unique<Babylon::AppRuntime>();
+            g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
+                g_graphics = Babylon::Graphics::InitializeFromWindow<void*>(window, width, height);
+
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
                     switch (level)
@@ -81,7 +86,7 @@ extern "C"
 
                 Babylon::Plugins::NativeWindow::Initialize(env, window, width, height);
 
-                Babylon::Plugins::NativeEngine::InitializeGraphics(window, width, height);
+                g_graphics->AddToJavaScript(env);
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
@@ -89,10 +94,7 @@ extern "C"
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-
-                g_inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-                InputManager::Initialize(jsRuntime, *g_inputBuffer);
+                InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
             });
 
             g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);
@@ -111,9 +113,8 @@ extern "C"
         if (g_runtime)
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-            g_runtime->Dispatch([window, width, height](Napi::Env env)
-            {
-                Babylon::Plugins::NativeEngine::Reinitialize(env, window, static_cast<size_t>(width), static_cast<size_t>(height));
+            g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
+                g_graphics->ReinitializeFromWindow<void*>(window, width, height);
             });
         }
     }

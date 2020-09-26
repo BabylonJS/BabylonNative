@@ -1,40 +1,35 @@
 #pragma once
 
 #include <string_view>
-#include <gsl/span>
 #include <functional>
+#include <spirv_cross.hpp>
+#include <spirv_parser.hpp>
 
-namespace glslang
+namespace bgfx
 {
-    class TShader;
-}
-namespace spirv_cross
-{
-    class Compiler;
-    class Parser;
+    struct Memory;
 }
 
 namespace Babylon
 {
-    class ShaderCompiler
+    /// This class is responsible for compiling the GLSL shader from Babylon.js into
+    /// bgfx shader bytes with information about the shader attributes and uniforms.
+    class ShaderCompiler final
     {
     public:
         ShaderCompiler();
         ~ShaderCompiler();
 
-        struct ShaderInfo
+        struct BgfxShaderInfo
         {
-            std::unique_ptr<spirv_cross::Parser> Parser;
-            std::unique_ptr<const spirv_cross::Compiler> Compiler;
-            gsl::span<uint8_t> Bytes;
+            std::vector<uint8_t> VertexBytes{};
+            std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
+            std::unordered_map<std::string, uint8_t> VertexUniformStages{};
+
+            std::vector<uint8_t> FragmentBytes{};
+            std::unordered_map<std::string, uint8_t> FragmentUniformStages{};
         };
 
-        void Compile(std::string_view vertexSource, std::string_view fragmentSource, std::function<void(ShaderInfo, ShaderInfo)> onCompiled);
-
-    protected:
-        // Invert dFdy operands similar to bgfx_shader.sh
-        // https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
-        // https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65
-        static void InvertYDerivativeOperands(glslang::TShader& shader);
+        BgfxShaderInfo Compile(std::string_view vertexSource, std::string_view fragmentSource);
     };
 }
