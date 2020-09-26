@@ -1437,7 +1437,9 @@ namespace Babylon
             {
                 Napi::HandleScope scope{env};
 
-                std::vector<Napi::ClassPropertyDescriptor<XRHand>> initList = {};
+                std::vector<Napi::ClassPropertyDescriptor<XRHand>> initList{};
+                initList.reserve(HAND_JOINT_NAMES.size() + 1);
+
                 for (int i = 0; i < HAND_JOINT_NAMES.size(); i++)
                 {
                     initList.push_back(StaticValue(HAND_JOINT_NAMES[i], Napi::Value::From(env, i)));
