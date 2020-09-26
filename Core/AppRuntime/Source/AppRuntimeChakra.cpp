@@ -46,7 +46,7 @@ namespace Babylon
             &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && !(defined(_M_ARM64) || defined(_M_ARM))
         // Put Chakra in debug mode.
         ThrowIfFailed(JsStartDebugging());
 #endif
