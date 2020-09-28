@@ -2,6 +2,56 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "LightFalloff",
+            "playgroundId": "#20OAV9#201",
+            "referenceImage": "lightFalloff.png"
+        },
+        {
+            "title": "Texture cache",
+            "playgroundId": "#20OAV9#237",
+            "referenceImage": "texture cache.png"
+        },
+        {
+            "title": "Chromatic aberration",
+            "playgroundId": "#NAW8EA#0",
+            "renderCount": 20,
+            "referenceImage": "chromaticAberration.png"
+        },
+        {
+            "title": "Normals",
+            "playgroundId": "#WXKLLJ#2",
+            "referenceImage": "normals.png"
+        },
+        {
+            "title": "LOD",
+            "renderCount": 10,
+            "playgroundId": "#FFMFW5#0",
+            "referenceImage": "lod.png",
+            "errorRatio": 8.0
+        },
+        {
+            "title": "Capsule",
+            "renderCount": 10,
+            "playgroundId": "#JAFIIU#2",
+            "referenceImage": "CreateCapsule.png"
+        },
+        {
+            "title": "Fresnel",
+            "playgroundId": "#603JUZ#1",
+            "referenceImage": "fresnel.png"
+        },
+        {
+            "title": "Ribbon morphing",
+            "playgroundId": "#ACKC2#1",
+            "renderCount": 50,
+            "referenceImage": "ribbon morphing.png"
+        },
+        {
+            "title": "Unindexed mesh",
+            "playgroundId": "#4IHSY2#0",
+            "referenceImage": "unindexedmesh.png"
+        },
+        {
             "title": "Black and White post-process",
             "playgroundId": "#N55Q2M#0",
             "referenceImage": "bwpp.png"
