@@ -1471,9 +1471,9 @@ namespace Babylon
                 std::vector<Napi::ClassPropertyDescriptor<XRHand>> initList{};
                 initList.reserve(HAND_JOINT_NAMES.size() + 1);
 
-                for (int i = 0; i < HAND_JOINT_NAMES.size(); i++)
+                for (size_t idx = 0; idx < HAND_JOINT_NAMES.size(); idx++)
                 {
-                    initList.push_back(StaticValue(HAND_JOINT_NAMES[i], Napi::Value::From(env, i)));
+                    initList.push_back(StaticValue(HAND_JOINT_NAMES[idx], Napi::Value::From(env, idx)));
                 }
 
                 initList.push_back(StaticAccessor("length", &XRHand::GetLength, nullptr));
