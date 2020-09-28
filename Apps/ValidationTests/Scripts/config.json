@@ -36,12 +36,6 @@
             "referenceImage": "fresnel.png"
         },
         {
-            "title": "Ribbon morphing",
-            "playgroundId": "#ACKC2#1",
-            "renderCount": 50,
-            "referenceImage": "ribbon morphing.png"
-        },
-        {
             "title": "Unindexed mesh",
             "playgroundId": "#4IHSY2#0",
             "referenceImage": "unindexedmesh.png"
