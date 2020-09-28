@@ -7,11 +7,6 @@
             "referenceImage": "lightFalloff.png"
         },
         {
-            "title": "Texture cache",
-            "playgroundId": "#20OAV9#237",
-            "referenceImage": "texture cache.png"
-        },
-        {
             "title": "Chromatic aberration",
             "playgroundId": "#NAW8EA#0",
             "renderCount": 20,

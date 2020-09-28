@@ -165,7 +165,7 @@ namespace Babylon
         {
             const auto imageData = info[0].As<Napi::External<Image>>().Data();
 
-            if (!imageData || !imageData->m_Image->m_size)
+            if (!imageData || !imageData->m_Image || !imageData->m_Image->m_size)
             {
                 return info.Env().Undefined();
             }
