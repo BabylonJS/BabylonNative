@@ -117,10 +117,13 @@ namespace UrlLib
                     int stillRunning;
                     int numfds;
                     int msgsLeft;
-                    curl_multi_wait(m_multiHandle, NULL, 0, 1000, &numfds);
+                    if (curl_multi_wait(m_multiHandle, NULL, 0, 1000, &numfds) == CURLM_OK)
                     {
                         std::lock_guard<std::mutex> guard(m_mutex);
-                        curl_multi_perform(m_multiHandle, &stillRunning);
+                        if (curl_multi_perform(m_multiHandle, &stillRunning) != CURLM_OK)
+                        {
+                            throw std::runtime_error("CURL: Curl Multi perform error.");
+                        }
                     }
                     
                     // See how the transfers went
