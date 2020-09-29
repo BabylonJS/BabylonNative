@@ -127,6 +127,40 @@ namespace
         }
     }
 
+    constexpr std::array<const char*, 25> HAND_JOINT_NAMES
+    {
+        "WRIST",
+
+        "THUMB_METACARPAL",
+        "THUMB_PHALANX_PROXIMAL",
+        "THUMB_PHALANX_DISTAL",
+        "THUMB_PHALANX_TIP",
+
+        "INDEX_METACARPAL",
+        "INDEX_PHALANX_PROXIMAL",
+        "INDEX_PHALANX_INTERMEDIATE",
+        "INDEX_PHALANX_DISTAL",
+        "INDEX_PHALANX_TIP",
+
+        "MIDDLE_METACARPAL",
+        "MIDDLE_PHALANX_PROXIMAL",
+        "MIDDLE_PHALANX_INTERMEDIATE",
+        "MIDDLE_PHALANX_DISTAL",
+        "MIDDLE_PHALANX_TIP",
+
+        "RING_METACARPAL",
+        "RING_PHALANX_PROXIMAL",
+        "RING_PHALANX_INTERMEDIATE",
+        "RING_PHALANX_DISTAL",
+        "RING_PHALANX_TIP",
+
+        "LITTLE_METACARPAL",
+        "LITTLE_PHALANX_PROXIMAL",
+        "LITTLE_PHALANX_INTERMEDIATE",
+        "LITTLE_PHALANX_DISTAL",
+        "LITTLE_PHALANX_TIP"
+    };
+
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
@@ -136,40 +170,6 @@ namespace
         // Don't set hands up unless hand data is supported/available
         if (inputSource.JointsTrackedThisFrame)
         {
-            constexpr std::array<const char*, 25> HAND_JOINT_NAMES
-            {
-                "WRIST",
-
-                "THUMB_METACARPAL",
-                "THUMB_PHALANX_PROXIMAL",
-                "THUMB_PHALANX_DISTAL",
-                "THUMB_PHALANX_TIP",
-
-                "INDEX_METACARPAL",
-                "INDEX_PHALANX_PROXIMAL",
-                "INDEX_PHALANX_INTERMEDIATE",
-                "INDEX_PHALANX_DISTAL",
-                "INDEX_PHALANX_TIP",
-
-                "MIDDLE_METACARPAL",
-                "MIDDLE_PHALANX_PROXIMAL",
-                "MIDDLE_PHALANX_INTERMEDIATE",
-                "MIDDLE_PHALANX_DISTAL",
-                "MIDDLE_PHALANX_TIP",
-
-                "RING_METACARPAL",
-                "RING_PHALANX_PROXIMAL",
-                "RING_PHALANX_INTERMEDIATE",
-                "RING_PHALANX_DISTAL",
-                "RING_PHALANX_TIP",
-
-                "LITTLE_METACARPAL",
-                "LITTLE_PHALANX_PROXIMAL",
-                "LITTLE_PHALANX_INTERMEDIATE",
-                "LITTLE_PHALANX_DISTAL",
-                "LITTLE_PHALANX_TIP"
-            };
-
             auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
 
             for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
@@ -1459,6 +1459,51 @@ namespace Babylon
             XRFrame* m_frame{};
         };
 
+        class XRHand : public Napi::ObjectWrap<XRHand>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRHand";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                std::vector<Napi::ClassPropertyDescriptor<XRHand>> initList{};
+                initList.reserve(HAND_JOINT_NAMES.size() + 1);
+
+                for (size_t idx = 0; idx < HAND_JOINT_NAMES.size(); idx++)
+                {
+                    initList.push_back(StaticValue(HAND_JOINT_NAMES[idx], Napi::Value::From(env, idx)));
+                }
+
+                initList.push_back(StaticAccessor("length", &XRHand::GetLength, nullptr));
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    initList
+                    );
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRHand(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRHand>{info}
+            {
+            }
+
+        private:
+            static Napi::Value GetLength(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
+            }
+        };
+
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -2310,6 +2355,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRHand::Initialize(env);
             XRPlane::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
@@ -2319,9 +2365,6 @@ namespace Babylon
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
-
-            // XRHand needs to be defined in order to use hand tracking, but we don't actually need the interface
-            env.Global().Set("XRHand", true);
         }
     }
 }

@@ -37,19 +37,11 @@ namespace Babylon
 
             auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser->get_parsed_ir());
 
-#if !ANDROID
-            compiler->build_combined_image_samplers();
-#endif
-
             spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
 
-#if ANDROID
             options.version = 300;
             options.es = true;
-#else
-            options.version = 330;
-            options.es = false;
-#endif
+
             compiler->set_common_options(options);
 
             glsl = compiler->compile();
@@ -91,10 +83,6 @@ namespace Babylon
         ShaderCompilerTraversers::IdGenerator ids{};
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
-
-#if !ANDROID
-        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
-#endif
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);

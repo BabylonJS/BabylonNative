@@ -22,7 +22,9 @@
 
 namespace
 {
+#ifndef __APPLE__
     std::filesystem::path GetModulePath();
+#endif
     std::atomic<bool> doExit{};
     int errorCode{};
 }
@@ -51,7 +53,8 @@ namespace Babylon
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
-                    ParentT::InstanceMethod("getWorkingDirectory", &TestUtils::GetWorkingDirectory),
+                    ParentT::InstanceMethod("getResourceDirectory", &TestUtils::GetResourceDirectory),
+                    ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
@@ -70,7 +73,7 @@ namespace Babylon
             doExit = true;
             errorCode = exitCode;
 #ifdef WIN32
-            PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
+            PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, 0, 0);
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
             XClientMessageEvent dummyEvent;
@@ -165,7 +168,7 @@ namespace Babylon
         {
             const auto imageData = info[0].As<Napi::External<Image>>().Data();
 
-            if (!imageData || !imageData->m_Image->m_size)
+            if (!imageData || !imageData->m_Image || !imageData->m_Image->m_size)
             {
                 return info.Env().Undefined();
             }
@@ -177,11 +180,30 @@ namespace Babylon
             return Napi::Value::From(info.Env(), data);
         }
 
-        Napi::Value GetWorkingDirectory(const Napi::CallbackInfo& info)
+        Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
         {
+#ifdef __APPLE__
+            std::string path = "app:///";
+#else
+            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
+#ifdef WIN32
+            path += "/..";
+#endif
+            path += "/Scripts/";
+#endif
+            return Napi::Value::From(info.Env(), path);
+        }
+
+        
+        Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
+        {
+#ifdef __APPLE__
+            std::string path = "~/";
+#else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
             path += "/..";
+#endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }
