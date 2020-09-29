@@ -273,14 +273,14 @@ jobs:
         tasks: 'assembleRelease'
     displayName: 'Build androidJSC'
 
-- job: Ubuntu_Clang8_JSC
+- job: Ubuntu_Clang9_JSC
   timeoutInMinutes: 25
   pool:
     vmImage: 'ubuntu-latest'
 
   variables:
-    CC: clang-8
-    CXX: clang++-8
+    CC: clang-9
+    CXX: clang++-9
 
   steps:
   - script: |
@@ -288,7 +288,7 @@ jobs:
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
+      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
     displayName: 'Install packages'
   - script: |
       mkdir build
@@ -307,15 +307,15 @@ jobs:
     displayName: 'Test on CI'
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'Ubuntu_Clang8_JSC Rendered Pictures'
+      artifactName: 'Ubuntu_Clang9_JSC Rendered Pictures'
       pathtoPublish: 'build/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Ubuntu_Clang8_JSC Results'
+    displayName: 'Publish Tests Ubuntu_Clang9_JSC Results'
     condition: succeeded()
   - task: PublishBuildArtifacts@1
     inputs:
-      artifactName: 'Ubuntu_Clang8_JSC Error Pictures'
+      artifactName: 'Ubuntu_Clang9_JSC Error Pictures'
       pathtoPublish: 'build/Apps/ValidationTests/Errors'
-    displayName: 'Publish Tests Ubuntu_Clang8_JSC Errors'
+    displayName: 'Publish Tests Ubuntu_Clang9_JSC Errors'
     condition: failed()
 
 - job: Ubuntu_GCC9_JSC
