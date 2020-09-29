@@ -35,10 +35,10 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getWorkingDirectory() + "/Errors/" + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.title + ".png");
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getWorkingDirectory() + "/Results/" + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.title + ".png");
     }
     return error;
 }
@@ -305,7 +305,7 @@ document = {
 }
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", "file://" + TestUtils.getWorkingDirectory() + "/Scripts/config.json", true);
+xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
     if (xhr.status === 200) {
