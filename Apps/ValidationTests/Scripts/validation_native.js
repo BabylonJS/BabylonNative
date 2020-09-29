@@ -2,13 +2,11 @@ var engine;
 var currentScene;
 var config;
 var justOnce;
-var threshold = 25;
-var errorRatio = 2.5;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
 
-function compare(test, renderData, referenceImage) {
+function compare(test, renderData, referenceImage, threshold, errorRatio) {
     var size = renderData.length;
     var referenceData = TestUtils.getImageData(referenceImage);
     var differencesCount = 0;
@@ -37,10 +35,10 @@ function compare(test, renderData, referenceImage) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getWorkingDirectory() + "/Errors/" + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.title + ".png");
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getWorkingDirectory() + "/Results/" + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.title + ".png");
     }
     return error;
 }
@@ -50,7 +48,10 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {
-            if (compare(test, screenshot, referenceImage)) {
+
+            var defaultErrorRatio = 2.5
+
+            if (compare(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
                 testRes = false;
                 console.log('failed');
             } else {
@@ -137,7 +138,7 @@ function runTest(index, done) {
             }
 
             var snippetUrl = "https://snippet.babylonjs.com";
-            var pgRoot = "/Playground"
+            var pgRoot = "https://playground.babylonjs.com";
 
             var retryTime = 500;
             var maxRetry = 5;
@@ -304,7 +305,7 @@ document = {
 }
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", "file://" + TestUtils.getWorkingDirectory() + "/Scripts/config.json", true);
+xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
     if (xhr.status === 200) {
