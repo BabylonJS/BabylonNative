@@ -183,7 +183,7 @@ namespace Babylon
         Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef __APPLE__
-            std::string path = "app://";
+            std::string path = "app:///";
 #else
             auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
 #ifdef WIN32
@@ -198,7 +198,7 @@ namespace Babylon
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef __APPLE__
-            std::string path = "~";
+            std::string path = "~/";
 #else
             auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
 #ifdef WIN32
