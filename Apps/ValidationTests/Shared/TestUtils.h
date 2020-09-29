@@ -200,7 +200,7 @@ namespace Babylon
 #ifdef __APPLE__
             std::string path = "~/";
 #else
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
+            auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
             path += "/..";
 #endif
