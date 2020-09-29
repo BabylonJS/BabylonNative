@@ -53,6 +53,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
+        Babylon::TestUtils::CreateInstance(env, windowPtr);
     });
     
     Babylon::ScriptLoader loader{ *runtime };
