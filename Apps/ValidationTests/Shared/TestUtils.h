@@ -70,7 +70,7 @@ namespace Babylon
             doExit = true;
             errorCode = exitCode;
 #ifdef WIN32
-            PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, exitCode, 0);
+            PostMessageW((HWND)_nativeWindowPtr, WM_CLOSE, 0, 0);
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
             XClientMessageEvent dummyEvent;
