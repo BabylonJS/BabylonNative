@@ -26,17 +26,17 @@ namespace Babylon
     {
         namespace TextureSampling
         {
-            constexpr uint32_t NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
-            constexpr uint32_t BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
-            constexpr uint32_t TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
-            constexpr uint32_t ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
-            constexpr uint32_t POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
-            constexpr uint32_t TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
-            constexpr uint32_t MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
-            constexpr uint32_t MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
-            constexpr uint32_t MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
-            constexpr uint32_t MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
-            constexpr uint32_t MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
+            constexpr uint32_t NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                              // nearest is mag = nearest and min = nearest and mip = linear
+            constexpr uint32_t BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                      // Bilinear is mag = linear and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR = 0;                                                                          // Trilinear is mag = linear and min = linear and mip = linear
+            constexpr uint32_t ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT; // mag = nearest and min = nearest and mip = nearest
+            constexpr uint32_t POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                        // mag = nearest and min = linear and mip = nearest
+            constexpr uint32_t TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                             // mag = nearest and min = linear and mip = linear
+            constexpr uint32_t MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                          // mag = nearest and min = linear and mip = none
+            constexpr uint32_t MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;          // mag = nearest and min = nearest and mip = none
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;          // mag = linear and min = nearest and mip = nearest
+            constexpr uint32_t MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                  // mag = linear and min = nearest and mip = linear
+            constexpr uint32_t MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                        // mag = linear and min = linear and mip = none
         }
 
         namespace AlphaMode
@@ -206,7 +206,7 @@ namespace Babylon
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
-        
+
         void SetBgfxIndexBuffer(uint32_t firstIndex, uint32_t numIndices) const
         {
             const auto nonDynamic = [firstIndex, numIndices](auto handle) {
@@ -331,8 +331,7 @@ namespace Babylon
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
-            {
-                InstanceMethod("dispose", &NativeEngine::Dispose),
+            {InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("getEngine", &NativeEngine::GetEngine),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
@@ -436,7 +435,7 @@ namespace Babylon
 
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
-                
+
                 InstanceValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
                 InstanceValue("ATTRIB_TYPE_INT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int16))),
                 InstanceValue("ATTRIB_TYPE_FLOAT", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Float))),
@@ -453,8 +452,7 @@ namespace Babylon
                 InstanceValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
                 InstanceValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
 
-                InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))
-            });
+                InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
     }
@@ -676,7 +674,7 @@ namespace Babylon
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout) });
+        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
@@ -702,8 +700,7 @@ namespace Babylon
         std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
         ShaderCompiler::BgfxShaderInfo shaderInfo{m_shaderCompiler.Compile(vertexSource, fragmentSource)};
 
-        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos)
-        {
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos) {
             auto numUniforms = bgfx::getShaderUniforms(shader);
             std::vector<bgfx::UniformHandle> uniforms{numUniforms};
             bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
@@ -714,7 +711,7 @@ namespace Babylon
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
                 uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
-                bool YFlip{ false };
+                bool YFlip{false};
                 if (!bgfx::getCaps()->originBottomLeft)
                 {
                     YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
@@ -1047,7 +1044,7 @@ namespace Babylon
 
         // This is WIP
         auto depthStencilFormat = bgfx::TextureFormat::D32;
-        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false/*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT) };
+        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false /*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
         bgfx::Attachment attachment;
         attachment.init(textureHandle);
         frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
@@ -1330,18 +1327,18 @@ namespace Babylon
         uint64_t fillModeState = 0; //indexed tri list
         switch (fillMode)
         {
-        case 2: // MATERIAL_PointFillMode
-            fillModeState = BGFX_STATE_PT_POINTS;
-            break;
-        case 4: // MATERIAL_LineListDrawMode
-            fillModeState = BGFX_STATE_PT_LINES;
-            break;
-        case 6: // MATERIAL_LineStripDrawMode
-            fillModeState = BGFX_STATE_PT_LINESTRIP;
-            break;
-        case 7: // MATERIAL_TriangleStripDrawMode
-            fillModeState = BGFX_STATE_PT_TRISTRIP;
-            break;
+            case 2: // MATERIAL_PointFillMode
+                fillModeState = BGFX_STATE_PT_POINTS;
+                break;
+            case 4: // MATERIAL_LineListDrawMode
+                fillModeState = BGFX_STATE_PT_LINES;
+                break;
+            case 6: // MATERIAL_LineStripDrawMode
+                fillModeState = BGFX_STATE_PT_LINESTRIP;
+                break;
+            case 7: // MATERIAL_TriangleStripDrawMode
+                fillModeState = BGFX_STATE_PT_TRISTRIP;
+                break;
         }
 
         if (m_frameBufferManager.IsRenderingToTarget() && (!bgfx::getCaps()->originBottomLeft))
@@ -1364,16 +1361,16 @@ namespace Babylon
                 if (value.YFlip)
                 {
                     float tmpMatrix[16];
-                    static const float flipMatrix[16] = { 1.f, 0.f, 0.f, 0.f,
-                        0.f,-1.f, 0.f, 0.f,
+                    static const float flipMatrix[16] = {1.f, 0.f, 0.f, 0.f,
+                        0.f, -1.f, 0.f, 0.f,
                         0.f, 0.f, 1.f, 0.f,
-                        0.f, 0.f, 0.f, 1.f };
+                        0.f, 0.f, 0.f, 1.f};
                     bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
-                    bgfx::setUniform({ it.first }, tmpMatrix, value.ElementLength);
+                    bgfx::setUniform({it.first}, tmpMatrix, value.ElementLength);
                 }
                 else
                 {
-                    bgfx::setUniform({ it.first }, value.Data.data(), value.ElementLength);
+                    bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
                 }
             }
             // change culling
@@ -1393,7 +1390,7 @@ namespace Babylon
             }
             bgfx::setState(m_engineState | fillModeState);
         }
-        
+
 #if (ANDROID)
         // TODO : find why we need to discard state on Android
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
