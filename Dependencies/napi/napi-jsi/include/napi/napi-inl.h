@@ -1691,6 +1691,7 @@ inline Reference<T>& Reference<T>::operator =(Reference<T>&& other) {
   _env = other._env;
   _object = std::move(other._object);
   _suppressDestruct = other._suppressDestruct;
+  other._env = nullptr;
   return *this;
 }
 
@@ -1953,7 +1954,7 @@ inline FunctionReference& FunctionReference::operator =(Reference<Function>&& ot
 }
 
 inline FunctionReference::FunctionReference(FunctionReference&& other)
-  : Reference<Function>(other) {
+  : Reference<Function>(std::move(other)) {
 }
 
 inline FunctionReference& FunctionReference::operator =(FunctionReference&& other) {
