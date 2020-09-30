@@ -174,24 +174,26 @@ namespace Babylon
         std::unique_ptr<ClearState> m_clearState{};
 
     public:
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, uint16_t width, uint16_t height)
+        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
             : m_clearState{std::make_unique<ClearState>()}
             , FrameBuffer{frameBuffer}
             , ViewId{viewId}
             , ViewClearState{ViewId, *m_clearState}
             , Width{width}
             , Height{height}
+            , ActAsBackBuffer{actAsBackBuffer}
         {
             assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
 
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, ClearState& clearState, uint16_t width, uint16_t height)
+        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
             : m_clearState{}
             , FrameBuffer{frameBuffer}
             , ViewId{viewId}
             , ViewClearState{ViewId, clearState}
             , Width{width}
             , Height{height}
+            , ActAsBackBuffer{actAsBackBuffer}
         {
             assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
@@ -221,6 +223,11 @@ namespace Babylon
         Babylon::ViewClearState ViewClearState;
         uint16_t Width{};
         uint16_t Height{};
+        // When a FrameBuffer acts as a back buffer, it means it will not be used as a texture in a shader.
+        // For example as a post process. It will be used as-is in a swapchain or for direct rendering (XR)
+        // When this flag is true, projection matrix will not be flipped for API that would normaly need it.
+        // Namely Direct3D and Metal.
+        bool ActAsBackBuffer{false};
     };
 
     struct FrameBufferManager final
@@ -235,9 +242,9 @@ namespace Babylon
             return new FrameBufferData(frameBufferHandle, GetNewViewId(), width, height);
         }
 
-        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, ClearState& clearState, uint16_t width, uint16_t height)
+        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer)
         {
-            return new FrameBufferData(frameBufferHandle, GetNewViewId(), clearState, width, height);
+            return new FrameBufferData(frameBufferHandle, GetNewViewId(), clearState, width, height, actAsBackBuffer);
         }
 
         void Bind(FrameBufferData* data)
@@ -250,6 +257,7 @@ namespace Babylon
 
             // bgfx::setTexture()? Why?
             // TODO: View order?
+            m_renderingToTarget = !m_boundFrameBuffer->ActAsBackBuffer;
         }
 
         FrameBufferData& GetBound() const
@@ -263,6 +271,7 @@ namespace Babylon
             //assert(m_boundFrameBuffer == data);
             (void)data;
             m_boundFrameBuffer = m_backBuffer;
+            m_renderingToTarget = false;
         }
 
         uint16_t GetNewViewId()
@@ -277,10 +286,16 @@ namespace Babylon
             m_nextId = 0;
         }
 
+        bool IsRenderingToTarget() const
+        {
+            return m_renderingToTarget;
+        }
+
     private:
         FrameBufferData* m_boundFrameBuffer{nullptr};
         FrameBufferData* m_backBuffer{nullptr};
         uint16_t m_nextId{0};
+        bool m_renderingToTarget{false};
     };
 
     struct TextureData final
@@ -316,6 +331,7 @@ namespace Babylon
     {
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
+        bool YFlip{false};
     };
 
     struct ProgramData final
@@ -339,15 +355,17 @@ namespace Babylon
         {
             std::vector<float> Data{};
             uint16_t ElementLength{};
+            bool YFlip{false};
         };
 
         std::unordered_map<uint16_t, UniformValue> Uniforms{};
 
-        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
+        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, bool YFlip, size_t elementLength = 1)
         {
             UniformValue& value = Uniforms[handle.idx];
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
+            value.YFlip = YFlip;
         }
     };
 
@@ -449,6 +467,7 @@ namespace Babylon
         void SetFloat3(const Napi::CallbackInfo& info);
         void SetFloat4(const Napi::CallbackInfo& info);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
+        Napi::Value CreateDepthTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);

@@ -441,7 +441,8 @@ namespace Babylon
                     frameBuffer,
                     m_clearState,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
-                    static_cast<uint16_t>(view.ColorTextureSize.Height));
+                    static_cast<uint16_t>(view.ColorTextureSize.Height),
+                    true);
 
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface

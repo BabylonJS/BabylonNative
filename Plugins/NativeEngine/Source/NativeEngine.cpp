@@ -13,6 +13,8 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
+#include <bx/math.h>
+
 #include <queue>
 #include <regex>
 #include <sstream>
@@ -379,6 +381,7 @@ namespace Babylon
                 InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
+                InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -715,6 +718,12 @@ namespace Babylon
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
                 uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
+                bool YFlip{false};
+                if (!bgfx::getCaps()->originBottomLeft)
+                {
+                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
+                }
+                uniformInfos[info.name].YFlip = YFlip;
             }
         }};
 
@@ -872,7 +881,7 @@ namespace Babylon
     {
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1));
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1), uniformInfo->YFlip);
     }
 
     template<int size, typename arrayType>
@@ -895,7 +904,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, uniformInfo->YFlip, elementLength / size);
     }
 
     template<int size>
@@ -909,7 +918,7 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, values);
+        m_currentProgram->SetUniform(uniformInfo->Handle, values, uniformInfo->YFlip);
     }
 
     template<int size>
@@ -934,11 +943,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16));
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16), uniformInfo->YFlip);
         }
         else
         {
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength));
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength), uniformInfo->YFlip);
         }
     }
 
@@ -990,7 +999,7 @@ namespace Babylon
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), uniformInfo->YFlip, elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1031,6 +1040,25 @@ namespace Babylon
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
+    }
+
+    Napi::Value NativeEngine::CreateDepthTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        bgfx::FrameBufferHandle frameBufferHandle{};
+
+        // This is WIP
+        auto depthStencilFormat = bgfx::TextureFormat::D32;
+        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false /*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
+        bgfx::Attachment attachment;
+        attachment.init(textureHandle);
+        frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
+
+        texture->Handle = bgfx::getTexture(frameBufferHandle);
+
+        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
@@ -1295,7 +1323,6 @@ namespace Babylon
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto elementStart = info[1].As<Napi::Number>().Int32Value();
         const auto elementCount = info[2].As<Napi::Number>().Int32Value();
-
         // TODO: handle viewport
 
         if (m_currentBoundIndexBuffer)
@@ -1321,13 +1348,56 @@ namespace Babylon
                 break;
         }
 
-        for (const auto& it : m_currentProgram->Uniforms)
+        if (m_frameBufferManager.IsRenderingToTarget() && (!bgfx::getCaps()->originBottomLeft))
         {
-            const ProgramData::UniformValue& value = it.second;
-            bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            // UV coordinates system are different between OpenGL and Direct3D/Metal
+            // This is not an issue with loaded textures (png/jpg...) because
+            // texel rows bytes are also using a different convention
+            // see https://www.puredevsoftware.com/blog/2018/03/17/texture-coordinates-d3d-vs-opengl/
+            // for render to texture, as the texel bytes are not reversed, sampling a RTT for
+            // post process or shadows will result in inversion on V axis (Y)
+            // to compensate for that, any matrix that is used to project onto clip-space has
+            // to be flipped.
+            // The involved matrices are determined by name and a boolean YFlip is set to true.
+            // When rendering to texture, those matrices are flipped and set as uniform datas.
+            // But because flipping clip-space coordinates also flips triangles winding,
+            // Culling also has to be flipped.
+            for (const auto& it : m_currentProgram->Uniforms)
+            {
+                const ProgramData::UniformValue& value = it.second;
+                if (value.YFlip)
+                {
+                    float tmpMatrix[16];
+                    static const float flipMatrix[16] = {1.f, 0.f, 0.f, 0.f,
+                        0.f, -1.f, 0.f, 0.f,
+                        0.f, 0.f, 1.f, 0.f,
+                        0.f, 0.f, 0.f, 1.f};
+                    bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
+                    bgfx::setUniform({it.first}, tmpMatrix, value.ElementLength);
+                }
+                else
+                {
+                    bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+                }
+            }
+            // change culling
+            uint64_t m_engineStateYFlipped = m_engineState;
+            if (m_engineStateYFlipped & ~BGFX_STATE_CULL_MASK)
+            {
+                m_engineStateYFlipped ^= BGFX_STATE_CULL_MASK;
+            }
+            bgfx::setState(m_engineStateYFlipped | fillModeState);
+        }
+        else
+        {
+            for (const auto& it : m_currentProgram->Uniforms)
+            {
+                const ProgramData::UniformValue& value = it.second;
+                bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            }
+            bgfx::setState(m_engineState | fillModeState);
         }
 
-        bgfx::setState(m_engineState | fillModeState);
 #if (ANDROID)
         // TODO : find why we need to discard state on Android
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
