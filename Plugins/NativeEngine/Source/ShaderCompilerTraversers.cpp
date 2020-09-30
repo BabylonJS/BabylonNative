@@ -451,7 +451,7 @@ namespace Babylon::ShaderCompilerTraversers
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
     if (std::strcmp(name, varyingName) == 0)                 \
     {                                                        \
-        return {static_cast<unsigned int>(attrib), newName}; \
+        return {static_cast<unsigned int>(attrib), name}; \
     }
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
