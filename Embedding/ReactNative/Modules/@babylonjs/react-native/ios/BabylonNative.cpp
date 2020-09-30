@@ -1,5 +1,6 @@
 #include "BabylonNative.h"
 
+#include <Babylon/Graphics.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -29,6 +30,7 @@ namespace Babylon
         {
         }
 
+        std::unique_ptr<Graphics> m_graphics{};
         Napi::Env env;
         JsRuntime* runtime{};
         Plugins::NativeInput* nativeInput{};
@@ -38,7 +40,7 @@ namespace Babylon
         : m_impl{ std::make_unique<Native::Impl>(jsiRuntime) }
     {
         dispatch_sync(dispatch_get_main_queue(), ^{
-            Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+            m_impl->m_graphics = Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
         });
 
         auto run_loop_scheduler = std::make_shared<arcana::run_loop_scheduler>(arcana::run_loop_scheduler::get_for_current_thread());
@@ -52,6 +54,8 @@ namespace Babylon
         }};
 
         m_impl->runtime = &JsRuntime::CreateForJavaScript(m_impl->env, std::move(dispatchFunction));
+        
+        m_impl->m_graphics->AddToJavaScript(m_impl->env);
 
         Polyfills::Window::Initialize(m_impl->env);
 
@@ -64,12 +68,11 @@ namespace Babylon
 
     Native::~Native()
     {
-        Plugins::NativeEngine::DeinitializeGraphics();
     }
 
     void Native::Refresh(void* windowPtr, size_t width, size_t height)
     {
-        Plugins::NativeEngine::Reinitialize(m_impl->env, windowPtr, width, height);
+        m_impl->m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
     }
 
     void Native::Resize(size_t width, size_t height)

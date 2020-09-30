@@ -31,7 +31,7 @@ const buildIphoneOS = async () => {
 };
 
 const buildIphoneSimulator = async () => {
-  exec('xcodebuild -sdk iphonesimulator -configuration Release -project ReactNativeBabylon.xcodeproj -scheme BabylonNative build CODE_SIGNING_ALLOWED=NO', 'iOS/Build');
+  exec('xcodebuild -sdk iphonesimulator -arch x86_64 -configuration Release -project ReactNativeBabylon.xcodeproj -scheme BabylonNative build CODE_SIGNING_ALLOWED=NO', 'iOS/Build');
 };
 
 const buildIOS = gulp.series(makeXCodeProj, buildIphoneOS, buildIphoneSimulator);
@@ -100,6 +100,7 @@ Assembled/ios/libs/libNativeXr.a
 Assembled/ios/libs/libspirv-cross-glsl.a
 Assembled/ios/libs/libNativeInput.a
 Assembled/ios/libs/libJsRuntime.a
+Assembled/ios/libs/libGraphics.a
 Assembled/ios/libs/libOSDependent.a
 Assembled/ios/libs/libastc-codec.a
 Assembled/ios/libs/libGenericCodeGen.a

@@ -25,6 +25,7 @@ Pod::Spec.new do |s|
                 'bx',
                 'GenericCodeGen',
                 'glslang',
+                'Graphics',
                 'jsRuntime',
                 'OGLCompiler',
                 'OSDependent',

@@ -10,6 +10,7 @@ set(PACKAGED_LIBS
     bx
     GenericCodeGen
     glslang
+    Graphics
     JsRuntime
     OGLCompiler
     OSDependent

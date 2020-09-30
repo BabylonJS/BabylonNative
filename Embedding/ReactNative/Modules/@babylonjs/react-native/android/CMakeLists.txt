@@ -46,6 +46,7 @@ target_link_libraries(BabylonNative
     arcana
     jsi
     AndroidExtensions
+    Graphics
     JsRuntime
     NativeWindow
     NativeEngine

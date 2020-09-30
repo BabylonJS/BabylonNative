@@ -1,5 +1,6 @@
 #include <jni.h>
 
+#include <Babylon/Graphics.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -52,7 +53,9 @@ namespace Babylon
             auto width = static_cast<size_t>(ANativeWindow_getWidth(windowPtr));
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
 
-            Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+            m_graphics = Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
+            m_graphics->AddToJavaScript(m_env);
+
             Plugins::NativeEngine::Initialize(m_env);
             Plugins::NativeWindow::Initialize(m_env, windowPtr, width, height);
             Plugins::NativeXr::Initialize(m_env);
@@ -62,12 +65,11 @@ namespace Babylon
             m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
 
             // TODO: This shouldn't be necessary, but for some reason results in a significant increase in frame rate. Need to figure this out.
-            Plugins::NativeEngine::Reinitialize(m_env, windowPtr, width, height);
+            m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
         }
 
         ~Native()
         {
-            Plugins::NativeEngine::DeinitializeGraphics();
             // TODO: Figure out why this causes the app to crash
             //Napi::Detach(m_env);
         }
@@ -76,7 +78,7 @@ namespace Babylon
         {
             auto width = static_cast<size_t>(ANativeWindow_getWidth(windowPtr));
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
-            Plugins::NativeEngine::Reinitialize(m_env, windowPtr, width, height);
+            m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
         }
 
         void SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)
@@ -99,6 +101,7 @@ namespace Babylon
     private:
         using looper_scheduler_t = arcana::looper_scheduler<sizeof(std::weak_ptr<Napi::Env>) + sizeof(std::function<void(Napi::Env)>)>;
 
+        std::unique_ptr<Graphics> m_graphics{};
         Napi::Env m_env;
         JsRuntime* m_runtime;
         Plugins::NativeInput* m_nativeInput;

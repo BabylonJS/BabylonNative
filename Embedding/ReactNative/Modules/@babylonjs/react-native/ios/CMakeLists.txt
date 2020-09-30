@@ -32,6 +32,7 @@ target_include_directories(BabylonNative PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(BabylonNative
     z
     arcana
+    Graphics
     jsi
     JsRuntime
     NativeWindow
