@@ -512,7 +512,15 @@ namespace Babylon
 
             try
             {
-                m_requestAnimationFrameCalback.Call({});
+                if (!m_requestAnimationFrameCalback.IsEmpty())
+                {
+                    // We can get here from either the normal RequestAnimationFrame or the XR RequestAnimationFrame,
+                    // so we need to clear out the regular RequestAnimationFrame callback to make sure we don't incorrectly
+                    // call it when we have transitioned to the XR RequestAnimationFrame.
+                    auto callback = std::move(m_requestAnimationFrameCalback);
+                    m_requestAnimationFrameCalback.Reset();
+                    callback({});
+                }
                 GetFrameBufferManager().Reset();
             }
             catch (const std::exception& ex)

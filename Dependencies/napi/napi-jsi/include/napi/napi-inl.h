@@ -1763,12 +1763,8 @@ inline uint32_t Reference<T>::Unref() {
 
 template <typename T>
 inline void Reference<T>::Reset() {
-  //if (_object != nullptr) {
-  //  napi_status status = napi_delete_reference(_env, _object);
-  //  NAPI_THROW_IF_FAILED_VOID(_env, status);
-  //  _object = nullptr;
-  //}
-  //throw std::runtime_error{"TODO"};
+  _env = {};
+  _object = {};
 }
 
 template <typename T>
