@@ -2569,22 +2569,13 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  (void)utf8name;
-  (void)getter;
-  (void)setter;
-  (void)attributes;
-  (void)data;
-  //StaticAccessorCallbackData* callbackData =
-  //  new StaticAccessorCallbackData({ getter, setter, data });
-
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.utf8name = utf8name;
-  //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
-  //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.utf8name = utf8name;
+  desc.staticGetter = getter;
+  desc.staticSetter = setter;
+  desc.attributes = attributes;
+  desc.data = data;
+  return desc;
 }
 
 template <typename T>
