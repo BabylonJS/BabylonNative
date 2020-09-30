@@ -22,7 +22,7 @@ namespace Babylon::Plugins
                 })
         };
 
-        env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Set(JS_CONSTRUCTOR_NAME, func);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
 
     // TODO: The JavaScript contract is such that the constructor takes an Engine, but really it should take some kind of view id, which should be passed through to NativeInput::GetFromJavaScript.

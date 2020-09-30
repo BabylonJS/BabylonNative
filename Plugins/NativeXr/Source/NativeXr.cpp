@@ -176,7 +176,7 @@ namespace
             {
                 auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
                 handJointCollection.Set(static_cast<int>(i), napiJoint);
-                handJointCollection.Set(Napi::String::New(env, HAND_JOINT_NAMES[i]), static_cast<int>(i));
+                handJointCollection.Set(HAND_JOINT_NAMES[i], static_cast<int>(i));
             }
 
             handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
@@ -1469,7 +1469,7 @@ namespace Babylon
             {
                 Napi::HandleScope scope{env};
 
-                std::vector<Napi::ClassPropertyDescriptor<XRHand>> initList{};
+                std::vector<XRHand::PropertyDescriptor> initList{};
                 initList.reserve(HAND_JOINT_NAMES.size() + 1);
 
                 for (size_t idx = 0; idx < HAND_JOINT_NAMES.size(); idx++)
