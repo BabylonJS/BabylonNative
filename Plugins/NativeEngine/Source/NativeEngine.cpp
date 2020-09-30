@@ -512,12 +512,12 @@ namespace Babylon
 
             try
             {
-                if (!m_requestAnimationFrameCalback.IsEmpty())
+                if (!m_requestAnimationFrameCallback.IsEmpty())
                 {
                     // We can get here from either the normal RequestAnimationFrame or the XR RequestAnimationFrame,
                     // so we need to clear out the regular RequestAnimationFrame callback to make sure we don't incorrectly
                     // call it when we have transitioned to the XR RequestAnimationFrame.
-                    auto callback{std::move(m_requestAnimationFrameCalback)};
+                    auto callback{std::move(m_requestAnimationFrameCallback)};
                     callback({});
                 }
                 GetFrameBufferManager().Reset();
@@ -584,10 +584,10 @@ namespace Babylon
     {
         auto callback = info[0].As<Napi::Function>();
 
-        if (m_requestAnimationFrameCalback.IsEmpty() ||
-            m_requestAnimationFrameCalback.Value() != callback)
+        if (m_requestAnimationFrameCallback.IsEmpty() ||
+            m_requestAnimationFrameCallback.Value() != callback)
         {
-            m_requestAnimationFrameCalback = Napi::Persistent(callback);
+            m_requestAnimationFrameCallback = Napi::Persistent(callback);
         }
 
         ScheduleRender();

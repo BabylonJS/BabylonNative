@@ -1692,6 +1692,7 @@ inline Reference<T>& Reference<T>::operator =(Reference<T>&& other) {
   _object = std::move(other._object);
   _suppressDestruct = other._suppressDestruct;
   other._env = nullptr;
+  other._suppressDestruct = false;
   return *this;
 }
 

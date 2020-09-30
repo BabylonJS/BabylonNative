@@ -530,7 +530,7 @@ namespace Babylon
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
         
-        Napi::FunctionReference m_requestAnimationFrameCalback{};
+        Napi::FunctionReference m_requestAnimationFrameCallback{};
 
         // webgl/opengl draw call parameters allow to set first index and number of indices used for that call
         // but with bgfx, those parameters must be set when binding the index buffer
