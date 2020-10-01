@@ -137,7 +137,7 @@ namespace Babylon
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
         bgfx::setPlatformData(pd);
-        bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height), BGFX_RESET_FLAGS);
     }
 
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
