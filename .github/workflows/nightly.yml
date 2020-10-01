@@ -34,3 +34,16 @@ jobs:
     - name: Run Validation Tests
       run: ./ValidationTests.exe
       working-directory: buildWin32_x64/Apps/ValidationTests/Release
+    - name: Upload Errors images artifact
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+          name: ErrorImages
+          path: |
+            buildWin32_x64/Apps/ValidationTests/Errors
+    - name: Upload Result images artifact
+      uses: actions/upload-artifact@v2
+      with:
+          name: ResultImages
+          path: |
+            buildWin32_x64/Apps/ValidationTests/Results
