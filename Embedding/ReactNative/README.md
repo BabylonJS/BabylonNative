@@ -17,7 +17,7 @@ It is also worth noting that Babylon React Native relies heavily on newer React 
 
 ## Usage
 
-See the [package usage](Apps/Playground/node_modules/@babylonjs/react-native/README.md) for installation instructions and/or the Playground app's [App.tsx](Apps/Playground/App.tsx) for example usage.
+See the [package usage](Modules/@babylonjs/react-native/README.md) for installation instructions and/or the Playground app's [App.tsx](Apps/Playground/App.tsx) for example usage.
 
 ## Contributing
 
