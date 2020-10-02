@@ -1,29 +1,28 @@
 if(APPLE)
-    set(GRAPHICS_API "Metal")
+    set(GRAPHICS_API Metal)
 elseif(ANDROID)
-    set(GRAPHICS_API "OpenGL")
+    set(GRAPHICS_API OpenGL)
 elseif(UNIX)
-    set(GRAPHICS_API "OpenGL")
+    set(GRAPHICS_API OpenGL)
 elseif(WIN32)
-    set(GRAPHICS_API "D3D")
+    set(GRAPHICS_API D3D)
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
 endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
-    "Source/BgfxCallback.cpp"
-    "Source/BgfxCallback.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/ResourceLimits.cpp"
     "Source/ResourceLimits.h"
-    "Source/ShaderCompiler.cpp"
-    "Source/ShaderCompiler${GRAPHICS_API}.cpp"
     "Source/ShaderCompiler.h"
+    "Source/ShaderCompilerCommon.h"
+    "Source/ShaderCompilerCommon.cpp"
     "Source/ShaderCompilerTraversers.cpp"
-    "Source/ShaderCompilerTraversers.h")
+    "Source/ShaderCompilerTraversers.h"
+    "Source/ShaderCompiler${GRAPHICS_API}.cpp")
 
 add_library(NativeEngine ${SOURCES})
 
@@ -31,6 +30,7 @@ target_include_directories(NativeEngine PUBLIC "Include")
 
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
+    INTERFACE Graphics
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg
@@ -38,7 +38,8 @@ target_link_to_dependencies(NativeEngine
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE NativeWindowInternal)
+    PRIVATE NativeWindowInternal
+    PRIVATE GraphicsInternal)
 warnings_as_errors(NativeEngine)
 
 if(APPLE)
@@ -51,6 +52,8 @@ endif()
 
 target_compile_definitions(NativeEngine
     PRIVATE NOMINMAX)
+target_compile_definitions(NativeEngine
+    PRIVATE API${GRAPHICS_API}) # OpenGL is defined in bgfx.h. Using APIXXX instead
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
@@ -66,4 +69,5 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE glslang
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
-    INTERFACE NativeWindowInternal)
+    INTERFACE NativeWindowInternal
+    INTERFACE GraphicsInternal)

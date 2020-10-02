@@ -1,4 +1,4 @@
-if((NOT UNIX AND NOT WIN32) OR WINDOWS_STORE OR APPLE OR ANDROID)
+if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR (APPLE AND IOS) OR ANDROID)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
@@ -24,6 +24,23 @@ if(WIN32)
 
     set(WIN32_EXECUTABLE TRUE)
     add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
+elseif(APPLE)
+        find_library(JSCORE_LIBRARY JavaScriptCore)
+        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
+        set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
+        set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
+        set(JSSCRIPT "${CMAKE_CURRENT_LIST_DIR}/Scripts/config.json"
+            "${CMAKE_CURRENT_LIST_DIR}/Scripts/validation_native.js")
+        set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT} ${BABYLONSCRIPTS})
+        set(SOURCES
+            ${SOURCES}
+            "macOS/main.m"
+            "macOS/AppDelegate.m"
+            "macOS/AppDelegate.h"
+            "macOS/ViewController.mm"
+            "macOS/ViewController.h"
+            "Shared/TestUtils.h")
+        add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
@@ -55,7 +72,17 @@ target_link_to_dependencies(ValidationTests
     PRIVATE Console
     PRIVATE Window
     PRIVATE ScriptLoader
+    ${ADDITIONAL_LIBRARIES}
     PRIVATE XMLHttpRequest)
+
+if(APPLE AND NOT IOS)
+    set_target_properties(ValidationTests PROPERTIES
+        MACOSX_BUNDLE true
+        MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+        RESOURCE "${RESOURCE_FILES}"
+        FOLDER "ValidationTests")
+endif()
 
 foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
     get_filename_component(SCRIPT_NAME "${script}" NAME)

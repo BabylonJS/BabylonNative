@@ -1,4 +1,5 @@
 #include "ShaderCompiler.h"
+#include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
@@ -36,17 +37,11 @@ namespace Babylon
 
             auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser->get_parsed_ir());
 
-            compiler->build_combined_image_samplers();
-
             spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
 
-#ifdef ANDROID
-            options.version = 310;
+            options.version = 300;
             options.es = true;
-#else
-            options.version = 330;
-            options.es = false;
-#endif
+
             compiler->set_common_options(options);
 
             glsl = compiler->compile();
@@ -65,7 +60,7 @@ namespace Babylon
         glslang::FinalizeProcess();
     }
 
-    void ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, std::function<void(ShaderInfo, ShaderInfo)> onCompiled)
+    ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
 
@@ -88,7 +83,6 @@ namespace Babylon
         ShaderCompilerTraversers::IdGenerator ids{};
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
-        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);
@@ -96,10 +90,8 @@ namespace Babylon
         std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
-        uint8_t* strVertex = (uint8_t*)vertexGLSL.data();
-        uint8_t* strFragment = (uint8_t*)fragmentGLSL.data();
-        onCompiled(
-            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(strVertex, vertexGLSL.size())},
-            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(strFragment, fragmentGLSL.size())});
+        return ShaderCompilerCommon::CreateBgfxShader(
+            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size())},
+            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size())});
     }
 }

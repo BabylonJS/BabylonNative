@@ -1,4 +1,5 @@
 #include "ShaderCompiler.h"
+#include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
 #include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
@@ -74,7 +75,7 @@ namespace Babylon
         glslang::FinalizeProcess();
     }
 
-    void ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, std::function<void(ShaderInfo, ShaderInfo)> onCompiled)
+    ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
 
@@ -83,7 +84,6 @@ namespace Babylon
 
         glslang::TShader fragmentShader{EShLangFragment};
         AddShader(program, fragmentShader, fragmentSource);
-        InvertYDerivativeOperands(fragmentShader);
 
         glslang::SpvVersion spv{};
         spv.spv = 0x10000;
@@ -99,6 +99,7 @@ namespace Babylon
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {
@@ -121,18 +122,18 @@ namespace Babylon
 
         Microsoft::WRL::ComPtr<ID3DBlob> vertexBlob;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, attributes, &vertexBlob);
-        ShaderInfo vertexShaderInfo{
+        ShaderCompilerCommon::ShaderInfo vertexShaderInfo{
             std::move(vertexParser),
             std::move(vertexCompiler),
             gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize())};
 
         Microsoft::WRL::ComPtr<ID3DBlob> fragmentBlob;
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
-        ShaderInfo fragmentShaderInfo{
+        ShaderCompilerCommon::ShaderInfo fragmentShaderInfo{
             std::move(fragmentParser),
             std::move(fragmentCompiler),
             gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize())};
 
-        onCompiled(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
+        return ShaderCompilerCommon::CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
     }
 }

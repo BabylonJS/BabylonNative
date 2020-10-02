@@ -1,6 +1,7 @@
 #include "LibNativeBridge.h"
 
 #import <Babylon/AppRuntime.h>
+#import <Babylon/Graphics.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeWindow.h>
@@ -9,8 +10,9 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
 
+std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
+std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 @implementation LibNativeBridge
 
@@ -26,17 +28,17 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 - (void)init:(void*)view width:(int)inWidth height:(int)inHeight
 {
-    runtime.reset();
     inputBuffer.reset();
+    runtime.reset();
+    graphics.reset();
 
-    // Create the AppRuntime
-    runtime = std::make_unique<Babylon::AppRuntime>();
-
-    // Initialize NativeWindow plugin
     float width = inWidth;
     float height = inHeight;
     void* windowPtr = view;
-    Babylon::Plugins::NativeEngine::InitializeGraphics(windowPtr, width, height);
+    
+    graphics = Babylon::Graphics::InitializeFromWindow(windowPtr, width, height);
+    runtime = std::make_unique<Babylon::AppRuntime>();
+    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([windowPtr, width, height](Napi::Env env)
     {
@@ -44,14 +46,14 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
+
+        graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        auto& jsRuntime = Babylon::JsRuntime::GetFromJavaScript(env);
-        inputBuffer = std::make_unique<InputManager::InputBuffer>(jsRuntime);
-        InputManager::Initialize(jsRuntime, *inputBuffer);
+        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -66,6 +68,11 @@ std::unique_ptr<InputManager::InputBuffer> inputBuffer{};
 
 - (void)resize:(int)inWidth height:(int)inHeight
 {
+    if (graphics)
+    {
+        graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+    }
+    
     if (runtime) 
     {
         runtime->Dispatch([inWidth, inHeight](Napi::Env env)

@@ -16,8 +16,7 @@ namespace Babylon::Plugins::Internal
             JS_CLASS_NAME,
             {});
 
-        auto global = env.Global();
-        auto jsNative = global.Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>();
+        auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
         auto jsWindow = constructor.New({Napi::External<void>::New(env, windowPtr), Napi::Number::From(env, width), Napi::Number::From(env, height)});
 
         jsNative.Set(JS_NATIVE_WINDOW_NAME, jsWindow);
@@ -25,7 +24,11 @@ namespace Babylon::Plugins::Internal
 
     NativeWindow& NativeWindow::GetFromJavaScript(Napi::Env env)
     {
-        return *NativeWindow::Unwrap(env.Global().Get(JsRuntime::JS_NATIVE_NAME).As<Napi::Object>().Get(JS_NATIVE_WINDOW_NAME).As<Napi::Object>());
+        return *NativeWindow::Unwrap(
+            JsRuntime::NativeObject::GetFromJavaScript(env)
+            .As<Napi::Object>()
+            .Get(JS_NATIVE_WINDOW_NAME)
+            .As<Napi::Object>());
     }
 
     NativeWindow::NativeWindow(const Napi::CallbackInfo& info)
@@ -85,9 +88,15 @@ namespace Babylon::Plugins::NativeWindow
         NativeWindow::Initialize(env, windowPtr, width, height);
     }
 
+    void Reinitialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
+    {
+        auto& window = NativeWindow::GetFromJavaScript(env);
+        window.Resize(width, height, windowPtr);
+    }
+
     void UpdateSize(Napi::Env env, size_t width, size_t height)
     {
         auto& window = NativeWindow::GetFromJavaScript(env);
-        window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+        window.Resize(width, height);
     }
 }

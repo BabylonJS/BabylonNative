@@ -127,11 +127,61 @@ namespace
         }
     }
 
-    void SetXRInputSourceSpaces(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    constexpr std::array<const char*, 25> HAND_JOINT_NAMES
+    {
+        "WRIST",
+
+        "THUMB_METACARPAL",
+        "THUMB_PHALANX_PROXIMAL",
+        "THUMB_PHALANX_DISTAL",
+        "THUMB_PHALANX_TIP",
+
+        "INDEX_METACARPAL",
+        "INDEX_PHALANX_PROXIMAL",
+        "INDEX_PHALANX_INTERMEDIATE",
+        "INDEX_PHALANX_DISTAL",
+        "INDEX_PHALANX_TIP",
+
+        "MIDDLE_METACARPAL",
+        "MIDDLE_PHALANX_PROXIMAL",
+        "MIDDLE_PHALANX_INTERMEDIATE",
+        "MIDDLE_PHALANX_DISTAL",
+        "MIDDLE_PHALANX_TIP",
+
+        "RING_METACARPAL",
+        "RING_PHALANX_PROXIMAL",
+        "RING_PHALANX_INTERMEDIATE",
+        "RING_PHALANX_DISTAL",
+        "RING_PHALANX_TIP",
+
+        "LITTLE_METACARPAL",
+        "LITTLE_PHALANX_PROXIMAL",
+        "LITTLE_PHALANX_INTERMEDIATE",
+        "LITTLE_PHALANX_DISTAL",
+        "LITTLE_PHALANX_TIP"
+    };
+
+    void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
         jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
+
+        // Don't set hands up unless hand data is supported/available
+        if (inputSource.JointsTrackedThisFrame)
+        {
+            auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
+
+            for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
+            {
+                auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
+                handJointCollection.Set(static_cast<int>(i), napiJoint);
+                handJointCollection.Set(HAND_JOINT_NAMES[i], static_cast<int>(i));
+            }
+
+            handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
+            jsInputSource.Set("hand", handJointCollection);
+        }
     }
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
@@ -144,7 +194,7 @@ namespace
         auto jsInputSource = Napi::Object::New(env);
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
-        SetXRInputSourceSpaces(jsInputSource, inputSource);
+        SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
@@ -161,7 +211,7 @@ namespace Babylon
     class NativeXr
     {
     public:
-        NativeXr();
+        NativeXr(Napi::Env);
         ~NativeXr();
 
         arcana::cancellation_source& GetCancellationSource();
@@ -185,17 +235,45 @@ namespace Babylon
 
         void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
         {
-            Dispatch([this, callback = std::move(callback)]() {
+            // Note: we are guaranteed to be on the JavaScript thread.
+
+            if (m_isFrameScheduled)
+            {
+                return; // Why is this ever being called twice in the same frame?
+            }
+            m_isFrameScheduled = true;
+
+            m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                // Note: we are guaranteed to be on the render thread.
+                m_isFrameScheduled = false;
+
                 // Early out if there's no session available.
                 if (m_session == nullptr)
                 {
                     return;
                 }
+                
+                m_engineImpl->ScheduleRender();
 
                 BeginFrame();
-                callback(*m_frame);
-                m_engineImpl->EndFrame();
-                EndFrame();
+
+                if (m_engineImpl->AutomaticRenderingEnabled)
+                {
+                    m_graphicsImpl.AddRenderWorkTask(arcana::make_task(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                        callback(*m_frame);
+                    }));
+                }
+                else
+                {
+                    m_graphicsImpl.AddRenderWorkTask(arcana::make_task(m_engineImpl->RuntimeScheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
+                        callback(*m_frame);
+                    }));
+                }
+                
+                m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this] {
+                    // Note: we are guaranteed to be on the render thread again.
+                    EndFrame();
+                });
             });
         }
 
@@ -231,14 +309,17 @@ namespace Babylon
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         ClearState m_clearState{};
         std::vector<FrameBufferData*> m_activeFrameBuffers{};
+        Graphics::Impl& m_graphicsImpl;
         NativeEngine* m_engineImpl{};
         arcana::cancellation_source m_cancellationSource{};
+        bool m_isFrameScheduled{false};
 
         void BeginFrame();
         void EndFrame();
     };
 
-    NativeXr::NativeXr()
+    NativeXr::NativeXr(Napi::Env env)
+        : m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
     {
     }
 
@@ -360,7 +441,8 @@ namespace Babylon
                     frameBuffer,
                     m_clearState,
                     static_cast<uint16_t>(view.ColorTextureSize.Width),
-                    static_cast<uint16_t>(view.ColorTextureSize.Height));
+                    static_cast<uint16_t>(view.ColorTextureSize.Height),
+                    true);
 
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
@@ -1378,6 +1460,51 @@ namespace Babylon
             XRFrame* m_frame{};
         };
 
+        class XRHand : public Napi::ObjectWrap<XRHand>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRHand";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                std::vector<XRHand::PropertyDescriptor> initList{};
+                initList.reserve(HAND_JOINT_NAMES.size() + 1);
+
+                for (size_t idx = 0; idx < HAND_JOINT_NAMES.size(); idx++)
+                {
+                    initList.push_back(StaticValue(HAND_JOINT_NAMES[idx], Napi::Value::From(env, idx)));
+                }
+
+                initList.push_back(StaticAccessor("length", &XRHand::GetLength, nullptr));
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    initList
+                    );
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRHand(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRHand>{info}
+            {
+            }
+
+        private:
+            static Napi::Value GetLength(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
+            }
+        };
+
         class XRFrame : public Napi::ObjectWrap<XRFrame>
         {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
@@ -1395,6 +1522,7 @@ namespace Babylon
                         InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                        InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
@@ -1415,8 +1543,10 @@ namespace Babylon
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
                 m_jsPose.Set("transform", m_jsTransform.Value());
+                m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
             void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
@@ -1473,6 +1603,7 @@ namespace Babylon
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
+            Napi::ObjectReference m_jsJointPose{};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
@@ -1502,6 +1633,24 @@ namespace Babylon
                     XRPose* pose = XRPose::Unwrap(napiPose);
                     pose->Update(xrSpace->GetTransform());
                     return std::move(napiPose);
+                }
+            }
+
+            Napi::Value GetJointPose(const Napi::CallbackInfo& info)
+            {
+                assert(info[0].IsExternal());
+
+                const auto& jointSpace = *info[0].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
+
+                if (jointSpace.PoseTracked)
+                {
+                    m_transform.Update(jointSpace, false);
+                    m_jsJointPose.Set("radius", jointSpace.PoseRadius);
+                    return m_jsJointPose.Value();
+                }
+                else
+                {
+                    return info.Env().Undefined();
                 }
             }
 
@@ -1735,6 +1884,7 @@ namespace Babylon
 
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{info}
+                , m_xr{info.Env()}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
@@ -1788,7 +1938,7 @@ namespace Babylon
             }
 
         private:
-            NativeXr m_xr{};
+            NativeXr m_xr;
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
             JsRuntimeScheduler m_runtimeScheduler;
@@ -1872,7 +2022,7 @@ namespace Babylon
                     {
                         // Ensure the correct spaces are associated with the existing input source.
                         auto val = found->second.Value();
-                        SetXRInputSourceSpaces(val, inputSource);
+                        SetXRInputSourceData(val, inputSource);
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
@@ -2206,6 +2356,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
+            XRHand::Initialize(env);
             XRPlane::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
