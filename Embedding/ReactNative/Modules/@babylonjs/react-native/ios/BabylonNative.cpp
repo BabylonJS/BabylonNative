@@ -73,6 +73,7 @@ namespace Babylon
     void Native::Refresh(void* windowPtr, size_t width, size_t height)
     {
         m_impl->m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
+        Plugins::NativeWindow::Reinitialize(m_impl->env, windowPtr, width, height);
     }
 
     void Native::Resize(size_t width, size_t height)

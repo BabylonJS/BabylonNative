@@ -79,6 +79,7 @@ namespace Babylon
             auto width = static_cast<size_t>(ANativeWindow_getWidth(windowPtr));
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
             m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
+            Plugins::NativeWindow::Reinitialize(m_env, windowPtr, width, height);
         }
 
         void SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)
