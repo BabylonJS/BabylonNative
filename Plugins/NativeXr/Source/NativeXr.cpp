@@ -1772,15 +1772,7 @@ namespace Babylon
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                // First loop over deleted planes and remove them from our JS mapping.
-                for (auto planeID : m_frame->RemovedPlanes)
-                {
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
-                    assert(trackedPlaneIterator != m_trackedPlanes.end());
-                    m_trackedPlanes.erase(trackedPlaneIterator);
-                }
-
-                // Next loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
+                // First loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
                 for (auto planeID : m_frame->UpdatedPlanes)
                 {
                     XRPlane* xrPlane{};
@@ -1801,6 +1793,14 @@ namespace Babylon
                     }
 
                     xrPlane->SetLastUpdatedTime(timestamp);
+                }
+
+                // Next go over removed planes and remove them from our mapping.
+                for (auto planeID : m_frame->RemovedPlanes)
+                {
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
+                    assert(trackedPlaneIterator != m_trackedPlanes.end());
+                    m_trackedPlanes.erase(trackedPlaneIterator);
                 }
             }
         };
