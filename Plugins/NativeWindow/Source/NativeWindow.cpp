@@ -88,9 +88,15 @@ namespace Babylon::Plugins::NativeWindow
         NativeWindow::Initialize(env, windowPtr, width, height);
     }
 
+    void Reinitialize(Napi::Env env, void* windowPtr, size_t width, size_t height)
+    {
+        auto& window = NativeWindow::GetFromJavaScript(env);
+        window.Resize(width, height, windowPtr);
+    }
+
     void UpdateSize(Napi::Env env, size_t width, size_t height)
     {
         auto& window = NativeWindow::GetFromJavaScript(env);
-        window.Resize(static_cast<size_t>(width), static_cast<size_t>(height));
+        window.Resize(width, height);
     }
 }
