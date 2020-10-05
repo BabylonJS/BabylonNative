@@ -243,6 +243,10 @@ namespace Babylon
             }
             m_isFrameScheduled = true;
 
+            m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this] {
+                m_engineImpl->ScheduleRender();
+            });
+
             m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
                 // Note: we are guaranteed to be on the render thread.
                 m_isFrameScheduled = false;
@@ -252,8 +256,6 @@ namespace Babylon
                 {
                     return;
                 }
-                
-                m_engineImpl->ScheduleRender();
 
                 BeginFrame();
 
