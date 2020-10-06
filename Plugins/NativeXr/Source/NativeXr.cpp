@@ -1574,11 +1574,11 @@ namespace Babylon
                 xrAnchor->SetAnchor(nativeAnchor);
 
                 // Add the anchor to the list of tracked anchors.
-                m_trackedAnchors.push_back(std::move(napiAnchor));
+                m_trackedAnchors.emplace_back(std::move(napiAnchor));
 
                 // Resolve the promise with the newly created anchor.
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(napiAnchor.Value());
+                deferred.Resolve(m_trackedAnchors.back().Value());
                 return deferred.Promise();
             }
 
