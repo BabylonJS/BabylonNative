@@ -44,6 +44,10 @@ namespace UrlLib
             if ([scheme isEqual:@"app"])
             {
                 NSString* path{[[NSBundle mainBundle] pathForResource:url.path ofType:nil]};
+                if (path == nil)
+                {
+                    throw std::runtime_error{"Invalid resource path in app bundle."};
+                }
                 url = [NSURL fileURLWithPath:path];
             }
             

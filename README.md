@@ -203,6 +203,12 @@ correct build system generator for CMake to use, as follows:
 cmake -G Xcode ..
 ```
 
+Starting with Xcode 12, it's mandatory to set the targeted CPU architectures (X86_64 and/or arm64).
+
+````
+cmake .. -GXcode "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
+```
+
 CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
 Please be patient; this process can take several minutes. When the process is 
 completed, open the project by double-clicking on it in Finder or by entering the 
