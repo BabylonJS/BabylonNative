@@ -1,10 +1,7 @@
 #include "AppRuntime.h"
 
-#ifndef __clang__
-#pragma warning(disable : 4100 4267)
-#endif
-#include <v8.h>
-#include <libplatform/libplatform.h>
+#include "v8/V8Inc.h"
+#include "v8/V8InspectorAgent.h"
 
 namespace Babylon
 {
@@ -28,6 +25,11 @@ namespace Babylon
                 v8::V8::ShutdownPlatform();
             }
 
+            static Module& Instance()
+            {
+                return *s_module;
+            }
+
             static void Initialize(const char* executablePath)
             {
                 if (s_module == nullptr)
@@ -35,6 +37,8 @@ namespace Babylon
                     s_module = std::make_unique<Module>(executablePath);
                 }
             }
+
+            v8::Platform* Platform() const { return m_platform.get(); }
 
         private:
             std::unique_ptr<v8::Platform> m_platform;
@@ -59,6 +63,9 @@ namespace Babylon
             v8::HandleScope isolate_handle_scope{isolate};
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
+
+            Babylon::V8InspectorAgent inspector{ *Module::Instance().Platform(), isolate, context, "BabylonNative", 5643 };
+            inspector.start();
 
             Napi::Env env = Napi::Attach(context);
             Run(env);

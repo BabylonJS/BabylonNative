@@ -128,3 +128,8 @@ endif()
 # Dependencies: arcana, AndroidExtensions
 add_subdirectory(UrlLib)
 set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
+
+# -------------------------------- asio --------------------------------
+# Dependencies: none
+add_library(asio INTERFACE)
+target_include_directories(asio INTERFACE "asio/asio/include")
