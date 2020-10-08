@@ -48,22 +48,22 @@ namespace Babylon
         struct DispatchData
         {
             arcana::run_loop_scheduler scheduler;
-            Napi::FunctionReference flushedQueue;
+            std::shared_ptr<facebook::jsi::Function> setTimeout;
 
-            DispatchData(Napi::Env env)
+            DispatchData(facebook::jsi::Runtime& rt)
                 : scheduler{ arcana::run_loop_scheduler::get_for_current_thread() }
-                , flushedQueue{ GetFlushedQueue(env) }
+                , setTimeout{ GetSetTimeout(rt) }
             {
             }
         };
 
         JsRuntime::DispatchFunctionT dispatchFunction =
-            [env = m_impl->env, data = std::make_shared<DispatchData>(m_impl->env)](std::function<void(Napi::Env)> func)
+            [env = m_impl->env, data = std::make_shared<DispatchData>(*jsiRuntime)](std::function<void(Napi::Env)> func)
             {
                 (data->scheduler)([env, func = std::move(func), &data]()
                 {
                     func(env);
-                    data->flushedQueue.Call({});
+                    data->setTimeout->call((static_cast<napi_env>(env))->rt, {});
                 });
             };
 

@@ -80,9 +80,6 @@ namespace Babylon
             Polyfills::Window::Initialize(m_env);
 
             m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
-
-            // TODO: This shouldn't be necessary, but for some reason results in a significant increase in frame rate. Need to figure this out.
-            m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
         }
 
         ~Native()

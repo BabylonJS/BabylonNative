@@ -27,7 +27,7 @@
     "base-64": "^0.1.0"
   },
   "peerDependencies": {
-    "@babylonjs/core": "^4.2.0-beta.6",
+    "@babylonjs/core": "^4.2.0-beta.10",
     "react": "^16.13.1",
     "react-native": "^0.63.1",
     "react-native-permissions": "^2.1.4"
