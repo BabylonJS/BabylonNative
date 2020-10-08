@@ -52,7 +52,7 @@ namespace Babylon
             auto result = JsStartDebugging();
             if (result != JsErrorCode::JsNoError)
             {
-                OutputDebugStringW(L"Failed to initialize debugging support.\n");
+                OutputDebugStringW(L"Failed to initialize JavaScript debugging support.\n");
             }
         }
 #endif
