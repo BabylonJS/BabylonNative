@@ -18,6 +18,8 @@
 #include <sstream>
 #include <unistd.h>
 
+#include "../shared/Shared.h"
+
 namespace Babylon
 {
     using namespace facebook;
@@ -43,15 +45,27 @@ namespace Babylon
             m_impl->m_graphics = Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
         });
 
-        auto run_loop_scheduler = std::make_shared<arcana::run_loop_scheduler>(arcana::run_loop_scheduler::get_for_current_thread());
-
-        JsRuntime::DispatchFunctionT dispatchFunction{[env = m_impl->env, run_loop_scheduler = std::move(run_loop_scheduler)](std::function<void(Napi::Env)> func)
+        struct DispatchData
         {
-            (*run_loop_scheduler)([env, func = std::move(func)]()
+            arcana::run_loop_scheduler scheduler;
+            Napi::FunctionReference flushedQueue;
+
+            DispatchData(Napi::Env env)
+                : scheduler{ arcana::run_loop_scheduler::get_for_current_thread() }
+                , flushedQueue{ GetFlushedQueue(env) }
             {
-                func(env);
-            });
-        }};
+            }
+        };
+
+        JsRuntime::DispatchFunctionT dispatchFunction =
+            [env = m_impl->env, data = std::make_shared<DispatchData>(m_impl->env)](std::function<void(Napi::Env)> func)
+            {
+                (data->scheduler)([env, func = std::move(func), &data]()
+                {
+                    func(env);
+                    data->flushedQueue.Call({});
+                });
+            };
 
         m_impl->runtime = &JsRuntime::CreateForJavaScript(m_impl->env, std::move(dispatchFunction));
         

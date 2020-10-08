@@ -22,6 +22,8 @@
 
 #include <jsi/jsi.h>
 
+#include "../../../../shared/Shared.h"
+
 namespace Babylon
 {
     namespace
@@ -39,14 +41,29 @@ namespace Babylon
         Native(facebook::jsi::Runtime* jsiRuntime, ANativeWindow* windowPtr)
             : m_env{ Napi::Attach<facebook::jsi::Runtime&>(*jsiRuntime) }
         {
-            auto looper_scheduler = std::make_shared<looper_scheduler_t>(looper_scheduler_t::get_for_current_thread());
+            struct DispatchData
+            {
+                using looper_scheduler_t = arcana::looper_scheduler<128>;
 
-            JsRuntime::DispatchFunctionT dispatchFunction{[env = m_env, looper_scheduler = std::move(looper_scheduler)](std::function<void(Napi::Env)> func) {
-                (*looper_scheduler)([env, func = std::move(func)]()
+                looper_scheduler_t scheduler;
+                Napi::FunctionReference flushedQueue;
+
+                DispatchData(Napi::Env env)
+                    : scheduler{ looper_scheduler_t::get_for_current_thread() }
+                    , flushedQueue{ GetFlushedQueue(env) }
                 {
-                    func(env);
-                });
-            }};
+                }
+            };
+
+            JsRuntime::DispatchFunctionT dispatchFunction =
+                [env = m_env, data = std::make_shared<DispatchData>(m_env)](std::function<void(Napi::Env)> func)
+                {
+                    (data->scheduler)([env, func = std::move(func), &data]()
+                    {
+                        func(env);
+                        data->flushedQueue.Call({});
+                    });
+                };
 
             m_runtime = &JsRuntime::CreateForJavaScript(m_env, dispatchFunction);
 
@@ -100,8 +117,6 @@ namespace Babylon
         }
 
     private:
-        using looper_scheduler_t = arcana::looper_scheduler<sizeof(std::weak_ptr<Napi::Env>) + sizeof(std::function<void(Napi::Env)>)>;
-
         std::unique_ptr<Graphics> m_graphics{};
         Napi::Env m_env;
         JsRuntime* m_runtime;
