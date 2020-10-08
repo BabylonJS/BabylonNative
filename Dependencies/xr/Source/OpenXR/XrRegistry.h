@@ -4,6 +4,8 @@
 
 namespace xr
 {
+    struct SceneUnderstanding;
+
     struct XrSessionContext
     {
         XrSessionContext();
@@ -16,6 +18,7 @@ namespace xr
         const XrSession Session() const;
         const XrSessionState State() const;
         const XrSpace Space() const;
+        const SceneUnderstanding& SceneUnderstanding() const;
 
         struct Impl;
         std::unique_ptr<Impl> ContextImpl;
