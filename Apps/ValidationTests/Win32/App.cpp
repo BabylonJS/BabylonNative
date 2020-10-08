@@ -272,9 +272,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_DESTROY:
         {
-            short exitCode = LOWORD(wParam);
             Uninitialize();
-            PostQuitMessage(exitCode);
+            PostQuitMessage(errorCode);
             break;
         }
         default:

@@ -1,11 +1,11 @@
 if(APPLE)
-    set(GRAPHICS_API "Metal")
+    set(GRAPHICS_API Metal)
 elseif(ANDROID)
-    set(GRAPHICS_API "OpenGL")
+    set(GRAPHICS_API OpenGL)
 elseif(UNIX)
-    set(GRAPHICS_API "OpenGL")
+    set(GRAPHICS_API OpenGL)
 elseif(WIN32)
-    set(GRAPHICS_API "D3D")
+    set(GRAPHICS_API D3D)
 else()
     message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
 endif()
@@ -52,6 +52,8 @@ endif()
 
 target_compile_definitions(NativeEngine
     PRIVATE NOMINMAX)
+target_compile_definitions(NativeEngine
+    PRIVATE API${GRAPHICS_API}) # OpenGL is defined in bgfx.h. Using APIXXX instead
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

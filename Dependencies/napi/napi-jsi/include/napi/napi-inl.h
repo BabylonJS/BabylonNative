@@ -1691,6 +1691,8 @@ inline Reference<T>& Reference<T>::operator =(Reference<T>&& other) {
   _env = other._env;
   _object = std::move(other._object);
   _suppressDestruct = other._suppressDestruct;
+  other._env = nullptr;
+  other._suppressDestruct = false;
   return *this;
 }
 
@@ -1763,12 +1765,8 @@ inline uint32_t Reference<T>::Unref() {
 
 template <typename T>
 inline void Reference<T>::Reset() {
-  //if (_object != nullptr) {
-  //  napi_status status = napi_delete_reference(_env, _object);
-  //  NAPI_THROW_IF_FAILED_VOID(_env, status);
-  //  _object = nullptr;
-  //}
-  //throw std::runtime_error{"TODO"};
+  _env = {};
+  _object = {};
 }
 
 template <typename T>
@@ -1957,7 +1955,7 @@ inline FunctionReference& FunctionReference::operator =(Reference<Function>&& ot
 }
 
 inline FunctionReference::FunctionReference(FunctionReference&& other)
-  : Reference<Function>(other) {
+  : Reference<Function>(std::move(other)) {
 }
 
 inline FunctionReference& FunctionReference::operator =(FunctionReference&& other) {
@@ -2569,22 +2567,13 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  (void)utf8name;
-  (void)getter;
-  (void)setter;
-  (void)attributes;
-  (void)data;
-  //StaticAccessorCallbackData* callbackData =
-  //  new StaticAccessorCallbackData({ getter, setter, data });
-
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.utf8name = utf8name;
-  //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
-  //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.utf8name = utf8name;
+  desc.staticGetter = getter;
+  desc.staticSetter = setter;
+  desc.attributes = attributes;
+  desc.data = data;
+  return desc;
 }
 
 template <typename T>

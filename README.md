@@ -48,7 +48,6 @@ but are expected to be supported in the future. Note that this list is not exhau
 - User input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
-- React Native integration.
 
 This section will be updated frequently. If you have any questions, please reach out
 to us on [the Babylon forum](https://forum.babylonjs.com).
