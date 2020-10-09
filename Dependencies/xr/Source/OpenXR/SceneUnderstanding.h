@@ -37,6 +37,7 @@ namespace xr
 		SceneUnderstanding();
 		~SceneUnderstanding();
 		void Initialize(const InitOptions options) const;
+		void Update() const;
 		void UpdateFrame(UpdateFrameArgs args) const;
 		System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
 

@@ -34,7 +34,19 @@ public:
 		}
 
 		// TODO
-		m_initialized = true;
+		//* Create an XrSceneObserverMSFT handle to mange the system resource of the scene understanding compute.
+		//* Start the scene compute by calling xrComputeNewSceneMSFT with XrSceneBoundsMSFT to limit the scan range.
+		//* Inspect the completion of computation polling xrGetSceneComputeStateMSFT.
+		//* Once compute is completed, create a handle to the result by calling xrCreateSceneMSFT.
+		//* Get a list of objects in the scene using xrGetSceneObjectsMSFT.
+		//* Get the properties of each scene object, such as object kind, using xrGetSceneObjectPropertiesMSFT.
+		//* Locate scene objects using xrLocateSceneObjectsMSFT.
+		//* Each object contains multiple planes and multiple meshes.
+		//* Each object, plane or mesh is identified by atoms (uint64_t) that’s unique in the XrSceneMSFT.
+		//* Get the properties of each plane, such as plane equation, alignment and bounds, using xrGetScenePlanePropertiesMSFT.
+		//* Get the properties of each mesh, such as vertices and indices buffer, using xrGetSceneMeshMSFT.
+
+			m_initialized = true;
 	}
 
 	void UpdateFrame(UpdateFrameArgs& args)
