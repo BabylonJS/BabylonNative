@@ -384,6 +384,7 @@ namespace Babylon
                 InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
+                InstanceMethod("copyTexture", &NativeEngine::CopyTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
@@ -1066,6 +1067,13 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
 
         return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
+    }
+
+    void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
+    {
+        const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
+        const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
+        textureDestination->Handle = textureSource->Handle;
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)

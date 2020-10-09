@@ -80,11 +80,11 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
             try {
                 currentScene.render();
                 renderCount--;
-
+                /*
                 if (renderCount === 0) {
                     engine.stopRenderLoop();
                     evaluate(test, resultCanvas, result, renderImage, index, waitRing, done);
-                }
+                }*/
             }
             catch (e) {
                 console.error(e);
@@ -280,7 +280,7 @@ engine.getRenderingCanvas = function () {
 engine.getInputElement = function () {
     return 0;
 }
-
+/*
 OffscreenCanvas = function(width, height) {
     return {
         width: width
@@ -294,11 +294,11 @@ OffscreenCanvas = function(width, height) {
         }
     };
 }
-
+*/
 document = {
     createElement: function (type) {
         if (type === "canvas") {
-            return new OffscreenCanvas(64, 64);
+            return new OffscreenCanvas();
         }
         return {};
     }

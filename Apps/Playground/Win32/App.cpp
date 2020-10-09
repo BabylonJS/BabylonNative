@@ -18,6 +18,7 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Canvas.h>
 
 #define MAX_LOADSTRING 100
 
@@ -110,6 +111,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            Babylon::Polyfills::Canvas::Initialize(env);
 
             // Initialize NativeWindow plugin.
             Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);

@@ -53,6 +53,16 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
+
+document = {
+    createElement: function (type) {
+        if (type === "canvas") {
+            return new OffscreenCanvas();
+        }
+        return {};
+    }
+}
+
 CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
@@ -77,6 +87,25 @@ CreateBoxAsync().then(function () {
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
 
+
+    var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
+    ground.rotation.x = Math.PI * 0.5;
+    ground.position.z = 2;
+ //Create dynamic texture
+    var textureResolution = 512;
+	var textureGround = new BABYLON.DynamicTexture("dynamic texture", textureResolution, scene);   
+	var textureContext = textureGround.getContext();
+	
+	var materialGround = new BABYLON.StandardMaterial("Mat", scene);    				
+	materialGround.diffuseTexture = textureGround;
+	ground.material = materialGround;
+    materialGround.backFaceCulling = false;
+
+    var font = "bold 44px monospace";
+    // textureGround.drawImage(videotest, 0, 0, 100, 100);
+    textureGround.clear();
+    textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
+    
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
     }

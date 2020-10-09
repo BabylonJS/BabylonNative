@@ -21,6 +21,7 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Canvas.h>
 #include <iostream>
 
 #define MAX_LOADSTRING 100
@@ -108,6 +109,7 @@ namespace
 
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+                Babylon::Polyfills::Canvas::Initialize(env);
 
                 Babylon::Polyfills::Window::Initialize(env);
                 // Initialize NativeWindow plugin to the test size.
@@ -131,7 +133,9 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
+        loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
+
     }
 }
 
