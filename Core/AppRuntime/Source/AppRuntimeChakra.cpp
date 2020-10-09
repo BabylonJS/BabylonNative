@@ -46,9 +46,15 @@ namespace Babylon
             &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
-#ifdef _DEBUG
+#if defined(_DEBUG)
         // Put Chakra in debug mode.
-        ThrowIfFailed(JsStartDebugging());
+        {
+            auto result = JsStartDebugging();
+            if (result != JsErrorCode::JsNoError)
+            {
+                OutputDebugStringW(L"Failed to initialize JavaScript debugging support.\n");
+            }
+        }
 #endif
 
         Napi::Env env = Napi::Attach();
