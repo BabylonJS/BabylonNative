@@ -111,6 +111,7 @@ namespace java::io
     {
     public:
         ByteArrayOutputStream();
+        ByteArrayOutputStream(int size);
         ByteArrayOutputStream(jobject object);
 
         void Write(lang::ByteArray b, int off, int len);
@@ -158,6 +159,8 @@ namespace java::net
         void Connect();
 
         URL GetURL() const;
+
+        int GetContentLength() const;
 
         io::InputStream GetInputStream() const;
 
