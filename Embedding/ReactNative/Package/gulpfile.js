@@ -102,6 +102,8 @@ Assembled/ios/libs/libNativeInput.a
 Assembled/ios/libs/libJsRuntime.a
 Assembled/ios/libs/libGraphics.a
 Assembled/ios/libs/libOSDependent.a
+Assembled/ios/libs/libXMLHttpRequest.a
+Assembled/ios/libs/libUrlLib.a
 Assembled/ios/libs/libastc-codec.a
 Assembled/ios/libs/libGenericCodeGen.a
 Assembled/ios/libs/libspirv-cross-core.a

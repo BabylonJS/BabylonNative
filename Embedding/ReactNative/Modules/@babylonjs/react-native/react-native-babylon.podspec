@@ -40,7 +40,9 @@ Pod::Spec.new do |s|
                 'spirv-cross-glsl',
                 'spirv-cross-hlsl',
                 'spirv-cross-msl',
+                'UrlLib',
                 'Window',
+                'XMLHttpRequest',
                 'xr'
 
   s.frameworks = "MetalKit", "ARKit"

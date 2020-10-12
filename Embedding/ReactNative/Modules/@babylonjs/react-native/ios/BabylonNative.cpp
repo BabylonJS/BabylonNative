@@ -7,6 +7,7 @@
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Window.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 
 #include <arcana/threading/task_schedulers.h>
 
@@ -63,7 +64,9 @@ namespace Babylon
                 (data->scheduler)([env, func = std::move(func), &data]()
                 {
                     func(env);
-                    data->setTimeout->call((static_cast<napi_env>(env))->rt, {});
+                    // NOTE: This doesn't work quite right on iOS, so we'll use a different work around until
+                    // we have a better solution (see Shared.h and EngineHook.ts for more details).
+                    //data->setTimeout->call((static_cast<napi_env>(env))->rt, {});
                 });
             };
 
@@ -72,6 +75,9 @@ namespace Babylon
         m_impl->m_graphics->AddToJavaScript(m_impl->env);
 
         Polyfills::Window::Initialize(m_impl->env);
+        // NOTE: React Native's XMLHttpRequest is slow and allocates a lot of memory. This does not override
+        // React Native's implementation, but rather adds a second one scoped to Babylon and used by WebRequest.ts.
+        Polyfills::XMLHttpRequest::Initialize(m_impl->env);
 
         Plugins::NativeWindow::Initialize(m_impl->env, windowPtr, width, height);
         Plugins::NativeEngine::Initialize(m_impl->env);

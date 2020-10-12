@@ -25,7 +25,9 @@ set(PACKAGED_LIBS
     spirv-cross-glsl
     spirv-cross-hlsl
     spirv-cross-msl
+    UrlLib
     Window
+    XMLHttpRequest
     xr
 )
 
