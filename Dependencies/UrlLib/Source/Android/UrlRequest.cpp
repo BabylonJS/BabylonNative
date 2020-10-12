@@ -95,9 +95,13 @@ namespace UrlLib
                     connection.Connect();
 
                     m_statusCode = static_cast<UrlStatusCode>(((HttpURLConnection)connection).GetResponseCode());
+                    int contentLength = connection.GetContentLength();
+                    if (contentLength < 0) {
+                        contentLength = 0;
+                    }
 
                     InputStream inputStream{connection.GetInputStream()};
-                    ByteArrayOutputStream byteArrayOutputStream{};
+                    ByteArrayOutputStream byteArrayOutputStream{contentLength};
 
                     ByteArray byteArray{4096};
                     int bytesRead{};

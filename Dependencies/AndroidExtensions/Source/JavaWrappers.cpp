@@ -73,6 +73,12 @@ namespace java::io
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "()V"));
     }
 
+    ByteArrayOutputStream::ByteArrayOutputStream(int size)
+        : Object{"java/io/ByteArrayOutputStream", nullptr}
+    {
+        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), size);
+    }
+
     ByteArrayOutputStream::ByteArrayOutputStream(jobject object)
         : Object{"java/io/ByteArrayOutputStream", object}
     {
@@ -151,6 +157,11 @@ namespace java::net
     URL URLConnection::GetURL() const
     {
         return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
+    }
+
+    int URLConnection::GetContentLength() const
+    {
+        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getContentLength", "()I"));
     }
 
     io::InputStream URLConnection::GetInputStream() const
