@@ -194,4 +194,10 @@ extern "C"
             g_inputBuffer->SetPointerDown(down);
         }
     }
+
+    JNIEXPORT void JNICALL
+    Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
+    {
+        g_scriptLoader->Eval("console.log(\"Rendering frame...\");", "");
+    }
 }
