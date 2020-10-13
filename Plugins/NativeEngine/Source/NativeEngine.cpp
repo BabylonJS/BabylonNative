@@ -462,6 +462,12 @@ namespace Babylon
                 InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+
+        if (autoRender)
+        {
+            // TODO: Dispatch instead to match multi-thread case?
+            Graphics::Impl::GetFromJavaScript(env).RenderCurrentFrame();
+        }
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)

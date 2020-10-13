@@ -16,6 +16,14 @@ namespace Babylon
         static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
     public:
+        template<typename CallableT>
+        Impl(CallableT initializer)
+        {
+            arcana::make_task(Dispatcher, arcana::cancellation::none(), [this, initializer = std::move(initializer)] {
+                initializer(*this);
+            });
+        }
+
         ~Impl();
 
         void AddToJavaScript(Napi::Env);

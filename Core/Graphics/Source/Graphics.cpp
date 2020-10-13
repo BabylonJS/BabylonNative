@@ -33,6 +33,8 @@ namespace Babylon
         }
         m_rendering = true;
 
+        Dispatcher.tick(arcana::cancellation::none());
+
         auto oldBeforeRenderTaskCompletionSource = BeforeRenderTaskCompletionSource;
         BeforeRenderTaskCompletionSource = {};
         oldBeforeRenderTaskCompletionSource.complete();
@@ -94,8 +96,9 @@ namespace Babylon
         }
     }
 
-    Graphics::Graphics()
-        : m_impl{std::make_unique<Graphics::Impl>()}
+    template<typename CallableT>
+    Graphics::Graphics(CallableT initializer)
+        : m_impl{std::make_unique<Graphics::Impl>(std::move(initializer))}
     {
     }
 
@@ -104,27 +107,25 @@ namespace Babylon
     template<>
     std::unique_ptr<Graphics> Graphics::InitializeFromWindow<void*>(void* nativeWindowPtr, size_t width, size_t height)
     {
-        std::unique_ptr<Graphics> graphics{new Graphics()};
-
-        // Initialize bgfx.
-        bgfx::Init init{};
-        init.platformData.nwh = nativeWindowPtr;
-        bgfx::setPlatformData(init.platformData);
+        return std::unique_ptr<Graphics>(new Graphics([nativeWindowPtr, width, height](Graphics::Impl& impl) {
+            // Initialize bgfx.
+            bgfx::Init init{};
+            init.platformData.nwh = nativeWindowPtr;
+            bgfx::setPlatformData(init.platformData);
 #if (ANDROID)
-        init.type = bgfx::RendererType::OpenGLES;
+            init.type = bgfx::RendererType::OpenGLES;
 #else
-        init.type = bgfx::RendererType::Direct3D11;
+            init.type = bgfx::RendererType::Direct3D11;
 #endif
-        init.resolution.width = static_cast<uint32_t>(width);
-        init.resolution.height = static_cast<uint32_t>(height);
-        init.resolution.reset = BGFX_RESET_FLAGS;
-        init.callback = &graphics->m_impl->Callback;
-        bgfx::init(init);
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-        bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
-        bgfx::touch(0);
-
-        return graphics;
+            init.resolution.width = static_cast<uint32_t>(width);
+            init.resolution.height = static_cast<uint32_t>(height);
+            init.resolution.reset = BGFX_RESET_FLAGS;
+            init.callback = &impl.Callback;
+            bgfx::init(init);
+            bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
+            bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
+            bgfx::touch(0);
+        }));
     }
 
     template<>
