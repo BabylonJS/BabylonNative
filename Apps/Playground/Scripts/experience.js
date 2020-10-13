@@ -50,6 +50,8 @@ function CreateInputHandling(scene) {
     });
 }
 
+BABYLON.Tools.DelayAsync(1000).then(() => {
+
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
@@ -238,4 +240,6 @@ CreateBoxAsync().then(function () {
     
 }, function (ex) {
     console.log(ex.message, ex.stack);
+});
+
 });

@@ -37,6 +37,8 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
+    constexpr bool RENDER_ON_JS_THREAD{true};
+
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
@@ -116,7 +118,7 @@ namespace
 
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
-            Babylon::Plugins::NativeEngine::Initialize(env);
+            Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
@@ -302,9 +304,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
+            if constexpr (!RENDER_ON_JS_THREAD)
+            {
+                if (graphics != nullptr)
+                {
+                    graphics->RenderCurrentFrame();
+                }
+            }
+
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
             EndPaint(hWnd, &ps);
+
+            if constexpr (!RENDER_ON_JS_THREAD)
+            {
+                InvalidateRgn(hWnd, nullptr, false);
+            }
             break;
         }
         case WM_SIZE:
