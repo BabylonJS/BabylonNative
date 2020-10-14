@@ -504,7 +504,7 @@ namespace Babylon
 
             try
             {
-                m_requestAnimationFrameCalback.Call({});
+                m_requestAnimationFrameCallback.Call({});
                 GetFrameBufferManager().Reset();
             }
             catch (const std::exception& ex)
@@ -569,10 +569,10 @@ namespace Babylon
     {
         auto callback = info[0].As<Napi::Function>();
 
-        if (m_requestAnimationFrameCalback.IsEmpty() ||
-            m_requestAnimationFrameCalback.Value() != callback)
+        if (m_requestAnimationFrameCallback.IsEmpty() ||
+            m_requestAnimationFrameCallback.Value() != callback)
         {
-            m_requestAnimationFrameCalback = Napi::Persistent(callback);
+            m_requestAnimationFrameCallback = Napi::Persistent(callback);
         }
 
         ScheduleRender();
@@ -870,7 +870,7 @@ namespace Babylon
     {
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1));
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1), uniformInfo->YFlip);
     }
 
     template<int size, typename arrayType>
@@ -893,7 +893,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, uniformInfo->YFlip, elementLength / size);
     }
 
     template<int size>
@@ -907,7 +907,7 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, values);
+        m_currentProgram->SetUniform(uniformInfo->Handle, values, uniformInfo->YFlip);
     }
 
     template<int size>
@@ -932,11 +932,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16));
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16), uniformInfo->YFlip);
         }
         else
         {
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength));
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength), uniformInfo->YFlip);
         }
     }
 

@@ -478,6 +478,7 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
 #undef IF_NAME_RETURN_ATTRIB
                 return {FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++, name};
+#endif
             }
 
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids)
