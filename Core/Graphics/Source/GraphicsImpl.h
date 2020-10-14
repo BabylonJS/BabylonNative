@@ -19,6 +19,7 @@ namespace Babylon
         Impl();
         ~Impl();
 
+        void* GetNativeWindow();
         void SetNativeWindow(void* nativeWindowPtr);
         void Resize(size_t width, size_t height);
 

@@ -30,6 +30,12 @@ namespace Babylon
         bgfx::shutdown();
     }
 
+    void* Graphics::Impl::GetNativeWindow()
+    {
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        return m_bgfxState.InitState.platformData.nwh;
+    }
+
     void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr)
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
@@ -187,7 +193,7 @@ namespace Babylon
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow(nativeWindowPtr);
         graphics->UpdateSize(width, height);
-        return std::move(graphics);
+        return graphics;
     }
 
     template<>

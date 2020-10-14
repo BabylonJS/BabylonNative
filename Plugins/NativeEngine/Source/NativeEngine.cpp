@@ -471,43 +471,23 @@ namespace Babylon
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
-        : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()), Plugins::Internal::NativeWindow::GetFromJavaScript(info.Env()))
+        : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()))
     {
     }
 
-    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime, Plugins::Internal::NativeWindow& nativeWindow)
+    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
         , AutomaticRenderingEnabled{info.This().As<Napi::Object>().Get(JS_AUTO_RENDER_PROPERTY_NAME).ToBoolean()}
         , RuntimeScheduler{runtime}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_engineState{BGFX_STATE_DEFAULT}
-        , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
-        UpdateSize(static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()));
     }
 
     NativeEngine::~NativeEngine()
     {
         Dispose();
-    }
-
-    void NativeEngine::UpdateSize(size_t width, size_t height)
-    {
-        const auto w = static_cast<uint16_t>(width);
-        const auto h = static_cast<uint16_t>(height);
-
-        auto bgfxStats = bgfx::getStats();
-        if (w != bgfxStats->width || h != bgfxStats->height)
-        {
-            bgfx::reset(w, h, BGFX_RESET_FLAGS);
-            bgfx::setViewRect(0, 0, 0, w, h);
-#ifdef __APPLE__
-            bgfx::frame();
-#else
-            bgfx::touch(0);
-#endif
-        }
     }
 
     template<typename SchedulerT>

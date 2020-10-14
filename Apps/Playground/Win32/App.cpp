@@ -13,7 +13,6 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -113,9 +112,6 @@ namespace
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-            // Initialize NativeWindow plugin.
-            Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
-
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
@@ -158,13 +154,6 @@ namespace
     void UpdateWindowSize(size_t width, size_t height)
     {
         graphics->UpdateSize(width, height);
-        runtime->Dispatch([width, height](Napi::Env env) {
-            // This probably needs to be modified to be callable on any thread and depend privately
-            // on the internal contract of Graphics so it can hook up to the correct logic flow to 
-            // do this at the right time. In fact, the NativeWindow may need to be subsumed into 
-            // the Graphics component.
-            Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-        });
     }
 }
 
