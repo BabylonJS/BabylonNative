@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" IgnorableNamespaces="uap mp rescap">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"  xmlns:uap2="http://schemas.microsoft.com/appx/manifest/uap/windows10/2" IgnorableNamespaces="uap mp rescap uap2">
   <Identity Name="4b8194f5-9fc7-444b-85a7-2a03e76cbb52" Publisher="CN=sevan" Version="1.0.0.0" />
   <mp:PhoneIdentity PhoneProductId="4b8194f5-9fc7-444b-85a7-2a03e76cbb52" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
@@ -35,5 +35,6 @@
   <Capabilities>
     <Capability Name="internetClient" />
     <rescap:Capability Name="broadFileSystemAccess" />
+    <uap2:Capability Name="spatialPerception"/>
   </Capabilities>
 </Package>
