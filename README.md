@@ -193,28 +193,17 @@ project. Build and run this app by pressing the green "Play" button or by pressi
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required 
 by dependencies)
 
-HoloLens 2 supports UWP applications. A physical **HoloLens 2** device uses `arm64` binaries; whereas, the [**HoloLens 2 emulator**](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/platform-capabilities-and-apis/using-the-hololens-emulator) can execute both `Win32` and `x64` binaries. To create a HoloLens 2 Visual Studio solution for a physical device, run the following command from the `BabylonNative/Build` directory:
+HoloLens 2 supports `arm64` UWP applications. To create a HoloLens 2 Visual Studio solution for a physical device, run the following command from the `BabylonNative/Build` directory:
 
 ```
 cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
 ```
 
-To create a Visual Studio solution for the [**HoloLens 2 emulator**](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/platform-capabilities-and-apis/using-the-hololens-emulator), run the following command from the `BabylonNative/Build` directory:
-
-```
-cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A x64 ..
-```
-
-To build for both **HoloLens 2** and the [**HoloLens 2 emulator**](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/platform-capabilities-and-apis/using-the-hololens-emulator) in a local development environment, one can do the following:
-1. Create `BabylonNative/Build/uwp_arm64` and `BabylonNative/Build/uwp_x64` directories.
-1. Inside the `BabylonNative/Build/uwp_arm64` directory, run `cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..\..`
-1. Inside the `BabylonNative/Build/uwp_x64` directory, run `cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A x64 ..\..`
-1. There will now be two separate Visual Studio solutions in the `BabylonNative/Build/uwp_arm64` and `BabylonNative/Build/uwp_x64` directories. The `BabylonNative/Build/uwp_arm64` directory will allow building for **HoloLens 2**. The `BabylonNative/Build/uwp_x64` directory will allow building for the [**HoloLens 2 emulator**](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/platform-capabilities-and-apis/using-the-hololens-emulator).
-
 **Additional notes for HoloLens 2 development**:
+* At this time, running immersive applications on **HoloLens 2 emulators** is **NOT** supported. We are tracking support of **HoloLens 2 emulators** [here](https://github.com/BabylonJS/BabylonNative/issues/448).
 * For the Playground app, setting the `hololens` javascript variable to true in `experience.js` will configure the experience for **HoloLens 2**.
 * HoloLens 2 immersive experiences require the `Spatial Perception` UWP capability. This capability is enabled in the application's `Package.appxmanifest`. When creating a custom BabylonNative project, one will need to enable the `Spatial Perception` UWP cability in their app's `Package.appxmanifest`. For more information on UWP capabilities, see [here](https://docs.microsoft.com/en-us/windows/uwp/packaging/app-capability-declarations).
-* HoloLens 2 immersive experiences are built on top of `OpenXR`. Updates to the `OpenXR` runtime should automtically be installed on physical **HoloLens 2** devices through the Windows Store. If for some reason updates are not automatically installed (custom device configurations, lack of network connectivity, etc), developers may need to manually install updates for the `OpenXR` runtime through the Windows Store. For **HoloLens 2 emulators**, its suggested to download newer versions of the emulator to obtain newer versions of `OpenXR`. For more information on `OpenXR` and installing newer versions of OpenXR/newer emulators, see [here](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/native/openxr-getting-started).
+* HoloLens 2 immersive experiences are built on top of `OpenXR`. Updates to the `OpenXR` runtime should automtically be installed on physical **HoloLens 2** devices through the Windows Store. If for some reason updates are not automatically installed (custom device configurations, lack of network connectivity, etc), developers may need to manually install updates for the `OpenXR` runtime through the Windows Store. For more information on installing newer versions of `OpenXR`, see [here](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/native/openxr-getting-started).
 
 ### **Building on macOS, Targeting macOS**
 
