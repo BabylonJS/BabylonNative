@@ -19,7 +19,8 @@ namespace Babylon
         template<typename CallableT>
         Impl(CallableT initializer)
         {
-            arcana::make_task(Dispatcher, arcana::cancellation::none(), [this, initializer = std::move(initializer)] {
+            // TODO: THIS IS WRONG
+            arcana::make_task(m_renderWorkDispatcher, arcana::cancellation::none(), [this, initializer = std::move(initializer)] {
                 initializer(*this);
             });
         }
@@ -47,12 +48,12 @@ namespace Babylon
     private:
         bool m_rendering{false};
 
-        arcana::manual_dispatcher<128> Dispatcher{};
-        arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> AfterRenderTaskCompletionSource{};
+        arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
+        arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
 
-        std::vector<arcana::task<void, std::exception_ptr>> RenderWorkTasks{};
-        std::mutex RenderWorkTasksMutex{};
+        arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
+        std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
+        std::mutex m_renderWorkTasksMutex{};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone);
     };

@@ -26,6 +26,8 @@ namespace
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
+
+    constexpr bool RENDER_ON_JS_THREAD{false};
 }
 
 extern "C"
@@ -87,7 +89,7 @@ extern "C"
                 Babylon::Plugins::NativeWindow::Initialize(env, window, width, height);
 
                 g_graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env);
+                Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
 
@@ -198,6 +200,9 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        g_scriptLoader->Eval("console.log(\"Rendering frame...\");", "");
+        if constexpr (!RENDER_ON_JS_THREAD)
+        {
+            g_graphics->RenderCurrentFrame();
+        }
     }
 }

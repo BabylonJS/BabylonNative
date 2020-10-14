@@ -11,18 +11,18 @@ namespace Babylon
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
     {
-        std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
-        RenderWorkTasks.push_back(std::move(renderWorkTask));
+        std::scoped_lock RenderWorkTasksLock{m_renderWorkTasksMutex};
+        m_renderWorkTasks.push_back(std::move(renderWorkTask));
     }
 
     arcana::task<void, std::exception_ptr> Graphics::Impl::GetBeforeRenderTask()
     {
-        return BeforeRenderTaskCompletionSource.as_task();
+        return m_beforeRenderTaskCompletionSource.as_task();
     }
 
     arcana::task<void, std::exception_ptr> Graphics::Impl::GetAfterRenderTask()
     {
-        return AfterRenderTaskCompletionSource.as_task();
+        return m_afterRenderTaskCompletionSource.as_task();
     }
 
     void Graphics::Impl::StartRenderingCurrentFrame()
@@ -33,10 +33,11 @@ namespace Babylon
         }
         m_rendering = true;
 
-        Dispatcher.tick(arcana::cancellation::none());
+        // TODO: THIS IS WRONG
+        m_renderWorkDispatcher.tick(arcana::cancellation::none());
 
-        auto oldBeforeRenderTaskCompletionSource = BeforeRenderTaskCompletionSource;
-        BeforeRenderTaskCompletionSource = {};
+        auto oldBeforeRenderTaskCompletionSource = m_beforeRenderTaskCompletionSource;
+        m_beforeRenderTaskCompletionSource = {};
         oldBeforeRenderTaskCompletionSource.complete();
     }
 
@@ -52,7 +53,7 @@ namespace Babylon
         RenderCurrentFrameAsync(finished, workDone);
         while (!finished)
         {
-            Dispatcher.blocking_tick(arcana::cancellation::none());
+            m_renderWorkDispatcher.blocking_tick(arcana::cancellation::none());
         }
 
         if (workDone)
@@ -60,8 +61,8 @@ namespace Babylon
             bgfx::frame();
         }
 
-        auto oldRenderTaskCompletionSource = AfterRenderTaskCompletionSource;
-        AfterRenderTaskCompletionSource = {};
+        auto oldRenderTaskCompletionSource = m_afterRenderTaskCompletionSource;
+        m_afterRenderTaskCompletionSource = {};
         oldRenderTaskCompletionSource.complete();
 
         m_rendering = false;
@@ -72,12 +73,12 @@ namespace Babylon
         bool anyTasks{};
         arcana::task<void, std::exception_ptr> whenAllTask{};
         {
-            std::scoped_lock RenderWorkTasksLock{RenderWorkTasksMutex};
-            anyTasks = !RenderWorkTasks.empty();
+            std::scoped_lock RenderWorkTasksLock{m_renderWorkTasksMutex};
+            anyTasks = !m_renderWorkTasks.empty();
             if (anyTasks)
             {
-                whenAllTask = arcana::when_all<std::exception_ptr>(RenderWorkTasks);
-                RenderWorkTasks.clear();
+                whenAllTask = arcana::when_all<std::exception_ptr>(m_renderWorkTasks);
+                m_renderWorkTasks.clear();
             }
         }
 
@@ -90,7 +91,7 @@ namespace Babylon
         }
         else
         {
-            return whenAllTask.then(Dispatcher, arcana::cancellation::none(), [this, &finished, &workDone]() mutable {
+            return whenAllTask.then(m_renderWorkDispatcher, arcana::cancellation::none(), [this, &finished, &workDone]() mutable {
                 return RenderCurrentFrameAsync(finished, workDone);
             });
         }
