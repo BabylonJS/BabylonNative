@@ -40,7 +40,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
     const [appState, setAppState] = useState(AppState.currentState);
     const [fps, setFps] = useState<number>();
     const engineViewRef = useRef<Component<NativeEngineViewProps>>(null);
-    const snapshotPromise = useRef<{promise: Promise<string>, resolve: (data: string) => void}>();
+    const snapshotPromise = useRef<{ promise: Promise<string>, resolve: (data: string) => void }>();
 
     useEffect(() => {
         (async () => {
@@ -80,6 +80,8 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
                 };
             }
         }
+
+        return undefined;
     }, [props.camera, appState]);
 
     useEffect(() => {
@@ -99,6 +101,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
         }
 
         setFps(undefined);
+        return undefined;
     }, [props.camera, props.displayFrameRate]);
 
     // Call onInitialized if provided, and include the callback for takeSnapshot.
@@ -134,7 +137,8 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
 
     // Handle snapshot data returned.
     const snapshotDataReturnedHandler = useCallback((event: SyntheticEvent) => {
-        const { data } = event.nativeEvent;
+        // The nativeEvent is a DOMEvent which doesn't have a typescript definition. Cast it to an Event object with a data property.
+        const { data } = event.nativeEvent as Event & { data: string };
         if (snapshotPromise.current) {
             snapshotPromise.current.resolve(data);
             snapshotPromise.current = undefined;
@@ -143,9 +147,9 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
 
     if (!failedInitialization) {
         return (
-            <View style={[props.style, {overflow: "hidden"}]}>
-                <NativeEngineView ref={engineViewRef} style={{flex: 1}} onSnapshotDataReturned={snapshotDataReturnedHandler} />
-                { fps && <Text style={{color: 'yellow', position: 'absolute', margin: 10, right: 0, top: 0}}>FPS: {Math.round(fps)}</Text> }
+            <View style={[props.style, { overflow: "hidden" }]}>
+                <NativeEngineView ref={engineViewRef} style={{ flex: 1 }} onSnapshotDataReturned={snapshotDataReturnedHandler} />
+                { fps && <Text style={{ color: 'yellow', position: 'absolute', margin: 10, right: 0, top: 0 }}>FPS: {Math.round(fps)}</Text>}
             </View>
         );
     } else {
@@ -155,9 +159,9 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
         }
 
         return (
-            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                <Text style={{fontSize: 24}}>{message}</Text>
-                { isRemoteDebuggingEnabled && <Text style={{fontSize: 12}}>React Native remote debugging does not work with Babylon Native.</Text> }
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 24 }}>{message}</Text>
+                { isRemoteDebuggingEnabled && <Text style={{ fontSize: 12 }}>React Native remote debugging does not work with Babylon Native.</Text>}
             </View>
         );
     }
