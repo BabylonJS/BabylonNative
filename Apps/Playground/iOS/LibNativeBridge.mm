@@ -4,7 +4,6 @@
 #import <Babylon/Graphics.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
-#import <Babylon/Plugins/NativeWindow.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
@@ -36,7 +35,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     float height = inHeight;
     void* windowPtr = view;
     
-    graphics = Babylon::Graphics::InitializeFromWindow(windowPtr, width, height);
+    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -44,9 +43,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-        Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
-
+        
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -71,14 +68,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     if (graphics)
     {
         graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
-    }
-    
-    if (runtime) 
-    {
-        runtime->Dispatch([inWidth, inHeight](Napi::Env env)
-        {
-            Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
-        });
     }
 }
 

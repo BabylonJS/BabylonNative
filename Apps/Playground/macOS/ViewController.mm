@@ -3,7 +3,6 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
 #import <Babylon/Plugins/NativeEngine.h>
-#import <Babylon/Plugins/NativeWindow.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/ScriptLoader.h>
@@ -41,7 +40,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     NSWindow* nativeWindow = [[self view] window];
     void* windowPtr = (__bridge void*)nativeWindow;
 
-    graphics = Babylon::Graphics::InitializeFromWindow(windowPtr, width, height);
+    graphics = Babylon::Graphics::CreaateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -103,16 +102,12 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)viewDidLayout {
     [super viewDidLayout];
-    if (runtime)
+    if (graphics)
     {
         NSSize size = [self view].frame.size;
         float width = size.width;
         float height = size.height;
         graphics->UpdateSize(width, height);
-        runtime->Dispatch([width, height](Napi::Env env)
-        {
-            Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(width), static_cast<size_t>(height));
-        });
     }
 }
 
