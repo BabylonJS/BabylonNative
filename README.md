@@ -200,7 +200,7 @@ cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
 ```
 
 **Additional notes for HoloLens 2 development**:
-* At this time, running immersive applications on **HoloLens 2 emulators** is **NOT** supported. We are tracking support of **HoloLens 2 emulators** [here](https://github.com/BabylonJS/BabylonNative/issues/448).
+* At this time, running immersive applications on **HoloLens 2 emulators** is **NOT** supported. We are tracking support for **HoloLens 2 emulators** [here](https://github.com/BabylonJS/BabylonNative/issues/448).
 * For the Playground app, setting the `hololens` javascript variable to true in `experience.js` will configure the experience for **HoloLens 2**.
 * HoloLens 2 immersive experiences require the `Spatial Perception` UWP capability. This capability is enabled in the application's `Package.appxmanifest`. When creating a custom BabylonNative project, one will need to enable the `Spatial Perception` UWP cability in their app's `Package.appxmanifest`. For more information on UWP capabilities, see [here](https://docs.microsoft.com/en-us/windows/uwp/packaging/app-capability-declarations).
 * HoloLens 2 immersive experiences are built on top of `OpenXR`. Updates to the `OpenXR` runtime should automtically be installed on physical **HoloLens 2** devices through the Windows Store. If for some reason updates are not automatically installed (custom device configurations, lack of network connectivity, etc), developers may need to manually install updates for the `OpenXR` runtime through the Windows Store. For more information on installing newer versions of `OpenXR`, see [here](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/native/openxr-getting-started).
