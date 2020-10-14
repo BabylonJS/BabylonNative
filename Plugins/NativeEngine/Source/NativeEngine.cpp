@@ -656,8 +656,8 @@ namespace Babylon
         VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
         VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
 
-        const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value();
+        const std::string kind{info[2].As<Napi::String>().Utf8Value()};
+        const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value(); 
         const uint32_t byteStride = info[4].As<Napi::Number>().Uint32Value();
         const uint32_t numElements = info[5].As<Napi::Number>().Uint32Value();
         const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
@@ -665,7 +665,9 @@ namespace Babylon
 
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
-        const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
+
+        const auto locationIndex = m_currentProgram->VertexAttributeLocations[kind];
+        const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(locationIndex);
         const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
         vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
