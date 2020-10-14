@@ -13,11 +13,12 @@ namespace Babylon
 
         ~Graphics();
 
-        template<typename NativeWindowT>
-        static std::unique_ptr<Graphics> InitializeFromWindow(NativeWindowT window, size_t width, size_t height);
+        template<typename... Ts>
+        static std::unique_ptr<Graphics> CreateGraphics(Ts...);
 
         template<typename NativeWindowT>
-        void ReinitializeFromWindow(NativeWindowT window, size_t width, size_t height);
+        void UpdateWindow(NativeWindowT window);
+        void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
 
@@ -30,10 +31,9 @@ namespace Babylon
             FinishRenderingCurrentFrame();
         }
 
-        void UpdateSize(size_t width, size_t height);
-
     private:
-        Graphics(void*, size_t, size_t);
+        Graphics();
+
         Graphics(const Graphics&) = delete;
         Graphics(Graphics&&) = delete;
 

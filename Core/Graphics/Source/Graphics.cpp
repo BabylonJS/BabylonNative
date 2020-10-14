@@ -4,20 +4,23 @@
 
 namespace Babylon
 {
-    Graphics::Impl::Impl(void* nativeWindowPtr, size_t width, size_t height)
+    // Forward declares of important specializations.
+    // clang-format off
+    template<> std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void*, size_t, size_t);
+    template<> void Graphics::UpdateWindow<void*>(void*);
+    // clang-format on
+
+    Graphics::Impl::Impl()
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
         m_bgfxState.Initialized = false;
 
         auto& init = m_bgfxState.InitState;
-        init.platformData.nwh = nativeWindowPtr;
 #if (ANDROID)
         init.type = bgfx::RendererType::OpenGLES;
 #else
         init.type = bgfx::RendererType::Direct3D11;
 #endif
-        init.resolution.width = static_cast<uint32_t>(width);
-        init.resolution.height = static_cast<uint32_t>(height);
         init.resolution.reset = BGFX_RESET_FLAGS;
         init.callback = &Callback;
     }
@@ -27,7 +30,7 @@ namespace Babylon
         bgfx::shutdown();
     }
 
-    void Graphics::Impl::ReinitializeFromWindow(void* nativeWindowPtr, size_t width, size_t height)
+    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr)
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
         m_bgfxState.Dirty = true;
@@ -38,10 +41,6 @@ namespace Babylon
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
-
-        auto& res = m_bgfxState.InitState.resolution;
-        res.width = static_cast<uint32_t>(width);
-        res.height = static_cast<uint32_t>(height);
     }
 
     void Graphics::Impl::Resize(size_t width, size_t height)
@@ -175,23 +174,26 @@ namespace Babylon
         }
     }
 
-    Graphics::Graphics(void* nativeWindowPtr, size_t width, size_t height)
-        : m_impl{std::make_unique<Graphics::Impl>(nativeWindowPtr, width, height)}
+    Graphics::Graphics()
+        : m_impl{std::make_unique<Impl>()}
     {
     }
 
     Graphics::~Graphics() = default;
 
     template<>
-    std::unique_ptr<Graphics> Graphics::InitializeFromWindow<void*>(void* nativeWindowPtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
     {
-        return std::unique_ptr<Graphics>(new Graphics(nativeWindowPtr, width, height));
+        std::unique_ptr<Graphics> graphics{new Graphics()};
+        graphics->UpdateWindow(nativeWindowPtr);
+        graphics->UpdateSize(width, height);
+        return std::move(graphics);
     }
 
     template<>
-    void Graphics::ReinitializeFromWindow<void*>(void* windowPtr, size_t width, size_t height)
+    void Graphics::UpdateWindow<void*>(void* windowPtr)
     {
-        m_impl->ReinitializeFromWindow(windowPtr, width, height);
+        m_impl->SetNativeWindow(windowPtr);
     }
 
     void Graphics::UpdateSize(size_t width, size_t height)

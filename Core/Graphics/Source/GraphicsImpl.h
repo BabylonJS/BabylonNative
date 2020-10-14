@@ -16,10 +16,10 @@ namespace Babylon
         static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
     public:
-        Impl(void* nativeWindowPtr, size_t width, size_t height);
+        Impl();
         ~Impl();
 
-        void ReinitializeFromWindow(void* nativeWindowPtr, size_t width, size_t height);
+        void SetNativeWindow(void* nativeWindowPtr);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);

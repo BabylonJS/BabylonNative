@@ -100,7 +100,7 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, width, height);
+        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -159,6 +159,10 @@ namespace
     {
         graphics->UpdateSize(width, height);
         runtime->Dispatch([width, height](Napi::Env env) {
+            // This probably needs to be modified to be callable on any thread and depend privately
+            // on the internal contract of Graphics so it can hook up to the correct logic flow to 
+            // do this at the right time. In fact, the NativeWindow may need to be subsumed into 
+            // the Graphics component.
             Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
     }
