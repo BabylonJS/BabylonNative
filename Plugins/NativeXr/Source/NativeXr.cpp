@@ -166,6 +166,7 @@ namespace
         auto env = jsInputSource.Env();
         jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
+        jsInputSource.Set("triggerValue", Napi::External<decltype(inputSource.TriggerData.TriggerValue)>::New(env, &inputSource.TriggerData.TriggerValue));
 
         // Don't set hands up unless hand data is supported/available
         if (inputSource.JointsTrackedThisFrame)
@@ -182,6 +183,7 @@ namespace
             handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
             jsInputSource.Set("hand", handJointCollection);
         }
+
     }
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
@@ -1517,10 +1519,11 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                        InstanceMethod("getPose", &XRFrame::GetPose),
-                        InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
-                        InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
-                        InstanceMethod("getJointPose", &XRFrame::GetJointPose),
+                            InstanceMethod("getPose", &XRFrame::GetPose),
+                            InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
+                            InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                            InstanceMethod("getJointPose", &XRFrame::GetJointPose),
+                            InstanceMethod("getTriggerValue", &XRFrame::GetTriggerValue),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
@@ -1587,6 +1590,7 @@ namespace Babylon
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
+            Napi::ObjectReference m_jsTriggerValue{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
@@ -1625,6 +1629,14 @@ namespace Babylon
                     pose->Update(xrSpace->GetTransform());
                     return std::move(napiPose);
                 }
+            }
+
+            Napi::Value GetTriggerValue(const Napi::CallbackInfo& info)
+            {
+                assert(info[0].IsExternal());
+                const auto& triggerData = *info[0].As<Napi::External<xr::System::Session::Frame::TriggerData>>().Data();
+                m_jsTriggerValue.Set("triggerValue", triggerData.TriggerValue);
+                return m_jsTriggerValue.Value();
             }
 
             Napi::Value GetJointPose(const Napi::CallbackInfo& info)

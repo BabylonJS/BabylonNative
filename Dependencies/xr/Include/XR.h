@@ -146,6 +146,11 @@ namespace xr
                     bool PoseTracked{ false };
                 };
 
+                struct TriggerData
+                {
+                    float TriggerValue{};
+                };
+
                 struct View
                 {
                     Space Space{};
@@ -185,6 +190,8 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
+                    bool TriggerValueChangedThisFrame{};
+                    TriggerData TriggerData{};
                     Space GripSpace{};
                     Space AimSpace{};
                     HandednessEnum Handedness{};

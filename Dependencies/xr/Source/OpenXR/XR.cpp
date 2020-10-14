@@ -256,7 +256,13 @@ namespace xr
             XrAction ControllerGetAimPoseAction{};
             std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerAimPoseSpaces{};
 
-            static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
+            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME{ "controller_get_trigger_action" };
+            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME{ "Controller Trigger" };
+            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX{ "/input/trigger/value" };
+            XrAction ControllerGetTriggerValueAction{};
+
+            //static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
+            static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::Plane> Planes{};
@@ -637,12 +643,40 @@ namespace xr
                 }
             }
 
-            // Provide suggested bindings to instance
-            XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
-            suggestedBindings.suggestedBindings = bindings.data();
-            suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
+            
+            // Create controller controller get menu click action and suggested bindings
+            {
+                XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
+                actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+                strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME);
+                strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME);
+                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
+                actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
+                XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetTriggerValueAction));
+                // For each controller subaction
+                for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+                {
+                    // Create suggested binding
+                    std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+                    path.append(ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX);
+                    bindings.push_back({ ActionResources.ControllerGetTriggerValueAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+                }
+            }
+
+            // Provide default suggested bindings to instance
+            /*XrInteractionProfileSuggestedBinding defaultSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &defaultSuggestedBindings.interactionProfile));
+            defaultSuggestedBindings.suggestedBindings = bindings.data();
+            defaultSuggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &defaultSuggestedBindings));*/
+
+            // Provide Microsoft suggested binding to instance
+            XrInteractionProfileSuggestedBinding microsoftSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
+            microsoftSuggestedBindings.suggestedBindings = bindings.data();
+            microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
@@ -1168,7 +1202,22 @@ namespace xr
                         inputSource.AimSpace.Pose.Orientation.W = location.pose.orientation.w;
                     }
                 }
-                
+
+                // Get trigger value data
+                {
+                    // query input action state
+                    XrActionStateFloat triggerState{XR_TYPE_ACTION_STATE_FLOAT};
+                    XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+                    getInfo.action = actionResources.ControllerGetTriggerValueAction;
+                    XrCheck(xrGetActionStateFloat(session, &getInfo, &triggerState));
+                    auto& inputSource = InputSources[idx];
+                    if (triggerState.changedSinceLastSync)
+                    {
+                        inputSource.TriggerValueChangedThisFrame = true;
+                        inputSource.TriggerData.TriggerValue = triggerState.currentState;
+                    }
+                }
+
                 // Get joint data
                 if (sessionImpl.HandData.HandsInitialized)
                 {
