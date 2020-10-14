@@ -16,16 +16,11 @@ namespace Babylon
         static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
     public:
-        template<typename CallableT>
-        Impl(CallableT initializer)
-        {
-            // TODO: THIS IS WRONG
-            arcana::make_task(m_renderWorkDispatcher, arcana::cancellation::none(), [this, initializer = std::move(initializer)] {
-                initializer(*this);
-            });
-        }
-
+        Impl(void* nativeWindowPtr, size_t width, size_t height);
         ~Impl();
+
+        void ReinitializeFromWindow(void* nativeWindowPtr, size_t width, size_t height);
+        void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
         static Impl& GetFromJavaScript(Napi::Env);
@@ -47,6 +42,15 @@ namespace Babylon
 
     private:
         bool m_rendering{false};
+
+        struct
+        {
+            std::mutex Mutex{};
+
+            bgfx::Init InitState{};
+            bool Initialized{};
+            bool Dirty{};
+        } m_bgfxState{};
 
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};

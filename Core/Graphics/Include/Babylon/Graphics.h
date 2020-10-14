@@ -33,8 +33,7 @@ namespace Babylon
         void UpdateSize(size_t width, size_t height);
 
     private:
-        template<typename CallableT>
-        Graphics(CallableT initializer);
+        Graphics(void*, size_t, size_t);
         Graphics(const Graphics&) = delete;
         Graphics(Graphics&&) = delete;
 

@@ -4,9 +4,54 @@
 
 namespace Babylon
 {
+    Graphics::Impl::Impl(void* nativeWindowPtr, size_t width, size_t height)
+    {
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        m_bgfxState.Initialized = false;
+
+        auto& init = m_bgfxState.InitState;
+        init.platformData.nwh = nativeWindowPtr;
+#if (ANDROID)
+        init.type = bgfx::RendererType::OpenGLES;
+#else
+        init.type = bgfx::RendererType::Direct3D11;
+#endif
+        init.resolution.width = static_cast<uint32_t>(width);
+        init.resolution.height = static_cast<uint32_t>(height);
+        init.resolution.reset = BGFX_RESET_FLAGS;
+        init.callback = &Callback;
+    }
+
     Graphics::Impl::~Impl()
     {
         bgfx::shutdown();
+    }
+
+    void Graphics::Impl::ReinitializeFromWindow(void* nativeWindowPtr, size_t width, size_t height)
+    {
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        m_bgfxState.Dirty = true;
+
+        auto& pd = m_bgfxState.InitState.platformData;
+        pd.ndt = nullptr;
+        pd.nwh = nativeWindowPtr;
+        pd.context = nullptr;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
+
+        auto& res = m_bgfxState.InitState.resolution;
+        res.width = static_cast<uint32_t>(width);
+        res.height = static_cast<uint32_t>(height);
+    }
+
+    void Graphics::Impl::Resize(size_t width, size_t height)
+    {
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        m_bgfxState.Dirty = true;
+
+        auto& res = m_bgfxState.InitState.resolution;
+        res.width = static_cast<uint32_t>(width);
+        res.height = static_cast<uint32_t>(height);
     }
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
@@ -33,8 +78,33 @@ namespace Babylon
         }
         m_rendering = true;
 
-        // TODO: THIS IS WRONG
-        m_renderWorkDispatcher.tick(arcana::cancellation::none());
+        {
+            std::scoped_lock lock{m_bgfxState.Mutex};
+
+            if (!m_bgfxState.Initialized)
+            {
+                // Initialize bgfx.
+                auto& init = m_bgfxState.InitState;
+                bgfx::setPlatformData(init.platformData);
+                bgfx::init(init);
+                bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
+                bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
+                bgfx::touch(0);
+
+                m_bgfxState.Initialized = true;
+                m_bgfxState.Dirty = false;
+            }
+            else if (m_bgfxState.Dirty)
+            {
+                bgfx::setPlatformData(m_bgfxState.InitState.platformData);
+                auto& res = m_bgfxState.InitState.resolution;
+                bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
+                bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
+                bgfx::touch(0);
+
+                m_bgfxState.Dirty = false;
+            }
+        }
 
         auto oldBeforeRenderTaskCompletionSource = m_beforeRenderTaskCompletionSource;
         m_beforeRenderTaskCompletionSource = {};
@@ -58,6 +128,14 @@ namespace Babylon
 
         if (workDone)
         {
+            {
+                std::scoped_lock lock{m_bgfxState.Mutex};
+                if (m_bgfxState.Dirty)
+                {
+                    bgfx::discard();
+                }
+            }
+
             bgfx::frame();
         }
 
@@ -97,9 +175,8 @@ namespace Babylon
         }
     }
 
-    template<typename CallableT>
-    Graphics::Graphics(CallableT initializer)
-        : m_impl{std::make_unique<Graphics::Impl>(std::move(initializer))}
+    Graphics::Graphics(void* nativeWindowPtr, size_t width, size_t height)
+        : m_impl{std::make_unique<Graphics::Impl>(nativeWindowPtr, width, height)}
     {
     }
 
@@ -108,38 +185,18 @@ namespace Babylon
     template<>
     std::unique_ptr<Graphics> Graphics::InitializeFromWindow<void*>(void* nativeWindowPtr, size_t width, size_t height)
     {
-        return std::unique_ptr<Graphics>(new Graphics([nativeWindowPtr, width, height](Graphics::Impl& impl) {
-            // Initialize bgfx.
-            bgfx::Init init{};
-            init.platformData.nwh = nativeWindowPtr;
-            bgfx::setPlatformData(init.platformData);
-#if (ANDROID)
-            init.type = bgfx::RendererType::OpenGLES;
-#else
-            init.type = bgfx::RendererType::Direct3D11;
-#endif
-            init.resolution.width = static_cast<uint32_t>(width);
-            init.resolution.height = static_cast<uint32_t>(height);
-            init.resolution.reset = BGFX_RESET_FLAGS;
-            init.callback = &impl.Callback;
-            bgfx::init(init);
-            bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-            bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
-            bgfx::touch(0);
-        }));
+        return std::unique_ptr<Graphics>(new Graphics(nativeWindowPtr, width, height));
     }
 
     template<>
     void Graphics::ReinitializeFromWindow<void*>(void* windowPtr, size_t width, size_t height)
     {
-        bgfx::PlatformData pd{};
-        pd.ndt = nullptr;
-        pd.nwh = windowPtr;
-        pd.context = nullptr;
-        pd.backBuffer = nullptr;
-        pd.backBufferDS = nullptr;
-        bgfx::setPlatformData(pd);
-        bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height), BGFX_RESET_FLAGS);
+        m_impl->ReinitializeFromWindow(windowPtr, width, height);
+    }
+
+    void Graphics::UpdateSize(size_t width, size_t height)
+    {
+        m_impl->Resize(width, height);
     }
 
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
@@ -169,25 +226,5 @@ namespace Babylon
     void Graphics::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
-    }
-
-    void Graphics::UpdateSize(size_t width, size_t height)
-    {
-        m_impl->GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [width, height] {
-            const auto w = static_cast<uint16_t>(width);
-            const auto h = static_cast<uint16_t>(height);
-
-            auto bgfxStats = bgfx::getStats();
-            if (w != bgfxStats->width || h != bgfxStats->height)
-            {
-                bgfx::reset(w, h, BGFX_RESET_FLAGS);
-                bgfx::setViewRect(0, 0, 0, w, h);
-#ifdef __APPLE__
-                bgfx::frame();
-#else
-                bgfx::touch(0);
-#endif
-            }
-        });
     }
 }
