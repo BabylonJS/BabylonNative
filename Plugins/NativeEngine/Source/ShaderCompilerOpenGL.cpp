@@ -7,6 +7,12 @@
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_glsl.hpp>
+#include <bgfx/bgfx.h>
+
+namespace bgfx::gl
+{
+    void setAttribName(bgfx::Attrib::Enum, const char*);
+}
 
 namespace Babylon
 {
@@ -52,6 +58,25 @@ namespace Babylon
 
     ShaderCompiler::ShaderCompiler()
     {
+        bgfx::gl::setAttribName(bgfx::Attrib::Position, "position");
+        bgfx::gl::setAttribName(bgfx::Attrib::Normal, "normal");
+        bgfx::gl::setAttribName(bgfx::Attrib::Tangent, "tangent");
+        bgfx::gl::setAttribName(bgfx::Attrib::Bitangent, "__unsupported__");
+        bgfx::gl::setAttribName(bgfx::Attrib::Color0, "color");
+        bgfx::gl::setAttribName(bgfx::Attrib::Color1, "__unsupported__");
+        bgfx::gl::setAttribName(bgfx::Attrib::Color2, "__unsupported__");
+        bgfx::gl::setAttribName(bgfx::Attrib::Color3, "__unsupported__");
+        bgfx::gl::setAttribName(bgfx::Attrib::Indices, "matricesIndices");
+        bgfx::gl::setAttribName(bgfx::Attrib::Weight, "matricesWeights");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord0, "uv");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord1, "uv2");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord2, "uv3");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord3, "uv4");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord4, "uv5");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord5, "uv6");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord6, "__unsupported__");
+        bgfx::gl::setAttribName(bgfx::Attrib::TexCoord7, "__unsupported__");
+
         glslang::InitializeProcess();
     }
 
