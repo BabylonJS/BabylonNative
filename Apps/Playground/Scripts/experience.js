@@ -226,18 +226,10 @@ CreateBoxAsync().then(function () {
                     sessionMode = "immersive-vr";
 
                     // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
-                    // Create a mesh to display for each hand joint
-                    const jointMesh = BABYLON.SphereBuilder.CreateSphere("jointParent", { diameter: 1, }, scene);
-                    const material = new BABYLON.StandardMaterial("jointMaterial", scene);
-                    material.alpha = 1;
-                    material.diffuseColor = BABYLON.Color3.White();
-                    jointMesh.material = material;
-
-                    // Enable hand tracking
                     xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HAND_TRACKING,
                         "latest",
-                        { xrInput: xr.input, jointMeshes: { sourceMesh: jointMesh } });
+                        { xrInput: xr.input });
                 }
 
                 xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
