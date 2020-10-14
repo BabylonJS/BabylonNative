@@ -8,6 +8,7 @@ var ar = false;
 var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
+var hololens = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -133,7 +134,7 @@ CreateBoxAsync().then(function () {
         scene.render();
     });
 
-    if (vr || ar) {
+    if (vr || ar || hololens) {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
                 if (xrHitTest) {
@@ -219,7 +220,33 @@ CreateBoxAsync().then(function () {
                     });
                 }
 
-                xr.baseExperience.enterXRAsync(vr ? "immersive-vr" : "immersive-ar", "unbounded", xr.renderTarget);
+                let sessionMode = vr ? "immersive-vr" : "immersive-ar"
+                if (hololens) {
+                    // Because HoloLens 2 is a head mounted display, its Babylon.js immersive experience more closely aligns to vr
+                    sessionMode = "immersive-vr";
+
+                    // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
+                    // Create a mesh to display for each hand joint
+                    const jointMesh = BABYLON.SphereBuilder.CreateSphere("jointParent", { diameter: 1, }, scene);
+                    const material = new BABYLON.StandardMaterial("jointMaterial", scene);
+                    material.alpha = 1;
+                    material.diffuseColor = BABYLON.Color3.White();
+                    jointMesh.material = material;
+
+                    // Enable hand tracking
+                    xr.baseExperience.featuresManager.enableFeature(
+                        BABYLON.WebXRFeatureName.HAND_TRACKING,
+                        "latest",
+                        { xrInput: xr.input, jointMeshes: { sourceMesh: jointMesh } });
+                }
+
+                xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
+                    if (hololens) {
+                        // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
+                        xrSessionManager.scene.autoClear = true;
+                        xrSessionManager.scene.clearColor = BABYLON.Color4.FromColor3(Color3.Black());
+                    }
+                });
             });
         }, 5000);
     }
