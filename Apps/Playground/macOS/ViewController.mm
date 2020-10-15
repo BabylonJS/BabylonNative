@@ -44,12 +44,10 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-    runtime->Dispatch([windowPtr, width, height](Napi::Env env)
+    runtime->Dispatch([](Napi::Env env)
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-        Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
