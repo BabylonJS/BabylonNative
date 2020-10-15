@@ -13,6 +13,8 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
+#include <bx/math.h>
+
 #include <queue>
 #include <regex>
 #include <sstream>
@@ -24,17 +26,23 @@ namespace Babylon
     {
         namespace TextureSampling
         {
-            constexpr uint32_t NEAREST = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;                               // nearest is mag = nearest and min = nearest and mip = linear
-            constexpr uint32_t BILINEAR = BGFX_SAMPLER_MIP_POINT;                                                       // Bilinear is mag = linear and min = linear and mip = nearest
-            constexpr uint32_t TRILINEAR = 0;                                                                           // Trilinear is mag = linear and min = linear and mip = linear
-            constexpr uint32_t ANISOTROPIC = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;  // mag = nearest and min = nearest and mip = nearest
-            constexpr uint32_t POINT_COMPARE = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;                         // mag = nearest and min = linear and mip = nearest
-            constexpr uint32_t TRILINEAR_COMPARE = BGFX_SAMPLER_MAG_POINT;                                              // mag = nearest and min = linear and mip = linear
-            constexpr uint32_t MINBILINEAR_MAGPOINT = BGFX_SAMPLER_MAG_POINT;                                           // mag = nearest and min = linear and mip = none
-            constexpr uint32_t MINPOINT_MAGPOINT_MIPLINEAR = BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT;           // mag = nearest and min = nearest and mip = none
-            constexpr uint32_t MINPOINT_MAGLINEAR_MIPPOINT = BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_MIP_POINT;           // mag = linear and min = nearest and mip = nearest
-            constexpr uint32_t MINPOINT_MAGLINEAR_MIPLINEAR = BGFX_SAMPLER_MIN_POINT;                                   // mag = linear and min = nearest and mip = linear
-            constexpr uint32_t MINLINEAR_MAGPOINT_MIPPOINT = 0;                                                         // mag = linear and min = linear and mip = none
+            constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
+
+            // clang-format off
+            // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                         MIN                         MIP
+            constexpr uint32_t NEAREST_NEAREST =                BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t LINEAR_LINEAR =                  BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t LINEAR_LINEAR_MIPLINEAR =        BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t NEAREST_NEAREST_MIPNEAREST =     BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_MIP_POINT  ;
+            constexpr uint32_t NEAREST_LINEAR_MIPNEAREST =      BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIP_POINT  ;
+            constexpr uint32_t NEAREST_LINEAR_MIPLINEAR =       BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t NEAREST_LINEAR =                 BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t NEAREST_NEAREST_MIPLINEAR =      BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t LINEAR_NEAREST_MIPNEAREST =      BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_MIP_POINT  ;
+            constexpr uint32_t LINEAR_NEAREST_MIPLINEAR =       BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
+            constexpr uint32_t LINEAR_LINEAR_MIPNEAREST =       BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIP_POINT  ;
+            constexpr uint32_t LINEAR_NEAREST =                 BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
+            // clang-format on
         }
 
         namespace AlphaMode
@@ -204,7 +212,7 @@ namespace Babylon
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
-        
+
         void SetBgfxIndexBuffer(uint32_t firstIndex, uint32_t numIndices) const
         {
             const auto nonDynamic = [firstIndex, numIndices](auto handle) {
@@ -329,8 +337,7 @@ namespace Babylon
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
-            {
-                InstanceMethod("dispose", &NativeEngine::Dispose),
+            {InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("getEngine", &NativeEngine::GetEngine),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
@@ -374,6 +381,7 @@ namespace Babylon
                 InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
+                InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -400,17 +408,18 @@ namespace Babylon
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
 
-                InstanceValue("SAMPLER_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST)),
-                InstanceValue("SAMPLER_BILINEAR", Napi::Number::From(env, TextureSampling::BILINEAR)),
-                InstanceValue("SAMPLER_TRILINEAR", Napi::Number::From(env, TextureSampling::TRILINEAR)),
-                InstanceValue("SAMPLER_ANISOTROPIC", Napi::Number::From(env, TextureSampling::ANISOTROPIC)),
-                InstanceValue("SAMPLER_POINT_COMPARE", Napi::Number::From(env, TextureSampling::POINT_COMPARE)),
-                InstanceValue("SAMPLER_TRILINEAR_COMPARE", Napi::Number::From(env, TextureSampling::TRILINEAR_COMPARE)),
-                InstanceValue("SAMPLER_MINBILINEAR_MAGPOINT", Napi::Number::From(env, TextureSampling::MINBILINEAR_MAGPOINT)),
-                InstanceValue("SAMPLER_MINPOINT_MAGPOINT_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGPOINT_MIPLINEAR)),
-                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPPOINT", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPPOINT)),
-                InstanceValue("SAMPLER_MINPOINT_MAGLINEAR_MIPLINEAR", Napi::Number::From(env, TextureSampling::MINPOINT_MAGLINEAR_MIPLINEAR)),
-                InstanceValue("SAMPLER_MINLINEAR_MAGPOINT_MIPPOINT", Napi::Number::From(env, TextureSampling::MINLINEAR_MAGPOINT_MIPPOINT)),
+                InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
+                InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
+                InstanceValue("TEXTURE_LINEAR_LINEAR_MIPLINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR_MIPLINEAR)),
+                InstanceValue("TEXTURE_NEAREST_NEAREST_MIPNEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST_MIPNEAREST)),
+                InstanceValue("TEXTURE_NEAREST_LINEAR_MIPNEAREST", Napi::Number::From(env, TextureSampling::NEAREST_LINEAR_MIPNEAREST)),
+                InstanceValue("TEXTURE_NEAREST_LINEAR_MIPLINEAR", Napi::Number::From(env, TextureSampling::NEAREST_LINEAR_MIPLINEAR)),
+                InstanceValue("TEXTURE_NEAREST_LINEAR", Napi::Number::From(env, TextureSampling::NEAREST_LINEAR)),
+                InstanceValue("TEXTURE_NEAREST_NEAREST_MIPLINEAR", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST_MIPLINEAR)),
+                InstanceValue("TEXTURE_LINEAR_NEAREST_MIPNEAREST", Napi::Number::From(env, TextureSampling::LINEAR_NEAREST_MIPNEAREST)),
+                InstanceValue("TEXTURE_LINEAR_NEAREST_MIPLINEAR", Napi::Number::From(env, TextureSampling::LINEAR_NEAREST_MIPLINEAR)),
+                InstanceValue("TEXTURE_LINEAR_LINEAR_MIPNEAREST", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR_MIPNEAREST)),
+                InstanceValue("TEXTURE_LINEAR_NEAREST", Napi::Number::From(env, TextureSampling::LINEAR_NEAREST)),
 
                 InstanceValue("DEPTH_TEST_LESS", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LESS)),
                 InstanceValue("DEPTH_TEST_LEQUAL", Napi::Number::From(env, BGFX_STATE_DEPTH_TEST_LEQUAL)),
@@ -433,7 +442,7 @@ namespace Babylon
 
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
-                
+
                 InstanceValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
                 InstanceValue("ATTRIB_TYPE_INT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int16))),
                 InstanceValue("ATTRIB_TYPE_FLOAT", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Float))),
@@ -450,8 +459,7 @@ namespace Babylon
                 InstanceValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
                 InstanceValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
 
-                InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))
-            });
+                InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
     }
@@ -504,7 +512,14 @@ namespace Babylon
 
             try
             {
-                m_requestAnimationFrameCallback.Call({});
+                if (!m_requestAnimationFrameCallback.IsEmpty())
+                {
+                    // We can get here from either the normal RequestAnimationFrame or the XR RequestAnimationFrame,
+                    // so we need to clear out the regular RequestAnimationFrame callback to make sure we don't incorrectly
+                    // call it when we have transitioned to the XR RequestAnimationFrame.
+                    auto callback{std::move(m_requestAnimationFrameCallback)};
+                    callback({});
+                }
                 GetFrameBufferManager().Reset();
             }
             catch (const std::exception& ex)
@@ -657,7 +672,7 @@ namespace Babylon
         VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
 
         const std::string kind{info[2].As<Napi::String>().Utf8Value()};
-        const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value(); 
+        const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value();
         const uint32_t byteStride = info[4].As<Napi::Number>().Uint32Value();
         const uint32_t numElements = info[5].As<Napi::Number>().Uint32Value();
         const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
@@ -701,8 +716,7 @@ namespace Babylon
         std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
         ShaderCompiler::BgfxShaderInfo shaderInfo{m_shaderCompiler.Compile(vertexSource, fragmentSource)};
 
-        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos)
-        {
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos) {
             auto numUniforms = bgfx::getShaderUniforms(shader);
             std::vector<bgfx::UniformHandle> uniforms{numUniforms};
             bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
@@ -713,6 +727,12 @@ namespace Babylon
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
                 uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
+                bool YFlip{false};
+                if (!bgfx::getCaps()->originBottomLeft)
+                {
+                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
+                }
+                uniformInfos[info.name].YFlip = YFlip;
             }
         }};
 
@@ -988,7 +1008,7 @@ namespace Babylon
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), uniformInfo->YFlip, elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1031,6 +1051,25 @@ namespace Babylon
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
     }
 
+    Napi::Value NativeEngine::CreateDepthTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        bgfx::FrameBufferHandle frameBufferHandle{};
+
+        // This is WIP
+        auto depthStencilFormat = bgfx::TextureFormat::D32;
+        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false /*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
+        bgfx::Attachment attachment;
+        attachment.init(textureHandle);
+        frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
+
+        texture->Handle = bgfx::getTexture(frameBufferHandle);
+
+        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
+    }
+
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
@@ -1045,8 +1084,10 @@ namespace Babylon
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
             [this, dataSpan, generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
-                // todo: bimg::imageParse will return nullptr when trying to load a texture with an url that is not a valid texture
-                // Like a 404 html page.
+                if (image == nullptr)
+                {
+                    throw std::runtime_error("Unable to decode image."); // exeption will be forwarded to JS
+                }
                 if (invertY)
                 {
                     FlipY(image);
@@ -1293,7 +1334,6 @@ namespace Babylon
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto elementStart = info[1].As<Napi::Number>().Int32Value();
         const auto elementCount = info[2].As<Napi::Number>().Int32Value();
-
         // TODO: handle viewport
 
         if (m_currentBoundIndexBuffer)
@@ -1305,27 +1345,70 @@ namespace Babylon
         uint64_t fillModeState = 0; //indexed tri list
         switch (fillMode)
         {
-        case 2: // MATERIAL_PointFillMode
-            fillModeState = BGFX_STATE_PT_POINTS;
-            break;
-        case 4: // MATERIAL_LineListDrawMode
-            fillModeState = BGFX_STATE_PT_LINES;
-            break;
-        case 6: // MATERIAL_LineStripDrawMode
-            fillModeState = BGFX_STATE_PT_LINESTRIP;
-            break;
-        case 7: // MATERIAL_TriangleStripDrawMode
-            fillModeState = BGFX_STATE_PT_TRISTRIP;
-            break;
+            case 2: // MATERIAL_PointFillMode
+                fillModeState = BGFX_STATE_PT_POINTS;
+                break;
+            case 4: // MATERIAL_LineListDrawMode
+                fillModeState = BGFX_STATE_PT_LINES;
+                break;
+            case 6: // MATERIAL_LineStripDrawMode
+                fillModeState = BGFX_STATE_PT_LINESTRIP;
+                break;
+            case 7: // MATERIAL_TriangleStripDrawMode
+                fillModeState = BGFX_STATE_PT_TRISTRIP;
+                break;
         }
 
-        for (const auto& it : m_currentProgram->Uniforms)
+        if (m_frameBufferManager.IsRenderingToTarget() && (!bgfx::getCaps()->originBottomLeft))
         {
-            const ProgramData::UniformValue& value = it.second;
-            bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            // UV coordinates system are different between OpenGL and Direct3D/Metal
+            // This is not an issue with loaded textures (png/jpg...) because
+            // texel rows bytes are also using a different convention
+            // see https://www.puredevsoftware.com/blog/2018/03/17/texture-coordinates-d3d-vs-opengl/
+            // for render to texture, as the texel bytes are not reversed, sampling a RTT for
+            // post process or shadows will result in inversion on V axis (Y)
+            // to compensate for that, any matrix that is used to project onto clip-space has
+            // to be flipped.
+            // The involved matrices are determined by name and a boolean YFlip is set to true.
+            // When rendering to texture, those matrices are flipped and set as uniform datas.
+            // But because flipping clip-space coordinates also flips triangles winding,
+            // Culling also has to be flipped.
+            for (const auto& it : m_currentProgram->Uniforms)
+            {
+                const ProgramData::UniformValue& value = it.second;
+                if (value.YFlip)
+                {
+                    float tmpMatrix[16];
+                    static const float flipMatrix[16] = {1.f, 0.f, 0.f, 0.f,
+                        0.f, -1.f, 0.f, 0.f,
+                        0.f, 0.f, 1.f, 0.f,
+                        0.f, 0.f, 0.f, 1.f};
+                    bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
+                    bgfx::setUniform({it.first}, tmpMatrix, value.ElementLength);
+                }
+                else
+                {
+                    bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+                }
+            }
+            // change culling
+            uint64_t m_engineStateYFlipped = m_engineState;
+            if (m_engineStateYFlipped & ~BGFX_STATE_CULL_MASK)
+            {
+                m_engineStateYFlipped ^= BGFX_STATE_CULL_MASK;
+            }
+            bgfx::setState(m_engineStateYFlipped | fillModeState);
+        }
+        else
+        {
+            for (const auto& it : m_currentProgram->Uniforms)
+            {
+                const ProgramData::UniformValue& value = it.second;
+                bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+            }
+            bgfx::setState(m_engineState | fillModeState);
         }
 
-        bgfx::setState(m_engineState | fillModeState);
 #if (ANDROID)
         // TODO : find why we need to discard state on Android
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
