@@ -102,7 +102,7 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        runtime->Dispatch([width, height](Napi::Env env) {
+        runtime->Dispatch([width, height](Napi::Env) {
             graphics->UpdateSize(width, height);
         });
     }

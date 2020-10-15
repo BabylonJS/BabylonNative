@@ -255,7 +255,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_SIZE:
         {
-            throw std::runtime_error{"Validation tests cannot be resized."};
+            if (graphics != nullptr)
+            {
+                size_t width = static_cast<size_t>(LOWORD(lParam));
+                size_t height = static_cast<size_t>(HIWORD(lParam));
+                graphics->UpdateSize(width, height);
+            }
+            break;
         }
         case WM_DESTROY:
         {
