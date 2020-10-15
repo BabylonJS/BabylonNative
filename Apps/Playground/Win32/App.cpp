@@ -36,7 +36,7 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    constexpr bool RENDER_ON_JS_THREAD{false};
+    constexpr bool RENDER_ON_JS_THREAD{true};
 
     std::filesystem::path GetModulePath()
     {
