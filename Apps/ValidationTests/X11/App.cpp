@@ -12,7 +12,6 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -58,7 +57,7 @@ namespace
 
         // Initialize console plugin.
         runtime->Dispatch([window](Napi::Env env) {
-            graphics = Babylon::Graphics::InitializeFromWindow((void*)(uintptr_t)window, width, height);
+            graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
             
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
@@ -68,10 +67,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-            // Initialize NativeWindow plugin.
-            Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
-
+            
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
@@ -90,7 +86,6 @@ namespace
     {
         runtime->Dispatch([width, height](Napi::Env env) {
             graphics->UpdateSize(static_cast<size_t>(width), static_cast<size_t>(height));
-            Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
         });
     }
 }
