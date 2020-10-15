@@ -15,20 +15,31 @@ namespace xr
 
 		struct InitOptions
 		{
-			DetectionBoundaryType DetectionBoundaryType;
-			float SphereRadius;
-			XrVector3f BoxDimensions;
+			const XrSession& Session;
+			const XrSupportedExtensions& Extensions;
+			const DetectionBoundaryType DetectionBoundaryType;
+			const float SphereRadius;
+			const XrVector3f BoxDimensions;
+			const XrTime UpdateIntervalInSeconds;
 
-			InitOptions();
+			InitOptions(
+				const XrSession& session,
+				const XrSupportedExtensions& extensions);
 		};
 
 		struct UpdateFrameArgs
 		{
+			const XrSpace& SceneSpace;
+			const XrSupportedExtensions& Extensions;
+			const XrTime DisplayTime;
 			std::vector<System::Session::Frame::Plane>& Planes;
 			std::vector<System::Session::Frame::Plane::Identifier>& UpdatedPlanes;
 			std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
 
 			UpdateFrameArgs(
+				const XrSpace& sceneSpace,
+				const XrSupportedExtensions& extensions,
+				const XrTime displayTime,
 				std::vector<System::Session::Frame::Plane>& planes,
 				std::vector<System::Session::Frame::Plane::Identifier>& updatedPlanes,
 				std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes);

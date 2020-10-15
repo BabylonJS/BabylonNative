@@ -924,6 +924,7 @@ namespace xr
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->sessionImpl.HmdImpl.Context.Extensions();
         auto& displayTime = m_impl->sessionImpl.HmdImpl.Context.ContextImpl->DisplayTime;
         auto& renderResources = m_impl->sessionImpl.RenderResources;
 
@@ -1102,7 +1103,7 @@ namespace xr
             }
 
             const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-            su.UpdateFrame(SceneUnderstanding::UpdateFrameArgs{ Planes, UpdatedPlanes, RemovedPlanes });
+            su.UpdateFrame(SceneUnderstanding::UpdateFrameArgs{ sceneSpace, extensions, displayTime, Planes, UpdatedPlanes, RemovedPlanes });
 
             // Locate all the things.
             auto& actionResources = m_impl->sessionImpl.ActionResources;
@@ -1431,8 +1432,10 @@ namespace xr
 
     void System::Session::SetPlaneDetectionEnabled(bool) const
     {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
         auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
-        su.Initialize({});
+        su.Initialize(SceneUnderstanding::InitOptions{session, extensions});
     }
 
     bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
