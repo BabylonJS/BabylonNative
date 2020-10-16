@@ -1,9 +1,16 @@
 #include "GraphicsImpl.h"
 
+#include <JsRuntimeInternalState.h>
+
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr auto JS_SENTINEL_NAME = "graphicsInitializationPromise";
+    }
+
     // Forward declares of important specializations.
     // clang-format off
     template<> std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void*, size_t, size_t);
@@ -211,6 +218,27 @@ namespace Babylon
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
             .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
+
+        auto deferred = Napi::Promise::Deferred::New(env);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_SENTINEL_NAME, deferred.Promise());
+        bool initialized;
+        {
+            std::scoped_lock lock{m_bgfxState.Mutex};
+            initialized = m_bgfxState.Initialized;
+        }
+        if (initialized)
+        {
+            deferred.Resolve(env.Null());
+        }
+        else
+        {
+            auto& jsRuntime = JsRuntime::GetFromJavaScript(env);
+            this->GetAfterRenderTask().then(arcana::inline_scheduler, JsRuntime::InternalState::GetFromJavaScript(env).Cancellation, [&jsRuntime, deferred = std::move(deferred)]() mutable {
+                jsRuntime.Dispatch([deferred = std::move(deferred)](Napi::Env env) {
+                    deferred.Resolve(env.Null());
+                });
+            });
+        }
     }
 
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
