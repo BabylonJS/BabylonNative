@@ -376,9 +376,9 @@ namespace Babylon
     {
         ~VertexArray()
         {
-            for (auto& vertexBuffer : vertexBuffers)
+            for (auto& vertexBufferPair : vertexBuffers)
             {
-                bgfx::destroy(vertexBuffer.vertexLayoutHandle);
+                bgfx::destroy(vertexBufferPair.second.vertexLayoutHandle);
             }
         }
 
@@ -396,7 +396,7 @@ namespace Babylon
             bgfx::VertexLayoutHandle vertexLayoutHandle{};
         };
 
-        std::vector<VertexBuffer> vertexBuffers{};
+        std::unordered_map<uint32_t, VertexBuffer> vertexBuffers;
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>

@@ -454,17 +454,17 @@ namespace Babylon::ShaderCompilerTraversers
         return {static_cast<unsigned int>(attrib), name}; \
     }
 #if ANDROID
-                IF_NAME_RETURN_ATTRIB("position", m_genericAttributesRunningCount++, "a_position")
-                IF_NAME_RETURN_ATTRIB("normal", m_genericAttributesRunningCount++, "a_normal")
-                IF_NAME_RETURN_ATTRIB("tangent", m_genericAttributesRunningCount++, "a_tangent")
-                IF_NAME_RETURN_ATTRIB("uv", m_genericAttributesRunningCount++, "a_texcoord0")
-                IF_NAME_RETURN_ATTRIB("uv2", m_genericAttributesRunningCount++, "a_texcoord1")
-                IF_NAME_RETURN_ATTRIB("uv3", m_genericAttributesRunningCount++, "a_texcoord2")
-                IF_NAME_RETURN_ATTRIB("uv4", m_genericAttributesRunningCount++, "a_texcoord3")
-                IF_NAME_RETURN_ATTRIB("color", m_genericAttributesRunningCount++, "a_color0")
-                IF_NAME_RETURN_ATTRIB("matricesIndices", m_genericAttributesRunningCount++, "a_indices")
-                IF_NAME_RETURN_ATTRIB("matricesWeights", m_genericAttributesRunningCount++, "a_weight")
-                return {m_genericAttributesRunningCount++, name};
+                IF_NAME_RETURN_ATTRIB("position", m_genericAttributesRunningCount++-1, "a_position")
+                IF_NAME_RETURN_ATTRIB("normal", m_genericAttributesRunningCount++-1, "a_normal")
+                IF_NAME_RETURN_ATTRIB("tangent", m_genericAttributesRunningCount++-1, "a_tangent")
+                IF_NAME_RETURN_ATTRIB("uv", m_genericAttributesRunningCount++-1, "a_texcoord0")
+                IF_NAME_RETURN_ATTRIB("uv2", m_genericAttributesRunningCount++-1, "a_texcoord1")
+                IF_NAME_RETURN_ATTRIB("uv3", m_genericAttributesRunningCount++-1, "a_texcoord2")
+                IF_NAME_RETURN_ATTRIB("uv4", m_genericAttributesRunningCount++-1, "a_texcoord3")
+                IF_NAME_RETURN_ATTRIB("color", m_genericAttributesRunningCount++-1, "a_color0")
+                IF_NAME_RETURN_ATTRIB("matricesIndices", m_genericAttributesRunningCount++-1, "a_indices")
+                IF_NAME_RETURN_ATTRIB("matricesWeights", m_genericAttributesRunningCount++-1, "a_weight")
+                return {m_genericAttributesRunningCount++-1, name};
 #else
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
