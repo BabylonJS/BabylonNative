@@ -223,7 +223,7 @@ cmake -G Xcode ..
 
 Starting with Xcode 12, it's mandatory to set the targeted CPU architectures (X86_64 and/or arm64).
 
-````
+```
 cmake .. -GXcode "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
 ```
 
