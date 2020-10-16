@@ -7,10 +7,32 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
+#import <MetalKit/MetalKit.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+bool allgood = false;
+
+@interface EngineView : MTKView <MTKViewDelegate>
+
+@end
+
+@implementation EngineView
+
+-(void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
+{
+    
+}
+
+-(void)drawInMTKView:(MTKView *)view
+{
+    if (allgood) {
+    graphics->RenderCurrentFrame();
+    }
+}
+@end
+
 
 @implementation ViewController
 
@@ -37,8 +59,15 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     NSSize size = [self view].frame.size;
     float width = size.width;
     float height = size.height;
-    NSWindow* nativeWindow = [[self view] window];
-    void* windowPtr = (__bridge void*)nativeWindow;
+    
+    
+    EngineView* engineView = [[EngineView alloc] initWithFrame:[self view].frame device:nil];
+    [[self view] addSubview:engineView];
+    engineView.delegate = engineView;
+        
+        
+    //NSWindow* nativeWindow = [[self view] window];
+    void* windowPtr = (__bridge void*)engineView;
 
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
     runtime = std::make_unique<Babylon::AppRuntime>();
@@ -50,7 +79,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         graphics->AddToJavaScript(env);
-        Babylon::Plugins::NativeEngine::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env, false); // render on UI Thread
         
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
@@ -76,6 +105,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
         loader.LoadScript("app:///playground_runner.js");
     }
+    
+    allgood = true;
 }
 
 - (void)viewDidAppear {
