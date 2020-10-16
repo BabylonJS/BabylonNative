@@ -83,7 +83,10 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        graphics->UpdateSize(static_cast<size_t>(width), static_cast<size_t>(height));
+        if (graphics != nullptr)
+        {
+            graphics->UpdateSize(static_cast<size_t>(width), static_cast<size_t>(height));
+        }
     }
 }
 
