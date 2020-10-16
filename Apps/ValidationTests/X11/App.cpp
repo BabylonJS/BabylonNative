@@ -50,10 +50,10 @@ namespace
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         // Separately call reset and make_unique to ensure state is destroyed before new one is created.
-        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
         graphics.reset();
         runtime.reset();
 
+        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
