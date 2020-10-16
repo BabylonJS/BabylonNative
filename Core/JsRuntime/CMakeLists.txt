@@ -1,6 +1,6 @@
 set(SOURCES
     "Include/Babylon/JsRuntime.h"
-    "include/Babylon/JsRuntimeScheduler.h"
+    "Include/Babylon/JsRuntimeScheduler.h"
     "Source/JsRuntimeInternalState.h"
     "Source/JsRuntime.cpp")
 
