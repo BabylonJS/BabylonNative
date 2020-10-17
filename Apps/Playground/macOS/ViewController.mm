@@ -19,12 +19,12 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 @implementation EngineView
 
-- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
+- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize)__unused size
 {
     
 }
 
-- (void)drawInMTKView:(MTKView *)view
+- (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics != nullptr) {
         graphics->RenderCurrentFrame();
@@ -104,8 +104,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
         loader.LoadScript("app:///playground_runner.js");
     }
-    
-    allgood = true;
 }
 
 - (void)viewDidAppear {
