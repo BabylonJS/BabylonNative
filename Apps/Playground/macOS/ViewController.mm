@@ -12,7 +12,6 @@
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
-bool allgood = false;
 
 @interface EngineView : MTKView <MTKViewDelegate>
 
@@ -20,15 +19,15 @@ bool allgood = false;
 
 @implementation EngineView
 
--(void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
+- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
 {
     
 }
 
--(void)drawInMTKView:(MTKView *)view
+- (void)drawInMTKView:(MTKView *)view
 {
-    if (allgood) {
-    graphics->RenderCurrentFrame();
+    if (graphics != nullptr) {
+        graphics->RenderCurrentFrame();
     }
 }
 @end
@@ -162,7 +161,7 @@ bool allgood = false;
     }
 }
 
--(IBAction) refresh:(id)__unused sender
+- (IBAction) refresh:(id)__unused sender
 {
     [self refreshBabylon];
 }

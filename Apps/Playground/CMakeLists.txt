@@ -154,6 +154,8 @@ if(APPLE)
             set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
             enable_language(Swift)
     else()
+        target_link_libraries(Playground PUBLIC "-framework MetalKit")
+
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
