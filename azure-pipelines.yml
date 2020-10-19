@@ -298,7 +298,7 @@ jobs:
     displayName: 'Build X11'
 
 - job: Ubuntu_GCC9_JSC
-  timeoutInMinutes: 20
+  timeoutInMinutes: 30
   pool:
     vmImage: 'ubuntu-latest'
 
