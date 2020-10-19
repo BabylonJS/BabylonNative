@@ -143,10 +143,13 @@ Assembled/android/src/main/java/com/reactlibrary/EngineViewManager.java
 Assembled/android/src/main/java/com/reactlibrary/EngineView.java
 Assembled/android/src/main/jniLibs
 Assembled/android/src/main/jniLibs/armeabi-v7a
+Assembled/android/src/main/jniLibs/armeabi-v7a/libturbomodulejsijni.so
 Assembled/android/src/main/jniLibs/armeabi-v7a/libBabylonNative.so
 Assembled/android/src/main/jniLibs/x86
+Assembled/android/src/main/jniLibs/x86/libturbomodulejsijni.so
 Assembled/android/src/main/jniLibs/x86/libBabylonNative.so
 Assembled/android/src/main/jniLibs/arm64-v8a
+Assembled/android/src/main/jniLibs/arm64-v8a/libturbomodulejsijni.so
 Assembled/android/src/main/jniLibs/arm64-v8a/libBabylonNative.so
 Assembled/react-native-babylon.podspec
 Assembled/index.ts

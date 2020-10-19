@@ -19,8 +19,6 @@
 #include <sstream>
 #include <unistd.h>
 
-#include "../shared/Shared.h"
-
 namespace Babylon
 {
     using namespace facebook;
@@ -28,45 +26,32 @@ namespace Babylon
     class Native::Impl
     {
     public:
-        Impl(facebook::jsi::Runtime* jsiRuntime)
+        Impl(facebook::jsi::Runtime* jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker)
             : env{ Napi::Attach<facebook::jsi::Runtime&>(*jsiRuntime) }
+            , jsCallInvoker{ callInvoker }
         {
         }
 
-        std::unique_ptr<Graphics> m_graphics{};
         Napi::Env env;
+        std::shared_ptr<facebook::react::CallInvoker> jsCallInvoker;
+        std::unique_ptr<Graphics> m_graphics{};
         JsRuntime* runtime{};
         Plugins::NativeInput* nativeInput{};
     };
 
-    Native::Native(facebook::jsi::Runtime* jsiRuntime, void* windowPtr, size_t width, size_t height)
-        : m_impl{ std::make_unique<Native::Impl>(jsiRuntime) }
+    Native::Native(facebook::jsi::Runtime* jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, void* windowPtr, size_t width, size_t height)
+        : m_impl{ std::make_unique<Native::Impl>(jsiRuntime, callInvoker) }
     {
         dispatch_sync(dispatch_get_main_queue(), ^{
             m_impl->m_graphics = Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
         });
 
-        struct DispatchData
-        {
-            arcana::run_loop_scheduler scheduler;
-            std::shared_ptr<facebook::jsi::Function> setTimeout;
-
-            DispatchData(facebook::jsi::Runtime& rt)
-                : scheduler{ arcana::run_loop_scheduler::get_for_current_thread() }
-                , setTimeout{ GetSetTimeout(rt) }
-            {
-            }
-        };
-
         JsRuntime::DispatchFunctionT dispatchFunction =
-            [env = m_impl->env, data = std::make_shared<DispatchData>(*jsiRuntime)](std::function<void(Napi::Env)> func)
+            [env = m_impl->env, callInvoker = m_impl->jsCallInvoker](std::function<void(Napi::Env)> func)
             {
-                (data->scheduler)([env, func = std::move(func), &data]()
+                callInvoker->invokeAsync([env, func = std::move(func)]
                 {
                     func(env);
-                    // NOTE: This doesn't work quite right on iOS, so we'll use a different work around until
-                    // we have a better solution (see Shared.h and EngineHook.ts for more details).
-                    //data->setTimeout->call((static_cast<napi_env>(env))->rt, {});
                 });
             };
 

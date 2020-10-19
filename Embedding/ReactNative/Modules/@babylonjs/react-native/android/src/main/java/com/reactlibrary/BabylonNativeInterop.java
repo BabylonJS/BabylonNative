@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.JavaScriptContextHolder;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.turbomodule.core.interfaces.CallInvokerHolder;
 
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -30,7 +31,7 @@ final class BabylonNativeInterop {
     private static native void setCurrentActivity(Activity activity);
     private static native void pause();
     private static native void resume();
-    private static native long create(long jsiRuntimeRef, Surface surface);
+    private static native long create(long jsiRuntimeRef, CallInvokerHolder callInvokerHolder, Surface surface);
     private static native void refresh(long instanceRef, Surface surface);
     private static native void setPointerButtonState(long instanceRef, int pointerId, int buttonId, boolean isDown, int x, int y);
     private static native void setPointerPosition(long instanceRef, int pointerId, int x, int y);
@@ -56,7 +57,7 @@ final class BabylonNativeInterop {
                 if (jsiRuntimeRef == 0) {
                     instanceRefFuture.complete(0L);
                 } else {
-                    instanceRef = BabylonNativeInterop.create(jsiRuntimeRef, surface);
+                    instanceRef = BabylonNativeInterop.create(jsiRuntimeRef, reactContext.getCatalystInstance().getJSCallInvokerHolder(), surface);
                     final long finalInstanceRef = instanceRef;
 
                     reactContext.addLifecycleEventListener(new LifecycleEventListener() {

@@ -15,6 +15,9 @@ file(COPY ${REACTNATIVE_DIR}/ReactCommon/jsi/jsi DESTINATION ${CMAKE_CURRENT_BIN
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/jsi/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 target_include_directories(jsi INTERFACE ${REACTNATIVE_DIR}/ReactCommon/jsi)
 
+add_library(reactnative INTERFACE)
+target_include_directories(reactnative INTERFACE ${REACTNATIVE_DIR}/ReactCommon/callinvoker)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/")
 
 set(BABYLON_NATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../submodules/BabylonNative")
@@ -34,6 +37,7 @@ target_link_libraries(BabylonNative
     arcana
     Graphics
     jsi
+    reactnative
     JsRuntime
     NativeWindow
     NativeEngine

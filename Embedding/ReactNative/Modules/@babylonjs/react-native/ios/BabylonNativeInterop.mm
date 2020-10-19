@@ -14,6 +14,10 @@
 
 using namespace facebook;
 
+@interface RCTBridge (RCTTurboModule)
+- (std::shared_ptr<facebook::react::CallInvoker>)jsCallInvoker;
+@end
+
 namespace {
     jsi::Runtime* GetJSIRuntime(RCTBridge* bridge) {
         RCTCxxBridge* cxxBridge = reinterpret_cast<RCTCxxBridge*>(bridge);
@@ -128,7 +132,7 @@ static NSMutableArray* activeTouches;
 
         jsi::Runtime* jsiRuntime = GetJSIRuntime(currentBridge);
         if (jsiRuntime) {
-            currentNativeInstance = std::make_unique<Babylon::Native>(GetJSIRuntime(currentBridge), (__bridge void*)mtkView, width, height);
+            currentNativeInstance = std::make_unique<Babylon::Native>(GetJSIRuntime(currentBridge), currentBridge.jsCallInvoker, (__bridge void*)mtkView, width, height);
         }
     }
 

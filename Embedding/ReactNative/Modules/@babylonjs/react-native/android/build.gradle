@@ -44,7 +44,11 @@ buildscript {
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
-configurations { natives }
+configurations { 
+    natives
+    fbjniHeaders
+    fbjniLibs
+}
 
 android {
     compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
@@ -62,6 +66,8 @@ android {
                         '-DENABLE_GLSLANG_BINARIES=OFF',
                         '-DSPIRV_CROSS_CLI=OFF',
                         "-DARCORE_LIBPATH=${extractedLibDir}/jni",
+                        "-DFBJNI_INCPATH=${extractedLibDir}/fbjni/",
+                        "-DFBJNI_LIBPATH=${extractedLibDir}/jni",
                         "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/"
             }
         }
@@ -105,7 +111,11 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'com.google.ar:core:1.14.0'
 
+    api("com.facebook.fbjni:fbjni-java-only:0.0.3")
+
     natives 'com.google.ar:core:1.14.0'
+    fbjniHeaders 'com.facebook.fbjni:fbjni:0.0.2:headers'
+    fbjniLibs 'com.facebook.fbjni:fbjni:0.0.2'
 }
 
 def configureReactNativePom(def pom) {
@@ -197,9 +207,35 @@ task extractNativeLibraries() {
     }
 }
 
+task extractFBJNIHeaders {
+    doLast {
+        configurations.fbjniHeaders.files.each { f ->
+            copy {
+                from zipTree(f)
+                into "$extractedLibDir/fbjni"
+                include "**/*.h"
+            }
+        }
+    }
+}
+
+task extractFBJNILibs {
+    doLast {
+        configurations.fbjniLibs.files.each { f ->
+            copy {
+                from zipTree(f)
+                into extractedLibDir
+                include "jni/**/*"
+            }
+        }
+    }
+}
+
 tasks.whenTaskAdded { task ->
     if (task.name.contains("external") && !task.name.contains("Clean")) {
         task.dependsOn(extractNativeLibraries)
+        task.dependsOn(extractFBJNIHeaders)
+        task.dependsOn(extractFBJNILibs)
     }
 }
 
