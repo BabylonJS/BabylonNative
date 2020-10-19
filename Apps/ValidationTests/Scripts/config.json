@@ -43,6 +43,7 @@
         {
             "title": "Black and White post-process",
             "playgroundId": "#N55Q2M#0",
+            "renderCount": 20,
             "referenceImage": "bwpp.png"
         },
         {

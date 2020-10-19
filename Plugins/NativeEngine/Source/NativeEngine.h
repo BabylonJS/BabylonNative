@@ -161,6 +161,7 @@ namespace Babylon
             bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
             // discard any previous set state
             bgfx::discard();
+            bgfx::touch(m_viewId);
         }
 
         uint16_t m_viewId{};
@@ -172,30 +173,29 @@ namespace Babylon
     {
     private:
         std::unique_ptr<ClearState> m_clearState{};
+        arcana::weak_table<FrameBufferData*>::ticket m_managerTicket;
 
     public:
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
-            : m_clearState{std::make_unique<ClearState>()}
+        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, arcana::weak_table<FrameBufferData*>& managerTable, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
+            : m_managerTicket{managerTable.insert(this)}
+            , m_clearState{std::make_unique<ClearState>()}
             , FrameBuffer{frameBuffer}
-            , ViewId{viewId}
             , ViewClearState{ViewId, *m_clearState}
             , Width{width}
             , Height{height}
             , ActAsBackBuffer{actAsBackBuffer}
         {
-            assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
 
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, uint16_t viewId, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
-            : m_clearState{}
+        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, arcana::weak_table<FrameBufferData*>& managerTable, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
+            : m_managerTicket{managerTable.insert(this)}
+            , m_clearState{}
             , FrameBuffer{frameBuffer}
-            , ViewId{viewId}
             , ViewClearState{ViewId, clearState}
             , Width{width}
             , Height{height}
             , ActAsBackBuffer{actAsBackBuffer}
         {
-            assert(ViewId < bgfx::getCaps()->limits.maxViews);
         }
 
         FrameBufferData(FrameBufferData&) = delete;
@@ -207,19 +207,23 @@ namespace Babylon
 
         void UseViewId(uint16_t viewId)
         {
+            assert(viewId < bgfx::getCaps()->limits.maxViews);
             ViewId = viewId;
             ViewClearState.UpdateViewId(ViewId);
         }
 
         void SetUpView(uint16_t viewId)
         {
+            assert(viewId < bgfx::getCaps()->limits.maxViews);
             bgfx::setViewFrameBuffer(viewId, FrameBuffer);
             UseViewId(viewId);
             bgfx::setViewRect(ViewId, 0, 0, Width, Height);
+            ViewIdDirty = false;
         }
 
         bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
-        bgfx::ViewId ViewId{};
+        bgfx::ViewId ViewId{uint16_t(~0)};
+        bool ViewIdDirty{true};
         Babylon::ViewClearState ViewClearState;
         uint16_t Width{};
         uint16_t Height{};
@@ -234,26 +238,25 @@ namespace Babylon
     {
         FrameBufferManager()
         {
-            m_boundFrameBuffer = m_backBuffer = new FrameBufferData(BGFX_INVALID_HANDLE, GetNewViewId(), bgfx::getStats()->width, bgfx::getStats()->height);
+            Bind(m_backBuffer = CreateNew(BGFX_INVALID_HANDLE, bgfx::getStats()->width, bgfx::getStats()->height, true));
         }
 
-        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height)
+        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
         {
-            return new FrameBufferData(frameBufferHandle, GetNewViewId(), width, height);
+            return new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, width, height, actAsBackBuffer);
         }
 
         FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer)
         {
-            return new FrameBufferData(frameBufferHandle, GetNewViewId(), clearState, width, height, actAsBackBuffer);
+            return new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, clearState, width, height, actAsBackBuffer);
         }
 
         void Bind(FrameBufferData* data)
         {
             m_boundFrameBuffer = data;
 
-            // TODO: Consider doing this only on bgfx::reset(); the effects of this call don't survive reset, but as
-            // long as there's no reset this doesn't technically need to be called every time the frame buffer is bound.
-            m_boundFrameBuffer->SetUpView(GetNewViewId());
+            if (m_boundFrameBuffer->ViewIdDirty)
+                m_boundFrameBuffer->SetUpView(GetNewViewId());
 
             // bgfx::setTexture()? Why?
             // TODO: View order?
@@ -267,11 +270,8 @@ namespace Babylon
 
         void Unbind(FrameBufferData* data)
         {
-            // this assert is commented because of an issue with XR described here : https://github.com/BabylonJS/BabylonNative/issues/344
-            //assert(m_boundFrameBuffer == data);
-            (void)data;
-            m_boundFrameBuffer = m_backBuffer;
-            m_renderingToTarget = false;
+            assert(m_boundFrameBuffer == data);
+            Bind(m_backBuffer);
         }
 
         uint16_t GetNewViewId()
@@ -284,16 +284,28 @@ namespace Babylon
         void Reset()
         {
             m_nextId = 0;
+            m_activeFrameBuffers.apply_to_all([](FrameBufferData* frameBufferData) {
+                frameBufferData->ViewIdDirty = true;
+            });
+
+            // Rebind the default back buffer and reset its view
+            Unbind(m_boundFrameBuffer);
         }
 
-        bool IsRenderingToTarget() const
+        inline bool IsRenderingToTarget() const
         {
             return m_renderingToTarget;
+        }
+
+        inline bool IsRenderingToDefault() const
+        {
+            return m_boundFrameBuffer == m_backBuffer;
         }
 
     private:
         FrameBufferData* m_boundFrameBuffer{nullptr};
         FrameBufferData* m_backBuffer{nullptr};
+        arcana::weak_table<FrameBufferData*> m_activeFrameBuffers{};
         uint16_t m_nextId{0};
         bool m_renderingToTarget{false};
     };

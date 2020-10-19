@@ -1389,12 +1389,16 @@ namespace Babylon
                     bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
                 }
             }
-            // change culling
+
+            // We need to explicitly swap the culling state flags (instead of XOR)
+            // because we would like to preserve the no culling configuration, which is 00.
+            const auto cullCW  = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
+            const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
+
             uint64_t m_engineStateYFlipped = m_engineState;
-            if (m_engineStateYFlipped & ~BGFX_STATE_CULL_MASK)
-            {
-                m_engineStateYFlipped ^= BGFX_STATE_CULL_MASK;
-            }
+            m_engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
+            m_engineStateYFlipped |= (cullCCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
+
             bgfx::setState(m_engineStateYFlipped | fillModeState);
         }
         else
@@ -1459,13 +1463,14 @@ namespace Babylon
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
-        const auto backbufferWidth = bgfx::getStats()->width;
-        const auto backbufferHeight = bgfx::getStats()->height;
+        auto& backBuffer = m_frameBufferManager.GetBound();
+        const auto isDefault = m_frameBufferManager.IsRenderingToDefault();
+
+        const auto backbufferWidth = isDefault ? bgfx::getStats()->width : backBuffer.Width;
+        const auto backbufferHeight = isDefault ? bgfx::getStats()->height : backBuffer.Height;
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_frameBufferManager.GetBound().UseViewId(m_frameBufferManager.GetNewViewId());
         const bgfx::ViewId viewId = m_frameBufferManager.GetBound().ViewId;
-        bgfx::setViewFrameBuffer(viewId, m_frameBufferManager.GetBound().FrameBuffer);
         bgfx::setViewRect(viewId,
             static_cast<uint16_t>(x * backbufferWidth),
             static_cast<uint16_t>(yOrigin * backbufferHeight),
