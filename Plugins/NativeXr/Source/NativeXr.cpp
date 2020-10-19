@@ -353,8 +353,10 @@ namespace Babylon
             }
         }
 
-        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, Graphics::Impl::GetFromJavaScript(env).GetNativeWindow()).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
-            m_session = std::move(session);
+        return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, windowPtr = Graphics::Impl::GetFromJavaScript(env).GetNativeWindow()]() {
+            return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, windowPtr).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+                m_session = std::move(session);
+            });
         });
     }
 
