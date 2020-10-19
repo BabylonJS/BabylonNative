@@ -112,7 +112,12 @@ namespace Babylon
                 auto& res = m_bgfxState.InitState.resolution;
                 bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
                 bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
+
+#if __APPLE__
+                bgfx::frame();
+#else
                 bgfx::touch(0);
+#endif
 
                 m_bgfxState.Dirty = false;
             }

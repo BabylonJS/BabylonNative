@@ -19,9 +19,11 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 @implementation EngineView
 
-- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize)__unused size
+- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
 {
-    
+    if (graphics != nullptr) {
+        graphics->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+    }
 }
 
 - (void)drawInMTKView:(MTKView *)__unused view
@@ -30,6 +32,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         graphics->RenderCurrentFrame();
     }
 }
+
 @end
 
 
@@ -59,13 +62,11 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     float width = size.width;
     float height = size.height;
     
-    
     EngineView* engineView = [[EngineView alloc] initWithFrame:[self view].frame device:nil];
+    engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
-        
-        
-    //NSWindow* nativeWindow = [[self view] window];
+    
     void* windowPtr = (__bridge void*)engineView;
 
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
@@ -124,17 +125,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     [super setRepresentedObject:representedObject];
 
     // Update the view, if already loaded.
-}
-
-- (void)viewDidLayout {
-    [super viewDidLayout];
-    if (graphics)
-    {
-        NSSize size = [self view].frame.size;
-        float width = size.width;
-        float height = size.height;
-        graphics->UpdateSize(width, height);
-    }
 }
 
 - (void)mouseDown:(NSEvent *)__unused theEvent {
