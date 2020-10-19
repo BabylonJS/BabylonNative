@@ -269,11 +269,16 @@ function runTest(index, done) {
     BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
 }
 
-_native.graphicsInitializationPromise.then(function () {
+var engine;
+var scene;
+var canvas;
+var xhr;
 
-    var engine = new BABYLON.NativeEngine();
-    var scene = new BABYLON.Scene(engine);
-    var canvas = window;
+_native.graphicsInitializationPromise.then(() => {
+
+    engine = new BABYLON.NativeEngine();
+    scene = new BABYLON.Scene(engine);
+    canvas = window;
 
     engine.getRenderingCanvas = function () {
         return window;
@@ -306,7 +311,7 @@ _native.graphicsInitializationPromise.then(function () {
         }
     }
 
-    var xhr = new XMLHttpRequest();
+    xhr = new XMLHttpRequest();
     xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
 
     xhr.addEventListener("readystatechange", function() {
