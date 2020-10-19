@@ -269,72 +269,74 @@ function runTest(index, done) {
     BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
 }
 
-var engine = new BABYLON.NativeEngine();
-var scene = new BABYLON.Scene(engine);
-var canvas = window;
+_native.graphicsInitializationPromise.then(function () {
 
-engine.getRenderingCanvas = function () {
-    return window;
-}
+    var engine = new BABYLON.NativeEngine();
+    var scene = new BABYLON.Scene(engine);
+    var canvas = window;
 
-engine.getInputElement = function () {
-    return 0;
-}
-
-OffscreenCanvas = function(width, height) {
-    return {
-        width: width
-        , height: height
-        , getContext: function(type) {
-            return {
-                fillRect: function(x, y, w, h) { }
-                , measureText: function(text) { return 8; }
-                , fillText: function(text, x, y) { }
-            };
-        }
-    };
-}
-
-document = {
-    createElement: function (type) {
-        if (type === "canvas") {
-            return new OffscreenCanvas(64, 64);
-        }
-        return {};
+    engine.getRenderingCanvas = function () {
+        return window;
     }
-}
 
-var xhr = new XMLHttpRequest();
-xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
-
-xhr.addEventListener("readystatechange", function() {
-    if (xhr.status === 200) {
-        config = JSON.parse(xhr.responseText);
-
-        // Run tests
-        var index = 0;
-        var recursiveRunTest = function(i) {
-            runTest(i, function(status) {
-                if (!status) {
-                    TestUtils.exit(-1);
-                    return;
-                }
-                i++;
-                if (justOnce || i >= config.tests.length) {
-                    TestUtils.exit(0);
-                    return;
-                }
-                recursiveRunTest(i);
-            });
-        }
-
-        recursiveRunTest(index);
+    engine.getInputElement = function () {
+        return 0;
     }
-}, false);
 
-_native.RootUrl = "https://playground.babylonjs.com";
-console.log("Starting");
-TestUtils.setTitle("Starting Native Validation Tests");
-TestUtils.updateSize(testWidth, testHeight);
-xhr.send();
+    OffscreenCanvas = function(width, height) {
+        return {
+            width: width
+            , height: height
+            , getContext: function(type) {
+                return {
+                    fillRect: function(x, y, w, h) { }
+                    , measureText: function(text) { return 8; }
+                    , fillText: function(text, x, y) { }
+                };
+            }
+        };
+    }
 
+    document = {
+        createElement: function (type) {
+            if (type === "canvas") {
+                return new OffscreenCanvas(64, 64);
+            }
+            return {};
+        }
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
+
+    xhr.addEventListener("readystatechange", function() {
+        if (xhr.status === 200) {
+            config = JSON.parse(xhr.responseText);
+
+            // Run tests
+            var index = 0;
+            var recursiveRunTest = function(i) {
+                runTest(i, function(status) {
+                    if (!status) {
+                        TestUtils.exit(-1);
+                        return;
+                    }
+                    i++;
+                    if (justOnce || i >= config.tests.length) {
+                        TestUtils.exit(0);
+                        return;
+                    }
+                    recursiveRunTest(i);
+                });
+            }
+
+            recursiveRunTest(index);
+        }
+    }, false);
+
+    _native.RootUrl = "https://playground.babylonjs.com";
+    console.log("Starting");
+    TestUtils.setTitle("Starting Native Validation Tests");
+    TestUtils.updateSize(testWidth, testHeight);
+    xhr.send();
+});
