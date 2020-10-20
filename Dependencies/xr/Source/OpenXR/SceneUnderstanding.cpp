@@ -2,18 +2,17 @@
 
 #include "SceneUnderstanding.h"
 #include "XrRegistry.h"
-#include "XrSceneUnderstanding.h"
 
 using namespace xr;
 
 constexpr SceneUnderstanding::DetectionBoundaryType DEFAULT_BOUNDARY_TYPE = SceneUnderstanding::DetectionBoundaryType::Sphere;
 constexpr float DEFAULT_SPHERE_RADIUS = 5.f;
-constexpr XrTime DEFAULT_UPDATE_INTERVAL_IN_SECONDS = 2;
-constexpr XrTime NANOSECONDS_IN_SECOND = 1000000000;
+constexpr double DEFAULT_UPDATE_INTERVAL_IN_SECONDS = 2;
+constexpr double NANOSECONDS_IN_SECOND = 1000000000;
 
 inline xr::Pose XrPoseToBabylonPose(XrPosef pose)
 {
-    // TODO: Fix coordinate systems?
+    // Right handed to left handed conversions are handled in the Babylon.js layer
     return xr::Pose{
         {
             pose.position.x,
@@ -38,6 +37,20 @@ SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     , BoxDimensions(XrVector3f{ 0, 0, 0 })
     , UpdateIntervalInSeconds(DEFAULT_UPDATE_INTERVAL_IN_SECONDS) {}
 
+SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
+    const XrSession& session,
+    const XrSupportedExtensions& extensions,
+    const SceneUnderstanding::DetectionBoundaryType detectionBoundaryType,
+    const float sphereRadius,
+    const XrVector3f boxDimensions,
+    const double updateIntervalInSeconds)
+    : Session(session)
+    , Extensions(extensions)
+    , DetectionBoundaryType(detectionBoundaryType)
+    , SphereRadius(sphereRadius)
+    , BoxDimensions(boxDimensions)
+    , UpdateIntervalInSeconds(updateIntervalInSeconds) {}
+
 SceneUnderstanding::SceneUnderstanding::UpdateFrameArgs::UpdateFrameArgs(
     const XrSpace& sceneSpace,
     const XrSupportedExtensions& extensions,
@@ -51,6 +64,22 @@ SceneUnderstanding::SceneUnderstanding::UpdateFrameArgs::UpdateFrameArgs(
     , Planes(planes)
     , UpdatedPlanes(updatedPlanes)
     , RemovedPlanes(removedPlanes)
+{
+}
+
+SceneUnderstanding::SceneUnderstanding::UpdateSceneObjectsArgs::UpdateSceneObjectsArgs(
+    const XrSpace& sceneSpace,
+    const XrSupportedExtensions& extensions,
+    const XrTime displayTime,
+    std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>>& sceneObjects,
+    std::vector<XrSceneObjectKeyMSFT>& updatedObjects,
+    std::vector<XrSceneObjectKeyMSFT>& removedObjects)
+    : SceneSpace(sceneSpace)
+    , Extensions(extensions)
+    , DisplayTime(displayTime)
+    , SceneObjects(sceneObjects)
+    , UpdatedObjects(updatedObjects)
+    , RemovedObjects(removedObjects)
 {
 }
 
@@ -71,7 +100,7 @@ public:
         m_boundaryType = options.DetectionBoundaryType;
         m_sphereRadius = options.SphereRadius;
         m_boxDimensions = options.BoxDimensions;
-        m_updateInterval = NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds;
+        m_updateInterval = static_cast<XrTime>(NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds);
 
         if (m_initialized)
         {
@@ -79,7 +108,7 @@ public:
             return;
         }
 
-        XrReferenceSpaceCreateInfo spaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
+        XrReferenceSpaceCreateInfo spaceCreateInfo{ XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
         spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
         spaceCreateInfo.poseInReferenceSpace = xr::math::Pose::Identity();
         CHECK_XRCMD(xrCreateReferenceSpace(session, &spaceCreateInfo, m_viewSpace.Put()));
@@ -92,8 +121,18 @@ public:
 
     void UpdateFrame(UpdateFrameArgs& args)
     {
-        const auto time = args.DisplayTime;
+        Update(args.DisplayTime, args.SceneSpace, args.Extensions);
+        PopulateFrameArguments(args);
+    }
 
+    void UpdateSceneObjects(UpdateSceneObjectsArgs& args)
+    {
+        Update(args.DisplayTime, args.SceneSpace, args.Extensions);
+        PopulateSceneObjectsArgs(args);
+    }
+
+    void Update(const XrTime time, const XrSpace& space, const XrSupportedExtensions& extensions)
+    {
         if (!m_initialized)
         {
             return;
@@ -101,44 +140,38 @@ public:
 
         if (m_lastFrameUpdate < time)
         {
-            // Update every frame
             m_updatedObjects.clear();
             m_updatedMeshes.clear();
             m_updatedPlanes.clear();
             m_removedObjects.clear();
             m_removedMeshes.clear();
             m_removedPlanes.clear();
-        }
 
-        switch (m_state)
-        {
-        case State::Ready:
-        {
-            HandleReady(args);
-        }
-        break;
-        case State::ComputingScene:
-        {
-            HandleComputingScene(args);
-        }
-        break;
-        case State::Waiting:
-        {
-            HandleWaiting(args);
-        }
-        break;
-        }
+            switch (m_state)
+            {
+            case State::Ready:
+            {
+                HandleReady(time, space, extensions);
+            }
+            break;
+            case State::ComputingScene:
+            {
+                HandleComputingScene(time, space, extensions);
+            }
+            break;
+            case State::Waiting:
+            {
+                HandleWaiting(time);
+            }
+            break;
+            }
 
-        PopulateFrameArguments(args);
-        m_lastFrameUpdate = time;
+            m_lastFrameUpdate = time;
+        }
     }
 
-    void HandleReady(UpdateFrameArgs& args)
+    void HandleReady(const XrTime time, const XrSpace& space, const XrSupportedExtensions& extensions)
     {
-        const auto& extensions = args.Extensions;
-        const auto time = args.DisplayTime;
-        const auto space = args.SceneSpace;
-
         // TODO: support other boundary types
         XrSceneSphereBoundMSFT sphere{};
         XrSpaceLocation viewInLocal{ XR_TYPE_SPACE_LOCATION };
@@ -148,7 +181,7 @@ public:
             sphere.radius = m_sphereRadius;
         }
 
-        XrNewSceneComputeInfoMSFT computeInfo{XR_TYPE_NEW_SCENE_COMPUTE_INFO_MSFT};
+        XrNewSceneComputeInfoMSFT computeInfo{ XR_TYPE_NEW_SCENE_COMPUTE_INFO_MSFT };
         computeInfo.bounds.space = space;
         computeInfo.bounds.time = time;
         computeInfo.bounds.sphereCount = 1;
@@ -160,10 +193,8 @@ public:
         m_state = State::ComputingScene;
     }
 
-    void HandleComputingScene(UpdateFrameArgs& args)
+    void HandleComputingScene(const XrTime time, const XrSpace& space, const XrSupportedExtensions& extensions)
     {
-        const auto& extensions = args.Extensions;
-
         XrSceneComputeStateMSFT state{};
         CHECK_XRCMD(extensions.xrGetSceneComputeStateMSFT(m_sceneObserverHandle.Get(), &state));
         if (state == XR_SCENE_COMPUTE_STATE_COMPLETED_MSFT) {
@@ -178,18 +209,18 @@ public:
                 sceneObjectKeys.at(i) = sceneObjects.at(i).sceneObjectKey;
             }
 
-            XrSceneObjectsLocateInfoMSFT locateInfo{XR_TYPE_SCENE_OBJECTS_LOCATE_INFO_MSFT};
-            locateInfo.baseSpace = args.SceneSpace;
-            locateInfo.time = args.DisplayTime;
+            XrSceneObjectsLocateInfoMSFT locateInfo{ XR_TYPE_SCENE_OBJECTS_LOCATE_INFO_MSFT };
+            locateInfo.baseSpace = space;
+            locateInfo.time = time;
             locateInfo.sceneObjectCount = static_cast<uint32_t>(sceneObjects.size());
             locateInfo.sceneObjectKeys = sceneObjectKeys.data();
 
             m_sceneObjectLocations.resize(sceneObjects.size());
-            XrSceneObjectLocationsMSFT locations{XR_TYPE_SCENE_OBJECT_LOCATIONS_MSFT};
+            XrSceneObjectLocationsMSFT locations{ XR_TYPE_SCENE_OBJECT_LOCATIONS_MSFT };
             locations.sceneObjectCount = static_cast<uint32_t>(m_sceneObjectLocations.size());
             locations.sceneObjectLocations = m_sceneObjectLocations.data();
 
-            CHECK_XRCMD(args.Extensions.xrLocateSceneObjectsMSFT(m_sceneHandle.Get(), &locateInfo, &locations));
+            CHECK_XRCMD(extensions.xrLocateSceneObjectsMSFT(m_sceneHandle.Get(), &locateInfo, &locations));
 
             for (size_t i = 0; i < sceneObjects.size(); i++)
             {
@@ -233,6 +264,15 @@ public:
 
                 knownObjects.erase(sceneObject.sceneObjectKey);
                 auto& sceneData = m_objects[sceneObject.sceneObjectKey];
+
+                // TODO: see if there's a better locatino to call this
+                XrSceneObjectPropertiesMSFT properties{XR_TYPE_SCENE_OBJECT_PROPERTIES_MSFT};
+                XrSceneObjectKindMSFT kind{XR_TYPE_SCENE_OBJECT_KIND_MSFT};
+                xr::InsertExtensionStruct(properties, kind);
+                XrSceneObjectPropertiesGetInfoMSFT getInfo{XR_TYPE_SCENE_OBJECT_PROPERTIES_GET_INFO_MSFT};
+                getInfo.sceneObjectKey = sceneObject.sceneObjectKey;
+                CHECK_XRCMD(extensions.xrGetSceneObjectPropertiesMSFT(m_sceneHandle.Get(), &getInfo, &properties));
+                sceneData.Kind = kind.kind;
 
                 sceneData.MeshKeys = xr::GetMeshKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
                 for (const auto& meshKey : sceneData.MeshKeys)
@@ -284,9 +324,9 @@ public:
         }
     }
 
-    void HandleWaiting(UpdateFrameArgs& args)
+    void HandleWaiting(const XrTime time)
     {
-        if (args.DisplayTime - m_lastSceneUpdate > m_updateInterval)
+        if (time - m_lastSceneUpdate > m_updateInterval)
         {
             m_state = State::Ready;
         }
@@ -294,7 +334,6 @@ public:
 
     void PopulateFrameArguments(UpdateFrameArgs& args)
     {
-        // TODO: avoid recalculating
         args.Planes.clear();
         for (const auto& [key, xrPlane] : m_planes)
         {
@@ -307,19 +346,24 @@ public:
 
             auto& babylonPlane = *m_babylonPlanes[key];
             babylonPlane.Center = XrPoseToBabylonPose(m_objects.at(xrPlane.parentObjectKey).Pose);
-            babylonPlane.PolygonFormat = xr::PolygonFormat::XZ;
+            babylonPlane.PolygonFormat = xr::PolygonFormat::XYZ;
 
-            constexpr uint8_t POINTS_IN_XZ_QUAD = 8;
-            babylonPlane.Polygon.resize(POINTS_IN_XZ_QUAD);
+            constexpr uint8_t VALUES_IN_POINT = 3;
+            constexpr uint8_t VALUES_IN_XYZ_QUAD = 12;
+            babylonPlane.Polygon.resize(VALUES_IN_XYZ_QUAD);
             babylonPlane.Polygon[0] = -1.f * xrPlane.extent.width / 2.f;
             babylonPlane.Polygon[1] = -1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[2] = 1.f * xrPlane.extent.width / 2.f;
-            babylonPlane.Polygon[3] = -1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[4] = 1.f * xrPlane.extent.width / 2.f;
-            babylonPlane.Polygon[5] = 1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[6] = -1.f * xrPlane.extent.width / 2.f;
+            babylonPlane.Polygon[2] = 0;
+            babylonPlane.Polygon[3] = 1.f * xrPlane.extent.width / 2.f;
+            babylonPlane.Polygon[4] = -1.f * xrPlane.extent.height / 2.f;
+            babylonPlane.Polygon[5] = 0;
+            babylonPlane.Polygon[6] = 1.f * xrPlane.extent.width / 2.f;
             babylonPlane.Polygon[7] = 1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.PolygonSize = babylonPlane.Polygon.size();
+            babylonPlane.Polygon[8] = 0;
+            babylonPlane.Polygon[9] = -1.f * xrPlane.extent.width / 2.f;
+            babylonPlane.Polygon[10] = 1.f * xrPlane.extent.height / 2.f;
+            babylonPlane.Polygon[11] = 0;
+            babylonPlane.PolygonSize = babylonPlane.Polygon.size() / VALUES_IN_POINT; // Number of points
 
             args.Planes.push_back(babylonPlane);
         }
@@ -347,6 +391,46 @@ public:
         }
     }
 
+    void PopulateSceneObjectsArgs(UpdateSceneObjectsArgs& args)
+    {
+        if (args.DisplayTime != m_lastSceneObjectUpdate)
+        {
+            // TODO: reduce amount of stored data
+            m_babylonObjects.clear();
+            for (const auto& [key, objectData] : m_objects)
+            {
+                auto object = std::make_shared<SceneObject>();
+                object->Key = key;
+                object->Kind = objectData.Kind;
+
+                object->Meshes.resize(objectData.MeshKeys.size());
+                for (size_t i = 0; i < objectData.MeshKeys.size(); i++)
+                {
+                    const auto meshKey = objectData.MeshKeys.at(i);
+                    object->Meshes.at(i) = m_meshes.at(meshKey);
+                }
+
+                object->Planes.resize(objectData.PlaneKeys.size());
+                for (size_t i = 0; i < objectData.PlaneKeys.size(); i++)
+                {
+                    const auto planeKey = objectData.PlaneKeys.at(i);
+                    object->Planes.at(i) = m_planes.at(planeKey);
+                }
+
+                m_babylonObjects[key] = object;
+            }
+        }
+
+        args.SceneObjects.clear();
+        for (const auto& [key, babylonObject] : m_babylonObjects)
+        {
+            args.SceneObjects[key] = babylonObject;
+        }
+
+        args.UpdatedObjects = m_updatedObjects;
+        args.RemovedObjects = m_removedObjects;
+    }
+
     System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id)
     {
         if (m_babylonPlanesById.count(id) > 0)
@@ -367,19 +451,10 @@ private:
 
     struct SceneObjectData
     {
+        XrSceneObjectKindTypeMSFT Kind;
         std::vector<XrSceneMeshKeyMSFT> MeshKeys;
         std::vector<XrScenePlaneKeyMSFT> PlaneKeys;
         XrPosef Pose;
-    };
-
-    struct Mesh : xr::SceneMesh
-    {
-        XrSceneObjectKeyMSFT parentObjectKey;
-    };
-
-    struct Plane : xr::ScenePlane
-    {
-        XrSceneObjectKeyMSFT parentObjectKey;
     };
 
     bool m_initialized{ false };
@@ -393,6 +468,7 @@ private:
     State m_state{ State::Ready };
     xr::SceneHandle m_sceneHandle{};
     XrTime m_lastFrameUpdate{};
+    XrTime m_lastSceneObjectUpdate{};
     std::vector<XrSceneObjectLocationMSFT> m_sceneObjectLocations;
 
     std::map<XrSceneObjectKeyMSFT, SceneObjectData> m_objects{};
@@ -407,6 +483,7 @@ private:
 
     std::map<XrScenePlaneKeyMSFT, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanes;
     std::map<xr::System::Session::Frame::Plane::Identifier, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanesById;
+    std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>> m_babylonObjects{};
 };
 
 SceneUnderstanding::SceneUnderstanding() 
@@ -426,6 +503,11 @@ void SceneUnderstanding::Initialize(const InitOptions options) const
 void SceneUnderstanding::UpdateFrame(UpdateFrameArgs args) const
 {
     m_impl->UpdateFrame(args);
+}
+
+void SceneUnderstanding::UpdateSceneObjects(UpdateSceneObjectsArgs args) const
+{
+    m_impl->UpdateSceneObjects(args);
 }
 
 System::Session::Frame::Plane& SceneUnderstanding::TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const
