@@ -1083,7 +1083,7 @@ namespace Babylon
                 return image;
             })
             .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](bimg::ImageContainer* image) {
-                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this, texture, image] {
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
                     CreateTextureFromImage(texture, image);
                 });
             })
