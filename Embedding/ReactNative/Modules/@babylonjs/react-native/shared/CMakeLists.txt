@@ -1,0 +1,2 @@
+add_library(BabylonReactNativeShared INTERFACE)
+target_include_directories(BabylonReactNativeShared INTERFACE ".")

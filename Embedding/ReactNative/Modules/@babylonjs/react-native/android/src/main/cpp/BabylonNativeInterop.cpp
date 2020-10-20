@@ -22,6 +22,10 @@
 #include <jsi/jsi.h>
 #include <ReactCommon/CallInvokerHolder.h>
 
+#include <DispatchFunction.h>
+
+using namespace facebook;
+
 namespace Babylon
 {
     namespace
@@ -36,19 +40,10 @@ namespace Babylon
     {
     public:
         // This class must be constructed from the JavaScript thread
-        Native(facebook::jsi::Runtime* jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, ANativeWindow* windowPtr)
-            : m_env{ Napi::Attach<facebook::jsi::Runtime&>(*jsiRuntime) }
+        Native(jsi::Runtime& jsiRuntime, std::shared_ptr<react::CallInvoker> callInvoker, ANativeWindow* windowPtr)
+            : m_env{ Napi::Attach<jsi::Runtime&>(jsiRuntime) }
         {
-            JsRuntime::DispatchFunctionT dispatchFunction =
-                [env = m_env, callInvoker](std::function<void(Napi::Env)> func)
-                {
-                    callInvoker->invokeAsync([env, func = std::move(func)]
-                    {
-                        func(env);
-                    });
-                };
-
-            m_runtime = &JsRuntime::CreateForJavaScript(m_env, dispatchFunction);
+            m_runtime = &JsRuntime::CreateForJavaScript(m_env, CreateJsRuntimeDispatcher(m_env, jsiRuntime, callInvoker));
 
             auto width = static_cast<size_t>(ANativeWindow_getWidth(windowPtr));
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
@@ -135,10 +130,10 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_res
 
 extern "C" JNIEXPORT jlong JNICALL Java_com_reactlibrary_BabylonNativeInterop_create(JNIEnv* env, jclass obj, jlong jsiRuntimeRef, jobject jsCallInvokerHolder, jobject surface)
 {
-    auto jsiRuntime = reinterpret_cast<facebook::jsi::Runtime*>(jsiRuntimeRef);
-    auto callInvoker = facebook::jni::alias_ref<facebook::react::CallInvokerHolder::javaobject> {reinterpret_cast<facebook::react::CallInvokerHolder::javaobject>(jsCallInvokerHolder)}->cthis()->getCallInvoker();
+    auto jsiRuntime = reinterpret_cast<jsi::Runtime*>(jsiRuntimeRef);
+    auto callInvoker = jni::alias_ref<react::CallInvokerHolder::javaobject> {reinterpret_cast<react::CallInvokerHolder::javaobject>(jsCallInvokerHolder)}->cthis()->getCallInvoker();
     ANativeWindow* windowPtr = ANativeWindow_fromSurface(env, surface);
-    auto native = new Babylon::Native(jsiRuntime, callInvoker, windowPtr);
+    auto native = new Babylon::Native(*jsiRuntime, callInvoker, windowPtr);
     return reinterpret_cast<intptr_t>(native);
 }
 

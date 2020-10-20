@@ -9,7 +9,7 @@ namespace Babylon
     {
     public:
         // This class must be constructed from the JavaScript thread
-        Native(facebook::jsi::Runtime* jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, void* windowPtr, size_t width, size_t height);
+        Native(facebook::jsi::Runtime& jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, void* windowPtr, size_t width, size_t height);
         ~Native();
         void Refresh(void* windowPtr, size_t width, size_t height);
         void Resize(size_t width, size_t height);

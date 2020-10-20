@@ -19,6 +19,8 @@
 #include <sstream>
 #include <unistd.h>
 
+#include <DispatchFunction.h>
+
 namespace Babylon
 {
     using namespace facebook;
@@ -26,8 +28,8 @@ namespace Babylon
     class Native::Impl
     {
     public:
-        Impl(facebook::jsi::Runtime* jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker)
-            : env{ Napi::Attach<facebook::jsi::Runtime&>(*jsiRuntime) }
+        Impl(facebook::jsi::Runtime& jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker)
+            : env{ Napi::Attach<facebook::jsi::Runtime&>(jsiRuntime) }
             , jsCallInvoker{ callInvoker }
         {
         }
@@ -39,23 +41,14 @@ namespace Babylon
         Plugins::NativeInput* nativeInput{};
     };
 
-    Native::Native(facebook::jsi::Runtime* jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, void* windowPtr, size_t width, size_t height)
+    Native::Native(facebook::jsi::Runtime& jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, void* windowPtr, size_t width, size_t height)
         : m_impl{ std::make_unique<Native::Impl>(jsiRuntime, callInvoker) }
     {
         dispatch_sync(dispatch_get_main_queue(), ^{
             m_impl->m_graphics = Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
         });
 
-        JsRuntime::DispatchFunctionT dispatchFunction =
-            [env = m_impl->env, callInvoker = m_impl->jsCallInvoker](std::function<void(Napi::Env)> func)
-            {
-                callInvoker->invokeAsync([env, func = std::move(func)]
-                {
-                    func(env);
-                });
-            };
-
-        m_impl->runtime = &JsRuntime::CreateForJavaScript(m_impl->env, std::move(dispatchFunction));
+        m_impl->runtime = &JsRuntime::CreateForJavaScript(m_impl->env, CreateJsRuntimeDispatcher(m_impl->env, jsiRuntime, callInvoker));
         
         m_impl->m_graphics->AddToJavaScript(m_impl->env);
 

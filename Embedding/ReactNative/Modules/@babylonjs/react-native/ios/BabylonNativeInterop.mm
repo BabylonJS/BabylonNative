@@ -132,7 +132,7 @@ static NSMutableArray* activeTouches;
 
         jsi::Runtime* jsiRuntime = GetJSIRuntime(currentBridge);
         if (jsiRuntime) {
-            currentNativeInstance = std::make_unique<Babylon::Native>(GetJSIRuntime(currentBridge), currentBridge.jsCallInvoker, (__bridge void*)mtkView, width, height);
+            currentNativeInstance = std::make_unique<Babylon::Native>(*jsiRuntime, currentBridge.jsCallInvoker, (__bridge void*)mtkView, width, height);
         }
     }
 

@@ -34,6 +34,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/")
 set(BABYLON_NATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../submodules/BabylonNative")
 add_subdirectory(${BABYLON_NATIVE_DIR} ${BABYLON_NATIVE_DIR}/build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
+set(BABYLON_REACT_NATIVE_SHARED_DIR "${CMAKE_CURRENT_LIST_DIR}/../shared")
+add_subdirectory(${BABYLON_REACT_NATIVE_SHARED_DIR} ${CMAKE_CURRENT_BINARY_DIR}/shared)
+
 add_library(fbjni SHARED IMPORTED)
 set_target_properties(fbjni PROPERTIES
     IMPORTED_LOCATION ${FBJNI_LIBPATH}/${ANDROID_ABI}/libfbjni.so
@@ -63,6 +66,7 @@ target_link_libraries(BabylonNative
     fbjni
     jsi
     turbomodulejsijni
+    BabylonReactNativeShared
     AndroidExtensions
     Graphics
     JsRuntime
