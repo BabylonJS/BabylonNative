@@ -102,7 +102,7 @@ namespace Babylon
     };
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_initialize(JNIEnv* env, jclass obj, jobject context)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_initialize(JNIEnv* env, jclass obj, jobject context)
 {
     JavaVM* javaVM{};
     if (env->GetJavaVM(&javaVM) != JNI_OK)
@@ -113,22 +113,22 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_ini
     android::global::Initialize(javaVM, context);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_setCurrentActivity(JNIEnv* env, jclass obj, jobject activity)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_setCurrentActivity(JNIEnv* env, jclass obj, jobject activity)
 {
     android::global::SetCurrentActivity(activity);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_pause(JNIEnv* env, jclass obj)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_pause(JNIEnv* env, jclass obj)
 {
     android::global::Pause();
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_resume(JNIEnv* env, jclass obj)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_resume(JNIEnv* env, jclass obj)
 {
     android::global::Resume();
 }
 
-extern "C" JNIEXPORT jlong JNICALL Java_com_reactlibrary_BabylonNativeInterop_create(JNIEnv* env, jclass obj, jlong jsiRuntimeRef, jobject jsCallInvokerHolder, jobject surface)
+extern "C" JNIEXPORT jlong JNICALL Java_com_babylonreactnative_BabylonNativeInterop_create(JNIEnv* env, jclass obj, jlong jsiRuntimeRef, jobject jsCallInvokerHolder, jobject surface)
 {
     auto jsiRuntime = reinterpret_cast<jsi::Runtime*>(jsiRuntimeRef);
     auto callInvoker = jni::alias_ref<react::CallInvokerHolder::javaobject> {reinterpret_cast<react::CallInvokerHolder::javaobject>(jsCallInvokerHolder)}->cthis()->getCallInvoker();
@@ -137,26 +137,26 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_reactlibrary_BabylonNativeInterop_cr
     return reinterpret_cast<intptr_t>(native);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_refresh(JNIEnv* env, jclass obj, jlong instanceRef, jobject surface)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_refresh(JNIEnv* env, jclass obj, jlong instanceRef, jobject surface)
 {
     auto native = reinterpret_cast<Babylon::Native*>(instanceRef);
     ANativeWindow* windowPtr = ANativeWindow_fromSurface(env, surface);
     native->Refresh(windowPtr);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_setPointerButtonState(JNIEnv* env, jclass obj, jlong instanceRef, jint pointerId, jint buttonId, jboolean isDown, jint x, jint y)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_setPointerButtonState(JNIEnv* env, jclass obj, jlong instanceRef, jint pointerId, jint buttonId, jboolean isDown, jint x, jint y)
 {
     auto native = reinterpret_cast<Babylon::Native*>(instanceRef);
     native->SetPointerButtonState(static_cast<uint32_t>(pointerId), static_cast<uint32_t>(buttonId), isDown, static_cast<uint32_t>(x), static_cast<uint32_t>(y));
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_setPointerPosition(JNIEnv* env, jclass obj, jlong instanceRef, jint pointerId, jint x, jint y)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_setPointerPosition(JNIEnv* env, jclass obj, jlong instanceRef, jint pointerId, jint x, jint y)
 {
     auto native = reinterpret_cast<Babylon::Native*>(instanceRef);
     native->SetPointerPosition(static_cast<uint32_t>(pointerId), static_cast<uint32_t>(x), static_cast<uint32_t>(y));
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_reactlibrary_BabylonNativeInterop_destroy(JNIEnv* env, jclass obj, jlong instanceRef)
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_destroy(JNIEnv* env, jclass obj, jlong instanceRef)
 {
     auto native = reinterpret_cast<Babylon::Native*>(instanceRef);
     delete native;

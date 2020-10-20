@@ -1,4 +1,4 @@
-package com.reactlibrary;
+package com.babylonreactnative;
 
 import java.util.Arrays;
 import java.util.List;

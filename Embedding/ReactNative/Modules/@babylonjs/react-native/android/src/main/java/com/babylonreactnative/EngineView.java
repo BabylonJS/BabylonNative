@@ -1,4 +1,4 @@
-package com.reactlibrary;
+package com.babylonreactnative;
 
 import android.annotation.TargetApi;
 import android.graphics.Bitmap;

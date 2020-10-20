@@ -1,4 +1,4 @@
-package com.reactlibrary;
+package com.babylonreactnative;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;

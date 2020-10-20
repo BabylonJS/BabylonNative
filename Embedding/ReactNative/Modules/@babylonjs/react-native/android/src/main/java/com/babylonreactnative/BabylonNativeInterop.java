@@ -1,4 +1,4 @@
-package com.reactlibrary;
+package com.babylonreactnative;
 
 import android.app.Activity;
 import android.content.Context;

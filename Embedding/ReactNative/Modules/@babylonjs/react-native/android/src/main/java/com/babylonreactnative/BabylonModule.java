@@ -1,4 +1,4 @@
-package com.reactlibrary;
+package com.babylonreactnative;
 
 import android.os.Handler;
 import android.os.Looper;
