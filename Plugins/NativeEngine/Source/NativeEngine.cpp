@@ -1083,6 +1083,7 @@ namespace Babylon
                 return image;
             })
             .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](bimg::ImageContainer* image) {
+                ScheduleRender();
                 return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
                     CreateTextureFromImage(texture, image);
                 });
@@ -1124,6 +1125,7 @@ namespace Babylon
 
         arcana::when_all(gsl::make_span(tasks))
             .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture, generateMips](std::vector<bimg::ImageContainer*> images) {
+                ScheduleRender();
                 return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips, images = std::move(images)] {
                     CreateCubeTextureFromImages(texture, images, generateMips);
                 });
@@ -1165,6 +1167,7 @@ namespace Babylon
 
         arcana::when_all(gsl::make_span(tasks))
             .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](std::vector<bimg::ImageContainer*> images) {
+                ScheduleRender();
                 return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, images = std::move(images)] {
                     CreateCubeTextureFromImages(texture, images, true);
                 });
