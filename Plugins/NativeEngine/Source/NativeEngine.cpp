@@ -1397,7 +1397,7 @@ namespace Babylon
 
             uint64_t m_engineStateYFlipped = m_engineState;
             m_engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
-            m_engineStateYFlipped |= (cullCCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
+            m_engineStateYFlipped |= (cullCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
 
             bgfx::setState(m_engineStateYFlipped | fillModeState);
         }
