@@ -1082,10 +1082,12 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(RuntimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](bimg::ImageContainer* image) {
-                CreateTextureFromImage(texture, image);
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](bimg::ImageContainer* image) {
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this, texture, image] {
+                    CreateTextureFromImage(texture, image);
+                });
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1121,11 +1123,12 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, m_cancelSource,
-                [texture, dataRef = Napi::Persistent(data), generateMips](const std::vector<bimg::ImageContainer*>& images) {
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture, generateMips](std::vector<bimg::ImageContainer*> images) {
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips, images = std::move(images)] {
                     CreateCubeTextureFromImages(texture, images, generateMips);
-                })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
+                });
+            })
+            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
                 onSuccessRef.Call({Napi::Value::From(Env(), true)});
             })
             .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
@@ -1161,8 +1164,10 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](std::vector<bimg::ImageContainer*> images) {
-                CreateCubeTextureFromImages(texture, images, true);
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](std::vector<bimg::ImageContainer*> images) {
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, images = std::move(images)] {
+                    CreateCubeTextureFromImages(texture, images, true);
+                });
             })
             .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
                 onSuccessRef.Call({Napi::Value::From(Env(), true)});
