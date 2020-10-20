@@ -70,7 +70,7 @@ jobs:
     displayName: 'Build iOS'
     
 - job: win32_x64
-  timeoutInMinutes: 20
+  timeoutInMinutes: 30
   pool:
     vmImage: 'windows-latest'
 
@@ -112,7 +112,7 @@ jobs:
     condition: failed()
     
 - job: win32_x86
-  timeoutInMinutes: 20 
+  timeoutInMinutes: 30 
   pool:
     vmImage: 'windows-latest'
 
@@ -274,7 +274,7 @@ jobs:
     displayName: 'Build androidJSC'
 
 - job: Ubuntu_Clang8_JSC
-  timeoutInMinutes: 20
+  timeoutInMinutes: 30
   pool:
     vmImage: 'ubuntu-latest'
 
