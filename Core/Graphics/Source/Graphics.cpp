@@ -137,7 +137,7 @@ namespace Babylon
 
         bool finished = false;
         bool workDone = false;
-        RenderCurrentFrameAsync(finished, workDone);
+        auto renderTask{RenderCurrentFrameAsync(finished, workDone)};
         while (!finished)
         {
             m_renderWorkDispatcher.blocking_tick(arcana::cancellation::none());
