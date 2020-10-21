@@ -243,12 +243,16 @@ namespace Babylon
 
         FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height, bool actAsBackBuffer = false)
         {
-            return new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, width, height, actAsBackBuffer);
+            const auto fbd = new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, width, height, actAsBackBuffer);
+            fbd->SetUpView(GetNewViewId());
+            return fbd;
         }
 
         FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer)
         {
-            return new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, clearState, width, height, actAsBackBuffer);
+            const auto fbd = new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, clearState, width, height, actAsBackBuffer);
+            fbd->SetUpView(GetNewViewId());
+            return fbd;
         }
 
         void Bind(FrameBufferData* data)
@@ -271,7 +275,7 @@ namespace Babylon
         void Unbind(FrameBufferData* data)
         {
             (void)data;
-            assert(m_boundFrameBuffer == data);
+            assert(m_boundFrameBuffer == m_backBuffer || m_boundFrameBuffer == data);
             Bind(m_backBuffer);
         }
 
