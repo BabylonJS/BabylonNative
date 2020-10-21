@@ -58,6 +58,7 @@ namespace Babylon
 
         arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
         std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
+        std::vector<arcana::task<void, std::exception_ptr>> m_processedRenderWorkTasks{};
         std::mutex m_renderWorkTasksMutex{};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone);
