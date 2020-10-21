@@ -56,11 +56,13 @@ namespace xr
 
         struct Mesh : SceneMesh
         {
+            XrSceneMeshKeyMSFT key;
             XrSceneObjectKeyMSFT parentObjectKey;
         };
 
         struct Plane : ScenePlane
         {
+            XrScenePlaneKeyMSFT key;
             XrSceneObjectKeyMSFT parentObjectKey;
         };
 
@@ -70,6 +72,7 @@ namespace xr
             XrSceneObjectKindTypeMSFT Kind;
             std::vector<Mesh> Meshes;
             std::vector<Plane> Planes;
+            XrPosef Pose;
         };
 
         struct UpdateSceneObjectsArgs

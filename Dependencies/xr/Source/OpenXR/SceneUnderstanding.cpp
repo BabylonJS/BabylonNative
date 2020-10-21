@@ -265,7 +265,7 @@ public:
                 knownObjects.erase(sceneObject.sceneObjectKey);
                 auto& sceneData = m_objects[sceneObject.sceneObjectKey];
 
-                // TODO: see if there's a better locatino to call this
+                // TODO: see if there's a better location to call this
                 XrSceneObjectPropertiesMSFT properties{XR_TYPE_SCENE_OBJECT_PROPERTIES_MSFT};
                 XrSceneObjectKindMSFT kind{XR_TYPE_SCENE_OBJECT_KIND_MSFT};
                 xr::InsertExtensionStruct(properties, kind);
@@ -284,7 +284,7 @@ public:
 
                     knownMeshes.erase(meshKey);
                     auto sceneMesh = xr::GetSceneMesh(extensions, m_sceneHandle.Get(), meshKey);
-                    m_meshes[meshKey] = Mesh{ std::move(sceneMesh), sceneObject.sceneObjectKey };
+                    m_meshes[meshKey] = Mesh{ std::move(sceneMesh), meshKey, sceneObject.sceneObjectKey };
                 }
 
                 sceneData.PlaneKeys = xr::GetPlaneKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
@@ -297,7 +297,7 @@ public:
 
                     knownPlanes.erase(planeKey);
                     auto scenePlane = xr::GetScenePlane(extensions, m_sceneHandle.Get(), planeKey);
-                    m_planes[planeKey] = Plane{ std::move(scenePlane), sceneObject.sceneObjectKey };
+                    m_planes[planeKey] = Plane{ std::move(scenePlane), planeKey, sceneObject.sceneObjectKey };
                 }
             }
 
@@ -334,6 +334,8 @@ public:
 
     void PopulateFrameArguments(UpdateFrameArgs& args)
     {
+        // TODO: plane ids don't seem to work correctly/plane removed events generate issues when attempting to access plane ids.
+
         args.Planes.clear();
         for (const auto& [key, xrPlane] : m_planes)
         {
@@ -416,6 +418,8 @@ public:
                     const auto planeKey = objectData.PlaneKeys.at(i);
                     object->Planes.at(i) = m_planes.at(planeKey);
                 }
+
+                object->Pose = objectData.Pose;
 
                 m_babylonObjects[key] = object;
             }
