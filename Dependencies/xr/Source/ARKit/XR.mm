@@ -250,7 +250,7 @@ namespace {
  Checks whether the camera UVs need to be updated based on the orientation and size of the view port, and updates them if necessary.
  @return True if the camera UVs were updated, false otherwise.
 */
-- (Boolean)checkAndUpdateCameraUVs:(ARFrame*)frame {
+- (Boolean)checkAndUpdateCameraUVs:(ARFrame *)frame {
     // When the orientation or viewport size changes loop over triangleVerts, apply transform to the UV to generate camera UVs.
     auto orientation = [self orientation];
     CGSize viewportSize = [self viewportSize];
@@ -346,7 +346,7 @@ namespace {
         , displayOrientedTransform.columns[3][2] };
 }
 
-- (void)session:(ARSession*)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor*>*)anchors {
+- (void)session:(ARSession*)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (!planeDetectionEnabled) {
         return;
     }
@@ -366,7 +366,7 @@ namespace {
     [self UnlockPlanes];
 }
 
-- (void)session:(ARSession*)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor*>*)anchors {
+- (void)session:(ARSession*)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (!planeDetectionEnabled) {
         return;
     }
@@ -386,7 +386,7 @@ namespace {
     [self UnlockPlanes];
 }
 
-- (void)session:(ARSession*)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor*>*)anchors {
+- (void)session:(ARSession*)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (!planeDetectionEnabled) {
         return;
     }
@@ -428,12 +428,12 @@ namespace {
   [super dealloc];
 }
 
-- (void)mtkView:(MTKView*)__unused view drawableSizeWillChange:(CGSize)size {
+- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize)size {
     _viewportSize.width = size.width;
     _viewportSize.height = size.height;
 }
 
-- (void)drawInMTKView:(MTKView*)__unused view {
+- (void)drawInMTKView:(MTKView *)__unused view {
 }
 
 - (CGSize)viewSize {
@@ -559,7 +559,7 @@ namespace xr {
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
-                metalLayer = (CAMetalLayer*)xrView.layer;
+                metalLayer = (CAMetalLayer *)xrView.layer;
 #pragma clang diagnostic pop
                 metalLayer.device = metalDevice;
                 auto scale = UIScreen.mainScreen.scale;
@@ -588,7 +588,7 @@ namespace xr {
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
             // Configure a pipeline descriptor that is used to create a pipeline state.
-            MTLRenderPipelineDescriptor* pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
             pipelineStateDescriptor.label = @"XR Pipeline";
             pipelineStateDescriptor.vertexFunction = vertexFunction;
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
@@ -679,12 +679,12 @@ namespace xr {
                         ActiveFrameViews[0].ColorTexturePointer = nil;
                     }
 
-                    MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:width height:height mipmapped:NO];
+                    MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:width height:height mipmapped:NO];
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
                     [texture retain];
 
-                    ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void*>(texture);
+                    ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
                     ActiveFrameViews[0].ColorTextureSize = {width, height};
                 }
@@ -698,13 +698,13 @@ namespace xr {
                         ActiveFrameViews[0].DepthTexturePointer = nil;
                     }
 
-                    MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:width height:height mipmapped:NO];
+                    MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:width height:height mipmapped:NO];
                     textureDescriptor.storageMode = MTLStorageModePrivate;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
                     [texture retain];
 
-                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(texture);
+                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
@@ -714,7 +714,7 @@ namespace xr {
                     // Clear the color and depth texture before handing it off to Babylon
                     id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
                     commandBuffer.label = @"BabylonTextureClearBuffer";
-                    MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
                     if(renderPassDescriptor != nil) {
                         // Set up the clear for the color texture.
                         renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
@@ -758,7 +758,7 @@ namespace xr {
                 commandBuffer.label = @"XRDisplayCommandBuffer";
                 
                 id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
-                MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
                 
                 id<MTLTexture> cameraTextureY = nil;
                 id<MTLTexture> cameraTextureCbCr = nil;
