@@ -461,6 +461,10 @@ namespace xr
                 width = static_cast<size_t>(_width);
                 height = static_cast<size_t>(_height);
             }
+            
+            // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
+            width = std::max(width, size_t(8));
+            height = std::max(height, size_t(8));
 
             // Check whether the dimensions have changed
             if ((ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height)
