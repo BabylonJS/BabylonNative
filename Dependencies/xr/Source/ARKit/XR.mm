@@ -346,7 +346,7 @@ namespace {
         , displayOrientedTransform.columns[3][2] };
 }
 
-- (void)session:(ARSession*)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+- (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (!planeDetectionEnabled) {
         return;
     }
@@ -366,7 +366,7 @@ namespace {
     [self UnlockPlanes];
 }
 
-- (void)session:(ARSession*)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+- (void)session:(ARSession *)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (!planeDetectionEnabled) {
         return;
     }
@@ -386,7 +386,7 @@ namespace {
     [self UnlockPlanes];
 }
 
-- (void)session:(ARSession*)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+- (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (!planeDetectionEnabled) {
         return;
     }
