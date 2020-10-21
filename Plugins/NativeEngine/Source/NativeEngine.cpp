@@ -538,6 +538,11 @@ namespace Babylon
                 Dispatch([this] {
                     m_graphicsImpl.RenderCurrentFrame();
                 });
+
+                // TODO: DEBUG
+                m_graphicsImpl.GetAfterRenderTask().then(RuntimeScheduler, m_cancelSource, [this]() mutable {
+                    ScheduleRender();
+                });
             }
         }
     }

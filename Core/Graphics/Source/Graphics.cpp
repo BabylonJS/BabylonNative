@@ -137,12 +137,11 @@ namespace Babylon
 
         bool finished = false;
         bool workDone = false;
-        auto renderTask{RenderCurrentFrameAsync(finished, workDone)};
+        RenderCurrentFrameAsync(finished, workDone);
         while (!finished)
         {
             m_renderWorkDispatcher.blocking_tick(arcana::cancellation::none());
         }
-        m_processedRenderWorkTasks.clear();
 
         if (workDone)
         {
@@ -174,7 +173,6 @@ namespace Babylon
             if (anyTasks)
             {
                 whenAllTask = arcana::when_all<std::exception_ptr>(m_renderWorkTasks);
-                m_processedRenderWorkTasks.insert(m_processedRenderWorkTasks.end(), m_renderWorkTasks.begin(), m_renderWorkTasks.end());
                 m_renderWorkTasks.clear();
             }
         }
