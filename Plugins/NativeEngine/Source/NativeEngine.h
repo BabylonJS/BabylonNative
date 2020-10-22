@@ -299,8 +299,7 @@ namespace Babylon
             });
 
             // TODO: Investigate performance implications of unbinding on reset when in VR mode.
-            // See https://github.com/BabylonJS/BabylonNative/issues/344
-            // Unbind(m_boundFrameBuffer);
+            Unbind(m_boundFrameBuffer);
         }
 
         inline bool IsRenderingToTarget() const
