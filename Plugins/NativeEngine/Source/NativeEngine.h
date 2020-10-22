@@ -275,8 +275,11 @@ namespace Babylon
         void Unbind(FrameBufferData* data)
         {
             (void)data;
-            assert(m_boundFrameBuffer == m_backBuffer || m_boundFrameBuffer == data);
-            Bind(m_backBuffer);
+            if (m_boundFrameBuffer != m_backBuffer)
+            {
+                assert(m_boundFrameBuffer == data);
+                Bind(m_backBuffer);
+            }
         }
 
         uint16_t GetNewViewId()
@@ -288,15 +291,16 @@ namespace Babylon
 
         void Reset()
         {
-            m_nextId = 1; // Don't overwrite m_backBuffer view id.
+            m_nextId = 1; // Don't overwrite m_backBuffer view id assignment.
             m_activeFrameBuffers.apply_to_all([this](FrameBufferData* frameBufferData) {
                 // We don't need to reassign m_backBuffer's view id since it's not transient.
                 if (frameBufferData != m_backBuffer)
                     frameBufferData->ViewIdDirty = true;
             });
 
-            // Rebind to the default back buffer
-            Unbind(m_boundFrameBuffer);
+            // TODO: Investigate performance implications of unbinding on reset when in VR mode.
+            // See https://github.com/BabylonJS/BabylonNative/issues/344
+            // Unbind(m_boundFrameBuffer);
         }
 
         inline bool IsRenderingToTarget() const

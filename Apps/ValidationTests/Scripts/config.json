@@ -9,7 +9,7 @@
         {
             "title": "Chromatic aberration",
             "playgroundId": "#NAW8EA#0",
-            "renderCount": 20,
+            "renderCount": 30,
             "referenceImage": "chromaticAberration.png"
         },
         {
@@ -43,7 +43,7 @@
         {
             "title": "Black and White post-process",
             "playgroundId": "#N55Q2M#0",
-            "renderCount": 20,
+            "renderCount": 30,
             "referenceImage": "bwpp.png"
         },
         {
