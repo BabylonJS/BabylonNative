@@ -288,12 +288,14 @@ namespace Babylon
 
         void Reset()
         {
-            m_nextId = 0;
-            m_activeFrameBuffers.apply_to_all([](FrameBufferData* frameBufferData) {
-                frameBufferData->ViewIdDirty = true;
+            m_nextId = 1; // Don't overwrite m_backBuffer view id.
+            m_activeFrameBuffers.apply_to_all([this](FrameBufferData* frameBufferData) {
+                // We don't need to reassign m_backBuffer's view id since it's not transient.
+                if (frameBufferData != m_backBuffer)
+                    frameBufferData->ViewIdDirty = true;
             });
 
-            // Rebind the default back buffer and reset its view
+            // Rebind to the default back buffer
             Unbind(m_boundFrameBuffer);
         }
 
