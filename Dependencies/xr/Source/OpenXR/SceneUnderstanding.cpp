@@ -104,7 +104,7 @@ public:
 
         if (m_initialized)
         {
-            // Unclear whether recreating the XrSceneObserverMSFT is needed
+            // This function will be repeatedly called when setting new detection boundaries.
             return;
         }
 
@@ -172,20 +172,41 @@ public:
 
     void HandleReady(const XrTime time, const XrSpace& space, const XrSupportedExtensions& extensions)
     {
-        // TODO: support other boundary types
-        XrSceneSphereBoundMSFT sphere{};
-        XrSpaceLocation viewInLocal{ XR_TYPE_SPACE_LOCATION };
-        CHECK_XRCMD(xrLocateSpace(m_viewSpace.Get(), space, time, &viewInLocal));
-        if (xr::math::Pose::IsPoseValid(viewInLocal)) {
-            sphere.center = viewInLocal.pose.position;
-            sphere.radius = m_sphereRadius;
-        }
-
         XrNewSceneComputeInfoMSFT computeInfo{ XR_TYPE_NEW_SCENE_COMPUTE_INFO_MSFT };
         computeInfo.bounds.space = space;
         computeInfo.bounds.time = time;
-        computeInfo.bounds.sphereCount = 1;
-        computeInfo.bounds.spheres = &sphere;
+
+        XrSpaceLocation viewInLocal{ XR_TYPE_SPACE_LOCATION };
+        CHECK_XRCMD(xrLocateSpace(m_viewSpace.Get(), space, time, &viewInLocal));
+
+        // TODO: support Frustum as needed
+        XrSceneSphereBoundMSFT sphere{};
+        XrSceneOrientedBoxBoundMSFT box{};
+        switch (m_boundaryType)
+        {
+        case DetectionBoundaryType::Sphere:
+        {
+            if (xr::math::Pose::IsPoseValid(viewInLocal)) {
+                sphere.center = viewInLocal.pose.position;
+                sphere.radius = m_sphereRadius;
+            }
+
+            computeInfo.bounds.sphereCount = 1;
+            computeInfo.bounds.spheres = &sphere;
+        }
+        break;
+        case DetectionBoundaryType::Box:
+        {
+            if (xr::math::Pose::IsPoseValid(viewInLocal)) {
+                box.pose = viewInLocal.pose;
+                box.extents = m_boxDimensions;
+            }
+            
+            computeInfo.bounds.boxCount = 1;
+            computeInfo.bounds.boxes = &box;
+        }
+        break;
+        }
 
         CHECK_XRCMD(extensions.xrComputeNewSceneMSFT(m_sceneObserverHandle.Get(), &computeInfo));
 
@@ -206,7 +227,7 @@ public:
             sceneObjectKeys.resize(sceneObjects.size());
             for (size_t i = 0; i < sceneObjectKeys.size(); i++)
             {
-                sceneObjectKeys.at(i) = sceneObjects.at(i).sceneObjectKey;
+                sceneObjectKeys[i] = sceneObjects.at(i).sceneObjectKey;
             }
 
             XrSceneObjectsLocateInfoMSFT locateInfo{ XR_TYPE_SCENE_OBJECTS_LOCATE_INFO_MSFT };
@@ -265,7 +286,6 @@ public:
                 knownObjects.erase(sceneObject.sceneObjectKey);
                 auto& sceneData = m_objects[sceneObject.sceneObjectKey];
 
-                // TODO: see if there's a better location to call this
                 XrSceneObjectPropertiesMSFT properties{XR_TYPE_SCENE_OBJECT_PROPERTIES_MSFT};
                 XrSceneObjectKindMSFT kind{XR_TYPE_SCENE_OBJECT_KIND_MSFT};
                 xr::InsertExtensionStruct(properties, kind);
