@@ -243,101 +243,96 @@ public:
 
             CHECK_XRCMD(extensions.xrLocateSceneObjectsMSFT(m_sceneHandle.Get(), &locateInfo, &locations));
 
+            // Get a set of the known objects to understand if any objects were removed
+            std::set<XrSceneObjectKeyMSFT> knownObjects{};
+            std::transform(m_sceneObjects.begin(), m_sceneObjects.end(),
+                std::inserter(knownObjects, knownObjects.end()),
+                [](auto pair) { return pair.first; });
+
             for (size_t i = 0; i < sceneObjects.size(); i++)
             {
                 const auto& location = m_sceneObjectLocations.at(i);
                 const auto& sceneObject = sceneObjects.at(i);
 
-                if (xr::math::Pose::IsPoseValid(location.locationFlags)) {
-                    if (m_objects.count(sceneObject.sceneObjectKey) == 0)
-                    {
-                        m_updatedObjects.push_back(sceneObject.sceneObjectKey);
-                        m_objects[sceneObject.sceneObjectKey] = SceneObjectData{};
-                    }
-
-                    m_objects[sceneObject.sceneObjectKey].Pose = location.pose;
-                }
-            }
-
-            std::set<XrSceneObjectKeyMSFT> knownObjects{};
-            std::transform(m_objects.begin(), m_objects.end(),
-                std::inserter(knownObjects, knownObjects.end()),
-                [](auto pair) { return pair.first; });
-
-            std::set<XrSceneMeshKeyMSFT> knownMeshes{};
-            std::transform(m_meshes.begin(), m_meshes.end(),
-                std::inserter(knownMeshes, knownMeshes.end()),
-                [](auto pair) { return pair.first; });
-
-            std::set<XrScenePlaneKeyMSFT> knownPlanes{};
-            std::transform(m_planes.begin(), m_planes.end(),
-                std::inserter(knownPlanes, knownPlanes.end()),
-                [](auto pair) { return pair.first; });
-
-            // m_updated vectors cleared every frame
-            for (const auto& sceneObject : sceneObjects)
-            {
-                if (m_objects.count(sceneObject.sceneObjectKey) == 0)
+                if (m_sceneObjects.count(sceneObject.sceneObjectKey) == 0)
                 {
                     m_updatedObjects.push_back(sceneObject.sceneObjectKey);
-                    m_objects[sceneObject.sceneObjectKey] = SceneObjectData{};
+                    m_sceneObjects[sceneObject.sceneObjectKey] = std::make_shared<SceneObject>();
                 }
 
                 knownObjects.erase(sceneObject.sceneObjectKey);
-                auto& sceneData = m_objects[sceneObject.sceneObjectKey];
+                auto& object = m_sceneObjects[sceneObject.sceneObjectKey];
 
+                // Set scene object pose
+                if (xr::math::Pose::IsPoseValid(location.locationFlags)) {
+                    object->Pose = location.pose;
+                }
+
+                // Set scene object kind
                 XrSceneObjectPropertiesMSFT properties{XR_TYPE_SCENE_OBJECT_PROPERTIES_MSFT};
                 XrSceneObjectKindMSFT kind{XR_TYPE_SCENE_OBJECT_KIND_MSFT};
                 xr::InsertExtensionStruct(properties, kind);
                 XrSceneObjectPropertiesGetInfoMSFT getInfo{XR_TYPE_SCENE_OBJECT_PROPERTIES_GET_INFO_MSFT};
                 getInfo.sceneObjectKey = sceneObject.sceneObjectKey;
                 CHECK_XRCMD(extensions.xrGetSceneObjectPropertiesMSFT(m_sceneHandle.Get(), &getInfo, &properties));
-                sceneData.Kind = kind.kind;
+                object->Kind = kind.kind;
 
-                sceneData.MeshKeys = xr::GetMeshKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
-                for (const auto& meshKey : sceneData.MeshKeys)
+                // Get sets of the known meshes and planes for this object to understand if any were removed
+                std::set<XrSceneMeshKeyMSFT> knownMeshes{};
+                std::transform(object->Meshes.begin(), object->Meshes.end(),
+                    std::inserter(knownMeshes, knownMeshes.end()),
+                    [](auto pair) { return pair.first; });
+
+                std::set<XrScenePlaneKeyMSFT> knownPlanes{};
+                std::transform(object->Planes.begin(), object->Planes.end(),
+                    std::inserter(knownPlanes, knownPlanes.end()),
+                    [](auto pair) { return pair.first; });
+
+                const auto meshKeys = xr::GetMeshKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
+                for (const auto& meshKey : meshKeys)
                 {
-                    if (m_meshes.count(meshKey) == 0)
+                    if (object->Meshes.count(meshKey) == 0)
                     {
                         m_updatedMeshes.push_back(meshKey);
                     }
 
                     knownMeshes.erase(meshKey);
                     auto sceneMesh = xr::GetSceneMesh(extensions, m_sceneHandle.Get(), meshKey);
-                    m_meshes[meshKey] = Mesh{ std::move(sceneMesh), meshKey, sceneObject.sceneObjectKey };
+                    object->Meshes[meshKey] = Mesh{ std::move(sceneMesh), meshKey, sceneObject.sceneObjectKey };
                 }
 
-                sceneData.PlaneKeys = xr::GetPlaneKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
-                for (const auto& planeKey : sceneData.PlaneKeys)
+                const auto planeKeys = xr::GetPlaneKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
+                for (const auto& planeKey : planeKeys)
                 {
-                    if (m_planes.count(planeKey) == 0)
+                    if (object->Planes.count(planeKey) == 0)
                     {
                         m_updatedPlanes.push_back(planeKey);
                     }
 
                     knownPlanes.erase(planeKey);
                     auto scenePlane = xr::GetScenePlane(extensions, m_sceneHandle.Get(), planeKey);
-                    m_planes[planeKey] = Plane{ std::move(scenePlane), planeKey, sceneObject.sceneObjectKey };
+                    object->Planes[planeKey] = Plane{ std::move(scenePlane), planeKey, sceneObject.sceneObjectKey };
+                }
+
+                // Clean up removed meshes and planes for this object
+                for (const auto& meshKey : knownMeshes)
+                {
+                    m_removedMeshes.push_back(meshKey);
+                    object->Meshes.erase(meshKey);
+                }
+
+                for (const auto& planeKey : knownPlanes)
+                {
+                    m_removedPlanes.push_back(planeKey);
+                    object->Planes.erase(planeKey);
                 }
             }
 
-            // m_removed vectors cleared every frame
+            // Clean up removed objects
             for (const auto& objectKey : knownObjects)
             {
                 m_removedObjects.push_back(objectKey);
-                m_objects.erase(objectKey);
-            }
-
-            for (const auto& meshKey : knownMeshes)
-            {
-                m_removedMeshes.push_back(meshKey);
-                m_meshes.erase(meshKey);
-            }
-
-            for (const auto& planeKey : knownPlanes)
-            {
-                m_removedPlanes.push_back(planeKey);
-                m_planes.erase(planeKey);
+                m_sceneObjects.erase(objectKey);
             }
 
             m_state = State::Waiting;
@@ -357,37 +352,40 @@ public:
         // TODO: plane ids don't seem to work correctly/plane removed events generate issues when attempting to access plane ids.
 
         args.Planes.clear();
-        for (const auto& [key, xrPlane] : m_planes)
+        for (const auto& [objectKey, object] : m_sceneObjects)
         {
-            if (m_babylonPlanes.count(key) == 0)
+            for (const auto& [key, xrPlane] : object->Planes)
             {
-                const auto newPlane = std::make_shared<xr::System::Session::Frame::Plane>();
-                m_babylonPlanes[key] = newPlane;
-                m_babylonPlanesById[newPlane->ID] = newPlane;
+                if (m_babylonPlanes.count(key) == 0)
+                {
+                    const auto newPlane = std::make_shared<xr::System::Session::Frame::Plane>();
+                    m_babylonPlanes[key] = newPlane;
+                    m_babylonPlanesById[newPlane->ID] = newPlane;
+                }
+
+                auto& babylonPlane = *m_babylonPlanes[key];
+                babylonPlane.Center = XrPoseToBabylonPose(object->Pose);
+                babylonPlane.PolygonFormat = xr::PolygonFormat::XYZ;
+
+                constexpr uint8_t VALUES_IN_POINT = 3;
+                constexpr uint8_t VALUES_IN_XYZ_QUAD = 12;
+                babylonPlane.Polygon.resize(VALUES_IN_XYZ_QUAD);
+                babylonPlane.Polygon[0] = -1.f * xrPlane.extent.width / 2.f;
+                babylonPlane.Polygon[1] = -1.f * xrPlane.extent.height / 2.f;
+                babylonPlane.Polygon[2] = 0;
+                babylonPlane.Polygon[3] = 1.f * xrPlane.extent.width / 2.f;
+                babylonPlane.Polygon[4] = -1.f * xrPlane.extent.height / 2.f;
+                babylonPlane.Polygon[5] = 0;
+                babylonPlane.Polygon[6] = 1.f * xrPlane.extent.width / 2.f;
+                babylonPlane.Polygon[7] = 1.f * xrPlane.extent.height / 2.f;
+                babylonPlane.Polygon[8] = 0;
+                babylonPlane.Polygon[9] = -1.f * xrPlane.extent.width / 2.f;
+                babylonPlane.Polygon[10] = 1.f * xrPlane.extent.height / 2.f;
+                babylonPlane.Polygon[11] = 0;
+                babylonPlane.PolygonSize = babylonPlane.Polygon.size() / VALUES_IN_POINT; // Number of points
+
+                args.Planes.push_back(babylonPlane);
             }
-
-            auto& babylonPlane = *m_babylonPlanes[key];
-            babylonPlane.Center = XrPoseToBabylonPose(m_objects.at(xrPlane.parentObjectKey).Pose);
-            babylonPlane.PolygonFormat = xr::PolygonFormat::XYZ;
-
-            constexpr uint8_t VALUES_IN_POINT = 3;
-            constexpr uint8_t VALUES_IN_XYZ_QUAD = 12;
-            babylonPlane.Polygon.resize(VALUES_IN_XYZ_QUAD);
-            babylonPlane.Polygon[0] = -1.f * xrPlane.extent.width / 2.f;
-            babylonPlane.Polygon[1] = -1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[2] = 0;
-            babylonPlane.Polygon[3] = 1.f * xrPlane.extent.width / 2.f;
-            babylonPlane.Polygon[4] = -1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[5] = 0;
-            babylonPlane.Polygon[6] = 1.f * xrPlane.extent.width / 2.f;
-            babylonPlane.Polygon[7] = 1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[8] = 0;
-            babylonPlane.Polygon[9] = -1.f * xrPlane.extent.width / 2.f;
-            babylonPlane.Polygon[10] = 1.f * xrPlane.extent.height / 2.f;
-            babylonPlane.Polygon[11] = 0;
-            babylonPlane.PolygonSize = babylonPlane.Polygon.size() / VALUES_IN_POINT; // Number of points
-
-            args.Planes.push_back(babylonPlane);
         }
 
         args.UpdatedPlanes.clear();
@@ -415,40 +413,10 @@ public:
 
     void PopulateSceneObjectsArgs(UpdateSceneObjectsArgs& args)
     {
-        if (args.DisplayTime != m_lastSceneObjectUpdate)
-        {
-            // TODO: reduce amount of stored data
-            m_babylonObjects.clear();
-            for (const auto& [key, objectData] : m_objects)
-            {
-                auto object = std::make_shared<SceneObject>();
-                object->Key = key;
-                object->Kind = objectData.Kind;
-
-                object->Meshes.resize(objectData.MeshKeys.size());
-                for (size_t i = 0; i < objectData.MeshKeys.size(); i++)
-                {
-                    const auto meshKey = objectData.MeshKeys.at(i);
-                    object->Meshes.at(i) = m_meshes.at(meshKey);
-                }
-
-                object->Planes.resize(objectData.PlaneKeys.size());
-                for (size_t i = 0; i < objectData.PlaneKeys.size(); i++)
-                {
-                    const auto planeKey = objectData.PlaneKeys.at(i);
-                    object->Planes.at(i) = m_planes.at(planeKey);
-                }
-
-                object->Pose = objectData.Pose;
-
-                m_babylonObjects[key] = object;
-            }
-        }
-
         args.SceneObjects.clear();
-        for (const auto& [key, babylonObject] : m_babylonObjects)
+        for (const auto& [key, object] : m_sceneObjects)
         {
-            args.SceneObjects[key] = babylonObject;
+            args.SceneObjects[key] = object;
         }
 
         args.UpdatedObjects = m_updatedObjects;
@@ -473,14 +441,6 @@ private:
         Waiting
     };
 
-    struct SceneObjectData
-    {
-        XrSceneObjectKindTypeMSFT Kind;
-        std::vector<XrSceneMeshKeyMSFT> MeshKeys;
-        std::vector<XrScenePlaneKeyMSFT> PlaneKeys;
-        XrPosef Pose;
-    };
-
     bool m_initialized{ false };
     xr::SpaceHandle m_viewSpace{};
     SceneUnderstanding::DetectionBoundaryType m_boundaryType{};
@@ -495,9 +455,7 @@ private:
     XrTime m_lastSceneObjectUpdate{};
     std::vector<XrSceneObjectLocationMSFT> m_sceneObjectLocations;
 
-    std::map<XrSceneObjectKeyMSFT, SceneObjectData> m_objects{};
-    std::map<XrSceneMeshKeyMSFT, Mesh> m_meshes{};
-    std::map<XrScenePlaneKeyMSFT, Plane> m_planes{};
+    std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>> m_sceneObjects{};
     std::vector<XrSceneObjectKeyMSFT> m_updatedObjects{};
     std::vector<XrSceneMeshKeyMSFT> m_updatedMeshes{};
     std::vector<XrScenePlaneKeyMSFT> m_updatedPlanes{};
@@ -507,7 +465,6 @@ private:
 
     std::map<XrScenePlaneKeyMSFT, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanes;
     std::map<xr::System::Session::Frame::Plane::Identifier, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanesById;
-    std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>> m_babylonObjects{};
 };
 
 SceneUnderstanding::SceneUnderstanding() 

@@ -70,8 +70,8 @@ namespace xr
         {
             XrSceneObjectKeyMSFT Key;
             XrSceneObjectKindTypeMSFT Kind;
-            std::vector<Mesh> Meshes;
-            std::vector<Plane> Planes;
+            std::map<XrSceneMeshKeyMSFT, Mesh> Meshes;
+            std::map<XrScenePlaneKeyMSFT, Plane> Planes;
             XrPosef Pose;
         };
 
