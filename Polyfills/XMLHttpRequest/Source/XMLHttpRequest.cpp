@@ -58,9 +58,11 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::HandleScope scope{env};
 
+        static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
+
         Napi::Function func = DefineClass(
             env,
-            "XMLHttpRequest",
+            JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
             {
                 StaticValue("UNSENT", Napi::Value::From(env, 0)),
                 StaticValue("OPENED", Napi::Value::From(env, 1)),
@@ -80,7 +82,12 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("send", &XMLHttpRequest::Send),
             });
 
-        env.Global().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
+        if (env.Global().Get(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME).IsUndefined())
+        {
+            env.Global().Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
+        }
+
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME, func);
     }
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)

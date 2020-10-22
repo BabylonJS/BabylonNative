@@ -1090,8 +1090,10 @@ namespace Babylon
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
             [this, dataSpan, generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
-                // todo: bimg::imageParse will return nullptr when trying to load a texture with an url that is not a valid texture
-                // Like a 404 html page.
+                if (image == nullptr)
+                {
+                    throw std::runtime_error("Unable to decode image."); // exeption will be forwarded to JS
+                }
                 if (invertY)
                 {
                     FlipY(image);
