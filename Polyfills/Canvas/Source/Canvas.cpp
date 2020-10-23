@@ -8,7 +8,7 @@
 #include <functional>
 #include <sstream>
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "font/stb/stb_truetype.h"
+#include "stb/stb_truetype.h"
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4996)

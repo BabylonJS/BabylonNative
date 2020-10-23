@@ -2,20 +2,17 @@ set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"
     "Source/Canvas.h"
-    "Source/font/font_manager.cpp"
-    "Source/font/font_manager.h"
-    "Source/font/text_buffer_manager.cpp"
-    "Source/font/text_buffer_manager.h"
-    "Source/font/cube_atlas.cpp"
-    "Source/font/cube_atlas.h"
-    "Source/font/utf8.cpp"
-    "Source/font/utf8.h"
     )
 
-add_library(Canvas ${SOURCES})
+file( GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
+set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
+
+add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES})
 warnings_as_errors(Canvas)
 
-target_include_directories(Canvas PUBLIC "Include")
+target_include_directories(Canvas PUBLIC "Include"
+    PRIVATE "${BGFX_DIR}/3rdparty"
+    PRIVATE "${BGFX_DIR}/examples/common")
 
 target_link_to_dependencies(Canvas PUBLIC napi
     PRIVATE bgfx
@@ -24,3 +21,5 @@ target_link_to_dependencies(Canvas PUBLIC napi
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+# disable warnings because of 3rd party 
+disable_warnings(Canvas)
