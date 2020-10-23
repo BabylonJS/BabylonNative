@@ -26,7 +26,9 @@ else()
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XrPlatformCommon.h"
         "Source/OpenXR/XrRegistry.h"
-        "Source/OpenXR/XrSupportedExtensions.h")
+        "Source/OpenXR/XrSupportedExtensions.h"
+        "Source/OpenXR/SceneUnderstanding.h"
+        "Source/OpenXR/SceneUnderstanding.cpp")
 endif()
 
 add_library(xr ${SOURCES})
