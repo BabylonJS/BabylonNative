@@ -187,6 +187,24 @@ By default, the "Playground" demo app should be set as the Visual Studio start-u
 project. Build and run this app by pressing the green "Play" button or by pressing
 `F5` on your keyboard.
 
+### **Building on Windows 10, Targeting HoloLens 2**
+
+**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with 
+C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required 
+by dependencies)
+
+HoloLens 2 supports `arm64` UWP applications. To create a HoloLens 2 Visual Studio solution for a physical device, run the following command from the `BabylonNative/Build` directory:
+
+```
+cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
+```
+
+**Additional notes for HoloLens 2 development**:
+* At this time, running immersive applications on **HoloLens 2 emulators** is **NOT** supported. We are tracking support for **HoloLens 2 emulators** [here](https://github.com/BabylonJS/BabylonNative/issues/448).
+* For the Playground app, setting the `hololens` javascript variable to true in `experience.js` will configure the experience for **HoloLens 2**.
+* HoloLens 2 immersive experiences require the `Spatial Perception` UWP capability. This capability is enabled in the application's `Package.appxmanifest`. When creating a custom BabylonNative project, one will need to enable the `Spatial Perception` UWP cability in their app's `Package.appxmanifest`. For more information on UWP capabilities, see [here](https://docs.microsoft.com/en-us/windows/uwp/packaging/app-capability-declarations).
+* HoloLens 2 immersive experiences are built on top of `OpenXR`. Updates to the `OpenXR` runtime should automtically be installed on physical **HoloLens 2** devices through the Windows Store. If for some reason updates are not automatically installed (custom device configurations, lack of network connectivity, etc), developers may need to manually install updates for the `OpenXR` runtime through the Windows Store. For more information on installing newer versions of `OpenXR`, see [here](https://docs.microsoft.com/en-us/windows/mixed-reality/develop/native/openxr-getting-started).
+
 ### **Building on macOS, Targeting macOS**
 
 **Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer, 
@@ -201,6 +219,12 @@ correct build system generator for CMake to use, as follows:
 
 ```
 cmake -G Xcode ..
+```
+
+Starting with Xcode 12, it's mandatory to set the targeted CPU architectures (X86_64 and/or arm64).
+
+```
+cmake .. -GXcode "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
 ```
 
 CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
