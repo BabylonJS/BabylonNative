@@ -198,14 +198,15 @@ namespace Babylon::Polyfills::Internal
 
         // Setup a top-left ortho matrix for screen space drawing.
         const bgfx::Caps* caps = bgfx::getCaps();
+        bool flipY = !bgfx::getCaps()->originBottomLeft;
         {
             float ortho[16];
             bx::mtxOrtho(
                 ortho
                 , centering
                 , static_cast<float>(width) + centering
-                , static_cast<float>(height) + centering
-                , centering
+                , flipY ? centering : (static_cast<float>(height) + centering)
+                , flipY ? (static_cast<float>(height) + centering) : centering
                 , 0.0f
                 , 100.0f
                 , 0.0f
