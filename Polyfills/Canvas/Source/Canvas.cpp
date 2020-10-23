@@ -12,15 +12,6 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    /*namespace 
-    {
-        FontManager* fontManager{};
-        TextBufferManager* textBufferManager{};
-        FontHandle font;
-        TextBufferHandle transientText;
-    }
-    */
- 
     void Canvas::CreateInstance(Napi::Env env)
     {
         Napi::HandleScope scope{env};
@@ -156,7 +147,6 @@ namespace Babylon::Polyfills::Internal
     {
     }
 
-
     void Context::FillRect(const Napi::CallbackInfo&)
     {
     }
@@ -198,15 +188,15 @@ namespace Babylon::Polyfills::Internal
 
         // Setup a top-left ortho matrix for screen space drawing.
         const bgfx::Caps* caps = bgfx::getCaps();
-        bool flipY = !bgfx::getCaps()->originBottomLeft;
+        bool flipY = bgfx::getCaps()->originBottomLeft;
         {
             float ortho[16];
             bx::mtxOrtho(
                 ortho
                 , centering
                 , static_cast<float>(width) + centering
-                , flipY ? centering : (static_cast<float>(height) + centering)
                 , flipY ? (static_cast<float>(height) + centering) : centering
+                , flipY ? centering : (static_cast<float>(height) + centering)
                 , 0.0f
                 , 100.0f
                 , 0.0f

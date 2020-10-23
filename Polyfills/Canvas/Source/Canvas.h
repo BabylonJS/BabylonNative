@@ -54,8 +54,6 @@ namespace Babylon::Polyfills::Internal
 
         explicit Context(const Napi::CallbackInfo& info);
 
-        
-
     private:
 
         void FillRect(const Napi::CallbackInfo&);
@@ -69,7 +67,6 @@ namespace Babylon::Polyfills::Internal
 
         TextBufferManager m_textBufferManager;
         TextBufferHandle m_transientText;
-
 
         friend class Canvas;
     };
