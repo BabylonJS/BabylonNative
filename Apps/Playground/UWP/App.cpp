@@ -159,6 +159,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Canvas::Initialize(env);
 
         Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
 

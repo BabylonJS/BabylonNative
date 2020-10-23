@@ -44,6 +44,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Canvas::Initialize(env);
 
         Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
 

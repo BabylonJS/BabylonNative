@@ -111,7 +111,6 @@ namespace
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
                 Babylon::Polyfills::Canvas::Initialize(env);
 
-                Babylon::Polyfills::Window::Initialize(env);
                 // Initialize NativeWindow plugin to the test size.
                 // TODO: TestUtils::UpdateSize should do it properly but the client size
                 // is not forwarded correctly to the rendering. Find why.

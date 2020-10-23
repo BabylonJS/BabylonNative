@@ -68,6 +68,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            Babylon::Polyfills::Canvas::Initialize(env);
 
             // Initialize NativeWindow plugin.
             Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
