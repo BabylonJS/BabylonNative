@@ -62,6 +62,7 @@ target_link_libraries(BabylonNativeJNI
         NativeXr
         NativeWindow
         Console
+        Canvas
         Window
         ScriptLoader
         XMLHttpRequest)
