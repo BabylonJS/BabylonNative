@@ -357,7 +357,7 @@ public:
                 babylonPlane.PolygonFormat = xr::PolygonFormat::XYZ;
 
                 // Note: Without a normal its unclear how to define the front/back of the plane
-                // This is currently an arbitrary winding order based on this lack of information
+                // This is currently an arbitrary winding order due to this lack of information
                 constexpr uint8_t VALUES_IN_POINT = 3;
                 constexpr uint8_t VALUES_IN_XYZ_QUAD = 12;
                 babylonPlane.Polygon.resize(VALUES_IN_XYZ_QUAD);
