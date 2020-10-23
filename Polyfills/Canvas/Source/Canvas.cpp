@@ -10,45 +10,17 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
 
-#if defined(_MSC_VER)
-#pragma warning(disable : 4996)
-#endif
-
 namespace Babylon::Polyfills::Internal
 {
-    inline void* load(const char* szFileName, uint32_t& bufSize)
+    /*namespace 
     {
-        FILE* fp = fopen(szFileName, "rb");
-        if (fp)
-        {
-            fseek(fp, 0, SEEK_END);
-            bufSize = ftell(fp);
-            fseek(fp, 0, SEEK_SET);
-            char* buf = new char[bufSize];
-            fread(buf, bufSize, 1, fp);
-            fclose(fp);
-            return buf;
-        }
-        return nullptr;
+        FontManager* fontManager{};
+        TextBufferManager* textBufferManager{};
+        FontHandle font;
+        TextBufferHandle transientText;
     }
-
-    TrueTypeHandle loadTtf(FontManager* _fm, const char* _filePath)
-    {
-        uint32_t size;
-        void* data = load(_filePath, size);
-
-        if (NULL != data)
-        {
-            TrueTypeHandle handle = _fm->createTtf((uint8_t*)data, size);
-            //BX_FREE(entry::getAllocator(), data);
-            return handle;
-        }
-
-        TrueTypeHandle invalid = BGFX_INVALID_HANDLE;
-        return invalid;
-    }
-
-
+    */
+ 
     void Canvas::CreateInstance(Napi::Env env)
     {
         Napi::HandleScope scope{env};
@@ -57,6 +29,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
+                ParentT::StaticMethod("loadTTF", &Canvas::LoadTTF),
                 ParentT::InstanceMethod("getContext", &Canvas::GetContext),
                 InstanceAccessor("width", &Canvas::GetWidth, &Canvas::SetWidth),
                 InstanceAccessor("height", &Canvas::GetHeight, &Canvas::SetHeight),
@@ -72,9 +45,25 @@ namespace Babylon::Polyfills::Internal
     {
     }
 
+    void Canvas::LoadTTF(const Napi::CallbackInfo& info)
+    {
+        std::string fontName = info[0].As<Napi::String>().Utf8Value();
+        const auto buffer = info[1].As<Napi::ArrayBuffer>();
+        
+        if (!fontsInfos)
+        {
+            // Init the text rendering system.
+            fontsInfos = std::make_unique<FontsInfo>(512);
+        }
+        TrueTypeHandle handle = fontsInfos->fontManager.createTtf((uint8_t*)buffer.Data(), buffer.ByteLength());
+        fontsInfos->font = fontsInfos->fontManager.createFontByPixelSize(handle, 0, 32);
+        fontsInfos->fontManager.preloadGlyph(fontsInfos->font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!@#$%^&*()[]{};:<>?,/\\ \n");
+        fontsInfos->fontManager.destroyTtf(handle);
+    }
+
     Napi::Value Canvas::GetContext(const Napi::CallbackInfo& info)
     {
-        return Context::CreateInstance(info.Env());
+        return Context::CreateInstance(info.Env(), this);
     }
 
     Napi::Value Canvas::GetWidth(const Napi::CallbackInfo&)
@@ -107,7 +96,6 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-
     struct TextureData final
     {
         ~TextureData()
@@ -135,18 +123,16 @@ namespace Babylon::Polyfills::Internal
     }
 
     // Context
-
     void Context::UpdateRenderTarget(uint32_t width, uint32_t height)
     {
         if (frameBufferHandle.idx != bgfx::kInvalidHandle)
         {
             bgfx::destroy(frameBufferHandle);
         }
-        auto format = bgfx::TextureFormat::RGBA8;
-        frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(width), static_cast<uint16_t>(height), format, BGFX_TEXTURE_RT);
+        frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(width), static_cast<uint16_t>(height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
     }
 
-    Napi::Value Context::CreateInstance(Napi::Env env)
+    Napi::Value Context::CreateInstance(Napi::Env env, Canvas* canvas)
     {
         Napi::HandleScope scope{ env };
 
@@ -159,13 +145,17 @@ namespace Babylon::Polyfills::Internal
                 ParentT::InstanceMethod("measureText", &Context::MeasureText),
                 ParentT::InstanceMethod("fillText", &Context::FillText),
             });
-        return func.New({});
+        return func.New({ Napi::External<Canvas>::New(env, canvas) });
     }
 
     Context::Context(const Napi::CallbackInfo& info)
         : ParentT{ info }
+        , m_canvas {info[0].As<Napi::External<Canvas>>().Data()}
+        , m_textBufferManager(&Canvas::fontsInfos->fontManager)
+        , m_transientText{m_textBufferManager.createTextBuffer(FONT_TYPE_DISTANCE_SUBPIXEL, BufferType::Transient)}
     {
     }
+
 
     void Context::FillRect(const Napi::CallbackInfo&)
     {
@@ -178,44 +168,33 @@ namespace Babylon::Polyfills::Internal
 
     void Context::FillText(const Napi::CallbackInfo& info)
     {
-        std::string text = info[0].As<Napi::String>().Utf8Value();
-        auto x = info[1].As<Napi::Number>().Int32Value();
-        auto y = info[2].As<Napi::Number>().Int32Value();
+        auto fontsInfos = m_canvas->fontsInfos.get();
 
-        x;y;
-
-        if (!m_fontManager)
+        if (!fontsInfos)
         {
-            // Init the text rendering system.
-            m_fontManager = new FontManager(512);
-            m_textBufferManager = new TextBufferManager(m_fontManager);
-
-            m_fontFile = loadTtf(m_fontManager, "droidsans.ttf");
-            m_font = m_fontManager->createFontByPixelSize(m_fontFile, 0, 32);
-
-            // Preload glyphs and blit them to atlas.
-            m_fontManager->preloadGlyph(m_font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
-
-            // You can unload the truetype files at this stage, but in that
-            // case, the set of glyph's will be limited to the set of preloaded
-            // glyph.
-            m_fontManager->destroyTtf(m_fontFile);
-
-            m_transientText = m_textBufferManager->createTextBuffer(FONT_TYPE_ALPHA, BufferType::Transient);
+            return;
         }
-        m_textBufferManager->clearTextBuffer(m_transientText);
-        m_textBufferManager->setTextColor(m_transientText, 0xFFFFFFFF);
-        m_textBufferManager->appendText(m_transientText, m_font, text.c_str());
+
+        std::string text = info[0].As<Napi::String>().Utf8Value();
+        auto x = info[1].As<Napi::Number>().FloatValue();
+        auto y = info[2].As<Napi::Number>().FloatValue();
+
+        m_textBufferManager.clearTextBuffer(m_transientText);
+        m_textBufferManager.setTextColor(m_transientText, 0xFFFFFFFF);
+        m_textBufferManager.appendText(m_transientText, fontsInfos->font, text.c_str());
 
         bgfx::ViewId canvasViewId = 100;
         bgfx::setViewFrameBuffer(canvasViewId, frameBufferHandle);
-        const bx::Vec3 at = { 0.0f, 0.0f,  0.0f };
-        const bx::Vec3 eye = { 0.0f, 0.0f, -1.0f };
+        const bx::Vec3 at = { -x, -y,  0.0f };
+        const bx::Vec3 eye = { -x, -y, -1.0f };
 
         float view[16];
         bx::mtxLookAt(view, eye, at);
 
         const float centering = 0.5f;
+
+        auto width = m_canvas->GetWidth();
+        auto height = m_canvas->GetHeight();
 
         // Setup a top-left ortho matrix for screen space drawing.
         const bgfx::Caps* caps = bgfx::getCaps();
@@ -224,8 +203,8 @@ namespace Babylon::Polyfills::Internal
             bx::mtxOrtho(
                 ortho
                 , centering
-                , 512/*m_width*/ + centering
-                , 512/*m_height*/ + centering
+                , static_cast<float>(width) + centering
+                , static_cast<float>(height) + centering
                 , centering
                 , 0.0f
                 , 100.0f
@@ -233,9 +212,9 @@ namespace Babylon::Polyfills::Internal
                 , caps->homogeneousDepth
             );
             bgfx::setViewTransform(canvasViewId, view, ortho);
-            bgfx::setViewRect(canvasViewId, 0, 0, uint16_t(512/*m_width*/), uint16_t(512/*m_height*/));
+            bgfx::setViewRect(canvasViewId, 0, 0, uint16_t(width), uint16_t(height));
         }
-        m_textBufferManager->submitTextBuffer(m_transientText, canvasViewId);
+        m_textBufferManager.submitTextBuffer(m_transientText, canvasViewId);
         bgfx::frame();
     }
 }

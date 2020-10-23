@@ -80,11 +80,10 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
             try {
                 currentScene.render();
                 renderCount--;
-                /*
                 if (renderCount === 0) {
                     engine.stopRenderLoop();
                     evaluate(test, resultCanvas, result, renderImage, index, waitRing, done);
-                }*/
+                }
             }
             catch (e) {
                 console.error(e);
@@ -280,21 +279,7 @@ engine.getRenderingCanvas = function () {
 engine.getInputElement = function () {
     return 0;
 }
-/*
-OffscreenCanvas = function(width, height) {
-    return {
-        width: width
-        , height: height
-        , getContext: function(type) {
-            return {
-                fillRect: function(x, y, w, h) { }
-                , measureText: function(text) { return 8; }
-                , fillText: function(text, x, y) { }
-            };
-        }
-    };
-}
-*/
+
 document = {
     createElement: function (type) {
         if (type === "canvas") {

@@ -84,11 +84,26 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
+    var onload = function (data, responseURL) {
+        OffscreenCanvas.loadTTF("droidsans", data);
+    }
+    BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", onload, undefined, undefined, true);
+    /*
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", , true);
+    xhr.addEventListener("readystatechange", function () {
+        if (xhr.status === 200) {
+            OffscreenCanvas.loadTTF("droidsans", xhr.response);
+        }
+    });
+    xhr.send();
+    */
+
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
 
-
+    /*
     var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
     ground.rotation.x = Math.PI * 0.5;
     ground.position.z = 2;
@@ -106,7 +121,7 @@ CreateBoxAsync().then(function () {
     // textureGround.drawImage(videotest, 0, 0, 100, 100);
     textureGround.clear();
     textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
-    
+    */
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
     }

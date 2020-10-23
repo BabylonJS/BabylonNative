@@ -15,6 +15,20 @@ namespace Babylon::Polyfills::Internal
 
         explicit Canvas(const Napi::CallbackInfo& info);
 
+        uint32_t GetWidth() const { return m_width; }
+        uint32_t GetHeight() const { return m_height; }
+
+        struct FontsInfo
+        {
+            FontsInfo(uint32_t atlasSize)
+                : fontManager(atlasSize)
+            {
+            }
+            FontManager fontManager;
+            FontHandle font;
+        };
+
+        static inline std::unique_ptr<FontsInfo> fontsInfos;
     private:
 
         Napi::Value GetContext(const Napi::CallbackInfo&);
@@ -23,6 +37,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetHeight(const Napi::CallbackInfo&);
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
+        static void LoadTTF(const Napi::CallbackInfo& info);
 
         uint32_t m_width{1};
         uint32_t m_height{1};
@@ -35,9 +50,11 @@ namespace Babylon::Polyfills::Internal
 
         using ParentT = Napi::ObjectWrap<Context>;
 
-        static Napi::Value CreateInstance(Napi::Env env);
+        static Napi::Value CreateInstance(Napi::Env env, Canvas* canvas);
 
         explicit Context(const Napi::CallbackInfo& info);
+
+        
 
     private:
 
@@ -47,11 +64,12 @@ namespace Babylon::Polyfills::Internal
 
         static inline bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
         static void UpdateRenderTarget(uint32_t width, uint32_t height);
-        static inline FontManager* m_fontManager{};
-        static inline TextBufferManager* m_textBufferManager{};
-        static inline TrueTypeHandle m_fontFile;
-        static inline FontHandle m_font;
-        static inline TextBufferHandle m_transientText;
+
+        Canvas* m_canvas;
+
+        TextBufferManager m_textBufferManager;
+        TextBufferHandle m_transientText;
+
 
         friend class Canvas;
     };
