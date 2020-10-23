@@ -146,9 +146,21 @@ namespace xr
                     bool PoseTracked{ false };
                 };
 
-                struct TriggerData
+                struct Button
                 {
-                    float TriggerValue{};
+                    bool Pressed{};
+                    bool Touched{};
+                    double Value{};
+                };
+
+                struct GamePad
+                {
+                    std::string id{};
+                    long index{};
+                    bool connected;
+                    std::string mapping;
+                    std::vector<float> axes{};
+                    std::vector<Button> buttons{}; 
                 };
 
                 struct View
@@ -190,8 +202,13 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
-                    bool TriggerValueChangedThisFrame{};
-                    TriggerData TriggerData{};
+                    bool SqueezeInputStartedThisFrame{};
+                    bool SqueezeInputEndedThisFrame{};
+                    bool SqueezeInputCompletedThisFrame{};
+                    bool SelectInputStartedThisFrame{};
+                    bool SelectInputEndedThisFrame{};
+                    bool SelectInputCompletedThisFrame{};
+                    GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
                     HandednessEnum Handedness{};

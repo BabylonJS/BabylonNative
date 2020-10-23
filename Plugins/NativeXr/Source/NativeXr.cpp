@@ -166,7 +166,6 @@ namespace
         auto env = jsInputSource.Env();
         jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
-        jsInputSource.Set("triggerValue", Napi::External<decltype(inputSource.TriggerData.TriggerValue)>::New(env, &inputSource.TriggerData.TriggerValue));
 
         // Don't set hands up unless hand data is supported/available
         if (inputSource.JointsTrackedThisFrame)
@@ -196,6 +195,7 @@ namespace
         auto jsInputSource = Napi::Object::New(env);
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
+        jsInputSource.Set("gamepad", Napi::External<decltype(inputSource.GamepadObject)>::New(env, &inputSource.GamepadObject));
         SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
@@ -1523,7 +1523,6 @@ namespace Babylon
                             InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                             InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                             InstanceMethod("getJointPose", &XRFrame::GetJointPose),
-                            InstanceMethod("getTriggerValue", &XRFrame::GetTriggerValue),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
@@ -1629,14 +1628,6 @@ namespace Babylon
                     pose->Update(xrSpace->GetTransform());
                     return std::move(napiPose);
                 }
-            }
-
-            Napi::Value GetTriggerValue(const Napi::CallbackInfo& info)
-            {
-                assert(info[0].IsExternal());
-                const auto& triggerData = *info[0].As<Napi::External<xr::System::Session::Frame::TriggerData>>().Data();
-                m_jsTriggerValue.Set("triggerValue", triggerData.TriggerValue);
-                return m_jsTriggerValue.Value();
             }
 
             Napi::Value GetJointPose(const Napi::CallbackInfo& info)
@@ -1830,6 +1821,12 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
+            static constexpr auto JS_EVENT_NAME_INPUT_SQUEEZE_START = "squeezestart";
+            static constexpr auto JS_EVENT_NAME_INPUT_SQUEEZE_END = "squeezeend";
+            static constexpr auto JS_EVENT_NAME_INPUT_SQUEEZE_COMPLETE = "squeeze";
+            static constexpr auto JS_EVENT_NAME_INPUT_SELECT_START = "selectstart";
+            static constexpr auto JS_EVENT_NAME_INPUT_SELECT_END = "selectend";
+            static constexpr auto JS_EVENT_NAME_INPUT_SELECT_COMPLETE = "select";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2077,6 +2074,94 @@ namespace Babylon
                         m_idToInputSource.erase(id);
                     }
                 }
+
+               /* for (auto& inputSource : frame.InputSources)
+                {
+                    if (!inputSource.SqueezeInputStartedThisFrame || 
+                        !inputSource.SqueezeInputEndedThisFrame || 
+                        !inputSource.SqueezeInputCompletedThisFrame ||
+                        !inputSource.SelectInputStartedThisFrame || 
+                        !inputSource.SelectInputEndedThisFrame || 
+                        !inputSource.SelectInputCompletedThisFrame)
+                    {
+                        continue;
+                    }
+
+                    if (inputSource.SqueezeInputStartedThisFrame)
+                    {
+                        auto found = m_idToInputSource.find(inputSource.ID);
+                        if (found != m_idToInputSource.end())
+                        {
+                            auto squeezeStartEvent = Napi::Object::New(env);
+                            squeezeStartEvent.Set("inputSource", found->second.Value());
+                            squeezeStartEvent.Set("frame", frame);
+                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                            {
+                                if (name == JS_EVENT_NAME_INPUT_SQUEEZE_START)
+                                {
+                                    callback.Call({squeezeStartEvent});
+                                }
+                            }
+                        }
+                    }
+
+                    if (inputSource.SqueezeInputEndedThisFrame || inputSource.SqueezeInputCompletedThisFrame)
+                    {
+                        auto found = m_idToInputSource.find(inputSource.ID);
+                        if (found != m_idToInputSource.end())
+                        {
+                            auto squeezeCompleteEvent = Napi::Object::New(env);
+                            squeezeCompleteEvent.Set("inputSource", found->second.Value());
+                            squeezeCompleteEvent.Set("frame", frame);
+                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                            {
+                                if (name == JS_EVENT_NAME_INPUT_SQUEEZE_COMPLETE)
+                                {
+                                    callback.Call({squeezeCompleteEvent});
+                                }
+                            }
+                        }
+                    }
+
+                    if (inputSource.SelectInputStartedThisFrame)
+                    {
+                        auto found = m_idToInputSource.find(inputSource.ID);
+                        if (found != m_idToInputSource.end())
+                        {
+                            auto selectStartEvent = Napi::Object::New(env);
+                            selectStartEvent.Set("inputSource",found->second.Value());
+                            selectStartEvent.Set("frame", frame);
+                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                            {
+                                if (name == JS_EVENT_NAME_INPUT_SELECT_START)
+                                {
+                                    callback.Call({selectStartEvent});
+                                }
+                            }
+
+                        }
+                    }
+
+                    if (inputSource.SelectInputEndedThisFrame || inputSource.SelectInputCompletedThisFrame)
+                    {
+                        auto found = m_idToInputSource.find(inputSource.ID);
+                        if (found != m_idToInputSource.end())
+                        {
+                            auto selectCompleteEvent = Napi::Object::New(env);
+                            selectCompleteEvent.Set("inputSource", found->second.Value());
+                            selectCompleteEvent.Set("frame", frame);
+                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                            {
+                                if (name == JS_EVENT_NAME_INPUT_SELECT_COMPLETE)
+                                {
+                                    callback.Call({selectCompleteEvent});
+                                }
+                            }
+                        }
+                    }
+                    
+                }*/
+
             }
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
