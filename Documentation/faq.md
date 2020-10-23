@@ -1,5 +1,9 @@
 # Frequently asked questions
 
+## Could you explain BabylonNative
+
+[Here is an article that describes the motivation behind Babylon Native.](https://babylonjs.medium.com/babylon-native-821f1694fffc)
+
 ## Unable to build for arm64 on Windows
 
 cmake displays such error:
@@ -20,3 +24,7 @@ In VisualStudio, go to menu `Tools` -> `Get Tools and Features`. Then check for 
 ## Unable to run BabylonNative on Android Simulator
 
 [A detailed page is avaible here.](AndroidSimulator.md)
+
+## Does Babylon Native support WASM?
+
+The JavaScript virtual machines (JavaScriptCore, V8, Chakra, ...) that we have so far all support WebAssembly automatically.
