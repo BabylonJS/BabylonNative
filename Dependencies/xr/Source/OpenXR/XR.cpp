@@ -286,8 +286,6 @@ namespace xr
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
-
-
         Impl(System::Impl& hmdImpl, void* graphicsContext)
             : HmdImpl{ hmdImpl }
         {
@@ -1430,12 +1428,15 @@ namespace xr
         return su.TryGetPlaneByID(id);
     }
 
-    void System::Session::SetPlaneDetectionEnabled(bool) const
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
-        const auto& session = m_impl->HmdImpl.Context.Session();
-        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
-        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
-        su.Initialize(SceneUnderstanding::InitOptions{session, extensions});
+        if (enabled)
+        {
+            const auto& session = m_impl->HmdImpl.Context.Session();
+            const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+            su.Initialize(SceneUnderstanding::InitOptions{ session, extensions });
+        }
     }
 
     bool System::Session::TrySetFeaturePointCloudEnabled(bool) const

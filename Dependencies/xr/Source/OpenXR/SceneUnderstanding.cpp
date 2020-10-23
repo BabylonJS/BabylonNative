@@ -1,4 +1,6 @@
+#ifndef NOMINMAX
 #define NOMINMAX // avoid including macro max definitions in favor of limit max definitions
+#endif
 
 #include "SceneUnderstanding.h"
 #include "XrRegistry.h"
@@ -10,7 +12,7 @@ constexpr float DEFAULT_SPHERE_RADIUS = 5.f;
 constexpr double DEFAULT_UPDATE_INTERVAL_IN_SECONDS = 2;
 constexpr double NANOSECONDS_IN_SECOND = 1000000000;
 
-inline xr::Pose XrPoseToBabylonPose(XrPosef pose)
+static inline xr::Pose XrPoseToBabylonPose(XrPosef pose)
 {
     // Right handed to left handed conversions are handled in the Babylon.js layer
     return xr::Pose{
@@ -86,7 +88,6 @@ SceneUnderstanding::SceneUnderstanding::UpdateSceneObjectsArgs::UpdateSceneObjec
 struct SceneUnderstanding::SceneUnderstanding::Impl
 {
 public:
-    Impl() {}
     void Initialize(const InitOptions& options)
     {
         const auto& session = options.Session;
@@ -150,20 +151,14 @@ public:
             switch (m_state)
             {
             case State::Ready:
-            {
                 HandleReady(time, space, extensions);
-            }
-            break;
+                break;
             case State::ComputingScene:
-            {
                 HandleComputingScene(time, space, extensions);
-            }
-            break;
+                break;
             case State::Waiting:
-            {
                 HandleWaiting(time);
-            }
-            break;
+                break;
             }
 
             m_lastFrameUpdate = time;
@@ -185,7 +180,6 @@ public:
         switch (m_boundaryType)
         {
         case DetectionBoundaryType::Sphere:
-        {
             if (xr::math::Pose::IsPoseValid(viewInLocal)) {
                 sphere.center = viewInLocal.pose.position;
                 sphere.radius = m_sphereRadius;
@@ -193,19 +187,16 @@ public:
 
             computeInfo.bounds.sphereCount = 1;
             computeInfo.bounds.spheres = &sphere;
-        }
-        break;
+            break;
         case DetectionBoundaryType::Box:
-        {
             if (xr::math::Pose::IsPoseValid(viewInLocal)) {
                 box.pose = viewInLocal.pose;
                 box.extents = m_boxDimensions;
             }
-            
+
             computeInfo.bounds.boxCount = 1;
             computeInfo.bounds.boxes = &box;
-        }
-        break;
+            break;
         }
 
         CHECK_XRCMD(extensions.xrComputeNewSceneMSFT(m_sceneObserverHandle.Get(), &computeInfo));
@@ -244,7 +235,7 @@ public:
             CHECK_XRCMD(extensions.xrLocateSceneObjectsMSFT(m_sceneHandle.Get(), &locateInfo, &locations));
 
             // Get a set of the known objects to understand if any objects were removed
-            std::set<XrSceneObjectKeyMSFT> knownObjects{};
+            std::unordered_set<XrSceneObjectKeyMSFT> knownObjects{};
             std::transform(m_sceneObjects.begin(), m_sceneObjects.end(),
                 std::inserter(knownObjects, knownObjects.end()),
                 [](auto pair) { return pair.first; });
@@ -278,12 +269,12 @@ public:
                 object->Kind = kind.kind;
 
                 // Get sets of the known meshes and planes for this object to understand if any were removed
-                std::set<XrSceneMeshKeyMSFT> knownMeshes{};
+                std::unordered_set<XrSceneMeshKeyMSFT> knownMeshes{};
                 std::transform(object->Meshes.begin(), object->Meshes.end(),
                     std::inserter(knownMeshes, knownMeshes.end()),
                     [](auto pair) { return pair.first; });
 
-                std::set<XrScenePlaneKeyMSFT> knownPlanes{};
+                std::unordered_set<XrScenePlaneKeyMSFT> knownPlanes{};
                 std::transform(object->Planes.begin(), object->Planes.end(),
                     std::inserter(knownPlanes, knownPlanes.end()),
                     [](auto pair) { return pair.first; });
@@ -349,8 +340,6 @@ public:
 
     void PopulateFrameArguments(UpdateFrameArgs& args)
     {
-        // TODO: plane ids don't seem to work correctly/plane removed events generate issues when attempting to access plane ids.
-
         args.Planes.clear();
         for (const auto& [objectKey, object] : m_sceneObjects)
         {
@@ -367,6 +356,8 @@ public:
                 babylonPlane.Center = XrPoseToBabylonPose(object->Pose);
                 babylonPlane.PolygonFormat = xr::PolygonFormat::XYZ;
 
+                // Note: Without a normal its unclear how to define the front/back of the plane
+                // This is currently an arbitrary winding order based on this lack of information
                 constexpr uint8_t VALUES_IN_POINT = 3;
                 constexpr uint8_t VALUES_IN_XYZ_QUAD = 12;
                 babylonPlane.Polygon.resize(VALUES_IN_XYZ_QUAD);
