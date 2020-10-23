@@ -8,6 +8,7 @@
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
+#import <Babylon/Polyfills/Canvas.h>
 #import <Shared/InputManager.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};

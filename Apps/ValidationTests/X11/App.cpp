@@ -16,6 +16,7 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Canvas.h>
 
 static const char* s_applicationName  = "BabylonNative Validation Tests";
 static const char* s_applicationClass = "Validation Tests";

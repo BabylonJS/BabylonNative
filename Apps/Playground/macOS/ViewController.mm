@@ -6,6 +6,7 @@
 #import <Babylon/Plugins/NativeWindow.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
+#import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
 
