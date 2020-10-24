@@ -1462,20 +1462,9 @@ namespace Babylon
         const auto y = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
-
-        auto& backBuffer = m_frameBufferManager.GetBound();
-        const auto isDefault = m_frameBufferManager.IsRenderingToDefault();
-
-        const auto backbufferWidth = isDefault ? bgfx::getStats()->width : backBuffer.Width;
-        const auto backbufferHeight = isDefault ? bgfx::getStats()->height : backBuffer.Height;
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        const bgfx::ViewId viewId = m_frameBufferManager.GetBound().ViewId;
-        bgfx::setViewRect(viewId,
-            static_cast<uint16_t>(x * backbufferWidth),
-            static_cast<uint16_t>(yOrigin * backbufferHeight),
-            static_cast<uint16_t>(width * backbufferWidth),
-            static_cast<uint16_t>(height * backbufferHeight));
+        m_frameBufferManager.GetBound().SetViewPort(x, yOrigin, width, height);
     }
 
     void NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
