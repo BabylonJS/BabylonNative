@@ -4,10 +4,11 @@ set(SOURCES
     "Source/Canvas.h"
     )
 
-file( GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
+file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
+file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/*.cpp)
 set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
 
-add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES})
+add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES})
 warnings_as_errors(Canvas)
 
 target_include_directories(Canvas PUBLIC "Include"

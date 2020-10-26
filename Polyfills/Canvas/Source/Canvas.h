@@ -53,16 +53,33 @@ namespace Babylon::Polyfills::Internal
         static Napi::Value CreateInstance(Napi::Env env, Canvas* canvas);
 
         explicit Context(const Napi::CallbackInfo& info);
-
+        virtual ~Context();
     private:
 
         void FillRect(const Napi::CallbackInfo&);
         Napi::Value MeasureText(const Napi::CallbackInfo&);
         void FillText(const Napi::CallbackInfo&);
+        void Fill(const Napi::CallbackInfo&);
+        void Save(const Napi::CallbackInfo&);
+        void Restore(const Napi::CallbackInfo&);
+        void ClearRect(const Napi::CallbackInfo&);
+        void Translate(const Napi::CallbackInfo&);
+        void Rotate(const Napi::CallbackInfo&);
+        void Scale(const Napi::CallbackInfo&);
+        void BeginPath(const Napi::CallbackInfo&);
+        void ClosePath(const Napi::CallbackInfo&);
+        void Clip(const Napi::CallbackInfo&);
+        void Rect(const Napi::CallbackInfo&);
+        void StrokeRect(const Napi::CallbackInfo&);
+        void Stroke(const Napi::CallbackInfo&);
+        void MoveTo(const Napi::CallbackInfo&);
+        void LineTo(const Napi::CallbackInfo&);
+        void QuadraticCurveTo(const Napi::CallbackInfo&);
 
         static inline bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
         static void UpdateRenderTarget(uint32_t width, uint32_t height);
 
+        NVGcontext* m_nvg;
         Canvas* m_canvas;
 
         TextBufferManager m_textBufferManager;

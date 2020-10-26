@@ -2,6 +2,7 @@
 #include <bgfx/bgfx.h>
 #include "font/font_manager.h"
 #include "font/text_buffer_manager.h"
+#include "nanovg/nanovg.h"
 
 #include "Canvas.h"
 
@@ -135,6 +136,23 @@ namespace Babylon::Polyfills::Internal
                 ParentT::InstanceMethod("fillRect", &Context::FillRect),
                 ParentT::InstanceMethod("measureText", &Context::MeasureText),
                 ParentT::InstanceMethod("fillText", &Context::FillText),
+                ParentT::InstanceMethod("fill", &Context::Fill),
+                ParentT::InstanceMethod("save", &Context::Save),
+                ParentT::InstanceMethod("restore", &Context::Restore),
+                ParentT::InstanceMethod("clearRect", &Context::ClearRect),
+                ParentT::InstanceMethod("translate", &Context::Translate),
+                ParentT::InstanceMethod("rotate", &Context::Rotate),
+                ParentT::InstanceMethod("scale", &Context::Scale),
+                ParentT::InstanceMethod("beginPath", &Context::BeginPath),
+                ParentT::InstanceMethod("closePath", &Context::ClosePath),
+                ParentT::InstanceMethod("rect", &Context::Rect),
+                ParentT::InstanceMethod("clip", &Context::Clip),
+                ParentT::InstanceMethod("strokeRect", &Context::StrokeRect),
+                ParentT::InstanceMethod("stroke", &Context::Stroke),
+                ParentT::InstanceMethod("moveTo", &Context::MoveTo),
+                ParentT::InstanceMethod("lineTo", &Context::LineTo),
+                ParentT::InstanceMethod("quadraticCurveTo", &Context::QuadraticCurveTo),
+                
             });
         return func.New({ Napi::External<Canvas>::New(env, canvas) });
     }
@@ -144,10 +162,103 @@ namespace Babylon::Polyfills::Internal
         , m_canvas {info[0].As<Napi::External<Canvas>>().Data()}
         , m_textBufferManager(&Canvas::fontsInfos->fontManager)
         , m_transientText{m_textBufferManager.createTextBuffer(FONT_TYPE_DISTANCE_SUBPIXEL, BufferType::Transient)}
+        , m_nvg{nvgCreate(1, 0)}
     {
     }
 
+    Context::~Context()
+    {
+        nvgDelete(m_nvg);
+    }
+
     void Context::FillRect(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::Fill(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::Save(const Napi::CallbackInfo&)
+    {
+        nvgSave(m_nvg);
+
+        // Draw first rect and set scissor to it's area.
+        
+        
+        
+        
+    }
+
+    void Context::Restore(const Napi::CallbackInfo&)
+    {
+        nvgRestore(m_nvg);
+    }
+
+    void Context::ClearRect(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::Translate(const Napi::CallbackInfo& info)
+    {
+        auto x = info[0].As<Napi::Number>().FloatValue();
+        auto y = info[1].As<Napi::Number>().FloatValue();
+        nvgTranslate(m_nvg, x, y);
+    }
+
+    void Context::Rotate(const Napi::CallbackInfo& info)
+    {
+        auto angle = info[0].As<Napi::Number>().FloatValue();
+        nvgRotate(m_nvg, nvgDegToRad(angle));
+    }
+
+    void Context::Scale(const Napi::CallbackInfo& info)
+    {
+        auto x = info[0].As<Napi::Number>().FloatValue();
+        auto y = info[1].As<Napi::Number>().FloatValue();
+        nvgScale(m_nvg, x, y);
+    }
+
+    void Context::BeginPath(const Napi::CallbackInfo&)
+    {
+        nvgBeginPath(m_nvg);
+    }
+
+    void Context::ClosePath(const Napi::CallbackInfo&)
+    {
+        nvgClosePath(m_nvg);
+    }
+
+    void Context::Rect(const Napi::CallbackInfo& info)
+    {
+        auto left = info[0].As<Napi::Number>().FloatValue();
+        auto top = info[1].As<Napi::Number>().FloatValue();
+        auto bottom = info[2].As<Napi::Number>().FloatValue();
+        auto right = info[3].As<Napi::Number>().FloatValue();
+        nvgRect(m_nvg, left, top, bottom, right);
+    }
+
+    void Context::Clip(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::StrokeRect(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::Stroke(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::MoveTo(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::LineTo(const Napi::CallbackInfo&)
+    {
+    }
+
+    void Context::QuadraticCurveTo(const Napi::CallbackInfo&)
     {
     }
 
@@ -175,11 +286,16 @@ namespace Babylon::Polyfills::Internal
 
         bgfx::ViewId canvasViewId = 100;
         bgfx::setViewFrameBuffer(canvasViewId, frameBufferHandle);
+        bgfx::setViewClear(canvasViewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
         const bx::Vec3 at = { -x, -y,  0.0f };
         const bx::Vec3 eye = { -x, -y, -1.0f };
 
+
+        x = 0;
         float view[16];
         bx::mtxLookAt(view, eye, at);
+        //bx::mtxTranslate(view, -x, -y, 1.f);
+
 
         const float centering = 0.5f;
 
@@ -197,7 +313,7 @@ namespace Babylon::Polyfills::Internal
                 , static_cast<float>(width) + centering
                 , flipY ? (static_cast<float>(height) + centering) : centering
                 , flipY ? centering : (static_cast<float>(height) + centering)
-                , 0.0f
+                , -100.0f
                 , 100.0f
                 , 0.0f
                 , caps->homogeneousDepth
@@ -206,7 +322,7 @@ namespace Babylon::Polyfills::Internal
             bgfx::setViewRect(canvasViewId, 0, 0, uint16_t(width), uint16_t(height));
         }
         m_textBufferManager.submitTextBuffer(m_transientText, canvasViewId);
-        bgfx::frame();
+        //bgfx::frame();
     }
 }
 
