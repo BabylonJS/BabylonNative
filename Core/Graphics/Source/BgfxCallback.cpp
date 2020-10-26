@@ -10,10 +10,11 @@
 
 namespace Babylon
 {
-    void BgfxCallback::addScreenShotCallback(Napi::Function callback)
+    void BgfxCallback::addScreenShotCallback(Napi::Function callback, std::function<void(std::function<void()>)> dispatchFunction)
     {
-        std::scoped_lock lock{ m_ssCallbackAccess };
+        std::scoped_lock lock{m_ssCallbackAccess};
         m_screenshotCallbacks.push(Napi::Persistent(callback));
+        m_screenshotDispatchFunctions.push(std::move(dispatchFunction));
     }
 
     void BgfxCallback::trace(const char* _filePath, uint16_t _line, const char* _format, ...)
@@ -88,29 +89,32 @@ namespace Babylon
     void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, const void* data, uint32_t /*size*/, bool yflip)
     {
         assert(m_screenshotCallbacks.size()); // addScreenShotCallback not called before doing the screenshot call on bgfx
-        auto env = m_screenshotCallbacks.front().Env();
-        auto array = Napi::Uint8Array::New(env, height * pitch);
-        auto bitmap = static_cast<uint8_t*>(array.Data());
+        m_screenshotDispatchFunctions.front()([this, width, height, pitch, data, yflip]() {
+            auto env = m_screenshotCallbacks.front().Env();
+            auto array = Napi::Uint8Array::New(env, height * pitch);
+            auto bitmap = static_cast<uint8_t*>(array.Data());
 
-        for (uint32_t py = 0; py < height; py++)
-        {
-            const uint8_t* ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - py - 1) : py) * pitch;
-            for (uint32_t px = 0; px < width; px++)
+            for (uint32_t py = 0; py < height; py++)
             {
-                // bgfx screenshot is BGRA
-                *bitmap++ = ptr[px * 4 + 2];
-                *bitmap++ = ptr[px * 4 + 1];
-                *bitmap++ = ptr[px * 4 + 0];
-                *bitmap++ = ptr[px * 4 + 3];
+                const uint8_t* ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - py - 1) : py) * pitch;
+                for (uint32_t px = 0; px < width; px++)
+                {
+                    // bgfx screenshot is BGRA
+                    *bitmap++ = ptr[px * 4 + 2];
+                    *bitmap++ = ptr[px * 4 + 1];
+                    *bitmap++ = ptr[px * 4 + 0];
+                    *bitmap++ = ptr[px * 4 + 3];
+                }
             }
-        }
 
-        JsRuntime& runtime{ JsRuntime::GetFromJavaScript(env) };
+            JsRuntime& runtime{JsRuntime::GetFromJavaScript(env)};
 
-        runtime.Dispatch([this, array = std::move(array)](Napi::Env) {
-            std::scoped_lock lock{ m_ssCallbackAccess };
-            m_screenshotCallbacks.front().Call({ array });
-            m_screenshotCallbacks.pop();
+            runtime.Dispatch([this, array = std::move(array)](Napi::Env) {
+                std::scoped_lock lock{m_ssCallbackAccess};
+                m_screenshotCallbacks.front().Call({array});
+                m_screenshotCallbacks.pop();
+                m_screenshotDispatchFunctions.pop();
+            });
         });
     }
 

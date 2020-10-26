@@ -13,7 +13,7 @@ namespace Babylon
     {
         virtual ~BgfxCallback() = default;
 
-        void addScreenShotCallback(Napi::Function callback);
+        void addScreenShotCallback(Napi::Function callback, std::function<void(std::function<void()>)> dispatchFunction);
 
     protected:
         void fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str) override;
@@ -32,5 +32,6 @@ namespace Babylon
 
         std::mutex m_ssCallbackAccess;
         std::queue<Napi::FunctionReference> m_screenshotCallbacks;
+        std::queue<std::function<void(std::function<void()>)>> m_screenshotDispatchFunctions{};
     };
 }

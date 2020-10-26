@@ -1472,7 +1472,9 @@ namespace Babylon
         bgfx::FrameBufferHandle fbh = BGFX_INVALID_HANDLE;
         const auto callback = info[0].As<Napi::Function>();
 
-        m_graphicsImpl.Callback.addScreenShotCallback(callback);
+        m_graphicsImpl.Callback.addScreenShotCallback(callback, [this](auto func) {
+            Dispatch(std::move(func));
+        });
         bgfx::requestScreenShot(fbh, "GetImageData");
     }
 
