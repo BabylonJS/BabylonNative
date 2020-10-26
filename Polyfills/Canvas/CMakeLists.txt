@@ -24,3 +24,4 @@ set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 # disable warnings because of 3rd party 
 disable_warnings(Canvas)
+target_compile_definitions(Canvas PRIVATE _CRT_SECURE_NO_WARNINGS)

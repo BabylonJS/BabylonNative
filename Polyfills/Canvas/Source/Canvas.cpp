@@ -177,17 +177,12 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Fill(const Napi::CallbackInfo&)
     {
+        nvgFill(m_nvg);
     }
 
     void Context::Save(const Napi::CallbackInfo&)
     {
         nvgSave(m_nvg);
-
-        // Draw first rect and set scissor to it's area.
-        
-        
-        
-        
     }
 
     void Context::Restore(const Napi::CallbackInfo&)
@@ -248,14 +243,21 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Stroke(const Napi::CallbackInfo&)
     {
+        //nvgStroke
     }
 
-    void Context::MoveTo(const Napi::CallbackInfo&)
+    void Context::MoveTo(const Napi::CallbackInfo& info)
     {
+        auto x = info[0].As<Napi::Number>().FloatValue();
+        auto y = info[1].As<Napi::Number>().FloatValue();
+        nvgMoveTo(m_nvg, x, y);
     }
 
-    void Context::LineTo(const Napi::CallbackInfo&)
+    void Context::LineTo(const Napi::CallbackInfo& info)
     {
+        auto x = info[0].As<Napi::Number>().FloatValue();
+        auto y = info[1].As<Napi::Number>().FloatValue();
+        nvgLineTo(m_nvg, x, y);
     }
 
     void Context::QuadraticCurveTo(const Napi::CallbackInfo&)
