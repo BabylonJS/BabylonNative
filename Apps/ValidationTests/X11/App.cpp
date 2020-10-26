@@ -27,6 +27,17 @@ static const int height = 400;
 
 namespace
 {
+    void TailRecurseRender()
+    {
+        if (graphics != nullptr && runtime != nullptr)
+        {
+            runtime->Dispatch([](auto) {
+                graphics->RenderCurrentFrame();
+                TailRecurseRender();
+            });
+        }
+    }
+
     std::filesystem::path GetModulePath()
     {
         char exe[1024];
@@ -79,6 +90,8 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
+
+        TailRecurseRender();
     }
 
     void UpdateWindowSize(float width, float height)
