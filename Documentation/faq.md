@@ -28,3 +28,27 @@ In VisualStudio, go to menu `Tools` -> `Get Tools and Features`. Then check for 
 ## Does Babylon Native support WASM?
 
 The JavaScript virtual machines (JavaScriptCore, V8, Chakra, ...) that we have so far all support WebAssembly automatically.
+
+
+## How to debug JavaScript ?
+
+### Windows
+
+In VisualStudio, select `Script` in the `Local Windows Debugger`. Then, run your app in debug mode (F5). You can put breakpoints, watch variable, ... in your JS scripts.
+
+### MacOS and iOS
+
+With Safari tools, it's possible to hook any JavaScriptCore instance running locally on your Mac or on your device and simulator. [Follow this steps to set it up.](DebugJavascriptMacIOS.md)
+Then you can debug from Safari just like you would debug standard JS.
+
+## How to debug rendering ?
+
+First, if you get rendering issues in Babylon Native but you don't reproduce in BabylonJS (in Playground), [please consider posting the issue on BabylonJS forum.](https://forum.babylonjs.com/)
+
+### Windows and Android
+
+Download and use [RenderDoc.](https://renderdoc.org/) You can find a guide to debug graphics on [Android device at this location.](https://renderdoc.org/docs/how/how_android_capture.html)
+
+### MacOS and iOS
+
+The tool of choice on Apple device is Xcode. It contains tools to capture and inspect shaders, textures and more. A more [detailed documentation is available here.](DebugRenderedFrameMetal.md)
