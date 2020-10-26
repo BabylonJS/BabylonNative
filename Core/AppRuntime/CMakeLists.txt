@@ -4,9 +4,14 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         "Include/Babylon/AppRuntime.h"
         "Source/AppRuntime.cpp"
         "Source/AppRuntime${NAPI_JAVASCRIPT_ENGINE}.cpp"
-        "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.cpp"
         "Source/WorkQueue.cpp"
         "Source/WorkQueue.h")
+
+    if(APPLE)
+        set(SOURCES ${SOURCES} "Source/AppRuntimeApple.mm")
+    else()
+        set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.cpp")
+    endif()
 
     add_library(AppRuntime ${SOURCES})
     warnings_as_errors(AppRuntime)

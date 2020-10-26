@@ -1318,12 +1318,12 @@ inline Value Function::Call(const Value& recv, size_t argc, const Value* args) c
     argv[i] = {_env->rt, args[i]};
   }
 
-    jsi::Value result{
-      recv.IsUndefined()
-        ? _function->call(_env->rt, static_cast<const jsi::Value*>(argv), argc)
-        : _function->callWithThis(_env->rt, static_cast<const jsi::Object&>(recv.ToObject()), static_cast<const jsi::Value*>(argv), argc)};
+  jsi::Value result{
+    recv.IsUndefined()
+      ? _function->call(_env->rt, static_cast<const jsi::Value*>(argv), argc)
+      : _function->callWithThis(_env->rt, static_cast<const jsi::Object&>(recv.ToObject()), static_cast<const jsi::Value*>(argv), argc)};
 
-    return {_env, std::move(result)};
+  return {_env, std::move(result)};
 }
 
 inline Object Function::New(const std::initializer_list<Value>& args) const {
