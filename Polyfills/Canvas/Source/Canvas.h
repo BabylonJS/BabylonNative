@@ -75,6 +75,10 @@ namespace Babylon::Polyfills::Internal
         void MoveTo(const Napi::CallbackInfo&);
         void LineTo(const Napi::CallbackInfo&);
         void QuadraticCurveTo(const Napi::CallbackInfo&);
+        Napi::Value GetFillStyle(const Napi::CallbackInfo&);
+        void SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetStrokeStyle(const Napi::CallbackInfo&);
+        void SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value);
 
         static inline bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
         static void UpdateRenderTarget(uint32_t width, uint32_t height);
