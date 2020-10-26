@@ -68,86 +68,9 @@ struct napi_env__ {
 
 using napi_env = napi_env__*;
 
-// VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known good version)
-#if !defined(_MSC_VER) || _MSC_FULL_VER >= 190024210
-#define NAPI_HAS_CONSTEXPR 1
+#ifdef NAPI_DISABLE_CPP_EXCEPTIONS
+  #error Exceptions cannot be disabled for NAPI/JSI
 #endif
-
-// If C++ exceptions are not explicitly enabled or disabled, enable them
-// if exceptions were enabled in the compiler settings.
-#if !defined(NAPI_CPP_EXCEPTIONS) && !defined(NAPI_DISABLE_CPP_EXCEPTIONS)
-  #if defined(_CPPUNWIND) || defined (__EXCEPTIONS)
-    #define NAPI_CPP_EXCEPTIONS
-  #else
-    #error Exception support not detected. \
-      Define either NAPI_CPP_EXCEPTIONS or NAPI_DISABLE_CPP_EXCEPTIONS.
-  #endif
-#endif
-
-#ifdef _NOEXCEPT
-  #define NAPI_NOEXCEPT _NOEXCEPT
-#else
-  #define NAPI_NOEXCEPT noexcept
-#endif
-
-// TODO
-//#ifdef NAPI_CPP_EXCEPTIONS
-//
-//// When C++ exceptions are enabled, Errors are thrown directly. There is no need
-//// to return anything after the throw statements. The variadic parameter is an
-//// optional return value that is ignored.
-//// We need _VOID versions of the macros to avoid warnings resulting from
-//// leaving the NAPI_THROW_* `...` argument empty.
-//
-//#define NAPI_THROW(e, ...)  throw e
-//#define NAPI_THROW_VOID(e)  throw e
-//
-//#define NAPI_THROW_IF_FAILED(env, status, ...)           \
-//  if ((status) != napi_ok) throw Napi::Error::New(env);
-//
-//#define NAPI_THROW_IF_FAILED_VOID(env, status)           \
-//  if ((status) != napi_ok) throw Napi::Error::New(env);
-//
-//#else // NAPI_CPP_EXCEPTIONS
-//
-//// When C++ exceptions are disabled, Errors are thrown as JavaScript exceptions,
-//// which are pending until the callback returns to JS.  The variadic parameter
-//// is an optional return value; usually it is an empty result.
-//// We need _VOID versions of the macros to avoid warnings resulting from
-//// leaving the NAPI_THROW_* `...` argument empty.
-//
-//#define NAPI_THROW(e, ...)                               \
-//  do {                                                   \
-//    (e).ThrowAsJavaScriptException();                    \
-//    return __VA_ARGS__;                                  \
-//  } while (0)
-//
-//#define NAPI_THROW_VOID(e)                               \
-//  do {                                                   \
-//    (e).ThrowAsJavaScriptException();                    \
-//    return;                                              \
-//  } while (0)
-//
-//#define NAPI_THROW_IF_FAILED(env, status, ...)           \
-//  if ((status) != napi_ok) {                             \
-//    Napi::Error::New(env).ThrowAsJavaScriptException();  \
-//    return __VA_ARGS__;                                  \
-//  }
-//
-//#define NAPI_THROW_IF_FAILED_VOID(env, status)           \
-//  if ((status) != napi_ok) {                             \
-//    Napi::Error::New(env).ThrowAsJavaScriptException();  \
-//    return;                                              \
-//  }
-//
-//#endif // NAPI_CPP_EXCEPTIONS
-//
-//#define NAPI_FATAL_IF_FAILED(status, location, message)  \
-//  do {                                                   \
-//    if ((status) != napi_ok) {                           \
-//      Napi::Error::Fatal((location), (message));         \
-//    }                                                    \
-//  } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
 /// N-API C++ Wrapper Classes
@@ -205,9 +128,6 @@ namespace Napi {
     Object Global() const;
     Value Undefined() const;
     Value Null() const;
-
-    bool IsExceptionPending() const;
-    Error GetAndClearPendingException();
 
   private:
     napi_env _env;
@@ -808,10 +728,7 @@ namespace Napi {
 
     template <typename T>
     static
-#if defined(NAPI_HAS_CONSTEXPR)
-    constexpr
-#endif
-    napi_typedarray_type TypedArrayTypeForPrimitiveType() {
+    constexpr napi_typedarray_type TypedArrayTypeForPrimitiveType() {
       return std::is_same<T, int8_t>::value ? napi_int8_array
         : std::is_same<T, uint8_t>::value ? napi_uint8_array
         : std::is_same<T, int16_t>::value ? napi_int16_array
@@ -846,12 +763,7 @@ namespace Napi {
     static TypedArrayOf New(
       napi_env env,         ///< N-API environment
       size_t elementLength, ///< Length of the created array, as a number of elements
-#if defined(NAPI_HAS_CONSTEXPR)
-      napi_typedarray_type type = TypedArray::TypedArrayTypeForPrimitiveType<T>()
-#else
-      napi_typedarray_type type
-#endif
-        ///< Type of array, if different from the default array type for the template parameter T.
+      napi_typedarray_type type = TypedArray::TypedArrayTypeForPrimitiveType<T>() ///< Type of array, if different from the default array type for the template parameter T.
     );
 
     /// Creates a new TypedArray instance over a provided array buffer.
@@ -865,12 +777,7 @@ namespace Napi {
       size_t elementLength,          ///< Length of the created array, as a number of elements
       Napi::ArrayBuffer arrayBuffer, ///< Backing array buffer instance to use
       size_t bufferOffset,           ///< Offset into the array buffer where the typed-array starts
-#if defined(NAPI_HAS_CONSTEXPR)
-      napi_typedarray_type type = TypedArray::TypedArrayTypeForPrimitiveType<T>()
-#else
-      napi_typedarray_type type
-#endif
-        ///< Type of array, if different from the default array type for the template parameter T.
+      napi_typedarray_type type = TypedArray::TypedArrayTypeForPrimitiveType<T>() ///< Type of array, if different from the default array type for the template parameter T.
     );
 
     TypedArrayOf();                               ///< Creates a new _empty_ TypedArrayOf instance.
@@ -1036,6 +943,8 @@ namespace Napi {
   ///
   /// The referenced value is not immediately destroyed when the reference count is zero; it is
   /// merely then eligible for garbage-collection if there are no other references to the value.
+  ///
+  /// NOTE: This class is implemented as a no-op for JSI.
   template <typename T>
   class Reference {
   public:
@@ -1043,14 +952,10 @@ namespace Napi {
 
     Reference();
     Reference(napi_env env, T object);
-    ~Reference();
 
     // A reference can be moved but cannot be copied.
     Reference(Reference<T>&& other);
     Reference<T>& operator =(Reference<T>&& other);
-
-    operator jsi::Object&();
-    operator const jsi::Object&() const;
 
     bool operator ==(const Reference<T> &other) const;
     bool operator !=(const Reference<T> &other) const;
@@ -1071,6 +976,7 @@ namespace Napi {
     // Call this on a reference that is declared as static data, to prevent its destructor
     // from running at program shutdown time, which would attempt to reset the reference when
     // the environment is no longer valid.
+    // NOTE: This is no-op for JSI.
     void SuppressDestruct();
 
   protected:
@@ -1079,10 +985,8 @@ namespace Napi {
     /// !cond INTERNAL
     napi_env _env;
     T _object;
+    uint32_t _refcount;
     /// !endcond
-
-  private:
-    bool _suppressDestruct;
   };
 
   class ObjectReference : public Reference<Object> {
@@ -1198,56 +1102,16 @@ namespace Napi {
   ///     }
   ///
   /// Since the exception was caught here, it will not be propagated as a JavaScript exception.
-  ///
-  /// ### Handling Errors Without C++ Exceptions
-  ///
-  /// If C++ exceptions are disabled (by defining `NAPI_DISABLE_CPP_EXCEPTIONS`) then this class
-  /// does not extend `std::exception`, and APIs in the `Napi` namespace do not throw C++
-  /// exceptions when they fail. Instead, they raise _pending_ JavaScript exceptions and
-  /// return _empty_ `Value`s. Calling code should check `Value::IsEmpty()` before attempting
-  /// to use a returned value, and may use methods on the `Env` class to check for, get, and
-  /// clear a pending JavaScript exception. If the pending exception is not cleared, it will
-  /// be thrown when the native callback returns to JavaScript.
-  ///
-  /// #### Example 1B - Throwing a JS exception
-  ///
-  ///     Napi::Env env = ...
-  ///     Napi::Error::New(env, "Example exception").ThrowAsJavaScriptException();
-  ///     return;
-  ///
-  /// After throwing a JS exception, the code should generally return immediately from the native
-  /// callback, after performing any necessary cleanup.
-  ///
-  /// #### Example 2B - Propagating a N-API JS exception:
-  ///
-  ///     Napi::Function jsFunctionThatThrows = someObj.As<Napi::Function>();
-  ///     Napi::Value result = jsFunctionThatThrows({ arg1, arg2 });
-  ///     if (result.IsEmpty()) return;
-  ///
-  /// An empty value result from a N-API call indicates an error occurred, and a JavaScript
-  /// exception is pending. To let the exception propagate, the code should generally return
-  /// immediately from the native callback, after performing any necessary cleanup.
-  ///
-  /// #### Example 3B - Handling a N-API JS exception:
-  ///
-  ///     Napi::Function jsFunctionThatThrows = someObj.As<Napi::Function>();
-  ///     Napi::Value result = jsFunctionThatThrows({ arg1, arg2 });
-  ///     if (result.IsEmpty()) {
-  ///       Napi::Error e = env.GetAndClearPendingException();
-  ///       cerr << "Caught JavaScript exception: " + e.Message();
-  ///     }
-  ///
-  /// Since the exception was cleared here, it will not be propagated as a JavaScript exception
-  /// after the native callback returns.
-  class Error : public ObjectReference
-#ifdef NAPI_CPP_EXCEPTIONS
-    , public std::exception
-#endif // NAPI_CPP_EXCEPTIONS
+  class Error : public ObjectReference, public std::exception
     {
   public:
-    static Error New(napi_env env);
     static Error New(napi_env env, const char* message);
     static Error New(napi_env env, const std::string& message);
+
+#ifdef NAPI_CPP_EXCEPTIONS
+    static Error New(napi_env env, const std::exception& exception);
+    static Error New(napi_env env, const std::exception_ptr& exception_ptr);
+#endif // NAPI_CPP_EXCEPTIONS
 
     static void Fatal(const char* location, const char* message);
 
@@ -1260,24 +1124,16 @@ namespace Napi {
     Error(const Error&);
     Error& operator =(Error&);
 
-    const std::string& Message() const NAPI_NOEXCEPT;
+    const std::string& Message() const;
     void ThrowAsJavaScriptException() const;
 
-#ifdef NAPI_CPP_EXCEPTIONS
-    const char* what() const NAPI_NOEXCEPT override;
-#endif // NAPI_CPP_EXCEPTIONS
+    const char* what() const noexcept override;
 
-  // TODO
-  //protected:
-  //  /// !cond INTERNAL
-  //  typedef napi_status (*create_error_fn)(napi_env envb, napi_value code, napi_value msg, napi_value* result);
-
-  //  template <typename TError>
-  //  static TError New(napi_env env,
-  //                    const char* message,
-  //                    size_t length,
-  //                    create_error_fn create_error);
-  //  /// !endcond
+  protected:
+    /// !cond INTERNAL
+    template <typename TError, typename TMessage>
+    static TError New(napi_env env, TMessage message, const char* constructor);
+    /// !endcond
 
   private:
     mutable std::string _message;

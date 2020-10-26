@@ -52,7 +52,7 @@ namespace xr
         case DXGI_FORMAT_D24_UNORM_S8_UINT:
             return xr::TextureFormat::D24S8;
         default:
-            throw std::exception{ /* Unsupported texture format */ };
+            throw std::runtime_error{ "Unsupported texture format" };
         }
     }
 

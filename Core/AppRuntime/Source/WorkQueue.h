@@ -5,6 +5,8 @@
 #include <napi/env.h>
 
 #include <future>
+#include <functional>
+#include <exception>
 
 namespace Babylon
 {
@@ -12,6 +14,7 @@ namespace Babylon
     {
     public:
         WorkQueue(std::function<void()> threadProcedure);
+        WorkQueue(std::function<void()> threadProcedure, std::function<void(std::exception_ptr)> unhandledExceptionHandler);
         ~WorkQueue();
 
         template<typename CallableT>
@@ -39,5 +42,7 @@ namespace Babylon
         arcana::manual_dispatcher<128> m_dispatcher{};
 
         std::thread m_thread;
+
+        std::function<void(std::exception_ptr)> m_unhandledExceptionHandler;
     };
 }

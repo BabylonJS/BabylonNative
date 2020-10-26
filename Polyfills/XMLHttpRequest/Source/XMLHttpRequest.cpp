@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == ArrayBuffer)
                     return UrlLib::UrlResponseType::Buffer;
 
-                throw std::exception{};
+                throw std::runtime_error{"Unsupported response type: " + value};
             }
 
             const char* EnumToString(UrlLib::UrlResponseType value)
@@ -31,7 +31,7 @@ namespace Babylon::Polyfills::Internal
                         return ArrayBuffer;
                 }
 
-                throw std::exception{};
+                throw std::runtime_error{"Invalid response type"};
             }
         }
 
@@ -44,7 +44,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == Get)
                     return UrlLib::UrlMethod::Get;
 
-                throw;
+                throw std::runtime_error{"Unsupported url method: " + value};
             }
         }
 
@@ -168,22 +168,48 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void XMLHttpRequest::Abort(const Napi::CallbackInfo&)
+    void XMLHttpRequest::Abort(const Napi::CallbackInfo& info)
     {
-        m_request.Abort();
+        try
+        {
+            m_request.Abort();
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
     }
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
-        m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
-        SetReadyState(ReadyState::Opened);
+        try
+        {
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
+            SetReadyState(ReadyState::Opened);
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
     }
 
-    void XMLHttpRequest::Send(const Napi::CallbackInfo& /*info*/)
+    void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
-            SetReadyState(ReadyState::Done);
-        });
+        try
+        {
+            m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+                if (result.has_error())
+                {
+                    throw Napi::Error::New(env, result.error());
+                }
+
+                SetReadyState(ReadyState::Done);
+            });
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)

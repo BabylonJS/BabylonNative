@@ -2,8 +2,9 @@
 
 namespace Babylon
 {
-    WorkQueue::WorkQueue(std::function<void()> threadProcedure)
+    WorkQueue::WorkQueue(std::function<void()> threadProcedure, std::function<void(std::exception_ptr)> unhandledExceptionHandler)
         : m_thread{std::move(threadProcedure)}
+        , m_unhandledExceptionHandler{std::move(unhandledExceptionHandler)}
     {
     }
 
@@ -42,6 +43,15 @@ namespace Babylon
         while (!m_cancelSource.cancelled())
         {
             m_dispatcher.blocking_tick(m_cancelSource);
+
+            // Call the unhandled exception handler if an exception is thrown in one of the tasks.
+            m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    m_unhandledExceptionHandler(result.error());
+                    m_cancelSource.cancel();
+                }
+            });
         }
 
         m_dispatcher.clear();

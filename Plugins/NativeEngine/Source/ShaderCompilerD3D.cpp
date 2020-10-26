@@ -22,7 +22,7 @@ namespace Babylon
 
             if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
-                throw std::runtime_error(shader.getInfoDebugLog());
+                throw std::runtime_error{shader.getInfoDebugLog()};
             }
 
             program.addShader(&shader);
@@ -58,7 +58,7 @@ namespace Babylon
 
             if (FAILED(D3DCompile(hlsl.data(), hlsl.size(), nullptr, nullptr, nullptr, "main", target, flags, 0, blob, &errorMsgs)))
             {
-                throw std::exception(static_cast<const char*>(errorMsgs->GetBufferPointer()));
+                throw std::runtime_error{static_cast<const char*>(errorMsgs->GetBufferPointer())};
             }
 
             return{std::move(parser), std::move(compiler)};
@@ -92,7 +92,7 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception(program.getInfoDebugLog());
+            throw std::runtime_error{program.getInfoDebugLog()};
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
