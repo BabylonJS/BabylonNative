@@ -29,7 +29,6 @@ In VisualStudio, go to menu `Tools` -> `Get Tools and Features`. Then check for 
 
 The JavaScript virtual machines (JavaScriptCore, V8, Chakra, ...) that we have so far all support WebAssembly automatically.
 
-
 ## How to debug JavaScript ?
 
 ### Windows
