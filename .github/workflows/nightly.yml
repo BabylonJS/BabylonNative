@@ -18,7 +18,7 @@ jobs:
         cd buildWin32_x64 &&
         cmake -G "Visual Studio 16 2019" -A x64 ..
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.1
+      uses: microsoft/setup-msbuild@v1.0.2
     - name: Download babylon.max.js
       run: curl.exe -o Apps/BabylonScripts/babylon.max.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
     - name: Download babylonjs.materials.js
