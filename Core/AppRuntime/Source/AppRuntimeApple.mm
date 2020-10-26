@@ -1,6 +1,8 @@
 #include "AppRuntime.h"
 #include <exception>
 
+#import <Foundation/NSObjCRuntime.h>
+
 namespace Babylon
 {
     void AppRuntime::RunPlatformTier()
@@ -16,7 +18,7 @@ namespace Babylon
         }
         catch (const Napi::Error& error)
         {
-            NSLog(@"Uncaught Error: %s", error.Message());
+            NSLog(@"Uncaught Error: %s", error.what());
         }
     }
 }
