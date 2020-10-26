@@ -112,7 +112,7 @@ namespace
 
                 // Initialize NativeEngine plugin.
                 graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env, false);
+                Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::TestUtils::CreateInstance(env, hWnd);
             });
@@ -248,16 +248,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
-            if (graphics != nullptr)
-            {
-                graphics->RenderCurrentFrame();
-            }
-
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
             EndPaint(hWnd, &ps);
-
-            InvalidateRgn(hWnd, nullptr, false);
             break;
         }
         case WM_SIZE:
