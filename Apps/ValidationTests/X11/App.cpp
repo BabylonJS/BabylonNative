@@ -83,6 +83,7 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
     }
 

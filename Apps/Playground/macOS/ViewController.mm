@@ -65,6 +65,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     loader.LoadScript("app:///babylon.max.js");
     loader.LoadScript("app:///babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///babylonjs.materials.js");
+    loader.LoadScript("app:///babylon.gui.js");
     
     if (scripts.empty())
     {
