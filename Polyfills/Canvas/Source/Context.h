@@ -53,9 +53,6 @@ namespace Babylon::Polyfills::Internal
         void BeginFrame();
         void EndFrame();
 
-        static inline bgfx::FrameBufferHandle frameBufferHandle{ bgfx::kInvalidHandle };
-        static void UpdateRenderTarget(uint32_t width, uint32_t height);
-
         Canvas* m_canvas;
         bgfx::ViewId m_viewId;
         NVGcontext* m_nvg;

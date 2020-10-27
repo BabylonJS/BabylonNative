@@ -11,15 +11,6 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    void Context::UpdateRenderTarget(uint32_t width, uint32_t height)
-    {
-        if (frameBufferHandle.idx != bgfx::kInvalidHandle)
-        {
-            bgfx::destroy(frameBufferHandle);
-        }
-        frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(width), static_cast<uint16_t>(height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-    }
-
     Napi::Value Context::CreateInstance(Napi::Env env, Canvas* canvas, uint32_t viewId)
     {
         Napi::HandleScope scope{ env };
@@ -298,8 +289,8 @@ namespace Babylon::Polyfills::Internal
         const auto width = m_canvas->GetWidth();
         const auto height = m_canvas->GetHeight();
 
-        bgfx::setViewFrameBuffer(m_viewId, frameBufferHandle);
-        //bgfx::setViewClear(m_viewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
+        bgfx::setViewFrameBuffer(m_viewId, m_canvas->GetFrameBufferHandle());
+        bgfx::setViewClear(m_viewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
         bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
 
         bgfx::discard();

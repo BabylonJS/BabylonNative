@@ -68,7 +68,7 @@ namespace Babylon::Polyfills::Internal
         if (width != m_width && width)
         {
             m_width = width;
-            Context::UpdateRenderTarget(m_width, m_height);
+            UpdateRenderTarget();
         }
     }
 
@@ -83,8 +83,17 @@ namespace Babylon::Polyfills::Internal
         if (height != m_height && height)
         {
             m_height = height;
-            Context::UpdateRenderTarget(m_width, m_height);
+            UpdateRenderTarget();
         }
+    }
+
+    void Canvas::UpdateRenderTarget()
+    {
+        if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
+        {
+            bgfx::destroy(m_frameBufferHandle);
+        }
+        m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
     }
 
     struct TextureData final
@@ -107,7 +116,7 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Canvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
         auto data = new TextureData();
-        data->Handle = bgfx::getTexture(Context::frameBufferHandle);
+        data->Handle = bgfx::getTexture(m_frameBufferHandle);
         data->Width = m_width;
         data->Height = m_height;
         return Napi::External<TextureData>::New(info.Env(), data);

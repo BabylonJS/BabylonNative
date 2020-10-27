@@ -19,7 +19,7 @@ namespace Babylon::Polyfills::Internal
         uint32_t GetHeight() const { return m_height; }
 
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
-
+        bgfx::FrameBufferHandle GetFrameBufferHandle() const { return m_frameBufferHandle; }
     private:
 
         Napi::Value GetContext(const Napi::CallbackInfo&);
@@ -32,8 +32,13 @@ namespace Babylon::Polyfills::Internal
         static void BeginContextsFrame(const Napi::CallbackInfo&);
         static void EndContextsFrame(const Napi::CallbackInfo&);
 
+
+        void UpdateRenderTarget();
+
         uint32_t m_width{1};
         uint32_t m_height{1};
+
+        bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
 
         // TODO : replace with an availability list
         static inline uint32_t m_nextViewId{100};

@@ -91,11 +91,17 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
+//BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/microsoft/experimental-pcf-control-assets/master/surface.glb").then(function () {
     BABYLON.Tools.Log("Loaded");
 
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
+    /*setTimeout(function () {
+        engine.dispose();
+    }, 30000);
+   */
+
 
     BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
         OffscreenCanvas.loadTTF("droidsans", data);
@@ -118,34 +124,98 @@ CreateBoxAsync().then(function () {
 
         textureGround.clear();
         textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
+        
+
         /*
+        scene.beforeRender = function () {
+            textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
+        };
+        */
+
+
 
         // GUI
-        
-        var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        
+
+        var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
+
         var button1 = BABYLON.GUI.Button.CreateSimpleButton("but1", "Click Me");
-        
+
         button1.width = "150px"
         button1.height = "40px";
-        
+
         button1.color = "white";
         button1.cornerRadius = 20;
         button1.background = "green";
         button1.onPointerUpObservable.add(function () {
             console.log("you did it!");
         });
-        
-        advancedTexture.addControl(button1);    
+
+        advancedTexture.addControl(button1);
+
+
+
+
+        var slider = new BABYLON.GUI.Slider();
+        slider.minimum = 0.1;
+        slider.maximum = 20;
+        slider.value = 5;
+        slider.height = "20px";
+        slider.width = "150px";
+        slider.color = "#003399";
+        slider.background = "grey";
+        slider.left = "120px";
+        slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        slider.onValueChangedObservable.add(function (value) {
+            //sphere.scaling = unitVec.scale(value);
+        });
+        advancedTexture.addControl(slider);
+
+
+
 
         var idx = 0;
         scene.beforeRender = function () {
-            button1.textBlock.text = "hohoho" + idx;
+            OffscreenCanvas.beginContextsFrame();
+            //textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
+            //button1.textBlock.text = "Click Me " + idx;
+            //slider.value = Math.random() * 20;
             idx++;
         };
+
+        scene.afterRender = function () {
+            OffscreenCanvas.endContextsFrame();
+        };
+        /*
+
+        var slider = new BABYLON.GUI.Slider();
+        slider.minimum = 0.1;
+        slider.maximum = 20;
+        slider.value = 5;
+        slider.height = "20px";
+        slider.width = "150px";
+        slider.color = "#003399";
+        slider.background = "grey";
+        slider.left = "120px";
+        slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        slider.onValueChangedObservable.add(function (value) {
+            //sphere.scaling = unitVec.scale(value);
+        });
+
+        var idx = 0;
+        scene.beforeRender = function () {
+            //textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
+            //button1.textBlock.text = "Click Me " + idx;
+            slider.value = idx;
+            idx+=0.01;
+        };
+
+        advancedTexture.addControl(slider);
         */
-        
     }, undefined, undefined, true);
+
+
 
 
     if (ibl) {
