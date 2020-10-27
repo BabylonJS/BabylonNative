@@ -170,7 +170,7 @@ namespace Babylon::ShaderCompilerCommon
             std::vector<uint8_t>& vertexBytes{bgfxShaderInfo.VertexBytes};
 
             const auto& compiler = *vertexShaderInfo.Compiler;
-            spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+            const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
             auto uniformsInfo = CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler);
 #if (BGFX_CONFIG_RENDERER_METAL)
             // with metal, we bind images and not samplers
