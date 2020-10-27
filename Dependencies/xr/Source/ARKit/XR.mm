@@ -422,6 +422,8 @@ namespace {
       CFRelease(textureCache);
       textureCache = nil;
   }
+
+  [planeLock release];
   
   [super dealloc];
 }
@@ -549,6 +551,7 @@ namespace xr {
             dispatch_sync(dispatch_get_main_queue(), ^{
                 xrView = [[MTKView alloc] initWithFrame:MainView.bounds device:metalDevice];
                 [MainView addSubview:xrView];
+                [xrView release];
                 xrView.userInteractionEnabled = false;
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
@@ -628,10 +631,9 @@ namespace xr {
             [session pause];
             [session release];
             [pipelineState release];
+            [xrView releaseDrawables];
             dispatch_sync(dispatch_get_main_queue(), ^{
                 [xrView removeFromSuperview]; });
-            [xrView releaseDrawables];
-            [xrView dealloc];
             xrView = nil;
         }
         
@@ -676,15 +678,12 @@ namespace xr {
                         [oldColorTexture release];
                         ActiveFrameViews[0].ColorTexturePointer = nil;
                     }
-                    
-                    MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
-                    textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
-                    textureDescriptor.width = width;
-                    textureDescriptor.height = height;
+
+                    MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:width height:height mipmapped:NO];
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
-                    [textureDescriptor dealloc];
-                                        
+                    [texture retain];
+
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
                     ActiveFrameViews[0].ColorTextureSize = {width, height};
@@ -699,16 +698,13 @@ namespace xr {
                         ActiveFrameViews[0].DepthTexturePointer = nil;
                     }
 
-                    MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
-                    textureDescriptor.pixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-                    textureDescriptor.width = width;
-                    textureDescriptor.height = height;
+                    MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:width height:height mipmapped:NO];
                     textureDescriptor.storageMode = MTLStorageModePrivate;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
-                    [textureDescriptor dealloc];
-                    
-                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(texture);
+                    [texture retain];
+
+                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
