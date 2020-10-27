@@ -42,6 +42,14 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
+    void TailRecursiveRender()
+    {
+        runtime->Dispatch([](auto) {
+            graphics->RenderCurrentFrame();
+            TailRecursiveRender();
+        });
+    }
+
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
@@ -126,6 +134,8 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
+
+        TailRecursiveRender();
     }
 }
 
