@@ -1,15 +1,9 @@
-#include <bx/math.h>
 #include <bgfx/bgfx.h>
-#include "font/font_manager.h"
-#include "font/text_buffer_manager.h"
-#include "nanovg/nanovg.h"
-
+#include <map>
 #include "Canvas.h"
-
+#include "Context.h"
 #include <functional>
 #include <sstream>
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb/stb_truetype.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -26,6 +20,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("width", &Canvas::GetWidth, &Canvas::SetWidth),
                 InstanceAccessor("height", &Canvas::GetHeight, &Canvas::SetHeight),
                 ParentT::InstanceMethod("getCanvasTexture", &Canvas::GetCanvasTexture),
+                ParentT::StaticMethod("beginContextsFrame", &Canvas::BeginContextsFrame),
+                ParentT::StaticMethod("endContextsFrame", &Canvas::EndContextsFrame),
                 
             });
 
@@ -37,25 +33,28 @@ namespace Babylon::Polyfills::Internal
     {
     }
 
+    void Canvas::BeginContextsFrame(const Napi::CallbackInfo&)
+    {
+        Context::BeginContextsFrame();
+    }
+
+    void Canvas::EndContextsFrame(const Napi::CallbackInfo&)
+    {
+        Context::EndContextsFrame();
+    }
+
     void Canvas::LoadTTF(const Napi::CallbackInfo& info)
     {
         std::string fontName = info[0].As<Napi::String>().Utf8Value();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
-        
-        if (!fontsInfos)
-        {
-            // Init the text rendering system.
-            fontsInfos = std::make_unique<FontsInfo>(512);
-        }
-        TrueTypeHandle handle = fontsInfos->fontManager.createTtf((uint8_t*)buffer.Data(), buffer.ByteLength());
-        fontsInfos->font = fontsInfos->fontManager.createFontByPixelSize(handle, 0, 32);
-        fontsInfos->fontManager.preloadGlyph(fontsInfos->font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!@#$%^&*()[]{};:<>?,/\\ \n");
-        fontsInfos->fontManager.destroyTtf(handle);
+
+        fontsInfos[fontName] = std::vector<uint8_t>(buffer.ByteLength());
+        memcpy(fontsInfos[fontName].data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
     }
 
     Napi::Value Canvas::GetContext(const Napi::CallbackInfo& info)
     {
-        return Context::CreateInstance(info.Env(), this);
+        return Context::CreateInstance(info.Env(), this, m_nextViewId++);
     }
 
     Napi::Value Canvas::GetWidth(const Napi::CallbackInfo&)
@@ -112,282 +111,6 @@ namespace Babylon::Polyfills::Internal
         data->Width = m_width;
         data->Height = m_height;
         return Napi::External<TextureData>::New(info.Env(), data);
-    }
-
-    // Context
-    void Context::UpdateRenderTarget(uint32_t width, uint32_t height)
-    {
-        if (frameBufferHandle.idx != bgfx::kInvalidHandle)
-        {
-            bgfx::destroy(frameBufferHandle);
-        }
-        frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(width), static_cast<uint16_t>(height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-    }
-
-    Napi::Value Context::CreateInstance(Napi::Env env, Canvas* canvas)
-    {
-        Napi::HandleScope scope{ env };
-
-        // defined at first call, makes construction faster for subsequent calls.
-        static Napi::Function func = ParentT::DefineClass(
-            env,
-            JS_CONSTRUCTOR_NAME,
-            {
-                ParentT::InstanceMethod("fillRect", &Context::FillRect),
-                ParentT::InstanceMethod("measureText", &Context::MeasureText),
-                ParentT::InstanceMethod("fillText", &Context::FillText),
-                ParentT::InstanceMethod("fill", &Context::Fill),
-                ParentT::InstanceMethod("save", &Context::Save),
-                ParentT::InstanceMethod("restore", &Context::Restore),
-                ParentT::InstanceMethod("clearRect", &Context::ClearRect),
-                ParentT::InstanceMethod("translate", &Context::Translate),
-                ParentT::InstanceMethod("rotate", &Context::Rotate),
-                ParentT::InstanceMethod("scale", &Context::Scale),
-                ParentT::InstanceMethod("beginPath", &Context::BeginPath),
-                ParentT::InstanceMethod("closePath", &Context::ClosePath),
-                ParentT::InstanceMethod("rect", &Context::Rect),
-                ParentT::InstanceMethod("clip", &Context::Clip),
-                ParentT::InstanceMethod("strokeRect", &Context::StrokeRect),
-                ParentT::InstanceMethod("stroke", &Context::Stroke),
-                ParentT::InstanceMethod("moveTo", &Context::MoveTo),
-                ParentT::InstanceMethod("lineTo", &Context::LineTo),
-                ParentT::InstanceMethod("quadraticCurveTo", &Context::QuadraticCurveTo),
-                InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
-                InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
-            });
-        return func.New({ Napi::External<Canvas>::New(env, canvas) });
-    }
-
-    Context::Context(const Napi::CallbackInfo& info)
-        : ParentT{ info }
-        , m_canvas {info[0].As<Napi::External<Canvas>>().Data()}
-        , m_textBufferManager(&Canvas::fontsInfos->fontManager)
-        , m_transientText{m_textBufferManager.createTextBuffer(FONT_TYPE_DISTANCE_SUBPIXEL, BufferType::Transient)}
-        , m_nvg{nvgCreate(1, 100)}
-    {
-    }
-
-    Context::~Context()
-    {
-        nvgDelete(m_nvg);
-    }
-
-    NVGcolor StringToColor(const std::string& str)
-    {
-        if (str == "white") {
-           return nvgRGBA(255, 255, 255, 255);
-        }
-        else if (str == "green") {
-            return nvgRGBA(0, 255, 0, 255);
-        }
-        else if (str == "red") {
-            return nvgRGBA(255, 0, 0, 255);
-        }
-        else if (str == "blue") {
-            return nvgRGBA(0, 0, 255, 255);
-        }
-        else {
-            assert(0);
-        }
-        return nvgRGBA(255, 0, 255, 255);
-    }
-
-    void Context::FillRect(const Napi::CallbackInfo& info)
-    {
-        auto left = info[0].As<Napi::Number>().FloatValue();
-        auto top = info[1].As<Napi::Number>().FloatValue();
-        auto width = info[2].As<Napi::Number>().FloatValue();
-        auto height = info[3].As<Napi::Number>().FloatValue();
-        nvgRect(m_nvg, left, top, width, height);
-        nvgFill(m_nvg);
-    }
-
-    Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), 0);
-    }
-
-    void Context::SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        auto color = StringToColor(value.As<Napi::String>().Utf8Value());
-        nvgFillColor(m_nvg, color);
-    }
-
-    Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), 0);
-    }
-
-    void Context::SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        auto color = StringToColor(value.As<Napi::String>().Utf8Value());
-
-        nvgStrokeColor(m_nvg, color);
-    }
-
-    void Context::Fill(const Napi::CallbackInfo&)
-    {
-        nvgFill(m_nvg);
-    }
-
-    void Context::Save(const Napi::CallbackInfo&)
-    {
-        nvgSave(m_nvg);
-    }
-
-    void Context::Restore(const Napi::CallbackInfo&)
-    {
-        nvgRestore(m_nvg);
-    }
-
-    void Context::ClearRect(const Napi::CallbackInfo&)
-    {
-    }
-
-    void Context::Translate(const Napi::CallbackInfo& info)
-    {
-        auto x = info[0].As<Napi::Number>().FloatValue();
-        auto y = info[1].As<Napi::Number>().FloatValue();
-        nvgTranslate(m_nvg, x, y);
-    }
-
-    void Context::Rotate(const Napi::CallbackInfo& info)
-    {
-        auto angle = info[0].As<Napi::Number>().FloatValue();
-        nvgRotate(m_nvg, nvgDegToRad(angle));
-    }
-
-    void Context::Scale(const Napi::CallbackInfo& info)
-    {
-        auto x = info[0].As<Napi::Number>().FloatValue();
-        auto y = info[1].As<Napi::Number>().FloatValue();
-        nvgScale(m_nvg, x, y);
-    }
-
-    void Context::BeginPath(const Napi::CallbackInfo&)
-    {
-        nvgBeginPath(m_nvg);
-    }
-
-    void Context::ClosePath(const Napi::CallbackInfo&)
-    {
-        nvgClosePath(m_nvg);
-    }
-
-    void Context::Rect(const Napi::CallbackInfo& info)
-    {
-        auto left = info[0].As<Napi::Number>().FloatValue();
-        auto top = info[1].As<Napi::Number>().FloatValue();
-        auto width = info[2].As<Napi::Number>().FloatValue();
-        auto height = info[3].As<Napi::Number>().FloatValue();
-        nvgRect(m_nvg, left, top, width, height);
-    }
-
-    void Context::Clip(const Napi::CallbackInfo&)
-    {
-    }
-
-    void Context::StrokeRect(const Napi::CallbackInfo&)
-    {
-    }
-
-    void Context::Stroke(const Napi::CallbackInfo&)
-    {
-
-        //nvgStroke
-    }
-
-    void Context::MoveTo(const Napi::CallbackInfo& info)
-    {
-        auto x = info[0].As<Napi::Number>().FloatValue();
-        auto y = info[1].As<Napi::Number>().FloatValue();
-        nvgMoveTo(m_nvg, x, y);
-    }
-
-    void Context::LineTo(const Napi::CallbackInfo& info)
-    {
-        auto x = info[0].As<Napi::Number>().FloatValue();
-        auto y = info[1].As<Napi::Number>().FloatValue();
-        nvgLineTo(m_nvg, x, y);
-    }
-
-    void Context::QuadraticCurveTo(const Napi::CallbackInfo& info)
-    {
-        auto cx = info[0].As<Napi::Number>().FloatValue();
-        auto cy = info[1].As<Napi::Number>().FloatValue();
-        auto x = info[2].As<Napi::Number>().FloatValue();
-        auto y = info[3].As<Napi::Number>().FloatValue();
-        nvgBezierTo(m_nvg, cx, cy, cx, cy, x, y);
-    }
-
-    Napi::Value Context::MeasureText(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), 8);
-    }
-
-    void Context::FillText(const Napi::CallbackInfo& info)
-    {
-        auto fontsInfos = m_canvas->fontsInfos.get();
-
-        if (!fontsInfos)
-        {
-            return;
-        }
-
-        std::string text = info[0].As<Napi::String>().Utf8Value();
-        auto x = info[1].As<Napi::Number>().FloatValue();
-        auto y = info[2].As<Napi::Number>().FloatValue();
-
-        m_textBufferManager.clearTextBuffer(m_transientText);
-        m_textBufferManager.setTextColor(m_transientText, 0xFFFFFFFF);
-        m_textBufferManager.appendText(m_transientText, fontsInfos->font, text.c_str());
-
-        bgfx::ViewId canvasViewId = 100;
-        bgfx::setViewFrameBuffer(canvasViewId, frameBufferHandle);
-        bgfx::setViewClear(canvasViewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
-
-        x = 100;
-        y = 100;
-
-        const bx::Vec3 at = { -x, -y,  0.0f };
-        const bx::Vec3 eye = { -x, -y, -1.0f };
-
-
-        
-        float view[16];
-        bx::mtxLookAt(view, eye, at);
-        //bx::mtxTranslate(view, -x, -y, 1.f);
-
-
-        const float centering = 0.5f;
-
-        auto width = m_canvas->GetWidth();
-        auto height = m_canvas->GetHeight();
-
-        // Setup a top-left ortho matrix for screen space drawing.
-        const bgfx::Caps* caps = bgfx::getCaps();
-        bool flipY = bgfx::getCaps()->originBottomLeft;
-        {
-            float ortho[16];
-            bx::mtxOrtho(
-                ortho
-                , centering
-                , static_cast<float>(width) + centering
-                , flipY ? (static_cast<float>(height) + centering) : centering
-                , flipY ? centering : (static_cast<float>(height) + centering)
-                , -100.0f
-                , 100.0f
-                , 0.0f
-                , caps->homogeneousDepth
-            );
-            bgfx::setViewTransform(canvasViewId, view, ortho);
-            bgfx::setViewRect(canvasViewId, 0, 0, uint16_t(width), uint16_t(height));
-        }
-        m_textBufferManager.submitTextBuffer(m_transientText, canvasViewId);
-        //bgfx::frame();
-
-        nvgEndFrame(m_nvg);
-        nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
     }
 }
 

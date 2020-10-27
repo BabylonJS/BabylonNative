@@ -2,6 +2,10 @@ set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"
     "Source/Canvas.h"
+    "Source/Context.cpp"
+    "Source/Context.h"
+    "Source/MeasureText.cpp"
+    "Source/MeasureText.h"
     )
 
 file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
