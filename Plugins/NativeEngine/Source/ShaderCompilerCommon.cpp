@@ -194,7 +194,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
 
-            auto renameBgfxVertexAttributes = [](std::string& attributeName) -> std::string {
+            auto renameBgfxVertexAttributes = [](std::string attributeName) -> std::string {
                 if (attributeName == "a_position")
                     attributeName = "position";
                 else if (attributeName == "a_normal")
