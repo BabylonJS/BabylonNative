@@ -24,6 +24,7 @@ namespace Babylon
         {
             std::vector<uint8_t> VertexBytes{};
             std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
+            std::unordered_map<std::string, std::string> VertexAttributeRenamingMap{};
             std::unordered_map<std::string, uint8_t> VertexUniformStages{};
 
             std::vector<uint8_t> FragmentBytes{};

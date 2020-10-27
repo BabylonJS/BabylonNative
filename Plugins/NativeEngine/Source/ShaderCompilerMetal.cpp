@@ -57,7 +57,7 @@ namespace Babylon
                     compiler->set_decoration(input.id, spv::DecorationLocation, -1);
                 }
             }
-            
+
             // rename textures without the 'texture' suffix so it's bindable from .js
             for (auto& resource : resources.separate_images)
             {
@@ -68,7 +68,7 @@ namespace Babylon
                     compiler->set_name(resource.id, imageName);
                 }
             }
-            
+
             compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
 
             shaderResult = compiler->compile();
@@ -112,7 +112,8 @@ namespace Babylon
         ShaderCompilerTraversers::IdGenerator ids{};
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
+        std::map<std::string, std::string> replacementNameToOriginal();
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids, replacementNameToOriginal);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
@@ -123,7 +124,7 @@ namespace Babylon
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
         return ShaderCompilerCommon::CreateBgfxShader(
-            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size())},
+            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size()), std::move(replacementNameToOriginal)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size())});
     }
 }

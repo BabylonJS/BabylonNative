@@ -11,6 +11,7 @@
 #include <gsl/gsl>
 
 #include <stdexcept>
+#include <iostream>
 
 using namespace glslang;
 
@@ -197,14 +198,14 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create the struct type. Name chosen arbitrarily (legacy reasons).
                 TType structType(structMembers, "Frame", qualifier);
 
-                // Create the symbol for the actual struct. The name of this symbol, "anon@0", 
+                // Create the symbol for the actual struct. The name of this symbol, "anon@0",
                 // mirrors the kinds of strings glslang generates automatically for these sorts
                 // of objects.
                 TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), "anon@0", structType});
 
-                // Every affected symbol in the AST (except linker objects) must be replaced 
+                // Every affected symbol in the AST (except linker objects) must be replaced
                 // with a new operation to retrieve its value from the struct. This operation
-                // consists of a binary operation indexing into the struct at a specified 
+                // consists of a binary operation indexing into the struct at a specified
                 // index. This loop creates these indexing operations for each of the symbols
                 // that must be replaced.
                 for (unsigned int idx = 0; idx < structMembers->size(); ++idx)
@@ -222,7 +223,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // because the move to the new struct fundamentally changes the nature of the
                 // uniforms they represent. Specifically, anything in the linker object region
                 // of the AST which has an analogue in the new struct must be erased to avoid
-                // conflicting with the presence of the new struct, which is added to the 
+                // conflicting with the presence of the new struct, which is added to the
                 // linker objects sequence at right after the following loop finishes.
                 auto* linkerObjectAggregate = intermediate->getTreeRoot()->getAsAggregate()->getSequence().back()->getAsAggregate();
                 assert(linkerObjectAggregate->getOp() == EOpLinkerObjects);
@@ -288,8 +289,8 @@ namespace Babylon::ShaderCompilerTraversers
                 // We only care about uniforms that are neither samplers nor matrices.
                 if (type.getQualifier().isUniformOrBuffer() && type.getBasicType() != EbtSampler && !type.isMatrix())
                 {
-                    // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected 
-                    // down a la vec3.x, greedily adding a swizzle operator to deal with the new type mismatch may create 
+                    // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected
+                    // down a la vec3.x, greedily adding a swizzle operator to deal with the new type mismatch may create
                     // something like (vec3.xyz).x. I suspect this is unlikely to cause problems.
 
                     auto* oldType = type.clone();
@@ -367,10 +368,10 @@ namespace Babylon::ShaderCompilerTraversers
                             // With a typical symbol, the symbol is being "consumed" by its parent node, and so
                             // it is sufficient to introduce a shape conversion between the symbol and its parent
                             // in order to reconcile the vector sizes. In the case of an array, however, the symbol
-                            // is not directly being "consumed" by its parent because the parent is actually an 
+                            // is not directly being "consumed" by its parent because the parent is actually an
                             // indexing operation that retrieves the data for consumption by THAT node's parent.
                             // This case, then, requires two modifications to the typical behavior: (1) the indexing
-                            // operation which is retrieving the value from the array must have its type modified 
+                            // operation which is retrieving the value from the array must have its type modified
                             // to correctly represent the type it's retrieving, and (2) a shape conversion must be
                             // inserted between the retrieval operation and its parent, not between the array and
                             // the retrieval operation.
@@ -419,9 +420,9 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverser final : private TIntermTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal)
             {
-                Traverse(program.getIntermediate(EShLangVertex), ids);
+                Traverse(program.getIntermediate(EShLangVertex), ids, replacementNameToOriginal);
             }
 
         private:
@@ -451,20 +452,83 @@ namespace Babylon::ShaderCompilerTraversers
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
     if (std::strcmp(name, varyingName) == 0)                 \
     {                                                        \
-        return {static_cast<unsigned int>(attrib), name}; \
+        return {static_cast<unsigned int>(attrib), newName}; \
     }
 #if ANDROID
-                IF_NAME_RETURN_ATTRIB("position", m_genericAttributesRunningCount++-1, "a_position")
-                IF_NAME_RETURN_ATTRIB("normal", m_genericAttributesRunningCount++-1, "a_normal")
-                IF_NAME_RETURN_ATTRIB("tangent", m_genericAttributesRunningCount++-1, "a_tangent")
-                IF_NAME_RETURN_ATTRIB("uv", m_genericAttributesRunningCount++-1, "a_texcoord0")
-                IF_NAME_RETURN_ATTRIB("uv2", m_genericAttributesRunningCount++-1, "a_texcoord1")
-                IF_NAME_RETURN_ATTRIB("uv3", m_genericAttributesRunningCount++-1, "a_texcoord2")
-                IF_NAME_RETURN_ATTRIB("uv4", m_genericAttributesRunningCount++-1, "a_texcoord3")
-                IF_NAME_RETURN_ATTRIB("color", m_genericAttributesRunningCount++-1, "a_color0")
-                IF_NAME_RETURN_ATTRIB("matricesIndices", m_genericAttributesRunningCount++-1, "a_indices")
-                IF_NAME_RETURN_ATTRIB("matricesWeights", m_genericAttributesRunningCount++-1, "a_weight")
-                return {m_genericAttributesRunningCount++-1, name};
+                const char * newName;
+                switch (m_genericAttributesRunningCount-1){
+                    case 0:
+                        newName = "position";
+                        break;
+                    case 1:
+                        newName = "normal";
+                        break;
+                    case 2:
+                        newName = "tangent";
+                        break;
+                    case 3:
+                        newName = "bitangent";
+                        break;
+                    case 4:
+                        newName = "color0";
+                        break;
+                    case 5:
+                        newName = "color1";
+                        break;
+                    case 6:
+                        newName = "color2";
+                        break;
+                    case 7:
+                        newName = "color3";
+                        break;
+                    case 8:
+                        newName = "indices";
+                        break;
+                    case 9:
+                        newName = "weight";
+                        break;
+                    case 10:
+                        newName = "texcoord0";
+                        break;
+                    case 11:
+                        newName = "texcoord1";
+                        break;
+                    case 12:
+                        newName = "texcoord2";
+                        break;
+                    case 13:
+                        newName = "texcoord3";
+                        break;
+                    case 14:
+                        newName = "texcoord4";
+                        break;
+                    case 15:
+                        newName = "texcoord5";
+                        break;
+                    case 16:
+                        newName = "texcoord6";
+                        break;
+                    case 17:
+                        newName = "texcoord7";
+                        break;
+                    default:
+                        newName = name;
+                }
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount++-1), newName};
+
+                //return {static_cast<unsigned int>(attrib), name};
+
+                //IF_NAME_RETURN_ATTRIB("position", m_genericAttributesRunningCount++-1, "a_position")
+                //IF_NAME_RETURN_ATTRIB("normal", m_genericAttributesRunningCount++-1, "a_normal")
+                //IF_NAME_RETURN_ATTRIB("tangent", m_genericAttributesRunningCount++-1, "a_tangent")
+                //IF_NAME_RETURN_ATTRIB("uv", m_genericAttributesRunningCount++-1, "a_texcoord0")
+                //IF_NAME_RETURN_ATTRIB("uv2", m_genericAttributesRunningCount++-1, "a_texcoord1")
+                //IF_NAME_RETURN_ATTRIB("uv3", m_genericAttributesRunningCount++-1, "a_texcoord2")
+                //IF_NAME_RETURN_ATTRIB("uv4", m_genericAttributesRunningCount++-1, "a_texcoord3")
+                //IF_NAME_RETURN_ATTRIB("color", m_genericAttributesRunningCount++-1, "a_color0")
+                //IF_NAME_RETURN_ATTRIB("matricesIndices", m_genericAttributesRunningCount++-1, "a_indices")
+                //IF_NAME_RETURN_ATTRIB("matricesWeights", m_genericAttributesRunningCount++-1, "a_weight")
+                //return {m_genericAttributesRunningCount++-1, name};
 #else
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
@@ -481,7 +545,7 @@ namespace Babylon::ShaderCompilerTraversers
 #endif
             }
 
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal)
             {
                 VertexVaryingInTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -505,7 +569,7 @@ namespace Babylon::ShaderCompilerTraversers
                     }
                 }
 
-                // Create the new symbols with which to replace all of the original varying 
+                // Create the new symbols with which to replace all of the original varying
                 // symbols. The primary purpose of these new symbols is to contain the required
                 // name and location.
                 for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
@@ -513,8 +577,8 @@ namespace Babylon::ShaderCompilerTraversers
                     const auto& type = symbol->getType();
                     publicType.qualifier = type.getQualifier();
                     auto [location, newName] = traverser.GetVaryingLocationAndNewNameForName(name.c_str());
-                    // It may not be necessary to specify this on certain platforms (like OpenGL), 
-                    // which might simplify the handling of scenarios where we currently run out 
+                    // It may not be necessary to specify this on certain platforms (like OpenGL),
+                    // which might simplify the handling of scenarios where we currently run out
                     // of attribute locations.
                     publicType.qualifier.layoutLocation = location;
 
@@ -530,6 +594,7 @@ namespace Babylon::ShaderCompilerTraversers
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
                     auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
+                    replacementNameToOriginal[name] = newName;
                     originalNameToReplacement[name] = newSymbol;
                 }
 
@@ -554,9 +619,9 @@ namespace Babylon::ShaderCompilerTraversers
             {
                 if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler)
                 {
-                    // Collect all sampler uniform symbols into the relevant caches 
+                    // Collect all sampler uniform symbols into the relevant caches
                     // later proccessing. Note that we treat linker object replacement
-                    // differently in this traverser, so we don't add linker object symbols 
+                    // differently in this traverser, so we don't add linker object symbols
                     // to the m_symbolsToParents cache.
                     if (isLinkerObject(this->path))
                     {
@@ -628,7 +693,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                     nameToNewTextureAndSampler[name] = std::pair<TIntermSymbol*, TIntermSymbol*>{newTexture, newSampler};
 
-                    // Create the aggregate. This represents the operation that uses the new 
+                    // Create the aggregate. This represents the operation that uses the new
                     // texture and sampler symbols to do what was intended by the original
                     // sampler symbol in the source code from Babylon.js.
                     auto* aggregate = intermediate->growAggregate(newTexture, newSampler);
@@ -660,10 +725,10 @@ namespace Babylon::ShaderCompilerTraversers
                         auto found = nameToNewTextureAndSampler.find(symbol->getName().c_str());
                         if (found != nameToNewTextureAndSampler.end())
                         {
-                            // Wherever we find a former sampler that has been replaced by a 
+                            // Wherever we find a former sampler that has been replaced by a
                             // new pair of symbols, we need to delete the old symbol, replace
-                            // it at its position with the new texture symbol, then insert 
-                            // the new sampler symbol after that. (The order doesn't really 
+                            // it at its position with the new texture symbol, then insert
+                            // the new sampler symbol after that. (The order doesn't really
                             // seem to matter, but it makes diffing the debug outputs of the
                             // intermediate representations easier if things that logically
                             // belong together are listed together.)
@@ -727,9 +792,9 @@ namespace Babylon::ShaderCompilerTraversers
         return UniformTypeChangeTraverser::Traverse(program, ids);
     }
 
-    void AssignLocationsAndNamesToVertexVaryings(TProgram& program, IdGenerator& ids)
+    void AssignLocationsAndNamesToVertexVaryings(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal)
     {
-        VertexVaryingInTraverser::Traverse(program, ids);
+        VertexVaryingInTraverser::Traverse(program, ids, replacementNameToOriginal);
     }
 
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)

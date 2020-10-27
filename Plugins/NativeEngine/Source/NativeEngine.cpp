@@ -611,12 +611,10 @@ namespace Babylon
         m_currentBoundIndexBuffer = vertexArray.indexBuffer.data;
 
         const auto& vertexBuffers = vertexArray.vertexBuffers;
-        for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
+        for (auto vertexBufferPair : vertexBuffers)
         {
-            if (vertexBuffers.find(index) != vertexBuffers.end()) {
-                const auto& vertexBuffer = vertexBuffers.at(index);
-                vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
-            }
+            const auto& vertexBuffer = vertexBufferPair.second;
+            vertexBuffer.data->SetAsBgfxVertexBuffer((uint8_t)vertexBufferPair.first, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
         }
     }
 
@@ -740,6 +738,7 @@ namespace Babylon
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
         InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos);
         programData->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+        programData->VertexAttributeRenamingMap = std::move(shaderInfo.VertexAttributeRenamingMap);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos);
@@ -788,13 +787,15 @@ namespace Babylon
         const auto names = info[1].As<Napi::Array>();
 
         const auto& attributeLocations = program->VertexAttributeLocations;
+        const auto& attributeNameMapping = program->VertexAttributeRenamingMap;
 
         auto length = names.Length();
         auto attributes = Napi::Array::New(info.Env(), length);
         for (uint32_t index = 0; index < length; ++index)
         {
-            const auto name = names[index].As<Napi::String>().Utf8Value();
-            const auto it = attributeLocations.find(name);
+            const std::string name = names[index].As<Napi::String>().Utf8Value();
+            auto internalName = attributeNameMapping.find(name);
+            const auto it = attributeLocations.find(internalName->second);
             int location = (it == attributeLocations.end() ? -1 : gsl::narrow_cast<int>(it->second));
             attributes[index] = Napi::Value::From(info.Env(), location);
         }

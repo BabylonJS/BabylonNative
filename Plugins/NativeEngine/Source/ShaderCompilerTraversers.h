@@ -3,6 +3,7 @@
 #include <glslang/Public/ShaderLang.h>
 
 #include <memory>
+#include <unordered_map>
 
 namespace Babylon::ShaderCompilerTraversers
 {
@@ -25,7 +26,7 @@ namespace Babylon::ShaderCompilerTraversers
     using ScopeT = std::unique_ptr<AllocationsScopeBase>;
 
     /// Helper class to allow consistency amongst various calls to modify shaders.
-    /// In the course of modifying programs, various objects must be given IDs, 
+    /// In the course of modifying programs, various objects must be given IDs,
     /// and those IDs must not be allowed to conflict with one another, so this
     /// class provides a way for many modification techniques to generate new
     /// IDs that will not collide.
@@ -45,13 +46,13 @@ namespace Babylon::ShaderCompilerTraversers
     };
 
     /// Modify the shader program by moving all uniforms other than samplers into a struct.
-    /// Thus, if the input shader has uniforms 
-    /// 
+    /// Thus, if the input shader has uniforms
+    ///
     ///     vec3 position;
     ///     mat4 viewMatrix;
-    /// 
+    ///
     /// then the shader will be modified to have the following struct instead.
-    /// 
+    ///
     ///     struct Frame
     ///     {
     ///         vec3 position;
@@ -60,16 +61,16 @@ namespace Babylon::ShaderCompilerTraversers
     ScopeT MoveNonSamplerUniformsIntoStruct(glslang::TProgram& program, IdGenerator& ids);
 
     /// Performs all changes to uniform types required by platforms that need changes.
-    /// This is needed for Metal and OpenGL (not DirectX) to match bgfx's expectations 
+    /// This is needed for Metal and OpenGL (not DirectX) to match bgfx's expectations
     /// that all uniforms, even scalars, are implemented as vec4 uniforms.
     ScopeT ChangeUniformTypes(glslang::TProgram& program, IdGenerator& ids);
 
     /// Changes the names and locations of varying attributes in the vertex shader to
-    /// match bgfx's expectations. 
-    void AssignLocationsAndNamesToVertexVaryings(glslang::TProgram& program, IdGenerator& ids);
+    /// match bgfx's expectations.
+    void AssignLocationsAndNamesToVertexVaryings(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal);
 
-    /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable. 
-    /// Native platforms expect them to be two separate variables -- a texture and a 
+    /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
+    /// Native platforms expect them to be two separate variables -- a texture and a
     /// sampler -- used together, so this function splits all texture samplers to match
     /// the expectations of native platforms.
     void SplitSamplersIntoSamplersAndTextures(glslang::TProgram& program, IdGenerator& ids);

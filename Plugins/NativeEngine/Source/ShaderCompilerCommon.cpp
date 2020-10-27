@@ -170,7 +170,7 @@ namespace Babylon::ShaderCompilerCommon
             std::vector<uint8_t>& vertexBytes{bgfxShaderInfo.VertexBytes};
 
             const auto& compiler = *vertexShaderInfo.Compiler;
-            const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+            spirv_cross::ShaderResources resources = compiler.get_shader_resources();
             auto uniformsInfo = CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler);
 #if (BGFX_CONFIG_RENDERER_METAL)
             // with metal, we bind images and not samplers
@@ -193,36 +193,53 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(vertexBytes, static_cast<uint8_t>(0));
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
-            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+
+            auto renameBgfxVertexAttributes = [](std::string& attributeName) -> std::string {
+                if (attributeName == "a_position")
+                    attributeName = "position";
+                else if (attributeName == "a_normal")
+                    attributeName = "normal";
+                else if (attributeName == "a_tangent")
+                    attributeName = "tangent";
+                else if (attributeName == "a_bitangent")
+                    attributeName = "bitangent";
+                else if (attributeName == "a_texcoord0")
+                    attributeName = "uv";
+                else if (attributeName == "a_texcoord1")
+                    attributeName = "uv2";
+                else if (attributeName == "a_texcoord2")
+                    attributeName = "uv3";
+                else if (attributeName == "a_texcoord3")
+                    attributeName = "uv4";
+                else if (attributeName == "a_color0")
+                    attributeName = "color";
+                else if (attributeName == "a_color1")
+                    attributeName = "color1";
+                else if (attributeName == "a_color2")
+                    attributeName = "color2";
+                else if (attributeName == "a_color3")
+                    attributeName = "color3";
+                else if (attributeName == "a_indices")
+                    attributeName = "matricesIndices";
+                else if (attributeName == "a_weight")
+                    attributeName = "matricesWeights";
+                return attributeName;
+            };
+
+            for (spirv_cross::Resource& stageInput : resources.stage_inputs)
             {
                 const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                 AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
 
-                std::string attributeName = stageInput.name;
-//                if (attributeName == "a_position")
-//                    attributeName = "position";
-//                else if (attributeName == "a_normal")
-//                    attributeName = "normal";
-//                else if (attributeName == "a_tangent")
-//                    attributeName = "tangent";
-//                else if (attributeName == "a_texcoord0")
-//                    attributeName = "uv";
-//                else if (attributeName == "a_texcoord1")
-//                    attributeName = "uv2";
-//                else if (attributeName == "a_texcoord2")
-//                    attributeName = "uv3";
-//                else if (attributeName == "a_texcoord3")
-//                    attributeName = "uv4";
-//                else if (attributeName == "a_color0")
-//                    attributeName = "color";
-//                else if (attributeName == "a_indices")
-//                    attributeName = "matricesIndices";
-//                else if (attributeName == "a_weight")
-//                    attributeName = "matricesWeights";
+                std::string attributeName = renameBgfxVertexAttributes(stageInput.name);
 
                 bgfxShaderInfo.VertexAttributeLocations[attributeName] = location;
             }
-
+            bgfxShaderInfo.VertexAttributeRenamingMap = std::move(vertexShaderInfo.replacementAttributeNameMapping);
+            for (auto attributeNameMap : bgfxShaderInfo.VertexAttributeRenamingMap)
+            {
+                bgfxShaderInfo.VertexAttributeRenamingMap[attributeNameMap.first] = renameBgfxVertexAttributes(attributeNameMap.second);
+            }
             AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
         }
 
