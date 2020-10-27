@@ -456,65 +456,65 @@ namespace Babylon::ShaderCompilerTraversers
     }
 #if ANDROID
                 const char * newName;
-                switch (m_genericAttributesRunningCount-1){
+                switch (m_genericAttributesRunningCount){
                     case 0:
-                        newName = "position";
+                        newName = "a_position";
                         break;
                     case 1:
-                        newName = "normal";
+                        newName = "a_normal";
                         break;
                     case 2:
-                        newName = "tangent";
+                        newName = "a_tangent";
                         break;
                     case 3:
-                        newName = "bitangent";
+                        newName = "a_bitangent";
                         break;
                     case 4:
-                        newName = "color0";
+                        newName = "a_color0";
                         break;
                     case 5:
-                        newName = "color1";
+                        newName = "a_color1";
                         break;
                     case 6:
-                        newName = "color2";
+                        newName = "a_color2";
                         break;
                     case 7:
-                        newName = "color3";
+                        newName = "a_color3";
                         break;
                     case 8:
-                        newName = "indices";
+                        newName = "a_indices";
                         break;
                     case 9:
-                        newName = "weight";
+                        newName = "a_weight";
                         break;
                     case 10:
-                        newName = "texcoord0";
+                        newName = "a_texcoord0";
                         break;
                     case 11:
-                        newName = "texcoord1";
+                        newName = "a_texcoord1";
                         break;
                     case 12:
-                        newName = "texcoord2";
+                        newName = "a_texcoord2";
                         break;
                     case 13:
-                        newName = "texcoord3";
+                        newName = "a_texcoord3";
                         break;
                     case 14:
-                        newName = "texcoord4";
+                        newName = "a_texcoord4";
                         break;
                     case 15:
-                        newName = "texcoord5";
+                        newName = "a_texcoord5";
                         break;
                     case 16:
-                        newName = "texcoord6";
+                        newName = "a_texcoord6";
                         break;
                     case 17:
-                        newName = "texcoord7";
+                        newName = "a_texcoord7";
                         break;
                     default:
                         newName = name;
                 }
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount++-1), newName};
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount++), newName};
 
                 //return {static_cast<unsigned int>(attrib), name};
 
@@ -558,6 +558,7 @@ namespace Babylon::ShaderCompilerTraversers
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
+#if !ANDROID
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
@@ -568,7 +569,7 @@ namespace Babylon::ShaderCompilerTraversers
                         traverser.m_genericAttributesRunningCount++;
                     }
                 }
-
+#endif
                 // Create the new symbols with which to replace all of the original varying
                 // symbols. The primary purpose of these new symbols is to contain the required
                 // name and location.

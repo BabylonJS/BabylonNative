@@ -211,6 +211,14 @@ namespace Babylon::ShaderCompilerCommon
                     attributeName = "uv3";
                 else if (attributeName == "a_texcoord3")
                     attributeName = "uv4";
+                else if (attributeName == "a_texcoord4")
+                    attributeName = "uv5";
+                else if (attributeName == "a_texcoord5")
+                    attributeName = "uv6";
+                else if (attributeName == "a_texcoord6")
+                    attributeName = "uv7";
+                else if (attributeName == "a_texcoord7")
+                    attributeName = "uv7";
                 else if (attributeName == "a_color0")
                     attributeName = "color";
                 else if (attributeName == "a_color1")
