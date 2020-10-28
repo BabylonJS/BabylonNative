@@ -2,6 +2,8 @@ package BabylonNative;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Canvas;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -25,6 +27,8 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
         holder.addCallback(this);
         setOnTouchListener(this);
         this.mViewDelegate = viewDelegate;
+
+        setWillNotDraw(false);
 
         BabylonNative.Wrapper.initEngine();
     }
@@ -119,5 +123,11 @@ public class BabylonView extends SurfaceView implements SurfaceHolder.Callback2,
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
         // Redraw happens in the bgfx thread. No need to handle it here.
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        BabylonNative.Wrapper.renderFrame();
+        invalidate();
     }
 }
