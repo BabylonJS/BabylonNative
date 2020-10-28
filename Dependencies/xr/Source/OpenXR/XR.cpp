@@ -3,6 +3,7 @@
 #include "Windows/XrPlatform.h"
 #include "XrSupportedExtensions.h"
 #include "XrRegistry.h"
+#include "SceneUnderstanding.h"
 
 #include <assert.h>
 #include <optional>
@@ -51,6 +52,7 @@ namespace xr
         std::atomic<XrSessionState> State{ XrSessionState::XR_SESSION_STATE_UNKNOWN };
         std::atomic<XrTime> DisplayTime{};
         std::unique_ptr<XrSupportedExtensions> Extensions;
+        xr::SceneUnderstanding SceneUnderstanding{};
     };
 
     XrSessionContext::XrSessionContext()
@@ -70,6 +72,7 @@ namespace xr
     const XrSession XrSessionContext::Session() const { return ContextImpl->Session.Get(); }
     const XrSessionState XrSessionContext::State() const { return ContextImpl->State; }
     const XrSpace XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
+    const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const { return ContextImpl->SceneUnderstanding; }
 
     const XrSessionContext& XrRegistry::Context()
     {
@@ -912,13 +915,14 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
-        , Planes { sessionImpl.ActionResources.Planes } // NYI
+        , Planes { sessionImpl.ActionResources.Planes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
-        , UpdatedPlanes{} // NYI
-        , RemovedPlanes{} // NYI
+        , UpdatedPlanes{}
+        , RemovedPlanes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->sessionImpl.HmdImpl.Context.Extensions();
         auto& displayTime = m_impl->sessionImpl.HmdImpl.Context.ContextImpl->DisplayTime;
         auto& renderResources = m_impl->sessionImpl.RenderResources;
 
@@ -1095,6 +1099,9 @@ namespace xr
                     }
                 }
             }
+
+            const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+            su.UpdateFrame(SceneUnderstanding::UpdateFrameArgs{ sceneSpace, extensions, displayTime, Planes, UpdatedPlanes, RemovedPlanes });
 
             // Locate all the things.
             auto& actionResources = m_impl->sessionImpl.ActionResources;
@@ -1415,14 +1422,21 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier) const
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier id) const
     {
-        throw std::runtime_error("Planes not yet implemented for OpenXR.");
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.TryGetPlaneByID(id);
     }
 
-    void System::Session::SetPlaneDetectionEnabled(bool) const
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
-        throw std::runtime_error("Planes not yet implemented for OpenXR");
+        if (enabled)
+        {
+            const auto& session = m_impl->HmdImpl.Context.Session();
+            const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+            su.Initialize(SceneUnderstanding::InitOptions{ session, extensions });
+        }
     }
 
     bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
