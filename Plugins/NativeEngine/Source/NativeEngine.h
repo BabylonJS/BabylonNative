@@ -183,8 +183,8 @@ namespace Babylon
             , ViewClearState{viewId, *m_clearState}
             , Width{width}
             , Height{height}
-            , ActAsBackBuffer{actAsBackBuffer}
             , SizeViewToWindow{sizeViewToWindow}
+            , ActAsBackBuffer{actAsBackBuffer}
         {
             UseViewId(viewId);
         }
@@ -196,8 +196,8 @@ namespace Babylon
             , ViewClearState{viewId, clearState}
             , Width{width}
             , Height{height}
-            , ActAsBackBuffer{actAsBackBuffer}
             , SizeViewToWindow{sizeViewToWindow}
+            , ActAsBackBuffer{actAsBackBuffer}
         {
             UseViewId(viewId);
         }
