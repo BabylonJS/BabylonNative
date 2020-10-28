@@ -86,6 +86,13 @@ namespace
 
     void Uninitialize()
     {
+        if (runtime)
+        {
+            Babylon::ScriptLoader loader{ *runtime };
+            loader.Eval("engine.dispose()", "");
+            Sleep(5000);
+        }
+
         runtime.reset();
         graphics.reset();
     }
@@ -93,6 +100,8 @@ namespace
     void Initialize(HWND hWnd)
     {
         graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
+        graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); });
+
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.

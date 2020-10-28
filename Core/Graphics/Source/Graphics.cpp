@@ -94,6 +94,11 @@ namespace Babylon
         }
     }
 
+    void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    {
+        Callback.SetDiagnosticOutput(std::move(outputFunction));
+    }
+
     Graphics::Graphics()
         : m_impl{std::make_unique<Graphics::Impl>()}
     {
@@ -167,6 +172,11 @@ namespace Babylon
     void Graphics::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
+    }
+
+    void Graphics::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    {
+        m_impl->SetDiagnosticOutput(std::move(outputFunction));
     }
 
     void Graphics::UpdateSize(size_t width, size_t height)

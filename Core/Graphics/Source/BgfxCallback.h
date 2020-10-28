@@ -15,6 +15,7 @@ namespace Babylon
 
         void addScreenShotCallback(Napi::Function callback);
 
+        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
     protected:
         void fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str) override;
         void traceVargs(const char* filePath, uint16_t line, const char* format, va_list argList) override;
@@ -32,5 +33,6 @@ namespace Babylon
 
         std::mutex m_ssCallbackAccess;
         std::queue<Napi::FunctionReference> m_screenshotCallbacks;
+        std::function<void(const char* output)> m_outputFunction;
     };
 }

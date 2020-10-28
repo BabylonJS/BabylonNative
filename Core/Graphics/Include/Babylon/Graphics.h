@@ -32,6 +32,8 @@ namespace Babylon
 
         void UpdateSize(size_t width, size_t height);
 
+        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+
     private:
         Graphics();
         Graphics(const Graphics&) = delete;
