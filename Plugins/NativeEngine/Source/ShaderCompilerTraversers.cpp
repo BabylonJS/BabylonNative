@@ -455,6 +455,10 @@ namespace Babylon::ShaderCompilerTraversers
         return {static_cast<unsigned int>(attrib), newName}; \
     }
 #if ANDROID
+                // For OpenGL platforms, we have an issue where we have a hard limit on the number shader attributes supported.
+                // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
+                // the first attribute encountered with the symbol for at attribute 0 and increment for each subsequent attribute encountered.
+                // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
                 const char * newName;
                 switch (m_genericAttributesRunningCount){
                     case 0:
@@ -515,20 +519,6 @@ namespace Babylon::ShaderCompilerTraversers
                         newName = name;
                 }
                 return {static_cast<unsigned int>(m_genericAttributesRunningCount++), newName};
-
-                //return {static_cast<unsigned int>(attrib), name};
-
-                //IF_NAME_RETURN_ATTRIB("position", m_genericAttributesRunningCount++-1, "a_position")
-                //IF_NAME_RETURN_ATTRIB("normal", m_genericAttributesRunningCount++-1, "a_normal")
-                //IF_NAME_RETURN_ATTRIB("tangent", m_genericAttributesRunningCount++-1, "a_tangent")
-                //IF_NAME_RETURN_ATTRIB("uv", m_genericAttributesRunningCount++-1, "a_texcoord0")
-                //IF_NAME_RETURN_ATTRIB("uv2", m_genericAttributesRunningCount++-1, "a_texcoord1")
-                //IF_NAME_RETURN_ATTRIB("uv3", m_genericAttributesRunningCount++-1, "a_texcoord2")
-                //IF_NAME_RETURN_ATTRIB("uv4", m_genericAttributesRunningCount++-1, "a_texcoord3")
-                //IF_NAME_RETURN_ATTRIB("color", m_genericAttributesRunningCount++-1, "a_color0")
-                //IF_NAME_RETURN_ATTRIB("matricesIndices", m_genericAttributesRunningCount++-1, "a_indices")
-                //IF_NAME_RETURN_ATTRIB("matricesWeights", m_genericAttributesRunningCount++-1, "a_weight")
-                //return {m_genericAttributesRunningCount++-1, name};
 #else
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
