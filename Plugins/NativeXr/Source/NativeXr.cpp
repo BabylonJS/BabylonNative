@@ -1577,12 +1577,6 @@ namespace Babylon
                 return deferred.Promise();
             }
 
-            // Deletes the allocated anchor, and marks it as no longer valid.
-            void DeleteNativeAnchor(xr::Anchor& nativeAnchor)
-            {
-                m_frame->DeleteAnchor(nativeAnchor);
-            }
-
             xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
             {
                 return m_frame->GetPlaneByID(planeID);
@@ -1713,11 +1707,14 @@ namespace Babylon
                     xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
 
                     // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
-                    m_frame->UpdateAnchor(nativeAnchor);
+                    if (nativeAnchor.IsValid)
+                    {
+                        m_frame->UpdateAnchor(nativeAnchor);
+                    }
 
                     if (!nativeAnchor.IsValid)
                     {
-                        DeleteNativeAnchor(nativeAnchor);
+                        m_frame->DeleteAnchor(nativeAnchor);
                         anchorIter = m_trackedAnchors.erase(anchorIter);
                     }
                     else
