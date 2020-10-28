@@ -234,7 +234,7 @@ namespace Babylon::ShaderCompilerCommon
                 return attributeName;
             };
 
-            for (spirv_cross::Resource& stageInput : resources.stage_inputs)
+            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
             {
                 const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                 AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
