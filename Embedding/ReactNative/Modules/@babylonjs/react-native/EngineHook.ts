@@ -67,22 +67,23 @@ export function useEngine(): Engine | undefined {
 
     useEffect(() => {
         let disposed = false;
+        let engine: Engine | undefined = undefined;
 
         (async () => {
             if (await BabylonModule.initialize() && !disposed)
             {
-                setEngine(new NativeEngine());
+                engine = new NativeEngine();
+                setEngine(engine);
             }
         })();
 
         return () => {
             disposed = true;
-            setEngine(engine => {
-                if (engine) {
-                    DisposeEngine(engine);
-                }
-                return undefined;
-            });
+            // NOTE: Do not use setEngine with a callback to dispose the engine instance as that callback does not get called during component unmount when compiled in release.
+            if (engine) {
+                DisposeEngine(engine);
+            }
+            setEngine(undefined);
         };
     }, []);
 
