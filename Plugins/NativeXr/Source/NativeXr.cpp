@@ -1708,12 +1708,14 @@ namespace Babylon
                     XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).Value());
                     xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
 
-                    // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
+                    // Update the anchor if it has not been marked for deletion.
                     if (nativeAnchor.IsValid)
                     {
                         m_frame->UpdateAnchor(nativeAnchor);
                     }
 
+                    // If the anchor has been marked for deletion, delete the anchor from the session
+                    // and remove it from the list of tracked anchors.
                     if (!nativeAnchor.IsValid)
                     {
                         m_frame->DeleteAnchor(nativeAnchor);
