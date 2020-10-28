@@ -4,7 +4,7 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = false;
+var ar = true;
 var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
@@ -137,6 +137,17 @@ CreateBoxAsync().then(function () {
     if (vr || ar || hololens) {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
+            const xrAnchorModule = xr.baseExperience.featuresManager.enableFeature(
+                BABYLON.WebXRFeatureName.ANCHOR_SYSTEM,
+                "latest"
+            );
+
+            xrAnchorModule.onAnchorAddedObservable.add((anchor) => {
+               setTimeout(function() {
+                   anchor.xrAnchor.delete();
+               }, 5000);
+            });
+
                 if (xrHitTest) {
                     // Create the hit test module. OffsetRay specifies the target direction, and entityTypes can be any combination of "mesh", "plane", and "point".
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
@@ -157,6 +168,8 @@ CreateBoxAsync().then(function () {
                     setTimeout(function () {
                         scene.meshes[0].position.z = 2;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
+
+                        xrAnchorModule.addAnchorAtPositionAndRotationAsync(scene.meshes[0].position.clone());
                     }, 5000);
                 }
 
