@@ -1154,7 +1154,6 @@ namespace Babylon
             XRAnchor(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRAnchor>{info}
             {
-                m_frame = nullptr;
             }
 
             xr::Anchor& GetNativeAnchor()
@@ -1165,11 +1164,6 @@ namespace Babylon
             void SetAnchor(xr::Anchor& nativeAnchor)
             {
                 m_nativeAnchor = nativeAnchor;
-            }
-
-            void SetFrame(XRFrame* frame)
-            {
-                m_frame = frame;
             }
 
         private:
@@ -1183,14 +1177,14 @@ namespace Babylon
                 return std::move(napiSpace);
             }
 
-            // Forward declaration of delete, as this relies on the XRFrame implementation.
-            void Delete(const Napi::CallbackInfo& info);
+            // Marks the anchor as no longer valid, and should be deleted on the next pass.
+            void Delete(const Napi::CallbackInfo&)
+            {
+                m_nativeAnchor.IsValid = false;
+            }
 
             // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
             xr::Anchor m_nativeAnchor{};
-
-            // Our native anchor.
-            XRFrame* m_frame{};
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
@@ -1572,7 +1566,6 @@ namespace Babylon
                 // Create the XRAnchor object, and initialize its members.
                 auto napiAnchor = Napi::Persistent(XRAnchor::New(info));
                 auto* xrAnchor = XRAnchor::Unwrap(napiAnchor.Value());
-                xrAnchor->SetFrame(this);
                 xrAnchor->SetAnchor(nativeAnchor);
 
                 // Add the anchor to the list of tracked anchors.
@@ -1811,12 +1804,6 @@ namespace Babylon
         Napi::Value XRHitTestResult::CreateAnchor(const Napi::CallbackInfo& info)
         {
             return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
-        }
-
-        // Deallocates the native anchor, and marks the XRAnchor as no longer tracked.
-        void XRAnchor::Delete(const Napi::CallbackInfo&)
-        {
-            m_frame->DeleteNativeAnchor(m_nativeAnchor);
         }
 
         xr::System::Session::Frame::Plane& XRPlane::GetPlane()
