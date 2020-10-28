@@ -18,7 +18,6 @@ set(PACKAGED_LIBS
     napi
     NativeEngine
     NativeInput
-    NativeWindow
     NativeXr
     SPIRV
     spirv-cross-core

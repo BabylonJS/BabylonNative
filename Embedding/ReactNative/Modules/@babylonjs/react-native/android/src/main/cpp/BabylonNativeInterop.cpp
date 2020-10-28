@@ -2,7 +2,6 @@
 
 #include <Babylon/Graphics.h>
 #include <Babylon/JsRuntime.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeXr.h>
@@ -48,11 +47,10 @@ namespace Babylon
             auto width = static_cast<size_t>(ANativeWindow_getWidth(windowPtr));
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
 
-            m_graphics = Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
+            m_graphics = Graphics::CreateGraphics(reinterpret_cast<void*>(windowPtr), width, height);
             m_graphics->AddToJavaScript(m_env);
 
-            Plugins::NativeEngine::Initialize(m_env);
-            Plugins::NativeWindow::Initialize(m_env, windowPtr, width, height);
+            Plugins::NativeEngine::Initialize(m_env, true);
             Plugins::NativeXr::Initialize(m_env);
 
             Polyfills::Window::Initialize(m_env);
@@ -73,8 +71,8 @@ namespace Babylon
         {
             auto width = static_cast<size_t>(ANativeWindow_getWidth(windowPtr));
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
-            m_graphics->ReinitializeFromWindow<void*>(windowPtr, width, height);
-            Plugins::NativeWindow::Reinitialize(m_env, windowPtr, width, height);
+            m_graphics->UpdateWindow<void*>(windowPtr);
+            m_graphics->UpdateSize(width, height);
         }
 
         void SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)

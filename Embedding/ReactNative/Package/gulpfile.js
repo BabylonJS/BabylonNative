@@ -94,7 +94,6 @@ Assembled/ios/libs/libWindow.a
 Assembled/ios/libs/libbimg.a
 Assembled/ios/libs/libOGLCompiler.a
 Assembled/ios/libs/libastc.a
-Assembled/ios/libs/libNativeWindow.a
 Assembled/ios/libs/libNativeEngine.a
 Assembled/ios/libs/libNativeXr.a
 Assembled/ios/libs/libspirv-cross-glsl.a

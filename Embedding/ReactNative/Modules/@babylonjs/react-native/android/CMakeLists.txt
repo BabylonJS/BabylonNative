@@ -71,7 +71,6 @@ target_link_libraries(BabylonNative
     AndroidExtensions
     Graphics
     JsRuntime
-    NativeWindow
     NativeEngine
     NativeInput
     NativeXr

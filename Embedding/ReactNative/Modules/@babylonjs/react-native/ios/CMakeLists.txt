@@ -43,7 +43,6 @@ target_link_libraries(BabylonNative
     reactnative
     BabylonReactNativeShared
     JsRuntime
-    NativeWindow
     NativeEngine
     NativeInput
     NativeXr

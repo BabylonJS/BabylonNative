@@ -33,7 +33,6 @@ Pod::Spec.new do |s|
                 'napi',
                 'NativeEngine',
                 'NativeInput',
-                'NativeWindow',
                 'NativeXR',
                 'SPIRV',
                 'spirv-cross-core',

@@ -62,6 +62,11 @@ class DOMException {
 declare const global: any;
 global.atob = base64.decode;
 
+// This global object is part of Babylon Native.
+declare const _native: {
+    graphicsInitializationPromise: Promise<void>;
+}
+
 export function useEngine(): Engine | undefined {
     const [engine, setEngine] = useState<Engine>();
 
@@ -72,6 +77,7 @@ export function useEngine(): Engine | undefined {
         (async () => {
             if (await BabylonModule.initialize() && !disposed)
             {
+                await _native.graphicsInitializationPromise;
                 engine = new NativeEngine();
                 setEngine(engine);
             }
