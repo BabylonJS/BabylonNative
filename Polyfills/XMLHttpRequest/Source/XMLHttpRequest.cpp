@@ -51,6 +51,7 @@ namespace Babylon::Polyfills::Internal
         namespace EventType
         {
             constexpr const char* ReadyStateChange = "readystatechange";
+            constexpr const char* LoadEnd = "loadend";
         }
     }
 
@@ -181,16 +182,25 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& /*info*/)
     {
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>&) {
             SetReadyState(ReadyState::Done);
+            RaiseEvent(EventType::LoadEnd);
+
+            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+            m_eventHandlerRefs.clear();
         });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
     {
         m_readyState = readyState;
+        RaiseEvent(EventType::ReadyStateChange);
+    }
 
-        auto it = m_eventHandlerRefs.find(EventType::ReadyStateChange);
+    void XMLHttpRequest::RaiseEvent(const char* eventType)
+    {
+        auto it = m_eventHandlerRefs.find(eventType);
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;
