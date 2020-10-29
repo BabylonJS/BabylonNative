@@ -189,8 +189,12 @@ namespace Babylon::Polyfills::Internal
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
     {
         m_readyState = readyState;
+        RaiseEvent(EventType::ReadyStateChange);
+    }
 
-        auto it = m_eventHandlerRefs.find(EventType::ReadyStateChange);
+    void XMLHttpRequest::RaiseEvent(const char* eventType)
+    {
+        auto it = m_eventHandlerRefs.find(eventType);
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;
