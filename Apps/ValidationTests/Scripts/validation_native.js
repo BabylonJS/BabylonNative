@@ -1,3 +1,4 @@
+console.log("[RYANTREM] SCRIPT START");
 var engine;
 var currentScene;
 var config;
@@ -158,8 +159,10 @@ function runTest(index, done) {
             }
 
             var loadPG = function() {
+                console.log(`[RYANTREM] XHR 2`);
                 var xmlHttp = new XMLHttpRequest();
                 xmlHttp.addEventListener("readystatechange", function() {
+                    console.log(`[RYANTREM] XHR 2 ${xhr.readyState}`);
                     if (xmlHttp.readyState === 4) {
                         try {
                             xmlHttp.onreadystatechange = null;
@@ -217,10 +220,13 @@ function runTest(index, done) {
                 BABYLON.Tools.BaseUrl = config.root + test.specificRoot;
             }
 
+
+            console.log(`[RYANTREM] XHR 3`);
             var request = new XMLHttpRequest();
             request.open('GET', config.root + test.scriptToRun, true);
 
             request.onreadystatechange = function() {
+                console.log(`[RYANTREM] XHR 3 ${xhr.readyState}`);
                 if (request.readyState === 4) {
                     try {
                         request.onreadystatechange = null;
@@ -311,10 +317,12 @@ _native.graphicsInitializationPromise.then(() => {
         }
     }
 
+    console.log("[RYANTREM] CREATING OUTERMOST XHR");
     xhr = new XMLHttpRequest();
     xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
 
     xhr.addEventListener("readystatechange", function() {
+        console.log(`[RYANTREM] OUTERMOST XHR READYSTATECHANGE ${xhr.readyState}`);
         if (xhr.status === 200) {
             config = JSON.parse(xhr.responseText);
 
