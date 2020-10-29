@@ -51,7 +51,7 @@ namespace Babylon::Polyfills::Internal
         namespace EventType
         {
             constexpr const char* ReadyStateChange = "readystatechange";
-            constexpr const char* LoadEnd = "loadend";
+            //constexpr const char* LoadEnd = "loadend";
         }
     }
 
