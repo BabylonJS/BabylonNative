@@ -94,7 +94,7 @@ namespace
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
         runtime = std::make_unique<Babylon::AppRuntime>();
 
-        setbuf(stdout, NULL);
+        setvbuf(stdout, NULL, _IONBF, 0)
 
         // Initialize console plugin.
         runtime->Dispatch([hWnd](Napi::Env env)
@@ -137,7 +137,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR    lpCmdLine,
     _In_ int       nCmdShow)
 {
-    setbuf(stdout, NULL);
+    setvbuf(stdout, NULL, _IONBF, 0)
     printf("%s", "EXECUTING wWinMain\r\n");
 
     UNREFERENCED_PARAMETER(hPrevInstance);
