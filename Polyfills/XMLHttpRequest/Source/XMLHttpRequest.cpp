@@ -51,6 +51,7 @@ namespace Babylon::Polyfills::Internal
         namespace EventType
         {
             constexpr const char* ReadyStateChange = "readystatechange";
+            constexpr const char* LoadEnd = "loadend";
         }
     }
 
@@ -61,26 +62,26 @@ namespace Babylon::Polyfills::Internal
         static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
 
         Napi::Function func = DefineClass(
-                env,
-                JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
-                {
-                        StaticValue("UNSENT", Napi::Value::From(env, 0)),
-                        StaticValue("OPENED", Napi::Value::From(env, 1)),
-                        StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
-                        StaticValue("LOADING", Napi::Value::From(env, 3)),
-                        StaticValue("DONE", Napi::Value::From(env, 4)),
-                        InstanceAccessor("readyState", &XMLHttpRequest::GetReadyState, nullptr),
-                        InstanceAccessor("response", &XMLHttpRequest::GetResponse, nullptr),
-                        InstanceAccessor("responseText", &XMLHttpRequest::GetResponseText, nullptr),
-                        InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
-                        InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
-                        InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
-                        InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
-                        InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
-                        InstanceMethod("abort", &XMLHttpRequest::Abort),
-                        InstanceMethod("open", &XMLHttpRequest::Open),
-                        InstanceMethod("send", &XMLHttpRequest::Send),
-                });
+        env,
+        JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
+        {
+            StaticValue("UNSENT", Napi::Value::From(env, 0)),
+            StaticValue("OPENED", Napi::Value::From(env, 1)),
+            StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
+            StaticValue("LOADING", Napi::Value::From(env, 3)),
+            StaticValue("DONE", Napi::Value::From(env, 4)),
+            InstanceAccessor("readyState", &XMLHttpRequest::GetReadyState, nullptr),
+            InstanceAccessor("response", &XMLHttpRequest::GetResponse, nullptr),
+            InstanceAccessor("responseText", &XMLHttpRequest::GetResponseText, nullptr),
+            InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
+            InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
+            InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+            InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
+            InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
+            InstanceMethod("abort", &XMLHttpRequest::Abort),
+            InstanceMethod("open", &XMLHttpRequest::Open),
+            InstanceMethod("send", &XMLHttpRequest::Send),
+        });
 
         if (env.Global().Get(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME).IsUndefined())
         {
@@ -183,6 +184,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
             SetReadyState(ReadyState::Done);
+            RaiseEvent(EventType::LoadEnd);
         });
     }
 
@@ -191,7 +193,7 @@ namespace Babylon::Polyfills::Internal
         m_readyState = readyState;
         RaiseEvent(EventType::ReadyStateChange);
     }
-//test 3
+
     void XMLHttpRequest::RaiseEvent(const char* eventType)
     {
         auto it = m_eventHandlerRefs.find(eventType);
