@@ -162,12 +162,15 @@ function runTest(index, done) {
                 console.log(`[RYANTREM] XHR 2`);
                 var xmlHttp = new XMLHttpRequest();
                 xmlHttp.addEventListener("readystatechange", function() {
-                    console.log(`[RYANTREM] XHR 2 ${xhr.readyState}`);
+                    console.log(`[RYANTREM] XHR 2 ${xmlHttp.readyState}`);
                     if (xmlHttp.readyState === 4) {
                         try {
+                            console.log(`[RYANTREM] XHR 2 set onreadystatechange to null`);
                             xmlHttp.onreadystatechange = null;
                             var snippet = JSON.parse(xmlHttp.responseText);
+                            console.log(`[RYANTREM] XHR 2 parsed responseText`);
                             var code = JSON.parse(snippet.jsonPayload).code.toString();
+                            console.log(`[RYANTREM] XHR 2 parsed code: ${code}`);
                             code = code.replace(/\/textures\//g, pgRoot + "/textures/");
                             code = code.replace(/"textures\//g, "\"" + pgRoot + "/textures/");
                             code = code.replace(/\/scenes\//g, pgRoot + "/scenes/");
@@ -186,21 +189,28 @@ function runTest(index, done) {
                             var waitRing;
 
                             if (currentScene.then) {
+                                console.log(`[RYANTREM] XHR 2 currentScene is a promise`);
                                 // Handle if createScene returns a promise
                                 currentScene.then(function(scene) {
+                                    console.log(`[RYANTREM] XHR 2 currentScene continuation`);
                                     currentScene = scene;
                                     processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
+                                    console.log(`[RYANTREM] XHR 2 processed scene`);
                                 }).catch(function(e) {
+                                    console.log(`[RYANTREM] XHR 2 promise error`);
                                     console.error(e);
                                     onError();
                                 })
                             } else {
+                                console.log(`[RYANTREM] XHR 2 currentScene is not a promise`);
                                 // Handle if createScene returns a scene
                                 processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
+                                console.log(`[RYANTREM] XHR 2 currentScene is a promise`);
                             }
 
                         }
                         catch (e) {
+                            console.log(`[RYANTREM] XHR 2 processing error`);
                             console.error(e);
                             onError();
                         }
@@ -226,7 +236,7 @@ function runTest(index, done) {
             request.open('GET', config.root + test.scriptToRun, true);
 
             request.onreadystatechange = function() {
-                console.log(`[RYANTREM] XHR 3 ${xhr.readyState}`);
+                console.log(`[RYANTREM] XHR 3 ${request.readyState}`);
                 if (request.readyState === 4) {
                     try {
                         request.onreadystatechange = null;
