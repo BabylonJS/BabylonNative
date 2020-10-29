@@ -462,46 +462,32 @@ namespace Babylon
                 InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+
+        if (autoRender)
+        {
+            // TODO: Dispatch instead to match multi-thread case?
+            Graphics::Impl::GetFromJavaScript(env).RenderCurrentFrame();
+        }
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
-        : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()), Plugins::Internal::NativeWindow::GetFromJavaScript(info.Env()))
+        : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()))
     {
     }
 
-    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime, Plugins::Internal::NativeWindow& nativeWindow)
+    NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
         , AutomaticRenderingEnabled{info.This().As<Napi::Object>().Get(JS_AUTO_RENDER_PROPERTY_NAME).ToBoolean()}
         , RuntimeScheduler{runtime}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_engineState{BGFX_STATE_DEFAULT}
-        , m_resizeCallbackTicket{nativeWindow.AddOnResizeCallback([this](size_t width, size_t height) { this->UpdateSize(width, height); })}
     {
-        UpdateSize(static_cast<uint32_t>(nativeWindow.GetWidth()), static_cast<uint32_t>(nativeWindow.GetHeight()));
     }
 
     NativeEngine::~NativeEngine()
     {
         Dispose();
-    }
-
-    void NativeEngine::UpdateSize(size_t width, size_t height)
-    {
-        const auto w = static_cast<uint16_t>(width);
-        const auto h = static_cast<uint16_t>(height);
-
-        auto bgfxStats = bgfx::getStats();
-        if (w != bgfxStats->width || h != bgfxStats->height)
-        {
-            bgfx::reset(w, h, BGFX_RESET_FLAGS);
-            bgfx::setViewRect(0, 0, 0, w, h);
-#ifdef __APPLE__
-            bgfx::frame();
-#else
-            bgfx::touch(0);
-#endif
-        }
     }
 
     template<typename SchedulerT>
@@ -1097,10 +1083,13 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(RuntimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](bimg::ImageContainer* image) {
-                CreateTextureFromImage(texture, image);
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](bimg::ImageContainer* image) {
+                ScheduleRender();
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
+                    CreateTextureFromImage(texture, image);
+                });
             })
-            .then(arcana::inline_scheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1136,11 +1125,13 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, m_cancelSource,
-                [texture, dataRef = Napi::Persistent(data), generateMips](const std::vector<bimg::ImageContainer*>& images) {
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture, generateMips](std::vector<bimg::ImageContainer*> images) {
+                ScheduleRender();
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips, images = std::move(images)] {
                     CreateCubeTextureFromImages(texture, images, generateMips);
-                })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
+                });
+            })
+            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
                 onSuccessRef.Call({Napi::Value::From(Env(), true)});
             })
             .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
@@ -1176,8 +1167,11 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, m_cancelSource, [texture, dataRef = Napi::Persistent(data)](std::vector<bimg::ImageContainer*> images) {
-                CreateCubeTextureFromImages(texture, images, true);
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [this, texture](std::vector<bimg::ImageContainer*> images) {
+                ScheduleRender();
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, images = std::move(images)] {
+                    CreateCubeTextureFromImages(texture, images, true);
+                });
             })
             .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
                 onSuccessRef.Call({Napi::Value::From(Env(), true)});

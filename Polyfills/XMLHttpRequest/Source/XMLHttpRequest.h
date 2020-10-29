@@ -38,7 +38,6 @@ namespace Babylon::Polyfills::Internal
         void Send(const Napi::CallbackInfo& info);
 
         void SetReadyState(ReadyState readyState);
-        void RaiseEvent(const char* eventType);
 
         UrlLib::UrlRequest m_request{};
         JsRuntimeScheduler m_runtimeScheduler;
