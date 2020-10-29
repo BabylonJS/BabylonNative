@@ -538,6 +538,7 @@ namespace xr {
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
         std::vector<Frame::Plane> Planes{};
+        std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -1150,9 +1151,12 @@ namespace xr {
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
         , Planes{ sessionImpl.Planes }
+        , Meshes{ sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
@@ -1181,6 +1185,10 @@ namespace xr {
 
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier) const {
+        throw std::runtime_error("not implemented");
     }
 
     System::System(const char* appName)
@@ -1240,6 +1248,24 @@ namespace xr {
     bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
     {
         // Point cloud system not yet supported.
+        return false;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions&)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions&)
+    {
+        // TODO
         return false;
     }
 }
