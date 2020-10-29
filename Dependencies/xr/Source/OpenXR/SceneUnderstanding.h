@@ -8,19 +8,14 @@ namespace xr
     struct SceneUnderstanding
     {
     public:
-        enum DetectionBoundaryType : uint8_t
-        {
-            Sphere,
-            Box
-        };
-
         struct InitOptions
         {
             const XrSession& Session;
             const XrSupportedExtensions& Extensions;
-            const DetectionBoundaryType DetectionBoundaryType;
+            const xr::DetectionBoundaryType DetectionBoundaryType;
             const float SphereRadius;
-            const XrVector3f BoxDimensions;
+            const xr::Frustum Frustum;
+            const xr::Vector3f BoxDimensions;
             const double UpdateIntervalInSeconds;
 
             InitOptions(
@@ -30,9 +25,10 @@ namespace xr
             InitOptions(
                 const XrSession& session,
                 const XrSupportedExtensions& extensions,
-                const SceneUnderstanding::DetectionBoundaryType detectionBoundaryType,
+                const xr::DetectionBoundaryType detectionBoundaryType,
                 const float sphereRadius,
-                const XrVector3f boxDimensions,
+                const xr::Frustum frustum,
+                const xr::Vector3f boxDimensions,
                 const double updateIntervalInSeconds);
         };
 
@@ -44,6 +40,9 @@ namespace xr
             std::vector<System::Session::Frame::Plane>& Planes;
             std::vector<System::Session::Frame::Plane::Identifier>& UpdatedPlanes;
             std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
+            std::vector<System::Session::Frame::Mesh>& Meshes;
+            std::vector<System::Session::Frame::Mesh::Identifier>& UpdatedMeshes;
+            std::vector<System::Session::Frame::Mesh::Identifier>& RemovedMeshes;
 
             UpdateFrameArgs(
                 const XrSpace& sceneSpace,
@@ -51,7 +50,10 @@ namespace xr
                 const XrTime displayTime,
                 std::vector<System::Session::Frame::Plane>& planes,
                 std::vector<System::Session::Frame::Plane::Identifier>& updatedPlanes,
-                std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes);
+                std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes,
+                std::vector<System::Session::Frame::Mesh>& meshes,
+                std::vector<System::Session::Frame::Mesh::Identifier>& updatedMeshes,
+                std::vector<System::Session::Frame::Mesh::Identifier>& removedMeshes);
         };
 
         struct Mesh : SceneMesh
@@ -99,6 +101,7 @@ namespace xr
         void UpdateFrame(UpdateFrameArgs args) const;
         void UpdateSceneObjects(UpdateSceneObjectsArgs args) const;
         System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
+        System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const;
 
     private:
         struct Impl;

@@ -59,14 +59,16 @@ namespace xr
         size_t Height{};
     };
 
+    struct Vector3f
+    {
+        float X{};
+        float Y{};
+        float Z{};
+    };
+
     struct Pose
     {
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-        } Position;
+        Vector3f Position;
 
         struct
         {
@@ -86,19 +88,8 @@ namespace xr
 
     struct Ray
     {
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-        } Origin;
-
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-        } Direction;
+        Vector3f Origin;
+        Vector3f Direction;
     };
 
     using NativeAnchorPtr = void*;
@@ -119,6 +110,46 @@ namespace xr
         float ConfidenceValue{};
         Identifier ID{};
     };
+
+    struct FieldOfView
+    {
+        float AngleLeft;
+        float AngleRight;
+        float AngleUp;
+        float AngleDown;
+    };
+
+    enum class DetectionBoundaryType
+    {
+        Box,
+        Frustum,
+        Sphere
+    };
+
+    struct Frustum
+    {
+        Pose Pose{};
+        FieldOfView FOV{};
+        float FarDistance;
+    };
+
+    struct DetectionBoundary
+    {
+        bool IsStationary{ false };
+        DetectionBoundaryType Type{ DetectionBoundaryType::Sphere };
+        Frustum Frustum{};
+        float SphereRadius{ 5.f };
+        Vector3f BoxDimensions;
+    };
+
+    struct GeometryDetectorOptions
+    {
+        xr::DetectionBoundary DetectionBoundary{};
+        double UpdateInterval{ 10 };
+    };
+
+    typedef int64_t GeometryId;
+    constexpr int32_t INVALID_GEOMETRY_ID = -1;
 
     class System
     {
@@ -202,18 +233,42 @@ namespace xr
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
                     PolygonFormat PolygonFormat{};
-                
+                    GeometryId GeometryId{ INVALID_GEOMETRY_ID };
+                    std::string GeometryType{};
+
                 private:
-                    static inline Identifier NEXT_ID{0};
+                    static inline Identifier NEXT_ID{ 0 };
+                };
+
+                struct Mesh
+                {
+                    typedef float PositionType;
+                    typedef uint32_t IndexType;
+                    typedef float NormalType;
+
+                    using Identifier = size_t;
+                    const Identifier ID{ NEXT_ID++ };
+                    std::vector<PositionType> Positions{};
+                    std::vector<IndexType> Indices{};
+                    bool HasNormals{ false };
+                    std::vector<NormalType> Normals;
+                    GeometryId GeometryId{ INVALID_GEOMETRY_ID };
+                    std::string GeometryType{};
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
                 };
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<Plane>& Planes;
+                std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
                 
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
+                std::vector<Mesh::Identifier>UpdatedMeshes;
+                std::vector<Mesh::Identifier>RemovedMeshes;
 
                 Frame(System::Session::Impl&);
                 ~Frame();
@@ -223,6 +278,7 @@ namespace xr
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
+                Mesh& GetMeshByID(Mesh::Identifier) const;
 
             private:
                 struct Impl;
@@ -242,6 +298,10 @@ namespace xr
             void SetDepthsNearFar(float depthNear, float depthFar);
             void SetPlaneDetectionEnabled(bool enabled) const;
             bool TrySetFeaturePointCloudEnabled(bool enabled) const;
+
+            bool TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions& options);
+            bool TrySetMeshDetectorEnabled(const bool enabled);
+            bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
 
         private:
             std::unique_ptr<Impl> m_impl{};

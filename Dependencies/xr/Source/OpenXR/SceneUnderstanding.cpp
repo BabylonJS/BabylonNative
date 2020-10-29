@@ -5,11 +5,32 @@
 #include "SceneUnderstanding.h"
 #include "XrRegistry.h"
 
+#pragma region DirectX
+#include <winrt/Windows.Foundation.h>
+namespace winrt
+{
+    using namespace winrt::Windows::Foundation;
+}
+
+namespace
+{
+    XrVector3f TransformPoint(const XrVector3f point, const XrPosef transform)
+    {
+        XrVector3f output{};
+        auto transformMatrix = xr::math::LoadXrPose(transform);
+        winrt::Numerics::float3 pointData{ point.x, point.y, point.z };
+        auto pointVector = DirectX::XMLoadFloat3(&pointData);
+        auto outPoint = DirectX::XMVector3Transform(pointVector, transformMatrix);
+        return XrVector3f{ DirectX::XMVectorGetX(outPoint), DirectX::XMVectorGetY(outPoint), DirectX::XMVectorGetZ(outPoint) };
+    }
+}
+#pragma endregion DirectX
+
 using namespace xr;
 
-constexpr SceneUnderstanding::DetectionBoundaryType DEFAULT_BOUNDARY_TYPE = SceneUnderstanding::DetectionBoundaryType::Sphere;
+constexpr xr::DetectionBoundaryType DEFAULT_BOUNDARY_TYPE = xr::DetectionBoundaryType::Sphere;
 constexpr float DEFAULT_SPHERE_RADIUS = 5.f;
-constexpr double DEFAULT_UPDATE_INTERVAL_IN_SECONDS = 2;
+constexpr double DEFAULT_UPDATE_INTERVAL_IN_SECONDS = 10;
 constexpr double NANOSECONDS_IN_SECOND = 1000000000;
 
 static inline xr::Pose XrPoseToBabylonPose(XrPosef pose)
@@ -36,20 +57,23 @@ SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     , Extensions(extensions)
     , DetectionBoundaryType(DEFAULT_BOUNDARY_TYPE)
     , SphereRadius(DEFAULT_SPHERE_RADIUS)
-    , BoxDimensions(XrVector3f{ 0, 0, 0 })
+    , Frustum(xr::Frustum{})
+    , BoxDimensions(xr::Vector3f{ 0, 0, 0 })
     , UpdateIntervalInSeconds(DEFAULT_UPDATE_INTERVAL_IN_SECONDS) {}
 
 SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     const XrSession& session,
     const XrSupportedExtensions& extensions,
-    const SceneUnderstanding::DetectionBoundaryType detectionBoundaryType,
+    const xr::DetectionBoundaryType detectionBoundaryType,
     const float sphereRadius,
-    const XrVector3f boxDimensions,
+    const xr::Frustum frustum,
+    const xr::Vector3f boxDimensions,
     const double updateIntervalInSeconds)
     : Session(session)
     , Extensions(extensions)
     , DetectionBoundaryType(detectionBoundaryType)
     , SphereRadius(sphereRadius)
+    , Frustum(frustum)
     , BoxDimensions(boxDimensions)
     , UpdateIntervalInSeconds(updateIntervalInSeconds) {}
 
@@ -59,13 +83,19 @@ SceneUnderstanding::SceneUnderstanding::UpdateFrameArgs::UpdateFrameArgs(
     const XrTime displayTime,
     std::vector<System::Session::Frame::Plane>& planes,
     std::vector<System::Session::Frame::Plane::Identifier>& updatedPlanes,
-    std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes)
+    std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes,
+    std::vector<System::Session::Frame::Mesh>& meshes,
+    std::vector<System::Session::Frame::Mesh::Identifier>& updatedMeshes,
+    std::vector<System::Session::Frame::Mesh::Identifier>& removedMeshes)
     : SceneSpace(sceneSpace)
     , Extensions(extensions)
     , DisplayTime(displayTime)
     , Planes(planes)
     , UpdatedPlanes(updatedPlanes)
     , RemovedPlanes(removedPlanes)
+    , Meshes(meshes)
+    , UpdatedMeshes(updatedMeshes)
+    , RemovedMeshes(removedMeshes)
 {
 }
 
@@ -100,7 +130,8 @@ public:
         // Default to most recently provided detection boundary information
         m_boundaryType = options.DetectionBoundaryType;
         m_sphereRadius = options.SphereRadius;
-        m_boxDimensions = options.BoxDimensions;
+        m_frustum = options.Frustum;
+        m_boxDimensions = { options.BoxDimensions.X, options.BoxDimensions.Y, options.BoxDimensions.Z };
         m_updateInterval = static_cast<XrTime>(NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds);
 
         if (m_initialized)
@@ -174,9 +205,9 @@ public:
         XrSpaceLocation viewInLocal{ XR_TYPE_SPACE_LOCATION };
         CHECK_XRCMD(xrLocateSpace(m_viewSpace.Get(), space, time, &viewInLocal));
 
-        // TODO: support Frustum as needed
         XrSceneSphereBoundMSFT sphere{};
         XrSceneOrientedBoxBoundMSFT box{};
+        XrSceneFrustumBoundMSFT frustum{};
         switch (m_boundaryType)
         {
         case DetectionBoundaryType::Sphere:
@@ -196,6 +227,35 @@ public:
 
             computeInfo.bounds.boxCount = 1;
             computeInfo.bounds.boxes = &box;
+            break;
+        case DetectionBoundaryType::Frustum:
+            frustum.farDistance = m_frustum.FarDistance;
+            frustum.pose = XrPosef
+            {
+                XrQuaternionf
+                {
+                    m_frustum.Pose.Orientation.X,
+                    m_frustum.Pose.Orientation.Y,
+                    m_frustum.Pose.Orientation.Z,
+                    m_frustum.Pose.Orientation.W,
+                },
+                XrVector3f
+                {
+                    m_frustum.Pose.Position.X,
+                    m_frustum.Pose.Position.Y,
+                    m_frustum.Pose.Position.Z
+                }
+            };
+            frustum.fov = XrFovf
+            {
+                m_frustum.FOV.AngleLeft,
+                m_frustum.FOV.AngleRight,
+                m_frustum.FOV.AngleUp,
+                m_frustum.FOV.AngleDown
+            };
+
+            computeInfo.bounds.frustumCount = 1;
+            computeInfo.bounds.frustums = &frustum;
             break;
         }
 
@@ -340,6 +400,12 @@ public:
 
     void PopulateFrameArguments(UpdateFrameArgs& args)
     {
+        PopulateFramePlaneArgs(args);
+        PopulateFrameMeshArgs(args);
+    }
+
+    void PopulateFramePlaneArgs(UpdateFrameArgs& args)
+    {
         args.Planes.clear();
         for (const auto& [objectKey, object] : m_sceneObjects)
         {
@@ -375,6 +441,17 @@ public:
                 babylonPlane.Polygon[11] = 0;
                 babylonPlane.PolygonSize = babylonPlane.Polygon.size() / VALUES_IN_POINT; // Number of points
 
+                babylonPlane.GeometryId = static_cast<xr::GeometryId>(objectKey);
+
+                if (s_sceneObjectTypeMap.count(object->Kind) > 0)
+                {
+                    babylonPlane.GeometryType = s_sceneObjectTypeMap.at(object->Kind);
+                }
+                else
+                {
+                    babylonPlane.GeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
+                }
+
                 args.Planes.push_back(babylonPlane);
             }
         }
@@ -402,6 +479,77 @@ public:
         }
     }
 
+    void PopulateFrameMeshArgs(UpdateFrameArgs& args)
+    {
+        args.Meshes.clear();
+        for (const auto& [objectKey, object] : m_sceneObjects)
+        {
+            for (const auto& [key, xrMesh] : object->Meshes)
+            {
+                if (m_babylonMeshes.count(key) == 0)
+                {
+                    const auto newMesh = std::make_shared<xr::System::Session::Frame::Mesh>();
+                    m_babylonMeshes[key] = newMesh;
+                    m_babylonMeshesById[newMesh->ID] = newMesh;
+                }
+
+                auto& babylonMesh = *m_babylonMeshes[key];
+
+                assert(sizeof(XrVector3f) == sizeof(xr::Vector3f));
+                constexpr uint8_t NUM_FLOAT_IN_VECTOR3 = 3;
+                babylonMesh.Positions.resize(NUM_FLOAT_IN_VECTOR3 * xrMesh.positions.size());
+                for (size_t n = 0; n < xrMesh.positions.size(); n++)
+                {
+                    size_t positionIndex = NUM_FLOAT_IN_VECTOR3 * n;
+                    const auto position = TransformPoint(xrMesh.positions.at(n), object->Pose);
+                    babylonMesh.Positions[positionIndex] = position.x;
+                    babylonMesh.Positions[positionIndex + 1] = position.y;
+                    babylonMesh.Positions[positionIndex + 2] = position.z;
+                }
+
+                babylonMesh.Indices.resize(xrMesh.indices.size());
+                memcpy(babylonMesh.Indices.data(), xrMesh.indices.data(), xrMesh.indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
+
+                babylonMesh.HasNormals = false;
+                babylonMesh.Normals.resize(0);
+
+                babylonMesh.GeometryId = static_cast<xr::GeometryId>(objectKey);
+                if (s_sceneObjectTypeMap.count(object->Kind) > 0)
+                {
+                    babylonMesh.GeometryType = s_sceneObjectTypeMap.at(object->Kind);
+                }
+                else
+                {
+                    babylonMesh.GeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
+                }
+
+                args.Meshes.push_back(babylonMesh);
+            }
+        }
+
+        args.UpdatedMeshes.clear();
+        for (const auto xrKey : m_updatedMeshes)
+        {
+            if (m_babylonMeshes.count(xrKey) > 0)
+            {
+                const auto babylonID = m_babylonMeshes.at(xrKey)->ID;
+                args.UpdatedMeshes.push_back(babylonID);
+            }
+        }
+
+        args.RemovedMeshes.clear();
+        for (const auto xrKey : m_removedMeshes)
+        {
+            if (m_babylonMeshes.count(xrKey) > 0)
+            {
+                const auto babylonMesh = m_babylonMeshes.at(xrKey);
+                args.RemovedMeshes.push_back(babylonMesh->ID);
+                m_babylonMeshes.erase(xrKey);
+                m_babylonMeshesById.erase(babylonMesh->ID);
+            }
+        }
+    }
+
     void PopulateSceneObjectsArgs(UpdateSceneObjectsArgs& args)
     {
         args.SceneObjects.clear();
@@ -424,8 +572,28 @@ public:
         throw std::exception(/*unknown plane id*/);
     }
 
+    System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id)
+    {
+        if (m_babylonMeshesById.count(id) > 0)
+        {
+            return *m_babylonMeshesById[id];
+        }
+
+        throw std::exception(/*unknown mesh id*/);
+    }
+
 private:
-    enum State : uint8_t
+    const std::map<XrSceneObjectKindTypeMSFT, std::string> s_sceneObjectTypeMap
+    {
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_BACKGROUND_MSFT, "background"},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_CEILING_MSFT, "ceiling"},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_FLOOR_MSFT, "floor"},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_PLATFORM_MSFT, "platform"},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT, "unknown"},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_WALL_MSFT, "wall"}
+    };
+
+    enum class State
     {
         Ready,
         ComputingScene,
@@ -434,8 +602,9 @@ private:
 
     bool m_initialized{ false };
     xr::SpaceHandle m_viewSpace{};
-    SceneUnderstanding::DetectionBoundaryType m_boundaryType{};
+    xr::DetectionBoundaryType m_boundaryType{};
     float m_sphereRadius;
+    xr::Frustum m_frustum;
     XrVector3f m_boxDimensions{};
     XrTime m_updateInterval;
     xr::SceneObserverHandle m_sceneObserverHandle{};
@@ -456,6 +625,8 @@ private:
 
     std::map<XrScenePlaneKeyMSFT, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanes;
     std::map<xr::System::Session::Frame::Plane::Identifier, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanesById;
+    std::map<XrSceneMeshKeyMSFT, std::shared_ptr<xr::System::Session::Frame::Mesh>> m_babylonMeshes;
+    std::map<xr::System::Session::Frame::Mesh::Identifier, std::shared_ptr<xr::System::Session::Frame::Mesh>> m_babylonMeshesById;
 };
 
 SceneUnderstanding::SceneUnderstanding() 
@@ -485,4 +656,9 @@ void SceneUnderstanding::UpdateSceneObjects(UpdateSceneObjectsArgs args) const
 System::Session::Frame::Plane& SceneUnderstanding::TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const
 {
     return m_impl->TryGetPlaneByID(id);
+}
+
+System::Session::Frame::Mesh& SceneUnderstanding::TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const
+{
+    return m_impl->TryGetMeshByID(id);
 }

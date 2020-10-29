@@ -260,6 +260,7 @@ namespace xr
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::Plane> Planes{};
+            std::vector<Frame::Mesh> Meshes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
@@ -916,9 +917,12 @@ namespace xr
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
         , Planes { sessionImpl.ActionResources.Planes }
+        , Meshes { sessionImpl.ActionResources.Meshes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
@@ -1101,7 +1105,19 @@ namespace xr
             }
 
             const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-            su.UpdateFrame(SceneUnderstanding::UpdateFrameArgs{ sceneSpace, extensions, displayTime, Planes, UpdatedPlanes, RemovedPlanes });
+            su.UpdateFrame(
+                SceneUnderstanding::UpdateFrameArgs
+                {
+                    sceneSpace,
+                    extensions,
+                    displayTime,
+                    Planes,
+                    UpdatedPlanes,
+                    RemovedPlanes,
+                    Meshes,
+                    UpdatedMeshes,
+                    RemovedMeshes
+                });
 
             // Locate all the things.
             auto& actionResources = m_impl->sessionImpl.ActionResources;
@@ -1428,6 +1444,12 @@ namespace xr
         return su.TryGetPlaneByID(id);
     }
 
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier id) const
+    {
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.TryGetMeshByID(id);
+    }
+
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
         if (enabled)
@@ -1443,5 +1465,62 @@ namespace xr
     {
         // Point cloud system not yet supported.
         return false;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& detectorOptions)
+    {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+
+        SceneUnderstanding::InitOptions initOptions
+        {
+            session,
+            extensions,
+            detectorOptions.DetectionBoundary.Type,
+            detectorOptions.DetectionBoundary.SphereRadius,
+            detectorOptions.DetectionBoundary.Frustum,
+            detectorOptions.DetectionBoundary.BoxDimensions,
+            detectorOptions.UpdateInterval
+        };
+
+        su.Initialize(initOptions);
+
+        return true;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
+    {
+        if (enabled)
+        {
+            const auto& session = m_impl->HmdImpl.Context.Session();
+            const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+            su.Initialize(SceneUnderstanding::InitOptions{ session, extensions });
+        }
+
+        return true;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& detectorOptions)
+    {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+
+        SceneUnderstanding::InitOptions initOptions
+        {
+            session,
+            extensions,
+            detectorOptions.DetectionBoundary.Type,
+            detectorOptions.DetectionBoundary.SphereRadius,
+            detectorOptions.DetectionBoundary.Frustum,
+            detectorOptions.DetectionBoundary.BoxDimensions,
+            detectorOptions.UpdateInterval
+        };
+
+        su.Initialize(initOptions);
+
+        return true;
     }
 }
