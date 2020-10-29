@@ -188,7 +188,7 @@ namespace Babylon::Polyfills::Internal
 
             // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
             // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-            m_eventHandlerRefs.clear();
+            //m_eventHandlerRefs.clear();
         });
     }
 
