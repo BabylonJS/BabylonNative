@@ -146,6 +146,7 @@ function runTest(index, done) {
             var retry = 0;
 
             var onError = function() {
+                console.log(`[RYANTREM ${test.playgroundId}] onError executing`);
                 retry++;
                 if (retry < maxRetry) {
                     setTimeout(function() {
@@ -195,7 +196,7 @@ function runTest(index, done) {
                                     console.log(`[RYANTREM] XHR 2 currentScene continuation`);
                                     currentScene = scene;
                                     processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
-                                    console.log(`[RYANTREM] XHR 2 processed scene`);
+                                    console.log(`[RYANTREM] XHR 2 processed scene async`);
                                 }).catch(function(e) {
                                     console.log(`[RYANTREM] XHR 2 promise error`);
                                     console.error(e);
@@ -205,7 +206,7 @@ function runTest(index, done) {
                                 console.log(`[RYANTREM] XHR 2 currentScene is not a promise`);
                                 // Handle if createScene returns a scene
                                 processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
-                                console.log(`[RYANTREM] XHR 2 currentScene is a promise`);
+                                console.log(`[RYANTREM] XHR 2 processed scene sync`);
                             }
 
                         }
@@ -340,6 +341,7 @@ _native.graphicsInitializationPromise.then(() => {
             var index = 0;
             var recursiveRunTest = function(i) {
                 runTest(i, function(status) {
+                    console.log(`[RYANTREM] finished test ${i} with ${status}`);
                     if (!status) {
                         TestUtils.exit(-1);
                         return;
