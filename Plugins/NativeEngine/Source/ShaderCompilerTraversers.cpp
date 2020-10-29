@@ -12,6 +12,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <arcana/macros.h>
 
 using namespace glslang;
 
@@ -420,9 +421,9 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverser final : private TIntermTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
-                Traverse(program.getIntermediate(EShLangVertex), ids, replacementNameToOriginal);
+                Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName);
             }
 
         private:
@@ -447,6 +448,32 @@ namespace Babylon::ShaderCompilerTraversers
                 }
             }
 
+#if __APPLE__ | APIOpenGL
+            // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
+            // copied from renderer_gl.cpp.
+            constexpr static const char * s_attribName[] =
+            {
+                "a_position",
+                "a_normal",
+                "a_tangent",
+                "a_bitangent",
+                "a_color0",
+                "a_color1",
+                "a_color2",
+                "a_color3",
+                "a_indices",
+                "a_weight",
+                "a_texcoord0",
+                "a_texcoord1",
+                "a_texcoord2",
+                "a_texcoord3",
+                "a_texcoord4",
+                "a_texcoord5",
+                "a_texcoord6",
+                "a_texcoord7",
+            };
+#endif
+
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
@@ -454,71 +481,13 @@ namespace Babylon::ShaderCompilerTraversers
     {                                                        \
         return {static_cast<unsigned int>(attrib), newName}; \
     }
-#if ANDROID
-                // For OpenGL platforms, we have an issue where we have a hard limit on the number shader attributes supported.
+#if __APPLE__ | APIOpenGL
+                // For OpenGL and Metal platforms, we have an issue where we have a hard limit on the number shader attributes supported.
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
-                // the first attribute encountered with the symbol for at attribute 0 and increment for each subsequent attribute encountered.
+                // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-                const char * newName;
-                switch (m_genericAttributesRunningCount){
-                    case 0:
-                        newName = "a_position";
-                        break;
-                    case 1:
-                        newName = "a_normal";
-                        break;
-                    case 2:
-                        newName = "a_tangent";
-                        break;
-                    case 3:
-                        newName = "a_bitangent";
-                        break;
-                    case 4:
-                        newName = "a_color0";
-                        break;
-                    case 5:
-                        newName = "a_color1";
-                        break;
-                    case 6:
-                        newName = "a_color2";
-                        break;
-                    case 7:
-                        newName = "a_color3";
-                        break;
-                    case 8:
-                        newName = "a_indices";
-                        break;
-                    case 9:
-                        newName = "a_weight";
-                        break;
-                    case 10:
-                        newName = "a_texcoord0";
-                        break;
-                    case 11:
-                        newName = "a_texcoord1";
-                        break;
-                    case 12:
-                        newName = "a_texcoord2";
-                        break;
-                    case 13:
-                        newName = "a_texcoord3";
-                        break;
-                    case 14:
-                        newName = "a_texcoord4";
-                        break;
-                    case 15:
-                        newName = "a_texcoord5";
-                        break;
-                    case 16:
-                        newName = "a_texcoord6";
-                        break;
-                    case 17:
-                        newName = "a_texcoord7";
-                        break;
-                    default:
-                        newName = name;
-                }
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount++), newName};
+                UNUSED(name);
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount), s_attribName[m_genericAttributesRunningCount++]};
 #else
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
@@ -535,7 +504,7 @@ namespace Babylon::ShaderCompilerTraversers
 #endif
             }
 
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 VertexVaryingInTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -548,7 +517,7 @@ namespace Babylon::ShaderCompilerTraversers
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-#if !ANDROID
+#if !(__APPLE__ | APIOpenGL)
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
@@ -585,13 +554,13 @@ namespace Babylon::ShaderCompilerTraversers
                     TType newType{publicType};
                     newType.setBasicType(symbol->getType().getBasicType());
                     auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
-                    replacementNameToOriginal[name] = newName;
                     originalNameToReplacement[name] = newSymbol;
+                    replacementToOriginalName[newName] = name;
                 }
 
                 makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
-# if !ANDROID
+# if !(__APPLE__ | APIOpenGL)
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
 # endif
             unsigned int m_genericAttributesRunningCount{0};
@@ -783,9 +752,9 @@ namespace Babylon::ShaderCompilerTraversers
         return UniformTypeChangeTraverser::Traverse(program, ids);
     }
 
-    void AssignLocationsAndNamesToVertexVaryings(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementNameToOriginal)
+    void AssignLocationsAndNamesToVertexVaryings(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
     {
-        VertexVaryingInTraverser::Traverse(program, ids, replacementNameToOriginal);
+        VertexVaryingInTraverser::Traverse(program, ids, replacementToOriginalName);
     }
 
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)

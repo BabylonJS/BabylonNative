@@ -62,7 +62,7 @@ namespace Babylon::ShaderCompilerCommon
         std::unique_ptr<spirv_cross::Parser> Parser;
         std::unique_ptr<const spirv_cross::Compiler> Compiler;
         gsl::span<uint8_t> Bytes;
-        std::unordered_map<std::string, std::string> replacementAttributeNameMapping;
+        std::unordered_map<std::string, std::string> AttributeRenaming;
     };
 
     ShaderCompiler::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);
