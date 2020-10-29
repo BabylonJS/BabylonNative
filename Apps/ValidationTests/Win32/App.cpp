@@ -94,6 +94,8 @@ namespace
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
         runtime = std::make_unique<Babylon::AppRuntime>();
 
+        setbuf(stdout, NULL);
+
         // Initialize console plugin.
         runtime->Dispatch([hWnd](Napi::Env env)
             {
@@ -103,6 +105,7 @@ namespace
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                     OutputDebugStringA(message);
                     printf("%s", message);
+                    fflush(stdout);
                 });
 
                 Babylon::Polyfills::Window::Initialize(env);
