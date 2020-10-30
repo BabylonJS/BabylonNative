@@ -168,7 +168,7 @@ jobs:
       sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
       contents: ValidationTests.*
       targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
-      cleanTargetFolder: true
+      cleanTargetFolder: false
     displayName: 'Stage test app exe/pdb for publishing'
     condition: failed()
 
