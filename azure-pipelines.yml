@@ -89,7 +89,7 @@ jobs:
     inputs:
       solution: 'buildWin32_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build WIN32_x64'
 
   - script: |
@@ -103,7 +103,7 @@ jobs:
       cd buildWin32_x64\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
 
@@ -123,7 +123,7 @@ jobs:
 
   - task: CopyFiles@2
     inputs:
-      sourceFolder: 'buildWin32_x64/Apps/ValidationTests/Release'
+      sourceFolder: 'buildWin32_x64/Apps/ValidationTests/RelWithDebInfo'
       contents: ValidationTests.*
       targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
       cleanTargetFolder: true
@@ -157,7 +157,7 @@ jobs:
     inputs:
       solution: 'buildWin32_x86/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build WIN32_x86'
 
   - script: |
@@ -171,7 +171,7 @@ jobs:
       cd buildWin32_x86\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
 
@@ -191,7 +191,7 @@ jobs:
 
   - task: CopyFiles@2
     inputs:
-      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/Release'
+      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
       contents: ValidationTests.*
       targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
       cleanTargetFolder: true
