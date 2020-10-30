@@ -145,7 +145,7 @@ jobs:
       cd buildWin32_x86\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
 
@@ -165,16 +165,17 @@ jobs:
 
   - task: CopyFiles@2
     inputs:
-      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/Release'
+      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
       contents: ValidationTests.*
       targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
       cleanTargetFolder: true
     displayName: 'Stage test app exe/pdb for publishing'
     condition: failed()
 
-  - script: |
-      timeout 10
-    displayName: 'Wait for potential crash dumps to be written'
+  # - script: |
+  #     timeout 10
+  #   displayName: 'Wait for potential crash dumps to be written'
+  #   condition: failed()
 
   - task: PublishBuildArtifacts@1
     inputs:
