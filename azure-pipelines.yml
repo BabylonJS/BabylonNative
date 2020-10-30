@@ -130,10 +130,6 @@ jobs:
     displayName: 'Stage test app exe/pdb for publishing'
     condition: failed()
 
-  - script: |
-      timeout 10
-    displayName: 'Wait for potential crash dumps to be written'
-
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x64 Crash Dumps'
@@ -201,10 +197,6 @@ jobs:
       cleanTargetFolder: true
     displayName: 'Stage test app exe/pdb for publishing'
     condition: failed()
-
-  - script: |
-      timeout 10
-    displayName: 'Wait for potential crash dumps to be written'
 
   - task: PublishBuildArtifacts@1
     inputs:
