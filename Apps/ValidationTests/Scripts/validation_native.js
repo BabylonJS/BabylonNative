@@ -238,7 +238,7 @@ function runTest(index, done) {
                 BABYLON.Tools.BaseUrl = config.root + test.specificRoot;
             }
 
-//test8
+//test9
             console.log(`[RYANTREM] XHR 3`);
             var request = new XMLHttpRequest();
             request.open('GET', config.root + test.scriptToRun, true);
