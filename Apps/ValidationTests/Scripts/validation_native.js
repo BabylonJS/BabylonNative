@@ -168,14 +168,14 @@ function runTest(index, done) {
 
             var loadPG = function() {
                 console.log(`[RYANTREM] XHR 2`);
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.addEventListener("readystatechange", function() {
-                    console.log(`[RYANTREM] XHR 2 ${xmlHttp.readyState}`);
-                    if (xmlHttp.readyState === 4) {
+                xhr = new XMLHttpRequest();
+                xhr.addEventListener("readystatechange", function() {
+                    console.log(`[RYANTREM] XHR 2 ${xhr.readyState}`);
+                    if (xhr.readyState === 4) {
                         try {
                             console.log(`[RYANTREM] XHR 2 set onreadystatechange to null`);
-                            xmlHttp.onreadystatechange = null;
-                            var snippet = JSON.parse(xmlHttp.responseText);
+                            xhr.onreadystatechange = null;
+                            var snippet = JSON.parse(xhr.responseText);
                             console.log(`[RYANTREM] XHR 2 parsed responseText`);
                             var code = JSON.parse(snippet.jsonPayload).code.toString();
                             //console.log(`[RYANTREM] XHR 2 parsed code: ${code}`);
@@ -224,12 +224,12 @@ function runTest(index, done) {
                         }
                     }
                 }, false);
-                xmlHttp.onerror = function() {
+                xhr.onerror = function() {
                     console.error("Network error during test load.");
                     onError();
                 }
-                xmlHttp.open("GET", snippetUrl + test.playgroundId.replace(/#/g, "/"));
-                xmlHttp.send();
+                xhr.open("GET", snippetUrl + test.playgroundId.replace(/#/g, "/"));
+                xhr.send();
             }
             loadPG();
         } else {
