@@ -172,11 +172,9 @@ jobs:
     displayName: 'Stage test app exe/pdb for publishing'
     condition: failed()
 
-  - task: Delay@1
-    inputs:
-      delayForMinutes: '1'
+  - script: |
+      timeout 10
     displayName: 'Wait for potential crash dumps to be written'
-    condition: failed()
 
   - task: PublishBuildArtifacts@1
     inputs:
