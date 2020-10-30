@@ -52,6 +52,7 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
 
             var defaultErrorRatio = 2.5
 
+            console.log(`[RYANTREM] comparing results for test ${index}`);
             if (compare(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
                 testRes = false;
                 console.log('failed');
@@ -70,20 +71,26 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
 }
 
 function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done) {
+    console.log(`[RYANTREM] processCurrentScene for test ${index}`);
     currentScene.useConstantAnimationDeltaTime = true;
     var renderCount = test.renderCount || 1;
 
     currentScene.executeWhenReady(function() {
+        console.log(`[RYANTREM] executeWhenReady for test ${index}`);
         if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
             currentScene.activeCamera.useAutoRotationBehavior = false;
         }
+        console.log(`[RYANTREM] about to run render loop for test ${index}`);
         engine.runRenderLoop(function() {
+            console.log(`[RYANTREM] rendering frame ${renderCount} for test ${index}`);
             try {
                 currentScene.render();
                 renderCount--;
 
                 if (renderCount === 0) {
+                    console.log(`[RYANTREM] stopping render loop for test ${index}`);
                     engine.stopRenderLoop();
+                    console.log(`[RYANTREM] evaluating results for test ${index}`);
                     evaluate(test, resultCanvas, result, renderImage, index, waitRing, done);
                 }
             }
@@ -171,7 +178,7 @@ function runTest(index, done) {
                             var snippet = JSON.parse(xmlHttp.responseText);
                             console.log(`[RYANTREM] XHR 2 parsed responseText`);
                             var code = JSON.parse(snippet.jsonPayload).code.toString();
-                            console.log(`[RYANTREM] XHR 2 parsed code: ${code}`);
+                            //console.log(`[RYANTREM] XHR 2 parsed code: ${code}`);
                             code = code.replace(/\/textures\//g, pgRoot + "/textures/");
                             code = code.replace(/"textures\//g, "\"" + pgRoot + "/textures/");
                             code = code.replace(/\/scenes\//g, pgRoot + "/scenes/");
