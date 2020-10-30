@@ -172,10 +172,8 @@ jobs:
     displayName: 'Stage test app exe/pdb for publishing'
     condition: failed()
 
-  # - script: |
-  #     timeout 10
-  #   displayName: 'Wait for potential crash dumps to be written'
-  #   condition: failed()
+  - powershell: sleep 10
+    displayName: 'Wait for potential crash dumps to be written'
 
   - task: PublishBuildArtifacts@1
     inputs:
