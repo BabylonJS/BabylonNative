@@ -103,6 +103,8 @@ namespace
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                     OutputDebugStringA(message);
                     printf("%s", message);
+                    // Ensure printfs are displayed, even if the app crashes
+                    fflush(stdout);
                 });
 
                 Babylon::Polyfills::Window::Initialize(env);
@@ -134,6 +136,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR    lpCmdLine,
     _In_ int       nCmdShow)
 {
+    // Ensure printfs are displayed, even if the app crashes
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
