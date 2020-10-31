@@ -13,7 +13,6 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -37,6 +36,8 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
+    constexpr bool RENDER_ON_JS_THREAD{true};
+
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
@@ -98,7 +99,7 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, width, height);
+        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -111,12 +112,9 @@ namespace
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-            // Initialize NativeWindow plugin.
-            Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
-
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
-            Babylon::Plugins::NativeEngine::Initialize(env);
+            Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
@@ -157,9 +155,6 @@ namespace
     void UpdateWindowSize(size_t width, size_t height)
     {
         graphics->UpdateSize(width, height);
-        runtime->Dispatch([width, height](Napi::Env env) {
-            Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-        });
     }
 }
 
@@ -303,9 +298,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
+            if constexpr (!RENDER_ON_JS_THREAD)
+            {
+                if (graphics != nullptr)
+                {
+                    graphics->RenderCurrentFrame();
+                }
+            }
+
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
             EndPaint(hWnd, &ps);
+
+            if constexpr (!RENDER_ON_JS_THREAD)
+            {
+                InvalidateRgn(hWnd, nullptr, false);
+            }
             break;
         }
         case WM_SIZE:

@@ -31,4 +31,6 @@ public class Wrapper {
     public static native void loadScript(String path);
 
     public static native void eval(String source, String sourceURL);
+
+    public static native void renderFrame();
 }

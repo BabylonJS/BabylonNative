@@ -110,7 +110,6 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
-    PRIVATE NativeWindow
     PRIVATE NativeEngine
     PRIVATE Console
     PRIVATE Window
@@ -157,6 +156,8 @@ if(APPLE)
             set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
             enable_language(Swift)
     else()
+        target_link_libraries(Playground PUBLIC "-framework MetalKit")
+
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"

@@ -13,7 +13,6 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -56,22 +55,18 @@ namespace
         runtime.reset();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
+        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         // Initialize console plugin.
-        runtime->Dispatch([width, height, window](Napi::Env env) {
-            graphics = Babylon::Graphics::InitializeFromWindow((void*)(uintptr_t)window, width, height);
-            
+        runtime->Dispatch([](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
             });
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-            // Initialize NativeWindow plugin.
-            Babylon::Plugins::NativeWindow::Initialize(env, (void*)(uintptr_t)window, width, height);
 
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
@@ -107,10 +102,10 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        runtime->Dispatch([width, height](Napi::Env env) {
+        if (graphics != nullptr)
+        {
             graphics->UpdateSize(width, height);
-            Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-        });
+        }
     }
 }
 

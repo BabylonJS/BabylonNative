@@ -13,7 +13,6 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -22,6 +21,8 @@
 
 namespace
 {
+    constexpr bool RENDER_ON_JS_THREAD{true};
+
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
@@ -66,7 +67,7 @@ extern "C"
 
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
-                g_graphics = Babylon::Graphics::InitializeFromWindow<void*>(window, width, height);
+                g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -84,10 +85,8 @@ extern "C"
                     }
                 });
 
-                Babylon::Plugins::NativeWindow::Initialize(env, window, width, height);
-
                 g_graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env);
+                Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
 
@@ -115,7 +114,8 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-                g_graphics->ReinitializeFromWindow<void*>(window, width, height);
+                g_graphics->UpdateWindow<void*>(window);
+                g_graphics->UpdateSize(width, height);
             });
         }
     }
@@ -193,6 +193,15 @@ extern "C"
         {
             g_inputBuffer->SetPointerPosition(x, y);
             g_inputBuffer->SetPointerDown(down);
+        }
+    }
+
+    JNIEXPORT void JNICALL
+    Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
+    {
+        if (!RENDER_ON_JS_THREAD)
+        {
+            g_graphics->RenderCurrentFrame();
         }
     }
 }
