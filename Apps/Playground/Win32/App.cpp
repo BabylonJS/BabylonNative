@@ -83,8 +83,8 @@ namespace
         if (runtime)
         {
             Babylon::ScriptLoader loader{ *runtime };
-            loader.Eval("engine.dispose()", "");
-            Sleep(5000);
+            loader.Eval("engine.dispose();", "");
+            Sleep(1000);
         }
 
         inputBuffer.reset();
@@ -136,7 +136,7 @@ namespace
         std::string scriptsRootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path() / "Scripts");
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.Eval("document = {}", "");
+        loader.Eval("document = {removeEventListener:function(){}}", "");
         loader.LoadScript(scriptsRootUrl + "/ammo.js");
         loader.LoadScript(scriptsRootUrl + "/recast.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
