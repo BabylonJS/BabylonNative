@@ -182,7 +182,35 @@ namespace
             handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
             jsInputSource.Set("hand", handJointCollection);
         }
+    }
 
+    void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)    
+    {
+        auto env = jsInputSource.Env();
+        //Set Gamepad Object
+
+        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.buttons.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.buttons.size(); i++)
+        {
+            auto gamepadButton = Napi::Object::New(env);
+            auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.buttons[i].Pressed);
+            auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.buttons[i].Touched);
+            auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.buttons[i].Value);
+            gamepadButton.Set("pressed", napiGamepadPressed);
+            gamepadButton.Set("touched", napiGamepadTouched);
+            gamepadButton.Set("value", napiGamepadValue);
+            gamepadButtons.Set(static_cast<int>(i), gamepadButton);
+        }
+        jsGamepadObject.Set("buttons", gamepadButtons);
+
+        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.axes.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.axes.size(); i++)
+        {
+            auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.axes[i]);
+            gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);
+        }
+        jsGamepadObject.Set("axes", gamepadAxes);
+        jsInputSource.Set("gamepad", jsGamepadObject);
     }
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
@@ -191,19 +219,26 @@ namespace
             "left",
             "right"};
         constexpr const char* TARGET_RAY_MODE{"tracked-pointer"};
-
         auto jsInputSource = Napi::Object::New(env);
+
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
-        jsInputSource.Set("gamepad", Napi::External<decltype(inputSource.GamepadObject)>::New(env, &inputSource.GamepadObject));
         SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
-        Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
+        Napi::Value string = Napi::String::New(env, "windows-mixed-reality");
         profiles.Set(uint32_t{0}, string);
         jsInputSource.Set("profiles", profiles);
 
         return Napi::Persistent(jsInputSource);
+    }
+
+    Napi::ObjectReference CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    {
+        auto env = jsInputSource.Env();
+        auto jsGamepadObject = Napi::Object::New(env);
+        SetXRGamepadObjectData(jsInputSource, jsGamepadObject, inputSource);
+        return Napi::Persistent(jsGamepadObject);
     }
 }
 
@@ -1947,6 +1982,7 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+            std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToGamepadObject{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2009,19 +2045,32 @@ namespace Babylon
 
                     current.insert(inputSource.ID);
 
-                    auto found = m_idToInputSource.find(inputSource.ID);
-                    if (found == m_idToInputSource.end())
+                    auto inputSourceFound = m_idToInputSource.find(inputSource.ID);
+                    if (inputSourceFound == m_idToInputSource.end())
                     {
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
+                        
+                        //Now that input Source is created, create a gamepad object for the input source
+                        inputSourceFound = m_idToInputSource.find(inputSource.ID);
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        m_idToGamepadObject.insert({inputSource.ID, CreateXRGamepadObject(inputSourceVal, inputSource)});
 
                         added.insert(inputSource.ID);
                     }
                     else
                     {
                         // Ensure the correct spaces are associated with the existing input source.
-                        auto val = found->second.Value();
-                        SetXRInputSourceData(val, inputSource);
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        SetXRInputSourceData(inputSourceVal, inputSource);
+
+                        //inputSource already exists, find the corresponding gamepad object and set to correct values
+                        auto gamepadObjectFound = m_idToGamepadObject.find(inputSource.ID);
+                        if (gamepadObjectFound != m_idToGamepadObject.end())
+                        {
+                            auto gamepadObjectVal = gamepadObjectFound->second.Value();
+                            SetXRGamepadObjectData(inputSourceVal, gamepadObjectVal, inputSource);
+                        }
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
@@ -2075,7 +2124,7 @@ namespace Babylon
                     }
                 }
 
-               /* for (auto& inputSource : frame.InputSources)
+                /*for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.SqueezeInputStartedThisFrame || 
                         !inputSource.SqueezeInputEndedThisFrame || 

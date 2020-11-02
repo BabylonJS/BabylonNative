@@ -299,6 +299,12 @@ namespace xr
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
+        struct
+        {
+            static constexpr uint32_t CONTROLLER_BUTTONS{ 4 };
+            static constexpr uint32_t CONTROLLER_AXES{ 4 };
+        } ControllerInfo;
+
         struct HandInfo
         {
             XrHandEXT Hand{};
@@ -673,6 +679,7 @@ namespace xr
                 }
             }
 
+
             // Create controller get trigger value action and suggested bindings
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
@@ -813,14 +820,7 @@ namespace xr
                 }
             }
 
-            // Provide default suggested bindings to instance
-            /*XrInteractionProfileSuggestedBinding defaultSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &defaultSuggestedBindings.interactionProfile));
-            defaultSuggestedBindings.suggestedBindings = bindings.data();
-            defaultSuggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &defaultSuggestedBindings));*/
-
-            // Provide Microsoft suggested binding to instance
+            // Provide default Microsoft suggested binding to instance
             XrInteractionProfileSuggestedBinding microsoftSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
             microsoftSuggestedBindings.suggestedBindings = bindings.data();
@@ -1352,13 +1352,19 @@ namespace xr
                     }
                 }
 
-                //Get the gamepad data
                 {
+                    // Initialize the gamepad object components
                     auto& inputSource = InputSources[idx];
-                    inputSource.GamepadObject.id = "";
-                    inputSource.GamepadObject.index = -1;
-                    inputSource.GamepadObject.mapping = "xr-standard";
-                    inputSource.GamepadObject.connected = true;
+                    auto controllerInfo = sessionImpl.ControllerInfo;
+                    if (inputSource.GamepadObject.buttons.size() != controllerInfo.CONTROLLER_BUTTONS)
+                    {
+                        inputSource.GamepadObject.buttons = std::vector<Button>(controllerInfo.CONTROLLER_BUTTONS);
+                    }
+                    if (inputSource.GamepadObject.axes.size() != controllerInfo.CONTROLLER_AXES)
+                    {
+                        inputSource.GamepadObject.axes = std::vector<float>(controllerInfo.CONTROLLER_AXES);
+                    }
+                    
                 }
 
                 // Get trigger value data

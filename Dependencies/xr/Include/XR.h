@@ -148,19 +148,20 @@ namespace xr
 
                 struct Button
                 {
-                    bool Pressed{};
-                    bool Touched{};
-                    double Value{};
+                    bool Pressed{ false };
+                    bool Touched{ false };
+                    double Value{0};
                 };
 
                 struct GamePad
                 {
-                    std::string id{};
-                    long index{};
-                    bool connected;
-                    std::string mapping;
-                    std::vector<float> axes{};
-                    std::vector<Button> buttons{}; 
+                    using Identifier = size_t;
+                    const Identifier ID{ NEXT_ID++ };
+                    std::vector<float> axes;
+                    std::vector<Button> buttons; 
+
+                    private:
+                    static inline Identifier NEXT_ID{0};
                 };
 
                 struct View
