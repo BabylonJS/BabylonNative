@@ -60,7 +60,6 @@ target_link_libraries(BabylonNativeJNI
         AppRuntime
         NativeEngine
         NativeXr
-        NativeWindow
         Console
         Canvas
         Window

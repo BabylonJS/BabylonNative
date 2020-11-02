@@ -16,7 +16,12 @@ namespace Babylon
         static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
     public:
+        Impl();
         ~Impl();
+
+        void* GetNativeWindow();
+        void SetNativeWindow(void* nativeWindowPtr);
+        void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
         static Impl& GetFromJavaScript(Napi::Env);
@@ -39,12 +44,21 @@ namespace Babylon
     private:
         bool m_rendering{false};
 
-        arcana::manual_dispatcher<128> Dispatcher{};
-        arcana::task_completion_source<void, std::exception_ptr> BeforeRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> AfterRenderTaskCompletionSource{};
+        struct
+        {
+            std::mutex Mutex{};
 
-        std::vector<arcana::task<void, std::exception_ptr>> RenderWorkTasks{};
-        std::mutex RenderWorkTasksMutex{};
+            bgfx::Init InitState{};
+            bool Initialized{};
+            bool Dirty{};
+        } m_bgfxState{};
+
+        arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
+        arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
+
+        arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
+        std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
+        std::mutex m_renderWorkTasksMutex{};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone);
     };

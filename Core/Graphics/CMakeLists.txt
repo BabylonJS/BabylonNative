@@ -13,7 +13,7 @@ target_include_directories(Graphics
 
 target_link_to_dependencies(Graphics
     PUBLIC JsRuntime
-    PRIVATE arcana
+    PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg
     PRIVATE bx)
@@ -28,6 +28,7 @@ add_library(GraphicsInternal INTERFACE)
 target_include_directories(GraphicsInternal INTERFACE "Source")
 target_link_to_dependencies(GraphicsInternal
     INTERFACE Graphics
+    INTERFACE JsRuntimeInternal
     INTERFACE arcana
     INTERFACE bgfx
     INTERFACE bimg

@@ -647,6 +647,7 @@ namespace xr {
             CFRunLoopTimerRef timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), intervalInSeconds, 0, 0, ^(CFRunLoopTimerRef timer){
                 if ([session currentFrame] != nil) {
                     CFRunLoopRemoveTimer(mainRunLoop, timer, kCFRunLoopCommonModes);
+                    CFRelease(timer);
                     tcs.complete();
                 }
             });

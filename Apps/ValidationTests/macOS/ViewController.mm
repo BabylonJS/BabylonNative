@@ -63,6 +63,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     loader.LoadScript("app:///babylon.max.js");
     loader.LoadScript("app:///babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///babylonjs.materials.js");
+    loader.LoadScript("app:///babylon.gui.js");
     loader.LoadScript("app:///validation_native.js");
 }
 

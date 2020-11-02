@@ -8,8 +8,6 @@
 
 #include <GraphicsImpl.h>
 
-#include <NativeWindow.h>
-
 #include <napi/napi.h>
 
 #include <bgfx/bgfx.h>
@@ -407,7 +405,7 @@ namespace Babylon
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
-        NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime, Plugins::Internal::NativeWindow& nativeWindow);
+        NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime);
         ~NativeEngine();
 
         static void Initialize(Napi::Env, bool autoRender);
@@ -495,8 +493,6 @@ namespace Babylon
         void GetFramebufferData(const Napi::CallbackInfo& info);
         Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
 
-        void UpdateSize(size_t width, size_t height);
-
         template<typename SchedulerT>
         arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
         
@@ -516,8 +512,6 @@ namespace Babylon
         uint64_t m_engineState;
 
         FrameBufferManager m_frameBufferManager{};
-
-        Plugins::Internal::NativeWindow::NativeWindow::OnResizeCallbackTicket m_resizeCallbackTicket;
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);

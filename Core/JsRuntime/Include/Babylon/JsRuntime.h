@@ -22,6 +22,9 @@ namespace Babylon
             }
         };
 
+        struct InternalState;
+        friend struct InternalState;
+
         using DispatchFunctionT = std::function<void(std::function<void(Napi::Env)>)>;
 
         // Note: It is the contract of JsRuntime that its dispatch function must be usable
@@ -42,5 +45,7 @@ namespace Babylon
 
         DispatchFunctionT m_dispatchFunction{};
         std::mutex m_mutex{};
+
+        std::unique_ptr<InternalState> m_internalState{};
     };
 }

@@ -2,7 +2,6 @@
 
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -147,7 +146,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
-    m_graphics = Babylon::Graphics::InitializeFromWindow<void*>(windowPtr, width, height);
+    m_graphics = Babylon::Graphics::CreateGraphics<void*>(windowPtr, width, height);
     m_runtime = std::make_unique<Babylon::AppRuntime>();
     m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
@@ -161,8 +160,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Canvas::Initialize(env);
-
-        Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
 
         // Initialize NativeEngine plugin.
         m_graphics->AddToJavaScript(env);
@@ -181,6 +178,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/babylon.gui.js");
 
     if (m_files == nullptr)
     {
@@ -228,10 +226,6 @@ void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs
     size_t width = static_cast<size_t>(args->Size.Width * m_displayScale);
     size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
     m_graphics->UpdateSize(width, height);
-    m_runtime->Dispatch([width, height](Napi::Env env)
-    {
-        Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-    });
 }
 
 void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
