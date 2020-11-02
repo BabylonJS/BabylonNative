@@ -489,7 +489,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
                 UNUSED(name);
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount), s_attribName[m_genericAttributesRunningCount++]};
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount), s_attribName[std::min(m_genericAttributesRunningCount++, static_cast<unsigned int>(bgfx::Attrib::Count)-1)]};
 #else
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
