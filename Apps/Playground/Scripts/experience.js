@@ -69,6 +69,7 @@ document = {
         }
         return {};
     },
+    removeEventListener: function () { },
     body: {
         appendChild: function () { }, removeChild: function () { }}
 }
