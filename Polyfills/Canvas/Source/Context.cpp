@@ -15,8 +15,7 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::HandleScope scope{ env };
 
-        // defined at first call, makes construction faster for subsequent calls.
-        static Napi::Function func = ParentT::DefineClass(
+        Napi::Function func = ParentT::DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
             {
@@ -106,8 +105,11 @@ namespace Babylon::Polyfills::Internal
         else if (str == "grey") {
             return nvgRGBA(128, 128, 128, 255);
         }
+        else if (str == "transparent") {
+            return nvgRGBA(0, 0, 0, 0);
+        }
         else if (str[0] == '#') {
-            int components[4];
+            unsigned int components[4];
             int count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
             for (int i = count; count < 4; count++)
             {
@@ -280,8 +282,11 @@ namespace Babylon::Polyfills::Internal
         auto x = info[1].As<Napi::Number>().FloatValue();
         auto y = info[2].As<Napi::Number>().FloatValue();
 
-        nvgFontFaceId(m_nvg, m_fonts.begin()->second);
-        nvgText(m_nvg, x, y, text.c_str(), nullptr);
+        if (!m_fonts.empty())
+        {
+            nvgFontFaceId(m_nvg, m_fonts.begin()->second);
+            nvgText(m_nvg, x, y, text.c_str(), nullptr);
+        }
     }
 
     void Context::BeginFrame()

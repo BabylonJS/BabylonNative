@@ -4,6 +4,7 @@
 #include "Context.h"
 #include <functional>
 #include <sstream>
+#include <assert.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -31,6 +32,14 @@ namespace Babylon::Polyfills::Internal
     Canvas::Canvas(const Napi::CallbackInfo& info)
         : ParentT{info}
     {
+    }
+
+    Canvas::~Canvas()
+    {
+        if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
+        {
+            bgfx::destroy(m_frameBufferHandle);
+        }
     }
 
     void Canvas::BeginContextsFrame(const Napi::CallbackInfo&)
@@ -94,6 +103,7 @@ namespace Babylon::Polyfills::Internal
             bgfx::destroy(m_frameBufferHandle);
         }
         m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+        assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
     }
 
     struct TextureData final
@@ -115,6 +125,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Canvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
+        assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
         auto data = new TextureData();
         data->Handle = bgfx::getTexture(m_frameBufferHandle);
         data->Width = m_width;

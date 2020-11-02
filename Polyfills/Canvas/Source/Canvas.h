@@ -14,6 +14,7 @@ namespace Babylon::Polyfills::Internal
         static void CreateInstance(Napi::Env env);
 
         explicit Canvas(const Napi::CallbackInfo& info);
+        virtual ~Canvas();
 
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
