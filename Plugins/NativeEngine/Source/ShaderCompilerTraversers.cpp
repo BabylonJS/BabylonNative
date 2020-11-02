@@ -5,6 +5,7 @@
 #include <glslang/MachineIndependent/RemoveTree.h>
 
 #include <bgfx/bgfx.h>
+#include <bx/bx.h>
 
 #include <arcana/experimental/array.h>
 
@@ -472,6 +473,7 @@ namespace Babylon::ShaderCompilerTraversers
                 "a_texcoord6",
                 "a_texcoord7",
             };
+            BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName) );
 #endif
 
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
