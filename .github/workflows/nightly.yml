@@ -26,14 +26,20 @@ jobs:
     - name: Download babylon.glTF2FileLoader.js
       run: curl.exe -o Apps\BabylonScripts/babylon.glTF2FileLoader.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylon.glTF2FileLoader.js
     - name: Build Win32
-      run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="Release" -p:Platform=x64
+      run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64
     - name: Make validation directories 
       run: cd buildWin32_x64/Apps/ValidationTests &&
           mkdir Results &&
-          mkdir Errors 
+          mkdir Errors
+    - name: Enable Crash Dumps
+      run: |
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 2
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$GITHUB_WORKSPACE/buildWin32_x64/Apps/ValidationTests/RelWithDebInfo"
     - name: Run Validation Tests
       run: ./ValidationTests.exe
-      working-directory: buildWin32_x64/Apps/ValidationTests/Release
+      working-directory: buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
     - name: Upload Errors images artifact
       uses: actions/upload-artifact@v2
       if: failure()
@@ -46,4 +52,11 @@ jobs:
       with:
           name: ResultImages
           path: |
-            buildWin32_x64/Apps/ValidationTests/Results
+            buildWin32_x64/Apps/ValidationTests/Results  
+    - name: Upload Crash dump artifact
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+          name: CrashDumps
+          path: |
+            buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
