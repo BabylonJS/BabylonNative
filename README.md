@@ -56,6 +56,8 @@ to us on [the Babylon forum](https://forum.babylonjs.com).
 
 Babylon Native documentation is available in this repo. From extending Babylon Native using your very own features to debugging the rendering on iOS, [you'll find extensive documentation here.](Documentation/Readme.md)
 
+For Frequently Asked Questions (FAQ) regarding build and other issues, [You can check this page.](Documentation/faq.md)
+
 ## Build System and Extensions
 
 The Babylon Native build system strives for simplicity, modularity, and scalability

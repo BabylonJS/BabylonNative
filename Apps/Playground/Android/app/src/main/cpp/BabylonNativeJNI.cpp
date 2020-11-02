@@ -103,6 +103,7 @@ extern "C"
             g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
+            g_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
         }
     }
 
