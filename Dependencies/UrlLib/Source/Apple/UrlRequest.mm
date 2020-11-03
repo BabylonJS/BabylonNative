@@ -48,7 +48,8 @@ namespace UrlLib
                 NSString* path{[[NSBundle mainBundle] pathForResource:url.path ofType:nil]};
                 if (path == nil)
                 {
-                    return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"Invalid resource path in app bundle."}));
+                    // Complete the task, but retain the default status code of 0 to indicate a client side error.
+                    return arcana::task_from_result<std::exception_ptr>();
                 }
                 url = [NSURL fileURLWithPath:path];
             }
@@ -62,7 +63,9 @@ namespace UrlLib
             {
                 if (error != nil)
                 {
-                    taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{[[error localizedDescription] UTF8String]})));
+                    // Complete the task, but retain the default status code of 0 to indicate a client side error.
+                    // TODO: Consider logging or otherwise exposing the error message in some way via: [[error localizedDescription] UTF8String]
+                    taskCompletionSource.complete();
                     return;
                 }
                 
@@ -126,7 +129,7 @@ namespace UrlLib
         {
             if (m_responseBuffer)
             {
-                return { reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), static_cast<long>(m_responseBuffer.length) };
+                return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), static_cast<long>(m_responseBuffer.length)};
             }
 
             return {};

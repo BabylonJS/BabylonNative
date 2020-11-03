@@ -104,12 +104,14 @@ namespace java::lang
         jstring m_string;
     };
 
-    class Throwable : public Object
+    class Throwable : public Object, public std::exception
     {
     public:
         Throwable(jthrowable throwable);
 
         String GetMessage() const;
+
+        const char* what() const noexcept override;
     };
 }
 

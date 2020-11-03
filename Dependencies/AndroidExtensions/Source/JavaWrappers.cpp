@@ -12,8 +12,7 @@ namespace
         {
             auto jthrowable{env->ExceptionOccurred()};
             env->ExceptionClear();
-            java::lang::Throwable throwable{jthrowable};
-            throw std::runtime_error{throwable.GetMessage()};
+            throw java::lang::Throwable{jthrowable};
         }
     }
 }
@@ -86,6 +85,12 @@ namespace java::lang
     String Throwable::GetMessage() const
     {
         return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getMessage", "()Ljava/lang/String;"))};
+    }
+
+    const char* Throwable::what() const noexcept
+    {
+        std::string message = GetMessage();
+        return message.c_str();
     }
 }
 
