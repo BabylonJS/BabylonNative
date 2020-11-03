@@ -4,6 +4,20 @@
 
 using namespace android::global;
 
+namespace
+{
+    void ThrowIfFaulted(JNIEnv* env)
+    {
+        if (env->ExceptionCheck())
+        {
+            auto jthrowable{env->ExceptionOccurred()};
+            env->ExceptionClear();
+            java::lang::Throwable throwable{jthrowable};
+            throw std::runtime_error{throwable.GetMessage()};
+        }
+    }
+}
+
 namespace java::lang
 {
     ByteArray::ByteArray(int size)
@@ -62,6 +76,16 @@ namespace java::lang
     String::operator std::string() const
     {
         return m_env->GetStringUTFChars(m_string, nullptr);
+    }
+
+    Throwable::Throwable(jthrowable throwable)
+        : Object{"java/lang/Throwable", throwable}
+    {
+    }
+
+    String Throwable::GetMessage() const
+    {
+        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getMessage", "()Ljava/lang/String;"))};
     }
 }
 
@@ -136,7 +160,9 @@ namespace java::net
 
     URLConnection URL::OpenConnection()
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "openConnection", "()Ljava/net/URLConnection;"))};
+        auto urlConnection{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "openConnection", "()Ljava/net/URLConnection;"))};
+        ThrowIfFaulted(m_env);
+        return {urlConnection};
     }
 
     lang::String URL::ToString()
@@ -152,6 +178,7 @@ namespace java::net
     void URLConnection::Connect()
     {
         m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "connect", "()V"));
+        ThrowIfFaulted(m_env);
     }
 
     URL URLConnection::GetURL() const
@@ -166,7 +193,9 @@ namespace java::net
 
     io::InputStream URLConnection::GetInputStream() const
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getInputStream", "()Ljava/io/InputStream;"))};
+        auto inputStream{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getInputStream", "()Ljava/io/InputStream;"))};
+        ThrowIfFaulted(m_env);
+        return {inputStream};
     }
 
     URLConnection::operator HttpURLConnection() const

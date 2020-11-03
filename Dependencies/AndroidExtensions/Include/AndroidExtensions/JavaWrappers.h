@@ -103,6 +103,14 @@ namespace java::lang
         JNIEnv* m_env;
         jstring m_string;
     };
+
+    class Throwable : public Object
+    {
+    public:
+        Throwable(jthrowable throwable);
+
+        String GetMessage() const;
+    };
 }
 
 namespace java::io
