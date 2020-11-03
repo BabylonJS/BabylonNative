@@ -488,7 +488,7 @@ namespace Babylon::ShaderCompilerTraversers
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
 
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount-1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount-1))]};
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount-1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount-1)]};
 #else
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
     if (std::strcmp(name, varyingName) == 0)                 \
@@ -506,7 +506,10 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
                 IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
 #undef IF_NAME_RETURN_ATTRIB
-                return {FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++, name};
+                const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
+                if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+                return {attributeLocation, name};
 #endif
             }
 
