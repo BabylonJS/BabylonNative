@@ -13,7 +13,6 @@ namespace Babylon
     class WorkQueue
     {
     public:
-        WorkQueue(std::function<void()> threadProcedure);
         WorkQueue(std::function<void()> threadProcedure, std::function<void(std::exception_ptr)> unhandledExceptionHandler);
         ~WorkQueue();
 

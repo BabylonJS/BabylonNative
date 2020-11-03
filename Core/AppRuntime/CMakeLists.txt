@@ -8,7 +8,7 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         "Source/WorkQueue.h")
 
     if(APPLE)
-        set(SOURCES ${SOURCES} "Source/AppRuntimeApple.mm")
+        set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.mm")
     else()
         set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.cpp")
     endif()

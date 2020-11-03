@@ -49,7 +49,6 @@ namespace Babylon
                 if (result.has_error())
                 {
                     m_unhandledExceptionHandler(result.error());
-                    m_cancelSource.cancel();
                 }
             });
         }
