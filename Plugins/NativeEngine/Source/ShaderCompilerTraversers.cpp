@@ -12,7 +12,6 @@
 #include <gsl/gsl>
 
 #include <stdexcept>
-#include <iostream>
 #include <arcana/macros.h>
 
 using namespace glslang;
