@@ -169,53 +169,33 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void XMLHttpRequest::Abort(const Napi::CallbackInfo& info)
+    void XMLHttpRequest::Abort(const Napi::CallbackInfo&)
     {
-        try
-        {
-            m_request.Abort();
-        }
-        catch (const std::exception& ex)
-        {
-            throw Napi::Error::New(info.Env(), ex.what());
-        }
+        m_request.Abort();
     }
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
-        try
-        {
-            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
-            SetReadyState(ReadyState::Opened);
-        }
-        catch (const std::exception& ex)
-        {
-            throw Napi::Error::New(info.Env(), ex.what());
-        }
+        m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
+        SetReadyState(ReadyState::Opened);
     }
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        try
-        {
-            m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
-                // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
-                // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-                auto clearEventHandlerRefs{gsl::finally([this] { m_eventHandlerRefs.clear(); })};
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+            if (result.has_error())
+            {
+                // Bail if UrlLib throws an exception.
+                std::abort();
+            }
 
-                if (result.has_error())
-                {
-                    throw Napi::Error::New(env, result.error());
-                }
+            SetReadyState(ReadyState::Done);
+            RaiseEvent(EventType::LoadEnd);
 
-                SetReadyState(ReadyState::Done);
-                RaiseEvent(EventType::LoadEnd);
-            });
-        }
-        catch (const std::exception& ex)
-        {
-            throw Napi::Error::New(info.Env(), ex.what());
-        }
+            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+            m_eventHandlerRefs.clear();
+        });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
