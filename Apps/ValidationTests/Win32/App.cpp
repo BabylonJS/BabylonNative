@@ -17,7 +17,6 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeWindow.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -92,7 +91,7 @@ namespace
 
     void Initialize(HWND hWnd)
     {
-        graphics = Babylon::Graphics::InitializeFromWindow<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
+        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
@@ -104,23 +103,20 @@ namespace
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                     OutputDebugStringA(message);
                     printf("%s", message);
+                    // Ensure printfs are displayed, even if the app crashes
+                    fflush(stdout);
                 });
 
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
                 Babylon::Polyfills::Window::Initialize(env);
-                // Initialize NativeWindow plugin to the test size.
-                // TODO: TestUtils::UpdateSize should do it properly but the client size
-                // is not forwarded correctly to the rendering. Find why.
-                Babylon::Plugins::NativeWindow::Initialize(env, hWnd, width, height);
 
                 // Initialize NativeEngine plugin.
                 graphics->AddToJavaScript(env);
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::TestUtils::CreateInstance(env, hWnd);
-                Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
             });
 
         // Scripts are copied to the parent of the executable due to CMake issues.
@@ -131,6 +127,7 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
+        loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
     }
 }
@@ -140,6 +137,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR    lpCmdLine,
     _In_ int       nCmdShow)
 {
+    // Ensure printfs are displayed, even if the app crashes
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -261,12 +261,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_SIZE:
         {
-            if (runtime != nullptr) {
+            if (graphics != nullptr)
+            {
                 size_t width = static_cast<size_t>(LOWORD(lParam));
                 size_t height = static_cast<size_t>(HIWORD(lParam));
-                runtime->Dispatch([width, height](Napi::Env env) {
-                    Babylon::Plugins::NativeWindow::UpdateSize(env, width, height);
-                });
+                graphics->UpdateSize(width, height);
             }
             break;
         }

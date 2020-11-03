@@ -70,7 +70,7 @@ jobs:
     displayName: 'Build iOS'
     
 - job: win32_x64
-  timeoutInMinutes: 20
+  timeoutInMinutes: 30
   pool:
     vmImage: 'windows-latest'
 
@@ -82,37 +82,63 @@ jobs:
   - script: |
       mkdir buildWin32_x64
       cd buildWin32_x64
-      cmake -G "Visual Studio 16 2019" -A x64 ..
+      cmake -G "Visual Studio 16 2019" -A x64 -DNAPI_JAVASCRIPT_ENGINE=V8 ..
     displayName: 'Generate Win32_x64 solution'
-    
+
   - task: MSBuild@1
     inputs:
       solution: 'buildWin32_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build WIN32_x64'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: 'Enable Crash Dumps'
+
   - script: |
       cd buildWin32_x64\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x64 Rendered Pictures'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Win32_x64 Results'
     condition: succeeded()
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x64 Error Pictures'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
     displayName: 'Publish Tests Win32_x64 Errors'
     condition: failed()
-    
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'buildWin32_x64/Apps/ValidationTests/RelWithDebInfo'
+      contents: ValidationTests.*
+      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+      cleanTargetFolder: false
+    displayName: 'Stage test app exe/pdb for publishing'
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x64 Crash Dumps'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
+    displayName: 'Publish Tests Win32_x64 Dumps'
+    condition: failed()
+
 - job: win32_x86
-  timeoutInMinutes: 20 
+  timeoutInMinutes: 30 
   pool:
     vmImage: 'windows-latest'
 
@@ -124,28 +150,38 @@ jobs:
   - script: |
       mkdir buildWin32_x86
       cd buildWin32_x86
-      cmake .. -G "Visual Studio 16 2019" -A Win32
+      cmake .. -G "Visual Studio 16 2019" -A Win32 -DNAPI_JAVASCRIPT_ENGINE=V8
     displayName: 'Generate Win32_x86 solution'
-    
+
   - task: MSBuild@1
     inputs:
       solution: 'buildWin32_x86/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build WIN32_x86'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: 'Enable Crash Dumps'
+
   - script: |
       cd buildWin32_x86\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x86 Rendered Pictures'
       pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Win32_x86 Results'
     condition: succeeded()
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x86 Error Pictures'
@@ -153,7 +189,22 @@ jobs:
     displayName: 'Publish Tests Win32_x86 Errors'
     condition: failed()
 
-    
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
+      contents: ValidationTests.*
+      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+      cleanTargetFolder: false
+    displayName: 'Stage test app exe/pdb for publishing'
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x86 Crash Dumps'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
+    displayName: 'Publish Tests Win32_x86 Dumps'
+    condition: failed()
+
 - job: uwp_x64    
   pool:
     vmImage: 'windows-latest'  
@@ -274,7 +325,7 @@ jobs:
     displayName: 'Build androidJSC'
 
 - job: Ubuntu_Clang8_JSC
-  timeoutInMinutes: 20
+  timeoutInMinutes: 30
   pool:
     vmImage: 'ubuntu-latest'
 
@@ -298,7 +349,7 @@ jobs:
     displayName: 'Build X11'
 
 - job: Ubuntu_GCC9_JSC
-  timeoutInMinutes: 20
+  timeoutInMinutes: 30
   pool:
     vmImage: 'ubuntu-latest'
 
