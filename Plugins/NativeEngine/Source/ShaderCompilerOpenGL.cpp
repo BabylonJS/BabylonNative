@@ -7,12 +7,6 @@
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_glsl.hpp>
-#include <bgfx/bgfx.h>
-
-namespace bgfx::gl
-{
-    void setAttribName(bgfx::Attrib::Enum, const char*);
-}
 
 namespace Babylon
 {

@@ -449,10 +449,10 @@ namespace Babylon::ShaderCompilerTraversers
                 }
             }
 
-#if __APPLE__ | APIOpenGL
+#if __APPLE__ || APIOpenGL
             // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
             // copied from renderer_gl.cpp.
-            constexpr static const char * s_attribName[] =
+            constexpr static const char* s_attribName[] =
             {
                 "a_position",
                 "a_normal",
@@ -473,25 +473,28 @@ namespace Babylon::ShaderCompilerTraversers
                 "a_texcoord6",
                 "a_texcoord7",
             };
-            BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName) );
+            BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
 #endif
 
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
-#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
-    if (std::strcmp(name, varyingName) == 0)                 \
-    {                                                        \
-        return {static_cast<unsigned int>(attrib), newName}; \
-    }
-#if __APPLE__ | APIOpenGL
+#if __APPLE__ || APIOpenGL
                 // For OpenGL and Metal platforms, we have an issue where we have a hard limit on the number shader attributes supported.
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
                 UNUSED(name);
                 m_genericAttributesRunningCount++;
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount-1), s_attribName[std::min(static_cast<unsigned int>(m_genericAttributesRunningCount-1), static_cast<unsigned int>(bgfx::Attrib::Count)-1)]};
+                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount-1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount-1))]};
 #else
+#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
+    if (std::strcmp(name, varyingName) == 0)                 \
+    {                                                        \
+        return {static_cast<unsigned int>(attrib), newName}; \
+    }
                 IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
                 IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
                 IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
@@ -520,7 +523,7 @@ namespace Babylon::ShaderCompilerTraversers
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-#if !(__APPLE__ | APIOpenGL)
+#if !(__APPLE__ || APIOpenGL)
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
@@ -563,7 +566,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                 makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
-# if !(__APPLE__ | APIOpenGL)
+# if !(__APPLE__ || APIOpenGL)
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
 # endif
             unsigned int m_genericAttributesRunningCount{0};

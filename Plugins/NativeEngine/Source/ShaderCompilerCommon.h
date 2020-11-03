@@ -5,7 +5,8 @@
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
 #include <spirv_parser.hpp>
-#include <map>
+#include <unordered_map>
+#include <string>
 
 namespace Babylon::ShaderCompilerCommon
 {
