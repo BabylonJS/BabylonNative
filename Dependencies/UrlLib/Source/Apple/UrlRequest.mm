@@ -52,7 +52,7 @@ namespace UrlLib
                 }
                 url = [NSURL fileURLWithPath:path];
             }
-            
+
             NSURLSession* session{[NSURLSession sharedSession]};
             NSURLRequest* request{[NSURLRequest requestWithURL:url]};
 
