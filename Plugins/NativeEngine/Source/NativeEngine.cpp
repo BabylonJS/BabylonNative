@@ -600,7 +600,7 @@ namespace Babylon
         for (auto vertexBufferPair : vertexBuffers)
         {
             const auto& vertexBuffer = vertexBufferPair.second;
-            vertexBuffer.data->SetAsBgfxVertexBuffer((uint8_t)vertexBufferPair.first, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
+            vertexBuffer.data->SetAsBgfxVertexBuffer(static_cast<uint8_t>(vertexBufferPair.first), vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
         }
     }
 
