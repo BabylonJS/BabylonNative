@@ -95,7 +95,7 @@ jobs:
   - script: |
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
     displayName: 'Enable Crash Dumps'
 
@@ -163,7 +163,7 @@ jobs:
   - script: |
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
     displayName: 'Enable Crash Dumps'
 
