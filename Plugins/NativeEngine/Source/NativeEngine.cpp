@@ -1063,9 +1063,10 @@ namespace Babylon
         const auto onSuccess = info[4].As<Napi::Function>();
         const auto onError = info[5].As<Napi::Function>();
 
+        const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
+
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, data = Napi::Persistent(data), generateMips, invertY]() {
-                const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.Value().ArrayBuffer().Data()) + data.Value().ByteOffset(), data.Value().ByteLength());
+            [this, dataSpan, dataRef = Napi::Persistent(data), generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (image == nullptr)
                 {
@@ -1111,8 +1112,8 @@ namespace Babylon
         for (uint32_t face = 0; face < data.Length(); face++)
         {
             const auto typedArray = data[face].As<Napi::TypedArray>();
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, typedArray = Napi::Persistent(typedArray), generateMips]() {
-                const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.Value().ArrayBuffer().Data()) + typedArray.Value().ByteOffset(), typedArray.Value().ByteLength());
+            const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, dataRef = Napi::Persistent(typedArray), generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (generateMips)
                 {
@@ -1155,8 +1156,8 @@ namespace Babylon
             for (uint32_t face = 0; face < 6; face++)
             {
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, typedArray = Napi::Persistent(typedArray)]() {
-                    const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.Value().ArrayBuffer().Data()) + typedArray.Value().ByteOffset(), typedArray.Value().ByteLength());
+                const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, dataRef = Napi::Persistent(typedArray)]() {
                     bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                     FlipY(image);
                     return image;
