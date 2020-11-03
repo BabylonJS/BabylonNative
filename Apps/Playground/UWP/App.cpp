@@ -176,6 +176,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/babylon.gui.js");
 
     if (m_files == nullptr)
     {
