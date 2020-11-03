@@ -79,7 +79,13 @@ namespace java::lang
 
     Throwable::Throwable(jthrowable throwable)
         : Object{"java/lang/Throwable", throwable}
+        , m_throwableRef{m_env->NewGlobalRef(throwable)}
     {
+    }
+
+    Throwable::~Throwable()
+    {
+        m_env->DeleteGlobalRef(m_throwableRef);
     }
 
     String Throwable::GetMessage() const
@@ -149,7 +155,9 @@ namespace java::net
 
     int HttpURLConnection::GetResponseCode() const
     {
-        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getResponseCode", "()I"));
+        auto responseCode = m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getResponseCode", "()I"));
+        ThrowIfFaulted(m_env);
+        return responseCode;
     }
 
     URL::URL(lang::String url)

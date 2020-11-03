@@ -108,10 +108,14 @@ namespace java::lang
     {
     public:
         Throwable(jthrowable throwable);
+        ~Throwable();
 
         String GetMessage() const;
 
         const char* what() const noexcept override;
+
+    private:
+        jobject m_throwableRef;
     };
 }
 
