@@ -589,10 +589,10 @@ namespace Babylon
         m_currentBoundIndexBuffer = vertexArray.indexBuffer.data;
 
         const auto& vertexBuffers = vertexArray.vertexBuffers;
-        for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
+        for (auto vertexBufferPair : vertexBuffers)
         {
-            const auto& vertexBuffer = vertexBuffers[index];
-            vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
+            const auto& vertexBuffer = vertexBufferPair.second;
+            vertexBuffer.data->SetAsBgfxVertexBuffer(static_cast<uint8_t>(vertexBufferPair.first), vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
         }
     }
 
@@ -658,6 +658,7 @@ namespace Babylon
 
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
+
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
         const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
@@ -666,7 +667,7 @@ namespace Babylon
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
+        vertexArray.vertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
@@ -777,7 +778,7 @@ namespace Babylon
         auto attributes = Napi::Array::New(info.Env(), length);
         for (uint32_t index = 0; index < length; ++index)
         {
-            const auto name = names[index].As<Napi::String>().Utf8Value();
+            const std::string name = names[index].As<Napi::String>().Utf8Value();
             const auto it = attributeLocations.find(name);
             int location = (it == attributeLocations.end() ? -1 : gsl::narrow_cast<int>(it->second));
             attributes[index] = Napi::Value::From(info.Env(), location);
@@ -1067,11 +1068,11 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, generateMips, invertY]() {
+            [this, dataSpan, dataRef = Napi::Persistent(data), generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (image == nullptr)
                 {
-                    throw std::runtime_error("Unable to decode image."); // exeption will be forwarded to JS
+                    throw std::runtime_error("Unable to decode image."); // exception will be forwarded to JS
                 }
                 if (invertY)
                 {
@@ -1114,7 +1115,7 @@ namespace Babylon
         {
             const auto typedArray = data[face].As<Napi::TypedArray>();
             const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, generateMips]() {
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, dataRef = Napi::Persistent(typedArray), generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (generateMips)
                 {
@@ -1158,7 +1159,7 @@ namespace Babylon
             {
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan]() {
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, dataRef = Napi::Persistent(typedArray)]() {
                     bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                     FlipY(image);
                     return image;
