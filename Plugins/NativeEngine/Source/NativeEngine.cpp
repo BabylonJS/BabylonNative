@@ -1140,7 +1140,7 @@ namespace Babylon
                 }
             });
     }
-//
+
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
