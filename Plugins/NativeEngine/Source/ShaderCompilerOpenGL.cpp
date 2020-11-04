@@ -11,7 +11,7 @@
 namespace Babylon
 {
     extern const TBuiltInResource DefaultTBuiltInResource;
-    
+
     namespace
     {
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
@@ -45,7 +45,7 @@ namespace Babylon
             compiler->set_common_options(options);
 
             glsl = compiler->compile();
-            
+
             return{std::move(parser), std::move(compiler)};
         }
     }
@@ -82,7 +82,8 @@ namespace Babylon
 
         ShaderCompilerTraversers::IdGenerator ids{};
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
+        std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids, vertexAttributeRenaming);
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);
@@ -91,7 +92,7 @@ namespace Babylon
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
         return ShaderCompilerCommon::CreateBgfxShader(
-            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size())},
-            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size())});
+            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size()), std::move(vertexAttributeRenaming)},
+            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size()), {}});
     }
 }

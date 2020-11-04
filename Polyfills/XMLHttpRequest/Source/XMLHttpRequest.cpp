@@ -105,7 +105,9 @@ namespace Babylon::Polyfills::Internal
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
         gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(responseBuffer.data()), responseBuffer.size());
+        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
+        return std::move(arrayBuffer);
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
@@ -183,6 +185,10 @@ namespace Babylon::Polyfills::Internal
     void XMLHttpRequest::Send(const Napi::CallbackInfo& /*info*/)
     {
         m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>&) {
+            // NOTE: In the case of a client side error (e.g. no internet connection), the task returned by SendAsync will complete in an
+            // exceptional state. However, UrlRequest::StatusCode() should return 0 in this case, which is consistent with the browser,
+            // so we can safely ignore the exception.
+
             SetReadyState(ReadyState::Done);
             RaiseEvent(EventType::LoadEnd);
 

@@ -103,6 +103,20 @@ namespace java::lang
         JNIEnv* m_env;
         jstring m_string;
     };
+
+    class Throwable : public Object, public std::exception
+    {
+    public:
+        Throwable(jthrowable throwable);
+        ~Throwable();
+
+        String GetMessage() const;
+
+        const char* what() const noexcept override;
+
+    private:
+        jobject m_throwableRef;
+    };
 }
 
 namespace java::io
