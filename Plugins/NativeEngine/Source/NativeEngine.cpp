@@ -597,10 +597,10 @@ namespace Babylon
         m_currentBoundIndexBuffer = vertexArray.indexBuffer.data;
 
         const auto& vertexBuffers = vertexArray.vertexBuffers;
-        for (uint8_t index = 0; index < vertexBuffers.size(); ++index)
+        for (auto vertexBufferPair : vertexBuffers)
         {
-            const auto& vertexBuffer = vertexBuffers[index];
-            vertexBuffer.data->SetAsBgfxVertexBuffer(index, vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
+            const auto& vertexBuffer = vertexBufferPair.second;
+            vertexBuffer.data->SetAsBgfxVertexBuffer(static_cast<uint8_t>(vertexBufferPair.first), vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
         }
     }
 
@@ -666,6 +666,7 @@ namespace Babylon
 
         bgfx::VertexLayout vertexLayout{};
         vertexLayout.begin();
+
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
         const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
@@ -674,7 +675,7 @@ namespace Babylon
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.vertexBuffers.push_back({vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)});
+        vertexArray.vertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
@@ -776,7 +777,7 @@ namespace Babylon
         auto attributes = Napi::Array::New(info.Env(), length);
         for (uint32_t index = 0; index < length; ++index)
         {
-            const auto name = names[index].As<Napi::String>().Utf8Value();
+            const std::string name = names[index].As<Napi::String>().Utf8Value();
             const auto it = attributeLocations.find(name);
             int location = (it == attributeLocations.end() ? -1 : gsl::narrow_cast<int>(it->second));
             attributes[index] = Napi::Value::From(info.Env(), location);
