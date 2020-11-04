@@ -105,7 +105,9 @@ namespace Babylon::Polyfills::Internal
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
         gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(responseBuffer.data()), responseBuffer.size());
+        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
+        return std::move(arrayBuffer);
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
