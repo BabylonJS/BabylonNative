@@ -1108,10 +1108,8 @@ namespace Napi {
     static Error New(napi_env env, const char* message);
     static Error New(napi_env env, const std::string& message);
 
-#ifdef NAPI_CPP_EXCEPTIONS
     static Error New(napi_env env, const std::exception& exception);
     static Error New(napi_env env, const std::exception_ptr& exception_ptr);
-#endif // NAPI_CPP_EXCEPTIONS
 
     static void Fatal(const char* location, const char* message);
 

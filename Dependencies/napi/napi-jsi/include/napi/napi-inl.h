@@ -1422,8 +1422,6 @@ inline Error Error::New(napi_env env, const std::string& message) {
   return Error::New<Error, const std::string&>(env, message, "Error");
 }
 
-#ifdef NAPI_CPP_EXCEPTIONS
-
 inline Error Error::New(napi_env env, const std::exception& exception) {
     return Error::New(env, exception.what());
 }
@@ -1435,9 +1433,6 @@ inline Error Error::New(napi_env env, const std::exception_ptr& exception_ptr) {
     return Error::New(env, exception);
   }
 }
-
-#endif // NAPI_CPP_EXCEPTIONS
-
 
 inline void Error::Fatal(const char* location, const char* message) {
   throw std::runtime_error{std::string{location} + ": " + message};
