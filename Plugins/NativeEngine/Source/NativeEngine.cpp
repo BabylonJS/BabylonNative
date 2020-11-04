@@ -1064,7 +1064,7 @@ namespace Babylon
         const auto onError = info[5].As<Napi::Function>();
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
-//
+
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
             [this, dataSpan, dataRef = Napi::Persistent(data), generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
