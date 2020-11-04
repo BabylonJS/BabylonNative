@@ -13,7 +13,6 @@ elseif (IOS)
         "Source/ARKit/XR.mm")
 else()
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
-    set(JSONCPP_FOUND OFF CACHE BOOL "disable using system installed jsoncpp" FORCE)
     set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp" FORCE)
     add_subdirectory(Dependencies/OpenXR-SDK)
 
