@@ -207,14 +207,9 @@ namespace
     xr::DetectionBoundary CreateDetectionBoundary(const Napi::Object& object)
     {
         xr::DetectionBoundary detectionBoundary{};
-        if (object.Has("isStationary"))
-        {
-            detectionBoundary.IsStationary = object.Get("isStationary").As<Napi::Boolean>();
-        }
-
         if (object.Has("type"))
         {
-            std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap
+            const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap
             {
                 {"box", xr::DetectionBoundaryType::Box},
                 {"frustum", xr::DetectionBoundaryType::Frustum},
@@ -226,9 +221,9 @@ namespace
         switch (detectionBoundary.Type)
         {
         case xr::DetectionBoundaryType::Box:
-            if (object.Has("boxDimensions"))
+            if (object.Has("extent"))
             {
-                const auto& vector = object.Get("boxDimensions").As<Napi::Object>();
+                const auto& vector = object.Get("extent").As<Napi::Object>();
                 detectionBoundary.BoxDimensions.X = vector.Get("x").As<Napi::Number>();
                 detectionBoundary.BoxDimensions.Y = vector.Get("y").As<Napi::Number>();
                 detectionBoundary.BoxDimensions.Z = vector.Get("z").As<Napi::Number>();
@@ -245,7 +240,7 @@ namespace
                 detectionBoundary.Frustum.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
                 detectionBoundary.Frustum.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
 
-                const auto& quaternion = frustum.Get("rotation").As<Napi::Object>();
+                const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
                 detectionBoundary.Frustum.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
                 detectionBoundary.Frustum.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
                 detectionBoundary.Frustum.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
@@ -256,12 +251,14 @@ namespace
                 detectionBoundary.Frustum.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
                 detectionBoundary.Frustum.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
                 detectionBoundary.Frustum.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
+
+                detectionBoundary.Frustum.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
             }
             break;
         case xr::DetectionBoundaryType::Sphere:
-            if (object.Has("sphereRadius"))
+            if (object.Has("radius"))
             {
-                detectionBoundary.SphereRadius = object.Get("sphereRadius").As<Napi::Number>();
+                detectionBoundary.SphereRadius = object.Get("radius").As<Napi::Number>();
             }
             break;
         }
@@ -1472,8 +1469,8 @@ namespace Babylon
                         InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
                         InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                        InstanceAccessor("geometryId", &XRPlane::GetGeometryId, nullptr),
-                        InstanceAccessor("geometryType", &XRPlane::GetGeometryType, nullptr)
+                        InstanceAccessor("parentGeometryId", &XRPlane::GetParentGeometryId, nullptr),
+                        InstanceAccessor("parentGeometryType", &XRPlane::GetParentGeometryType, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1551,29 +1548,29 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetGeometryId(const Napi::CallbackInfo& info)
+            Napi::Value GetParentGeometryId(const Napi::CallbackInfo& info)
             {
                 const auto& plane = GetPlane();
-                if (plane.GeometryId == xr::INVALID_GEOMETRY_ID)
+                if (plane.ParentGeometryId == xr::INVALID_GEOMETRY_ID)
                 {
                     return info.Env().Undefined();
                 }
                 else
                 {
-                    return Napi::Value::From(info.Env(), plane.GeometryId);
+                    return Napi::Value::From(info.Env(), plane.ParentGeometryId);
                 }
             }
 
-            Napi::Value GetGeometryType(const Napi::CallbackInfo& info)
+            Napi::Value GetParentGeometryType(const Napi::CallbackInfo& info)
             {
                 const auto& plane = GetPlane();
-                if (plane.GeometryType.empty())
+                if (xr::GeometryTypeNames.count(plane.ParentGeometryType) == 0)
                 {
                     return info.Env().Undefined();
                 }
                 else
                 {
-                    return Napi::Value::From(info.Env(), plane.GeometryType);
+                    return Napi::Value::From(info.Env(), xr::GeometryTypeNames.at(plane.ParentGeometryType));
                 }
             }
 
@@ -1600,12 +1597,13 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
+                        InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
                         InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
                         InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                        InstanceAccessor("geometryId", &XRMesh::GetGeometryId, nullptr),
-                        InstanceAccessor("geometryType", &XRMesh::GetGeometryType, nullptr)
+                        InstanceAccessor("parentGeometryId", &XRMesh::GetParentGeometryId, nullptr),
+                        InstanceAccessor("parentGeometryType", &XRMesh::GetParentGeometryType, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1645,6 +1643,18 @@ namespace Babylon
 
         private:
             xr::System::Session::Frame::Mesh& GetMesh();
+
+            Napi::Value GetMeshSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+
+                // TODO: update to not use identity pose as needed
+                rigidTransform->Update(xr::Pose{});
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
+                return std::move(napiSpace);
+            }
 
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
             {
@@ -1722,29 +1732,29 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetGeometryId(const Napi::CallbackInfo& info)
+            Napi::Value GetParentGeometryId(const Napi::CallbackInfo& info)
             {
                 const auto& mesh = GetMesh();
-                if (mesh.GeometryId == xr::INVALID_GEOMETRY_ID)
+                if (mesh.ParentGeometryId == xr::INVALID_GEOMETRY_ID)
                 {
                     return info.Env().Undefined();
                 }
                 else
                 {
-                    return Napi::Value::From(info.Env(), mesh.GeometryId);
+                    return Napi::Value::From(info.Env(), mesh.ParentGeometryId);
                 }
             }
 
-            Napi::Value GetGeometryType(const Napi::CallbackInfo& info)
+            Napi::Value GetParentGeometryType(const Napi::CallbackInfo& info)
             {
                 const auto& mesh = GetMesh();
-                if (mesh.GeometryType.empty())
+                if (xr::GeometryTypeNames.count(mesh.ParentGeometryType) == 0)
                 {
                     return info.Env().Undefined();
                 }
                 else
                 {
-                    return Napi::Value::From(info.Env(), mesh.GeometryType);
+                    return Napi::Value::From(info.Env(), xr::GeometryTypeNames.at(mesh.ParentGeometryType));
                 }
             }
 
@@ -1834,7 +1844,6 @@ namespace Babylon
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
-                        InstanceAccessor("detectedMeshes", &XRFrame::GetDetectedMeshes, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1917,6 +1926,7 @@ namespace Babylon
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
             std::unordered_map<xr::System::Session::Frame::Mesh::Identifier, Napi::ObjectReference> m_trackedMeshes{};
+            Napi::ObjectReference m_meshSet{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -2066,6 +2076,8 @@ namespace Babylon
 
                 // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
+                worldInformationObj.Set("detectedMeshes", GetDetectedMeshes(info));
+
                 return std::move(worldInformationObj);
             }
 
@@ -2090,14 +2102,21 @@ namespace Babylon
 
             Napi::Value GetDetectedMeshes(const Napi::CallbackInfo& info)
             {
-                // TODO cache object reference
-                auto meshSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
-                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
+                if (m_meshSet)
                 {
-                    meshSet.Get("add").As<Napi::Function>().Call(meshSet, { meshNapiValue.Value() });
+                    m_meshSet.Value().Get("clear").As<Napi::Function>().Call(m_meshSet.Value(), {});
+                }
+                else
+                {
+                    m_meshSet = Napi::Persistent(info.Env().Global().Get("Set").As<Napi::Function>().New({}));
                 }
 
-                return meshSet;
+                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
+                {
+                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), { meshNapiValue.Value() });
+                }
+
+                return m_meshSet.Value();
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)

@@ -441,15 +441,15 @@ public:
                 babylonPlane.Polygon[11] = 0;
                 babylonPlane.PolygonSize = babylonPlane.Polygon.size() / VALUES_IN_POINT; // Number of points
 
-                babylonPlane.GeometryId = static_cast<xr::GeometryId>(objectKey);
+                babylonPlane.ParentGeometryId = static_cast<xr::GeometryId>(objectKey);
 
                 if (s_sceneObjectTypeMap.count(object->Kind) > 0)
                 {
-                    babylonPlane.GeometryType = s_sceneObjectTypeMap.at(object->Kind);
+                    babylonPlane.ParentGeometryType = s_sceneObjectTypeMap.at(object->Kind);
                 }
                 else
                 {
-                    babylonPlane.GeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
+                    babylonPlane.ParentGeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
                 }
 
                 args.Planes.push_back(babylonPlane);
@@ -513,14 +513,14 @@ public:
                 babylonMesh.HasNormals = false;
                 babylonMesh.Normals.resize(0);
 
-                babylonMesh.GeometryId = static_cast<xr::GeometryId>(objectKey);
+                babylonMesh.ParentGeometryId = static_cast<xr::GeometryId>(objectKey);
                 if (s_sceneObjectTypeMap.count(object->Kind) > 0)
                 {
-                    babylonMesh.GeometryType = s_sceneObjectTypeMap.at(object->Kind);
+                    babylonMesh.ParentGeometryType = s_sceneObjectTypeMap.at(object->Kind);
                 }
                 else
                 {
-                    babylonMesh.GeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
+                    babylonMesh.ParentGeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
                 }
 
                 args.Meshes.push_back(babylonMesh);
@@ -583,14 +583,14 @@ public:
     }
 
 private:
-    const std::map<XrSceneObjectKindTypeMSFT, std::string> s_sceneObjectTypeMap
+    const std::map<XrSceneObjectKindTypeMSFT, xr::GeometryType> s_sceneObjectTypeMap
     {
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_BACKGROUND_MSFT, "background"},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_CEILING_MSFT, "ceiling"},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_FLOOR_MSFT, "floor"},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_PLATFORM_MSFT, "platform"},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT, "unknown"},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_WALL_MSFT, "wall"}
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_BACKGROUND_MSFT, xr::GeometryType::Background},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_CEILING_MSFT, xr::GeometryType::Ceiling},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_FLOOR_MSFT, xr::GeometryType::Floor},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_PLATFORM_MSFT, xr::GeometryType::Platform},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT, xr::GeometryType::Unknown},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_WALL_MSFT, xr::GeometryType::Wall}
     };
 
     enum class State

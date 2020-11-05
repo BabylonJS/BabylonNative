@@ -72,10 +72,10 @@ namespace xr
 
         struct
         {
-            float X{};
-            float Y{};
-            float Z{};
-            float W{};
+            float X{0.f};
+            float Y{0.f};
+            float Z{0.f};
+            float W{1.f};
         } Orientation;
     };
 
@@ -135,7 +135,6 @@ namespace xr
 
     struct DetectionBoundary
     {
-        bool IsStationary{ false };
         DetectionBoundaryType Type{ DetectionBoundaryType::Sphere };
         Frustum Frustum{};
         float SphereRadius{ 5.f };
@@ -148,8 +147,29 @@ namespace xr
         double UpdateInterval{ 10 };
     };
 
-    typedef int64_t GeometryId;
+    typedef int32_t GeometryId;
     constexpr int32_t INVALID_GEOMETRY_ID = -1;
+
+    enum class GeometryType
+    {
+        Unknown,
+        Background,
+        Wall,
+        Floor,
+        Ceiling,
+        Platform,
+        Undefined
+    };
+
+    const std::map<xr::GeometryType, std::string> GeometryTypeNames
+    {
+        {xr::GeometryType::Unknown, "unknown" },
+        {xr::GeometryType::Background, "background" },
+        {xr::GeometryType::Ceiling, "ceiling" },
+        {xr::GeometryType::Floor, "floor" },
+        {xr::GeometryType::Platform, "platform" },
+        {xr::GeometryType::Wall, "wall" }
+    };
 
     class System
     {
@@ -233,8 +253,8 @@ namespace xr
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
                     PolygonFormat PolygonFormat{};
-                    GeometryId GeometryId{ INVALID_GEOMETRY_ID };
-                    std::string GeometryType{};
+                    GeometryId ParentGeometryId{ INVALID_GEOMETRY_ID };
+                    GeometryType ParentGeometryType{ GeometryType::Undefined };
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
@@ -252,8 +272,8 @@ namespace xr
                     std::vector<IndexType> Indices{};
                     bool HasNormals{ false };
                     std::vector<NormalType> Normals;
-                    GeometryId GeometryId{ INVALID_GEOMETRY_ID };
-                    std::string GeometryType{};
+                    GeometryId ParentGeometryId{ INVALID_GEOMETRY_ID };
+                    GeometryType ParentGeometryType{ GeometryType::Undefined };
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
