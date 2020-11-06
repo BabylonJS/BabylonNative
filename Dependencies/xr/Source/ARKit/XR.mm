@@ -546,7 +546,6 @@ namespace xr {
             : SystemImpl{ systemImpl }
             , getMainView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<UIView*>(windowProvider()); } }
             , metalDevice{ id<MTLDevice>(graphicsContext) } {
-
             UIView* mainView = getMainView();
 
             // Create the XR View to stay within the safe area of the main view.
