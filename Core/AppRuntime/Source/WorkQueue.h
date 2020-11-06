@@ -30,6 +30,8 @@ namespace Babylon
         void Run(Napi::Env);
 
     private:
+        void AppendExceptionHandler();
+
         std::optional<Napi::Env> m_env{};
 
         std::mutex m_appendMutex{};

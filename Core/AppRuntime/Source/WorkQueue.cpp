@@ -43,17 +43,22 @@ namespace Babylon
         while (!m_cancelSource.cancelled())
         {
             m_dispatcher.blocking_tick(m_cancelSource);
-
-            // Call the unhandled exception handler if an exception is thrown in one of the tasks.
-            m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>& result) {
-                if (result.has_error())
-                {
-                    m_unhandledExceptionHandler(result.error());
-                }
-            });
+            AppendExceptionHandler();
         }
 
         m_dispatcher.clear();
         m_task = arcana::task_from_result<std::exception_ptr>();
+    }
+
+    void WorkQueue::AppendExceptionHandler()
+    {
+        std::scoped_lock lock{m_appendMutex};
+        m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>& result) {
+            if (result.has_error())
+            {
+                // Call the unhandled exception handler if an exception is thrown in one of the tasks.
+                m_unhandledExceptionHandler(result.error());
+            }
+        });
     }
 }
