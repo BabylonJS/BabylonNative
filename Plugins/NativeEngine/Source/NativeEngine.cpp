@@ -923,6 +923,7 @@ namespace Babylon
 
         const size_t elementLength = matrix.ElementLength();
         assert(elementLength == size * size);
+        (void)elementLength;
 
         if constexpr (size < 4)
         {
