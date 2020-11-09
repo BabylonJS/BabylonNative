@@ -76,10 +76,24 @@ namespace java::lang
         jbyteArray m_byteArray;
     };
 
+    class Class
+    {
+    public:
+        Class(const char* className);
+        Class(const jclass classObj);
+
+        bool IsAssignableFrom(Class otherClass);
+
+    protected:
+        JNIEnv* m_env;
+        const jclass m_class;
+    };
+
     class Object
     {
     public:
         operator jobject() const;
+        Class Class();
 
     protected:
         Object(const char* className, jobject object);
@@ -87,6 +101,7 @@ namespace java::lang
         JNIEnv* m_env;
         const jclass m_class;
         jobject m_object;
+        class Class m_classWrapper;
     };
 
     class String

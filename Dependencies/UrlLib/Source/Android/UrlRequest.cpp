@@ -98,7 +98,15 @@ namespace UrlLib
                         URLConnection connection{url.OpenConnection()};
                         connection.Connect();
 
-                        m_statusCode = static_cast<UrlStatusCode>(((HttpURLConnection)connection).GetResponseCode());
+                        if (connection.Class().IsAssignableFrom({"java/net/HttpURLConnection"}))
+                        {
+                            m_statusCode = static_cast<UrlStatusCode>(((HttpURLConnection)connection).GetResponseCode());
+                        }
+                        else
+                        {
+                            m_statusCode = UrlStatusCode::Ok;
+                        }
+
                         int contentLength = connection.GetContentLength();
                         if (contentLength < 0)
                         {

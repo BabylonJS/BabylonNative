@@ -43,6 +43,23 @@ namespace java::lang
         return result;
     }
 
+    Class::Class(const char* className)
+        : m_env{GetEnvForCurrentThread()}
+        , m_class{m_env->FindClass(className)}
+    {
+    }
+
+    Class::Class(const jclass classObj)
+        : m_env{GetEnvForCurrentThread()}
+        , m_class{classObj}
+    {
+    }
+
+    bool Class::IsAssignableFrom(Class otherClass)
+    {
+        return m_env->IsAssignableFrom(m_class, otherClass.m_class);
+    };
+
     Object::operator jobject() const
     {
         return m_object;
@@ -50,9 +67,15 @@ namespace java::lang
 
     Object::Object(const char* className, jobject object)
         : m_env{GetEnvForCurrentThread()}
-        , m_class{m_env->FindClass(className)}
+        , m_class{object == nullptr ? m_env->FindClass(className) : m_env->GetObjectClass(object)}
         , m_object{object}
+        , m_classWrapper{m_class}
     {
+    }
+
+    Class Object::Class()
+    {
+        return m_classWrapper;
     }
 
     String::String(jstring string)
