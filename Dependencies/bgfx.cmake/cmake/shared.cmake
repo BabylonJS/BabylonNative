@@ -28,7 +28,7 @@ target_include_directories( bgfx-bounds INTERFACE ${BGFX_DIR}/include )
 target_include_directories( bgfx-bounds INTERFACE ${BGFX_DIR}/examples/common )
 
 # Frameworks required on OS X
-if( APPLE AND NOT IOS)
+if( ${CMAKE_SYSTEM_NAME} MATCHES Darwin )
 	find_library( COCOA_LIBRARY Cocoa )
 	mark_as_advanced( COCOA_LIBRARY )
 	target_link_libraries( bgfx-vertexlayout INTERFACE ${COCOA_LIBRARY} )
