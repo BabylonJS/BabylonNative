@@ -31,7 +31,7 @@ namespace
                 return bgfx::TextureFormat::D24S8;
 
             default:
-                throw std::exception{/* Unsupported texture format */};
+                throw std::runtime_error{"Unsupported texture format"};
         }
     }
 
@@ -233,7 +233,7 @@ namespace Babylon
             m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine>>().Data();
         }
 
-        void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
+        void DoFrame(Napi::Env env, std::function<void(const xr::System::Session::Frame&)> callback)
         {
             // Note: we are guaranteed to be on the JavaScript thread.
 
@@ -245,6 +245,11 @@ namespace Babylon
 
             m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this] {
                 m_engineImpl->ScheduleRender();
+            }).then(m_engineImpl->RuntimeScheduler, m_cancellationSource, [env](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    throw Napi::Error::New(env, result.error());
+                }
             });
 
             m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, callback = std::move(callback)] {
@@ -276,6 +281,11 @@ namespace Babylon
                     // Note: we are guaranteed to be on the render thread again.
                     EndFrame();
                 });
+            }).then(m_engineImpl->RuntimeScheduler, m_cancellationSource, [env](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    throw Napi::Error::New(env, result.error());
+                }
             });
         }
 
@@ -525,7 +535,7 @@ namespace Babylon
                     case 2:
                         return NONE;
                     default:
-                        throw std::exception{/* Unsupported idx */};
+                        throw std::runtime_error{"Unsupported index"};
                 }
             }
 
@@ -545,7 +555,7 @@ namespace Babylon
                 }
                 else
                 {
-                    throw std::exception{/* Unsupported eye */};
+                    throw std::runtime_error{"Unsupported eye"};
                 }
             }
         };
@@ -1854,14 +1864,7 @@ namespace Babylon
                         [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
-                                try
-                                {
-                                    std::rethrow_exception(result.error());
-                                }
-                                catch (const std::exception& e)
-                                {
-                                    deferred.Reject(Napi::Error::New(env, e.what()).Value());
-                                }
+                                deferred.Reject(Napi::Error::New(env, result.error()).Value());
                             }
                             else
                             {
@@ -2069,7 +2072,7 @@ namespace Babylon
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
+                m_xr.DoFrame(info.Env(), [this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
                     ProcessInputSources(frame, env);
 
                     m_xrFrame.Update(env, frame, m_timestamp);
