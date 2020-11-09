@@ -82,6 +82,8 @@ namespace java::lang
         Class(const char* className);
         Class(const jclass classObj);
 
+        operator jclass() const;
+
         bool IsAssignableFrom(Class otherClass);
 
     protected:
@@ -99,9 +101,8 @@ namespace java::lang
         Object(const char* className, jobject object);
 
         JNIEnv* m_env;
-        const jclass m_class;
+        const class Class m_class;
         jobject m_object;
-        class Class m_classWrapper;
     };
 
     class String

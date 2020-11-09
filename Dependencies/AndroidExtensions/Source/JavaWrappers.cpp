@@ -55,6 +55,11 @@ namespace java::lang
     {
     }
 
+    Class::operator jclass() const
+    {
+        return m_class;
+    };
+
     bool Class::IsAssignableFrom(Class otherClass)
     {
         return m_env->IsAssignableFrom(m_class, otherClass.m_class);
@@ -69,13 +74,12 @@ namespace java::lang
         : m_env{GetEnvForCurrentThread()}
         , m_class{object == nullptr ? m_env->FindClass(className) : m_env->GetObjectClass(object)}
         , m_object{object}
-        , m_classWrapper{m_class}
     {
     }
 
     Class Object::Class()
     {
-        return m_classWrapper;
+        return m_class;
     }
 
     String::String(jstring string)
