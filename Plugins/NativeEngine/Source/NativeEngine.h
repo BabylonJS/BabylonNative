@@ -413,6 +413,7 @@ namespace Babylon
         FrameBufferManager& GetFrameBufferManager();
         void Dispatch(std::function<void()>);
 
+        // IMPORTANT: Must be called from the JS thread.
         void ScheduleRender();
 
         const bool AutomaticRenderingEnabled{};
