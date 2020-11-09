@@ -94,6 +94,7 @@ namespace UrlLib
                 m_thread.join();
                 auto errCode = curl_multi_cleanup(m_multiHandle);
                 assert(errCode == CURLM_OK);
+                (void)errCode;
             }
 
             void AddHandle(CURL* handle)

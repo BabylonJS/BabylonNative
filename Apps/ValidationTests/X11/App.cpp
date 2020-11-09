@@ -72,6 +72,7 @@ namespace
         runtime->Dispatch([window](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
+                fflush(stdout);
             });
 
             Babylon::TestUtils::CreateInstance(env, (void*)(uintptr_t)window);
