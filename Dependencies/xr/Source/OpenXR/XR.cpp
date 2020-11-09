@@ -38,7 +38,7 @@ namespace xr
         {
             if (Instance.Get() == XR_NULL_HANDLE)
             {
-                throw std::exception(/*Attempted to populate extensions when instance was null*/);
+                throw std::runtime_error{ "Attempted to populate extensions when instance was null" };
             }
 
             Extensions->PopulateDispatchTable(Instance.Get());
@@ -180,7 +180,7 @@ namespace xr
                 systemId = XR_NULL_SYSTEM_ID;
                 return false;
             }
-            else if(!XR_SUCCEEDED(result))
+            else if(XR_FAILED(result))
             {
                 throw std::runtime_error{ "SystemId initialization failed with unexpected result type." };
             }

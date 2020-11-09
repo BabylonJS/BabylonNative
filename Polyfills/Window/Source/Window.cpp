@@ -98,16 +98,16 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<Napi::FunctionReference> function,
         std::chrono::system_clock::time_point whenToRun)
     {
-        if (std::chrono::system_clock::now() >= whenToRun)
-        {
-            function->Call({});
-        }
-        else
-        {
-            m_runtime.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
+        m_runtime.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
+            if (std::chrono::system_clock::now() >= whenToRun)
+            {
+                function->Call({});
+            }
+            else
+            {
                 RecursiveWaitOrCall(std::move(function), whenToRun);
-            });
-        }
+            }
+        });
     }
 }
 
