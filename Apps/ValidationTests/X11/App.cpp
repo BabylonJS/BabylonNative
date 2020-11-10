@@ -71,6 +71,7 @@ namespace
         runtime->Dispatch([window](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
+                fflush(stdout);
             });
 
             Babylon::TestUtils::CreateInstance(env, (void*)(uintptr_t)window);
@@ -89,6 +90,7 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
 
         TailRecurseRender();

@@ -135,12 +135,18 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        bool finished = false;
-        bool workDone = false;
-        RenderCurrentFrameAsync(finished, workDone);
+        bool finished{false};
+        bool workDone{false};
+        std::exception_ptr error{};
+        RenderCurrentFrameAsync(finished, workDone, error);
         while (!finished)
         {
             m_renderWorkDispatcher.blocking_tick(arcana::cancellation::none());
+        }
+
+        if (error != nullptr)
+        {
+            std::rethrow_exception(error);
         }
 
         if (workDone)
@@ -163,7 +169,7 @@ namespace Babylon
         m_rendering = false;
     }
 
-    arcana::task<void, std::exception_ptr> Graphics::Impl::RenderCurrentFrameAsync(bool& finished, bool& workDone)
+    arcana::task<void, std::exception_ptr> Graphics::Impl::RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error)
     {
         bool anyTasks{};
         arcana::task<void, std::exception_ptr> whenAllTask{};
@@ -186,8 +192,15 @@ namespace Babylon
         }
         else
         {
-            return whenAllTask.then(m_renderWorkDispatcher, arcana::cancellation::none(), [this, &finished, &workDone]() mutable {
-                return RenderCurrentFrameAsync(finished, workDone);
+            return whenAllTask.then(m_renderWorkDispatcher, arcana::cancellation::none(), [this, &finished, &workDone, &error](const arcana::expected<void, std::exception_ptr>& result) mutable {
+                if (result.has_error())
+                {
+                    finished = true;
+                    error = result.error();
+                    return arcana::task_from_result<std::exception_ptr>();
+                }
+
+                return RenderCurrentFrameAsync(finished, workDone, error);
             });
         }
     }

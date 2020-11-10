@@ -111,7 +111,9 @@ namespace
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                     OutputDebugStringA(message);
+
                     printf("%s", message);
+                    fflush(stdout);
                 });
 
                 Babylon::Polyfills::Window::Initialize(env);
@@ -134,6 +136,7 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
+        loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
     }
 }

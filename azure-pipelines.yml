@@ -34,7 +34,7 @@ jobs:
       scheme: 'Playground'
       sdk: 'macosx'
       useXcpretty: false
-      configuration: Release
+      configuration: RelWithDebInfo
     displayName: 'Build macOS'
     
 - job: iOS
@@ -66,7 +66,7 @@ jobs:
       scheme: 'Playground'
       sdk: 'iphoneos'
       useXcpretty: false
-      configuration: Release
+      configuration: RelWithDebInfo
     displayName: 'Build iOS'
     
 - job: win32_x64
@@ -84,33 +84,59 @@ jobs:
       cd buildWin32_x64
       cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
     displayName: 'Generate Win32_x64 solution'
-    
+
   - task: MSBuild@1
     inputs:
       solution: 'buildWin32_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build WIN32_x64'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: 'Enable Crash Dumps'
+
   - script: |
       cd buildWin32_x64\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x64 Rendered Pictures'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Win32_x64 Results'
     condition: succeeded()
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x64 Error Pictures'
       pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
     displayName: 'Publish Tests Win32_x64 Errors'
     condition: failed()
-    
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'buildWin32_x64/Apps/ValidationTests/RelWithDebInfo'
+      contents: ValidationTests.*
+      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+      cleanTargetFolder: false
+    displayName: 'Stage test app exe/pdb for publishing'
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x64 Crash Dumps'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
+    displayName: 'Publish Tests Win32_x64 Dumps'
+    condition: failed()
+
 - job: win32_x86
   timeoutInMinutes: 30 
   pool:
@@ -126,26 +152,36 @@ jobs:
       cd buildWin32_x86
       cmake .. -G "Visual Studio 16 2019" -A Win32 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
     displayName: 'Generate Win32_x86 solution'
-    
+
   - task: MSBuild@1
     inputs:
       solution: 'buildWin32_x86/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build WIN32_x86'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: 'Enable Crash Dumps'
+
   - script: |
       cd buildWin32_x86\Apps\ValidationTests
       mkdir Results
       mkdir Errors
-      cd Release
+      cd RelWithDebInfo
       ValidationTests
     displayName: 'Validation Tests'
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x86 Rendered Pictures'
       pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Results'
     displayName: 'Publish Tests Win32_x86 Results'
     condition: succeeded()
+
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'Win32_x86 Error Pictures'
@@ -153,7 +189,22 @@ jobs:
     displayName: 'Publish Tests Win32_x86 Errors'
     condition: failed()
 
-    
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
+      contents: ValidationTests.*
+      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+      cleanTargetFolder: false
+    displayName: 'Stage test app exe/pdb for publishing'
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Win32_x86 Crash Dumps'
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
+    displayName: 'Publish Tests Win32_x86 Dumps'
+    condition: failed()
+
 - job: uwp_x64    
   pool:
     vmImage: 'windows-latest'  
@@ -173,7 +224,7 @@ jobs:
     inputs:
       solution: 'buildUWP_x64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x64'
 
@@ -196,7 +247,7 @@ jobs:
     inputs:
       solution: 'buildUWP_arm64/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_arm64'
 
@@ -219,7 +270,7 @@ jobs:
     inputs:
       solution: 'buildUWP_x86/BabylonNative.sln'
       maximumCpuCount: true
-      configuration: 'Release'
+      configuration: 'RelWithDebInfo'
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x86'
 
@@ -293,7 +344,7 @@ jobs:
   - script: |
       mkdir build
       cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
+      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo
       ninja
     displayName: 'Build X11'
 
@@ -317,27 +368,28 @@ jobs:
   - script: |
       mkdir build
       cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
+      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
       ninja
     displayName: 'Build X11'
-  - script: |
-      export DISPLAY=:99
-      Xvfb :99 -screen 0 1600x900x24 &
-      sleep 3
-      cd build/Apps/ValidationTests
-      mkdir Errors
-      mkdir Results
-      ./ValidationTests
-    displayName: 'Test on CI'
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
-      pathtoPublish: 'build/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
-    condition: succeeded()
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
-      pathtoPublish: 'build/Apps/ValidationTests/Errors'
-    displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
-    condition: failed()
+
+  #- script: |
+  #    export DISPLAY=:99
+  #    Xvfb :99 -screen 0 1600x900x24 &
+  #    sleep 3
+  #    cd build/Apps/ValidationTests
+  #    mkdir Errors
+  #    mkdir Results
+  #    ./ValidationTests
+  #  displayName: 'Test on CI'
+  #- task: PublishBuildArtifacts@1
+  #  inputs:
+  #    artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
+  #    pathtoPublish: 'build/Apps/ValidationTests/Results'
+  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
+  #  condition: succeeded()
+  #- task: PublishBuildArtifacts@1
+  #  inputs:
+  #    artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
+  #    pathtoPublish: 'build/Apps/ValidationTests/Errors'
+  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
+  #  condition: failed()

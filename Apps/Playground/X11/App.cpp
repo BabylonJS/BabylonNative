@@ -63,6 +63,7 @@ namespace
         runtime->Dispatch([](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
+                fflush(stdout);
             });
 
             Babylon::Polyfills::Window::Initialize(env);
@@ -83,6 +84,7 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
 
         if (scripts.empty())
         {

@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == ArrayBuffer)
                     return UrlLib::UrlResponseType::Buffer;
 
-                throw std::exception{};
+                throw std::runtime_error{"Unsupported response type: " + value};
             }
 
             const char* EnumToString(UrlLib::UrlResponseType value)
@@ -31,7 +31,7 @@ namespace Babylon::Polyfills::Internal
                         return ArrayBuffer;
                 }
 
-                throw std::exception{};
+                throw std::runtime_error{"Invalid response type"};
             }
         }
 
@@ -44,13 +44,14 @@ namespace Babylon::Polyfills::Internal
                 if (value == Get)
                     return UrlLib::UrlMethod::Get;
 
-                throw;
+                throw std::runtime_error{"Unsupported url method: " + value};
             }
         }
 
         namespace EventType
         {
             constexpr const char* ReadyStateChange = "readystatechange";
+            constexpr const char* LoadEnd = "loadend";
         }
     }
 
@@ -61,26 +62,26 @@ namespace Babylon::Polyfills::Internal
         static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
 
         Napi::Function func = DefineClass(
-                env,
-                JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
-                {
-                        StaticValue("UNSENT", Napi::Value::From(env, 0)),
-                        StaticValue("OPENED", Napi::Value::From(env, 1)),
-                        StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
-                        StaticValue("LOADING", Napi::Value::From(env, 3)),
-                        StaticValue("DONE", Napi::Value::From(env, 4)),
-                        InstanceAccessor("readyState", &XMLHttpRequest::GetReadyState, nullptr),
-                        InstanceAccessor("response", &XMLHttpRequest::GetResponse, nullptr),
-                        InstanceAccessor("responseText", &XMLHttpRequest::GetResponseText, nullptr),
-                        InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
-                        InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
-                        InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
-                        InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
-                        InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
-                        InstanceMethod("abort", &XMLHttpRequest::Abort),
-                        InstanceMethod("open", &XMLHttpRequest::Open),
-                        InstanceMethod("send", &XMLHttpRequest::Send),
-                });
+            env,
+            JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
+            {
+                StaticValue("UNSENT", Napi::Value::From(env, 0)),
+                StaticValue("OPENED", Napi::Value::From(env, 1)),
+                StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
+                StaticValue("LOADING", Napi::Value::From(env, 3)),
+                StaticValue("DONE", Napi::Value::From(env, 4)),
+                InstanceAccessor("readyState", &XMLHttpRequest::GetReadyState, nullptr),
+                InstanceAccessor("response", &XMLHttpRequest::GetResponse, nullptr),
+                InstanceAccessor("responseText", &XMLHttpRequest::GetResponseText, nullptr),
+                InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
+                InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
+                InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+                InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
+                InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
+                InstanceMethod("abort", &XMLHttpRequest::Abort),
+                InstanceMethod("open", &XMLHttpRequest::Open),
+                InstanceMethod("send", &XMLHttpRequest::Send),
+            });
 
         if (env.Global().Get(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME).IsUndefined())
         {
@@ -91,8 +92,8 @@ namespace Babylon::Polyfills::Internal
     }
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XMLHttpRequest>{info}
-            , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+        : Napi::ObjectWrap<XMLHttpRequest>{info}
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
     }
 
@@ -104,7 +105,9 @@ namespace Babylon::Polyfills::Internal
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
         gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(responseBuffer.data()), responseBuffer.size());
+        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
+        return std::move(arrayBuffer);
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
@@ -179,18 +182,33 @@ namespace Babylon::Polyfills::Internal
         SetReadyState(ReadyState::Opened);
     }
 
-    void XMLHttpRequest::Send(const Napi::CallbackInfo& /*info*/)
+    void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+            if (result.has_error())
+            {
+                // Bail if UrlLib throws an exception.
+                std::abort();
+            }
+
             SetReadyState(ReadyState::Done);
+            RaiseEvent(EventType::LoadEnd);
+
+            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+            m_eventHandlerRefs.clear();
         });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
     {
         m_readyState = readyState;
+        RaiseEvent(EventType::ReadyStateChange);
+    }
 
-        auto it = m_eventHandlerRefs.find(EventType::ReadyStateChange);
+    void XMLHttpRequest::RaiseEvent(const char* eventType)
+    {
+        auto it = m_eventHandlerRefs.find(eventType);
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;
