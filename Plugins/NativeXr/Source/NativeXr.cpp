@@ -350,7 +350,7 @@ namespace Babylon
         }
     }
 
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env /*env*/)
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
@@ -363,8 +363,8 @@ namespace Babylon
             }
         }
 
-        return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, windowPtr = Graphics::Impl::GetFromJavaScript(env).GetNativeWindow()]() {
-            return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, windowPtr).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+        return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, getWindow = std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)]() {
+            return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, std::move(getWindow)).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
                 m_session = std::move(session);
             });
         });
