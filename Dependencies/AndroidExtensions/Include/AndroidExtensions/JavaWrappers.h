@@ -98,7 +98,8 @@ namespace java::lang
         Class Class();
 
     protected:
-        Object(const char* className, jobject object);
+        Object(const char* className);
+        Object(jobject object);
 
         JNIEnv* m_env;
         const class Class m_class;

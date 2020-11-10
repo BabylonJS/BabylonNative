@@ -70,10 +70,17 @@ namespace java::lang
         return m_object;
     }
 
-    Object::Object(const char* className, jobject object)
+    Object::Object(const char* className)
         : m_env{GetEnvForCurrentThread()}
-        , m_class{object == nullptr ? m_env->FindClass(className) : m_env->GetObjectClass(object)}
-        , m_object{object}
+        , m_class{m_env->FindClass(className)}
+        , m_object{nullptr}
+    {
+    }
+
+    Object::Object(jobject object)
+            : m_env{GetEnvForCurrentThread()}
+            , m_class{m_env->GetObjectClass(object)}
+            , m_object{object}
     {
     }
 
@@ -105,7 +112,7 @@ namespace java::lang
     }
 
     Throwable::Throwable(jthrowable throwable)
-        : Object{"java/lang/Throwable", throwable}
+        : Object{throwable}
         , m_throwableRef{m_env->NewGlobalRef(throwable)}
     {
     }
@@ -130,19 +137,19 @@ namespace java::lang
 namespace java::io
 {
     ByteArrayOutputStream::ByteArrayOutputStream()
-        : Object{"java/io/ByteArrayOutputStream", nullptr}
+        : Object{"java/io/ByteArrayOutputStream"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "()V"));
     }
 
     ByteArrayOutputStream::ByteArrayOutputStream(int size)
-        : Object{"java/io/ByteArrayOutputStream", nullptr}
+        : Object{"java/io/ByteArrayOutputStream"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), size);
     }
 
     ByteArrayOutputStream::ByteArrayOutputStream(jobject object)
-        : Object{"java/io/ByteArrayOutputStream", object}
+        : Object{object}
     {
     }
 
@@ -163,7 +170,7 @@ namespace java::io
     }
 
     InputStream::InputStream(jobject object)
-        : Object{"java/io/InputStream", object}
+        : Object{object}
     {
     }
 
@@ -176,7 +183,7 @@ namespace java::io
 namespace java::net
 {
     HttpURLConnection::HttpURLConnection(jobject object)
-        : Object{"java/net/HttpURLConnection", object}
+        : Object{object}
     {
     }
 
@@ -188,13 +195,13 @@ namespace java::net
     }
 
     URL::URL(lang::String url)
-        : Object{"java/net/URL", nullptr}
+        : Object{"java/net/URL"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), (jstring)url);
     }
 
     URL::URL(jobject object)
-        : Object{"java/net/URL", object}
+        : Object{object}
     {
     }
 
@@ -211,7 +218,7 @@ namespace java::net
     }
 
     URLConnection::URLConnection(jobject object)
-        : Object{"java/net/URLConnection", object}
+        : Object{object}
     {
     }
 
@@ -263,7 +270,7 @@ namespace android
 namespace android::app
 {
     Activity::Activity(jobject object)
-        : Object{"android/app/Activity", object}
+        : Object{object}
     {
     }
 
@@ -281,7 +288,7 @@ namespace android::app
 namespace android::content
 {
     Context::Context(jobject object)
-        : Object{"android/content/Context", object}
+        : Object{object}
     {
     }
 
@@ -316,7 +323,7 @@ namespace android::content
 namespace android::content::res
 {
     AssetManager::AssetManager(jobject object)
-        : Object("android/content/res/AssetManager", object)
+        : Object(object)
     {
     }
 
@@ -329,7 +336,7 @@ namespace android::content::res
 namespace android::view
 {
     Display::Display(jobject object)
-            : Object("android/view/Display", object)
+            : Object(object)
     {
     }
 
@@ -339,7 +346,7 @@ namespace android::view
     }
 
     WindowManager::WindowManager(jobject object)
-        : Object("android/view/WindowManager", object)
+        : Object(object)
     {
     }
 
@@ -352,7 +359,7 @@ namespace android::view
 namespace android::net
 {
     Uri::Uri(jobject object)
-        : Object{"android/net/Uri", object}
+        : Object{object}
     {
     }
 
