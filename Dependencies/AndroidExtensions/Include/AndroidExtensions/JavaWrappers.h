@@ -76,16 +76,33 @@ namespace java::lang
         jbyteArray m_byteArray;
     };
 
+    class Class
+    {
+    public:
+        Class(const char* className);
+        Class(const jclass classObj);
+
+        operator jclass() const;
+
+        bool IsAssignableFrom(Class otherClass);
+
+    protected:
+        JNIEnv* m_env;
+        const jclass m_class;
+    };
+
     class Object
     {
     public:
         operator jobject() const;
+        Class GetClass();
 
     protected:
-        Object(const char* className, jobject object);
+        Object(const char* className);
+        Object(jobject object);
 
         JNIEnv* m_env;
-        const jclass m_class;
+        Class m_class;
         jobject m_object;
     };
 
@@ -149,6 +166,8 @@ namespace java::net
     class HttpURLConnection : public lang::Object
     {
     public:
+        static lang::Class Class();
+
         HttpURLConnection(jobject object);
 
         int GetResponseCode() const;
