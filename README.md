@@ -24,7 +24,7 @@ features are currently unstable or not yet implemented.
 The following major features are currently supported and expected to work. Note that 
 this list is not exhaustive.
 
-- Developing Babylon Native on the following platforms: Windows 10, macOS
+- Developing Babylon Native on the following platforms: Windows 10, macOS.
 - Building and running the libraries and demo apps for the following platforms: Win32,
 UWP, macOS, iOS, Android.
 - Loading and executing JavaScript code on all supported platforms.
@@ -38,7 +38,7 @@ that this list is not exhaustive.
 
 - Developing Babylon Native on the following platforms: Linux.
 - Mixed reality powered by OpenXR on the following platforms: Win32, UWP.
-- User Input
+- User Input.
 
 The following major features are not yet supported or implemented, even as previews, 
 but are expected to be supported in the future. Note that this list is not exhaustive.
