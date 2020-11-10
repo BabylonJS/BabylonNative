@@ -60,6 +60,6 @@ namespace Babylon
         std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
         std::mutex m_renderWorkTasksMutex{};
 
-        arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone);
+        arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
     };
 }
