@@ -3191,6 +3191,14 @@ var GLTFLoader = /** @class */ (function () {
             if (_this._parent.compileShadowGenerators) {
                 promises.push(_this._compileShadowGeneratorsAsync());
             }
+
+            _this.log("promise.length " + promises.length);
+            for (let p = 0; p < promises.length; ++p) {
+                promises[p].then(function () {
+                    _this.log("promise complete " + p);
+                });
+            }
+
             var resultPromise = Promise.all(promises).then(function () {
                 if (_this._rootBabylonMesh) {
                     _this._rootBabylonMesh.setEnabled(true);
@@ -3199,6 +3207,8 @@ var GLTFLoader = /** @class */ (function () {
                 _this._setState(_glTFFileLoader__WEBPACK_IMPORTED_MODULE_1__["GLTFLoaderState"].READY);
                 _this._startAnimations();
                 return resultFunc();
+            }, function (error) {
+                _this.log("resultPromise error: " + error.message);
             });
             resultPromise.then(function () {
                 _this._parent._endPerformanceCounter(loadingToReadyCounterName);
@@ -3519,6 +3529,7 @@ var GLTFLoader = /** @class */ (function () {
         }
         this.logClose();
         return Promise.all(promises).then(function () {
+            _this.log(context + ": loaded");
             _this._forEachPrimitive(node, function (babylonMesh) {
                 if (babylonMesh.geometry && babylonMesh.geometry.useBoundingInfoFromGeometry) {
                     // simply apply the world matrices to the bounding info - the extends are already ok
@@ -3532,6 +3543,7 @@ var GLTFLoader = /** @class */ (function () {
         });
     };
     GLTFLoader.prototype._loadMeshAsync = function (context, node, mesh, assign) {
+        var _this = this;
         var primitives = mesh.primitives;
         if (!primitives || !primitives.length) {
             throw new Error(context + ": Primitives are missing");
@@ -3569,6 +3581,7 @@ var GLTFLoader = /** @class */ (function () {
         assign(node._babylonTransformNode);
         this.logClose();
         return Promise.all(promises).then(function () {
+            _this.log(context + ": loaded");
             return node._babylonTransformNode;
         });
     };
@@ -3638,6 +3651,7 @@ var GLTFLoader = /** @class */ (function () {
         assign(babylonAbstractMesh);
         this.logClose();
         return promise.then(function () {
+            _this.log(context + ": loaded");
             return babylonAbstractMesh;
         });
     };
@@ -4394,6 +4408,7 @@ var GLTFLoader = /** @class */ (function () {
     };
     /** @hidden */
     GLTFLoader.prototype._loadMaterialAsync = function (context, material, babylonMesh, babylonDrawMode, assign) {
+        var _this = this;
         if (assign === void 0) { assign = function () { }; }
         var extensionPromise = this._extensionsLoadMaterialAsync(context, material, babylonMesh, babylonDrawMode, assign);
         if (extensionPromise) {
@@ -4425,6 +4440,7 @@ var GLTFLoader = /** @class */ (function () {
         }
         assign(babylonData.babylonMaterial);
         return babylonData.promise.then(function () {
+            _this.log(context + ": loaded");
             return babylonData.babylonMaterial;
         });
     };
@@ -4466,6 +4482,7 @@ var GLTFLoader = /** @class */ (function () {
      * @returns A promise that resolves when the load is complete
      */
     GLTFLoader.prototype.loadMaterialPropertiesAsync = function (context, material, babylonMaterial) {
+        var _this = this;
         var extensionPromise = this._extensionsLoadMaterialPropertiesAsync(context, material, babylonMaterial);
         if (extensionPromise) {
             return extensionPromise;
@@ -4476,7 +4493,9 @@ var GLTFLoader = /** @class */ (function () {
             promises.push(this._loadMaterialMetallicRoughnessPropertiesAsync(context + "/pbrMetallicRoughness", material.pbrMetallicRoughness, babylonMaterial));
         }
         this.loadMaterialAlphaProperties(context, material, babylonMaterial);
-        return Promise.all(promises).then(function () { });
+        return Promise.all(promises).then(function () {
+            _this.log(context + ": loaded");
+        });
     };
     /**
      * Loads the normal, occlusion, and emissive properties from a glTF material into a Babylon material.
@@ -4614,10 +4633,12 @@ var GLTFLoader = /** @class */ (function () {
         var deferred = new babylonjs_Misc_deferred__WEBPACK_IMPORTED_MODULE_0__["Deferred"]();
         this._babylonScene._blockEntityCollection = this._forAssetContainer;
         var babylonTexture = new babylonjs_Misc_deferred__WEBPACK_IMPORTED_MODULE_0__["Texture"](null, this._babylonScene, samplerData.noMipMaps, false, samplerData.samplingMode, function () {
+            _this.log(context + ": deferred.resolve");
             if (!_this._disposed) {
                 deferred.resolve();
             }
         }, function (message, exception) {
+            _this.log(context + ": deferred.reject - " + message);
             if (!_this._disposed) {
                 deferred.reject(new Error(context + ": " + ((exception && exception.message) ? exception.message : message || "Failed to load texture")));
             }
@@ -4627,12 +4648,14 @@ var GLTFLoader = /** @class */ (function () {
         promises.push(this.loadImageAsync("/images/" + image.index, image).then(function (data) {
             var name = image.uri || _this._fileName + "#image" + image.index;
             var dataUrl = "data:" + _this._uniqueRootUrl + name;
+            _this.log(context + ": loaded image - " + name + ", " + dataUrl);
             babylonTexture.updateURL(dataUrl, data);
         }));
         babylonTexture.wrapU = samplerData.wrapU;
         babylonTexture.wrapV = samplerData.wrapV;
         assign(babylonTexture);
         return Promise.all(promises).then(function () {
+            _this.log(context + ": loaded");
             return babylonTexture;
         });
     };
@@ -4685,15 +4708,15 @@ var GLTFLoader = /** @class */ (function () {
         }
         if (babylonjs_Misc_deferred__WEBPACK_IMPORTED_MODULE_0__["Tools"].IsBase64(uri)) {
             var data = new Uint8Array(babylonjs_Misc_deferred__WEBPACK_IMPORTED_MODULE_0__["Tools"].DecodeBase64(uri));
-            this.log("Decoded " + uri.substr(0, 64) + "... (" + data.length + " bytes)");
+            this.log(context + ": Decoded " + uri.substr(0, 64) + "... (" + data.length + " bytes)");
             return Promise.resolve(data);
         }
-        this.log("Loading " + uri);
+        this.log(context + ": Loading " + uri);
         return this._parent.preprocessUrlAsync(this._rootUrl + uri).then(function (url) {
             return new Promise(function (resolve, reject) {
                 _this._parent._loadFile(url, _this._babylonScene, function (data) {
                     if (!_this._disposed) {
-                        _this.log("Loaded " + uri + " (" + data.byteLength + " bytes)");
+                        _this.log(context + ": Loaded " + uri + " (" + data.byteLength + " bytes)");
                         resolve(new Uint8Array(data));
                     }
                 }, true, function (request) {
@@ -4992,7 +5015,7 @@ var GLTFLoader = /** @class */ (function () {
      * @param message The message to log
      */
     GLTFLoader.prototype.logOpen = function (message) {
-        this._parent._logOpen(message);
+        this._parent._logOpen(this._rootUrl + this._fileName + ": " + message);
     };
     /**
      * Decrements the indentation level.
@@ -5005,7 +5028,7 @@ var GLTFLoader = /** @class */ (function () {
      * @param message The message to log
      */
     GLTFLoader.prototype.log = function (message) {
-        this._parent._log(message);
+        this._parent._log(this._rootUrl + this._fileName + ": " + message);
     };
     /**
      * Starts a performance counter.
@@ -5332,6 +5355,8 @@ var GLTFFileLoader = /** @class */ (function () {
         this._startPerformanceCounter = this._startPerformanceCounterDisabled;
         /** @hidden */
         this._endPerformanceCounter = this._endPerformanceCounterDisabled;
+
+        this.loggingEnabled = true;
     }
     Object.defineProperty(GLTFFileLoader.prototype, "onParsed", {
         /**

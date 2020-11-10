@@ -84,6 +84,7 @@ namespace Babylon
 
     void Graphics::Impl::StartRenderingCurrentFrame()
     {
+        printf("Graphics::Impl::StartRenderCurrentFrame m_rendering=%i\n", m_rendering); fflush(stdout);
         if (m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be started before prior frame has been finished."};
@@ -93,6 +94,7 @@ namespace Babylon
         {
             std::scoped_lock lock{m_bgfxState.Mutex};
 
+            printf("Graphics::Impl::StartRenderCurrentFrame m_bgfxState.Initialized=%i m_bgfxState.Dirty=%i\n", m_bgfxState.Initialized, m_bgfxState.Dirty); fflush(stdout);
             if (!m_bgfxState.Initialized)
             {
                 // Initialize bgfx.
@@ -123,6 +125,7 @@ namespace Babylon
             }
         }
 
+        printf("Graphics::Impl::StartRenderCurrentFrame m_beforeRenderTaskCompletionSource.complete()\n"); fflush(stdout);
         auto oldBeforeRenderTaskCompletionSource = m_beforeRenderTaskCompletionSource;
         m_beforeRenderTaskCompletionSource = {};
         oldBeforeRenderTaskCompletionSource.complete();
@@ -130,6 +133,7 @@ namespace Babylon
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
+        printf("Graphics::Impl::FinishRenderCurrentFrame m_rendering=%i\n", m_rendering); fflush(stdout);
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
@@ -149,6 +153,7 @@ namespace Babylon
             std::rethrow_exception(error);
         }
 
+        printf("Graphics::Impl::FinishRenderCurrentFrame workDone=%i\n", workDone); fflush(stdout);
         if (workDone)
         {
             {
@@ -162,6 +167,7 @@ namespace Babylon
             bgfx::frame();
         }
 
+        printf("Graphics::Impl::FinishRenderCurrentFrame m_afterRenderTaskCompletionSource.complete()\n"); fflush(stdout);
         auto oldRenderTaskCompletionSource = m_afterRenderTaskCompletionSource;
         m_afterRenderTaskCompletionSource = {};
         oldRenderTaskCompletionSource.complete();

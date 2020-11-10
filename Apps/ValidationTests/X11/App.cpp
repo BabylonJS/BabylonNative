@@ -93,7 +93,7 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
 
-        TailRecurseRender();
+        //TailRecurseRender();
     }
 
     void UpdateWindowSize(float width, float height)

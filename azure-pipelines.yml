@@ -5,70 +5,6 @@ pr:
 - master
 
 jobs:
-- job: macOS
-  pool:
-    vmImage: 'macOS-10.14'
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-    
-  - script: |
-      cmake --version
-    displayName: 'CMake version'
-
-  - script: |
-      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
-    displayName: 'Select XCode 11.3.1'
-    
-  - script: |
-      mkdir buildmacOS
-      cd buildmacOS
-      cmake .. -GXcode
-    displayName: 'Generate macOS solution'
-      
-  - task: Xcode@5
-    inputs:
-      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-      scheme: 'Playground'
-      sdk: 'macosx'
-      useXcpretty: false
-      configuration: RelWithDebInfo
-    displayName: 'Build macOS'
-    
-- job: iOS
-  pool:
-    vmImage: 'macOS-10.14'
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-      
-  - script: |
-      cmake --version
-    displayName: 'CMake version'
-
-  - script: |
-      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
-    displayName: 'Select XCode 11.3.1'
-
-  - script: |
-      mkdir buildiOS
-      cd buildiOS
-      cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
-    displayName: 'Generate iOS solution'
-
-  - task: Xcode@5
-    inputs:
-      xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-      scheme: 'Playground'
-      sdk: 'iphoneos'
-      useXcpretty: false
-      configuration: RelWithDebInfo
-    displayName: 'Build iOS'
-    
 - job: win32_x64
   timeoutInMinutes: 30
   pool:
@@ -137,217 +73,6 @@ jobs:
     displayName: 'Publish Tests Win32_x64 Dumps'
     condition: failed()
 
-- job: win32_x86
-  timeoutInMinutes: 30 
-  pool:
-    vmImage: 'windows-latest'
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildWin32_x86
-      cd buildWin32_x86
-      cmake .. -G "Visual Studio 16 2019" -A Win32
-    displayName: 'Generate Win32_x86 solution'
-
-  - task: MSBuild@1
-    inputs:
-      solution: 'buildWin32_x86/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-    displayName: 'Build WIN32_x86'
-
-  - script: |
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
-    displayName: 'Enable Crash Dumps'
-
-  - script: |
-      cd buildWin32_x86\Apps\ValidationTests
-      mkdir Results
-      mkdir Errors
-      cd RelWithDebInfo
-      ValidationTests
-    displayName: 'Validation Tests'
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x86 Rendered Pictures'
-      pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Win32_x86 Results'
-    condition: succeeded()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x86 Error Pictures'
-      pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Errors'
-    displayName: 'Publish Tests Win32_x86 Errors'
-    condition: failed()
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
-      contents: ValidationTests.*
-      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
-      cleanTargetFolder: false
-    displayName: 'Stage test app exe/pdb for publishing'
-    condition: failed()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x86 Crash Dumps'
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
-    displayName: 'Publish Tests Win32_x86 Dumps'
-    condition: failed()
-
-- job: uwp_x64    
-  pool:
-    vmImage: 'windows-latest'  
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-    
-  - script: |
-      mkdir buildUWP_x64
-      cd buildUWP_x64
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
-    displayName: 'Generate UWP_x64 solution'
-  
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_x64/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_x64'
-
-- job: uwp_arm64    
-  pool:
-    vmImage: 'windows-latest'  
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-    
-  - script: |
-      mkdir buildUWP_arm64
-      cd buildUWP_arm64
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A arm64
-    displayName: 'Generate UWP_arm64 solution'
-  
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_arm64/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_arm64'
-
-- job: uwp_x86
-  pool:
-    vmImage: 'windows-latest'  
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildUWP_x86
-      cd buildUWP_x86
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -G "Visual Studio 16 2019" -A Win32
-    displayName: 'Generate UWP_x86 solution'
-
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_x86/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_x86'
-
-- job: Android_V8
-  pool:
-    vmImage: 'macOS-10.14'
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      brew install ninja
-    displayName: 'Install Ninja'
-  - script: |
-      cd Apps/Playground/Android
-      npm install
-    displayName: 'Install JS engine NPMs'    
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=v8android'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build androidV8'
-
-- job: Android_JSC
-  pool:
-    vmImage: 'macOS-10.14'
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      brew install ninja
-    displayName: 'Install Ninja'
-  - script: |
-      cd Apps/Playground/Android
-      npm install
-    displayName: 'Install JS engine NPMs'    
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=jsc'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build androidJSC'
-
-- job: Ubuntu_Clang8_JSC
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'ubuntu-latest'
-
-  variables:
-    CC: clang-8
-    CXX: clang++-8
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
-    displayName: 'Install packages'
-  - script: |
-      mkdir build
-      cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo
-      ninja
-    displayName: 'Build X11'
-
 - job: Ubuntu_GCC9_JSC
   timeoutInMinutes: 30
   pool:
@@ -371,25 +96,24 @@ jobs:
       cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo
       ninja
     displayName: 'Build X11'
-
-  #- script: |
-  #    export DISPLAY=:99
-  #    Xvfb :99 -screen 0 1600x900x24 &
-  #    sleep 3
-  #    cd build/Apps/ValidationTests
-  #    mkdir Errors
-  #    mkdir Results
-  #    ./ValidationTests
-  #  displayName: 'Test on CI'
-  #- task: PublishBuildArtifacts@1
-  #  inputs:
-  #    artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
-  #    pathtoPublish: 'build/Apps/ValidationTests/Results'
-  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
-  #  condition: succeeded()
-  #- task: PublishBuildArtifacts@1
-  #  inputs:
-  #    artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
-  #    pathtoPublish: 'build/Apps/ValidationTests/Errors'
-  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
-  #  condition: failed()
+  - script: |
+      export DISPLAY=:99
+      Xvfb :99 -screen 0 1600x900x24 &
+      sleep 3
+      cd build/Apps/ValidationTests
+      mkdir Errors
+      mkdir Results
+      ./ValidationTests
+    displayName: 'Test on CI'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
+    condition: succeeded()
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
+      pathtoPublish: 'build/Apps/ValidationTests/Errors'
+    displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
+    condition: failed()

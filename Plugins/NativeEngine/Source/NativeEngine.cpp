@@ -511,11 +511,13 @@ namespace Babylon
 
     void NativeEngine::ScheduleRender()
     {
+        printf("NativeEngine::ScheduleRender m_isRenderScheduled=%i\n", m_isRenderScheduled); fflush(stdout);
         if (!m_isRenderScheduled)
         {
             m_isRenderScheduled = true;
 
             m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this]() mutable {
+                printf("NativeEngine::ScheduleRender inside GetBeforeRenderTask\n"); fflush(stdout);
                 if (AutomaticRenderingEnabled)
                 {
                     m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(arcana::inline_scheduler));
@@ -527,7 +529,9 @@ namespace Babylon
             });
             if (AutomaticRenderingEnabled)
             {
+                printf("NativeEngine::ScheduleRender Dispatch\n"); fflush(stdout);
                 Dispatch([this] {
+                    printf("NativeEngine::ScheduleRender inside Dispatch\n"); fflush(stdout);
                     m_graphicsImpl.RenderCurrentFrame();
                 });
             }
@@ -1066,10 +1070,14 @@ namespace Babylon
         const auto onSuccess = info[4].As<Napi::Function>();
         const auto onError = info[5].As<Napi::Function>();
 
+        void* id{texture};
+        printf("NativeEngine::LoadTexture %p\n", id); fflush(stdout);
+
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, dataRef = Napi::Persistent(data), generateMips, invertY]() {
+            [this, dataSpan, dataRef = Napi::Persistent(data), generateMips, invertY, id]() {
+                printf("NativeEngine::LoadTexture %p imageParse\n", id); fflush(stdout);
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (image == nullptr)
                 {
@@ -1085,19 +1093,23 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture](bimg::ImageContainer* image) {
+            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, id](bimg::ImageContainer* image) {
+                printf("NativeEngine::LoadTexture %p ScheduleRender\n", id); fflush(stdout);
                 ScheduleRender();
-                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image, id] {
+                    printf("NativeEngine::LoadTexture %p CreateTextureFromImage\n", id);
                     CreateTextureFromImage(texture, image);
                 });
             })
-            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError), id](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
+                    printf("NativeEngine::LoadTexture %p onError\n", id); fflush(stdout);
                     onErrorRef.Call({});
                 }
                 else
                 {
+                    printf("NativeEngine::LoadTexture %p onSuccess\n", id); fflush(stdout);
                     onSuccessRef.Call({});
                 }
             });
