@@ -253,7 +253,7 @@ namespace Babylon::Polyfills::Internal
             }
             return nvgRGBA(components[0], components[1], components[2], components[3]);
         }
-        else if (str[0] == '#' && str.length() == 4)
+        else if (str[0] == '#' && str.length() == 7)
         {
             unsigned int components[4];
             int count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
