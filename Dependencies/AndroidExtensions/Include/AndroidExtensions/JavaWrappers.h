@@ -95,14 +95,14 @@ namespace java::lang
     {
     public:
         operator jobject() const;
-        Class Class();
+        Class GetClass();
 
     protected:
         Object(const char* className);
         Object(jobject object);
 
         JNIEnv* m_env;
-        const class Class m_class;
+        Class m_class;
         jobject m_object;
     };
 
@@ -166,6 +166,8 @@ namespace java::net
     class HttpURLConnection : public lang::Object
     {
     public:
+        static lang::Class Class();
+
         HttpURLConnection(jobject object);
 
         int GetResponseCode() const;

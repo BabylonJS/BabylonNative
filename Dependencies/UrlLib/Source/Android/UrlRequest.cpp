@@ -98,7 +98,7 @@ namespace UrlLib
                         URLConnection connection{url.OpenConnection()};
                         connection.Connect();
 
-                        if (connection.Class().IsAssignableFrom({"java/net/HttpURLConnection"}))
+                        if (connection.GetClass().IsAssignableFrom(HttpURLConnection::Class()))
                         {
                             m_statusCode = static_cast<UrlStatusCode>(((HttpURLConnection)connection).GetResponseCode());
                         }

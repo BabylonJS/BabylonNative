@@ -84,7 +84,7 @@ namespace java::lang
     {
     }
 
-    Class Object::Class()
+    Class Object::GetClass()
     {
         return m_class;
     }
@@ -185,6 +185,11 @@ namespace java::net
     HttpURLConnection::HttpURLConnection(jobject object)
         : Object{object}
     {
+    }
+
+    lang::Class HttpURLConnection::Class()
+    {
+        return {"java/net/HttpURLConnection"};
     }
 
     int HttpURLConnection::GetResponseCode() const
