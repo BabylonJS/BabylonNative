@@ -542,16 +542,16 @@ namespace xr {
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         
-        Impl(System::Impl& systemImpl, void* graphicsContext, void* window)
-            : SystemImpl{ systemImpl } {
-            metalDevice = id<MTLDevice>(graphicsContext);
-            UIView* MainView = (UIView*)window;
-            
+        Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
+            : SystemImpl{ systemImpl }
+            , getMainView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<UIView*>(windowProvider()); } }
+            , metalDevice{ id<MTLDevice>(graphicsContext) } {
+            UIView* mainView = getMainView();
+
             // Create the XR View to stay within the safe area of the main view.
             dispatch_sync(dispatch_get_main_queue(), ^{
-                xrView = [[MTKView alloc] initWithFrame:MainView.bounds device:metalDevice];
-                [MainView addSubview:xrView];
-                [xrView release];
+                xrView = [[MTKView alloc] initWithFrame:mainView.bounds device:metalDevice];
+                [mainView addSubview:xrView];
                 xrView.userInteractionEnabled = false;
                 xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
                 xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
@@ -563,8 +563,8 @@ namespace xr {
 #pragma clang diagnostic pop
                 metalLayer.device = metalDevice;
                 auto scale = UIScreen.mainScreen.scale;
-                viewportSize.x = MainView.bounds.size.width * scale;
-                viewportSize.y = MainView.bounds.size.height * scale;
+                viewportSize.x = mainView.bounds.size.width * scale;
+                viewportSize.y = mainView.bounds.size.height * scale;
             });
 
             // Create the ARSession enable plane detection, and disable lighting estimation.
@@ -573,8 +573,7 @@ namespace xr {
             configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
             configuration.lightEstimationEnabled = false;
             configuration.worldAlignment = ARWorldAlignmentGravity;
-            
-            metalDevice = id<MTLDevice>(graphicsContext);
+
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice viewportSize:CGSizeMake(viewportSize.x, viewportSize.y)];
             session.delegate = sessionDelegate;
             xrView.delegate = sessionDelegate;
@@ -634,6 +633,7 @@ namespace xr {
             [xrView releaseDrawables];
             dispatch_sync(dispatch_get_main_queue(), ^{
                 [xrView removeFromSuperview]; });
+            [xrView release];
             xrView = nil;
         }
         
@@ -656,18 +656,28 @@ namespace xr {
         }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
+            shouldEndSession = sessionEnded;
+            shouldRestartSession = false;
+
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                // Check whether the main view has changed, and if so, reparent the xr view.
+                UIView* currentSuperview = [xrView superview];
+                UIView* desiredSuperview = getMainView();
+                if (currentSuperview != desiredSuperview) {
+                    [xrView removeFromSuperview];
+                    [xrView setFrame:desiredSuperview.bounds];
+                    [desiredSuperview addSubview:xrView];
+                }
+                
+                ARFrame* currentFrame = [session currentFrame];
+                [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
+            });
+
             auto viewSize = [sessionDelegate viewSize];
             viewportSize.x = viewSize.width;
             viewportSize.y = viewSize.height;
             uint32_t width = viewportSize.x;
             uint32_t height = viewportSize.y;
-            shouldEndSession = sessionEnded;
-            shouldRestartSession = false;
-
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                ARFrame* currentFrame = [session currentFrame];
-                [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
-            });
             
             if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) {
                 // Color texture
@@ -1001,6 +1011,7 @@ namespace xr {
 
         private:
             ARSession* session{};
+            std::function<UIView*()> getMainView{};
             MTKView* xrView{};
             bool sessionEnded{ false };
             id<MTLDevice> metalDevice{};
@@ -1202,15 +1213,15 @@ namespace xr {
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window) {
-        auto session = std::make_shared<System::Session>(system, graphicsDevice, window);
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
+        auto session = std::make_shared<System::Session>(system, graphicsDevice, std::move(windowProvider));
         return session->m_impl->WhenReady().then(arcana::inline_scheduler, arcana::cancellation::none(), [session] {
             return session;
         });
     }
 
-    System::Session::Session(System& system, void* graphicsDevice, void* window)
-        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, window) } {}
+    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, std::move(windowProvider)) } {}
 
     System::Session::~Session() {
         // Free textures

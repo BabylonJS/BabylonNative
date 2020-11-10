@@ -2,8 +2,9 @@
 
 namespace Babylon
 {
-    WorkQueue::WorkQueue(std::function<void()> threadProcedure)
+    WorkQueue::WorkQueue(std::function<void()> threadProcedure, std::function<void(std::exception_ptr)> unhandledExceptionHandler)
         : m_thread{std::move(threadProcedure)}
+        , m_unhandledExceptionHandler{std::move(unhandledExceptionHandler)}
     {
     }
 
@@ -45,6 +46,6 @@ namespace Babylon
         }
 
         m_dispatcher.clear();
-        m_task = arcana::task_from_result<std::exception_ptr>();
+        m_task = arcana::task_from_result<std::error_code>();
     }
 }

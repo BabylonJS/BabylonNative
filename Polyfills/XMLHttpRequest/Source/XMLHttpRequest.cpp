@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == ArrayBuffer)
                     return UrlLib::UrlResponseType::Buffer;
 
-                throw std::exception{};
+                throw std::runtime_error{"Unsupported response type: " + value};
             }
 
             const char* EnumToString(UrlLib::UrlResponseType value)
@@ -31,7 +31,7 @@ namespace Babylon::Polyfills::Internal
                         return ArrayBuffer;
                 }
 
-                throw std::exception{};
+                throw std::runtime_error{"Invalid response type"};
             }
         }
 
@@ -44,7 +44,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == Get)
                     return UrlLib::UrlMethod::Get;
 
-                throw;
+                throw std::runtime_error{"Unsupported url method: " + value};
             }
         }
 
@@ -182,12 +182,14 @@ namespace Babylon::Polyfills::Internal
         SetReadyState(ReadyState::Opened);
     }
 
-    void XMLHttpRequest::Send(const Napi::CallbackInfo& /*info*/)
+    void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>&) {
-            // NOTE: In the case of a client side error (e.g. no internet connection), the task returned by SendAsync will complete in an
-            // exceptional state. However, UrlRequest::StatusCode() should return 0 in this case, which is consistent with the browser,
-            // so we can safely ignore the exception.
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+            if (result.has_error())
+            {
+                // Bail if UrlLib throws an exception.
+                std::abort();
+            }
 
             SetReadyState(ReadyState::Done);
             RaiseEvent(EventType::LoadEnd);
