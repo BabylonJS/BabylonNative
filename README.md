@@ -348,7 +348,12 @@ Then targeting a Ninja make file:
 cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so ..
 ```
 
-Ninja is not mandatory and make can be used instead.
+Ninja is not mandatory and make can be used instead:
+
+```
+cmake -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so ..
+```
+
 And finaly, run a build:
 
 ```
