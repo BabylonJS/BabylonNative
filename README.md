@@ -38,12 +38,12 @@ that this list is not exhaustive.
 
 - Developing Babylon Native on the following platforms: Linux.
 - Mixed reality powered by OpenXR on the following platforms: Win32, UWP.
-- User Input.
 
 The following major features are not yet supported or implemented, even as previews, 
 but are expected to be supported in the future. Note that this list is not exhaustive.
 
 - Debugging JavaScript with V8.
+- User Input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
 
@@ -348,22 +348,10 @@ Then targeting a Ninja make file:
 cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so ..
 ```
 
-Ninja is not mandatory and make can be used instead:
-
-```
-cmake -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so ..
-```
-
 And finally, run a build:
 
 ```
 ninja
-```
-
-or
-
-```
-make
 ```
 
 You can switch compiler between GCC and Clang by defining shell variables.
