@@ -43,7 +43,7 @@ The following major features are not yet supported or implemented, even as previ
 but are expected to be supported in the future. Note that this list is not exhaustive.
 
 - Debugging JavaScript with V8.
-- User Input.
+- User input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
 
