@@ -126,7 +126,16 @@ static NSMutableArray* activeTouches;
     {
         const std::lock_guard<std::mutex> lock(mapMutex);
 
-        currentBridge = bridge;
+        if (bridge != currentBridge) {
+            if (currentBridge == nil || currentBridge.parentBridge != bridge.parentBridge) {
+                [[NSNotificationCenter defaultCenter] addObserver:self
+                    selector:@selector(onBridgeWillInvalidate:)
+                    name:RCTBridgeWillInvalidateModulesNotification
+                    object:bridge.parentBridge];
+            }
+
+            currentBridge = bridge;
+        }
 
         currentNativeInstance.reset();
 
@@ -144,6 +153,12 @@ static NSMutableArray* activeTouches;
 
         initializationPromises.erase(initializationPromisesIterator);
     }
+}
+
+// NOTE: This happens during dev mode reload, when the JS engine is being shutdown and restarted.
++ (void)onBridgeWillInvalidate:(NSNotification*)notification
+{
+    currentNativeInstance.reset();
 }
 
 @end

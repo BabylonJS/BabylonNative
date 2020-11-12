@@ -24,6 +24,11 @@ namespace Babylon
 {
     using namespace facebook;
 
+    namespace
+    {
+        bool isShuttingDown{false};
+    }
+
     class Native::Impl
     {
     public:
@@ -32,10 +37,15 @@ namespace Babylon
             , jsCallInvoker{ callInvoker }
         {
         }
+        
+        ~Impl()
+        {
+            Napi::Detach(env);
+        }
 
         Napi::Env env;
         std::shared_ptr<facebook::react::CallInvoker> jsCallInvoker;
-        std::unique_ptr<Graphics> m_graphics{};
+        std::unique_ptr<Graphics> graphics{};
         JsRuntime* runtime{};
         Plugins::NativeInput* nativeInput{};
     };
@@ -43,13 +53,12 @@ namespace Babylon
     Native::Native(facebook::jsi::Runtime& jsiRuntime, std::shared_ptr<facebook::react::CallInvoker> callInvoker, void* windowPtr, size_t width, size_t height)
         : m_impl{ std::make_unique<Native::Impl>(jsiRuntime, callInvoker) }
     {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            m_impl->m_graphics = Graphics::CreateGraphics(reinterpret_cast<void*>(windowPtr), width, height);
-        });
+        isShuttingDown = false;
+        m_impl->graphics = Graphics::CreateGraphics(reinterpret_cast<void*>(windowPtr), width, height);
 
-        m_impl->runtime = &JsRuntime::CreateForJavaScript(m_impl->env, CreateJsRuntimeDispatcher(m_impl->env, jsiRuntime, callInvoker));
-        
-        m_impl->m_graphics->AddToJavaScript(m_impl->env);
+        m_impl->runtime = &JsRuntime::CreateForJavaScript(m_impl->env, CreateJsRuntimeDispatcher(m_impl->env, jsiRuntime, std::move(callInvoker), isShuttingDown));
+
+        m_impl->graphics->AddToJavaScript(m_impl->env);
 
         Polyfills::Window::Initialize(m_impl->env);
         // NOTE: React Native's XMLHttpRequest is slow and allocates a lot of memory. This does not override
@@ -62,19 +71,27 @@ namespace Babylon
         m_impl->nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_impl->env);
     }
 
+    // NOTE: This only happens when the JS engine is shutting down (other than when the app exits, this only
+    //       happens during a dev mode reload). In this case, EngineHook.ts won't call NativeEngine.dispose,
+    //       so we need to manually do it here to properly clean up these resources.
     Native::~Native()
     {
+        auto native = JsRuntime::NativeObject::GetFromJavaScript(m_impl->env);
+        auto engine = native.Get("engineInstance").As<Napi::Object>();
+        auto dispose = engine.Get("dispose").As<Napi::Function>();
+        dispose.Call(engine, {});
+        isShuttingDown = true;
     }
 
     void Native::Refresh(void* windowPtr, size_t width, size_t height)
     {
-        m_impl->m_graphics->UpdateWindow<void*>(windowPtr);
-        m_impl->m_graphics->UpdateSize(width, height);
+        m_impl->graphics->UpdateWindow<void*>(windowPtr);
+        m_impl->graphics->UpdateSize(width, height);
     }
 
     void Native::Resize(size_t width, size_t height)
     {
-        m_impl->m_graphics->UpdateSize(width, height);
+        m_impl->graphics->UpdateSize(width, height);
     }
 
     void Native::SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)

@@ -132,7 +132,7 @@ final class BabylonNativeInterop {
         return BabylonNativeInterop.getOrCreateFuture(reactContext);
     }
 
-    // Must be called from the Android UI thread
+    // Must be called from the JavaScript thread
     static void deinitialize() {
         BabylonNativeInterop.destroyOldNativeInstances(null);
     }
