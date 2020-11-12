@@ -149,19 +149,22 @@ namespace Babylon
         void UpdateViewId(uint16_t viewId)
         {
             m_viewId = viewId;
-            Update();
+            Update(false);
         }
 
     private:
 
-        void Update() const
+        void Update(bool forceClear = true) const
         {
             bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
-            // Discard any previously set state
-            bgfx::discard();
-            // Submit an empty primitive so we always clear the framebuffer on bgfx::frame,
-            // even if no other geometry is rendered to this view.
-            bgfx::touch(m_viewId);
+            if (forceClear)
+            {
+                // Discard any previously set state
+                bgfx::discard();
+                // Submit an empty primitive so we always clear the framebuffer on bgfx::frame,
+                // even if no other geometry is rendered to this view.
+                bgfx::touch(m_viewId);
+            }
         }
 
         uint16_t m_viewId{};
