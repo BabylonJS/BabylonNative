@@ -252,11 +252,7 @@ namespace Babylon
     {
         FrameBufferManager()
         {
-            // Create the default back buffer, which for bgfx corresponds to view id 0 by default.
-            // If we bind BGFX_INVALID_HANDLE to any other view id, bgfx will still just render
-            // to the default back buffer (view id 0). We also resize the default back buffer to
-            // the window size, so we can pass in 0 for width & height.
-            Bind(m_defaultBackBuffer = new FrameBufferData(BGFX_INVALID_HANDLE, m_activeFrameBuffers, 0, 0, 0, true, true));
+            Bind(m_defaultBackBuffer = new FrameBufferData(BGFX_INVALID_HANDLE, m_activeFrameBuffers, GetNewViewId(), 0, 0, true, true));
         }
 
         FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height)
@@ -307,11 +303,7 @@ namespace Babylon
         {
             m_nextId = 0;
             m_activeFrameBuffers.apply_to_all([](auto frameBufferData) {
-                // Mark all except the default back buffer as dirty, since
-                // view id 0 is always BGFX_INVALID_HANDLE, and Babylon.js
-                // will always explicitly set up the rendering state of the
-                // default back buffer per-frame, as this is what WebGL requires.
-                frameBufferData->IsViewIdDirty = frameBufferData->ViewId != 0;
+                frameBufferData->IsViewIdDirty = true;
             });
         }
 
