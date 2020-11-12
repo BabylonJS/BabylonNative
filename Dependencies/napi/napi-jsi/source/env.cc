@@ -11,6 +11,8 @@ namespace Napi
 
   void Detach(Env env)
   {
+    napi_env__* env_ptr{env};
+    delete env_ptr;
   }
 
   Napi::Value Eval(Napi::Env env, const char* string, const char* sourceUrl)
