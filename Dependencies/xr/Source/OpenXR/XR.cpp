@@ -291,7 +291,6 @@ namespace xr
             static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX{ "/input/thumbstick/click" };
             XrAction ControllerGetThumbstickClickAction{};
 
-            //static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
@@ -1377,16 +1376,7 @@ namespace xr
                     auto& inputSource = InputSources[idx];
                     if (triggerState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.buttons[0].Value = triggerState.currentState;
-                        if (triggerState.currentState)
-                        {
-                            inputSource.SqueezeInputStartedThisFrame = true;
-                        }
-                        else
-                        {
-                            inputSource.SqueezeInputCompletedThisFrame = true;
-                            inputSource.SqueezeInputEndedThisFrame = true;
-                        }                       
+                        inputSource.GamepadObject.buttons[0].Value = triggerState.currentState;                    
                     }
                 }
 
@@ -1401,15 +1391,6 @@ namespace xr
                     if (squeezeState.changedSinceLastSync)
                     {
                         inputSource.GamepadObject.buttons[1].Pressed = squeezeState.currentState;
-                        if (squeezeState.currentState)
-                        {
-                            inputSource.SqueezeInputStartedThisFrame = true;
-                        }
-                        else
-                        {
-                            inputSource.SqueezeInputCompletedThisFrame = true;
-                            inputSource.SqueezeInputEndedThisFrame = true;
-                        }    
                     }
                 }
 
@@ -1439,15 +1420,6 @@ namespace xr
                     if (trackpadClickState.changedSinceLastSync)
                     {
                         inputSource.GamepadObject.buttons[2].Pressed = trackpadClickState.currentState;
-                        if (trackpadClickState.currentState)
-                        {
-                            inputSource.SelectInputStartedThisFrame = true;
-                        }
-                        else
-                        {
-                            inputSource.SelectInputCompletedThisFrame = true;
-                            inputSource.SelectInputEndedThisFrame = true;
-                        }    
                     }
                 }
 
@@ -1491,15 +1463,6 @@ namespace xr
                     if (thumbstickClickState.changedSinceLastSync)
                     {
                         inputSource.GamepadObject.buttons[3].Pressed = thumbstickClickState.currentState;
-                        if (thumbstickClickState.currentState)
-                        {
-                            inputSource.SelectInputStartedThisFrame = true;
-                        }
-                        else
-                        {
-                            inputSource.SelectInputCompletedThisFrame = true;
-                            inputSource.SelectInputEndedThisFrame = true;
-                        }    
                     }
                 }
 

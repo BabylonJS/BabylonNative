@@ -203,12 +203,6 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
-                    bool SqueezeInputStartedThisFrame{};
-                    bool SqueezeInputEndedThisFrame{};
-                    bool SqueezeInputCompletedThisFrame{};
-                    bool SelectInputStartedThisFrame{};
-                    bool SelectInputEndedThisFrame{};
-                    bool SelectInputCompletedThisFrame{};
                     GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
