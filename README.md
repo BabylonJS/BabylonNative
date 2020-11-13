@@ -37,8 +37,6 @@ The following major features are partially implemented but not yet supported. No
 that this list is not exhaustive.
 
 - Developing Babylon Native on the following platforms: Linux.
-- Building and running the libraries and demo apps for the following platforms: 
-Android.
 - Mixed reality powered by OpenXR on the following platforms: Win32, UWP.
 
 The following major features are not yet supported or implemented, even as previews, 
@@ -350,17 +348,10 @@ Then targeting a Ninja make file:
 cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so ..
 ```
 
-Ninja is not mandatory and make can be used instead.
-And finaly, run a build:
+And finally, run a build:
 
 ```
 ninja
-```
-
-or
-
-```
-make
 ```
 
 You can switch compiler between GCC and Clang by defining shell variables.
