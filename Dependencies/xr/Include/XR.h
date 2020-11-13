@@ -125,6 +125,8 @@ namespace xr
     public:
         static constexpr float DEFAULT_DEPTH_NEAR_Z{ 0.5f };
         static constexpr float DEFAULT_DEPTH_FAR_Z{ 1000.f };
+        static constexpr uint32_t DEFAULT_CONTROLLER_BUTTONS{ 4 };
+        static constexpr uint32_t DEFAULT_CONTROLLER_AXES{ 4 };
 
         class Session
         {
@@ -146,22 +148,17 @@ namespace xr
                     bool PoseTracked{ false };
                 };
 
-                struct Button
-                {
-                    bool Pressed{ false };
-                    bool Touched{ false };
-                    double Value{0};
-                };
-
                 struct GamePad
                 {
-                    using Identifier = size_t;
-                    const Identifier ID{ NEXT_ID++ };
-                    std::vector<float> Axes;
-                    std::vector<Button> Buttons; 
+                    struct Button
+                    {
+                        bool Pressed{ false };
+                        bool Touched{ false };
+                        double Value{0};
+                    };
 
-                private:
-                    static inline Identifier NEXT_ID{0};
+                    std::array<float, DEFAULT_CONTROLLER_AXES> Axes;
+                    std::array<Button, DEFAULT_CONTROLLER_BUTTONS> Buttons;
                 };
 
                 struct View

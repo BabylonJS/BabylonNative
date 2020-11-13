@@ -219,6 +219,7 @@ namespace
             "left",
             "right"};
         constexpr const char* TARGET_RAY_MODE{"tracked-pointer"};
+
         auto jsInputSource = Napi::Object::New(env);
 
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
@@ -1624,7 +1625,6 @@ namespace Babylon
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
-            Napi::ObjectReference m_jsTriggerValue{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
@@ -2115,6 +2115,7 @@ namespace Babylon
                     for (const auto id : removed)
                     {
                         m_idToInputSource.erase(id);
+                        m_idToGamepadObject.erase(id);
                     }
                 }
             }
