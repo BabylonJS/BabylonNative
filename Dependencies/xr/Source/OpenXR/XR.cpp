@@ -302,6 +302,14 @@ namespace xr
         {
             static constexpr uint32_t CONTROLLER_BUTTONS{ 4 };
             static constexpr uint32_t CONTROLLER_AXES{ 4 };
+            static constexpr uint32_t TRIGGER_BUTTON = 0;
+            static constexpr uint32_t SQUEEZE_BUTTON = 1;
+            static constexpr uint32_t TRACKPAD_BUTTON = 2;
+            static constexpr uint32_t THUMBSTICK_BUTTON = 3;
+            static constexpr uint32_t TRACKPAD_X_AXIS = 0;
+            static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
+            static constexpr uint32_t THUMBSTICK_X_AXIS = 2;
+            static constexpr uint32_t THUMBSTICK_Y_AXIS = 3;
         } ControllerInfo;
 
         struct HandInfo
@@ -677,7 +685,6 @@ namespace xr
                     XrCheck(xrCreateActionSpace(session, &actionSpaceCreateInfo, &ActionResources.ControllerAimPoseSpaces[idx]));
                 }
             }
-
 
             // Create controller get trigger value action and suggested bindings
             {
@@ -1355,15 +1362,14 @@ namespace xr
                     // Initialize the gamepad object components
                     auto& inputSource = InputSources[idx];
                     auto controllerInfo = sessionImpl.ControllerInfo;
-                    if (inputSource.GamepadObject.buttons.size() != controllerInfo.CONTROLLER_BUTTONS)
+                    if (inputSource.GamepadObject.Buttons.size() != controllerInfo.CONTROLLER_BUTTONS)
                     {
-                        inputSource.GamepadObject.buttons = std::vector<Button>(controllerInfo.CONTROLLER_BUTTONS);
+                        inputSource.GamepadObject.Buttons = std::vector<Button>(controllerInfo.CONTROLLER_BUTTONS);
                     }
-                    if (inputSource.GamepadObject.axes.size() != controllerInfo.CONTROLLER_AXES)
+                    if (inputSource.GamepadObject.Axes.size() != controllerInfo.CONTROLLER_AXES)
                     {
-                        inputSource.GamepadObject.axes = std::vector<float>(controllerInfo.CONTROLLER_AXES);
-                    }
-                    
+                        inputSource.GamepadObject.Axes = std::vector<float>(controllerInfo.CONTROLLER_AXES);
+                    }  
                 }
 
                 // Get trigger value data
@@ -1374,9 +1380,10 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetTriggerValueAction;
                     XrCheck(xrGetActionStateFloat(session, &getInfo, &triggerState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (triggerState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.buttons[0].Value = triggerState.currentState;                    
+                        inputSource.GamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = triggerState.currentState;                
                     }
                 }
 
@@ -1388,9 +1395,10 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetSqueezeClickAction;
                     XrCheck(xrGetActionStateBoolean(session, &getInfo, &squeezeState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (squeezeState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.buttons[1].Pressed = squeezeState.currentState;
+                        inputSource.GamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed = squeezeState.currentState;
                     }
                 }
 
@@ -1402,10 +1410,11 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetTrackpadAxesAction;
                     XrCheck(xrGetActionStateVector2f(session, &getInfo, &trackpadAxesState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (trackpadAxesState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.axes[0] = trackpadAxesState.currentState.x;
-                        inputSource.GamepadObject.axes[1] = trackpadAxesState.currentState.y;
+                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS] = trackpadAxesState.currentState.x;
+                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = trackpadAxesState.currentState.y;
                     }
                 }
 
@@ -1417,9 +1426,10 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetTrackpadClickAction;
                     XrCheck(xrGetActionStateBoolean(session, &getInfo, &trackpadClickState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (trackpadClickState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.buttons[2].Pressed = trackpadClickState.currentState;
+                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed = trackpadClickState.currentState;
                     }
                 }
 
@@ -1431,9 +1441,10 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetTrackpadTouchAction;
                     XrCheck(xrGetActionStateBoolean(session, &getInfo, &trackpadTouchState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (trackpadTouchState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.buttons[2].Touched = trackpadTouchState.currentState;
+                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched = trackpadTouchState.currentState;
                     }
                 }
 
@@ -1445,10 +1456,11 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetThumbstickAxesAction;
                     XrCheck(xrGetActionStateVector2f(session, &getInfo, &thumbstickAxesState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (thumbstickAxesState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.axes[2] = thumbstickAxesState.currentState.x;
-                        inputSource.GamepadObject.axes[3] = thumbstickAxesState.currentState.y;
+                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] = thumbstickAxesState.currentState.x;
+                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = thumbstickAxesState.currentState.y;
                     }
                 }
 
@@ -1460,9 +1472,10 @@ namespace xr
                     getInfo.action = actionResources.ControllerGetThumbstickClickAction;
                     XrCheck(xrGetActionStateBoolean(session, &getInfo, &thumbstickClickState));
                     auto& inputSource = InputSources[idx];
+                    auto controllerInfo = sessionImpl.ControllerInfo;
                     if (thumbstickClickState.changedSinceLastSync)
                     {
-                        inputSource.GamepadObject.buttons[3].Pressed = thumbstickClickState.currentState;
+                        inputSource.GamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed = thumbstickClickState.currentState;
                     }
                 }
 

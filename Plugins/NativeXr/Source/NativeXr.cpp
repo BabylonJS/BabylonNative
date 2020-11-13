@@ -189,13 +189,13 @@ namespace
         auto env = jsInputSource.Env();
         //Set Gamepad Object
 
-        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.buttons.size());
-        for (size_t i = 0; i < inputSource.GamepadObject.buttons.size(); i++)
+        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
         {
             auto gamepadButton = Napi::Object::New(env);
-            auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.buttons[i].Pressed);
-            auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.buttons[i].Touched);
-            auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.buttons[i].Value);
+            auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Pressed);
+            auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Touched);
+            auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.Buttons[i].Value);
             gamepadButton.Set("pressed", napiGamepadPressed);
             gamepadButton.Set("touched", napiGamepadTouched);
             gamepadButton.Set("value", napiGamepadValue);
@@ -203,10 +203,10 @@ namespace
         }
         jsGamepadObject.Set("buttons", gamepadButtons);
 
-        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.axes.size());
-        for (size_t i = 0; i < inputSource.GamepadObject.axes.size(); i++)
+        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.Axes.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Axes.size(); i++)
         {
-            auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.axes[i]);
+            auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.Axes[i]);
             gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);
         }
         jsGamepadObject.Set("axes", gamepadAxes);
@@ -1554,10 +1554,10 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                            InstanceMethod("getPose", &XRFrame::GetPose),
-                            InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
-                            InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
-                            InstanceMethod("getJointPose", &XRFrame::GetJointPose),
+                        InstanceMethod("getPose", &XRFrame::GetPose),
+                        InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
+                        InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                        InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
@@ -1856,12 +1856,6 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
-            static constexpr auto JS_EVENT_NAME_INPUT_SQUEEZE_START = "squeezestart";
-            static constexpr auto JS_EVENT_NAME_INPUT_SQUEEZE_END = "squeezeend";
-            static constexpr auto JS_EVENT_NAME_INPUT_SQUEEZE_COMPLETE = "squeeze";
-            static constexpr auto JS_EVENT_NAME_INPUT_SELECT_START = "selectstart";
-            static constexpr auto JS_EVENT_NAME_INPUT_SELECT_END = "selectend";
-            static constexpr auto JS_EVENT_NAME_INPUT_SELECT_COMPLETE = "select";
 
         public:
             static void Initialize(Napi::Env env)
