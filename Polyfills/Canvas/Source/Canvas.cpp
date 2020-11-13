@@ -103,6 +103,9 @@ namespace Babylon::Polyfills::Internal
             bgfx::destroy(m_frameBufferHandle);
         }
         m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+        // destroyed frame buffer will have commited resources (and available resources back)
+        // during frame rendering. Calling bgfx::frame here to get frame buffer handle
+        bgfx::frame();
         assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
     }
 
