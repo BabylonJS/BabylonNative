@@ -108,12 +108,16 @@ namespace java::lang
 
     String::operator std::string() const
     {
-        return m_env->GetStringUTFChars(m_string, nullptr);
+        const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
+        std::string str{buffer};
+        m_env->ReleaseStringUTFChars(m_string, buffer);
+        return str;
     }
 
     Throwable::Throwable(jthrowable throwable)
         : Object{throwable}
         , m_throwableRef{m_env->NewGlobalRef(throwable)}
+        , m_message{GetMessage()}
     {
     }
 
@@ -129,8 +133,7 @@ namespace java::lang
 
     const char* Throwable::what() const noexcept
     {
-        std::string message = GetMessage();
-        return message.c_str();
+        return m_message.c_str();
     }
 }
 
