@@ -308,7 +308,8 @@ _native.graphicsInitializationPromise.then(() => {
                 return new OffscreenCanvas(64, 64);
             }
             return {};
-        }
+        },
+        removeEventListener: function () { }
     }
 
     xhr = new XMLHttpRequest();
@@ -328,6 +329,7 @@ _native.graphicsInitializationPromise.then(() => {
                     }
                     i++;
                     if (justOnce || i >= config.tests.length) {
+                        engine.dispose();
                         TestUtils.exit(0);
                         return;
                     }

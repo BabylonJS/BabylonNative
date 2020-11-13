@@ -85,13 +85,6 @@ namespace
 
     void Uninitialize()
     {
-        if (runtime)
-        {
-            Babylon::ScriptLoader loader{ *runtime };
-            loader.Eval("engine.dispose()", "");
-            Sleep(5000);
-        }
-
         runtime.reset();
         graphics.reset();
     }
