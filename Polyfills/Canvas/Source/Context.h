@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/Graphics.h>
 
 struct NVGcontext;
 
@@ -59,7 +60,9 @@ namespace Babylon::Polyfills::Internal
 
         std::map<std::string, int> m_fonts;
 
-        static inline std::vector<Context*> registeredContexts{};
+        Babylon::Graphics& m_graphics;
+        Babylon::Graphics::CallbackHandle m_callbackBeginFrameHandle;
+        Babylon::Graphics::CallbackHandle m_callbackEndFrameHandle;
 
         friend class Canvas;
     };

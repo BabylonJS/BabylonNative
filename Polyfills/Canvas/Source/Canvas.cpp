@@ -21,9 +21,6 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("width", &Canvas::GetWidth, &Canvas::SetWidth),
                 InstanceAccessor("height", &Canvas::GetHeight, &Canvas::SetHeight),
                 ParentT::InstanceMethod("getCanvasTexture", &Canvas::GetCanvasTexture),
-                ParentT::StaticMethod("beginContextsFrame", &Canvas::BeginContextsFrame),
-                ParentT::StaticMethod("endContextsFrame", &Canvas::EndContextsFrame),
-                
             });
 
         env.Global().Set(JS_CONSTRUCTOR_NAME, func);
@@ -40,16 +37,6 @@ namespace Babylon::Polyfills::Internal
         {
             bgfx::destroy(m_frameBufferHandle);
         }
-    }
-
-    void Canvas::BeginContextsFrame(const Napi::CallbackInfo&)
-    {
-        Context::BeginContextsFrame();
-    }
-
-    void Canvas::EndContextsFrame(const Napi::CallbackInfo&)
-    {
-        Context::EndContextsFrame();
     }
 
     void Canvas::LoadTTF(const Napi::CallbackInfo& info)

@@ -9,6 +9,7 @@ namespace Babylon
     namespace
     {
         constexpr auto JS_SENTINEL_NAME = "graphicsInitializationPromise";
+        static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
     }
 
     // Forward declares of important specializations.
@@ -125,6 +126,12 @@ namespace Babylon
 
         auto oldBeforeRenderTaskCompletionSource = m_beforeRenderTaskCompletionSource;
         m_beforeRenderTaskCompletionSource = {};
+
+        // callbacks
+        for (auto& callback : m_onBeginFrameCallbacks)
+        {
+            callback.second();
+        }
         oldBeforeRenderTaskCompletionSource.complete();
     }
 
@@ -133,6 +140,12 @@ namespace Babylon
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
+        }
+
+        // callbacks
+        for (auto& callback : m_onEndFrameCallbacks)
+        {
+            callback.second();
         }
 
         bool finished{false};
@@ -235,7 +248,7 @@ namespace Babylon
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
+            .Set(JS_GRAPHICS_IMPL_NAME, Napi::External<Impl>::New(env, this));
 
         auto deferred = Napi::Promise::Deferred::New(env);
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_SENTINEL_NAME, deferred.Promise());
@@ -262,14 +275,61 @@ namespace Babylon
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-                    .Get(JS_GRAPHICS_NAME)
+                    .Get(JS_GRAPHICS_IMPL_NAME)
                     .As<Napi::External<Graphics::Impl>>()
                     .Data();
     }
 
+    Graphics::CallbackHandle Graphics::Impl::RegisterOnBeginFrame(std::function<void()> callback)
+    {
+        static CallbackHandle callbackHandle{};
+        callbackHandle++;
+
+        m_onBeginFrameCallbacks.insert(std::make_pair(callbackHandle, callback));
+        return callbackHandle;
+    }
+
+    void Graphics::Impl::UnregisterOnBeginFrame(Graphics::CallbackHandle callbackHandle)
+    {
+        auto iter = m_onBeginFrameCallbacks.find(callbackHandle);
+        if (iter != m_onBeginFrameCallbacks.end())
+        {
+            m_onBeginFrameCallbacks.erase(iter);
+        }
+    }
+
+    Graphics::CallbackHandle Graphics::Impl::RegisterOnEndFrame(std::function<void()> callback)
+    {
+        static CallbackHandle callbackHandle{};
+        callbackHandle++;
+
+        m_onEndFrameCallbacks.insert(std::make_pair(callbackHandle, callback));
+        return callbackHandle;
+    }
+
+    void Graphics::Impl::UnregisterOnEndFrame(Graphics::CallbackHandle callbackHandle)
+    {
+        auto iter = m_onEndFrameCallbacks.find(callbackHandle);
+        if (iter != m_onEndFrameCallbacks.end())
+        {
+            m_onEndFrameCallbacks.erase(iter);
+        }
+    }
+
     void Graphics::AddToJavaScript(Napi::Env env)
     {
+        JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Set(JS_GRAPHICS_NAME, Napi::External<Graphics>::New(env, this));
+
         m_impl->AddToJavaScript(env);
+    }
+
+    Graphics& Graphics::GetFromJavaScript(Napi::Env env)
+    {
+        return *JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Get(JS_GRAPHICS_NAME)
+            .As<Napi::External<Graphics>>()
+            .Data();
     }
 
     void Graphics::StartRenderingCurrentFrame()
@@ -280,5 +340,25 @@ namespace Babylon
     void Graphics::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
+    }
+
+    Graphics::CallbackHandle Graphics::RegisterOnBeginFrame(std::function<void()> callback)
+    {
+        return m_impl->RegisterOnBeginFrame(callback);
+    }
+
+    void Graphics::UnregisterOnBeginFrame(Graphics::CallbackHandle callbackHandle)
+    {
+        m_impl->UnregisterOnBeginFrame(callbackHandle);
+    }
+
+    Graphics::CallbackHandle Graphics::RegisterOnEndFrame(std::function<void()> callback)
+    {
+        return m_impl->RegisterOnEndFrame(callback);
+    }
+
+    void Graphics::UnregisterOnEndFrame(Graphics::CallbackHandle callbackHandle)
+    {
+        m_impl->UnregisterOnEndFrame(callbackHandle);
     }
 }

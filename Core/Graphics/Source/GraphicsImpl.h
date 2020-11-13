@@ -13,7 +13,7 @@ namespace Babylon
 {
     class Graphics::Impl
     {
-        static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
+        static constexpr auto JS_GRAPHICS_IMPL_NAME = "_GraphicsImpl";
 
     public:
         Impl();
@@ -39,6 +39,12 @@ namespace Babylon
             FinishRenderingCurrentFrame();
         }
 
+        CallbackHandle RegisterOnBeginFrame(std::function<void()> callback);
+        void UnregisterOnBeginFrame(CallbackHandle callbackHandle);
+
+        CallbackHandle RegisterOnEndFrame(std::function<void()> callback);
+        void UnregisterOnEndFrame(CallbackHandle callbackHandle);
+
         BgfxCallback Callback{};
 
     private:
@@ -61,5 +67,9 @@ namespace Babylon
         std::mutex m_renderWorkTasksMutex{};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
+
+        std::map<CallbackHandle, std::function<void()>> m_onBeginFrameCallbacks;
+        std::map<CallbackHandle, std::function<void()>> m_onEndFrameCallbacks;
+
     };
 }

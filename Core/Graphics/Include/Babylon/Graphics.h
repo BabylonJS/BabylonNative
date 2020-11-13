@@ -21,6 +21,7 @@ namespace Babylon
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
+        static Graphics& GetFromJavaScript(Napi::Env);
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
@@ -30,6 +31,13 @@ namespace Babylon
             StartRenderingCurrentFrame();
             FinishRenderingCurrentFrame();
         }
+
+        typedef uint32_t CallbackHandle;
+        CallbackHandle RegisterOnBeginFrame(std::function<void()> callback);
+        void UnregisterOnBeginFrame(CallbackHandle callbackHandle);
+
+        CallbackHandle RegisterOnEndFrame(std::function<void()> callback);
+        void UnregisterOnEndFrame(CallbackHandle callbackHandle);
 
     private:
         Graphics();

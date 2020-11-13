@@ -22,7 +22,8 @@ target_include_directories(Canvas PUBLIC "Include"
 target_link_to_dependencies(Canvas PUBLIC napi
     PRIVATE bgfx
     PRIVATE bimg
-    PRIVATE bx)
+    PRIVATE bx
+    PRIVATE Graphics)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

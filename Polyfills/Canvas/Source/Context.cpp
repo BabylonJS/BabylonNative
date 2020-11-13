@@ -50,38 +50,23 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{ info[0].As<Napi::External<Canvas>>().Data() }
         , m_viewId{ static_cast<bgfx::ViewId>(info[1].As<Napi::Number>().Uint32Value()) }
         , m_nvg{ nvgCreate(1, m_viewId) }
+        , m_graphics{ Babylon::Graphics::GetFromJavaScript(info.Env()) }
     {
         for (auto& font : Canvas::fontsInfos)
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }
-        registeredContexts.push_back(this);
+
+        m_callbackBeginFrameHandle = m_graphics.RegisterOnBeginFrame([this]() { BeginFrame(); });
+        m_callbackEndFrameHandle = m_graphics.RegisterOnEndFrame([this]() { EndFrame(); });
     }
 
     Context::~Context()
     {
         nvgDelete(m_nvg);
 
-        auto iter = std::find(registeredContexts.begin(), registeredContexts.end(), this);
-        if (iter != registeredContexts.end())
-        {
-            registeredContexts.erase(iter);
-        }
-    }
-
-    void Context::BeginContextsFrame()
-    {
-        for (auto& context : registeredContexts)
-        {
-            context->BeginFrame();
-        }
-    }
-    void Context::EndContextsFrame()
-    {
-        for (auto& context : registeredContexts)
-        {
-            context->EndFrame();
-        }
+        m_graphics.UnregisterOnBeginFrame(m_callbackBeginFrameHandle);
+        m_graphics.UnregisterOnEndFrame(m_callbackEndFrameHandle);
     }
 
     NVGcolor StringToColor(const std::string& colorString)
