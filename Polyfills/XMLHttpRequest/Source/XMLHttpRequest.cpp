@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == ArrayBuffer)
                     return UrlLib::UrlResponseType::Buffer;
 
-                throw std::exception{};
+                throw std::runtime_error{"Unsupported response type: " + value};
             }
 
             const char* EnumToString(UrlLib::UrlResponseType value)
@@ -31,7 +31,7 @@ namespace Babylon::Polyfills::Internal
                         return ArrayBuffer;
                 }
 
-                throw std::exception{};
+                throw std::runtime_error{"Invalid response type"};
             }
         }
 
@@ -44,7 +44,7 @@ namespace Babylon::Polyfills::Internal
                 if (value == Get)
                     return UrlLib::UrlMethod::Get;
 
-                throw;
+                throw std::runtime_error{"Unsupported url method: " + value};
             }
         }
 
@@ -105,7 +105,9 @@ namespace Babylon::Polyfills::Internal
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
         gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        return Napi::ArrayBuffer::New(Env(), const_cast<std::byte*>(responseBuffer.data()), responseBuffer.size());
+        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
+        return std::move(arrayBuffer);
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
@@ -180,9 +182,15 @@ namespace Babylon::Polyfills::Internal
         SetReadyState(ReadyState::Opened);
     }
 
-    void XMLHttpRequest::Send(const Napi::CallbackInfo& /*info*/)
+    void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>&) {
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+            if (result.has_error())
+            {
+                // Bail if UrlLib throws an exception.
+                std::abort();
+            }
+
             SetReadyState(ReadyState::Done);
             RaiseEvent(EventType::LoadEnd);
 

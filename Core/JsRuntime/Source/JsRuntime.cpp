@@ -1,4 +1,5 @@
 #include "JsRuntime.h"
+#include "JsRuntimeInternalState.h"
 
 namespace Babylon
 {
@@ -10,6 +11,7 @@ namespace Babylon
 
     JsRuntime::JsRuntime(Napi::Env env, DispatchFunctionT dispatchFunction)
         : m_dispatchFunction{std::move(dispatchFunction)}
+        , m_internalState{std::make_unique<JsRuntime::InternalState>()}
     {
         auto global = env.Global();
 

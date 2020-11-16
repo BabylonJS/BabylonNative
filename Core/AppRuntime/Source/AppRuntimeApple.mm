@@ -1,7 +1,7 @@
 #include "AppRuntime.h"
 #include <exception>
-#include <sstream>
-#include <android/log.h>
+
+#import <Foundation/NSObjCRuntime.h>
 
 namespace Babylon
 {
@@ -18,9 +18,7 @@ namespace Babylon
         }
         catch (const Napi::Error& error)
         {
-            std::stringstream ss{};
-            ss << "Uncaught Error: " << error.Message() << std::endl;
-            __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", ss.str().data());
+            NSLog(@"Uncaught Error: %s", error.what());
         }
     }
 }

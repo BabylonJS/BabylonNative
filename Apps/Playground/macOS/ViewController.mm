@@ -3,15 +3,38 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
 #import <Babylon/Plugins/NativeEngine.h>
-#import <Babylon/Plugins/NativeWindow.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
+#import <MetalKit/MetalKit.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+
+@interface EngineView : MTKView <MTKViewDelegate>
+
+@end
+
+@implementation EngineView
+
+- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
+{
+    if (graphics != nullptr) {
+        graphics->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+    }
+}
+
+- (void)drawInMTKView:(MTKView *)__unused view
+{
+    if (graphics != nullptr) {
+        graphics->RenderCurrentFrame();
+    }
+}
+
+@end
+
 
 @implementation ViewController
 
@@ -38,22 +61,25 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     NSSize size = [self view].frame.size;
     float width = size.width;
     float height = size.height;
-    NSWindow* nativeWindow = [[self view] window];
-    void* windowPtr = (__bridge void*)nativeWindow;
+    
+    EngineView* engineView = [[EngineView alloc] initWithFrame:[self view].frame device:nil];
+    engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [[self view] addSubview:engineView];
+    engineView.delegate = engineView;
+    
+    void* windowPtr = (__bridge void*)engineView;
 
-    graphics = Babylon::Graphics::InitializeFromWindow(windowPtr, width, height);
+    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-    runtime->Dispatch([windowPtr, width, height](Napi::Env env)
+    runtime->Dispatch([](Napi::Env env)
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        Babylon::Plugins::NativeWindow::Initialize(env, windowPtr, width, height);
-
         graphics->AddToJavaScript(env);
-        Babylon::Plugins::NativeEngine::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env, false); // render on UI Thread
         
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
@@ -65,6 +91,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     loader.LoadScript("app:///babylon.max.js");
     loader.LoadScript("app:///babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///babylonjs.materials.js");
+    loader.LoadScript("app:///babylon.gui.js");
     
     if (scripts.empty())
     {
@@ -101,21 +128,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     // Update the view, if already loaded.
 }
 
-- (void)viewDidLayout {
-    [super viewDidLayout];
-    if (runtime)
-    {
-        NSSize size = [self view].frame.size;
-        float width = size.width;
-        float height = size.height;
-        graphics->UpdateSize(width, height);
-        runtime->Dispatch([width, height](Napi::Env env)
-        {
-            Babylon::Plugins::NativeWindow::UpdateSize(env, static_cast<size_t>(width), static_cast<size_t>(height));
-        });
-    }
-}
-
 - (void)mouseDown:(NSEvent *)__unused theEvent {
     if (inputBuffer)
     {
@@ -138,7 +150,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     }
 }
 
--(IBAction) refresh:(id)__unused sender
+- (IBAction) refresh:(id)__unused sender
 {
     [self refreshBabylon];
 }
