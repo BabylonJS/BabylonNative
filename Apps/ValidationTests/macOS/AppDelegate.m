@@ -16,4 +16,8 @@
 }
 
 
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)__unused sender {
+    return YES;
+}
+
 @end
