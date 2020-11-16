@@ -37,23 +37,13 @@ namespace xr
             const XrSpace& SceneSpace;
             const XrSupportedExtensions& Extensions;
             const XrTime DisplayTime;
+            std::vector<System::Session::Frame::SceneObject>& SceneObjects;
             std::vector<System::Session::Frame::Plane>& Planes;
             std::vector<System::Session::Frame::Plane::Identifier>& UpdatedPlanes;
             std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
             std::vector<System::Session::Frame::Mesh>& Meshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& UpdatedMeshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& RemovedMeshes;
-
-            UpdateFrameArgs(
-                const XrSpace& sceneSpace,
-                const XrSupportedExtensions& extensions,
-                const XrTime displayTime,
-                std::vector<System::Session::Frame::Plane>& planes,
-                std::vector<System::Session::Frame::Plane::Identifier>& updatedPlanes,
-                std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes,
-                std::vector<System::Session::Frame::Mesh>& meshes,
-                std::vector<System::Session::Frame::Mesh::Identifier>& updatedMeshes,
-                std::vector<System::Session::Frame::Mesh::Identifier>& removedMeshes);
         };
 
         struct Mesh : SceneMesh
@@ -68,38 +58,17 @@ namespace xr
             XrSceneObjectKeyMSFT parentObjectKey;
         };
 
-        struct SceneObject
+        struct SceneObject : public xr::System::Session::Frame::SceneObject
         {
-            XrSceneObjectKeyMSFT Key;
-            XrSceneObjectKindTypeMSFT Kind;
             std::map<XrSceneMeshKeyMSFT, Mesh> Meshes;
             std::map<XrScenePlaneKeyMSFT, Plane> Planes;
             XrPosef Pose;
-        };
-
-        struct UpdateSceneObjectsArgs
-        {
-            const XrSpace& SceneSpace;
-            const XrSupportedExtensions& Extensions;
-            const XrTime DisplayTime;
-            std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>>& SceneObjects;
-            std::vector<XrSceneObjectKeyMSFT>& UpdatedObjects;
-            std::vector<XrSceneObjectKeyMSFT>& RemovedObjects;
-
-            UpdateSceneObjectsArgs(
-                const XrSpace& sceneSpace,
-                const XrSupportedExtensions& extensions,
-                const XrTime displayTime,
-                std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>>& sceneObjects,
-                std::vector<XrSceneObjectKeyMSFT>& updatedObjects,
-                std::vector<XrSceneObjectKeyMSFT>& removedObjects);
         };
 
         SceneUnderstanding();
         ~SceneUnderstanding();
         void Initialize(const InitOptions options) const;
         void UpdateFrame(UpdateFrameArgs args) const;
-        void UpdateSceneObjects(UpdateSceneObjectsArgs args) const;
         System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
         System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const;
 

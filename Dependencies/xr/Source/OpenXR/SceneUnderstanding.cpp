@@ -77,44 +77,6 @@ SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     , BoxDimensions(boxDimensions)
     , UpdateIntervalInSeconds(updateIntervalInSeconds) {}
 
-SceneUnderstanding::SceneUnderstanding::UpdateFrameArgs::UpdateFrameArgs(
-    const XrSpace& sceneSpace,
-    const XrSupportedExtensions& extensions,
-    const XrTime displayTime,
-    std::vector<System::Session::Frame::Plane>& planes,
-    std::vector<System::Session::Frame::Plane::Identifier>& updatedPlanes,
-    std::vector<System::Session::Frame::Plane::Identifier>& removedPlanes,
-    std::vector<System::Session::Frame::Mesh>& meshes,
-    std::vector<System::Session::Frame::Mesh::Identifier>& updatedMeshes,
-    std::vector<System::Session::Frame::Mesh::Identifier>& removedMeshes)
-    : SceneSpace(sceneSpace)
-    , Extensions(extensions)
-    , DisplayTime(displayTime)
-    , Planes(planes)
-    , UpdatedPlanes(updatedPlanes)
-    , RemovedPlanes(removedPlanes)
-    , Meshes(meshes)
-    , UpdatedMeshes(updatedMeshes)
-    , RemovedMeshes(removedMeshes)
-{
-}
-
-SceneUnderstanding::SceneUnderstanding::UpdateSceneObjectsArgs::UpdateSceneObjectsArgs(
-    const XrSpace& sceneSpace,
-    const XrSupportedExtensions& extensions,
-    const XrTime displayTime,
-    std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>>& sceneObjects,
-    std::vector<XrSceneObjectKeyMSFT>& updatedObjects,
-    std::vector<XrSceneObjectKeyMSFT>& removedObjects)
-    : SceneSpace(sceneSpace)
-    , Extensions(extensions)
-    , DisplayTime(displayTime)
-    , SceneObjects(sceneObjects)
-    , UpdatedObjects(updatedObjects)
-    , RemovedObjects(removedObjects)
-{
-}
-
 struct SceneUnderstanding::SceneUnderstanding::Impl
 {
 public:
@@ -155,12 +117,6 @@ public:
     {
         Update(args.DisplayTime, args.SceneSpace, args.Extensions);
         PopulateFrameArguments(args);
-    }
-
-    void UpdateSceneObjects(UpdateSceneObjectsArgs& args)
-    {
-        Update(args.DisplayTime, args.SceneSpace, args.Extensions);
-        PopulateSceneObjectsArgs(args);
     }
 
     void Update(const XrTime time, const XrSpace& space, const XrSupportedExtensions& extensions)
@@ -295,24 +251,26 @@ public:
             CHECK_XRCMD(extensions.xrLocateSceneObjectsMSFT(m_sceneHandle.Get(), &locateInfo, &locations));
 
             // Get a set of the known objects to understand if any objects were removed
-            std::unordered_set<XrSceneObjectKeyMSFT> knownObjects{};
+            std::unordered_set<SceneObject::Identifier> knownObjects{};
             std::transform(m_sceneObjects.begin(), m_sceneObjects.end(),
                 std::inserter(knownObjects, knownObjects.end()),
-                [](auto pair) { return pair.first; });
+                [](const auto& pair) { return pair.first; });
 
             for (size_t i = 0; i < sceneObjects.size(); i++)
             {
                 const auto& location = m_sceneObjectLocations.at(i);
                 const auto& sceneObject = sceneObjects.at(i);
+                const auto sceneObjectId = static_cast<SceneObject::Identifier>(sceneObject.sceneObjectKey);
 
-                if (m_sceneObjects.count(sceneObject.sceneObjectKey) == 0)
+                if (m_sceneObjects.count(sceneObjectId) == 0)
                 {
-                    m_updatedObjects.push_back(sceneObject.sceneObjectKey);
-                    m_sceneObjects[sceneObject.sceneObjectKey] = std::make_shared<SceneObject>();
+                    m_sceneObjects[sceneObjectId] = std::make_shared<SceneObject>();
+                    m_sceneObjects[sceneObjectId]->ID = sceneObjectId;
+                    m_updatedObjects.push_back(sceneObjectId);
                 }
 
-                knownObjects.erase(sceneObject.sceneObjectKey);
-                auto& object = m_sceneObjects[sceneObject.sceneObjectKey];
+                knownObjects.erase(sceneObjectId);
+                auto& object = m_sceneObjects[sceneObjectId];
 
                 // Set scene object pose
                 if (xr::math::Pose::IsPoseValid(location.locationFlags)) {
@@ -320,24 +278,32 @@ public:
                 }
 
                 // Set scene object kind
-                XrSceneObjectPropertiesMSFT properties{XR_TYPE_SCENE_OBJECT_PROPERTIES_MSFT};
-                XrSceneObjectKindMSFT kind{XR_TYPE_SCENE_OBJECT_KIND_MSFT};
+                XrSceneObjectPropertiesMSFT properties{ XR_TYPE_SCENE_OBJECT_PROPERTIES_MSFT };
+                XrSceneObjectKindMSFT kind{ XR_TYPE_SCENE_OBJECT_KIND_MSFT };
                 xr::InsertExtensionStruct(properties, kind);
-                XrSceneObjectPropertiesGetInfoMSFT getInfo{XR_TYPE_SCENE_OBJECT_PROPERTIES_GET_INFO_MSFT};
+                XrSceneObjectPropertiesGetInfoMSFT getInfo{ XR_TYPE_SCENE_OBJECT_PROPERTIES_GET_INFO_MSFT };
                 getInfo.sceneObjectKey = sceneObject.sceneObjectKey;
                 CHECK_XRCMD(extensions.xrGetSceneObjectPropertiesMSFT(m_sceneHandle.Get(), &getInfo, &properties));
-                object->Kind = kind.kind;
+
+                if (s_sceneObjectTypeMap.count(kind.kind) > 0)
+                {
+                    object->Type = s_sceneObjectTypeMap.at(kind.kind);
+                }
+                else
+                {
+                    object->Type = xr::SceneObjectType::Unknown;
+                }
 
                 // Get sets of the known meshes and planes for this object to understand if any were removed
                 std::unordered_set<XrSceneMeshKeyMSFT> knownMeshes{};
                 std::transform(object->Meshes.begin(), object->Meshes.end(),
                     std::inserter(knownMeshes, knownMeshes.end()),
-                    [](auto pair) { return pair.first; });
+                    [](const auto& pair) { return pair.first; });
 
                 std::unordered_set<XrScenePlaneKeyMSFT> knownPlanes{};
                 std::transform(object->Planes.begin(), object->Planes.end(),
                     std::inserter(knownPlanes, knownPlanes.end()),
-                    [](auto pair) { return pair.first; });
+                    [](const auto& pair) { return pair.first; });
 
                 const auto meshKeys = xr::GetMeshKeys(extensions, m_sceneHandle.Get(), sceneObject.sceneObjectKey);
                 for (const auto& meshKey : meshKeys)
@@ -400,8 +366,18 @@ public:
 
     void PopulateFrameArguments(UpdateFrameArgs& args)
     {
+        PopulateFrameSceneObjectArgs(args);
         PopulateFramePlaneArgs(args);
         PopulateFrameMeshArgs(args);
+    }
+
+    void PopulateFrameSceneObjectArgs(UpdateFrameArgs& args)
+    {
+        args.SceneObjects.clear();
+        for (const auto& [objectKey, object] : m_sceneObjects)
+        {
+            args.SceneObjects.push_back(xr::System::Session::Frame::SceneObject{ objectKey, object->Type });
+        }
     }
 
     void PopulateFramePlaneArgs(UpdateFrameArgs& args)
@@ -441,16 +417,7 @@ public:
                 babylonPlane.Polygon[11] = 0;
                 babylonPlane.PolygonSize = babylonPlane.Polygon.size() / VALUES_IN_POINT; // Number of points
 
-                babylonPlane.ParentGeometryId = static_cast<xr::GeometryId>(objectKey);
-
-                if (s_sceneObjectTypeMap.count(object->Kind) > 0)
-                {
-                    babylonPlane.ParentGeometryType = s_sceneObjectTypeMap.at(object->Kind);
-                }
-                else
-                {
-                    babylonPlane.ParentGeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
-                }
+                babylonPlane.ParentSceneObjectID = objectKey;
 
                 args.Planes.push_back(babylonPlane);
             }
@@ -513,15 +480,7 @@ public:
                 babylonMesh.HasNormals = false;
                 babylonMesh.Normals.resize(0);
 
-                babylonMesh.ParentGeometryId = static_cast<xr::GeometryId>(objectKey);
-                if (s_sceneObjectTypeMap.count(object->Kind) > 0)
-                {
-                    babylonMesh.ParentGeometryType = s_sceneObjectTypeMap.at(object->Kind);
-                }
-                else
-                {
-                    babylonMesh.ParentGeometryType = s_sceneObjectTypeMap.at(XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT);
-                }
+                babylonMesh.ParentSceneObjectID = objectKey;
 
                 args.Meshes.push_back(babylonMesh);
             }
@@ -550,18 +509,6 @@ public:
         }
     }
 
-    void PopulateSceneObjectsArgs(UpdateSceneObjectsArgs& args)
-    {
-        args.SceneObjects.clear();
-        for (const auto& [key, object] : m_sceneObjects)
-        {
-            args.SceneObjects[key] = object;
-        }
-
-        args.UpdatedObjects = m_updatedObjects;
-        args.RemovedObjects = m_removedObjects;
-    }
-
     System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id)
     {
         if (m_babylonPlanesById.count(id) > 0)
@@ -583,14 +530,14 @@ public:
     }
 
 private:
-    const std::map<XrSceneObjectKindTypeMSFT, xr::GeometryType> s_sceneObjectTypeMap
+    const std::map<XrSceneObjectKindTypeMSFT, xr::SceneObjectType> s_sceneObjectTypeMap
     {
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_BACKGROUND_MSFT, xr::GeometryType::Background},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_CEILING_MSFT, xr::GeometryType::Ceiling},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_FLOOR_MSFT, xr::GeometryType::Floor},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_PLATFORM_MSFT, xr::GeometryType::Platform},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT, xr::GeometryType::Unknown},
-        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_WALL_MSFT, xr::GeometryType::Wall}
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_BACKGROUND_MSFT, xr::SceneObjectType::Background},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_CEILING_MSFT, xr::SceneObjectType::Ceiling},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_FLOOR_MSFT, xr::SceneObjectType::Floor},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_PLATFORM_MSFT, xr::SceneObjectType::Platform},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_UNKNOWN_MSFT, xr::SceneObjectType::Unknown},
+        {XrSceneObjectKindTypeMSFT::XR_SCENE_OBJECT_KIND_TYPE_WALL_MSFT, xr::SceneObjectType::Wall}
     };
 
     enum class State
@@ -615,14 +562,14 @@ private:
     XrTime m_lastSceneObjectUpdate{};
     std::vector<XrSceneObjectLocationMSFT> m_sceneObjectLocations;
 
-    std::map<XrSceneObjectKeyMSFT, std::shared_ptr<SceneObject>> m_sceneObjects{};
-    std::vector<XrSceneObjectKeyMSFT> m_updatedObjects{};
+    std::vector<SceneObject::Identifier> m_updatedObjects{};
     std::vector<XrSceneMeshKeyMSFT> m_updatedMeshes{};
     std::vector<XrScenePlaneKeyMSFT> m_updatedPlanes{};
-    std::vector<XrSceneObjectKeyMSFT> m_removedObjects{};
+    std::vector<SceneObject::Identifier> m_removedObjects{};
     std::vector<XrSceneMeshKeyMSFT> m_removedMeshes{};
     std::vector<XrScenePlaneKeyMSFT> m_removedPlanes{};
 
+    std::map<SceneObject::Identifier, std::shared_ptr<SceneObject>> m_sceneObjects{};
     std::map<XrScenePlaneKeyMSFT, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanes;
     std::map<xr::System::Session::Frame::Plane::Identifier, std::shared_ptr<xr::System::Session::Frame::Plane>> m_babylonPlanesById;
     std::map<XrSceneMeshKeyMSFT, std::shared_ptr<xr::System::Session::Frame::Mesh>> m_babylonMeshes;
@@ -646,11 +593,6 @@ void SceneUnderstanding::Initialize(const InitOptions options) const
 void SceneUnderstanding::UpdateFrame(UpdateFrameArgs args) const
 {
     m_impl->UpdateFrame(args);
-}
-
-void SceneUnderstanding::UpdateSceneObjects(UpdateSceneObjectsArgs args) const
-{
-    m_impl->UpdateSceneObjects(args);
 }
 
 System::Session::Frame::Plane& SceneUnderstanding::TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const

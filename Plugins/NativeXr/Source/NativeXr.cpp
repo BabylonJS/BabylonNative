@@ -1469,8 +1469,7 @@ namespace Babylon
                         InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
                         InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentGeometryId", &XRPlane::GetParentGeometryId, nullptr),
-                        InstanceAccessor("parentGeometryType", &XRPlane::GetParentGeometryType, nullptr)
+                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1548,31 +1547,7 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetParentGeometryId(const Napi::CallbackInfo& info)
-            {
-                const auto& plane = GetPlane();
-                if (plane.ParentGeometryId == xr::INVALID_GEOMETRY_ID)
-                {
-                    return info.Env().Undefined();
-                }
-                else
-                {
-                    return Napi::Value::From(info.Env(), plane.ParentGeometryId);
-                }
-            }
-
-            Napi::Value GetParentGeometryType(const Napi::CallbackInfo& info)
-            {
-                const auto& plane = GetPlane();
-                if (xr::GeometryTypeNames.count(plane.ParentGeometryType) == 0)
-                {
-                    return info.Env().Undefined();
-                }
-                else
-                {
-                    return Napi::Value::From(info.Env(), xr::GeometryTypeNames.at(plane.ParentGeometryType));
-                }
-            }
+            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
@@ -1602,8 +1577,7 @@ namespace Babylon
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
                         InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentGeometryId", &XRMesh::GetParentGeometryId, nullptr),
-                        InstanceAccessor("parentGeometryType", &XRMesh::GetParentGeometryType, nullptr)
+                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1732,31 +1706,7 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetParentGeometryId(const Napi::CallbackInfo& info)
-            {
-                const auto& mesh = GetMesh();
-                if (mesh.ParentGeometryId == xr::INVALID_GEOMETRY_ID)
-                {
-                    return info.Env().Undefined();
-                }
-                else
-                {
-                    return Napi::Value::From(info.Env(), mesh.ParentGeometryId);
-                }
-            }
-
-            Napi::Value GetParentGeometryType(const Napi::CallbackInfo& info)
-            {
-                const auto& mesh = GetMesh();
-                if (xr::GeometryTypeNames.count(mesh.ParentGeometryType) == 0)
-                {
-                    return info.Env().Undefined();
-                }
-                else
-                {
-                    return Napi::Value::From(info.Env(), xr::GeometryTypeNames.at(mesh.ParentGeometryType));
-                }
-            }
+            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{ 0 };
@@ -1876,6 +1826,9 @@ namespace Babylon
                 // Update anchor positions.
                 UpdateAnchors();
 
+                // Update scene objects.
+                UpdateSceneObjects(env);
+
                 // Update planes.
                 UpdatePlanes(env, timestamp);
 
@@ -1919,6 +1872,17 @@ namespace Babylon
                 return m_frame->GetMeshByID(meshID);
             }
 
+            Napi::Value GetJSSceneObjectFromID(const Napi::CallbackInfo& info, const xr::System::Session::Frame::SceneObject::Identifier objectID)
+            {
+                if (objectID == xr::System::Session::Frame::SceneObject::INVALID_ID)
+                {
+                    return info.Env().Undefined();
+                }
+
+                assert(m_sceneObjects.count(objectID) > 0);
+                return m_sceneObjects.at(objectID).Value();
+            }
+
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
@@ -1927,6 +1891,7 @@ namespace Babylon
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
             std::unordered_map<xr::System::Session::Frame::Mesh::Identifier, Napi::ObjectReference> m_trackedMeshes{};
             Napi::ObjectReference m_meshSet{};
+            std::unordered_map<xr::System::Session::Frame::SceneObject::Identifier, Napi::ObjectReference> m_sceneObjects{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -2119,6 +2084,30 @@ namespace Babylon
                 return m_meshSet.Value();
             }
 
+            void UpdateSceneObjects(const Napi::Env& env)
+            {
+                std::unordered_set<xr::System::Session::Frame::SceneObject::Identifier> knownObjects{};
+                std::transform(m_sceneObjects.begin(), m_sceneObjects.end(),
+                    std::inserter(knownObjects, knownObjects.end()),
+                    [](const auto& pair) { return pair.first; });
+
+                for (const auto& sceneObject : m_frame->SceneObjects)
+                {
+                    if (m_sceneObjects.count(sceneObject.ID) == 0)
+                    {
+                        m_sceneObjects[sceneObject.ID] = Napi::Persistent(Napi::Object::New(env));
+                    }
+
+                    m_sceneObjects.at(sceneObject.ID).Value().Set("type", xr::SceneObjectTypeNames.at(sceneObject.Type));
+                    knownObjects.erase(sceneObject.ID);
+                }
+
+                for (const auto& removedObjectID : knownObjects)
+                {
+                    m_sceneObjects.erase(removedObjectID);
+                }
+            }
+
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
                 // First loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
@@ -2200,9 +2189,21 @@ namespace Babylon
             return m_frame->GetPlaneFromID(m_nativePlaneID);
         }
 
+        Napi::Value XRPlane::GetParentSceneObject(const Napi::CallbackInfo& info)
+        {
+            const auto& plane = GetPlane();
+            return m_frame->GetJSSceneObjectFromID(info, plane.ParentSceneObjectID);
+        }
+
         xr::System::Session::Frame::Mesh& XRMesh::GetMesh()
         {
             return m_frame->GetMeshFromID(m_nativeMeshID);
+        }
+
+        Napi::Value XRMesh::GetParentSceneObject(const Napi::CallbackInfo& info)
+        {
+            const auto& mesh = GetMesh();
+            return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface

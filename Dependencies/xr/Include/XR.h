@@ -147,10 +147,7 @@ namespace xr
         double UpdateInterval{ 10 };
     };
 
-    typedef int32_t GeometryId;
-    constexpr int32_t INVALID_GEOMETRY_ID = -1;
-
-    enum class GeometryType
+    enum class SceneObjectType
     {
         Unknown,
         Background,
@@ -161,14 +158,14 @@ namespace xr
         Undefined
     };
 
-    const std::map<xr::GeometryType, std::string> GeometryTypeNames
+    const std::map<xr::SceneObjectType, std::string> SceneObjectTypeNames
     {
-        {xr::GeometryType::Unknown, "unknown" },
-        {xr::GeometryType::Background, "background" },
-        {xr::GeometryType::Ceiling, "ceiling" },
-        {xr::GeometryType::Floor, "floor" },
-        {xr::GeometryType::Platform, "platform" },
-        {xr::GeometryType::Wall, "wall" }
+        {xr::SceneObjectType::Unknown, "unknown" },
+        {xr::SceneObjectType::Background, "background" },
+        {xr::SceneObjectType::Ceiling, "ceiling" },
+        {xr::SceneObjectType::Floor, "floor" },
+        {xr::SceneObjectType::Platform, "platform" },
+        {xr::SceneObjectType::Wall, "wall" }
     };
 
     class System
@@ -245,6 +242,15 @@ namespace xr
                     static inline Identifier NEXT_ID{ 0 };
                 };
 
+                struct SceneObject
+                {
+                    using Identifier = int32_t;
+                    const static Identifier INVALID_ID = -1;
+
+                    Identifier ID{ INVALID_ID };
+                    SceneObjectType Type{ SceneObjectType::Undefined };
+                };
+
                 struct Plane
                 {
                     using Identifier = size_t;
@@ -253,8 +259,7 @@ namespace xr
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
                     PolygonFormat PolygonFormat{};
-                    GeometryId ParentGeometryId{ INVALID_GEOMETRY_ID };
-                    GeometryType ParentGeometryType{ GeometryType::Undefined };
+                    SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
@@ -272,8 +277,7 @@ namespace xr
                     std::vector<IndexType> Indices{};
                     bool HasNormals{ false };
                     std::vector<NormalType> Normals;
-                    GeometryId ParentGeometryId{ INVALID_GEOMETRY_ID };
-                    GeometryType ParentGeometryType{ GeometryType::Undefined };
+                    SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
@@ -281,10 +285,11 @@ namespace xr
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
+                std::vector<SceneObject>& SceneObjects;
                 std::vector<Plane>& Planes;
                 std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
-                
+
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
                 std::vector<Mesh::Identifier>UpdatedMeshes;

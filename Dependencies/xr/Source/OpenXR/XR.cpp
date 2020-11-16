@@ -259,6 +259,7 @@ namespace xr
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
+            std::vector<Frame::SceneObject> SceneObjects{};
             std::vector<Frame::Plane> Planes{};
             std::vector<Frame::Mesh> Meshes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
@@ -916,6 +917,7 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
+        , SceneObjects { sessionImpl.ActionResources.SceneObjects }
         , Planes { sessionImpl.ActionResources.Planes }
         , Meshes { sessionImpl.ActionResources.Meshes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
@@ -1111,6 +1113,7 @@ namespace xr
                     sceneSpace,
                     extensions,
                     displayTime,
+                    SceneObjects,
                     Planes,
                     UpdatedPlanes,
                     RemovedPlanes,
