@@ -35,6 +35,7 @@ android {
                 abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
                 arguments '-DANDROID_STL=c++_static',
                         '-DENABLE_GLSLANG_BINARIES=OFF',
+                        "-DENABLE_PCH=OFF",
                         '-DSPIRV_CROSS_CLI=OFF',
                         "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                         "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
