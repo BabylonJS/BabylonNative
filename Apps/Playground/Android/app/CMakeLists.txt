@@ -70,4 +70,4 @@ configure_file(
     "${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libc++_shared.so"
     COPYONLY)
     
-target_compile_options(glslang PRIVATE ENABLE_PCH=OFF)
+target_compile_definitions(glslang PUBLIC ENABLE_PCH=OFF)

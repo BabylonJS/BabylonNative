@@ -92,7 +92,7 @@ namespace
     void Initialize(HWND hWnd)
     {
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
-        graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); });
+        graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
