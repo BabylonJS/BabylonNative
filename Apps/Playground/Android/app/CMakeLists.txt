@@ -69,3 +69,5 @@ configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"
     "${CMAKE_CURRENT_LIST_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libc++_shared.so"
     COPYONLY)
+    
+target_compile_options(glslang PRIVATE ENABLE_PCH=OFF)
