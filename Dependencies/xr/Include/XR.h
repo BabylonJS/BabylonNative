@@ -200,6 +200,7 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
+                    bool GamepadEnabledThisFrame{};
                     GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};

@@ -188,7 +188,6 @@ namespace
     {
         auto env = jsInputSource.Env();
         //Set Gamepad Object
-
         auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
         for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
         {
@@ -227,7 +226,7 @@ namespace
         SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
-        Napi::Value string = Napi::String::New(env, "windows-mixed-reality");
+        Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
         profiles.Set(uint32_t{0}, string);
         jsInputSource.Set("profiles", profiles);
 
@@ -2030,6 +2029,9 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
+
+                std::set<xr::System::Session::Frame::InputSource::Identifier> enabledGamepads{};
+
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2045,10 +2047,14 @@ namespace Babylon
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
                         
-                        //Now that input Source is created, create a gamepad object for the input source
+                        //Now that input Source is created, create a gamepad object if enabled for the input source
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
-                        auto inputSourceVal = inputSourceFound->second.Value();
-                        m_idToGamepadObject.insert({inputSource.ID, CreateXRGamepadObject(inputSourceVal, inputSource)});
+                        if (inputSource.GamepadEnabledThisFrame)
+                        {
+                            auto inputSourceVal = inputSourceFound->second.Value();
+                            m_idToGamepadObject.insert({inputSource.ID, CreateXRGamepadObject(inputSourceVal, inputSource)});
+                            enabledGamepads.insert(inputSource.ID);
+                        }
 
                         added.insert(inputSource.ID);
                     }
@@ -2058,12 +2064,15 @@ namespace Babylon
                         auto inputSourceVal = inputSourceFound->second.Value();
                         SetXRInputSourceData(inputSourceVal, inputSource);
 
-                        //inputSource already exists, find the corresponding gamepad object and set to correct values
-                        auto gamepadObjectFound = m_idToGamepadObject.find(inputSource.ID);
-                        if (gamepadObjectFound != m_idToGamepadObject.end())
+                        //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
+                        if (inputSource.GamepadEnabledThisFrame)
                         {
-                            auto gamepadObjectVal = gamepadObjectFound->second.Value();
-                            SetXRGamepadObjectData(inputSourceVal, gamepadObjectVal, inputSource);
+                            auto gamepadObjectFound = m_idToGamepadObject.find(inputSource.ID);
+                            if (gamepadObjectFound != m_idToGamepadObject.end())
+                            {
+                                auto gamepadObjectVal = gamepadObjectFound->second.Value();
+                                SetXRGamepadObjectData(inputSourceVal, gamepadObjectVal, inputSource);
+                            }
                         }
                     }
                 }
@@ -2115,7 +2124,15 @@ namespace Babylon
                     for (const auto id : removed)
                     {
                         m_idToInputSource.erase(id);
-                        m_idToGamepadObject.erase(id);
+
+                        // remove the corresponding gampad if it exists
+                        for (const auto gamepadId : enabledGamepads)
+                        {
+                            if (id == gamepadId)
+                            {
+                                m_idToGamepadObject.erase(id);
+                            }
+                        }
                     }
                 }
             }
