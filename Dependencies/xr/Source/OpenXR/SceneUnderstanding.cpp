@@ -373,11 +373,8 @@ public:
 
     void PopulateFrameSceneObjectArgs(UpdateFrameArgs& args)
     {
-        args.SceneObjects.clear();
-        for (const auto& [objectKey, object] : m_sceneObjects)
-        {
-            args.SceneObjects.push_back(xr::System::Session::Frame::SceneObject{ objectKey, object->Type });
-        }
+        args.UpdatedSceneObjects = m_updatedObjects;
+        args.RemovedSceneObjects = m_removedObjects;
     }
 
     void PopulateFramePlaneArgs(UpdateFrameArgs& args)
@@ -509,6 +506,16 @@ public:
         }
     }
 
+    System::Session::Frame::SceneObject& TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id)
+    {
+        if (m_sceneObjects.count(id) > 0)
+        {
+            return *m_sceneObjects.at(id);
+        }
+
+        throw std::exception(/*unknown scene object id*/);
+    }
+
     System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id)
     {
         if (m_babylonPlanesById.count(id) > 0)
@@ -593,6 +600,11 @@ void SceneUnderstanding::Initialize(const InitOptions options) const
 void SceneUnderstanding::UpdateFrame(UpdateFrameArgs args) const
 {
     m_impl->UpdateFrame(args);
+}
+
+System::Session::Frame::SceneObject& SceneUnderstanding::TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const
+{
+    return m_impl->TryGetSceneObjectByID(id);
 }
 
 System::Session::Frame::Plane& SceneUnderstanding::TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const

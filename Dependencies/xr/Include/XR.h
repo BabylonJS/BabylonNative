@@ -285,11 +285,12 @@ namespace xr
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
-                std::vector<SceneObject>& SceneObjects;
                 std::vector<Plane>& Planes;
                 std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
 
+                std::vector<SceneObject::Identifier>UpdatedSceneObjects;
+                std::vector<SceneObject::Identifier>RemovedSceneObjects;
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
                 std::vector<Mesh::Identifier>UpdatedMeshes;
@@ -302,6 +303,7 @@ namespace xr
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
+                SceneObject& GetSceneObjectByID(SceneObject::Identifier) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
                 Mesh& GetMeshByID(Mesh::Identifier) const;
 

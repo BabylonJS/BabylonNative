@@ -37,7 +37,8 @@ namespace xr
             const XrSpace& SceneSpace;
             const XrSupportedExtensions& Extensions;
             const XrTime DisplayTime;
-            std::vector<System::Session::Frame::SceneObject>& SceneObjects;
+            std::vector<System::Session::Frame::SceneObject::Identifier>& UpdatedSceneObjects;
+            std::vector<System::Session::Frame::SceneObject::Identifier>& RemovedSceneObjects;
             std::vector<System::Session::Frame::Plane>& Planes;
             std::vector<System::Session::Frame::Plane::Identifier>& UpdatedPlanes;
             std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
@@ -69,6 +70,7 @@ namespace xr
         ~SceneUnderstanding();
         void Initialize(const InitOptions options) const;
         void UpdateFrame(UpdateFrameArgs args) const;
+        System::Session::Frame::SceneObject& TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const;
         System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
         System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const;
 

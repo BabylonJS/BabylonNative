@@ -917,10 +917,11 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
-        , SceneObjects { sessionImpl.ActionResources.SceneObjects }
         , Planes { sessionImpl.ActionResources.Planes }
         , Meshes { sessionImpl.ActionResources.Meshes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
+        , UpdatedSceneObjects{}
+        , RemovedSceneObjects{}
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , UpdatedMeshes{}
@@ -1113,7 +1114,8 @@ namespace xr
                     sceneSpace,
                     extensions,
                     displayTime,
-                    SceneObjects,
+                    UpdatedSceneObjects,
+                    RemovedSceneObjects,
                     Planes,
                     UpdatedPlanes,
                     RemovedPlanes,
@@ -1439,6 +1441,12 @@ namespace xr
     void System::Session::Frame::DeleteAnchor(Anchor& anchor) const
     {
         m_impl->sessionImpl.DeleteAnchor(anchor);
+    }
+
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier id) const
+    {
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.TryGetSceneObjectByID(id);
     }
 
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier id) const

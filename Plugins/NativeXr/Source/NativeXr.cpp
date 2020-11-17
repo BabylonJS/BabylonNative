@@ -2086,23 +2086,18 @@ namespace Babylon
 
             void UpdateSceneObjects(const Napi::Env& env)
             {
-                std::unordered_set<xr::System::Session::Frame::SceneObject::Identifier> knownObjects{};
-                std::transform(m_sceneObjects.begin(), m_sceneObjects.end(),
-                    std::inserter(knownObjects, knownObjects.end()),
-                    [](const auto& pair) { return pair.first; });
-
-                for (const auto& sceneObject : m_frame->SceneObjects)
+                for (const auto& sceneObjectID : m_frame->UpdatedSceneObjects)
                 {
-                    if (m_sceneObjects.count(sceneObject.ID) == 0)
+                    if (m_sceneObjects.count(sceneObjectID) == 0)
                     {
-                        m_sceneObjects[sceneObject.ID] = Napi::Persistent(Napi::Object::New(env));
+                        m_sceneObjects[sceneObjectID] = Napi::Persistent(Napi::Object::New(env));
                     }
 
-                    m_sceneObjects.at(sceneObject.ID).Value().Set("type", xr::SceneObjectTypeNames.at(sceneObject.Type));
-                    knownObjects.erase(sceneObject.ID);
+                    const auto& sceneObject = m_frame->GetSceneObjectByID(sceneObjectID);
+                    m_sceneObjects.at(sceneObjectID).Value().Set("type", xr::SceneObjectTypeNames.at(sceneObject.Type));
                 }
 
-                for (const auto& removedObjectID : knownObjects)
+                for (const auto& removedObjectID : m_frame->RemovedSceneObjects)
                 {
                     m_sceneObjects.erase(removedObjectID);
                 }
