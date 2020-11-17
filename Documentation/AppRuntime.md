@@ -40,7 +40,7 @@ by two CMake variables.
     [N-API CMakeLists.txt](../Dependencies/napi/CMakeLists.txt), can take 
     any of the following values:
     - `Chakra`, the default value for Windows targets.
-    - `V8`, the default value for Android targets.
+    - `v8`, the default value for Android targets.
     - `JavaScriptCore`, the default value for Apple targets.
     - Note that, while `JSI` is also an allowed value for
         `NAPI_JAVASCRIPT_ENGINE`, AppRuntime does not have an 

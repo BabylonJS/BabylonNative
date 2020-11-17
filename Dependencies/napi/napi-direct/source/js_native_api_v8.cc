@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #define NAPI_EXPERIMENTAL
-#include "js_native_api_V8.h"
+#include "js_native_api_v8.h"
 #include <napi/js_native_api.h>
 
 #define CHECK_MAYBE_NOTHING(env, maybe, status) \
