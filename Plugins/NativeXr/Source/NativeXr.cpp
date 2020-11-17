@@ -2030,8 +2030,6 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
 
-                std::set<xr::System::Session::Frame::InputSource::Identifier> enabledGamepads{};
-
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2053,7 +2051,6 @@ namespace Babylon
                         {
                             auto inputSourceVal = inputSourceFound->second.Value();
                             m_idToGamepadObject.insert({inputSource.ID, CreateXRGamepadObject(inputSourceVal, inputSource)});
-                            enabledGamepads.insert(inputSource.ID);
                         }
 
                         added.insert(inputSource.ID);
@@ -2124,15 +2121,7 @@ namespace Babylon
                     for (const auto id : removed)
                     {
                         m_idToInputSource.erase(id);
-
-                        // remove the corresponding gampad if it exists
-                        for (const auto gamepadId : enabledGamepads)
-                        {
-                            if (id == gamepadId)
-                            {
-                                m_idToGamepadObject.erase(id);
-                            }
-                        }
+                        m_idToGamepadObject.erase(id);
                     }
                 }
             }

@@ -1382,7 +1382,7 @@ namespace xr
                 }
 
                 // Get gamepad data 
-                auto controllerInfo = sessionImpl.ControllerInfo;
+                const auto& controllerInfo = sessionImpl.ControllerInfo;
                 if (!controllerInfo.DefaultControllerBinding)
                 {
                      auto& inputSource = InputSources[idx];
@@ -1404,7 +1404,7 @@ namespace xr
 
                     // Get trackpad axes data
                     float currentTrackpadXAxis, currentTrackpadYAxis;
-                    if ( m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis))
+                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis))
                     {
                         inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS] = currentTrackpadXAxis;
                         inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = currentTrackpadYAxis;
