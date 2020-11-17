@@ -1,3 +1,5 @@
+STRING(TOLOWER ${NAPI_JAVASCRIPT_ENGINE} ENGINE_FILE_POSTFIX)
+
 set(SOURCES
     "include/napi/env.h"
     "include/napi/js_native_api.h"
@@ -5,10 +7,10 @@ set(SOURCES
     "include/napi/napi.h"
     "include/napi/napi-inl.h"
     "source/env.cc"
-    "source/env_${NAPI_JAVASCRIPT_ENGINE}.cc"
-    "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}.cc"
-    "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}.h"
-    "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}_internals.h")
+    "source/env_${ENGINE_FILE_POSTFIX}.cc"
+    "source/js_native_api_${ENGINE_FILE_POSTFIX}.cc"
+    "source/js_native_api_${ENGINE_FILE_POSTFIX}.h"
+    "source/js_native_api_${ENGINE_FILE_POSTFIX}_internals.h")
 
 add_library(napi ${SOURCES})
 
