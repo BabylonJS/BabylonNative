@@ -14,7 +14,7 @@ else()
 endif()
 
 # Check that the requested JavaScript engine is supported.
-set(SUPPORTED_JAVASCRIPT_ENGINES "Chakra" "v8" "JavaScriptCore" "JSI")
+set(SUPPORTED_JAVASCRIPT_ENGINES "Chakra" "V8" "JavaScriptCore" "JSI")
 if(NOT NAPI_JAVASCRIPT_ENGINE IN_LIST SUPPORTED_JAVASCRIPT_ENGINES)
     message(FATAL_ERROR "Unsupported engine: ${NAPI_JAVASCRIPT_ENGINE}")
 endif()

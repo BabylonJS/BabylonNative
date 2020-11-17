@@ -1,3 +1,9 @@
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    set(ENGINE_FILE_POSTFIX "v8")
+else()
+    set(ENGINE_FILE_POSTFIX ${NAPI_JAVASCRIPT_ENGINE})
+endif()
+
 set(SOURCES
     "include/napi/env.h"
     "include/napi/js_native_api.h"
@@ -5,10 +11,10 @@ set(SOURCES
     "include/napi/napi.h"
     "include/napi/napi-inl.h"
     "source/env.cc"
-    "source/env_${NAPI_JAVASCRIPT_ENGINE}.cc"
-    "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}.cc"
-    "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}.h"
-    "source/js_native_api_${NAPI_JAVASCRIPT_ENGINE}_internals.h")
+    "source/env_${ENGINE_FILE_POSTFIX}.cc"
+    "source/js_native_api_${ENGINE_FILE_POSTFIX}.cc"
+    "source/js_native_api_${ENGINE_FILE_POSTFIX}.h"
+    "source/js_native_api_${ENGINE_FILE_POSTFIX}_internals.h")
 
 add_library(napi ${SOURCES})
 
@@ -27,7 +33,7 @@ target_include_directories(napi PUBLIC "include")
 if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
     add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")
-    if(NAPI_JAVASCRIPT_ENGINE STREQUAL "v8" AND NOT ANDROID)
+    if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND NOT ANDROID)
         if(${CMAKE_CXX_COMPILER} MATCHES "x86/cl.exe$")
             set(ARCH "x86")
         elseif(${CMAKE_CXX_COMPILER} MATCHES "x64/cl.exe$")

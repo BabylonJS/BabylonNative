@@ -2,7 +2,7 @@
 # linked from an executable target as a library.
 function(on_linked_as_dependency target)
     # We only have to do anything if the JavaScript engine is V8.
-    if (NAPI_JAVASCRIPT_ENGINE STREQUAL "v8")
+    if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
 
         # Propagate this file to the target so that it will be transitively available to targets that
         # link to that one, too.

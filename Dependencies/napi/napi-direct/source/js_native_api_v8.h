@@ -4,7 +4,7 @@
 // This file needs to be compatible with C compilers.
 #include <string.h>  // NOLINT(modernize-deprecated-headers)
 #include <napi/js_native_api_types.h>
-#include "js_native_api_V8_internals.h"
+#include "js_native_api_v8_internals.h"
 
 static napi_status napi_clear_last_error(napi_env env);
 
