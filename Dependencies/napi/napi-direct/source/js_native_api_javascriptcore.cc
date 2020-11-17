@@ -1,4 +1,4 @@
-#include "js_native_api_JavaScriptCore.h"
+#include "js_native_api_javascriptcore.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
