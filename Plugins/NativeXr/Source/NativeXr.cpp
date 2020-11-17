@@ -60,16 +60,16 @@ namespace
         // so, here, a ratio after tangent is computed
         // and a second derivative ratio computed to compensate
         // the aspect ratio delta after tangent calls
-        const float aspectRatio = static_cast<float>(view.ColorTextureSize.Width) / static_cast<float>(view.ColorTextureSize.Height);
+        /*const float aspectRatio = static_cast<float>(view.ColorTextureSize.Width) / static_cast<float>(view.ColorTextureSize.Height);
         const float deltax = (r - l);
         const float deltay = (t - b);
         const float afterTangentAspectRatio = deltax / deltay;
         const float compensationRatio = afterTangentAspectRatio / aspectRatio;
         const float tc{std::tanf(view.FieldOfView.AngleUp * compensationRatio) * n};
-        const float bc{std::tanf(view.FieldOfView.AngleDown * compensationRatio) * n};
+        const float bc{std::tanf(view.FieldOfView.AngleDown * compensationRatio) * n};*/
 
         std::array<float, 16> bxResult{};
-        bx::mtxProj(bxResult.data(), tc, bc, l, r, n, f, false, bx::Handness::Right);
+        bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
 
         return bxResult;
     }
