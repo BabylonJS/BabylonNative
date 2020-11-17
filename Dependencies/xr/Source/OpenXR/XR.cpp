@@ -38,7 +38,7 @@ namespace xr
         {
             if (Instance.Get() == XR_NULL_HANDLE)
             {
-                throw std::exception(/*Attempted to populate extensions when instance was null*/);
+                throw std::runtime_error{ "Attempted to populate extensions when instance was null" };
             }
 
             Extensions->PopulateDispatchTable(Instance.Get());
@@ -180,7 +180,7 @@ namespace xr
                 systemId = XR_NULL_SYSTEM_ID;
                 return false;
             }
-            else if(!XR_SUCCEEDED(result))
+            else if(XR_FAILED(result))
             {
                 throw std::runtime_error{ "SystemId initialization failed with unexpected result type." };
             }
@@ -1394,12 +1394,12 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* window)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
     {
-        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, window));
+        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, windowProvider));
     }
 
-    System::Session::Session(System& headMountedDisplay, void* graphicsDevice, void*)
+    System::Session::Session(System& headMountedDisplay, void* graphicsDevice, std::function<void*()>)
         : m_impl{ std::make_unique<System::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}
 

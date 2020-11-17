@@ -4,6 +4,19 @@
 
 using namespace android::global;
 
+namespace
+{
+    void ThrowIfFaulted(JNIEnv* env)
+    {
+        if (env->ExceptionCheck())
+        {
+            auto jthrowable{env->ExceptionOccurred()};
+            env->ExceptionClear();
+            throw java::lang::Throwable{jthrowable};
+        }
+    }
+}
+
 namespace java::lang
 {
     ByteArray::ByteArray(int size)
@@ -30,16 +43,50 @@ namespace java::lang
         return result;
     }
 
+    Class::Class(const char* className)
+        : m_env{GetEnvForCurrentThread()}
+        , m_class{m_env->FindClass(className)}
+    {
+    }
+
+    Class::Class(const jclass classObj)
+        : m_env{GetEnvForCurrentThread()}
+        , m_class{classObj}
+    {
+    }
+
+    Class::operator jclass() const
+    {
+        return m_class;
+    };
+
+    bool Class::IsAssignableFrom(Class otherClass)
+    {
+        return m_env->IsAssignableFrom(m_class, otherClass.m_class);
+    };
+
     Object::operator jobject() const
     {
         return m_object;
     }
 
-    Object::Object(const char* className, jobject object)
+    Object::Object(const char* className)
         : m_env{GetEnvForCurrentThread()}
         , m_class{m_env->FindClass(className)}
-        , m_object{object}
+        , m_object{nullptr}
     {
+    }
+
+    Object::Object(jobject object)
+            : m_env{GetEnvForCurrentThread()}
+            , m_class{m_env->GetObjectClass(object)}
+            , m_object{object}
+    {
+    }
+
+    Class Object::GetClass()
+    {
+        return m_class;
     }
 
     String::String(jstring string)
@@ -61,26 +108,51 @@ namespace java::lang
 
     String::operator std::string() const
     {
-        return m_env->GetStringUTFChars(m_string, nullptr);
+        const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
+        std::string str{buffer};
+        m_env->ReleaseStringUTFChars(m_string, buffer);
+        return str;
+    }
+
+    Throwable::Throwable(jthrowable throwable)
+        : Object{throwable}
+        , m_throwableRef{m_env->NewGlobalRef(throwable)}
+        , m_message{GetMessage()}
+    {
+    }
+
+    Throwable::~Throwable()
+    {
+        m_env->DeleteGlobalRef(m_throwableRef);
+    }
+
+    String Throwable::GetMessage() const
+    {
+        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getMessage", "()Ljava/lang/String;"))};
+    }
+
+    const char* Throwable::what() const noexcept
+    {
+        return m_message.c_str();
     }
 }
 
 namespace java::io
 {
     ByteArrayOutputStream::ByteArrayOutputStream()
-        : Object{"java/io/ByteArrayOutputStream", nullptr}
+        : Object{"java/io/ByteArrayOutputStream"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "()V"));
     }
 
     ByteArrayOutputStream::ByteArrayOutputStream(int size)
-        : Object{"java/io/ByteArrayOutputStream", nullptr}
+        : Object{"java/io/ByteArrayOutputStream"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), size);
     }
 
     ByteArrayOutputStream::ByteArrayOutputStream(jobject object)
-        : Object{"java/io/ByteArrayOutputStream", object}
+        : Object{object}
     {
     }
 
@@ -101,7 +173,7 @@ namespace java::io
     }
 
     InputStream::InputStream(jobject object)
-        : Object{"java/io/InputStream", object}
+        : Object{object}
     {
     }
 
@@ -114,29 +186,38 @@ namespace java::io
 namespace java::net
 {
     HttpURLConnection::HttpURLConnection(jobject object)
-        : Object{"java/net/HttpURLConnection", object}
+        : Object{object}
     {
+    }
+
+    lang::Class HttpURLConnection::Class()
+    {
+        return {"java/net/HttpURLConnection"};
     }
 
     int HttpURLConnection::GetResponseCode() const
     {
-        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getResponseCode", "()I"));
+        auto responseCode = m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getResponseCode", "()I"));
+        ThrowIfFaulted(m_env);
+        return responseCode;
     }
 
     URL::URL(lang::String url)
-        : Object{"java/net/URL", nullptr}
+        : Object{"java/net/URL"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), (jstring)url);
     }
 
     URL::URL(jobject object)
-        : Object{"java/net/URL", object}
+        : Object{object}
     {
     }
 
     URLConnection URL::OpenConnection()
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "openConnection", "()Ljava/net/URLConnection;"))};
+        auto urlConnection{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "openConnection", "()Ljava/net/URLConnection;"))};
+        ThrowIfFaulted(m_env);
+        return {urlConnection};
     }
 
     lang::String URL::ToString()
@@ -145,13 +226,14 @@ namespace java::net
     }
 
     URLConnection::URLConnection(jobject object)
-        : Object{"java/net/URLConnection", object}
+        : Object{object}
     {
     }
 
     void URLConnection::Connect()
     {
         m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "connect", "()V"));
+        ThrowIfFaulted(m_env);
     }
 
     URL URLConnection::GetURL() const
@@ -166,7 +248,9 @@ namespace java::net
 
     io::InputStream URLConnection::GetInputStream() const
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getInputStream", "()Ljava/io/InputStream;"))};
+        auto inputStream{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getInputStream", "()Ljava/io/InputStream;"))};
+        ThrowIfFaulted(m_env);
+        return {inputStream};
     }
 
     URLConnection::operator HttpURLConnection() const
@@ -194,7 +278,7 @@ namespace android
 namespace android::app
 {
     Activity::Activity(jobject object)
-        : Object{"android/app/Activity", object}
+        : Object{object}
     {
     }
 
@@ -212,7 +296,7 @@ namespace android::app
 namespace android::content
 {
     Context::Context(jobject object)
-        : Object{"android/content/Context", object}
+        : Object{object}
     {
     }
 
@@ -247,7 +331,7 @@ namespace android::content
 namespace android::content::res
 {
     AssetManager::AssetManager(jobject object)
-        : Object("android/content/res/AssetManager", object)
+        : Object(object)
     {
     }
 
@@ -260,7 +344,7 @@ namespace android::content::res
 namespace android::view
 {
     Display::Display(jobject object)
-            : Object("android/view/Display", object)
+            : Object(object)
     {
     }
 
@@ -270,7 +354,7 @@ namespace android::view
     }
 
     WindowManager::WindowManager(jobject object)
-        : Object("android/view/WindowManager", object)
+        : Object(object)
     {
     }
 
@@ -283,7 +367,7 @@ namespace android::view
 namespace android::net
 {
     Uri::Uri(jobject object)
-        : Object{"android/net/Uri", object}
+        : Object{object}
     {
     }
 

@@ -1,9 +1,12 @@
 #include "AppRuntime.h"
 
 #include <Objbase.h>
+#include <Windows.h>
 
 #include <gsl/gsl>
 #include <cassert>
+#include <exception>
+#include <sstream>
 
 namespace Babylon
 {
@@ -24,5 +27,19 @@ namespace Babylon
         assert(result != 0);
         (void)result;
         RunEnvironmentTier(filename);
+    }
+
+    void AppRuntime::DefaultUnhandledExceptionHandler(std::exception_ptr ptr)
+    {
+        try
+        {
+            std::rethrow_exception(ptr);
+        }
+        catch (const Napi::Error& error)
+        {
+            std::stringstream ss{};
+            ss << "Uncaught Error: " << error.Message() << std::endl;
+            OutputDebugStringA(ss.str().data());
+        }
     }
 }

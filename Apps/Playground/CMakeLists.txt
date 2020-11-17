@@ -2,6 +2,7 @@ set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.glTF2FileLoader.js"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylonjs.materials.js"
+    "../BabylonScripts/babylon.gui.js"
     "../BabylonScripts/ammo.js"
     "../BabylonScripts/meshwriter.min.js"
     "../BabylonScripts/recast.js")
@@ -48,6 +49,7 @@ if(APPLE)
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.glTF2FileLoader.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.max.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.materials.js"
+        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.gui.js"
         "${CMAKE_CURRENT_LIST_DIR}/Scripts/experience.js"
         "${CMAKE_CURRENT_LIST_DIR}/Scripts/playground_runner.js")
     set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT})
@@ -108,7 +110,6 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
-    PRIVATE NativeWindow
     PRIVATE NativeEngine
     PRIVATE Console
     PRIVATE Window
@@ -155,6 +156,8 @@ if(APPLE)
             set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
             enable_language(Swift)
     else()
+        target_link_libraries(Playground PUBLIC "-framework MetalKit")
+
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"

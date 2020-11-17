@@ -22,7 +22,7 @@ namespace Babylon
 
             if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
-                throw std::runtime_error(shader.getInfoDebugLog());
+                throw std::runtime_error{shader.getInfoDebugLog()};
             }
 
             program.addShader(&shader);
@@ -58,7 +58,7 @@ namespace Babylon
 
             if (FAILED(D3DCompile(hlsl.data(), hlsl.size(), nullptr, nullptr, nullptr, "main", target, flags, 0, blob, &errorMsgs)))
             {
-                throw std::exception(static_cast<const char*>(errorMsgs->GetBufferPointer()));
+                throw std::runtime_error{static_cast<const char*>(errorMsgs->GetBufferPointer())};
             }
 
             return{std::move(parser), std::move(compiler)};
@@ -92,12 +92,13 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception(program.getInfoDebugLog());
+            throw std::runtime_error{program.getInfoDebugLog()};
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids);
+        std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids, vertexAttributeRenaming);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
@@ -125,14 +126,16 @@ namespace Babylon
         ShaderCompilerCommon::ShaderInfo vertexShaderInfo{
             std::move(vertexParser),
             std::move(vertexCompiler),
-            gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize())};
+            gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize()),
+            std::move(vertexAttributeRenaming)};
 
         Microsoft::WRL::ComPtr<ID3DBlob> fragmentBlob;
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
         ShaderCompilerCommon::ShaderInfo fragmentShaderInfo{
             std::move(fragmentParser),
             std::move(fragmentCompiler),
-            gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize())};
+            gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize()),
+            {}};
 
         return ShaderCompilerCommon::CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
     }

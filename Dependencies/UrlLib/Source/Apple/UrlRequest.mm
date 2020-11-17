@@ -12,6 +12,10 @@ namespace UrlLib
         ~Impl()
         {
             Abort();
+            if (m_responseBuffer)
+            {
+                [m_responseBuffer release];
+            }
         }
 
         void Abort()
@@ -37,8 +41,6 @@ namespace UrlLib
 
         arcana::task<void, std::exception_ptr> SendAsync()
         {
-            __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
-            
             NSURL* url{[NSURL URLWithString:[NSString stringWithUTF8String:m_url.data()]]};
             NSString* scheme{url.scheme};
             if ([scheme isEqual:@"app"])
@@ -46,19 +48,25 @@ namespace UrlLib
                 NSString* path{[[NSBundle mainBundle] pathForResource:url.path ofType:nil]};
                 if (path == nil)
                 {
-                    throw std::runtime_error{"Invalid resource path in app bundle."};
+                    // Complete the task, but retain the default status code of 0 to indicate a client side error.
+                    return arcana::task_from_result<std::exception_ptr>();
                 }
                 url = [NSURL fileURLWithPath:path];
             }
-            
+
             NSURLSession* session{[NSURLSession sharedSession]};
             NSURLRequest* request{[NSURLRequest requestWithURL:url]};
-            
+
+            __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
+
             id completionHandler{^(NSData* data, NSURLResponse* response, NSError* error)
             {
                 if (error != nil)
                 {
-                    throw std::runtime_error{[[error localizedDescription] UTF8String]};
+                    // Complete the task, but retain the default status code of 0 to indicate a client side error.
+                    // TODO: Consider logging or otherwise exposing the error message in some way via: [[error localizedDescription] UTF8String]
+                    taskCompletionSource.complete();
+                    return;
                 }
                 
                 if ([response class] == [NSHTTPURLResponse class])
@@ -82,14 +90,13 @@ namespace UrlLib
                         }
                         case UrlResponseType::Buffer:
                         {
-                            // TODO: Is it better to avoid copying and retain NSData instead?
-                            m_responseBuffer.resize(data.length);
-                            std::memcpy(m_responseBuffer.data(), data.bytes, data.length);
+                            [data retain];
+                            m_responseBuffer = data;
                             break;
                         }
                         default:
                         {
-                            throw std::runtime_error{"Invalid response type"};
+                            taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Invalid response type"})));
                         }
                     }
                 }
@@ -120,7 +127,12 @@ namespace UrlLib
 
         gsl::span<const std::byte> ResponseBuffer() const
         {
-            return m_responseBuffer;
+            if (m_responseBuffer)
+            {
+                return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), static_cast<long>(m_responseBuffer.length)};
+            }
+
+            return {};
         }
 
     private:
@@ -131,7 +143,7 @@ namespace UrlLib
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};
         std::string m_responseString{};
-        std::vector<std::byte> m_responseBuffer{};
+        NSData* m_responseBuffer{};
     };
 }
 

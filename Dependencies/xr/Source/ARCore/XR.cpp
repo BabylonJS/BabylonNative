@@ -34,27 +34,32 @@
 using namespace android;
 using namespace android::global;
 
-namespace xr {
+namespace xr
+{
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID = 8435;
 
-    struct System::Impl {
-        Impl(const std::string & /*applicationName*/) {
+    struct System::Impl
+    {
+        Impl(const std::string& /*applicationName*/)
+        {
         }
 
-        bool IsInitialized() const {
+        bool IsInitialized() const
+        {
             return true;
         }
 
-        bool TryInitialize() {
+        bool TryInitialize()
+        {
             return true;
         }
     };
 
-    namespace {
-        constexpr GLfloat VERTEX_POSITIONS[]{-1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f,
-                                             +1.0f};
-        constexpr size_t VERTEX_COUNT{std::size(VERTEX_POSITIONS) / 2};
+    namespace
+    {
+        constexpr GLfloat VERTEX_POSITIONS[]{ -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f };
+        constexpr size_t VERTEX_COUNT{ std::size(VERTEX_POSITIONS) / 2 };
 
         constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
             precision highp float;
@@ -84,10 +89,12 @@ namespace xr {
             }
         )";
 
-        GLuint LoadShader(GLenum shader_type, const char *shader_source) {
+        GLuint LoadShader(GLenum shader_type, const char* shader_source)
+        {
             GLuint shader = glCreateShader(shader_type);
-            if (!shader) {
-                throw std::runtime_error{"Failed to create shader"};
+            if (!shader)
+            {
+                throw std::runtime_error{ "Failed to create shader" };
             }
 
             glShaderSource(shader, 1, &shader_source, nullptr);
@@ -95,12 +102,14 @@ namespace xr {
             GLint compileStatus = GL_FALSE;
             glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
 
-            if (compileStatus != GL_TRUE) {
+            if (compileStatus != GL_TRUE)
+            {
                 GLint infoLogLength = 0;
 
                 glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-                if (!infoLogLength) {
-                    throw std::runtime_error{"Unknown error compiling shader"};
+                if (!infoLogLength)
+                {
+                    throw std::runtime_error{ "Unknown error compiling shader" };
                 }
 
                 std::string infoLog;
@@ -113,13 +122,15 @@ namespace xr {
             return shader;
         }
 
-        GLuint CreateShaderProgram() {
+        GLuint CreateShaderProgram()
+        {
             GLuint vertShader = LoadShader(GL_VERTEX_SHADER, QUAD_VERT_SHADER);
             GLuint fragShader = LoadShader(GL_FRAGMENT_SHADER, QUAD_FRAG_SHADER);
 
             GLuint program = glCreateProgram();
-            if (!program) {
-                throw std::runtime_error{"Failed to create shader program"};
+            if (!program)
+            {
+                throw std::runtime_error{ "Failed to create shader program" };
             }
 
             glAttachShader(program, vertShader);
@@ -134,11 +145,13 @@ namespace xr {
             glDetachShader(program, fragShader);
             glDeleteShader(fragShader);
 
-            if (linkStatus != GL_TRUE) {
+            if (linkStatus != GL_TRUE)
+            {
                 GLint infoLogLength = 0;
                 glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-                if (!infoLogLength) {
-                    throw std::runtime_error{"Unknown error linking shader program"};
+                if (!infoLogLength)
+                {
+                    throw std::runtime_error{ "Unknown error linking shader program" };
                 }
 
                 std::string infoLog;
@@ -151,16 +164,23 @@ namespace xr {
             return program;
         }
 
-        constexpr GLint GetTextureUnit(GLenum texture) {
+        constexpr GLint GetTextureUnit(GLenum texture)
+        {
             return texture - GL_TEXTURE0;
         }
 
-        namespace GLTransactions {
-            auto SetCapability(GLenum capability, bool isEnabled) {
-                const auto setCapability = [capability](bool isEnabled) {
-                    if (isEnabled) {
+        namespace GLTransactions
+        {
+            auto SetCapability(GLenum capability, bool isEnabled)
+            {
+                const auto setCapability = [capability](bool isEnabled)
+                {
+                    if (isEnabled)
+                    {
                         glEnable(capability);
-                    } else {
+                    }
+                    else
+                    {
                         glDisable(capability);
                     }
                 };
@@ -170,76 +190,75 @@ namespace xr {
                 return gsl::finally([wasEnabled, setCapability]() { setCapability(wasEnabled); });
             }
 
-            auto BindFrameBuffer(GLuint frameBufferId) {
+            auto BindFrameBuffer(GLuint frameBufferId)
+            {
                 GLint previousFrameBufferId;
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFrameBufferId);
                 glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId);
-                return gsl::finally([previousFrameBufferId]() {
-                    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFrameBufferId));
-                });
+                return gsl::finally([previousFrameBufferId]() { glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFrameBufferId)); });
             }
 
-            auto DepthMask(GLboolean depthMask) {
+            auto DepthMask(GLboolean depthMask)
+            {
                 GLboolean previousDepthMask;
                 glGetBooleanv(GL_DEPTH_WRITEMASK, &previousDepthMask);
                 glDepthMask(depthMask);
                 return gsl::finally([previousDepthMask]() { glDepthMask(previousDepthMask); });
             }
 
-            auto BlendFunc(GLenum blendFuncName, GLenum blendFuncSFactor, GLenum blendFuncTFactor) {
+            auto BlendFunc(GLenum blendFuncName, GLenum blendFuncSFactor, GLenum blendFuncTFactor)
+            {
                 GLint previousBlendFuncTFactor;
                 glGetIntegerv(blendFuncName, &previousBlendFuncTFactor);
                 glBlendFunc(blendFuncSFactor, blendFuncTFactor);
-                return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() {
-                    glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor));
-                });
+                return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() { glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor)); });
             }
 
-            auto ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) {
+            auto ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
+            {
                 GLfloat previousClearColor[4];
                 glGetFloatv(GL_COLOR_CLEAR_VALUE, previousClearColor);
                 glClearColor(red, green, blue, alpha);
-                return gsl::finally(
-                        [red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() {
-                            glClearColor(red, green, blue, alpha);
-                        });
+                return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
             }
 
-            auto Sampler(int unit) {
+            auto Sampler(int unit)
+            {
                 glActiveTexture(GL_TEXTURE0 + unit);
                 GLint previousSampler;
                 glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
-                return gsl::finally([unit, sampler = previousSampler]() {
-                    glActiveTexture(GL_TEXTURE0 + unit);
-                    glBindSampler(unit, sampler);
-                });
+                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
             }
         }
 
-        bool CheckARCoreInstallStatus(bool requestInstall) {
+        bool CheckARCoreInstallStatus(bool requestInstall)
+        {
             ArInstallStatus install_status;
             ArStatus installStatus = ArCoreApk_requestInstall(
-                    GetEnvForCurrentThread(), GetCurrentActivity(), requestInstall,
-                    &install_status);
+                GetEnvForCurrentThread(), GetCurrentActivity(), requestInstall, &install_status);
             return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
         }
 
-        arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync() {
+        arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync()
+        {
             auto task = arcana::task_from_result<std::exception_ptr>();
 
             // Check if ARCore is already installed.
-            if (!CheckARCoreInstallStatus(false)) {
+            if (!CheckARCoreInstallStatus(false))
+            {
                 arcana::task_completion_source<void, std::exception_ptr> installTcs{};
 
                 // Add a resume callback, which will check if ARCore has been successfully installed upon app resume.
                 auto resumeTicket{AddResumeCallback([installTcs]() mutable {
-                    if (!CheckARCoreInstallStatus(false)) {
+                    if (!CheckARCoreInstallStatus(false))
+                    {
                         // ARCore not installed, throw an error.
                         std::ostringstream message;
                         message << "ARCore not installed.";
-                        installTcs.complete(arcana::make_unexpected(
-                                make_exception_ptr(std::runtime_error{message.str()})));
-                    } else {
+                        installTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                    }
+                    else
+                    {
                         // ARCore installed successfully, complete the promise.
                         installTcs.complete();
                     }
@@ -247,85 +266,81 @@ namespace xr {
 
                 // Kick off the install request, and set the task for our caller to wait on.
                 CheckARCoreInstallStatus(true);
-                task = installTcs.as_task().then(arcana::inline_scheduler,
-                                                 arcana::cancellation::none(),
-                                                 [resumeTicket = std::move(resumeTicket)]() {
-                                                     return;
-                                                 });
+                task = installTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){
+                    return;
+                });
             }
 
             return task;
         }
 
-        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync() {
+        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
+        {
             auto task = arcana::task_from_result<std::exception_ptr>();
 
             // Check if permissions are already granted.
-            if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA())) {
+            if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA()))
+            {
                 // Register for the permission callback request.
                 arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
                 auto permissionTicket
+                {
+                    AddRequestPermissionsResultCallback(
+                    [permissionTcs](int32_t requestCode, const std::vector<std::string>& /*permissionList*/, const std::vector<int32_t>& results) mutable
+                    {
+                        // Check if this is our permission request ID.
+                        if (requestCode == PERMISSION_REQUEST_ID)
                         {
-                                AddRequestPermissionsResultCallback(
-                                        [permissionTcs](int32_t requestCode,
-                                                        const std::vector<std::string> & /*permissionList*/,
-                                                        const std::vector<int32_t> &results) mutable {
-                                            // Check if this is our permission request ID.
-                                            if (requestCode == PERMISSION_REQUEST_ID) {
-                                                // If the permission is found and granted complete the task.
-                                                if (results[0] ==
-                                                    0 /* PackageManager.PERMISSION_GRANTED */) {
-                                                    permissionTcs.complete();
-                                                    return;
-                                                }
+                            // If the permission is found and granted complete the task.
+                            if (results[0] == 0 /* PackageManager.PERMISSION_GRANTED */)
+                            {
+                                permissionTcs.complete();
+                                return;
+                            }
 
-                                                // Permission was denied.  Complete the task with an error.
-                                                std::ostringstream message;
-                                                message
-                                                        << "Camera permission not acquired successfully";
-                                                permissionTcs.complete(arcana::make_unexpected(
-                                                        make_exception_ptr(std::runtime_error{
-                                                                message.str()})));
-                                            }
-                                        })
-                        };
+                            // Permission was denied.  Complete the task with an error.
+                            std::ostringstream message;
+                            message << "Camera permission not acquired successfully";
+                            permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
+                        }
+                    })
+                };
 
                 // Kick off the permission check request, and set the task for our caller to wait on.
-                GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(),
-                                                        PERMISSION_REQUEST_ID);
-                task = permissionTcs.as_task().then(arcana::inline_scheduler,
-                                                    arcana::cancellation::none(),
-                                                    [ticket = std::move(permissionTicket)]() {
-                                                        return;
-                                                    });
+                GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(), PERMISSION_REQUEST_ID);
+                task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){
+                    return;
+                });
             }
 
             return task;
         }
     }
 
-    struct System::Session::Impl {
-        const System::Impl &SystemImpl;
-        std::vector<Frame::View> ActiveFrameViews{{}};
+    struct System::Session::Impl
+    {
+        const System::Impl& SystemImpl;
+        std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
-        std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        float DepthNearZ{DEFAULT_DEPTH_NEAR_Z};
-        float DepthFarZ{DEFAULT_DEPTH_FAR_Z};
-        bool PlaneDetectionEnabled{false};
-        bool FeaturePointCloudEnabled{false};
+        float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
+        float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
+        bool PlaneDetectionEnabled{ false };
+        bool FeaturePointCloudEnabled{ false };
 
-        Impl(System::Impl &systemImpl, void * /*graphicsContext*/)
-                : SystemImpl{systemImpl},
-                  pauseTicket{AddPauseCallback([this]() { this->PauseSession(); })},
-                  resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })} {
+        Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
+            : SystemImpl{ systemImpl }
+            , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
+            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
+        {
         }
 
-        ~Impl() {
-            if (isInitialized) {
+        ~Impl()
+        {
+            if (isInitialized)
+            {
                 Planes.clear();
-                Meshes.clear();
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
                 ArPose_destroy(cameraPose);
@@ -344,7 +359,8 @@ namespace xr {
             }
         }
 
-        void Initialize() {
+        void Initialize()
+        {
             // Note: graphicsContext is an EGLContext
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
@@ -360,12 +376,12 @@ namespace xr {
 
             // Create the ARCore ArSession
             {
-                ArStatus status = ArSession_create(GetEnvForCurrentThread(), GetAppContext(),
-                                                   &session);
-                if (status != ArStatus::AR_SUCCESS) {
+                ArStatus status = ArSession_create(GetEnvForCurrentThread(), GetAppContext(), &session);
+                if (status != ArStatus::AR_SUCCESS)
+                {
                     std::ostringstream message;
                     message << "Failed to create ArSession with status: " << status;
-                    throw std::runtime_error{message.str()};
+                    throw std::runtime_error{ message.str() };
                 }
             }
 
@@ -395,20 +411,21 @@ namespace xr {
             // Start the ArSession
             {
                 ArStatus status = ArSession_resume(session);
-                if (status != ArStatus::AR_SUCCESS) {
+                if (status != ArStatus::AR_SUCCESS)
+                {
                     std::ostringstream message;
                     message << "Failed to start ArSession with status: " << status;
-                    throw std::runtime_error{message.str()};
+                    throw std::runtime_error{ message.str() };
                 }
             }
 
             isInitialized = true;
         }
 
-        std::unique_ptr<Session::Frame>
-        GetNextFrame(bool &shouldEndSession, bool &shouldRestartSession,
-                     std::function<void(void *texturePointer)> deletedTextureCallback) {
-            if (!isInitialized) {
+        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
+        {
+            if (!isInitialized)
+            {
                 Initialize();
             }
 
@@ -418,7 +435,7 @@ namespace xr {
             // Update the ArSession to get a new frame
             ArSession_update(session, frame);
 
-            ArCamera *camera{};
+            ArCamera* camera{};
             ArFrame_acquireCamera(session, frame, &camera);
 
             {
@@ -444,29 +461,27 @@ namespace xr {
                 width = static_cast<size_t>(_width);
                 height = static_cast<size_t>(_height);
             }
-
+            
             // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
             width = std::max(width, size_t(8));
             height = std::max(height, size_t(8));
 
             // Check whether the dimensions have changed
-            if ((ActiveFrameViews[0].ColorTextureSize.Width != width ||
-                 ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height) {
+            if ((ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height)
+            {
                 DestroyDisplayResources(deletedTextureCallback);
 
                 int rotation = GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation();
 
                 // Update the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
-                ArSession_setDisplayGeometry(session, rotation, static_cast<int32_t>(width),
-                                             static_cast<int32_t>(height));
+                ArSession_setDisplayGeometry(session, rotation, static_cast<int32_t>(width), static_cast<int32_t>(height));
 
                 // Allocate and store the render texture
                 {
                     GLuint colorTextureId{};
                     glGenTextures(1, &colorTextureId);
                     glBindTexture(GL_TEXTURE_2D, colorTextureId);
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                                 GL_UNSIGNED_BYTE, nullptr);
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                     glBindTexture(GL_TEXTURE_2D, 0);
@@ -480,30 +495,25 @@ namespace xr {
                     GLuint depthTextureId{};
                     glGenTextures(1, &depthTextureId);
                     glBindTexture(GL_TEXTURE_2D, depthTextureId);
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_OES, width, height, 0,
-                                 GL_DEPTH_STENCIL_OES, GL_UNSIGNED_INT_24_8_OES, nullptr);
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_OES, width, height, 0, GL_DEPTH_STENCIL_OES, GL_UNSIGNED_INT_24_8_OES, nullptr);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                     glBindTexture(GL_TEXTURE_2D, 0);
-                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void *>(depthTextureId);
+                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void*>(depthTextureId);
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
 
                 // Bind the color and depth texture to the clear color frame buffer
-                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(
-                        clearFrameBufferId);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                                       static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)),
-                                       0);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                                       static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)),
-                                       0);
-            } else {
+                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(clearFrameBufferId);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)), 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)), 0);
+            }
+            else
+            {
                 // Clear the color and depth texture
                 // Whether or not to clear is an implementation detail - OpenXR (for example) provides a color texture that is already filled with the camera texture, so the common XR layer should not assume a clear is required
-                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(
-                        clearFrameBufferId);
+                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(clearFrameBufferId);
                 auto clearColorTransaction = GLTransactions::ClearColor(0, 0, 0, 0);
                 glClear(GL_COLOR_BUFFER_BIT);
             }
@@ -512,13 +522,11 @@ namespace xr {
             ArFrame_getDisplayGeometryChanged(session, frame, &geometryChanged);
 
             // Check whether the projection matrix needs to be updated
-            if (geometryChanged || ActiveFrameViews[0].DepthNearZ != DepthNearZ ||
-                ActiveFrameViews[0].DepthFarZ != DepthFarZ) {
+            if (geometryChanged || ActiveFrameViews[0].DepthNearZ != DepthNearZ || ActiveFrameViews[0].DepthFarZ != DepthFarZ)
+            {
                 // Get the current projection matrix
                 glm::mat4 projectionMatrix{};
-                ArCamera_getProjectionMatrix(session, camera, ActiveFrameViews[0].DepthNearZ,
-                                             ActiveFrameViews[0].DepthFarZ,
-                                             glm::value_ptr(projectionMatrix));
+                ArCamera_getProjectionMatrix(session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
 
                 // Calculate the aspect ratio and field of view
                 float a = projectionMatrix[0][0];
@@ -529,19 +537,18 @@ namespace xr {
 
                 // Set the horizontal and vertical field of view
                 ActiveFrameViews[0].FieldOfView.AngleDown = -(ActiveFrameViews[0].FieldOfView.AngleUp = fieldOfView);
-                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight =
-                                                                      fieldOfView * aspectRatio);
+                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
             }
 
             ActiveFrameViews[0].DepthNearZ = DepthNearZ;
             ActiveFrameViews[0].DepthFarZ = DepthFarZ;
 
-            if (geometryChanged) {
+            if (geometryChanged)
+            {
                 // Transform the UVs for the vertex positions given the current display size
                 ArFrame_transformCoordinates2d(
-                        session, frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
-                        VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED,
-                        CameraFrameUVs);
+                    session, frame, AR_COORDINATES_2D_OPENGL_NORMALIZED_DEVICE_COORDINATES,
+                    VERTEX_COUNT, VERTEX_POSITIONS, AR_COORDINATES_2D_TEXTURE_NORMALIZED, CameraFrameUVs);
             }
 
             ArCamera_release(camera);
@@ -549,62 +556,59 @@ namespace xr {
             return std::make_unique<Session::Frame>(*this);
         }
 
-        void RequestEndSession() {
+        void RequestEndSession()
+        {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             sessionEnded = true;
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const {
+        Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const
+        {
             // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
-            return {1, 1};
+            return {1,1};
         }
 
-        void DrawFrame() {
+        void DrawFrame()
+        {
             // Suppress rendering if the camera did not produce the first frame yet.
             // This is to avoid drawing possible leftover data from previous sessions if
             // the texture is reused.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
-            if (frameTimestamp) {
+            if (frameTimestamp)
+            {
                 auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(0);
                 auto cullFaceTransaction = GLTransactions::SetCapability(GL_CULL_FACE, false);
                 auto depthTestTransaction = GLTransactions::SetCapability(GL_DEPTH_TEST, false);
                 auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
-                auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA,
-                                                                      GL_SRC_ALPHA,
-                                                                      GL_ONE_MINUS_SRC_ALPHA);
+                auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 auto sampler0Transation = GLTransactions::Sampler(0);
                 auto sampler1Transation = GLTransactions::Sampler(1);
 
-                glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width,
-                           ActiveFrameViews[0].ColorTextureSize.Height);
+                glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(shaderProgramId);
 
                 // Configure the quad vertex positions
-                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId,
-                                                                           "vertexPositions");
+                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
                 glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
                 // Configure the camera texture
-                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId,
-                                                                         "cameraTexture");
+                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
                 glBindSampler(0, 0);
 
                 // Configure the camera frame UVs
-                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId,
-                                                                          "cameraFrameUVs");
+                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
                 glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
 
                 // Configure the babylon render texture
-                auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId,
-                                                                          "babylonTexture");
+                auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId, "babylonTexture");
                 glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
                 glActiveTexture(GL_TEXTURE1);
-                auto babylonTextureId = (GLuint) (size_t) ActiveFrameViews[0].ColorTexturePointer;
+                auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
                 glBindSampler(1, 0);
 
@@ -620,84 +624,83 @@ namespace xr {
             }
         }
 
-        void GetHitTestResults(std::vector<HitResult> &filteredResults, xr::Ray offsetRay,
-                               xr::HitTestTrackableType validHitTestTypes) {
-            if (!IsTracking()) {
+        void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType validHitTestTypes)
+        {
+            if (!IsTracking())
+            {
                 return;
             }
 
             // Push the camera orientation into a glm quaternion.
             glm::quat cameraOrientationQuaternion
-                    {
-                            ActiveFrameViews[0].Space.Pose.Orientation.W,
-                            ActiveFrameViews[0].Space.Pose.Orientation.X,
-                            ActiveFrameViews[0].Space.Pose.Orientation.Y,
-                            ActiveFrameViews[0].Space.Pose.Orientation.Z
-                    };
+            {
+                ActiveFrameViews[0].Space.Pose.Orientation.W,
+                ActiveFrameViews[0].Space.Pose.Orientation.X,
+                ActiveFrameViews[0].Space.Pose.Orientation.Y,
+                ActiveFrameViews[0].Space.Pose.Orientation.Z
+            };
 
             // Pull out the direction from the offset ray into a GLM Vector3.
-            glm::vec3 direction{offsetRay.Direction.X, offsetRay.Direction.Y,
-                                offsetRay.Direction.Z};
+            glm::vec3 direction{ offsetRay.Direction.X, offsetRay.Direction.Y, offsetRay.Direction.Z };
 
             // Multiply the camera rotation quaternion by the direction vector to calculate the direction vector in viewer space.
-            glm::vec3 cameraOrientedDirection{
-                    cameraOrientationQuaternion * glm::normalize(direction)};
-            float cameraOrientedDirectionArray[3]{cameraOrientedDirection.x,
-                                                  cameraOrientedDirection.y,
-                                                  cameraOrientedDirection.z};
+            glm::vec3 cameraOrientedDirection{cameraOrientationQuaternion * glm::normalize(direction)};
+            float cameraOrientedDirectionArray[3]{ cameraOrientedDirection.x, cameraOrientedDirection.y, cameraOrientedDirection.z };
 
             // Convert the origin to camera space by multiplying the origin by the rotation quaternion, then adding that to the
             // position of the camera.
-            glm::vec3 offsetOrigin{offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z};
+            glm::vec3 offsetOrigin{ offsetRay.Origin.X, offsetRay.Origin.Y, offsetRay.Origin.Z };
             offsetOrigin = cameraOrientationQuaternion * offsetOrigin;
 
             // Pull out the origin composited from the offsetRay and camera position into a float array.
             float hitTestOrigin[3]
-                    {
-                            ActiveFrameViews[0].Space.Pose.Position.X + offsetOrigin.x,
-                            ActiveFrameViews[0].Space.Pose.Position.Y + offsetOrigin.y,
-                            ActiveFrameViews[0].Space.Pose.Position.Z + offsetOrigin.z
-                    };
+            {
+                ActiveFrameViews[0].Space.Pose.Position.X + offsetOrigin.x,
+                ActiveFrameViews[0].Space.Pose.Position.Y + offsetOrigin.y,
+                ActiveFrameViews[0].Space.Pose.Position.Z + offsetOrigin.z
+            };
 
             // Perform a hit test and process the results.
-            ArFrame_hitTestRay(session, frame, hitTestOrigin, cameraOrientedDirectionArray,
-                               hitResultList);
+            ArFrame_hitTestRay(session, frame, hitTestOrigin, cameraOrientedDirectionArray, hitResultList);
 
             // Iterate over the results and pull out only those that match the desired TrackableType.  For now we are limiting results to
             // just hits against the Plane, and further scoping that to Poses that are contained in the polygon of the detected mesh.
             // This is equivalent to XRHitTestTrackableType.mesh (https://immersive-web.github.io/hit-test/#hit-test-trackable-type-enum).
             int32_t size{};
             ArHitResultList_getSize(session, hitResultList, &size);
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++)
+            {
                 ArTrackableType trackableType{};
-                ArTrackable *trackable;
+                ArTrackable* trackable;
 
                 bool hitTestResultValid{false};
                 ArHitResultList_getItem(session, hitResultList, i, hitResult);
                 ArHitResult_acquireTrackable(session, hitResult, &trackable);
                 ArTrackable_getType(session, trackable, &trackableType);
-                if (trackableType == AR_TRACKABLE_PLANE) {
+                if (trackableType == AR_TRACKABLE_PLANE)
+                {
                     // If we are only hit testing against planes then mark the hit test as valid otherwise check
                     // if the hit result is inside the plane mesh.
-                    if ((validHitTestTypes & xr::HitTestTrackableType::PLANE) !=
-                        xr::HitTestTrackableType::NONE) {
+                    if ((validHitTestTypes & xr::HitTestTrackableType::PLANE) != xr::HitTestTrackableType::NONE)
+                    {
                         hitTestResultValid = true;
-                    } else if ((validHitTestTypes & xr::HitTestTrackableType::MESH) !=
-                               xr::HitTestTrackableType::NONE) {
+                    }
+                    else if ((validHitTestTypes & xr::HitTestTrackableType::MESH) != xr::HitTestTrackableType::NONE)
+                    {
                         int32_t isPoseInPolygon{};
                         ArHitResult_getHitPose(session, hitResult, tempPose);
-                        ArPlane_isPoseInPolygon(session, reinterpret_cast<ArPlane *>(trackable),
-                                                tempPose, &isPoseInPolygon);
+                        ArPlane_isPoseInPolygon(session, reinterpret_cast<ArPlane*>(trackable), tempPose, &isPoseInPolygon);
                         hitTestResultValid = isPoseInPolygon != 0;
                     }
-                } else if (trackableType == AR_TRACKABLE_POINT &&
-                           (validHitTestTypes & xr::HitTestTrackableType::POINT) !=
-                           xr::HitTestTrackableType::NONE) {
+                }
+                else if (trackableType == AR_TRACKABLE_POINT && (validHitTestTypes & xr::HitTestTrackableType::POINT) != xr::HitTestTrackableType::NONE)
+                {
                     // Hit a feature point, which is valid for this hit test source.
                     hitTestResultValid = true;
                 }
 
-                if (hitTestResultValid) {
+                if (hitTestResultValid)
+                {
                     float rawPose[7]{};
                     ArHitResult_getHitPose(session, hitResult, tempPose);
                     ArPose_getPoseRaw(session, tempPose, rawPose);
@@ -712,28 +715,34 @@ namespace xr {
         }
 
         // Clean up all ArCore trackables owned by the current frame, this should be called once per frame.
-        void CleanupFrameTrackables() {
-            for (ArTrackable *trackable : frameTrackables) {
+        void CleanupFrameTrackables()
+        {
+            for (ArTrackable* trackable : frameTrackables)
+            {
                 ArTrackable_release(trackable);
             }
 
             frameTrackables.clear();
         }
 
-        Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable) {
+        Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable)
+        {
             // First translate the passed in pose to something usable by ArCore.
-            ArPose *arPose{};
+            ArPose* arPose{};
             float rawPose[7]{};
             PoseToRaw(rawPose, pose);
             ArPose_create(session, rawPose, &arPose);
 
             // Create the actual anchor. If a trackable was passed in (from a hit test result) create the
             // anchor against the tracakble. Otherwise create it against the session.
-            ArAnchor *arAnchor{};
-            auto trackableObj = reinterpret_cast<ArTrackable *>(trackable);
-            if (trackableObj) {
+            ArAnchor* arAnchor{};
+            auto trackableObj = reinterpret_cast<ArTrackable*>(trackable);
+            if (trackableObj)
+            {
                 ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
-            } else {
+            }
+            else
+            {
                 ArSession_acquireNewAnchor(session, arPose, &arAnchor);
             }
 
@@ -745,10 +754,12 @@ namespace xr {
             return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
         }
 
-        void UpdateAnchor(xr::Anchor &anchor) {
+        void UpdateAnchor(xr::Anchor& anchor)
+        {
             // First check if the anchor still exists, if not then mark the anchor as no longer valid.
-            auto arAnchor = reinterpret_cast<ArAnchor *>(anchor.NativeAnchor);
-            if (arAnchor == nullptr) {
+            auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
+            if (arAnchor == nullptr)
+            {
                 anchor.IsValid = false;
                 return;
             }
@@ -758,48 +769,60 @@ namespace xr {
 
             // If tracking then update the pose, if paused then skip the update, if stopped then
             // mark this anchor as no longer valid, as it will never again be tracked by ArCore.
-            if (trackingState == AR_TRACKING_STATE_TRACKING) {
+            if (trackingState == AR_TRACKING_STATE_TRACKING)
+            {
                 ArAnchor_getPose(session, arAnchor, tempPose);
                 float rawPose[7]{};
                 ArPose_getPoseRaw(session, tempPose, rawPose);
                 RawToPose(rawPose, anchor.Pose);
-            } else if (trackingState == AR_TRACKING_STATE_STOPPED) {
+            }
+            else if (trackingState == AR_TRACKING_STATE_STOPPED)
+            {
                 anchor.IsValid = false;
             }
         }
 
-        void DeleteAnchor(xr::Anchor &anchor) {
+        void DeleteAnchor(xr::Anchor& anchor)
+        {
             // If this anchor has not already been deleted, then detach it from the current AR session,
             // and clean up its state in memory.
-            if (anchor.NativeAnchor != nullptr) {
-                auto arAnchor = reinterpret_cast<ArAnchor *>(anchor.NativeAnchor);
+            if (anchor.NativeAnchor != nullptr)
+            {
+                auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
                 ArAnchor_detach(session, arAnchor);
                 CleanupAnchor(arAnchor);
                 anchor.NativeAnchor = nullptr;
             }
         }
 
-        void CleanupAnchor(ArAnchor *arAnchor) {
+        void CleanupAnchor(ArAnchor* arAnchor)
+        {
             // Iterate over the list of anchors if arAnchor is null then clean up all anchors
             // otherwise clean up only the target anchor and return.
             auto anchorIter = arCoreAnchors.begin();
-            while (anchorIter != arCoreAnchors.end()) {
-                if (arAnchor == nullptr || arAnchor == *anchorIter) {
+            while (anchorIter != arCoreAnchors.end())
+            {
+                if (arAnchor == nullptr || arAnchor == *anchorIter)
+                {
                     ArAnchor_release(*anchorIter);
                     anchorIter = arCoreAnchors.erase(anchorIter);
 
-                    if (arAnchor != nullptr) {
+                    if (arAnchor != nullptr)
+                    {
                         return;
                     }
-                } else {
+                }
+                else
+                {
                     anchorIter++;
                 }
             }
         }
 
-        void UpdatePlanes(std::vector<Frame::Plane::Identifier> &updatedPlanes,
-                          std::vector<Frame::Plane::Identifier> &deletedPlanes) {
-            if (!IsTracking() || !PlaneDetectionEnabled) {
+        void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
+        {
+            if (!IsTracking() || !PlaneDetectionEnabled)
+            {
                 return;
             }
 
@@ -810,21 +833,23 @@ namespace xr {
             ArFrame_getUpdatedTrackables(session, frame, AR_TRACKABLE_PLANE, trackableList);
             int32_t size{};
             ArTrackableList_getSize(session, trackableList, &size);
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++)
+            {
                 // Get the plane.
-                ArPlane *planeTrackable{};
+                ArPlane* planeTrackable{};
                 {
-                    ArTrackable *trackable{};
+                    ArTrackable* trackable{};
                     ArTrackableList_acquireItem(session, trackableList, i, &trackable);
-                    planeTrackable = reinterpret_cast<ArPlane *>(trackable);
+                    planeTrackable = reinterpret_cast<ArPlane*>(trackable);
                 }
 
                 // Check if this plane has been subsumed. If so skip it as we are about to delete this plane.
-                ArPlane *subsumingPlane{};
+                ArPlane* subsumingPlane{};
                 ArPlane_acquireSubsumedBy(session, planeTrackable, &subsumingPlane);
-                if (subsumingPlane != nullptr) {
-                    ArTrackable_release(reinterpret_cast<ArTrackable *>(planeTrackable));
-                    ArTrackable_release(reinterpret_cast<ArTrackable *>(subsumingPlane));
+                if (subsumingPlane != nullptr)
+                {
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
                     continue;
                 }
 
@@ -842,46 +867,53 @@ namespace xr {
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
                 auto planeIterator = planeMap.find(planeTrackable);
-                if (planeIterator != planeMap.end()) {
-                    UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), rawPose,
-                                planePolygonBuffer, polygonSize);
-                    ArTrackable_release(reinterpret_cast<ArTrackable *>(planeTrackable));
-                } else {
+                if (planeIterator != planeMap.end())
+                {
+                    UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), rawPose, planePolygonBuffer, polygonSize);
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(planeTrackable));
+                }
+                else
+                {
                     // This is a new plane, create it and initialize its values.
                     Planes.emplace_back();
-                    auto &plane = Planes.back();
+                    auto& plane = Planes.back();
                     planeMap.insert({planeTrackable, plane.ID});
                     UpdatePlane(updatedPlanes, plane, rawPose, planePolygonBuffer, polygonSize);
                 }
             }
         }
 
-        void UpdateFeaturePointCloud() {
-            if (!IsTracking() || !FeaturePointCloudEnabled) {
+        void UpdateFeaturePointCloud()
+        {
+            if (!IsTracking() || !FeaturePointCloudEnabled)
+            {
                 return;
             }
 
             // Get the feature point cloud from ArCore.
             ArPointCloud *pointCloud = nullptr;
             int32_t numberOfPoints = 0;
-            const int32_t *pointCloudIDs = nullptr;
+            const int32_t* pointCloudIDs = nullptr;
             const float *pointCloudData = nullptr;
             ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);
 
-            if (status != AR_SUCCESS) {
+            if (status != AR_SUCCESS)
+            {
                 FeaturePointCloud.clear();
                 return;
             }
 
-            try {
+            try
+            {
                 ArPointCloud_getNumberOfPoints(session, pointCloud, &numberOfPoints);
                 ArPointCloud_getData(session, pointCloud, &pointCloudData);
                 ArPointCloud_getPointIds(session, pointCloud, &pointCloudIDs);
 
                 FeaturePointCloud.resize(numberOfPoints);
-                for (int32_t i = 0; i < numberOfPoints; i++) {
+                for (int32_t i = 0; i < numberOfPoints; i++)
+                {
                     FeaturePointCloud.emplace_back();
-                    auto &featurePoint = FeaturePointCloud.back();
+                    auto& featurePoint = FeaturePointCloud.back();
                     int32_t dataIndex = i * 4;
 
                     // Grab the position and confidence value from the point cloud.
@@ -895,15 +927,19 @@ namespace xr {
                     // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
                     const int32_t id = pointCloudIDs[i];
                     auto featurePointIterator = featurePointIDMap.find(id);
-                    if (featurePointIterator != featurePointIDMap.end()) {
+                    if (featurePointIterator != featurePointIDMap.end())
+                    {
                         featurePoint.ID = featurePointIterator->second;
-                    } else {
+                    }
+                    else
+                    {
                         featurePoint.ID = nextFeaturePointID++;
                         featurePointIDMap.insert({id, featurePoint.ID});
                     }
                 }
             }
-            catch (std::exception) {
+            catch (std::exception)
+            {
                 // Release the point cloud to free its memory.
                 ArPointCloud_release(pointCloud);
                 throw;
@@ -913,10 +949,13 @@ namespace xr {
             ArPointCloud_release(pointCloud);
         }
 
-        Frame::Plane &GetPlaneByID(Frame::Plane::Identifier planeID) {
+        Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
+        {
             // Loop over the plane vector and find the correct plane.
-            for (Frame::Plane &plane : Planes) {
-                if (plane.ID == planeID) {
+            for (Frame::Plane& plane : Planes)
+            {
+                if (plane.ID == planeID)
+                {
                     return plane;
                 }
             }
@@ -927,10 +966,10 @@ namespace xr {
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
-        std::vector<ArTrackable *> frameTrackables{};
-        std::vector<ArAnchor *> arCoreAnchors{};
+        std::vector<ArTrackable*> frameTrackables{};
+        std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
-        std::unordered_map<ArPlane *, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID = 0;
 
@@ -938,40 +977,46 @@ namespace xr {
         GLuint cameraTextureId{};
         GLuint clearFrameBufferId{};
 
-        ArSession *session{};
-        ArFrame *frame{};
-        ArPose *cameraPose{};
-        ArPose *tempPose{};
-        ArHitResultList *hitResultList{};
-        ArHitResult *hitResult{};
-        ArTrackableList *trackableList{};
+        ArSession* session{};
+        ArFrame* frame{};
+        ArPose* cameraPose{};
+        ArPose* tempPose{};
+        ArHitResultList* hitResultList{};
+        ArHitResult* hitResult{};
+        ArTrackableList* trackableList{};
 
         float CameraFrameUVs[VERTEX_COUNT * 2]{};
 
         AppStateChangedCallbackTicket pauseTicket;
         AppStateChangedCallbackTicket resumeTicket;
 
-        void PauseSession() {
-            if (session) {
+        void PauseSession()
+        {
+            if (session)
+            {
                 ArSession_pause(session);
             }
         }
 
-        void ResumeSession() {
-            if (session) {
+        void ResumeSession()
+        {
+            if (session)
+            {
                 ArSession_resume(session);
             }
         }
 
-        void DestroyDisplayResources(
-                std::function<void(void *texturePointer)> deletedTextureCallback = [](void *) {}) {
-            if (ActiveFrameViews[0].ColorTexturePointer) {
+        void DestroyDisplayResources(std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){})
+        {
+            if (ActiveFrameViews[0].ColorTexturePointer)
+            {
                 auto colorTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer));
                 glDeleteTextures(1, &colorTextureId);
                 deletedTextureCallback(ActiveFrameViews[0].ColorTexturePointer);
             }
 
-            if (ActiveFrameViews[0].DepthTexturePointer) {
+            if (ActiveFrameViews[0].DepthTexturePointer)
+            {
                 auto depthTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer));
                 glDeleteTextures(1, &depthTextureId);
             }
@@ -979,7 +1024,8 @@ namespace xr {
             ActiveFrameViews[0] = {};
         }
 
-        void PoseToRaw(float rawPose[], const Pose &pose) {
+        void PoseToRaw(float rawPose[], const Pose& pose)
+        {
             rawPose[0] = pose.Orientation.X;
             rawPose[1] = pose.Orientation.Y;
             rawPose[2] = pose.Orientation.Z;
@@ -989,7 +1035,8 @@ namespace xr {
             rawPose[6] = pose.Position.Z;
         }
 
-        void RawToPose(const float rawPose[], Pose &pose) {
+        void RawToPose(const float rawPose[], Pose& pose)
+        {
             pose.Orientation.X = rawPose[0];
             pose.Orientation.Y = rawPose[1];
             pose.Orientation.Z = rawPose[2];
@@ -1002,41 +1049,46 @@ namespace xr {
         /**
          * Checks whether this plane has been subsumed (i.e. no longer needed), and adds it to the vector if so.
          **/
-        void CheckForSubsumedPlanes(std::vector<Frame::Plane::Identifier> &subsumedPlanes) {
+        void CheckForSubsumedPlanes(std::vector<Frame::Plane::Identifier>& subsumedPlanes)
+        {
             auto planeMapIterator = planeMap.begin();
-            while (planeMapIterator != planeMap.end()) {
-                auto[arPlane, planeID] = *planeMapIterator;
+            while (planeMapIterator != planeMap.end())
+            {
+                auto [arPlane, planeID] = *planeMapIterator;
 
                 // Check if the plane has been subsumed, and if we should stop tracking it.
-                ArPlane *subsumingPlane = nullptr;
+                ArPlane* subsumingPlane = nullptr;
                 ArPlane_acquireSubsumedBy(session, arPlane, &subsumingPlane);
 
                 // Plane has been subsumed, stop tracking it explicitly.
-                if (subsumingPlane != nullptr) {
+                if (subsumingPlane != nullptr)
+                {
                     subsumedPlanes.push_back(planeID);
 
-                    auto &plane = GetPlaneByID(planeID);
+                    auto& plane = GetPlaneByID(planeID);
                     plane.Polygon.clear();
                     plane.PolygonSize = 0;
-
+                    
                     planeMapIterator = planeMap.erase(planeMapIterator);
-                    ArTrackable_release(reinterpret_cast<ArTrackable *>(arPlane));
-                    ArTrackable_release(reinterpret_cast<ArTrackable *>(subsumingPlane));
-                } else {
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
+                    ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
+                }
+                else
+                {
                     planeMapIterator++;
                 }
             }
         }
 
-        void UpdatePlane(std::vector<Frame::Plane::Identifier> &updatedPlanes, Frame::Plane &plane,
-                         const float rawPose[], std::vector<float> &newPolygon,
-                         size_t polygonSize) {
+        void UpdatePlane(std::vector<Frame::Plane::Identifier>& updatedPlanes, Frame::Plane& plane, const float rawPose[], std::vector<float>& newPolygon, size_t polygonSize)
+        {
             // Grab the new center
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
 
             // Plane was not actually updated return.
-            if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter)) {
+            if (!CheckIfPlaneWasUpdated(plane, newPolygon, newCenter))
+            {
                 return;
             }
 
@@ -1055,8 +1107,9 @@ namespace xr {
         /**
          * Checks whether the AR camera is currently tracking.
          **/
-        bool IsTracking() {
-            ArCamera *camera{};
+        bool IsTracking()
+        {
+            ArCamera* camera{};
             ArTrackingState trackingState{};
             ArFrame_acquireCamera(session, frame, &camera);
             ArCamera_getTrackingState(session, camera, &trackingState);
@@ -1064,84 +1117,93 @@ namespace xr {
         }
     };
 
-    struct System::Session::Frame::Impl {
-        Impl(Session::Impl &sessionImpl)
-                : sessionImpl{sessionImpl} {
+    struct System::Session::Frame::Impl
+    {
+        Impl(Session::Impl& sessionImpl)
+            : sessionImpl{sessionImpl}
+        {
         }
 
-        Session::Impl &sessionImpl;
+        Session::Impl& sessionImpl;
     };
 
-    System::Session::Frame::Frame(Session::Impl &sessionImpl)
-            : Views{sessionImpl.ActiveFrameViews}, InputSources{sessionImpl.InputSources},
-              Planes{sessionImpl.Planes}, Meshes{sessionImpl.Meshes},
-              FeaturePointCloud{sessionImpl.FeaturePointCloud}, UpdatedPlanes{}, RemovedPlanes{},
-              UpdatedMeshes{}, RemovedMeshes{},
-              m_impl{std::make_unique<Session::Frame::Impl>(sessionImpl)} {
+    System::Session::Frame::Frame(Session::Impl& sessionImpl)
+        : Views{ sessionImpl.ActiveFrameViews }
+        , InputSources{ sessionImpl.InputSources }
+        , Planes{ sessionImpl.Planes }
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , UpdatedPlanes{}
+        , RemovedPlanes{}
+        , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
+    {
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
         m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
-    void System::Session::Frame::GetHitTestResults(std::vector<HitResult> &filteredResults,
-                                                   xr::Ray offsetRay,
-                                                   xr::HitTestTrackableType trackableTypes) const {
+    void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
+    {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
-    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const {
+    Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
+    {
         return m_impl->sessionImpl.CreateAnchor(pose, trackable);
     }
 
-    void System::Session::Frame::UpdateAnchor(xr::Anchor &anchor) const {
+    void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const
+    {
         m_impl->sessionImpl.UpdateAnchor(anchor);
     }
 
-    void System::Session::Frame::DeleteAnchor(xr::Anchor &anchor) const {
+    void System::Session::Frame::DeleteAnchor(xr::Anchor& anchor) const
+    {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
-    System::Session::Frame::Plane &
-    System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
+    System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
+    {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
     }
 
-    System::Session::Frame::Mesh &
-    System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier) const {
-        throw std::exception(/*not implemented*/);
-    }
-
-    System::Session::Frame::~Frame() {
+    System::Session::Frame::~Frame()
+    {
         m_impl->sessionImpl.CleanupFrameTrackables();
         m_impl->sessionImpl.DrawFrame();
     }
 
-    System::System(const char *appName)
-            : m_impl{std::make_unique<System::Impl>(appName)} {}
+    System::System(const char* appName)
+        : m_impl{ std::make_unique<System::Impl>(appName) }
+    {}
 
     System::~System() {}
 
-    bool System::IsInitialized() const {
+    bool System::IsInitialized() const
+    {
         return m_impl->IsInitialized();
     }
 
-    bool System::TryInitialize() {
+    bool System::TryInitialize()
+    {
         return m_impl->TryInitialize();
     }
 
-    arcana::task<bool, std::exception_ptr>
-    System::IsSessionSupportedAsync(SessionType sessionType) {
+    arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType)
+    {
         // Currently only AR is supported on Android
-        if (sessionType == SessionType::IMMERSIVE_AR) {
+        if (sessionType == SessionType::IMMERSIVE_AR)
+        {
             // Spin up a background thread to own the polling check.
             arcana::task_completion_source<bool, std::exception_ptr> tcs;
-            std::thread([tcs]() mutable {
+            std::thread([tcs]() mutable
+            {
                 // Query ARCore to check if AR sessions are supported.
                 // If not yet installed then poll supported status up to 100 times over 20 seconds.
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < 100; i++)
+                {
                     ArAvailability arAvailability{};
-                    ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(),
-                                                &arAvailability);
-                    switch (arAvailability) {
+                    ArCoreApk_checkAvailability(GetEnvForCurrentThread(), GetAppContext(), &arAvailability);
+                    switch (arAvailability)
+                    {
                         case AR_AVAILABILITY_SUPPORTED_APK_TOO_OLD:
                         case AR_AVAILABILITY_SUPPORTED_INSTALLED:
                         case AR_AVAILABILITY_SUPPORTED_NOT_INSTALLED:
@@ -1155,12 +1217,14 @@ namespace xr {
                             break;
                     }
 
-                    if (tcs.completed()) {
+                    if (tcs.completed())
+                    {
                         break;
                     }
                 }
 
-                if (!tcs.completed()) {
+                if (!tcs.completed())
+                {
                     tcs.complete(false);
                 }
             }).detach();
@@ -1172,72 +1236,58 @@ namespace xr {
         return arcana::task_from_result<std::exception_ptr>(false);
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr>
-    System::Session::CreateAsync(System &system, void *graphicsDevice, void *window) {
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+    {
         // First perform the ARCore installation check, request install if not yet installed.
-        return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler,
-                                                 arcana::cancellation::none(), []() {
-                    // Next check for camera permissions, and request if not already granted.
-                    return CheckCameraPermissionAsync();
-                }).then(arcana::inline_scheduler, arcana::cancellation::none(),
-                        [&system, graphicsDevice, window]() {
-                            // Finally if the previous two tasks succeed, start the AR session.
-                            return std::make_shared<System::Session>(system, graphicsDevice,
-                                                                     window);
-                        });
+        return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), []()
+        {
+            // Next check for camera permissions, and request if not already granted.
+            return CheckCameraPermissionAsync();
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, windowProvider{ std::move(windowProvider) }]()
+        {
+            // Finally if the previous two tasks succeed, start the AR session.
+            return std::make_shared<System::Session>(system, graphicsDevice, windowProvider);
+        });
     }
 
-    System::Session::Session(System &system, void *graphicsDevice, void *)
-            : m_impl{std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice)} {}
+    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()>)
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
+    {}
 
-    System::Session::~Session() {
+    System::Session::~Session()
+    {
     }
 
-    std::unique_ptr<System::Session::Frame>
-    System::Session::GetNextFrame(bool &shouldEndSession, bool &shouldRestartSession,
-                                  std::function<void(
-                                          void *texturePointer)> deletedTextureCallback) {
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
+    {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureCallback);
     }
 
-    void System::Session::RequestEndSession() {
+    void System::Session::RequestEndSession()
+    {
         m_impl->RequestEndSession();
     }
 
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const {
+    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
+    {
         return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 
-    void System::Session::SetDepthsNearFar(float depthNear, float depthFar) {
+    void System::Session::SetDepthsNearFar(float depthNear, float depthFar)
+    {
         m_impl->DepthNearZ = depthNear;
         m_impl->DepthFarZ = depthFar;
     }
 
-    void System::Session::SetPlaneDetectionEnabled(bool enabled) const {
+    void System::Session::SetPlaneDetectionEnabled(bool enabled) const
+    {
         m_impl->PlaneDetectionEnabled = enabled;
     }
 
-    bool System::Session::TrySetFeaturePointCloudEnabled(bool enabled) const {
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool enabled) const
+    {
         // Point cloud system not yet supported.
         m_impl->FeaturePointCloudEnabled = enabled;
         return enabled;
-    }
-
-    bool System::Session::TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions&)
-    {
-        // TODO
-        return false;
-    }
-
-    bool System::Session::TrySetMeshDetectorEnabled(const bool)
-    {
-        // TODO
-        return false;
-    }
-
-    bool System::Session::TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions&)
-    {
-        // TODO
-        return false;
     }
 }

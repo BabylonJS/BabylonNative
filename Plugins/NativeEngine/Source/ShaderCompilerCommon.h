@@ -5,6 +5,8 @@
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
 #include <spirv_parser.hpp>
+#include <unordered_map>
+#include <string>
 
 namespace Babylon::ShaderCompilerCommon
 {
@@ -61,6 +63,7 @@ namespace Babylon::ShaderCompilerCommon
         std::unique_ptr<spirv_cross::Parser> Parser;
         std::unique_ptr<const spirv_cross::Compiler> Compiler;
         gsl::span<uint8_t> Bytes;
+        std::unordered_map<std::string, std::string> AttributeRenaming;
     };
 
     ShaderCompiler::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);
