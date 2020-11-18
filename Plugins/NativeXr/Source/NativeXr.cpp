@@ -46,19 +46,19 @@ namespace
 
     std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
     {
-        const float n{view.DepthNearZ};
-        const float f{view.DepthFarZ};
-        const float verticalFoV{view.FieldOfView.AngleUp - view.FieldOfView.AngleDown};
-        const float horizontalFoV{view.FieldOfView.AngleRight - view.FieldOfView.AngleLeft};
+        // Calculate total vertical and horizontal FoV and the aspect ratio.
+        const float verticalFoV{abs(view.FieldOfView.AngleUp) + abs(view.FieldOfView.AngleDown)};
+        const float horizontalFoV{abs(view.FieldOfView.AngleRight) + abs(view.FieldOfView.AngleLeft)};
         const float aspectRatio = static_cast<float>(horizontalFoV / verticalFoV);
 
-        const float t{std::tanf(verticalFoV / 2) * n};
-        const float b{t * -1};
-        const float r{t * aspectRatio};
-        const float l{r * -1};
+        // Calculate the top, bottom, left, and right values for creating the projection matrix.
+        const float top{std::tanf(verticalFoV / 2) * view.DepthNearZ};
+        const float bottom{top * -1};
+        const float right{top * aspectRatio};
+        const float left{right * -1};
 
         std::array<float, 16> bxResult{};
-        bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
+        bx::mtxProj(bxResult.data(), top, bottom, left, right, view.DepthNearZ, view.DepthFarZ, false, bx::Handness::Right);
 
         return bxResult;
     }
