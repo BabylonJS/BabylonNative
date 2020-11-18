@@ -48,28 +48,17 @@ namespace
     {
         const float n{view.DepthNearZ};
         const float f{view.DepthFarZ};
+        const float verticalFoV{view.FieldOfView.AngleUp - view.FieldOfView.AngleDown};
+        const float horizontalFoV{view.FieldOfView.AngleRight - view.FieldOfView.AngleLeft};
+        const float aspectRatio = static_cast<float>(horizontalFoV / verticalFoV);
 
-        const float r{std::tanf(view.FieldOfView.AngleRight) * n};
-        const float l{std::tanf(view.FieldOfView.AngleLeft) * n};
-        const float t{std::tanf(view.FieldOfView.AngleUp) * n};
-        const float b{std::tanf(view.FieldOfView.AngleDown) * n};
-
-        // Angles for FieldOfView respect the viewport ratio
-        // but tangent is not a linear function and ratio of values(l,r,b,t) computed
-        // in CreateProjectionMatrix do not respect that ratio
-        // so, here, a ratio after tangent is computed
-        // and a second derivative ratio computed to compensate
-        // the aspect ratio delta after tangent calls
-        const float aspectRatio = static_cast<float>(view.ColorTextureSize.Height) / static_cast<float>(view.ColorTextureSize.Width);
-        const float deltax = (r - l);
-        const float deltay = (t - b);
-        const float afterTangentAspectRatio = deltay / deltax;
-        const float compensationRatio = afterTangentAspectRatio / aspectRatio;
-        const float rc{std::tanf(view.FieldOfView.AngleRight * compensationRatio) * n};
-        const float lc{std::tanf(view.FieldOfView.AngleLeft * compensationRatio) * n};
+        const float t{std::tanf(verticalFoV / 2) * n};
+        const float b{t * -1};
+        const float r{t * aspectRatio};
+        const float l{r * -1};
 
         std::array<float, 16> bxResult{};
-        bx::mtxProj(bxResult.data(), t, b, lc, rc, n, f, false, bx::Handness::Right);
+        bx::mtxProj(bxResult.data(), t, b, l, r, n, f, false, bx::Handness::Right);
 
         return bxResult;
     }
