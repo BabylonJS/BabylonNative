@@ -133,6 +133,7 @@ namespace java::lang
 
     private:
         jobject m_throwableRef;
+        std::string m_message;
     };
 }
 
