@@ -10,6 +10,7 @@
 // Note: Do not include this file directly! Include "napi.h" instead.
 
 #include <cstring>
+#include <stdexcept>
 #include <type_traits>
 
 namespace Napi {
@@ -2049,10 +2050,24 @@ inline Error Error::New(napi_env env, const std::string& message) {
   return Error::New<Error>(env, message.c_str(), message.size(), napi_create_error);
 }
 
-inline NAPI_NO_RETURN void Error::Fatal(const char* /*location*/, const char* /*message*/) {
-  // $HACK
-  //napi_fatal_error(location, NAPI_AUTO_LENGTH, message, NAPI_AUTO_LENGTH);
-  throw std::exception();
+#ifdef NAPI_CPP_EXCEPTIONS
+
+inline Error Error::New(napi_env env, const std::exception& exception) {
+  return Error::New(env, exception.what());
+}
+
+inline Error Error::New(napi_env env, const std::exception_ptr& exception_ptr) {
+  try {
+    std::rethrow_exception(exception_ptr);
+  } catch (const std::exception& exception) {
+    return Error::New(env, exception);
+  }
+}
+
+#endif // NAPI_CPP_EXCEPTIONS
+
+inline NAPI_NO_RETURN void Error::Fatal(const char* location, const char* message) {
+  throw std::runtime_error(std::string{location} + ": " + message);
 }
 
 inline Error::Error() : ObjectReference() {

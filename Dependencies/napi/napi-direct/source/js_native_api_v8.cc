@@ -2947,13 +2947,16 @@ napi_status napi_run_script(napi_env env,
 
   auto maybe_script = v8::Script::Compile(context,
       v8::Local<v8::String>::Cast(v8_script));
-  CHECK_MAYBE_EMPTY(env, maybe_script, napi_generic_failure);
 
-  auto script_result =
-      maybe_script.ToLocalChecked()->Run(context);
-  CHECK_MAYBE_EMPTY(env, script_result, napi_generic_failure);
+  if (!maybe_script.IsEmpty()) {
+      auto script_result =
+          maybe_script.ToLocalChecked()->Run(context);
+      if (!script_result.IsEmpty()) {
+          *result = v8impl::JsValueFromV8LocalValue(
+              script_result.ToLocalChecked());
+      }
+  }
 
-  *result = v8impl::JsValueFromV8LocalValue(script_result.ToLocalChecked());
   return GET_RETURN_STATUS(env);
 }
 

@@ -200,12 +200,12 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void Update(const Napi::TypedArray& bytes, uint32_t startingIdx)
+        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx)
         {
             const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
 
-            constexpr auto nonDynamic = [](auto) {
-                throw std::runtime_error("Cannot update a non-dynamic index buffer.");
+            auto nonDynamic = [env](auto) {
+                throw Napi::Error::New(env, "Cannot update a non-dynamic index buffer.");
             };
             const auto dynamic = [memory, startingIdx](auto handle) {
                 bgfx::update(handle, startingIdx, memory);
@@ -293,10 +293,10 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void Update(const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
+        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
         {
-            constexpr auto nonDynamic = [](auto) {
-                throw std::runtime_error("Cannot update non-dynamic vertex buffer.");
+            auto nonDynamic = [env](auto) {
+                throw Napi::Error::New(env, "Cannot update non-dynamic vertex buffer.");
             };
             const auto dynamic = [&bytes, offset, byteLength, this](auto handle) {
                 if (handle.idx == bgfx::kInvalidHandle)
@@ -496,24 +496,16 @@ namespace Babylon
         return arcana::make_task(scheduler, m_cancelSource, [this] {
             m_isRenderScheduled = false;
 
-            try
+            if (!m_requestAnimationFrameCallback.IsEmpty())
             {
-                if (!m_requestAnimationFrameCallback.IsEmpty())
-                {
-                    // We can get here from either the normal RequestAnimationFrame or the XR RequestAnimationFrame,
-                    // so we need to clear out the regular RequestAnimationFrame callback to make sure we don't incorrectly
-                    // call it when we have transitioned to the XR RequestAnimationFrame.
-                    auto callback{std::move(m_requestAnimationFrameCallback)};
-                    callback({});
-                }
-                GetFrameBufferManager().Reset();
+                // We can get here from either the normal RequestAnimationFrame or the XR RequestAnimationFrame,
+                // so we need to clear out the regular RequestAnimationFrame callback to make sure we don't incorrectly
+                // call it when we have transitioned to the XR RequestAnimationFrame.
+                auto callback{std::move(m_requestAnimationFrameCallback)};
+                callback({});
             }
-            catch (const std::exception& ex)
-            {
-                m_runtime.Dispatch([ex](Napi::Env env) {
-                    Napi::Error::New(env, ex.what()).ThrowAsJavaScriptException();
-                });
-            }
+
+            GetFrameBufferManager().Reset();
         });
     }
 
@@ -635,7 +627,7 @@ namespace Babylon
         const Napi::TypedArray data = info[1].As<Napi::TypedArray>();
         const uint32_t startingIdx = info[2].As<Napi::Number>().Uint32Value();
 
-        indexBufferData.Update(data, startingIdx);
+        indexBufferData.Update(info.Env(), data, startingIdx);
     }
 
     Napi::Value NativeEngine::CreateVertexBuffer(const Napi::CallbackInfo& info)
@@ -690,7 +682,7 @@ namespace Babylon
             byteLength = static_cast<uint32_t>(data.ByteLength());
         }
 
-        vertexBufferData.Update(data, byteOffset, byteLength);
+        vertexBufferData.Update(info.Env(), data, byteOffset, byteLength);
     }
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
@@ -699,7 +691,16 @@ namespace Babylon
         const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
         std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
-        ShaderCompiler::BgfxShaderInfo shaderInfo{m_shaderCompiler.Compile(vertexSource, fragmentSource)};
+        ShaderCompiler::BgfxShaderInfo shaderInfo{};
+        
+        try
+        {
+            shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
 
         static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos) {
             auto numUniforms = bgfx::getShaderUniforms(shader);
@@ -1272,7 +1273,7 @@ namespace Babylon
         bgfx::FrameBufferHandle frameBufferHandle{};
         if (generateStencilBuffer && !generateDepth)
         {
-            throw std::exception{/* Does this case even make any sense? */};
+            throw std::runtime_error{"Does this case even make any sense?"};
         }
         else if (!generateStencilBuffer && !generateDepth)
         {
@@ -1385,12 +1386,16 @@ namespace Babylon
                     bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
                 }
             }
-            // change culling
+
+            // We need to explicitly swap the culling state flags (instead of XOR)
+            // because we would like to preserve the no culling configuration, which is 00.
+            const auto cullCW  = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
+            const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
+
             uint64_t m_engineStateYFlipped = m_engineState;
-            if (m_engineStateYFlipped & ~BGFX_STATE_CULL_MASK)
-            {
-                m_engineStateYFlipped ^= BGFX_STATE_CULL_MASK;
-            }
+            m_engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
+            m_engineStateYFlipped |= (cullCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
+
             bgfx::setState(m_engineStateYFlipped | fillModeState);
         }
         else
@@ -1454,19 +1459,9 @@ namespace Babylon
         const auto y = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
-
-        const auto backbufferWidth = bgfx::getStats()->width;
-        const auto backbufferHeight = bgfx::getStats()->height;
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_frameBufferManager.GetBound().UseViewId(m_frameBufferManager.GetNewViewId());
-        const bgfx::ViewId viewId = m_frameBufferManager.GetBound().ViewId;
-        bgfx::setViewFrameBuffer(viewId, m_frameBufferManager.GetBound().FrameBuffer);
-        bgfx::setViewRect(viewId,
-            static_cast<uint16_t>(x * backbufferWidth),
-            static_cast<uint16_t>(yOrigin * backbufferHeight),
-            static_cast<uint16_t>(width * backbufferWidth),
-            static_cast<uint16_t>(height * backbufferHeight));
+        m_frameBufferManager.GetBound().SetViewPort(x, yOrigin, width, height);
     }
 
     void NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
