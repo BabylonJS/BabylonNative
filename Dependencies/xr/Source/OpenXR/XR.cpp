@@ -742,7 +742,6 @@ namespace xr
         {
             const auto& session = HmdImpl.Context.Session();
             const auto& sessionState = HmdImpl.Context.State();
-            
             switch (sessionState)
             {
             case XR_SESSION_STATE_READY:
@@ -910,6 +909,12 @@ namespace xr
             depthInfoView.subImage.imageRect = imageRect;
             depthInfoView.subImage.imageArrayIndex = 0;
         }
+
+        bool IsFrameSubmissionSupported()
+        {
+            const auto& sessionState = sessionImpl.HmdImpl.Context.State();
+            return sessionState != XrSessionState::XR_SESSION_STATE_IDLE;
+        }
     };
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
@@ -921,6 +926,11 @@ namespace xr
         , RemovedPlanes{}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
+        if (!m_impl->IsFrameSubmissionSupported())
+        {
+            return;
+        }
+
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
         const auto& extensions = *m_impl->sessionImpl.HmdImpl.Context.Extensions();
         auto& displayTime = m_impl->sessionImpl.HmdImpl.Context.ContextImpl->DisplayTime;
@@ -1234,6 +1244,11 @@ namespace xr
 
     System::Session::Frame::~Frame()
     {
+        if (!m_impl->IsFrameSubmissionSupported())
+        {
+            return;
+        }
+
         std::vector<XrCompositionLayerProjection> layers{};
         const auto& context = m_impl->sessionImpl.HmdImpl.Context;
         const auto& session = context.Session();
