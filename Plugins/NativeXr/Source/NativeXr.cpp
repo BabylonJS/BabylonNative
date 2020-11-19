@@ -835,8 +835,8 @@ namespace Babylon
                 : Napi::ObjectWrap<XRViewerPose>{info}
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
-                , m_jsIsEmulatedPosition{Napi::Persistent(Napi::Boolean::New(info.Env(), true))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
+                , m_isEmulatedPosition{true}
             {
             }
 
@@ -882,17 +882,17 @@ namespace Babylon
                 }
                 
                 // Check the frame to see if it has valid tracking, if it does not then the position should
-                //  be flagged as being emulated.
-                m_jsIsEmulatedPosition = Napi::Persistent(Napi::Boolean::New(info.Env(), !frame->IsTracking()));
+                // be flagged as being emulated.
+                m_isEmulatedPosition = !frame->IsTracking();
             }
 
         private:
             Napi::ObjectReference m_jsTransform{};
             Napi::Reference<Napi::Array> m_jsViews{};
-            Napi::Reference<Napi::Boolean> m_jsIsEmulatedPosition{};
 
             XRRigidTransform& m_transform;
             std::vector<XRView*> m_views{};
+            bool m_isEmulatedPosition;
 
             Napi::Value GetTransform(const Napi::CallbackInfo& /*info*/)
             {
@@ -904,9 +904,9 @@ namespace Babylon
                 return m_jsViews.Value();
             }
             
-            Napi::Value GetEmulatedPosition(const Napi::CallbackInfo& /*info*/)
+            Napi::Value GetEmulatedPosition(const Napi::CallbackInfo& info)
             {
-                return m_jsIsEmulatedPosition.Value();
+                return Napi::Boolean::New(info.Env(), m_isEmulatedPosition);
             }
         };
 
@@ -1618,7 +1618,7 @@ namespace Babylon
             Napi::ObjectReference m_jsPose{};
             Napi::ObjectReference m_jsJointPose{};
             
-            bool m_hasBegunTracking = false;
+            bool m_hasBegunTracking{false};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
@@ -1627,7 +1627,7 @@ namespace Babylon
                 // as it will be marked as estimated if tracking is lost.
                 if (!m_hasBegunTracking && !m_frame->IsTracking())
                 {
-                    return info.Env().Undefined();
+                    return info.Env().Null();
                 }
                 else
                 {

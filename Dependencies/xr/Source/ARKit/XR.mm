@@ -1009,8 +1009,12 @@ namespace xr {
             [sessionDelegate SetPlaneDetectionEnabled:enabled];
         }
         
-        ARTrackingState GetTrackingState() const {
-            return session.currentFrame.camera.trackingState;
+        bool IsTracking() const {
+            // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
+            // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
+            // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
+            // ARTrackingStateNormal.
+            return session.currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
 
     private:
@@ -1200,11 +1204,7 @@ namespace xr {
     }
 
     bool System::Session::Frame::IsTracking() const {
-        // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
-        // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
-        // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
-        // ARTrackingStateNormal.
-        return m_impl->sessionImpl.GetTrackingState() == ARTrackingState::ARTrackingStateNormal;
+        return m_impl->sessionImpl.IsTracking();
     }
 
     System::System(const char* appName)
