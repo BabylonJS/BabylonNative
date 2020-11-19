@@ -1430,7 +1430,8 @@ namespace xr
 
     bool System::Session::Frame::IsTracking() const
     {
-        // TODO - Plumb tracking states from OpenXR. For now this will maintain the current behavior where
+        // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
+        // Plumb tracking states from OpenXR. For now this will maintain the current behavior where
         // BabylonJS assumes tracking is always available.
         return true;
     }
