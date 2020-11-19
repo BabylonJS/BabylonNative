@@ -2045,7 +2045,11 @@ namespace Babylon
 
                 // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
-                worldInformationObj.Set("detectedMeshes", GetDetectedMeshes(info));
+
+                if (m_meshSet)
+                {
+                    worldInformationObj.Set("detectedMeshes", m_meshSet.Value());
+                }
 
                 return std::move(worldInformationObj);
             }
@@ -2067,25 +2071,6 @@ namespace Babylon
                 }
 
                 return std::move(featurePointArray);
-            }
-
-            Napi::Value GetDetectedMeshes(const Napi::CallbackInfo& info)
-            {
-                if (m_meshSet)
-                {
-                    m_meshSet.Value().Get("clear").As<Napi::Function>().Call(m_meshSet.Value(), {});
-                }
-                else
-                {
-                    m_meshSet = Napi::Persistent(info.Env().Global().Get("Set").As<Napi::Function>().New({}));
-                }
-
-                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
-                {
-                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), { meshNapiValue.Value() });
-                }
-
-                return m_meshSet.Value();
             }
 
             void UpdateSceneObjects(const Napi::Env& env)
@@ -2167,6 +2152,13 @@ namespace Babylon
                 for (auto meshID : m_frame->RemovedMeshes)
                 {
                     m_trackedMeshes.erase(meshID);
+                }
+
+                // Creaet a new mesh set every frame, detected meshes are assumed immutable
+                m_meshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
+                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
+                {
+                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), { meshNapiValue.Value() });
                 }
             }
         };
