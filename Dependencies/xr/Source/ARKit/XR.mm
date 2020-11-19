@@ -283,14 +283,14 @@ namespace {
     auto orientation = [self orientation];
     
     // Grab the projection matrix for the image based on the viewport.
-    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    auto projectionMatrix = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
 
     // Update the projection matrix of the view.
     for(int row = 0; row < 4; row++)
     {
         for(int column = 0; column < 4; column++)
         {
-            ActiveFrameViews[0].ProjectionMatrix[row * 4 + column] = projectionMatrix[row][column];
+            frameView.ProjectionMatrix[row * 4 + column] = projectionMatrix.columns[row][column];
         }
     }
 }
@@ -596,11 +596,6 @@ namespace xr {
             
             [pipelineStateDescriptor release];
             commandQueue = [metalDevice newCommandQueue];
-            
-            // default fov values to avoid NaN at startup
-            auto& frameView = ActiveFrameViews[0];
-            frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = 0.5);
-            frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = 0.5);
         }
 
         ~Impl() {

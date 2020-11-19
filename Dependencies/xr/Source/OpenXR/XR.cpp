@@ -856,7 +856,7 @@ namespace xr
             }
         }
 
-        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) {
+        void PopulateProjectionMatrix(const XrView& /*cachedView*/, xr::System::Session::Frame::View& /*view*/) {
             // TODO: Need to populate view.ProjectionMatrix.
         }
 
