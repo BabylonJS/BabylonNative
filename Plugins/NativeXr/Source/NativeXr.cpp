@@ -184,6 +184,34 @@ namespace
         }
     }
 
+    void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)    
+    {
+        auto env = jsInputSource.Env();
+        //Set Gamepad Object
+        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
+        {
+            auto gamepadButton = Napi::Object::New(env);
+            auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Pressed);
+            auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Touched);
+            auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.Buttons[i].Value);
+            gamepadButton.Set("pressed", napiGamepadPressed);
+            gamepadButton.Set("touched", napiGamepadTouched);
+            gamepadButton.Set("value", napiGamepadValue);
+            gamepadButtons.Set(static_cast<int>(i), gamepadButton);
+        }
+        jsGamepadObject.Set("buttons", gamepadButtons);
+
+        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.Axes.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Axes.size(); i++)
+        {
+            auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.Axes[i]);
+            gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);
+        }
+        jsGamepadObject.Set("axes", gamepadAxes);
+        jsInputSource.Set("gamepad", jsGamepadObject);
+    }
+
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
     {
         constexpr std::array<const char*, 2> HANDEDNESS_STRINGS{
@@ -192,6 +220,7 @@ namespace
         constexpr const char* TARGET_RAY_MODE{"tracked-pointer"};
 
         auto jsInputSource = Napi::Object::New(env);
+
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
         SetXRInputSourceData(jsInputSource, inputSource);
@@ -202,6 +231,13 @@ namespace
         jsInputSource.Set("profiles", profiles);
 
         return Napi::Persistent(jsInputSource);
+    }
+
+    void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    {
+        auto env = jsInputSource.Env();
+        auto jsGamepadObject = Napi::Object::New(env);
+        SetXRGamepadObjectData(jsInputSource, jsGamepadObject, inputSource);
     }
 }
 
@@ -1994,6 +2030,7 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
+
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2003,19 +2040,34 @@ namespace Babylon
 
                     current.insert(inputSource.ID);
 
-                    auto found = m_idToInputSource.find(inputSource.ID);
-                    if (found == m_idToInputSource.end())
+                    auto inputSourceFound = m_idToInputSource.find(inputSource.ID);
+                    if (inputSourceFound == m_idToInputSource.end())
                     {
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
+                        
+                        //Now that input Source is created, create a gamepad object if enabled for the input source
+                        inputSourceFound = m_idToInputSource.find(inputSource.ID);
+                        if (inputSource.GamepadTrackedThisFrame)
+                        {
+                            auto inputSourceVal = inputSourceFound->second.Value();
+                            CreateXRGamepadObject(inputSourceVal, inputSource);
+                        }
 
                         added.insert(inputSource.ID);
                     }
                     else
                     {
                         // Ensure the correct spaces are associated with the existing input source.
-                        auto val = found->second.Value();
-                        SetXRInputSourceData(val, inputSource);
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        SetXRInputSourceData(inputSourceVal, inputSource);
+
+                        //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
+                        if (inputSourceVal.Has("gamepad"))
+                        {
+                            auto gamepadObject = inputSourceVal.Get("gamepad").As<Napi::Object>();
+                            SetXRGamepadObjectData(inputSourceVal, gamepadObject, inputSource);
+                        }
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)

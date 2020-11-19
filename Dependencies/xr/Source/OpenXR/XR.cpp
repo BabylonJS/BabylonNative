@@ -256,12 +256,63 @@ namespace xr
             XrAction ControllerGetAimPoseAction{};
             std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerAimPoseSpaces{};
 
+            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME{ "controller_get_trigger_action" };
+            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME{ "Controller Trigger" };
+            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX{ "/input/trigger/value" };
+            XrAction ControllerGetTriggerValueAction{};
+
+            static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME{ "controller_get_squeeze_action" };
+            static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME{ "Controller Squeeze" };
+            static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX{ "/input/squeeze/click" };
+            XrAction ControllerGetSqueezeClickAction{};
+
+            static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME{ "controller_get_trackpad_axes_action" };
+            static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME{ "Controller Trackpad Axes" };
+            static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX{ "/input/trackpad" };
+            XrAction ControllerGetTrackpadAxesAction{};
+
+            static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME{ "controller_get_trackpad_click_action" };
+            static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME{ "Controller Trackpad Click" };
+            static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX{ "/input/trackpad/click" };
+            XrAction ControllerGetTrackpadClickAction{};
+
+            static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME{ "controller_get_trackpad_touch_action" };
+            static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME{ "Controller Trackpad Touch" };
+            static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX{ "/input/trackpad/touch" };
+            XrAction ControllerGetTrackpadTouchAction{};
+
+            static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME{ "controller_get_thumbstick_axes_action" };
+            static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME{ "Controller Thumbstick Axes" };
+            static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX{ "/input/thumbstick" };
+            XrAction ControllerGetThumbstickAxesAction{};
+
+            static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME{ "controller_get_thumbstick_click_action" };
+            static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME{ "Controller Thumbstick Click" };
+            static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX{ "/input/thumbstick/click" };
+            XrAction ControllerGetThumbstickClickAction{};
+
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
+            static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::Plane> Planes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
+
+        struct
+        {
+            static constexpr uint32_t TRIGGER_BUTTON = 0;
+            static constexpr uint32_t SQUEEZE_BUTTON = 1;
+            static constexpr uint32_t TRACKPAD_BUTTON = 2;
+            static constexpr uint32_t THUMBSTICK_BUTTON = 3;
+
+            static constexpr uint32_t TRACKPAD_X_AXIS = 0;
+            static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
+            static constexpr uint32_t THUMBSTICK_X_AXIS = 2;
+            static constexpr uint32_t THUMBSTICK_Y_AXIS = 3;
+
+            XrBool32 ControllerBinding{ true };
+        } ControllerInfo;
 
         struct HandInfo
         {
@@ -565,6 +616,33 @@ namespace xr
             HandData.HandsInitialized = true;
         }
 
+        void CreateControllerActionAndBinding(
+            XrActionType controllerActionType,
+            char* controllerActionName,
+            char* controllerLocalizedActionName,
+            const char* controllerActionSuffix,
+            XrAction* controllerAction,
+            std::vector<XrActionSuggestedBinding> &bindings,
+            XrInstance instance)
+        {
+            XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = controllerActionType;
+            strcpy_s(actionInfo.actionName, controllerActionName);
+            strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionName);
+            actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
+            actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
+            XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, controllerAction));
+            // For each controller subaction
+            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+            {
+                // Create suggested binding
+                std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+                path.append(controllerActionSuffix);
+                bindings.push_back({*controllerAction});
+                XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+            }
+        }
+
         void InitializeActionResources(XrInstance instance)
         {
             const auto& session = HmdImpl.Context.Session();
@@ -610,7 +688,7 @@ namespace xr
                 }
             }
 
-            // Create controller controller get aim pose action, suggested bindings, and spaces
+            // Create controller get aim pose action, suggested bindings, and spaces
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
@@ -637,12 +715,97 @@ namespace xr
                 }
             }
 
-            // Provide suggested bindings to instance
-            XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
-            suggestedBindings.suggestedBindings = bindings.data();
-            suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
+            // Create controller get trigger value action and suggested bindings=
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_FLOAT_INPUT, 
+                ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX,
+                &ActionResources.ControllerGetTriggerValueAction,
+                bindings,
+                instance);
+
+            // Create controller get squeeze click action and suggested bindings
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX,
+                &ActionResources.ControllerGetSqueezeClickAction,
+                bindings,
+                instance);
+
+            // Create controller get trackpad axes action and suggested bindings
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_VECTOR2F_INPUT, 
+                ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX,
+                &ActionResources.ControllerGetTrackpadAxesAction,
+                bindings,
+                instance);
+
+            // Create controller get trackpad click action and suggested bindings
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX,
+                &ActionResources.ControllerGetTrackpadClickAction,
+                bindings,
+                instance);
+
+            // Create controller get trackpad touch action and suggested bindings
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX,
+                &ActionResources.ControllerGetTrackpadTouchAction,
+                bindings,
+                instance);
+
+            // Create controller get thumbstick axes action and suggested bindings
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_VECTOR2F_INPUT, 
+                ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX,
+                &ActionResources.ControllerGetThumbstickAxesAction,
+                bindings,
+                instance);
+
+            // Create controller get thumbstick click action and suggested bindings
+            CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME,
+                ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME,
+                ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX,
+                &ActionResources.ControllerGetThumbstickClickAction,
+                bindings,
+                instance);
+
+            // Provide Microsoft suggested binding to instance
+            XrInteractionProfileSuggestedBinding microsoftSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
+            microsoftSuggestedBindings.suggestedBindings = bindings.data();
+            microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+
+            // Fallback on the default bindings if the Microsoft bindings fail
+            if (XR_FAILED(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings)))
+            {
+                ControllerInfo.ControllerBinding = false;
+            }
+
+            if (!ControllerInfo.ControllerBinding)
+            {
+                // Provide default suggested bindings to instance
+                XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+                XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
+                suggestedBindings.suggestedBindings = bindings.data();
+                suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+                XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
+            }
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
@@ -910,6 +1073,55 @@ namespace xr
             depthInfoView.subImage.imageRect = imageRect;
             depthInfoView.subImage.imageArrayIndex = 0;
         }
+
+        bool QueryControllerFloatAction(XrAction controllerAction, XrSession session, float& currentFloatState)
+        {
+            // query input action state
+            XrActionStateFloat floatActionState{XR_TYPE_ACTION_STATE_FLOAT};
+            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            getInfo.action = controllerAction;
+            XrCheck(xrGetActionStateFloat(session, &getInfo, &floatActionState));
+            auto controllerInfo = sessionImpl.ControllerInfo;
+            if (floatActionState.changedSinceLastSync)
+            {
+                currentFloatState = floatActionState.currentState;
+                return true;
+            }
+            return false;
+        }
+
+       bool QueryControllerBooleanAction(XrAction controllerAction, XrSession session, bool& currentBooleanState)
+       {
+           // query input action state
+           XrActionStateBoolean booleanActionState{XR_TYPE_ACTION_STATE_BOOLEAN};
+           XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+           getInfo.action = controllerAction;
+           XrCheck(xrGetActionStateBoolean(session, &getInfo, &booleanActionState));
+           auto controllerInfo = sessionImpl.ControllerInfo;
+           if (booleanActionState.changedSinceLastSync)
+           {
+               currentBooleanState = booleanActionState.currentState;
+               return true;
+           }
+           return false;
+       }
+        
+        bool QueryControllerVector2fAction(XrAction controllerAction, XrSession session, float& currentXState, float& currentYState)
+        {
+            // query input action state
+            XrActionStateVector2f vector2fActionState{XR_TYPE_ACTION_STATE_VECTOR2F};
+            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            getInfo.action = controllerAction;
+            XrCheck(xrGetActionStateVector2f(session, &getInfo, &vector2fActionState));
+            auto controllerInfo = sessionImpl.ControllerInfo;
+            if (vector2fActionState.changedSinceLastSync)
+            {
+                currentXState = vector2fActionState.currentState.x;
+                currentYState = vector2fActionState.currentState.y;
+                return true;
+            }
+            return false;
+        }
     };
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
@@ -1168,7 +1380,67 @@ namespace xr
                         inputSource.AimSpace.Pose.Orientation.W = location.pose.orientation.w;
                     }
                 }
-                
+
+                // Get gamepad data 
+                const auto& controllerInfo = sessionImpl.ControllerInfo;
+                if (controllerInfo.ControllerBinding)
+                {
+                     auto& inputSource = InputSources[idx];
+                     inputSource.GamepadTrackedThisFrame = true;
+
+                    // Get trigger value data
+                    float currentTriggerValue;
+                    if (m_impl->QueryControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, currentTriggerValue))
+                    {
+                        inputSource.GamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = currentTriggerValue;
+                    }
+
+                    // Get squeeze click data
+                    bool currentSqueezeValue;
+                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, currentSqueezeValue))
+                    {
+                        inputSource.GamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed = currentSqueezeValue;
+                    }
+
+                    // Get trackpad axes data
+                    float currentTrackpadXAxis, currentTrackpadYAxis;
+                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis))
+                    {
+                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS] = currentTrackpadXAxis;
+                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = currentTrackpadYAxis;
+                    }
+
+                    //Get trackpad click data
+                    bool currentTrackpadValue;
+                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, currentTrackpadValue))
+                    {
+                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed = currentTrackpadValue;
+                    }
+
+                    //Get trackpad touch data
+                    bool currentTrackpadTouch;
+                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, currentTrackpadTouch))
+                    {
+                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched = currentTrackpadTouch;
+                    }
+
+                    // Get thumbstick axes data
+                    float currentThumbstickXAxis, currentThumbstickYAxis;
+                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, currentThumbstickXAxis, currentThumbstickYAxis))
+                    {
+                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] = currentThumbstickXAxis;
+                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = currentThumbstickYAxis;
+                    }
+
+                    //Get thumbstick click data
+                    bool currentThumbstickValue;
+                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, currentThumbstickValue))
+                    {
+                        inputSource.GamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed = currentThumbstickValue;
+                    }
+
+                }
+
                 // Get joint data
                 if (sessionImpl.HandData.HandsInitialized)
                 {
