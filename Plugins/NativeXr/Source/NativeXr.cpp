@@ -93,11 +93,13 @@ namespace
         return bxResult;
     }
 
+    constexpr float centeredViewAngleEpsilon{0.01};
+
     std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
     {
         const bool isCentered{
-            abs(view.FieldOfView.AngleUp + view.FieldOfView.AngleDown) < .01 &&
-            abs(view.FieldOfView.AngleRight + view.FieldOfView.AngleLeft) < .01};
+            abs(view.FieldOfView.AngleUp + view.FieldOfView.AngleDown) < centeredViewAngleEpsilon &&
+            abs(view.FieldOfView.AngleRight + view.FieldOfView.AngleLeft) < centeredViewAngleEpsilon};
 
         if (isCentered)
         {
