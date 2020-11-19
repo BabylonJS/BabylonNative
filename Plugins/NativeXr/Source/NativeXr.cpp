@@ -93,7 +93,7 @@ namespace
         return bxResult;
     }
 
-    constexpr float centeredViewAngleEpsilon{0.01};
+    constexpr float centeredViewAngleEpsilon{0.01f};
 
     std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
     {
