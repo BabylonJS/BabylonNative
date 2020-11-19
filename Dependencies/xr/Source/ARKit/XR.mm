@@ -290,7 +290,7 @@ namespace {
     {
         for(int column = 0; column < 4; column++)
         {
-            frameView.ProjectionMatrix[row * 4 + column] = projectionMatrix.columns[row][column];
+            frameView.ProjectionMatrix[row * 4 + column] = projectionMatrix.columns[column][row];
         }
     }
 }
