@@ -2050,7 +2050,7 @@ namespace Babylon
                         
                         //Now that input Source is created, create a gamepad object if enabled for the input source
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
-                        if (inputSource.GamepadEnabledThisFrame)
+                        if (inputSource.GamepadTrackedThisFrame)
                         {
                             auto inputSourceVal = inputSourceFound->second.Value();
                             m_idToGamepadObject.insert({inputSource.ID, CreateXRGamepadObject(inputSourceVal, inputSource)});
@@ -2065,7 +2065,7 @@ namespace Babylon
                         SetXRInputSourceData(inputSourceVal, inputSource);
 
                         //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
-                        if (inputSource.GamepadEnabledThisFrame)
+                        if (inputSource.GamepadTrackedThisFrame)
                         {
                             auto gamepadObjectFound = m_idToGamepadObject.find(inputSource.ID);
                             if (gamepadObjectFound != m_idToGamepadObject.end())

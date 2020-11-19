@@ -311,7 +311,7 @@ namespace xr
             static constexpr uint32_t THUMBSTICK_X_AXIS = 2;
             static constexpr uint32_t THUMBSTICK_Y_AXIS = 3;
 
-            XrBool32 DefaultControllerBinding{ false };
+            XrBool32 ControllerBinding{ true };
         } ControllerInfo;
 
         struct HandInfo
@@ -794,10 +794,10 @@ namespace xr
             // Fallback on the default bindings if the Microsoft bindings fail
             if (XR_FAILED(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings)))
             {
-                ControllerInfo.DefaultControllerBinding = true;
+                ControllerInfo.ControllerBinding = false;
             }
 
-            if (ControllerInfo.DefaultControllerBinding)
+            if (!ControllerInfo.ControllerBinding)
             {
                 // Provide default suggested bindings to instance
                 XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
@@ -1383,10 +1383,10 @@ namespace xr
 
                 // Get gamepad data 
                 const auto& controllerInfo = sessionImpl.ControllerInfo;
-                if (!controllerInfo.DefaultControllerBinding)
+                if (controllerInfo.ControllerBinding)
                 {
                      auto& inputSource = InputSources[idx];
-                     inputSource.GamepadEnabledThisFrame = true;
+                     inputSource.GamepadTrackedThisFrame = true;
 
                     // Get trigger value data
                     float currentTriggerValue;
