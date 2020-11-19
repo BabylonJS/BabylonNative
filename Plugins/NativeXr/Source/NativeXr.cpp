@@ -233,12 +233,11 @@ namespace
         return Napi::Persistent(jsInputSource);
     }
 
-    Napi::ObjectReference CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
         auto jsGamepadObject = Napi::Object::New(env);
         SetXRGamepadObjectData(jsInputSource, jsGamepadObject, inputSource);
-        return Napi::Persistent(jsGamepadObject);
     }
 }
 
@@ -1978,7 +1977,6 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
-            std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToGamepadObject{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2053,7 +2051,7 @@ namespace Babylon
                         if (inputSource.GamepadTrackedThisFrame)
                         {
                             auto inputSourceVal = inputSourceFound->second.Value();
-                            m_idToGamepadObject.insert({inputSource.ID, CreateXRGamepadObject(inputSourceVal, inputSource)});
+                            CreateXRGamepadObject(inputSourceVal, inputSource);
                         }
 
                         added.insert(inputSource.ID);
@@ -2065,14 +2063,10 @@ namespace Babylon
                         SetXRInputSourceData(inputSourceVal, inputSource);
 
                         //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
-                        if (inputSource.GamepadTrackedThisFrame)
+                        if (inputSourceVal.Has("gamepad"))
                         {
-                            auto gamepadObjectFound = m_idToGamepadObject.find(inputSource.ID);
-                            if (gamepadObjectFound != m_idToGamepadObject.end())
-                            {
-                                auto gamepadObjectVal = gamepadObjectFound->second.Value();
-                                SetXRGamepadObjectData(inputSourceVal, gamepadObjectVal, inputSource);
-                            }
+                            auto gamepadObject = inputSourceVal.Get("gamepad").As<Napi::Object>();
+                            SetXRGamepadObjectData(inputSourceVal, gamepadObject, inputSource);
                         }
                     }
                 }
@@ -2124,7 +2118,6 @@ namespace Babylon
                     for (const auto id : removed)
                     {
                         m_idToInputSource.erase(id);
-                        m_idToGamepadObject.erase(id);
                     }
                 }
             }
