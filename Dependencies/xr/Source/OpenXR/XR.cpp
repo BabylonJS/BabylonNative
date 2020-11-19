@@ -856,6 +856,10 @@ namespace xr
             }
         }
 
+        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) {
+            // TODO: Need to populate view.ProjectionMatrix.
+        }
+
         void PopulateView(const XrView& cachedView,
             const xr::System::Session::Impl::Swapchain& colorSwapchain,
             const uint32_t colorSwapchainImageIndex,
@@ -870,10 +874,6 @@ namespace xr
             view.Space.Pose.Orientation.Y = cachedView.pose.orientation.y;
             view.Space.Pose.Orientation.Z = cachedView.pose.orientation.z;
             view.Space.Pose.Orientation.W = cachedView.pose.orientation.w;
-            view.FieldOfView.AngleUp = cachedView.fov.angleUp;
-            view.FieldOfView.AngleDown = cachedView.fov.angleDown;
-            view.FieldOfView.AngleLeft = cachedView.fov.angleLeft;
-            view.FieldOfView.AngleRight = cachedView.fov.angleRight;
             view.ColorTextureFormat = SwapchainFormatToTextureFormat(colorSwapchain.Format);
             view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
             view.ColorTextureSize.Width = colorSwapchain.Width;
@@ -884,6 +884,8 @@ namespace xr
             view.DepthTextureSize.Height = depthSwapchain.Height;
             view.DepthNearZ = sessionImpl.DepthNearZ;
             view.DepthFarZ = sessionImpl.DepthFarZ;
+
+            PopulateProjectionMatrix(cachedView, view);
         }
 
         void PopulateProjectionView(const XrView& cachedView,

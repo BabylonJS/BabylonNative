@@ -284,21 +284,15 @@ namespace {
     
     // Grab the projection matrix for the image based on the viewport.
     auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-    
-    // Pull out the xScale, and yScale values from the projection matrix.
-    float xScale = projection.columns[0][0];
-    float yScale = projection.columns[1][1];
-    
-    // Calculate the aspect ratio of the projection.
-    float aspectRatio = yScale / xScale;
 
-    // Calculate FoV and apply it to the frame view.
-    // TODO: Validate if this actually gives the right FoV, it seems to be stretched vertically in Landscape
-    // mode likely due to the image being cropped by the transformation in checkAndUpdateCameraUVs vs being
-    // aspect fitted by projectionMatrixForOrientation.
-    float fov =  atanf(1 / yScale);
-    frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
-    frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
+    // Update the projection matrix of the view.
+    for(int row = 0; row < 4; row++)
+    {
+        for(int column = 0; column < 4; column++)
+        {
+            ActiveFrameViews[0].ProjectionMatrix[row * 4 + column] = projectionMatrix[row][column];
+        }
+    }
 }
 
 /**

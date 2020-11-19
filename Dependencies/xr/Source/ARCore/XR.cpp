@@ -526,18 +526,16 @@ namespace xr
             {
                 // Get the current projection matrix
                 glm::mat4 projectionMatrix{};
-                ArCamera_getProjectionMatrix(session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
+                ArCamera_getProjectionMatrix(session, camera, DepthNearZ, DepthFarZ, glm::value_ptr(projectionMatrix));
 
-                // Calculate the aspect ratio and field of view
-                float a = projectionMatrix[0][0];
-                float b = projectionMatrix[1][1];
-
-                float aspectRatio = b / a;
-                float fieldOfView = std::atan(1.0f / b);
-
-                // Set the horizontal and vertical field of view
-                ActiveFrameViews[0].FieldOfView.AngleDown = -(ActiveFrameViews[0].FieldOfView.AngleUp = fieldOfView);
-                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
+                // Copy the projection matrix values into the view.
+                for(int row = 0; row < 4; row++)
+                {
+                    for(int column = 0; column < 4; column++)
+                    {
+                        ActiveFrameViews[0].ProjectionMatrix[row * 4 + column] = projectionMatrix[row][column];
+                    }
+                }
             }
 
             ActiveFrameViews[0].DepthNearZ = DepthNearZ;

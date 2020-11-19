@@ -149,14 +149,7 @@ namespace xr
                 struct View
                 {
                     Space Space{};
-
-                    struct
-                    {
-                        float AngleLeft{};
-                        float AngleRight{};
-                        float AngleUp{};
-                        float AngleDown{};
-                    } FieldOfView;
+                    std::array<float, 16> ProjectionMatrix{};
 
                     TextureFormat ColorTextureFormat{};
                     void* ColorTexturePointer{};
