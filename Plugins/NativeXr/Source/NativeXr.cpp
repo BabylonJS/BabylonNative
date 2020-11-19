@@ -1627,11 +1627,11 @@ namespace Babylon
                 // as it will be marked as estimated if tracking is lost.
                 if (!m_hasBegunTracking && !m_frame->IsTracking())
                 {
-                    return info.Env().Null();
+                    return info.Env().Undefined();
                 }
                 else
                 {
-                    // We've recieved initial tracking, update the flag
+                    // We've received initial tracking, update the flag
                     m_hasBegunTracking = true;
                 }
                 
