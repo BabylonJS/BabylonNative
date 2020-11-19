@@ -2154,7 +2154,7 @@ namespace Babylon
                     m_trackedMeshes.erase(meshID);
                 }
 
-                // Creaet a new mesh set every frame, detected meshes are assumed immutable
+                // Create a new mesh set every frame, detected meshes are assumed immutable
                 m_meshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
                 for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
                 {
