@@ -1428,6 +1428,13 @@ namespace xr
         return su.TryGetPlaneByID(id);
     }
 
+    bool System::Session::Frame::IsTracking() const
+    {
+        // TODO - Plumb tracking states from OpenXR. For now this will maintain the current behavior where
+        // BabylonJS assumes tracking is always available.
+        return true;
+    }
+
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
     {
         if (enabled)

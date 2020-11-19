@@ -963,6 +963,18 @@ namespace xr
             throw std::runtime_error{"Tried to get non-existent plane."};
         }
 
+        /**
+         * Checks whether the AR camera is currently tracking.
+         **/
+        bool IsTracking()
+        {
+            ArCamera* camera{};
+            ArTrackingState trackingState{};
+            ArFrame_acquireCamera(session, frame, &camera);
+            ArCamera_getTrackingState(session, camera, &trackingState);
+            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
+        }
+
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
@@ -1103,18 +1115,6 @@ namespace xr
             plane.PolygonFormat = PolygonFormat::XZ;
             updatedPlanes.push_back(plane.ID);
         }
-
-        /**
-         * Checks whether the AR camera is currently tracking.
-         **/
-        bool IsTracking()
-        {
-            ArCamera* camera{};
-            ArTrackingState trackingState{};
-            ArFrame_acquireCamera(session, frame, &camera);
-            ArCamera_getTrackingState(session, camera, &trackingState);
-            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
-        }
     };
 
     struct System::Session::Frame::Impl
@@ -1163,6 +1163,11 @@ namespace xr
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
     {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
+    bool System::Session::Frame::IsTracking() const
+    {
+        return m_impl->sessionImpl.IsTracking();
     }
 
     System::Session::Frame::~Frame()

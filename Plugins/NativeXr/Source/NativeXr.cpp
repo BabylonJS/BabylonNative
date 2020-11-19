@@ -820,6 +820,7 @@ namespace Babylon
                     {
                         InstanceAccessor("transform", &XRViewerPose::GetTransform, nullptr),
                         InstanceAccessor("views", &XRViewerPose::GetViews, nullptr),
+                        InstanceAccessor("emulatedPosition", &XRViewerPose::GetEmulatedPosition, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -834,22 +835,23 @@ namespace Babylon
                 : Napi::ObjectWrap<XRViewerPose>{info}
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
+                , m_jsIsEmulatedPosition{Napi::Persistent(Napi::Boolean::New(info.Env(), true))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame* frame)
             {
                 // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
                 // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
-                if (views.size() > 0)
+                if (frame->Views.size() > 0)
                 {
-                    m_transform.Update(views[0].Space, true);
+                    m_transform.Update(frame->Views[0].Space, true);
                 }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
-                const auto newSize = static_cast<uint32_t>(views.size());
+                const auto newSize = static_cast<uint32_t>(frame->Views.size());
                 if (oldSize != newSize)
                 {
                     auto newViews = Napi::Array::New(m_jsViews.Env(), newSize);
@@ -873,16 +875,21 @@ namespace Babylon
                 }
 
                 // Update the individual views.
-                for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
+                for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame->Views.size()); ++idx)
                 {
-                    const auto& view = views[idx];
+                    const auto& view = frame->Views[idx];
                     m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space, view.IsFirstPersonObserver);
                 }
+                
+                // Check the frame to see if it has valid tracking, if it does not then the position should
+                //  be flagged as being emulated.
+                m_jsIsEmulatedPosition = Napi::Persistent(Napi::Boolean::New(info.Env(), !frame->IsTracking()));
             }
 
         private:
             Napi::ObjectReference m_jsTransform{};
             Napi::Reference<Napi::Array> m_jsViews{};
+            Napi::Reference<Napi::Boolean> m_jsIsEmulatedPosition{};
 
             XRRigidTransform& m_transform;
             std::vector<XRView*> m_views{};
@@ -895,6 +902,11 @@ namespace Babylon
             Napi::Value GetViews(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsViews.Value();
+            }
+            
+            Napi::Value GetEmulatedPosition(const Napi::CallbackInfo& /*info*/)
+            {
+                return m_jsIsEmulatedPosition.Value();
             }
         };
 
@@ -1605,15 +1617,31 @@ namespace Babylon
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
             Napi::ObjectReference m_jsJointPose{};
+            
+            bool m_hasBegunTracking = false;
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
+                // To match the WebXR implementation we should return undefined here until we have gotten
+                // initial tracking. After that point we can just continue returning the position
+                // as it will be marked as estimated if tracking is lost.
+                if (!m_hasBegunTracking && !m_frame->IsTracking())
+                {
+                    return info.Env().Undefined();
+                }
+                else
+                {
+                    // We've recieved initial tracking, update the flag
+                    m_hasBegunTracking = true;
+                }
+                
+                
                 // TODO: Support reference spaces.
                 // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-                m_xrViewerPose.Update(info, m_frame->Views);
+                m_xrViewerPose.Update(info, m_frame);
 
                 return m_jsXRViewerPose.Value();
             }

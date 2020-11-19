@@ -223,6 +223,7 @@ namespace xr
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
+                bool IsTracking() const;
 
             private:
                 struct Impl;
