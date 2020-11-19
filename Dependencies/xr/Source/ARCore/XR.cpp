@@ -323,6 +323,7 @@ namespace xr
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
+        std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -1131,9 +1132,14 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , Planes{ sessionImpl.Planes }
+        , Meshes { sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , UpdatedSceneObjects{}
+        , RemovedSceneObjects{}
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
@@ -1160,9 +1166,19 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier /*sceneObjectID*/) const
+    {
+        throw std::runtime_error{"Scene object detection is not supported on current platform."};
+    }
+
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
     {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier /*meshID*/) const
+    {
+        throw std::runtime_error{"Mesh detection is not supported on current platform."};
     }
 
     System::Session::Frame::~Frame()
@@ -1289,5 +1305,23 @@ namespace xr
         // Point cloud system not yet supported.
         m_impl->FeaturePointCloudEnabled = enabled;
         return enabled;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& /*options*/)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool /*enabled*/)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& /*options*/)
+    {
+        // TODO
+        return false;
     }
 }
