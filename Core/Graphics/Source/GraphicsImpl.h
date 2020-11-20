@@ -30,6 +30,9 @@ namespace Babylon
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
         arcana::task<void, std::exception_ptr> GetAfterRenderTask();
 
+        void EnableRendering();
+        void DisableRendering();
+
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
@@ -53,6 +56,7 @@ namespace Babylon
             bool Dirty{};
         } m_bgfxState{};
 
+        arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
 

@@ -465,8 +465,7 @@ namespace Babylon
 
         if (autoRender)
         {
-            // TODO: Dispatch instead to match multi-thread case?
-            Graphics::Impl::GetFromJavaScript(env).RenderCurrentFrame();
+            Graphics::Impl::GetFromJavaScript(env).EnableRendering();
         }
     }
 
