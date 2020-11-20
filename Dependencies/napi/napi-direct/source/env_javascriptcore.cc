@@ -1,7 +1,7 @@
 #include <napi/env.h>
 #include <napi/js_native_api_types.h>
 #include "JavaScriptCore/JavaScript.h"
-#include "js_native_api_JavaScriptCore.h"
+#include "js_native_api_javascriptcore.h"
 
 namespace Napi
 {
