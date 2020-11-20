@@ -5,6 +5,7 @@
 
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
+#include <arcana/threading/affinity.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -45,6 +46,8 @@ namespace Babylon
         BgfxCallback Callback{};
 
     private:
+        arcana::affinity m_renderThreadAffinity{};
+
         bool m_rendering{false};
 
         struct

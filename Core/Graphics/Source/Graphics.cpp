@@ -2,6 +2,8 @@
 
 #include <JsRuntimeInternalState.h>
 
+#include <cassert>
+
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 
 namespace Babylon
@@ -88,6 +90,9 @@ namespace Babylon
 
         if (!m_bgfxState.Initialized)
         {
+            // Set the thread affinity (all other rendering operations must happen on this thread).
+            m_renderThreadAffinity = std::this_thread::get_id();
+
             // Initialize bgfx.
             auto& init{m_bgfxState.InitState};
             bgfx::setPlatformData(init.platformData);
@@ -99,12 +104,15 @@ namespace Babylon
             m_bgfxState.Initialized = true;
             m_bgfxState.Dirty = false;
 
+            // Allow JS awaiters to start doing graphics operations.
             m_enableRenderTaskCompletionSource.complete();
         }
     }
 
     void Graphics::Impl::DisableRendering()
     {
+        assert(m_renderThreadAffinity.check());
+
         std::scoped_lock lock{m_bgfxState.Mutex};
 
         if (m_bgfxState.Initialized)
@@ -112,11 +120,14 @@ namespace Babylon
             bgfx::shutdown();
             m_bgfxState.Initialized = false;
             m_enableRenderTaskCompletionSource = {};
+            m_renderThreadAffinity = {};
         }
     }
 
     void Graphics::Impl::StartRenderingCurrentFrame()
     {
+        assert(m_renderThreadAffinity.check());
+
         if (m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be started before prior frame has been finished."};
@@ -152,6 +163,8 @@ namespace Babylon
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
+        assert(m_renderThreadAffinity.check());
+
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
