@@ -1635,7 +1635,6 @@ namespace Babylon
                     m_hasBegunTracking = true;
                 }
                 
-                
                 // TODO: Support reference spaces.
                 // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
