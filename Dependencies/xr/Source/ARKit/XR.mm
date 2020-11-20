@@ -207,8 +207,8 @@ namespace {
 
         // Check if our orientation or size has changed and update camera UVs if necessary.
         if ([self checkAndUpdateCameraUVs:frame]) {
-            // If our camera UVs updated, then also update the FoV to match the updated UVs.
-            [self updateFoV:frame.camera];
+            // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
+            [self updateProjectionMatrix:frame.camera];
         }
 
         // Finally update the XR pose based on the current transform from ARKit.
@@ -274,9 +274,9 @@ namespace {
 }
 
 /**
- Finds the FoV of the AR Camera, and applies it to the frameView.
+ Gets the projection matrix of the AR Camera, and applies it to the frameView.
 */
-- (void)updateFoV:(ARCamera*)camera {
+- (void)updateProjectionMatrix:(ARCamera*)camera {
     // Get the viewport size and the orientation of the device.
     auto& frameView = activeFrameViews->at(0);
     auto viewportSize = [self viewportSize];
@@ -290,7 +290,7 @@ namespace {
     {
         for(int column = 0; column < 4; column++)
         {
-            frameView.ProjectionMatrix[row * 4 + column] = projectionMatrix.columns[column][row];
+            frameView.ProjectionMatrix[row * 4 + column] = projectionMatrix.columns[row][column];
         }
     }
 }
