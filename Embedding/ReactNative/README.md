@@ -87,6 +87,32 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 13)
 - The `ANDROID_HOME` environment variable must be defined (typically %LOCALAPPDATA%/Android/sdk).
 - The `JAVA_HOME` environment variable must be defined (typically %ProgramFiles%/Android/Android Studio/jre).
 
+### **Configuring a Linux Dev Environment**
+
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147)
+
+With Ubuntu, you can install needed packages by this command:
+
+```
+sudo apt-get install adb ninja-build openjdk-14-jdk android-sdk
+```
+
+Update PATH with this commands:
+
+```
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/tools
+export PATH=$PATH:$ANDROID_HOME/tools/bin
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+```
+
+**Troubleshootings:**
+- If the Metro server is not started with `npm run android` , you can start it manually by running `npm run start` in a terminal.
+- Android Studio is the tool of choice for downloading the various versions of NDK.
+- If something goes wrong with the build `npm run android --verbose` can give some hints.
+- If the emulator is not launched by the build, you can run `~/Android/Sdk/emulator/emulator @name_of_your_image`.
+
 ### **Building and Running the Playground App**
 
 On either Mac or Windows, NPM is used to build and run the Playground sample/test app from the command line. Open a command prompt at the root of the BabylonReactNative repo if you don't have one already open.
