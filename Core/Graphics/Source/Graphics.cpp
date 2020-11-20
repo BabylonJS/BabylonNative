@@ -272,8 +272,9 @@ namespace Babylon
         JsRuntime::NativeObject::GetFromJavaScript(env)
             .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
 
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_GRAPHICS_READY_NAME, Napi::Function::New(env, [this, env](const Napi::CallbackInfo&){
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_GRAPHICS_READY_NAME, Napi::Function::New(env, [this, env](const Napi::CallbackInfo&) -> Napi::Value {
             auto deferred{Napi::Promise::Deferred::New(env)};
+            auto promise{deferred.Promise()};
 
             arcana::task<void, std::exception_ptr> enableRenderTask;
             {
@@ -287,6 +288,8 @@ namespace Babylon
                     deferred.Resolve(env.Null());
                 });
             });
+
+            return std::move(promise);
         }, JS_GRAPHICS_READY_NAME));
     }
 
