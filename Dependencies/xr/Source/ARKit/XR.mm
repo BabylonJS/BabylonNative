@@ -284,15 +284,7 @@ namespace {
     
     // Grab the projection matrix for the image based on the viewport.
     auto projectionMatrix = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-
-    // Update the projection matrix of the view.
-    for(int row = 0; row < 4; row++)
-    {
-        for(int column = 0; column < 4; column++)
-        {
-            frameView.ProjectionMatrix[row * 4 + column] = projectionMatrix.columns[row][column];
-        }
-    }
+    memcpy(frameView.ProjectionMatrix.data(), projectionMatrix.columns, sizeof(float) * 16);
 }
 
 /**

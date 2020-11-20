@@ -527,15 +527,7 @@ namespace xr
                 // Get the current projection matrix
                 glm::mat4 projectionMatrix{};
                 ArCamera_getProjectionMatrix(session, camera, DepthNearZ, DepthFarZ, glm::value_ptr(projectionMatrix));
-
-                // Copy the projection matrix values into the view.
-                for(int row = 0; row < 4; row++)
-                {
-                    for(int column = 0; column < 4; column++)
-                    {
-                        ActiveFrameViews[0].ProjectionMatrix[row * 4 + column] = projectionMatrix[row][column];
-                    }
-                }
+                memcpy(ActiveFrameViews[0].ProjectionMatrix.data(), &projectionMatrix, sizeof(float) * 16);
             }
 
             ActiveFrameViews[0].DepthNearZ = DepthNearZ;
