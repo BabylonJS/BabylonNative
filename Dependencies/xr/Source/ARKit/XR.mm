@@ -281,10 +281,10 @@ namespace {
     auto& frameView = activeFrameViews->at(0);
     auto viewportSize = [self viewportSize];
     auto orientation = [self orientation];
-    
+
     // Grab the projection matrix for the image based on the viewport.
     auto projectionMatrix = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-    memcpy(frameView.ProjectionMatrix.data(), projectionMatrix.columns, sizeof(float) * 16);
+    memcpy(frameView.ProjectionMatrix.data(), projectionMatrix.columns, sizeof(float) * frameView.ProjectionMatrix.size());
 }
 
 /**

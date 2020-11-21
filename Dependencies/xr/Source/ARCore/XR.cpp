@@ -525,9 +525,7 @@ namespace xr
             if (geometryChanged || ActiveFrameViews[0].DepthNearZ != DepthNearZ || ActiveFrameViews[0].DepthFarZ != DepthFarZ)
             {
                 // Get the current projection matrix
-                glm::mat4 projectionMatrix{};
-                ArCamera_getProjectionMatrix(session, camera, DepthNearZ, DepthFarZ, glm::value_ptr(projectionMatrix));
-                memcpy(ActiveFrameViews[0].ProjectionMatrix.data(), &projectionMatrix, sizeof(float) * 16);
+                ArCamera_getProjectionMatrix(session, camera, DepthNearZ, DepthFarZ, ActiveFrameViews[0].ProjectionMatrix.data());
             }
 
             ActiveFrameViews[0].DepthNearZ = DepthNearZ;
