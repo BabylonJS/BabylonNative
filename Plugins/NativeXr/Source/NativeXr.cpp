@@ -44,36 +44,6 @@ namespace
     };
     // clang-format on
 
-    std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
-    {
-        const float n{view.DepthNearZ};
-        const float f{view.DepthFarZ};
-
-        const float r{std::tanf(view.FieldOfView.AngleRight) * n};
-        const float l{std::tanf(view.FieldOfView.AngleLeft) * n};
-        const float t{std::tanf(view.FieldOfView.AngleUp) * n};
-        const float b{std::tanf(view.FieldOfView.AngleDown) * n};
-
-        // Angles for FieldOfView respect the viewport ratio
-        // but tangent is not a linear function and ratio of values(l,r,b,t) computed
-        // in CreateProjectionMatrix do not respect that ratio
-        // so, here, a ratio after tangent is computed
-        // and a second derivative ratio computed to compensate
-        // the aspect ratio delta after tangent calls
-        const float aspectRatio = static_cast<float>(view.ColorTextureSize.Width) / static_cast<float>(view.ColorTextureSize.Height);
-        const float deltax = (r - l);
-        const float deltay = (t - b);
-        const float afterTangentAspectRatio = deltax / deltay;
-        const float compensationRatio = afterTangentAspectRatio / aspectRatio;
-        const float tc{std::tanf(view.FieldOfView.AngleUp * compensationRatio) * n};
-        const float bc{std::tanf(view.FieldOfView.AngleDown * compensationRatio) * n};
-
-        std::array<float, 16> bxResult{};
-        bx::mtxProj(bxResult.data(), tc, bc, l, r, n, f, false, bx::Handness::Right);
-
-        return bxResult;
-    }
-
     std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space, bool viewSpace = true)
     {
         auto& quat = space.Pose.Orientation;
@@ -912,7 +882,7 @@ namespace Babylon
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
                 {
                     const auto& view = views[idx];
-                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space, view.IsFirstPersonObserver);
+                    m_views[idx]->Update(idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver);
                 }
             }
 
