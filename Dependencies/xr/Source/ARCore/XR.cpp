@@ -821,7 +821,7 @@ namespace xr
 
         void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
         {
-            if (!IsTracking() || !PlaneDetectionEnabled)
+            if (!PlaneDetectionEnabled)
             {
                 return;
             }
@@ -885,7 +885,7 @@ namespace xr
 
         void UpdateFeaturePointCloud()
         {
-            if (!IsTracking() || !FeaturePointCloudEnabled)
+            if (!FeaturePointCloudEnabled)
             {
                 return;
             }
@@ -1134,10 +1134,14 @@ namespace xr
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
-        m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
-        m_impl->sessionImpl.UpdateFeaturePointCloud();
+        if (IsTracking)
+        {
+            m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+            m_impl->sessionImpl.UpdateFeaturePointCloud();
+        }
     }
 
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
@@ -1163,11 +1167,6 @@ namespace xr
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
     {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
-    }
-
-    bool System::Session::Frame::IsTracking() const
-    {
-        return m_impl->sessionImpl.IsTracking();
     }
 
     System::Session::Frame::~Frame()

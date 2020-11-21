@@ -1173,6 +1173,7 @@ namespace xr {
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
@@ -1201,10 +1202,6 @@ namespace xr {
 
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
-    }
-
-    bool System::Session::Frame::IsTracking() const {
-        return m_impl->sessionImpl.IsTracking();
     }
 
     System::System(const char* appName)

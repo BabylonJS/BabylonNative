@@ -883,7 +883,7 @@ namespace Babylon
                 
                 // Check the frame to see if it has valid tracking, if it does not then the position should
                 // be flagged as being emulated.
-                m_isEmulatedPosition = !frame->IsTracking();
+                m_isEmulatedPosition = !frame->IsTracking;
             }
 
         private:
@@ -1625,7 +1625,7 @@ namespace Babylon
                 // To match the WebXR implementation we should return undefined here until we have gotten
                 // initial tracking. After that point we can just continue returning the position
                 // as it will be marked as estimated if tracking is lost.
-                if (!m_hasBegunTracking && !m_frame->IsTracking())
+                if (!m_hasBegunTracking && !m_frame->IsTracking)
                 {
                     return info.Env().Undefined();
                 }

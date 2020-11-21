@@ -215,6 +215,8 @@ namespace xr
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
 
+                bool IsTracking;
+
                 Frame(System::Session::Impl&);
                 ~Frame();
 
@@ -223,7 +225,6 @@ namespace xr
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
-                bool IsTracking() const;
 
             private:
                 struct Impl;

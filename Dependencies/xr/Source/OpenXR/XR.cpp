@@ -919,6 +919,9 @@ namespace xr
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
+        // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
+        , IsTracking{true}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
@@ -1426,14 +1429,6 @@ namespace xr
     {
         const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
         return su.TryGetPlaneByID(id);
-    }
-
-    bool System::Session::Frame::IsTracking() const
-    {
-        // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
-        // Plumb tracking states from OpenXR. For now this will maintain the current behavior where
-        // BabylonJS assumes tracking is always available.
-        return true;
     }
 
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
