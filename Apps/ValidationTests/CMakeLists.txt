@@ -36,7 +36,7 @@ elseif(APPLE)
         set(SOURCES
             ${SOURCES}
             "macOS/main.m"
-            "macOS/AppDelegate.m"
+            "macOS/AppDelegate.mm"
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
             "macOS/ViewController.h"

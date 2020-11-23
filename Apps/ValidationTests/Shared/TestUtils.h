@@ -29,6 +29,12 @@ namespace
     int errorCode{};
 }
 
+// can't externalize variable with ObjC++. Using a function instead.
+int GetExitCode()
+{
+    return errorCode;
+}
+
 namespace Babylon
 {
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
@@ -83,6 +89,10 @@ namespace Babylon
             dummyEvent.format = 32;
             XSendEvent(display, (Window)_nativeWindowPtr, 0, 0, (XEvent*)&dummyEvent);
             XFlush(display);
+#elif __APPLE__
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[(__bridge NSView*)_nativeWindowPtr window]close];
+            });
 #else
             // TODO: handle exit for other platforms
 #endif
@@ -198,7 +208,7 @@ namespace Babylon
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef __APPLE__
-            std::string path = "~/";
+            std::string path = getenv("HOME");
 #else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
