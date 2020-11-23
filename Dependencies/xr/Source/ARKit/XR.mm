@@ -525,6 +525,7 @@ namespace xr {
         std::vector<Frame::InputSource> InputSources;
         std::vector<Frame::Plane> Planes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
+        ARFrame* currentFrame{nil};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         
@@ -650,7 +651,8 @@ namespace xr {
                     [desiredSuperview addSubview:xrView];
                 }
                 
-                ARFrame* currentFrame = [session currentFrame];
+                currentFrame = [session currentFrame];
+                [currentFrame retain];
                 [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
             });
 
@@ -802,6 +804,8 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    [currentFrame release];
+                    currentFrame = nil;
                 }
                 @catch (NSException* exception) {
                     if (cameraTextureY != nil) {
@@ -819,7 +823,7 @@ namespace xr {
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
             @autoreleasepool {
-                if (session != nil && session.currentFrame != nil && session.currentFrame.camera != nil && [session.currentFrame.camera trackingState] == ARTrackingStateNormal) {
+                if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
                     if (@available(iOS 13.0, *)) {
                         GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                     } else {
@@ -1124,7 +1128,7 @@ namespace xr {
             }
 
             // Now perform the actual hit test and process the results
-            auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            auto hitTestResults = [currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
             for (ARHitTestResult* result in hitTestResults) {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
