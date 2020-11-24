@@ -4,6 +4,8 @@
 
 @end
 
+int GetExitCode();
+
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)__unused aNotification {
@@ -13,6 +15,7 @@
 
 - (void)applicationWillTerminate:(NSNotification *)__unused aNotification {
     // Insert code here to tear down your application
+    exit(GetExitCode());
 }
 
 
