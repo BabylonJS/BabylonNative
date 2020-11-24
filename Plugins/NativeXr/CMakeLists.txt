@@ -9,6 +9,10 @@ target_include_directories(NativeXr
     PRIVATE "Include/Babylon/Plugins"
     INTERFACE "Include")
 
+if(WIN32)
+    target_compile_definitions(NativeXr PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
+endif()
+
 target_link_to_dependencies(NativeXr
     PUBLIC JsRuntime
     PRIVATE NativeEngineInternal
