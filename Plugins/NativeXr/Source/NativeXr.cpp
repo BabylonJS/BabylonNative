@@ -8,8 +8,6 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
-#include <android/log.h>
-
 #include <set>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
@@ -424,8 +422,6 @@ namespace Babylon
         // Ending a session outside of calls to EndSession() is currently not supported.
         assert(!shouldEndSession);
         assert(m_frame != nullptr);
-
-        __android_log_print(ANDROID_LOG_DEBUG, "FLICKER", "View Count: %i", (int)m_frame->Views.size());
 
         m_activeFrameBuffers.reserve(m_frame->Views.size());
         for (const auto& view : m_frame->Views)
