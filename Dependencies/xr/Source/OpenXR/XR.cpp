@@ -1023,19 +1023,19 @@ namespace xr
             const float n{sessionImpl.DepthNearZ};
             const float f{sessionImpl.DepthFarZ};
 
-            const float l{std::tanf(cachedView.fov.angleLeft)  * n};	
-            const float r{std::tanf(cachedView.fov.angleRight) * n};	
+            const float l{std::tanf(cachedView.fov.angleLeft)  * n};
+            const float r{std::tanf(cachedView.fov.angleRight) * n};
             const float t{std::tanf(cachedView.fov.angleUp)    * n};
             const float b{std::tanf(cachedView.fov.angleDown)  * n};
 
             // Taken from BGFX math mtxProj().
             // See also D3DXMatrixPerspectiveOffCenterRH.
             const float invDiffRL = 1.f / (r - l);
-		    const float invDiffTB = 1.f / (t - b);
-		    const float ww  =  2.f * n * invDiffRL;
-		    const float hh  =  2.f * n * invDiffTB;
-		    const float xx  = (r + l) * invDiffRL;
-		    const float yy  = (t + b) * invDiffTB;
+            const float invDiffTB = 1.f / (t - b);
+            const float ww  =  2.f * n * invDiffRL;
+            const float hh  =  2.f * n * invDiffTB;
+            const float xx  = (r + l) * invDiffRL;
+            const float yy  = (t + b) * invDiffTB;
 
             // TODO: Set this based on the graphics API in use.
             // If true, the NDC depth ranges from [-1, 1] (OpenGL/Vulkan)
@@ -1045,8 +1045,8 @@ namespace xr
             // We negate the values za and zc to create a right-handed projection matrix,
             // since the supplied nearZ and farZ are positive.
             const float diffFN = f - n;
-		    const float za = -(homogeneousDepth ? (f + n) / diffFN : f / diffFN);
-		    const float zb = -(homogeneousDepth ? (2.f * f * n) / diffFN : n * -za);
+            const float za = -(homogeneousDepth ? (f + n) / diffFN : f / diffFN);
+            const float zb = -(homogeneousDepth ? (2.f * f * n) / diffFN : n * -za);
             constexpr float zc = -1.f;
 
             view.ProjectionMatrix = {
