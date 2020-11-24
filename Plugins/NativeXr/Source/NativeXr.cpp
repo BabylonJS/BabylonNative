@@ -8,6 +8,8 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
+#include <android/log.h>
+
 #include <set>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
@@ -416,6 +418,8 @@ namespace Babylon
         // Ending a session outside of calls to EndSession() is currently not supported.
         assert(!shouldEndSession);
         assert(m_frame != nullptr);
+
+        __android_log_print(ANDROID_LOG_DEBUG, "FLICKER", "View Count: %i", (int)m_frame->Views.size());
 
         m_activeFrameBuffers.reserve(m_frame->Views.size());
         for (const auto& view : m_frame->Views)
@@ -840,18 +844,18 @@ namespace Babylon
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame* frame)
+            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame& frame)
             {
                 // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
                 // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
-                if (frame->Views.size() > 0)
+                if (frame.Views.size() > 0)
                 {
-                    m_transform.Update(frame->Views[0].Space, true);
+                    m_transform.Update(frame.Views[0].Space, true);
                 }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
-                const auto newSize = static_cast<uint32_t>(frame->Views.size());
+                const auto newSize = static_cast<uint32_t>(frame.Views.size());
                 if (oldSize != newSize)
                 {
                     auto newViews = Napi::Array::New(m_jsViews.Env(), newSize);
@@ -875,15 +879,15 @@ namespace Babylon
                 }
 
                 // Update the individual views.
-                for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame->Views.size()); ++idx)
+                for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame.Views.size()); ++idx)
                 {
-                    const auto& view = frame->Views[idx];
+                    const auto& view = frame.Views[idx];
                     m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space, view.IsFirstPersonObserver);
                 }
                 
                 // Check the frame to see if it has valid tracking, if it does not then the position should
                 // be flagged as being emulated.
-                m_isEmulatedPosition = !frame->IsTracking;
+                m_isEmulatedPosition = !frame.IsTracking;
             }
 
         private:
@@ -1640,7 +1644,7 @@ namespace Babylon
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-                m_xrViewerPose.Update(info, m_frame);
+                m_xrViewerPose.Update(info, *m_frame);
 
                 return m_jsXRViewerPose.Value();
             }
