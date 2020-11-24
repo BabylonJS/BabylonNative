@@ -887,7 +887,7 @@ namespace Babylon
                 // Update the individual views.
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame.Views.size()); ++idx)
                 {
-                    const auto& view = views[idx];
+                    const auto& view = frame.Views[idx];
                     m_views[idx]->Update(idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver);
                 }
                 
