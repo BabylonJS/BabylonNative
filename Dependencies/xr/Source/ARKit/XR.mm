@@ -207,8 +207,8 @@ namespace {
 
         // Check if our orientation or size has changed and update camera UVs if necessary.
         if ([self checkAndUpdateCameraUVs:frame]) {
-            // If our camera UVs updated, then also update the FoV to match the updated UVs.
-            [self updateFoV:frame.camera];
+            // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
+            [self updateProjectionMatrix:frame.camera];
         }
 
         // Finally update the XR pose based on the current transform from ARKit.
@@ -274,31 +274,17 @@ namespace {
 }
 
 /**
- Finds the FoV of the AR Camera, and applies it to the frameView.
+ Gets the projection matrix of the AR Camera, and applies it to the frameView.
 */
-- (void)updateFoV:(ARCamera*)camera {
+- (void)updateProjectionMatrix:(ARCamera*)camera {
     // Get the viewport size and the orientation of the device.
     auto& frameView = activeFrameViews->at(0);
     auto viewportSize = [self viewportSize];
     auto orientation = [self orientation];
-    
-    // Grab the projection matrix for the image based on the viewport.
-    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-    
-    // Pull out the xScale, and yScale values from the projection matrix.
-    float xScale = projection.columns[0][0];
-    float yScale = projection.columns[1][1];
-    
-    // Calculate the aspect ratio of the projection.
-    float aspectRatio = yScale / xScale;
 
-    // Calculate FoV and apply it to the frame view.
-    // TODO: Validate if this actually gives the right FoV, it seems to be stretched vertically in Landscape
-    // mode likely due to the image being cropped by the transformation in checkAndUpdateCameraUVs vs being
-    // aspect fitted by projectionMatrixForOrientation.
-    float fov =  atanf(1 / yScale);
-    frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
-    frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
+    // Grab the projection matrix for the image based on the viewport.
+    auto projectionMatrix = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    memcpy(frameView.ProjectionMatrix.data(), projectionMatrix.columns, sizeof(float) * frameView.ProjectionMatrix.size());
 }
 
 /**
@@ -602,11 +588,6 @@ namespace xr {
             
             [pipelineStateDescriptor release];
             commandQueue = [metalDevice newCommandQueue];
-            
-            // default fov values to avoid NaN at startup
-            auto& frameView = ActiveFrameViews[0];
-            frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = 0.5);
-            frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = 0.5);
         }
 
         ~Impl() {
