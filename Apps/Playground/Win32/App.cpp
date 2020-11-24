@@ -127,7 +127,7 @@ namespace
         std::string scriptsRootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path() / "Scripts");
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.Eval("document = {removeEventListener:function(){}}", "");
+        loader.Eval("document = {}", "");
         loader.LoadScript(scriptsRootUrl + "/ammo.js");
         loader.LoadScript(scriptsRootUrl + "/recast.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
