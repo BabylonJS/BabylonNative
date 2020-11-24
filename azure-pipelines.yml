@@ -289,7 +289,7 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-      cd Apps/ValidationTests/Android
+      cd ../../ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
@@ -325,7 +325,7 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-      cd Apps/ValidationTests/Android
+      cd ../../ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
@@ -362,7 +362,7 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-      cd Apps/ValidationTests/Android
+      cd ../../ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
@@ -399,7 +399,7 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-      cd Apps/ValidationTests/Android
+      cd ../../ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
