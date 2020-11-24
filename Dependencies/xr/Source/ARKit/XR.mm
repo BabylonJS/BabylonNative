@@ -728,7 +728,6 @@ namespace xr {
                     
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
-                    [commandBuffer waitUntilCompleted];
                 }
             }
             
@@ -804,6 +803,7 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    [commandBuffer waitUntilCompleted];
                     [currentFrame release];
                     currentFrame = nil;
                 }
