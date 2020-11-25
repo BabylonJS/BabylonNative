@@ -36,7 +36,7 @@ elseif(APPLE)
         set(SOURCES
             ${SOURCES}
             "macOS/main.m"
-            "macOS/AppDelegate.m"
+            "macOS/AppDelegate.mm"
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
             "macOS/ViewController.h"
@@ -76,6 +76,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE XMLHttpRequest)
 
 if(APPLE AND NOT IOS)
+    target_link_libraries(ValidationTests PRIVATE "-framework MetalKit")
     set_target_properties(ValidationTests PROPERTIES
         MACOSX_BUNDLE true
         MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"

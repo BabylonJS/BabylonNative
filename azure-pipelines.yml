@@ -35,8 +35,17 @@ jobs:
       sdk: 'macosx'
       useXcpretty: false
       configuration: RelWithDebInfo
-    displayName: 'Build macOS'
-    
+    displayName: 'Build Playground macOS'
+
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+      scheme: 'ValidationTests'
+      sdk: 'macosx'
+      useXcpretty: false
+      configuration: RelWithDebInfo
+    displayName: 'Build ValidationTests macOS'
+
 - job: iOS
   pool:
     vmImage: 'macOS-10.14'
@@ -82,7 +91,7 @@ jobs:
   - script: |
       mkdir buildWin32_x64
       cd buildWin32_x64
-      cmake -G "Visual Studio 16 2019" -A x64 ..
+      cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
     displayName: 'Generate Win32_x64 solution'
 
   - task: MSBuild@1
@@ -150,7 +159,7 @@ jobs:
   - script: |
       mkdir buildWin32_x86
       cd buildWin32_x86
-      cmake .. -G "Visual Studio 16 2019" -A Win32
+      cmake .. -G "Visual Studio 16 2019" -A Win32 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
     displayName: 'Generate Win32_x86 solution'
 
   - task: MSBuild@1
@@ -465,7 +474,7 @@ jobs:
   - script: |
       mkdir build
       cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
       ninja
     displayName: 'Build X11'
 

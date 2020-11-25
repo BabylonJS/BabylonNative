@@ -809,7 +809,7 @@ namespace xr
 
         void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
         {
-            if (!IsTracking() || !PlaneDetectionEnabled)
+            if (!PlaneDetectionEnabled)
             {
                 return;
             }
@@ -873,7 +873,7 @@ namespace xr
 
         void UpdateFeaturePointCloud()
         {
-            if (!IsTracking() || !FeaturePointCloudEnabled)
+            if (!FeaturePointCloudEnabled)
             {
                 return;
             }
@@ -949,6 +949,18 @@ namespace xr
             }
 
             throw std::runtime_error{"Tried to get non-existent plane."};
+        }
+
+        /**
+         * Checks whether the AR camera is currently tracking.
+         **/
+        bool IsTracking()
+        {
+            ArCamera* camera{};
+            ArTrackingState trackingState{};
+            ArFrame_acquireCamera(session, frame, &camera);
+            ArCamera_getTrackingState(session, camera, &trackingState);
+            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
         }
 
     private:
@@ -1091,18 +1103,6 @@ namespace xr
             plane.PolygonFormat = PolygonFormat::XZ;
             updatedPlanes.push_back(plane.ID);
         }
-
-        /**
-         * Checks whether the AR camera is currently tracking.
-         **/
-        bool IsTracking()
-        {
-            ArCamera* camera{};
-            ArTrackingState trackingState{};
-            ArFrame_acquireCamera(session, frame, &camera);
-            ArCamera_getTrackingState(session, camera, &trackingState);
-            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
-        }
     };
 
     struct System::Session::Frame::Impl
@@ -1122,10 +1122,14 @@ namespace xr
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
-        m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
-        m_impl->sessionImpl.UpdateFeaturePointCloud();
+        if (IsTracking)
+        {
+            m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+            m_impl->sessionImpl.UpdateFeaturePointCloud();
+        }
     }
 
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
