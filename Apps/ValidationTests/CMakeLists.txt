@@ -26,8 +26,22 @@ if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
     add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(APPLE)
-        find_library(JSCORE_LIBRARY JavaScriptCore)
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
+    find_library(JSCORE_LIBRARY JavaScriptCore)
+    if(IOS)
+        set(PLIST_FILE
+            "${CMAKE_CURRENT_LIST_DIR}/iOS/Info.plist")
+        set(STORYBOARD
+            "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
+            "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
+        set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
+        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
+        set(SOURCES
+            ${SOURCES}
+            "iOS/AppDelegate.swift"
+            "iOS/ViewController.swift"
+            "iOS/LibNativeBridge.h"
+            "iOS/LibNativeBridge.mm")
+    else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(JSSCRIPT "${CMAKE_CURRENT_LIST_DIR}/Scripts/config.json"
@@ -41,7 +55,9 @@ elseif(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h"
             "Shared/TestUtils.h")
-        add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+     endif()
+     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
+     add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
