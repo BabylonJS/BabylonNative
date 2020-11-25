@@ -8,8 +8,12 @@ namespace Babylon
     {
         auto globalContext = JSGlobalContextCreateInGroup(nullptr, nullptr);
         Napi::Env env = Napi::Attach(globalContext);
+
         Run(env);
+
         JSGlobalContextRelease(globalContext);
+
+        // Detach must come after JSGlobalContextRelease since it triggers finalizers which require env.
         Napi::Detach(env);
     }
 }
