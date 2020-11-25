@@ -7,8 +7,6 @@
 
 #include <bgfx/bgfx.h>
 
-#define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
-
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -1414,12 +1412,7 @@ namespace Babylon
             bgfx::setState(m_engineState | fillModeState);
         }
 
-#if (ANDROID)
-        // TODO : find why we need to discard state on Android
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
-#else
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
-#endif
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)

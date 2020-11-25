@@ -31,6 +31,8 @@ namespace Babylon
             FinishRenderingCurrentFrame();
         }
 
+        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+
     private:
         Graphics();
 
