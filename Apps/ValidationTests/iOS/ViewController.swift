@@ -24,17 +24,13 @@ class ViewController: UIViewController {
             
             mtkView.colorPixelFormat = .bgra8Unorm_srgb
             mtkView.depthStencilPixelFormat = .depth32Float
-            
-            let gesture = UIPanGestureRecognizer(target: self, action:  #selector(self.panGesture))
-            mtkView.addGestureRecognizer(gesture)
 
-            let scale = UIScreen.main.scale
-            let width = view.bounds.size.width
-            let height = view.bounds.size.height
+            let width = 600
+            let height = 400
             
             let mainView: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView).toOpaque()
             
-            appDelegate!._bridge!.init(mainView, width:Int32(width * scale), height:Int32(height * scale))
+            appDelegate!._bridge!.init(mainView, width:Int32(width), height:Int32(height))
         }
     }
 
@@ -45,19 +41,7 @@ class ViewController: UIViewController {
             return
         }
         if appDelegate != nil {
-            let scale = UIScreen.main.scale
-            let width = view.bounds.size.width
-            let height = view.bounds.size.height
-
-            appDelegate!._bridge!.resize(Int32(width * scale), height: Int32(height * scale))
-        }
-    }
-
-    @objc func panGesture(sender : UIPanGestureRecognizer) {
-        let appDelegate = UIApplication.shared.delegate as? AppDelegate
-        if appDelegate != nil {
-            let translation = sender.translation(in:mtkView)
-            appDelegate!._bridge!.setInputs(Int32(translation.x), y:Int32(translation.y), tap:true)
+            appDelegate!._bridge!.resize(Int32(600), height: Int32(400))
         }
     }
 }

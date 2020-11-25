@@ -10,7 +10,6 @@
 
 - (void)init:(void*)inView width:(int)inWidth height:(int)inHeight;
 - (void)resize:(int)inWidth height:(int)inHeight;
-- (void)setInputs:(int)inX y:(int)inY tap:(bool)inTap;
 
 @end
 

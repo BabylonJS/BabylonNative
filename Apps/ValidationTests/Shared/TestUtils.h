@@ -90,9 +90,26 @@ namespace Babylon
             XSendEvent(display, (Window)_nativeWindowPtr, 0, 0, (XEvent*)&dummyEvent);
             XFlush(display);
 #elif __APPLE__
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+            dispatch_async(dispatch_get_main_queue(), ^{
+                runtime.reset();
+                graphics.reset();
+                UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
+                                               message:(errorCode == 0)?@"Success!":@"Errors: Check logs!"
+                                               preferredStyle:UIAlertControllerStyleAlert];
+                 
+                UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+                   handler:^(UIAlertAction * ) {}];
+                 
+                [alert addAction:defaultAction];
+                UIViewController *rootController = [[[[UIApplication sharedApplication]delegate] window] rootViewController];
+                [rootController presentViewController:alert animated:YES completion:nil];
+            });
+#else
             dispatch_async(dispatch_get_main_queue(), ^{
                 [[(__bridge NSView*)_nativeWindowPtr window]close];
             });
+#endif
 #else
             // TODO: handle exit for other platforms
 #endif

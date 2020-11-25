@@ -7,11 +7,12 @@
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
-#import <Shared/InputManager.h>
+#import <UIKit/UIKit.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+
+#import <Shared/TestUtils.h>
 
 @implementation LibNativeBridge
 
@@ -27,7 +28,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)init:(void*)view width:(int)inWidth height:(int)inHeight
 {
-    inputBuffer.reset();
     runtime.reset();
     graphics.reset();
 
@@ -36,8 +36,9 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     void* windowPtr = view;
     
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+    graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+
     runtime = std::make_unique<Babylon::AppRuntime>();
-    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([](Napi::Env env)
     {
@@ -49,8 +50,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
-
-        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+        
+        Babylon::TestUtils::CreateInstance(env, nullptr);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -61,7 +62,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     loader.LoadScript("app:///babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
-    loader.LoadScript("app:///experience.js");
+    loader.LoadScript("app:///validation_native.js");
 }
 
 - (void)resize:(int)inWidth height:(int)inHeight
@@ -69,15 +70,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     if (graphics)
     {
         graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
-    }
-}
-
-- (void)setInputs:(int)x y:(int)y tap:(bool)tap
-{
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerPosition(x, y);
-        inputBuffer->SetPointerDown(tap);
     }
 }
 
