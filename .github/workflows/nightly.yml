@@ -1,6 +1,7 @@
 name: Nightly build
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: 0 23 * * 1-5
 
