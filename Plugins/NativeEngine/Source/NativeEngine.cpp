@@ -1135,7 +1135,7 @@ namespace Babylon
                     CreateCubeTextureFromImages(texture, images, generateMips);
                 });
             })
-            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1180,14 +1180,14 @@ namespace Babylon
                     CreateCubeTextureFromImages(texture, images, true);
                 });
             })
-            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    onErrorRef.Call({Napi::Value::From(Env(), true)});
+                    onErrorRef.Call({});
                 }
                 else
                 {
-                    onSuccessRef.Call({Napi::Value::From(Env(), true)});
+                    onSuccessRef.Call({});
                 }
             });
     }
