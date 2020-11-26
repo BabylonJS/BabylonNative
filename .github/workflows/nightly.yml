@@ -17,7 +17,7 @@ jobs:
     - name: Make Solution
       run: mkdir buildWin32_x64 && 
         cd buildWin32_x64 &&
-        cmake -G "Visual Studio 16 2019" -A x64 ..
+        cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
     - name: Download babylon.max.js
@@ -28,8 +28,10 @@ jobs:
       run: curl.exe -o Apps/BabylonScripts/babylon.glTF2FileLoader.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylon.glTF2FileLoader.js
     - name: Download babylon.gui.js
       run: curl.exe -o Apps/BabylonScripts/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
+    - name: Download draco_decoder_gltf.js
+      run: curl.exe -o Apps/BabylonScripts/draco_decoder_gltf.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/draco_decoder_gltf.js
     - name: Build Win32
-      run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="Release" -p:Platform=x64
+      run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
     - name: Make validation directories 
       run: cd buildWin32_x64/Apps/ValidationTests &&
           mkdir Results &&
