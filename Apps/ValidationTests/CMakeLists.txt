@@ -6,7 +6,8 @@ set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.glTF2FileLoader.js"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylonjs.materials.js"
-    "../BabylonScripts/babylon.gui.js")
+    "../BabylonScripts/babylon.gui.js"
+    "../BabylonScripts/draco_decoder_gltf.js")
 
 set(SCRIPTS
     "Scripts/validation_native.js"
