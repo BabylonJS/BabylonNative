@@ -38,7 +38,7 @@ jobs:
           mkdir Errors 
     - name: Run Validation Tests
       run: ./ValidationTests.exe
-      working-directory: buildWin32_x64/Apps/ValidationTests/Release
+      working-directory: buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
     - name: Upload Errors images artifact
       uses: actions/upload-artifact@v2
       if: failure()
