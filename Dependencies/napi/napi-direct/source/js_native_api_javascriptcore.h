@@ -5,6 +5,8 @@
 #include <JavaScriptCore/JavaScript.h>
 #include <unordered_set>
 #include <list>
+#include <thread>
+#include <cassert>
 
 struct napi_env__ {
   JSGlobalContextRef context{};
@@ -12,7 +14,9 @@ struct napi_env__ {
   napi_extended_error_info last_error{nullptr, nullptr, 0, napi_ok};
   std::unordered_set<napi_value> active_ref_values{};
   std::list<napi_ref> strong_refs{};
-  
+
+  const std::thread::id thread_id{std::this_thread::get_id()};
+
   napi_env__(JSGlobalContextRef context) : context{context} {
     JSGlobalContextRetain(context);
   }
@@ -21,23 +25,24 @@ struct napi_env__ {
     deinit_refs();
     JSGlobalContextRelease(context);
   }
-  
+
  private:
   void deinit_refs();
 };
 
-#define RETURN_STATUS_IF_FALSE(env, condition, status)                  \
-  do {                                                                  \
-    if (!(condition)) {                                                 \
-      return napi_set_last_error((env), (status));                      \
-    }                                                                   \
+#define RETURN_STATUS_IF_FALSE(env, condition, status) \
+  do {                                                 \
+    if (!(condition)) {                                \
+      return napi_set_last_error((env), (status));     \
+    }                                                  \
   } while (0)
 
-#define CHECK_ENV(env)          \
-  do {                          \
-    if ((env) == nullptr) {     \
-      return napi_invalid_arg;  \
-    }                           \
+#define CHECK_ENV(env)                                    \
+  do {                                                    \
+    if ((env) == nullptr) {                               \
+      return napi_invalid_arg;                            \
+    }                                                     \
+    assert(env->thread_id == std::this_thread::get_id()); \
   } while (0)
 
 #define CHECK_ARG(env, arg) \

@@ -5,6 +5,8 @@
 #include <string.h>  // NOLINT(modernize-deprecated-headers)
 #include <napi/js_native_api_types.h>
 #include "js_native_api_v8_internals.h"
+#include <thread>
+#include <cassert>
 
 static napi_status napi_clear_last_error(napi_env env);
 
@@ -77,6 +79,8 @@ struct napi_env__ {
     void* hint = nullptr;
     napi_finalize finalize_cb = nullptr;
   } instance_data;
+
+  const std::thread::id thread_id{std::this_thread::get_id()};
 };
 
 static inline napi_status napi_clear_last_error(napi_env env) {
@@ -98,18 +102,19 @@ napi_status napi_set_last_error(napi_env env, napi_status error_code,
   return error_code;
 }
 
-#define RETURN_STATUS_IF_FALSE(env, condition, status)                  \
-  do {                                                                  \
-    if (!(condition)) {                                                 \
-      return napi_set_last_error((env), (status));                      \
-    }                                                                   \
+#define RETURN_STATUS_IF_FALSE(env, condition, status) \
+  do {                                                 \
+    if (!(condition)) {                                \
+      return napi_set_last_error((env), (status));     \
+    }                                                  \
   } while (0)
 
-#define CHECK_ENV(env)          \
-  do {                          \
-    if ((env) == nullptr) {     \
-      return napi_invalid_arg;  \
-    }                           \
+#define CHECK_ENV(env)                                    \
+  do {                                                    \
+    if ((env) == nullptr) {                               \
+      return napi_invalid_arg;                            \
+    }                                                     \
+    assert(env->thread_id == std::this_thread::get_id()); \
   } while (0)
 
 #define CHECK_ARG(env, arg) \

@@ -4,8 +4,14 @@
 
 #include <cassert>
 
+#if (ANDROID)
+// MSAA is disabled on Android.
+// See issue https://github.com/BabylonJS/BabylonNative/issues/494#issuecomment-731135918
+// for explanation
+#define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY)
+#else
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
-
+#endif
 namespace Babylon
 {
     namespace
@@ -240,6 +246,11 @@ namespace Babylon
         }
     }
 
+    void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    {
+        Callback.SetDiagnosticOutput(std::move(outputFunction));
+    }
+
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
@@ -324,5 +335,10 @@ namespace Babylon
     void Graphics::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
+    }
+
+    void Graphics::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    {
+        m_impl->SetDiagnosticOutput(std::move(outputFunction));
     }
 }

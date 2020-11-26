@@ -1019,6 +1019,44 @@ namespace xr
             }
         }
 
+        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) {
+            const float n{sessionImpl.DepthNearZ};
+            const float f{sessionImpl.DepthFarZ};
+
+            const float l{std::tanf(cachedView.fov.angleLeft)  * n};
+            const float r{std::tanf(cachedView.fov.angleRight) * n};
+            const float t{std::tanf(cachedView.fov.angleUp)    * n};
+            const float b{std::tanf(cachedView.fov.angleDown)  * n};
+
+            // Taken from BGFX math mtxProj().
+            // See also D3DXMatrixPerspectiveOffCenterRH.
+            const float invDiffRL = 1.f / (r - l);
+            const float invDiffTB = 1.f / (t - b);
+            const float ww  =  2.f * n * invDiffRL;
+            const float hh  =  2.f * n * invDiffTB;
+            const float xx  = (r + l) * invDiffRL;
+            const float yy  = (t + b) * invDiffTB;
+
+            // TODO: Set this based on the graphics API in use.
+            // If true, the NDC depth ranges from [-1, 1] (OpenGL/Vulkan)
+            // If false, the NDC depth ranges from [0, 1] (D3D)
+            constexpr bool homogeneousDepth = false;
+
+            // We negate the values za and zc to create a right-handed projection matrix,
+            // since the supplied nearZ and farZ are positive.
+            const float diffFN = f - n;
+            const float za = -(homogeneousDepth ? (f + n) / diffFN : f / diffFN);
+            const float zb = -(homogeneousDepth ? (2.f * f * n) / diffFN : n * -za);
+            constexpr float zc = -1.f;
+
+            view.ProjectionMatrix = {
+                ww, 0,  0,  0,
+                0,  hh, 0,  0,
+                xx, yy, za, zc,
+                0,  0,  zb, 0
+            };
+        }
+
         void PopulateView(const XrView& cachedView,
             const xr::System::Session::Impl::Swapchain& colorSwapchain,
             const uint32_t colorSwapchainImageIndex,
@@ -1033,10 +1071,6 @@ namespace xr
             view.Space.Pose.Orientation.Y = cachedView.pose.orientation.y;
             view.Space.Pose.Orientation.Z = cachedView.pose.orientation.z;
             view.Space.Pose.Orientation.W = cachedView.pose.orientation.w;
-            view.FieldOfView.AngleUp = cachedView.fov.angleUp;
-            view.FieldOfView.AngleDown = cachedView.fov.angleDown;
-            view.FieldOfView.AngleLeft = cachedView.fov.angleLeft;
-            view.FieldOfView.AngleRight = cachedView.fov.angleRight;
             view.ColorTextureFormat = SwapchainFormatToTextureFormat(colorSwapchain.Format);
             view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
             view.ColorTextureSize.Width = colorSwapchain.Width;
@@ -1047,6 +1081,8 @@ namespace xr
             view.DepthTextureSize.Height = depthSwapchain.Height;
             view.DepthNearZ = sessionImpl.DepthNearZ;
             view.DepthFarZ = sessionImpl.DepthFarZ;
+
+            PopulateProjectionMatrix(cachedView, view);
         }
 
         void PopulateProjectionView(const XrView& cachedView,
@@ -1131,6 +1167,9 @@ namespace xr
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
+        // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
+        , IsTracking{true}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();

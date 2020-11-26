@@ -164,14 +164,7 @@ namespace xr
                 struct View
                 {
                     Space Space{};
-
-                    struct
-                    {
-                        float AngleLeft{};
-                        float AngleRight{};
-                        float AngleUp{};
-                        float AngleDown{};
-                    } FieldOfView;
+                    std::array<float, 16> ProjectionMatrix{};
 
                     TextureFormat ColorTextureFormat{};
                     void* ColorTexturePointer{};
@@ -231,6 +224,8 @@ namespace xr
                 
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
+
+                bool IsTracking;
 
                 Frame(System::Session::Impl&);
                 ~Frame();

@@ -65,6 +65,7 @@ namespace
         runtime.reset();
 
         graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
