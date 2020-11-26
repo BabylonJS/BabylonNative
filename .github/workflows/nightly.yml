@@ -39,7 +39,7 @@ jobs:
           mkdir Errors
     - name: Run Validation Tests
       run: |
-          ./ValidationTests.exe
+          ValidationTests.exe
       shell: cmd
       working-directory: buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
     - name: Upload Errors images artifact
