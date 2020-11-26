@@ -33,12 +33,14 @@ jobs:
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
     - name: Make validation directories 
-      run: cd buildWin32_x64/Apps/ValidationTests &&
-          mkdir Results &&
-          mkdir Errors 
+      run: |
+          cd buildWin32_x64/Apps/ValidationTests
+          mkdir Results
+          mkdir Errors
     - name: Run Validation Tests
-      run: ./ValidationTests.exe &&
-          echo "Done!"
+      run: |
+          ./ValidationTests.exe
+      shell: cmd
       working-directory: buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
     - name: Upload Errors images artifact
       uses: actions/upload-artifact@v2
