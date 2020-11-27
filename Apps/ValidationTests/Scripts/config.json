@@ -4,8 +4,7 @@
         {
             "title": "LightFalloff",
             "playgroundId": "#20OAV9#201",
-            "referenceImage": "lightFalloff.png",
-            "errorRatio": -8.0
+            "referenceImage": "lightFalloff.png"
         },
         {
             "title": "Chromatic aberration",
