@@ -130,6 +130,7 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
+        loader.LoadScript(scriptsRootUrl + "/draco_decoder_gltf.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
     }
 }
