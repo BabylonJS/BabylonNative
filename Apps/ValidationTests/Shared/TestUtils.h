@@ -29,6 +29,12 @@ namespace
     int errorCode{};
 }
 
+// can't externalize variable with ObjC++. Using a function instead.
+int GetExitCode()
+{
+    return errorCode;
+}
+
 namespace Babylon
 {
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
@@ -83,6 +89,27 @@ namespace Babylon
             dummyEvent.format = 32;
             XSendEvent(display, (Window)_nativeWindowPtr, 0, 0, (XEvent*)&dummyEvent);
             XFlush(display);
+#elif __APPLE__
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+            dispatch_async(dispatch_get_main_queue(), ^{
+                runtime.reset();
+                graphics.reset();
+                UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
+                                               message:(errorCode == 0)?@"Success!":@"Errors: Check logs!"
+                                               preferredStyle:UIAlertControllerStyleAlert];
+                 
+                UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+                   handler:^(UIAlertAction * ) {}];
+                 
+                [alert addAction:defaultAction];
+                UIViewController *rootController = [[[[UIApplication sharedApplication]delegate] window] rootViewController];
+                [rootController presentViewController:alert animated:YES completion:nil];
+            });
+#else
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[(__bridge NSView*)_nativeWindowPtr window]close];
+            });
+#endif
 #else
             // TODO: handle exit for other platforms
 #endif
@@ -198,7 +225,7 @@ namespace Babylon
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef __APPLE__
-            std::string path = "~/";
+            std::string path = getenv("HOME");
 #else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
