@@ -35,6 +35,7 @@ final class BabylonNativeInterop {
     private static native void refresh(long instanceRef, Surface surface);
     private static native void setPointerButtonState(long instanceRef, int pointerId, int buttonId, boolean isDown, int x, int y);
     private static native void setPointerPosition(long instanceRef, int pointerId, int x, int y);
+    private static native void reset(long instanceRef);
     private static native void destroy(long instanceRef);
 
     // Must be called from the Android UI thread
@@ -135,6 +136,17 @@ final class BabylonNativeInterop {
     // Must be called from the JavaScript thread
     static void deinitialize() {
         BabylonNativeInterop.destroyOldNativeInstances(null);
+    }
+
+    static void reset(ReactContext reactContext) {
+        JavaScriptContextHolder jsContext = reactContext.getJavaScriptContextHolder();
+        CompletableFuture<Long> instanceRefFuture = BabylonNativeInterop.nativeInstances.get(jsContext);
+        if (instanceRefFuture != null) {
+            Long instanceRef = instanceRefFuture.getNow(null);
+            if (instanceRef != null) {
+                BabylonNativeInterop.reset(instanceRef);
+            }
+        }
     }
 
     private static CompletableFuture<Long> getOrCreateFuture(ReactContext reactContext) {

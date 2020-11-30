@@ -115,6 +115,12 @@ static NSMutableArray* activeTouches;
     }
 }
 
++ (void)reset {
+    if (currentNativeInstance) {
+        currentNativeInstance->Reset();
+    }
+}
+
 + (void)setCurrentView:(MTKView*)mtkView {
     currentView = mtkView;
     activeTouches = [NSMutableArray new];

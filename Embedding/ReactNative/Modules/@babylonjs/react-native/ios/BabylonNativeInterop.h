@@ -7,4 +7,5 @@
 + (void)setView:(RCTBridge*)bridge jsRunLoop:(NSRunLoop*)jsRunLoop mktView:(MTKView*)mtkView;
 + (void)reportTouchEvent:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event;
 + (void)whenInitialized:(RCTBridge*)bridge resolve:(RCTPromiseResolveBlock)resolve;
++ (void)reset;
 @end

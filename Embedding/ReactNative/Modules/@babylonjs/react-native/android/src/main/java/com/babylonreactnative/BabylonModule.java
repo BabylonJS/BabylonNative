@@ -39,4 +39,12 @@ public final class BabylonModule extends ReactContextBaseJavaModule {
     public void whenInitialized(Promise promise) {
         BabylonNativeInterop.whenInitialized(this.getReactApplicationContext()).thenAccept(instanceRef -> promise.resolve(instanceRef != 0));
     }
+
+    @ReactMethod
+    public void reset(Promise promise) {
+        this.getReactApplicationContext().runOnJSQueueThread(() -> {
+            BabylonNativeInterop.reset(this.getReactApplicationContext());
+            promise.resolve(null);
+        });
+    }
 }

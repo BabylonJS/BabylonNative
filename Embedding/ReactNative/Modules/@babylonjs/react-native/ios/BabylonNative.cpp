@@ -87,11 +87,17 @@ namespace Babylon
     {
         m_impl->graphics->UpdateWindow<void*>(windowPtr);
         m_impl->graphics->UpdateSize(width, height);
+        m_impl->graphics->EnableRendering();
     }
 
     void Native::Resize(size_t width, size_t height)
     {
         m_impl->graphics->UpdateSize(width, height);
+    }
+
+    void Native::Reset()
+    {
+        m_impl->graphics->DisableRendering();
     }
 
     void Native::SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)

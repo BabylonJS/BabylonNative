@@ -85,6 +85,12 @@ namespace Babylon
             auto height = static_cast<size_t>(ANativeWindow_getHeight(windowPtr));
             m_graphics->UpdateWindow<void*>(windowPtr);
             m_graphics->UpdateSize(width, height);
+            m_graphics->EnableRendering();
+        }
+
+        void Reset()
+        {
+            m_graphics->DisableRendering();
         }
 
         void SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)
@@ -164,6 +170,12 @@ extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInter
 {
     auto native = reinterpret_cast<Babylon::Native*>(instanceRef);
     native->SetPointerPosition(static_cast<uint32_t>(pointerId), static_cast<uint32_t>(x), static_cast<uint32_t>(y));
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_reset(JNIEnv* env, jclass obj, jlong instanceRef)
+{
+    auto native = reinterpret_cast<Babylon::Native*>(instanceRef);
+    native->Reset();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_destroy(JNIEnv* env, jclass obj, jlong instanceRef)

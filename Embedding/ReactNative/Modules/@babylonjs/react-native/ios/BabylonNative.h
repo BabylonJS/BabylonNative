@@ -13,6 +13,7 @@ namespace Babylon
         ~Native();
         void Refresh(void* windowPtr, size_t width, size_t height);
         void Resize(size_t width, size_t height);
+        void Reset();
         void SetPointerButtonState(uint32_t pointerId, uint32_t buttonId, bool isDown, uint32_t x, uint32_t y);
         void SetPointerPosition(uint32_t pointerId, uint32_t x, uint32_t y);
 

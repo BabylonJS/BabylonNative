@@ -83,6 +83,7 @@ export function useEngine(): Engine | undefined {
             if (engine) {
                 DisposeEngine(engine);
             }
+            BabylonModule.reset();
             setEngine(undefined);
         };
     }, []);
