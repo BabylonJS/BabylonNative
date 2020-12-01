@@ -125,6 +125,8 @@ namespace xr
     public:
         static constexpr float DEFAULT_DEPTH_NEAR_Z{ 0.5f };
         static constexpr float DEFAULT_DEPTH_FAR_Z{ 1000.f };
+        static constexpr uint32_t DEFAULT_CONTROLLER_BUTTONS{ 4 };
+        static constexpr uint32_t DEFAULT_CONTROLLER_AXES{ 4 };
 
         class Session
         {
@@ -146,17 +148,23 @@ namespace xr
                     bool PoseTracked{ false };
                 };
 
+                struct GamePad
+                {
+                    struct Button
+                    {
+                        bool Pressed{ false };
+                        bool Touched{ false };
+                        double Value{0};
+                    };
+
+                    std::array<float, DEFAULT_CONTROLLER_AXES> Axes;
+                    std::array<Button, DEFAULT_CONTROLLER_BUTTONS> Buttons;
+                };
+
                 struct View
                 {
                     Space Space{};
-
-                    struct
-                    {
-                        float AngleLeft{};
-                        float AngleRight{};
-                        float AngleUp{};
-                        float AngleDown{};
-                    } FieldOfView;
+                    std::array<float, 16> ProjectionMatrix{};
 
                     TextureFormat ColorTextureFormat{};
                     void* ColorTexturePointer{};
@@ -185,6 +193,8 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
+                    bool GamepadTrackedThisFrame{};
+                    GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
                     HandednessEnum Handedness{};
@@ -214,6 +224,8 @@ namespace xr
                 
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
+
+                bool IsTracking;
 
                 Frame(System::Session::Impl&);
                 ~Frame();

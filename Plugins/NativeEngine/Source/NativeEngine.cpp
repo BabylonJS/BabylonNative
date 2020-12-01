@@ -7,8 +7,6 @@
 
 #include <bgfx/bgfx.h>
 
-#define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
-
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -466,8 +464,7 @@ namespace Babylon
 
         if (autoRender)
         {
-            // TODO: Dispatch instead to match multi-thread case?
-            Graphics::Impl::GetFromJavaScript(env).RenderCurrentFrame();
+            Graphics::Impl::GetFromJavaScript(env).EnableRendering();
         }
     }
 
@@ -1077,7 +1074,7 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, dataRef = Napi::Persistent(data), generateMips, invertY]() {
+            [this, dataSpan, generateMips, invertY]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (image == nullptr)
                 {
@@ -1093,13 +1090,13 @@ namespace Babylon
                 }
                 return image;
             })
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture](bimg::ImageContainer* image) {
+            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, dataRef{Napi::Persistent(data)}](bimg::ImageContainer* image) {
                 ScheduleRender();
                 return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
                     CreateTextureFromImage(texture, image);
                 });
             })
-            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1119,12 +1116,14 @@ namespace Babylon
         const auto onSuccess = info[3].As<Napi::Function>();
         const auto onError = info[4].As<Napi::Function>();
 
+        std::array<Napi::Reference<Napi::TypedArray>, 6> dataRefs;
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
         for (uint32_t face = 0; face < data.Length(); face++)
         {
             const auto typedArray = data[face].As<Napi::TypedArray>();
             const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, dataRef = Napi::Persistent(typedArray), generateMips]() {
+            dataRefs[face] = Napi::Persistent(typedArray);
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (generateMips)
                 {
@@ -1135,19 +1134,20 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, generateMips](std::vector<bimg::ImageContainer*> images) {
+            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, generateMips, dataRefs{std::move(dataRefs)}](std::vector<bimg::ImageContainer*> images) {
                 ScheduleRender();
                 return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips, images = std::move(images)] {
                     CreateCubeTextureFromImages(texture, images, generateMips);
                 });
             })
-            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
-                onSuccessRef.Call({Napi::Value::From(Env(), true)});
-            })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    onErrorRef.Call({Napi::Value::From(Env(), true)});
+                    onErrorRef.Call({});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
                 }
             });
     }
@@ -1160,6 +1160,7 @@ namespace Babylon
         const auto onError = info[3].As<Napi::Function>();
 
         const auto numMips = data.Length();
+        std::vector<Napi::Reference<Napi::TypedArray>> dataRefs(6 * numMips);
         std::vector<arcana::task<bimg::ImageContainer*, std::exception_ptr>> tasks(6 * numMips);
         for (uint32_t mip = 0; mip < numMips; mip++)
         {
@@ -1168,7 +1169,8 @@ namespace Babylon
             {
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, dataRef = Napi::Persistent(typedArray)]() {
+                dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan]() {
                     bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                     FlipY(image);
                     return image;
@@ -1177,19 +1179,20 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture](std::vector<bimg::ImageContainer*> images) {
+            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, dataRefs{std::move(dataRefs)}](std::vector<bimg::ImageContainer*> images) {
                 ScheduleRender();
                 return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, images = std::move(images)] {
                     CreateCubeTextureFromImages(texture, images, true);
                 });
             })
-            .then(RuntimeScheduler, m_cancelSource, [this, onSuccessRef = Napi::Persistent(onSuccess)]() {
-                onSuccessRef.Call({Napi::Value::From(Env(), true)});
-            })
-            .then(arcana::inline_scheduler, m_cancelSource, [this, onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    onErrorRef.Call({Napi::Value::From(Env(), true)});
+                    onErrorRef.Call({});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
                 }
             });
     }
@@ -1416,12 +1419,7 @@ namespace Babylon
             bgfx::setState(m_engineState | fillModeState);
         }
 
-#if (ANDROID)
-        // TODO : find why we need to discard state on Android
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, false);
-#else
         bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
-#endif
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)

@@ -70,7 +70,7 @@ document = {
         appendChild: function () { }, removeChild: function () { }}
 }
 
-_native.graphicsInitializationPromise.then(function () {
+_native.whenGraphicsReady().then(function () {
 
     var engine = new BABYLON.NativeEngine();
     var scene = new BABYLON.Scene(engine);
@@ -142,9 +142,9 @@ _native.graphicsInitializationPromise.then(function () {
 
                 // The first parameter can be used to specify which mesh to import. Here we import all meshes
                 BABYLON.SceneLoader.ImportMesh("", "https://david.blob.core.windows.net/babylonjs/MRTK/", "pushButton.glb", scene, function (newMeshes) {
-                    newMeshes.forEach(function (mesh) {
-                        mesh.scaling.z = 1;// fix the scaling
-                    });
+                    var mesh = newMeshes[0];
+                    mesh.position.z = 1;
+                    mesh.scaling.scaleInPlace(0.5);
                     pushButtonCore = newMeshes[0];
                     const newPushButton = pushButtonCore.clone("pushButton");
                     makePushButton(newPushButton, new Color3(0.25, 0, 0));
@@ -174,7 +174,7 @@ _native.graphicsInitializationPromise.then(function () {
                 }
             }
 
-            //addPushButton(scene, manager);
+            addPushButton(scene, manager);
 
             /*
             scene.beforeRender = function () {

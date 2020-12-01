@@ -23,6 +23,9 @@ namespace Babylon
         void AddToJavaScript(Napi::Env);
         static Graphics& GetFromJavaScript(Napi::Env);
 
+        void EnableRendering();
+        void DisableRendering();
+
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
         
@@ -38,6 +41,8 @@ namespace Babylon
 
         CallbackHandle RegisterOnEndFrame(std::function<void()> callback);
         void UnregisterOnEndFrame(CallbackHandle callbackHandle);
+
+        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
     private:
         Graphics();

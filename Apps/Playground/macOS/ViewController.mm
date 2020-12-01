@@ -36,7 +36,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 @end
 
-
 @implementation ViewController
 
 - (void)viewDidLoad {
