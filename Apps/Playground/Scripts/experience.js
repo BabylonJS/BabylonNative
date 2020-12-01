@@ -11,7 +11,7 @@ var text = false;
 var hololens = false;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
+    BABYLON.Mesh.CreateBox("box1", 0.2).setEnabled(false);
     return Promise.resolve();
 }
 
@@ -94,124 +94,100 @@ _native.graphicsInitializationPromise.then(function () {
     //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
     //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
         BABYLON.Tools.Log("Loaded");
-
+        /*
         scene.createDefaultCamera(true);
         scene.activeCamera.alpha += Math.PI;
         CreateInputHandling(scene);
-
-
-BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-        OffscreenCanvas.loadTTF("droidsans", data);
-        
-        var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
-        ground.rotation.x = Math.PI * 0.5;
-        ground.position.z = 2;
-        //Create dynamic texture
-        var textureResolution = 512;
-        var textureGround = new BABYLON.DynamicTexture("dynamic texture", textureResolution, scene);
-        var textureContext = textureGround.getContext();
-
-        var materialGround = new BABYLON.StandardMaterial("Mat", scene);
-        materialGround.diffuseTexture = textureGround;
-        ground.material = materialGround;
-        materialGround.backFaceCulling = false;
-
-        var font = "bold 44px monospace";
-        // textureGround.drawImage(videotest, 0, 0, 100, 100);
-
-        textureGround.clear();
-        textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
-        
-
-        /*
-        scene.beforeRender = function () {
-            textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
-        };
         */
+        var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 2, -4), scene);
+        camera.setTarget(BABYLON.Vector3.Zero());
+        //camera.attachControl(canvas, true);
+        CreateInputHandling(scene);
+
+        BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+            OffscreenCanvas.loadTTF("droidsans", data);
+            var manager = new BABYLON.GUI.GUI3DManager(scene);
+
+            const addButtonPanel = function (manager) {
+
+                var anchor = new BABYLON.TransformNode("");
 
 
+                var panel = new BABYLON.GUI.SpherePanel();
+                panel.margin = 0.2;
 
-        // GUI
+                manager.addControl(panel);
+                panel.linkToTransformNode(anchor);
+                panel.position.z = -1.5;
 
-        var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
+                // Let's add some buttons!
+                var addButton = function () {
+                    var button = new BABYLON.GUI.HolographicButton("orientation");
+                    panel.addControl(button);
 
-        var button1 = BABYLON.GUI.Button.CreateSimpleButton("but1", "Click Me");
+                    button.text = "Button #" + panel.children.length;
+                }
 
-        button1.width = "150px"
-        button1.height = "40px";
+                panel.blockLayout = true;
+                for (var index = 0; index < 60; index++) {
+                    addButton();
+                }
+                panel.blockLayout = false;
+            }
 
-        button1.color = "white";
-        button1.cornerRadius = 20;
-        button1.background = "green";
-        button1.onPointerUpObservable.add(function () {
-            console.log("you did it!");
-        });
+            addButtonPanel(manager);
 
-        advancedTexture.addControl(button1);
+            const addPushButton = (scene, manager) => {
+                var pushButtonCore;
+
+                // The first parameter can be used to specify which mesh to import. Here we import all meshes
+                BABYLON.SceneLoader.ImportMesh("", "https://david.blob.core.windows.net/babylonjs/MRTK/", "pushButton.glb", scene, function (newMeshes) {
+                    newMeshes.forEach(function (mesh) {
+                        mesh.scaling.z = 1;// fix the scaling
+                    });
+                    pushButtonCore = newMeshes[0];
+                    const newPushButton = pushButtonCore.clone("pushButton");
+                    makePushButton(newPushButton, new Color3(0.25, 0, 0));
+                    pushButtonCore.setEnabled(false);
+                });
+
+                function makePushButton(mesh, hoverColor) {
+                    var cylinder = mesh.getChildMeshes(false, (node) => { return node.name.indexOf("Cylinder") !== -1 })[0];
+                    cylinder.material.albedoColor = new Color3(0.5, 0.19, 0);
+                    var pushButton = new BABYLON.GUI.TouchMeshButton3D(mesh, "pushButton");
+                    pushButton.pointerEnterAnimation = () => {
+                        cylinder.material.albedoColor = hoverColor;
+                    };
+                    pushButton.pointerOutAnimation = () => {
+                        cylinder.material.albedoColor = new BABYLON.Color3(0.5, 0.19, 0);
+                    };
+                    pushButton.pointerDownAnimation = () => {
+                        cylinder.position.y = 0;
+                    }
+                    pushButton.pointerUpAnimation = () => {
+                        cylinder.position.y = 0.21;
+                    }
+                    pushButton.onPointerDownObservable.add(() => {
+                        console.log(pushButton.name + " pushed.");
+                    });
+                    manager.addControl(pushButton);
+                }
+            }
+
+            //addPushButton(scene, manager);
+
+            /*
+            scene.beforeRender = function () {
+                OffscreenCanvas.beginContextsFrame();
+            };
+
+            scene.afterRender = function () {
+                OffscreenCanvas.endContextsFrame();
+            };
+            */
+        }, undefined, undefined, true);
 
 
-
-
-        var slider = new BABYLON.GUI.Slider();
-        slider.minimum = 0.1;
-        slider.maximum = 20;
-        slider.value = 5;
-        slider.height = "20px";
-        slider.width = "150px";
-        slider.color = "#003399";
-        slider.background = "grey";
-        slider.left = "120px";
-        slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        slider.onValueChangedObservable.add(function (value) {
-            //sphere.scaling = unitVec.scale(value);
-        });
-        advancedTexture.addControl(slider);
-
-
-
-
-        var idx = 0;
-        scene.beforeRender = function () {
-            OffscreenCanvas.beginContextsFrame();
-            //textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
-            //button1.textBlock.text = "Click Me " + idx;
-            //slider.value = Math.random() * 20;
-            idx++;
-        };
-
-        scene.afterRender = function () {
-            OffscreenCanvas.endContextsFrame();
-        };
-        /*
-
-        var slider = new BABYLON.GUI.Slider();
-        slider.minimum = 0.1;
-        slider.maximum = 20;
-        slider.value = 5;
-        slider.height = "20px";
-        slider.width = "150px";
-        slider.color = "#003399";
-        slider.background = "grey";
-        slider.left = "120px";
-        slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        slider.onValueChangedObservable.add(function (value) {
-            //sphere.scaling = unitVec.scale(value);
-        });
-
-        var idx = 0;
-        scene.beforeRender = function () {
-            //textureGround.drawText("BabylonNative", 10, 120, font, "White", null, true, true);
-            //button1.textBlock.text = "Click Me " + idx;
-            slider.value = idx;
-            idx+=0.01;
-        };
-
-        advancedTexture.addControl(slider);
-        */
-    }, undefined, undefined, true);
-    
         if (ibl) {
             scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
         }
