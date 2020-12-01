@@ -16,15 +16,16 @@ namespace Babylon::Polyfills::Internal
                 ParentT::InstanceMethod("log", &Console::Log),
                 ParentT::InstanceMethod("warn", &Console::Warn),
                 ParentT::InstanceMethod("error", &Console::Error),
-            },
-            &callback);
+            });
 
-        env.Global().Set(JS_INSTANCE_NAME, func.New({}));
+        auto console = func.New({});
+        Console::Unwrap(console)->m_callback = std::move(callback);
+        env.Global().Set(JS_INSTANCE_NAME, console);
     }
 
     Console::Console(const Napi::CallbackInfo& info)
         : ParentT{info}
-        , m_callback{std::move(*(Babylon::Polyfills::Console::CallbackT*)info.Data())}
+        , m_callback{}
     {
     }
 
