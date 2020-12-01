@@ -22,7 +22,7 @@
 
 namespace
 {
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(ANDROID)
     std::filesystem::path GetModulePath();
 #endif
     std::atomic<bool> doExit{};
@@ -78,6 +78,8 @@ namespace Babylon
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
             doExit = true;
             errorCode = exitCode;
+#if ANDROID
+#else
 #ifdef WIN32
             PostMessageW((HWND)_nativeWindowPtr, WM_DESTROY, 0, 0);
 #elif __linux__
@@ -90,11 +92,29 @@ namespace Babylon
             XSendEvent(display, (Window)_nativeWindowPtr, 0, 0, (XEvent*)&dummyEvent);
             XFlush(display);
 #elif __APPLE__
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+            dispatch_async(dispatch_get_main_queue(), ^{
+                runtime.reset();
+                graphics.reset();
+                UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
+                                               message:(errorCode == 0)?@"Success!":@"Errors: Check logs!"
+                                               preferredStyle:UIAlertControllerStyleAlert];
+                 
+                UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+                   handler:^(UIAlertAction * ) {}];
+                 
+                [alert addAction:defaultAction];
+                UIViewController *rootController = [[[[UIApplication sharedApplication]delegate] window] rootViewController];
+                [rootController presentViewController:alert animated:YES completion:nil];
+            });
+#else
             dispatch_async(dispatch_get_main_queue(), ^{
                 [[(__bridge NSView*)_nativeWindowPtr window]close];
             });
+#endif
 #else
             // TODO: handle exit for other platforms
+#endif
 #endif
         }
 
@@ -119,6 +139,8 @@ namespace Babylon
             const auto title = info[0].As<Napi::String>().Utf8Value();
 #ifdef WIN32
             SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
+#elif ANDROID
+            (void)info;
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
             XStoreName(display, (Window)_nativeWindowPtr, title.c_str());
@@ -193,6 +215,9 @@ namespace Babylon
 
         Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
         {
+#ifdef ANDROID
+            auto path = "app://";
+#else
 #ifdef __APPLE__
             std::string path = "app:///";
 #else
@@ -202,18 +227,23 @@ namespace Babylon
 #endif
             path += "/Scripts/";
 #endif
+#endif
             return Napi::Value::From(info.Env(), path);
         }
 
         
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
+#ifdef ANDROID
+            auto path = "/data/data/com.android.babylonnative.validationtests/cache";
+#else
 #ifdef __APPLE__
             std::string path = getenv("HOME");
 #else
             auto path = GetModulePath().parent_path().generic_string();
 #ifdef WIN32
             path += "/..";
+#endif
 #endif
 #endif
             return Napi::Value::From(info.Env(), path);
