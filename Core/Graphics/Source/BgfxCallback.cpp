@@ -57,6 +57,10 @@ namespace Babylon
         }
         out[total] = '\0';
         bx::debugOutput(out);
+        if (m_outputFunction)
+        {
+            m_outputFunction(out);
+        }
     }
 
     void BgfxCallback::profilerBegin(const char* /*name*/, uint32_t /*abgr*/, const char* /*filePath*/, uint16_t /*line*/)
@@ -69,6 +73,11 @@ namespace Babylon
 
     void BgfxCallback::profilerEnd()
     {
+    }
+
+    void BgfxCallback::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    {
+        m_outputFunction = std::move(outputFunction);
     }
 
     uint32_t BgfxCallback::cacheReadSize(uint64_t /*id*/)

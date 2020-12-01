@@ -2,25 +2,30 @@
 
 #include <jsrt.h>
 #include <napi/js_native_api_types.h>
+#include <thread>
+#include <cassert>
 
 struct napi_env__ {
   JsSourceContext source_context = JS_SOURCE_CONTEXT_NONE;
   napi_extended_error_info last_error{ nullptr, nullptr, 0, napi_ok };
   JsValueRef has_own_property_function = JS_INVALID_REFERENCE;
+
+  const std::thread::id thread_id{std::this_thread::get_id()};
 };
 
-#define RETURN_STATUS_IF_FALSE(env, condition, status)                  \
-  do {                                                                  \
-    if (!(condition)) {                                                 \
-      return napi_set_last_error((env), (status));                      \
-    }                                                                   \
+#define RETURN_STATUS_IF_FALSE(env, condition, status) \
+  do {                                                 \
+    if (!(condition)) {                                \
+      return napi_set_last_error((env), (status));     \
+    }                                                  \
   } while (0)
 
-#define CHECK_ENV(env)          \
-  do {                          \
-    if ((env) == nullptr) {     \
-      return napi_invalid_arg;  \
-    }                           \
+#define CHECK_ENV(env)                                    \
+  do {                                                    \
+    if ((env) == nullptr) {                               \
+      return napi_invalid_arg;                            \
+    }                                                     \
+    assert(env->thread_id == std::this_thread::get_id()); \
   } while (0)
 
 #define CHECK_ARG(env, arg) \
@@ -32,7 +37,7 @@ struct napi_env__ {
     if (err != JsNoError) return napi_set_last_error(env, err); \
   } while (0)
 
-#define CHECK_JSRT_EXPECTED(env, expr, expected)                 \
+#define CHECK_JSRT_EXPECTED(env, expr, expected)                \
   do {                                                          \
     JsErrorCode err = (expr);                                   \
     if (err == JsErrorInvalidArgument)                          \
