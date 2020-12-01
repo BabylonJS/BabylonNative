@@ -6,6 +6,13 @@ var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
 
+// Random replacement
+var seed = 1;
+Math.random = function () {
+    var x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+}
+
 function compare(test, renderData, referenceImage, threshold, errorRatio) {
     var size = renderData.length;
     var referenceData = TestUtils.getImageData(referenceImage);
@@ -274,7 +281,7 @@ var scene;
 var canvas;
 var xhr;
 
-_native.graphicsInitializationPromise.then(() => {
+_native.whenGraphicsReady().then(() => {
 
     engine = new BABYLON.NativeEngine();
     scene = new BABYLON.Scene(engine);
@@ -308,7 +315,8 @@ _native.graphicsInitializationPromise.then(() => {
                 return new OffscreenCanvas(64, 64);
             }
             return {};
-        }
+        },
+        removeEventListener: function () { }
     }
 
     xhr = new XMLHttpRequest();
@@ -328,6 +336,7 @@ _native.graphicsInitializationPromise.then(() => {
                     }
                     i++;
                     if (justOnce || i >= config.tests.length) {
+                        engine.dispose();
                         TestUtils.exit(0);
                         return;
                     }

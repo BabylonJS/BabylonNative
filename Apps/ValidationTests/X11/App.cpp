@@ -65,6 +65,7 @@ namespace
         runtime.reset();
 
         graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
@@ -91,6 +92,7 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/draco_decoder_gltf.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
 
         TailRecurseRender();

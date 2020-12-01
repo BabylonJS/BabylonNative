@@ -22,6 +22,9 @@ namespace Babylon
 
         void AddToJavaScript(Napi::Env);
 
+        void EnableRendering();
+        void DisableRendering();
+
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
         
@@ -30,6 +33,8 @@ namespace Babylon
             StartRenderingCurrentFrame();
             FinishRenderingCurrentFrame();
         }
+
+        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
     private:
         Graphics();

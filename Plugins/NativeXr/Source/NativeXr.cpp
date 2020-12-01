@@ -44,36 +44,6 @@ namespace
     };
     // clang-format on
 
-    std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
-    {
-        const float n{view.DepthNearZ};
-        const float f{view.DepthFarZ};
-
-        const float r{std::tanf(view.FieldOfView.AngleRight) * n};
-        const float l{std::tanf(view.FieldOfView.AngleLeft) * n};
-        const float t{std::tanf(view.FieldOfView.AngleUp) * n};
-        const float b{std::tanf(view.FieldOfView.AngleDown) * n};
-
-        // Angles for FieldOfView respect the viewport ratio
-        // but tangent is not a linear function and ratio of values(l,r,b,t) computed
-        // in CreateProjectionMatrix do not respect that ratio
-        // so, here, a ratio after tangent is computed
-        // and a second derivative ratio computed to compensate
-        // the aspect ratio delta after tangent calls
-        const float aspectRatio = static_cast<float>(view.ColorTextureSize.Width) / static_cast<float>(view.ColorTextureSize.Height);
-        const float deltax = (r - l);
-        const float deltay = (t - b);
-        const float afterTangentAspectRatio = deltax / deltay;
-        const float compensationRatio = afterTangentAspectRatio / aspectRatio;
-        const float tc{std::tanf(view.FieldOfView.AngleUp * compensationRatio) * n};
-        const float bc{std::tanf(view.FieldOfView.AngleDown * compensationRatio) * n};
-
-        std::array<float, 16> bxResult{};
-        bx::mtxProj(bxResult.data(), tc, bc, l, r, n, f, false, bx::Handness::Right);
-
-        return bxResult;
-    }
-
     std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space, bool viewSpace = true)
     {
         auto& quat = space.Pose.Orientation;
@@ -184,6 +154,34 @@ namespace
         }
     }
 
+    void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)    
+    {
+        auto env = jsInputSource.Env();
+        //Set Gamepad Object
+        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
+        {
+            auto gamepadButton = Napi::Object::New(env);
+            auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Pressed);
+            auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Touched);
+            auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.Buttons[i].Value);
+            gamepadButton.Set("pressed", napiGamepadPressed);
+            gamepadButton.Set("touched", napiGamepadTouched);
+            gamepadButton.Set("value", napiGamepadValue);
+            gamepadButtons.Set(static_cast<int>(i), gamepadButton);
+        }
+        jsGamepadObject.Set("buttons", gamepadButtons);
+
+        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.Axes.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Axes.size(); i++)
+        {
+            auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.Axes[i]);
+            gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);
+        }
+        jsGamepadObject.Set("axes", gamepadAxes);
+        jsInputSource.Set("gamepad", jsGamepadObject);
+    }
+
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
     {
         constexpr std::array<const char*, 2> HANDEDNESS_STRINGS{
@@ -192,6 +190,7 @@ namespace
         constexpr const char* TARGET_RAY_MODE{"tracked-pointer"};
 
         auto jsInputSource = Napi::Object::New(env);
+
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
         SetXRInputSourceData(jsInputSource, inputSource);
@@ -281,6 +280,13 @@ namespace
         }
 
         return options;
+    }
+    
+    void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    {
+        auto env = jsInputSource.Env();
+        auto jsGamepadObject = Napi::Object::New(env);
+        SetXRGamepadObjectData(jsInputSource, jsGamepadObject, inputSource);
     }
 }
 
@@ -914,6 +920,7 @@ namespace Babylon
                     {
                         InstanceAccessor("transform", &XRViewerPose::GetTransform, nullptr),
                         InstanceAccessor("views", &XRViewerPose::GetViews, nullptr),
+                        InstanceAccessor("emulatedPosition", &XRViewerPose::GetEmulatedPosition, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -929,21 +936,22 @@ namespace Babylon
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
+                , m_isEmulatedPosition{true}
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, gsl::span<const xr::System::Session::Frame::View> views)
+            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame& frame)
             {
                 // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
                 // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
-                if (views.size() > 0)
+                if (frame.Views.size() > 0)
                 {
-                    m_transform.Update(views[0].Space, true);
+                    m_transform.Update(frame.Views[0].Space, true);
                 }
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
-                const auto newSize = static_cast<uint32_t>(views.size());
+                const auto newSize = static_cast<uint32_t>(frame.Views.size());
                 if (oldSize != newSize)
                 {
                     auto newViews = Napi::Array::New(m_jsViews.Env(), newSize);
@@ -967,11 +975,15 @@ namespace Babylon
                 }
 
                 // Update the individual views.
-                for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
+                for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame.Views.size()); ++idx)
                 {
-                    const auto& view = views[idx];
-                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space, view.IsFirstPersonObserver);
+                    const auto& view = frame.Views[idx];
+                    m_views[idx]->Update(idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver);
                 }
+                
+                // Check the frame to see if it has valid tracking, if it does not then the position should
+                // be flagged as being emulated.
+                m_isEmulatedPosition = !frame.IsTracking;
             }
 
         private:
@@ -980,6 +992,7 @@ namespace Babylon
 
             XRRigidTransform& m_transform;
             std::vector<XRView*> m_views{};
+            bool m_isEmulatedPosition;
 
             Napi::Value GetTransform(const Napi::CallbackInfo& /*info*/)
             {
@@ -989,6 +1002,11 @@ namespace Babylon
             Napi::Value GetViews(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsViews.Value();
+            }
+            
+            Napi::Value GetEmulatedPosition(const Napi::CallbackInfo& info)
+            {
+                return Napi::Boolean::New(info.Env(), m_isEmulatedPosition);
             }
         };
 
@@ -1896,15 +1914,30 @@ namespace Babylon
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
             Napi::ObjectReference m_jsJointPose{};
+            
+            bool m_hasBegunTracking{false};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
+                // To match the WebXR implementation we should return undefined here until we have gotten
+                // initial tracking. After that point we can just continue returning the position
+                // as it will be marked as estimated if tracking is lost.
+                if (!m_hasBegunTracking && !m_frame->IsTracking)
+                {
+                    return info.Env().Undefined();
+                }
+                else
+                {
+                    // We've received initial tracking, update the flag
+                    m_hasBegunTracking = true;
+                }
+                
                 // TODO: Support reference spaces.
                 // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-                m_xrViewerPose.Update(info, m_frame->Views);
+                m_xrViewerPose.Update(info, *m_frame);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -2366,6 +2399,7 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
+
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2375,19 +2409,34 @@ namespace Babylon
 
                     current.insert(inputSource.ID);
 
-                    auto found = m_idToInputSource.find(inputSource.ID);
-                    if (found == m_idToInputSource.end())
+                    auto inputSourceFound = m_idToInputSource.find(inputSource.ID);
+                    if (inputSourceFound == m_idToInputSource.end())
                     {
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
+                        
+                        //Now that input Source is created, create a gamepad object if enabled for the input source
+                        inputSourceFound = m_idToInputSource.find(inputSource.ID);
+                        if (inputSource.GamepadTrackedThisFrame)
+                        {
+                            auto inputSourceVal = inputSourceFound->second.Value();
+                            CreateXRGamepadObject(inputSourceVal, inputSource);
+                        }
 
                         added.insert(inputSource.ID);
                     }
                     else
                     {
                         // Ensure the correct spaces are associated with the existing input source.
-                        auto val = found->second.Value();
-                        SetXRInputSourceData(val, inputSource);
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        SetXRInputSourceData(inputSourceVal, inputSource);
+
+                        //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
+                        if (inputSourceVal.Has("gamepad"))
+                        {
+                            auto gamepadObject = inputSourceVal.Get("gamepad").As<Napi::Object>();
+                            SetXRGamepadObjectData(inputSourceVal, gamepadObject, inputSource);
+                        }
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
