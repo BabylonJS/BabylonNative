@@ -281,7 +281,7 @@ var scene;
 var canvas;
 var xhr;
 
-_native.graphicsInitializationPromise.then(() => {
+_native.whenGraphicsReady().then(() => {
 
     engine = new BABYLON.NativeEngine();
     scene = new BABYLON.Scene(engine);

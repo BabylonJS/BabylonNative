@@ -51,7 +51,7 @@ function CreateInputHandling(scene) {
     });
 }
 
-_native.graphicsInitializationPromise.then(function () {
+_native.whenGraphicsReady().then(function () {
 
     var engine = new BABYLON.NativeEngine();
     var scene = new BABYLON.Scene(engine);
