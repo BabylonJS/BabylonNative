@@ -277,9 +277,9 @@ namespace xr
 
                 struct Mesh
                 {
-                    typedef float PositionType;
-                    typedef uint32_t IndexType;
-                    typedef float NormalType;
+                    using PositionType = float;
+                    using IndexType = uint32_t;
+                    using NormalType = float;
 
                     using Identifier = size_t;
                     const Identifier ID{ NEXT_ID++ };
