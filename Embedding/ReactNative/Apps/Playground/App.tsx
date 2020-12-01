@@ -9,7 +9,7 @@ import React, { useState, FunctionComponent, useEffect, useCallback } from 'reac
 import { SafeAreaView, StatusBar, Button, View, Text, ViewProps, Image } from 'react-native';
 
 import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-native';
-import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput } from '@babylonjs/core';
+import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState } from '@babylonjs/core';
 import '@babylonjs/loaders';
 import Slider from '@react-native-community/slider';
 
@@ -26,6 +26,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
   const [scale, setScale] = useState<number>(defaultScale);
   const [snapshotData, setSnapshotData] = useState<string>();
   const [engineViewCallbacks, setEngineViewCallbacks] = useState<EngineViewCallbacks>();
+  const [trackingState, setTrackingState] = useState<WebXRTrackingState>();
 
   useEffect(() => {
     if (engine) {
@@ -74,16 +75,27 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
     }
   }, [rootNode, scale]);
 
+  const trackingStateToString = (trackingState: WebXRTrackingState | undefined) : string => {
+    return trackingState === undefined ? "" : WebXRTrackingState[trackingState];
+  };
+
   const onToggleXr = useCallback(() => {
     (async () => {
       if (xrSession) {
         await xrSession.exitXRAsync();
         setXrSession(undefined);
+        setTrackingState(undefined);
       } else {
         if (rootNode !== undefined && scene !== undefined) {
           const xr = await scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true })
           const session = await xr.baseExperience.enterXRAsync("immersive-ar", "unbounded", xr.renderTarget);
           setXrSession(session);
+
+          setTrackingState(xr.baseExperience.camera.trackingState);
+          xr.baseExperience.camera.onTrackingStateChanged.add((newTrackingState) => {
+            setTrackingState(newTrackingState);
+          });
+
           // TODO: Figure out why getFrontPosition stopped working
           //box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
           const cameraRay = scene.activeCamera!.getForwardRay(1);
@@ -119,6 +131,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
             }
             <EngineView style={props.style} camera={camera} onInitialized={onInitialized} />
             <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} value={defaultScale} onValueChange={setScale} />
+            <Text style={{fontSize: 12, color: 'yellow',  position: 'absolute', margin: 10}}>{trackingStateToString(trackingState)}</Text>
           </View>
         }
         { toggleView &&
