@@ -53,6 +53,7 @@ namespace xr
         std::atomic<XrTime> DisplayTime{};
         std::unique_ptr<XrSupportedExtensions> Extensions;
         xr::SceneUnderstanding SceneUnderstanding{};
+        bool IsSessionRunning{ false };
     };
 
     XrSessionContext::XrSessionContext()
@@ -73,6 +74,7 @@ namespace xr
     const XrSessionState XrSessionContext::State() const { return ContextImpl->State; }
     const XrSpace XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
     const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const { return ContextImpl->SceneUnderstanding; }
+    const bool XrSessionContext::IsSessionRunning() const { return ContextImpl->IsSessionRunning; }
 
     const XrSessionContext& XrRegistry::Context()
     {
@@ -905,7 +907,7 @@ namespace xr
         {
             const auto& session = HmdImpl.Context.Session();
             const auto& sessionState = HmdImpl.Context.State();
-            
+            auto& isSessionRunning = HmdImpl.Context.ContextImpl->IsSessionRunning;
             switch (sessionState)
             {
             case XR_SESSION_STATE_READY:
@@ -929,10 +931,12 @@ namespace xr
                 }
 
                 XrCheck(xrBeginSession(session, &sessionBeginInfo));
+                isSessionRunning = true;
                 break;
             }
             case XR_SESSION_STATE_STOPPING:
                 XrCheck(xrEndSession(session));
+                isSessionRunning = false;
                 break;
             case XR_SESSION_STATE_EXITING:
                 // Do not attempt to restart because user closed this session.
@@ -1167,8 +1171,16 @@ namespace xr
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
+        // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
+        , IsTracking{true}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) }
     {
+        if (!m_impl->sessionImpl.HmdImpl.Context.IsSessionRunning())
+        {
+            return;
+        }
+
         const auto& session = m_impl->sessionImpl.HmdImpl.Context.Session();
         const auto& extensions = *m_impl->sessionImpl.HmdImpl.Context.Extensions();
         auto& displayTime = m_impl->sessionImpl.HmdImpl.Context.ContextImpl->DisplayTime;
@@ -1542,6 +1554,11 @@ namespace xr
 
     System::Session::Frame::~Frame()
     {
+        if (!m_impl->sessionImpl.HmdImpl.Context.IsSessionRunning())
+        {
+            return;
+        }
+
         std::vector<XrCompositionLayerProjection> layers{};
         const auto& context = m_impl->sessionImpl.HmdImpl.Context;
         const auto& session = context.Session();

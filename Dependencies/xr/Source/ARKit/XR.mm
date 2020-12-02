@@ -996,26 +996,34 @@ namespace xr {
             planeDetectionEnabled = enabled;
             [sessionDelegate SetPlaneDetectionEnabled:enabled];
         }
+        
+        bool IsTracking() const {
+            // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
+            // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
+            // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
+            // ARTrackingStateNormal.
+            return session.currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
+        }
 
-        private:
-            ARSession* session{};
-            std::function<UIView*()> getMainView{};
-            MTKView* xrView{};
-            bool sessionEnded{ false };
-            id<MTLDevice> metalDevice{};
+    private:
+        ARSession* session{};
+        std::function<UIView*()> getMainView{};
+        MTKView* xrView{};
+        bool sessionEnded{ false };
+        id<MTLDevice> metalDevice{};
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
-            CAMetalLayer* metalLayer{};
+        CAMetalLayer* metalLayer{};
 #pragma clang diagnostic pop
-            SessionDelegate* sessionDelegate{};
-            id<MTLRenderPipelineState> pipelineState{};
-            vector_uint2 viewportSize{};
-            id<MTLCommandQueue> commandQueue;
-            std::vector<ARAnchor*> nativeAnchors{};
-            std::vector<float> planePolygonBuffer{};
-            std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
-            bool planeDetectionEnabled{ false };
+        SessionDelegate* sessionDelegate{};
+        id<MTLRenderPipelineState> pipelineState{};
+        vector_uint2 viewportSize{};
+        id<MTLCommandQueue> commandQueue;
+        std::vector<ARAnchor*> nativeAnchors{};
+        std::vector<float> planePolygonBuffer{};
+        std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
+        bool planeDetectionEnabled{ false };
         
         /*
          Helper function to translate a world transform into a hit test result.
@@ -1153,6 +1161,7 @@ namespace xr {
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
