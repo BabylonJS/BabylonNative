@@ -1002,7 +1002,7 @@ namespace xr {
             // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
             // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
             // ARTrackingStateNormal.
-            return session.currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
+            return currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
 
     private:
