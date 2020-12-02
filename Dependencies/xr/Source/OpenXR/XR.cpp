@@ -1813,10 +1813,7 @@ namespace xr
         {
             session,
             extensions,
-            detectorOptions.DetectionBoundary.Type,
-            detectorOptions.DetectionBoundary.SphereRadius,
-            detectorOptions.DetectionBoundary.Frustum,
-            detectorOptions.DetectionBoundary.BoxDimensions,
+            detectorOptions.DetectionBoundary,
             detectorOptions.UpdateInterval
         };
 
@@ -1832,7 +1829,8 @@ namespace xr
             const auto& session = m_impl->HmdImpl.Context.Session();
             const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
             auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
-            su.Initialize(SceneUnderstanding::InitOptions{ session, extensions });
+            SceneUnderstanding::InitOptions initOptions{ session, extensions };
+            su.Initialize(initOptions);
         }
 
         return true;
@@ -1848,10 +1846,7 @@ namespace xr
         {
             session,
             extensions,
-            detectorOptions.DetectionBoundary.Type,
-            detectorOptions.DetectionBoundary.SphereRadius,
-            detectorOptions.DetectionBoundary.Frustum,
-            detectorOptions.DetectionBoundary.BoxDimensions,
+            detectorOptions.DetectionBoundary,
             detectorOptions.UpdateInterval
         };
 

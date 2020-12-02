@@ -55,32 +55,23 @@ SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     const XrSupportedExtensions& extensions)
     : Session(session)
     , Extensions(extensions)
-    , DetectionBoundaryType(DEFAULT_BOUNDARY_TYPE)
-    , SphereRadius(DEFAULT_SPHERE_RADIUS)
-    , Frustum(xr::Frustum{})
-    , BoxDimensions(xr::Vector3f{ 0, 0, 0 })
+    , DetectionBoundary{}
     , UpdateIntervalInSeconds(DEFAULT_UPDATE_INTERVAL_IN_SECONDS) {}
 
 SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     const XrSession& session,
     const XrSupportedExtensions& extensions,
-    const xr::DetectionBoundaryType detectionBoundaryType,
-    const float sphereRadius,
-    const xr::Frustum frustum,
-    const xr::Vector3f boxDimensions,
+    const xr::DetectionBoundary detectionBoundary,
     const double updateIntervalInSeconds)
     : Session(session)
     , Extensions(extensions)
-    , DetectionBoundaryType(detectionBoundaryType)
-    , SphereRadius(sphereRadius)
-    , Frustum(frustum)
-    , BoxDimensions(boxDimensions)
+    , DetectionBoundary(detectionBoundary)
     , UpdateIntervalInSeconds(updateIntervalInSeconds) {}
 
 struct SceneUnderstanding::SceneUnderstanding::Impl
 {
 public:
-    void Initialize(const InitOptions& options)
+    void Initialize(InitOptions options)
     {
         const auto& session = options.Session;
         const auto& extensions = options.Extensions;
@@ -90,10 +81,7 @@ public:
         }
 
         // Default to most recently provided detection boundary information
-        m_boundaryType = options.DetectionBoundaryType;
-        m_sphereRadius = options.SphereRadius;
-        m_frustum = options.Frustum;
-        m_boxDimensions = { options.BoxDimensions.X, options.BoxDimensions.Y, options.BoxDimensions.Z };
+        m_detectionBoundary = options.DetectionBoundary;
         m_updateInterval = static_cast<XrTime>(NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds);
 
         if (m_initialized)
@@ -164,50 +152,52 @@ public:
         XrSceneSphereBoundMSFT sphere{};
         XrSceneOrientedBoxBoundMSFT box{};
         XrSceneFrustumBoundMSFT frustum{};
-        switch (m_boundaryType)
+        switch (m_detectionBoundary.Type)
         {
         case DetectionBoundaryType::Sphere:
             if (xr::math::Pose::IsPoseValid(viewInLocal)) {
                 sphere.center = viewInLocal.pose.position;
-                sphere.radius = m_sphereRadius;
-            }
+                sphere.radius = std::get<float>(m_detectionBoundary.Data);
 
-            computeInfo.bounds.sphereCount = 1;
-            computeInfo.bounds.spheres = &sphere;
+                computeInfo.bounds.sphereCount = 1;
+                computeInfo.bounds.spheres = &sphere;
+            }
             break;
         case DetectionBoundaryType::Box:
             if (xr::math::Pose::IsPoseValid(viewInLocal)) {
                 box.pose = viewInLocal.pose;
-                box.extents = m_boxDimensions;
-            }
+                const auto& boxDimensions = std::get<xr::Vector3f>(m_detectionBoundary.Data);
+                box.extents = XrVector3f{ boxDimensions.X, boxDimensions.Y, boxDimensions.Z };
 
-            computeInfo.bounds.boxCount = 1;
-            computeInfo.bounds.boxes = &box;
+                computeInfo.bounds.boxCount = 1;
+                computeInfo.bounds.boxes = &box;
+            }
             break;
         case DetectionBoundaryType::Frustum:
-            frustum.farDistance = m_frustum.FarDistance;
+            const auto& frustumData = std::get<xr::Frustum>(m_detectionBoundary.Data);
+            frustum.farDistance = frustumData.FarDistance;
             frustum.pose = XrPosef
             {
                 XrQuaternionf
                 {
-                    m_frustum.Pose.Orientation.X,
-                    m_frustum.Pose.Orientation.Y,
-                    m_frustum.Pose.Orientation.Z,
-                    m_frustum.Pose.Orientation.W,
+                    frustumData.Pose.Orientation.X,
+                    frustumData.Pose.Orientation.Y,
+                    frustumData.Pose.Orientation.Z,
+                    frustumData.Pose.Orientation.W,
                 },
                 XrVector3f
                 {
-                    m_frustum.Pose.Position.X,
-                    m_frustum.Pose.Position.Y,
-                    m_frustum.Pose.Position.Z
+                    frustumData.Pose.Position.X,
+                    frustumData.Pose.Position.Y,
+                    frustumData.Pose.Position.Z
                 }
             };
             frustum.fov = XrFovf
             {
-                m_frustum.FOV.AngleLeft,
-                m_frustum.FOV.AngleRight,
-                m_frustum.FOV.AngleUp,
-                m_frustum.FOV.AngleDown
+                frustumData.FOV.AngleLeft,
+                frustumData.FOV.AngleRight,
+                frustumData.FOV.AngleUp,
+                frustumData.FOV.AngleDown
             };
 
             computeInfo.bounds.frustumCount = 1;
@@ -556,10 +546,7 @@ private:
 
     bool m_initialized{ false };
     xr::SpaceHandle m_viewSpace{};
-    xr::DetectionBoundaryType m_boundaryType{};
-    float m_sphereRadius;
-    xr::Frustum m_frustum;
-    XrVector3f m_boxDimensions{};
+    xr::DetectionBoundary m_detectionBoundary;
     XrTime m_updateInterval;
     xr::SceneObserverHandle m_sceneObserverHandle{};
     XrTime m_lastSceneUpdate{};
@@ -592,7 +579,7 @@ SceneUnderstanding::~SceneUnderstanding()
 {
 }
 
-void SceneUnderstanding::Initialize(const InitOptions options) const
+void SceneUnderstanding::Initialize(InitOptions options) const
 {
     m_impl->Initialize(options);
 }

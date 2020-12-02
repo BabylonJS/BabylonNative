@@ -223,41 +223,46 @@ namespace
             if (object.Has("extent"))
             {
                 const auto& vector = object.Get("extent").As<Napi::Object>();
-                detectionBoundary.BoxDimensions.X = vector.Get("x").As<Napi::Number>();
-                detectionBoundary.BoxDimensions.Y = vector.Get("y").As<Napi::Number>();
-                detectionBoundary.BoxDimensions.Z = vector.Get("z").As<Napi::Number>();
+                xr::Vector3f boxDimensions{};
+                boxDimensions.X = vector.Get("x").As<Napi::Number>();
+                boxDimensions.Y = vector.Get("y").As<Napi::Number>();
+                boxDimensions.Z = vector.Get("z").As<Napi::Number>();
+                detectionBoundary.Data = boxDimensions;
             }
             break;
         case xr::DetectionBoundaryType::Frustum:
             if (object.Has("frustum"))
             {
                 const auto& frustum = object.Get("frustum").As<Napi::Object>();
-                detectionBoundary.Frustum.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
-                
+                xr::Frustum frustumData{};
+                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+
                 const auto& vector = frustum.Get("position").As<Napi::Object>();
-                detectionBoundary.Frustum.Pose.Position.X = vector.Get("x").As<Napi::Number>();
-                detectionBoundary.Frustum.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
-                detectionBoundary.Frustum.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
+                frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
+                frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
+                frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
 
                 const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
-                detectionBoundary.Frustum.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
-                detectionBoundary.Frustum.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
-                detectionBoundary.Frustum.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
-                detectionBoundary.Frustum.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
+                frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
+                frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
+                frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
+                frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
 
                 const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
-                detectionBoundary.Frustum.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
-                detectionBoundary.Frustum.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
-                detectionBoundary.Frustum.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
-                detectionBoundary.Frustum.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
+                frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
+                frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
+                frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
+                frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
 
-                detectionBoundary.Frustum.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+
+                detectionBoundary.Data = frustumData;
             }
             break;
         case xr::DetectionBoundaryType::Sphere:
             if (object.Has("radius"))
             {
-                detectionBoundary.SphereRadius = object.Get("radius").As<Napi::Number>();
+                detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
             }
             break;
         }

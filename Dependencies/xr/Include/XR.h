@@ -61,22 +61,23 @@ namespace xr
 
     struct Vector3f
     {
-        float X{};
-        float Y{};
-        float Z{};
+        float X{0.f};
+        float Y{0.f};
+        float Z{1.f};
+    };
+
+    struct Vector4f
+    {
+        float X{0.f};
+        float Y{0.f};
+        float Z{0.f};
+        float W{1.f};
     };
 
     struct Pose
     {
         Vector3f Position;
-
-        struct
-        {
-            float X{0.f};
-            float Y{0.f};
-            float Z{0.f};
-            float W{1.f};
-        } Orientation;
+        Vector4f Orientation;
     };
 
     using NativeTrackablePtr = void*;
@@ -136,15 +137,13 @@ namespace xr
     struct DetectionBoundary
     {
         DetectionBoundaryType Type{ DetectionBoundaryType::Sphere };
-        Frustum Frustum{};
-        float SphereRadius{ 5.f };
-        Vector3f BoxDimensions;
+        std::variant<float, Frustum, Vector3f> Data{ 5.f };
     };
 
     struct GeometryDetectorOptions
     {
         xr::DetectionBoundary DetectionBoundary{};
-        double UpdateInterval{ 10 };
+        double UpdateInterval{10};
     };
 
     enum class SceneObjectType

@@ -12,10 +12,7 @@ namespace xr
         {
             const XrSession& Session;
             const XrSupportedExtensions& Extensions;
-            const xr::DetectionBoundaryType DetectionBoundaryType;
-            const float SphereRadius;
-            const xr::Frustum Frustum;
-            const xr::Vector3f BoxDimensions;
+            const xr::DetectionBoundary DetectionBoundary;
             const double UpdateIntervalInSeconds;
 
             InitOptions(
@@ -25,10 +22,7 @@ namespace xr
             InitOptions(
                 const XrSession& session,
                 const XrSupportedExtensions& extensions,
-                const xr::DetectionBoundaryType detectionBoundaryType,
-                const float sphereRadius,
-                const xr::Frustum frustum,
-                const xr::Vector3f boxDimensions,
+                const xr::DetectionBoundary detectionBoundary,
                 const double updateIntervalInSeconds);
         };
 
@@ -68,7 +62,7 @@ namespace xr
 
         SceneUnderstanding();
         ~SceneUnderstanding();
-        void Initialize(const InitOptions options) const;
+        void Initialize(InitOptions options) const;
         void UpdateFrame(UpdateFrameArgs args) const;
         System::Session::Frame::SceneObject& TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const;
         System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
