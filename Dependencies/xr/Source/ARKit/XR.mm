@@ -641,11 +641,6 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
             
-            if (currentFrame != nil) {
-                [currentFrame release];
-                currentFrame = nil;
-            }
-
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
                 UIView* currentSuperview = [xrView superview];
@@ -809,6 +804,11 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    
+                    if (currentFrame != nil) {
+                        [currentFrame release];
+                        currentFrame = nil;
+                    }
                 }
                 @catch (NSException* exception) {
                     if (cameraTextureY != nil) {
