@@ -83,7 +83,12 @@ export function useEngine(): Engine | undefined {
             if (engine) {
                 DisposeEngine(engine);
             }
-            BabylonModule.reset();
+            // Ideally we would always do a reset here as we don't want different behavior between debug and release. Unfortunately, fast refresh has some strange behavior that
+            // makes it quite difficult to get this to work correctly (e.g. it re-runs previous useEffect instances, which means it can try to use Babylon Native in a de-initialized state).
+            // TODO: https://github.com/BabylonJS/BabylonReactNative/issues/125
+            if (!__DEV__) {
+                BabylonModule.reset();
+            }
             setEngine(undefined);
         };
     }, []);

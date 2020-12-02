@@ -152,7 +152,8 @@ When making local changes, the following manual test steps should be performed w
 1. **View replacement** - tap the *Toggle EngineView* button twice to replace the render target view.
 1. **Engine dispose** - tap the *Toggle EngineScreen* button twice to dispose and re-instantiate the Babylon engine.
 1. **Suspend/resume** - switch to a different app and then back to the Playground and make sure it is still rendering correctly.
-1. **Dev mode reload** - in the Metro server console window, press the `R` key on the keyboard to reload the JS engine and make sure rendering restarts successfully.
+1. **Fast refresh** (debug only) - save the App.tsx file to trigger a fast refresh.
+1. **Dev mode reload** (debug only) - in the Metro server console window, press the `R` key on the keyboard to reload the JS engine and make sure rendering restarts successfully.
 1. **XR mode** - tap the *Start XR* button and make sure XR mode is working.
 1. **XR display rotation** - rotate the device 90 degrees and make sure the view rotates and renders correctly.
 1. **XR view replacement** - tap the *Toggle EngineView* button twice to replace the render target view.
