@@ -640,7 +640,8 @@ namespace xr {
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
-            
+
+            currentFrame = [session currentFrame];
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
                 UIView* currentSuperview = [xrView superview];
@@ -651,8 +652,6 @@ namespace xr {
                     [desiredSuperview addSubview:xrView];
                 }
                 
-                currentFrame = [session currentFrame];
-                [currentFrame retain];
                 [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
             });
 
@@ -1207,7 +1206,7 @@ namespace xr {
 
     arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType) {
         // Only IMMERSIVE_AR is supported for now.
-        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
+        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR && ARWorldTrackingConfiguration.isSupported);
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
