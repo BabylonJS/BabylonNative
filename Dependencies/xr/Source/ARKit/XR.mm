@@ -640,6 +640,11 @@ namespace xr {
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
+            
+            if (currentFrame != nil) {
+                [currentFrame release];
+                currentFrame = nil;
+            }
 
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
@@ -728,6 +733,7 @@ namespace xr {
                     
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    [commandBuffer waitUntilCompleted];
                 }
             }
             
@@ -803,9 +809,6 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
-                    [commandBuffer waitUntilCompleted];
-                    [currentFrame release];
-                    currentFrame = nil;
                 }
                 @catch (NSException* exception) {
                     if (cameraTextureY != nil) {

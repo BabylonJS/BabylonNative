@@ -2,7 +2,12 @@
 
 #include <JsRuntimeInternalState.h>
 
+#if __APPLE__
+#define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER)
+#else
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
+#endif
+
 
 namespace Babylon
 {
@@ -102,7 +107,7 @@ namespace Babylon
                 bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
                 bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
                 bgfx::touch(0);
-
+                
                 m_bgfxState.Initialized = true;
                 m_bgfxState.Dirty = false;
             }
