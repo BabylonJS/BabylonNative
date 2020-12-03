@@ -525,7 +525,7 @@ namespace xr {
         std::vector<Frame::InputSource> InputSources;
         std::vector<Frame::Plane> Planes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        ARFrame* currentFrame{nil};
+        ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         
