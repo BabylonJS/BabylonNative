@@ -1662,10 +1662,11 @@ namespace Babylon
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
             {
                 const auto& mesh = GetMesh();
+                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 if (!m_jsPositions ||
-                    m_numJsPositions != mesh.Positions.size())
+                    m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
                 {
-                    m_numJsPositions = mesh.Positions.size();
+                    m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
                     m_jsPositions.Reset();
                     m_jsPositions = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsPositions));
                     memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::Vector3f));
@@ -1710,10 +1711,11 @@ namespace Babylon
                     return info.Env().Undefined();
                 }
 
+                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 if (!m_jsNormals ||
-                    m_numJsNormals != mesh.Normals.size())
+                    m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
                 {
-                    m_numJsNormals = mesh.Normals.size();
+                    m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
                     m_jsNormals.Reset();
                     m_jsNormals = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsNormals));
                     memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::Vector3f));
