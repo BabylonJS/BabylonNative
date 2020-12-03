@@ -641,7 +641,14 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
-            currentFrame = [session currentFrame];
+            // We may or may not be under the scope of an autoreleasepool already, so to guard against both cases grab the
+            // current frame inside a locally scoped autoreleasepool and manually retain the frame without marking for autorelease.
+            // We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see #527.
+            @autoreleasepool {
+                currentFrame = session.currentFrame;
+                [currentFrame retain];
+            }
+            
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
                 UIView* currentSuperview = [xrView superview];
