@@ -160,7 +160,7 @@ namespace Babylon
             {
                 return;
             }
-            bx::DefaultAllocator allocator;
+
             bx::MemoryBlock mb(&allocator);
             bx::FileWriter writer;
             bx::FilePath filepath(filename.c_str());
@@ -180,6 +180,7 @@ namespace Babylon
                 if (m_Image)
                 {
                     bimg::imageFree(m_Image);
+                    m_Image = nullptr;
                 }
             }
             bimg::ImageContainer* m_Image{};
@@ -190,10 +191,10 @@ namespace Babylon
             Image* image = new Image;
             const auto buffer = info[0].As<Napi::ArrayBuffer>();
 
-            bx::DefaultAllocator allocator;
             image->m_Image = bimg::imageParse(&allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength()));
 
-            return Napi::External<Image>::New(info.Env(), image);
+            auto finalizer = [](Napi::Env, Image* image) { delete image;};
+            return Napi::External<Image>::New(info.Env(), image, std::move(finalizer));
         }
 
         Napi::Value GetImageData(const Napi::CallbackInfo& info)
@@ -248,7 +249,7 @@ namespace Babylon
             return Napi::Value::From(info.Env(), path);
         }
 
-
         inline static void* _nativeWindowPtr{};
+        inline static bx::DefaultAllocator allocator{};
     };
 }
