@@ -450,15 +450,13 @@ public:
                 auto& babylonMesh = *m_babylonMeshes[key];
 
                 assert(sizeof(XrVector3f) == sizeof(xr::Vector3f));
-                constexpr uint8_t NUM_FLOAT_IN_VECTOR3 = 3;
-                babylonMesh.Positions.resize(NUM_FLOAT_IN_VECTOR3 * xrMesh.positions.size());
+                babylonMesh.Positions.resize(xrMesh.positions.size());
                 for (size_t n = 0; n < xrMesh.positions.size(); n++)
                 {
-                    size_t positionIndex = NUM_FLOAT_IN_VECTOR3 * n;
                     const auto position = TransformPoint(xrMesh.positions.at(n), object->Pose);
-                    babylonMesh.Positions[positionIndex] = position.x;
-                    babylonMesh.Positions[positionIndex + 1] = position.y;
-                    babylonMesh.Positions[positionIndex + 2] = position.z;
+                    babylonMesh.Positions[n].X = position.x;
+                    babylonMesh.Positions[n].Y = position.y;
+                    babylonMesh.Positions[n].Z = position.z;
                 }
 
                 babylonMesh.Indices.resize(xrMesh.indices.size());

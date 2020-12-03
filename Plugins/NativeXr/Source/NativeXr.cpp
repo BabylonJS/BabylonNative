@@ -1661,7 +1661,6 @@ namespace Babylon
 
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
             {
-                assert(sizeof(xr::System::Session::Frame::Mesh::PositionType) == sizeof(float));
                 const auto& mesh = GetMesh();
                 if (!m_jsPositions ||
                     m_numJsPositions != mesh.Positions.size())
@@ -1669,12 +1668,12 @@ namespace Babylon
                     m_numJsPositions = mesh.Positions.size();
                     m_jsPositions.Reset();
                     m_jsPositions = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsPositions));
-                    memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::System::Session::Frame::Mesh::PositionType));
+                    memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::Vector3f));
                     m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
                 else if (m_lastPositionsUpdatedTimestamp != m_lastUpdatedTimestamp)
                 {
-                    memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::System::Session::Frame::Mesh::PositionType));
+                    memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::Vector3f));
                     m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
 
@@ -1705,7 +1704,6 @@ namespace Babylon
 
             Napi::Value GetNormals(const Napi::CallbackInfo& info)
             {
-                assert(sizeof(xr::System::Session::Frame::Mesh::NormalType) == sizeof(float));
                 const auto& mesh = GetMesh();
                 if (!mesh.HasNormals)
                 {
@@ -1718,12 +1716,12 @@ namespace Babylon
                     m_numJsNormals = mesh.Normals.size();
                     m_jsNormals.Reset();
                     m_jsNormals = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsNormals));
-                    memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::System::Session::Frame::Mesh::NormalType));
+                    memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::Vector3f));
                     m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
                 else if (m_lastNormalsUpdatedTimestamp != m_lastUpdatedTimestamp)
                 {
-                    memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::System::Session::Frame::Mesh::NormalType));
+                    memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::Vector3f));
                     m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
 

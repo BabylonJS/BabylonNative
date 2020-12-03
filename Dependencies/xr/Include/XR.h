@@ -276,16 +276,13 @@ namespace xr
 
                 struct Mesh
                 {
-                    using PositionType = float;
                     using IndexType = uint32_t;
-                    using NormalType = float;
-
                     using Identifier = size_t;
                     const Identifier ID{ NEXT_ID++ };
-                    std::vector<PositionType> Positions{};
+                    std::vector<xr::Vector3f> Positions{};
                     std::vector<IndexType> Indices{};
                     bool HasNormals{ false };
-                    std::vector<NormalType> Normals;
+                    std::vector<xr::Vector3f> Normals;
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
