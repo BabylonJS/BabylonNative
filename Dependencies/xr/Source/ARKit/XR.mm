@@ -643,7 +643,8 @@ namespace xr {
 
             // We may or may not be under the scope of an autoreleasepool already, so to guard against both cases grab the
             // current frame inside a locally scoped autoreleasepool and manually retain the frame without marking for autorelease.
-            // We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see #527.
+            // DEVNOTE: We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see:
+            // https://github.com/BabylonJS/BabylonNative/issues/527
             @autoreleasepool {
                 currentFrame = session.currentFrame;
                 [currentFrame retain];
