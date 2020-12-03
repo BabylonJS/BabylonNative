@@ -55,7 +55,7 @@ SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
     const XrSupportedExtensions& extensions)
     : Session(session)
     , Extensions(extensions)
-    , DetectionBoundary{}
+    , DetectionBoundary{ DEFAULT_BOUNDARY_TYPE, DEFAULT_SPHERE_RADIUS }
     , UpdateIntervalInSeconds(DEFAULT_UPDATE_INTERVAL_IN_SECONDS) {}
 
 SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
