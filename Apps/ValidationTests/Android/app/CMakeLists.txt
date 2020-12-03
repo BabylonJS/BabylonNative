@@ -64,7 +64,8 @@ target_link_libraries(BabylonNativeJNI
         Window
         ScriptLoader
         bgfx
-        XMLHttpRequest)
+        XMLHttpRequest
+        DOM)
 
 configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"

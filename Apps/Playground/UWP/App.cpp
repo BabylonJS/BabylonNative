@@ -158,6 +158,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::DOM::Initialize(env);
 
         // Initialize NativeEngine plugin.
         m_graphics->AddToJavaScript(env);

@@ -89,7 +89,8 @@ target_link_to_dependencies(ValidationTests
     PRIVATE Window
     PRIVATE ScriptLoader
     ${ADDITIONAL_LIBRARIES}
-    PRIVATE XMLHttpRequest)
+    PRIVATE XMLHttpRequest
+    PRIVATE DOM)
 
 if(APPLE)
     target_link_libraries(ValidationTests PRIVATE "-framework MetalKit")

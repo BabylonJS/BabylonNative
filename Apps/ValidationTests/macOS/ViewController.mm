@@ -73,6 +73,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::DOM::Initialize(env);
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env, false); // render on UI Thread

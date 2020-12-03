@@ -115,6 +115,7 @@ target_link_to_dependencies(Playground
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
+    PRIVATE DOM
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 

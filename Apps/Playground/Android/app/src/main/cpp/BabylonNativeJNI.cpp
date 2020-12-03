@@ -92,6 +92,7 @@ extern "C"
 
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+                Babylon::Polyfills::DOM::Initialize(env);
 
                 InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
             });

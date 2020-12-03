@@ -88,6 +88,7 @@ extern "C"
 
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+                Babylon::Polfyills::DOM::Initialize(env);
                 Babylon::TestUtils::CreateInstance(env, window);
             });
 

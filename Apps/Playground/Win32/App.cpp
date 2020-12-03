@@ -111,6 +111,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            Babylon::Polyfills::DOM::Initialize(env);
 
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
