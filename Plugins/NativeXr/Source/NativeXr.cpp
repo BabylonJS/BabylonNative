@@ -214,7 +214,7 @@ namespace
                 {"frustum", xr::DetectionBoundaryType::Frustum},
                 {"sphere", xr::DetectionBoundaryType::Sphere}
             };
-            detectionBoundary.Type = detectionBoundaryTypeMap.at("type");
+            detectionBoundary.Type = detectionBoundaryTypeMap.at(object.Get("type").As<Napi::String>());
         }
 
         switch (detectionBoundary.Type)
