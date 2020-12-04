@@ -144,7 +144,8 @@ _native.whenGraphicsReady().then(function () {
                 BABYLON.SceneLoader.ImportMesh("", "https://david.blob.core.windows.net/babylonjs/MRTK/", "pushButton.glb", scene, function (newMeshes) {
                     var mesh = newMeshes[0];
                     mesh.position.z = 1;
-                    mesh.scaling.scaleInPlace(0.5);
+                    mesh.rotationQuaternion = BABYLON.Quaternion.RotationAlphaBetaGamma(1, 0, 0);
+                    mesh.scaling.scaleInPlace(1.0);
                     pushButtonCore = newMeshes[0];
                     const newPushButton = pushButtonCore.clone("pushButton");
                     makePushButton(newPushButton, new Color3(0.25, 0, 0));
@@ -176,15 +177,6 @@ _native.whenGraphicsReady().then(function () {
 
             addPushButton(scene, manager);
 
-            /*
-            scene.beforeRender = function () {
-                OffscreenCanvas.beginContextsFrame();
-            };
-
-            scene.afterRender = function () {
-                OffscreenCanvas.endContextsFrame();
-            };
-            */
         }, undefined, undefined, true);
 
 
