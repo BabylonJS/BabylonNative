@@ -340,18 +340,6 @@ namespace Babylon
         uint8_t AnisotropicLevel{0};
     };
 
-    struct ImageData final
-    {
-        ~ImageData()
-        {
-            if (Image)
-            {
-                bimg::imageFree(Image.get());
-            }
-        }
-        std::unique_ptr<bimg::ImageContainer> Image;
-    };
-
     struct UniformInfo final
     {
         uint8_t Stage{};
