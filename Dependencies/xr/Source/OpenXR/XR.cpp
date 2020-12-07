@@ -733,7 +733,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX,
                 &ActionResources.ControllerGetTriggerValueAction,
-               microsoftControllerBindings
+                microsoftControllerBindings
                 instance);
 
             // Create controller get squeeze click action and suggested bindings
