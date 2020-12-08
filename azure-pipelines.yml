@@ -296,7 +296,10 @@ jobs:
 - job: Android_V8_Mac
   pool:
     vmImage: 'macOS-10.14'
-    
+
+  variables:
+    HOMEBREW_NO_INSTALL_CLEANUP: 1
+
   steps:
   - script: |
       git submodule update --init --recursive
@@ -309,7 +312,7 @@ jobs:
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -332,7 +335,10 @@ jobs:
 - job: Android_JSC_Mac
   pool:
     vmImage: 'macOS-10.14'
-    
+
+  variables:
+    HOMEBREW_NO_INSTALL_CLEANUP: 1
+
   steps:
   - script: |
       git submodule update --init --recursive
