@@ -2,11 +2,17 @@
 
 #include <JsRuntimeInternalState.h>
 
+#include <cassert>
+
 #if (ANDROID)
 // MSAA is disabled on Android.
 // See issue https://github.com/BabylonJS/BabylonNative/issues/494#issuecomment-731135918
 // for explanation
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY)
+#elif __APPLE__
+// On Apple devices we need to set BGFX_RESET_FLIP_AFTER_RENDER so that draw calls are immediately pushed
+// to the Metal command buffer to avoid a one frame delay.
+#define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER)
 #else
 #define BGFX_RESET_FLAGS (BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY)
 #endif
@@ -14,7 +20,7 @@ namespace Babylon
 {
     namespace
     {
-        constexpr auto JS_SENTINEL_NAME = "graphicsInitializationPromise";
+        constexpr auto JS_GRAPHICS_READY_NAME = "whenGraphicsReady";
     }
 
     // Forward declares of important specializations.
@@ -40,7 +46,7 @@ namespace Babylon
 
     Graphics::Impl::~Impl()
     {
-        bgfx::shutdown();
+        DisableRendering();
     }
 
     void* Graphics::Impl::GetNativeWindow()
@@ -88,31 +94,62 @@ namespace Babylon
         return m_afterRenderTaskCompletionSource.as_task();
     }
 
+    void Graphics::Impl::EnableRendering()
+    {
+        std::scoped_lock lock{m_bgfxState.Mutex};
+
+        if (!m_bgfxState.Initialized)
+        {
+            // Set the thread affinity (all other rendering operations must happen on this thread).
+            m_renderThreadAffinity = std::this_thread::get_id();
+
+            // Initialize bgfx.
+            auto& init{m_bgfxState.InitState};
+            bgfx::setPlatformData(init.platformData);
+            bgfx::init(init);
+            bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
+            bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
+            bgfx::touch(0);
+
+            m_bgfxState.Initialized = true;
+            m_bgfxState.Dirty = false;
+
+            // Allow JS awaiters to start doing graphics operations.
+            m_enableRenderTaskCompletionSource.complete();
+        }
+    }
+
+    void Graphics::Impl::DisableRendering()
+    {
+        assert(m_renderThreadAffinity.check());
+
+        std::scoped_lock lock{m_bgfxState.Mutex};
+
+        if (m_bgfxState.Initialized)
+        {
+            bgfx::shutdown();
+            m_bgfxState.Initialized = false;
+            m_enableRenderTaskCompletionSource = {};
+            m_renderThreadAffinity = {};
+        }
+    }
+
     void Graphics::Impl::StartRenderingCurrentFrame()
     {
+        assert(m_renderThreadAffinity.check());
+
         if (m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be started before prior frame has been finished."};
         }
         m_rendering = true;
 
+        // Ensure rendering is enabled
+        EnableRendering();
+
         {
             std::scoped_lock lock{m_bgfxState.Mutex};
-
-            if (!m_bgfxState.Initialized)
-            {
-                // Initialize bgfx.
-                auto& init = m_bgfxState.InitState;
-                bgfx::setPlatformData(init.platformData);
-                bgfx::init(init);
-                bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-                bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
-                bgfx::touch(0);
-
-                m_bgfxState.Initialized = true;
-                m_bgfxState.Dirty = false;
-            }
-            else if (m_bgfxState.Dirty)
+            if (m_bgfxState.Dirty)
             {
                 bgfx::setPlatformData(m_bgfxState.InitState.platformData);
                 auto& res = m_bgfxState.InitState.resolution;
@@ -136,6 +173,8 @@ namespace Babylon
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
+        assert(m_renderThreadAffinity.check());
+
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
@@ -248,26 +287,25 @@ namespace Babylon
         JsRuntime::NativeObject::GetFromJavaScript(env)
             .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
 
-        auto deferred = Napi::Promise::Deferred::New(env);
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_SENTINEL_NAME, deferred.Promise());
-        bool initialized;
-        {
-            std::scoped_lock lock{m_bgfxState.Mutex};
-            initialized = m_bgfxState.Initialized;
-        }
-        if (initialized)
-        {
-            deferred.Resolve(env.Null());
-        }
-        else
-        {
-            auto& jsRuntime = JsRuntime::GetFromJavaScript(env);
-            this->GetAfterRenderTask().then(arcana::inline_scheduler, JsRuntime::InternalState::GetFromJavaScript(env).Cancellation, [&jsRuntime, deferred = std::move(deferred)]() mutable {
-                jsRuntime.Dispatch([deferred = std::move(deferred)](Napi::Env env) {
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_GRAPHICS_READY_NAME, Napi::Function::New(env, [this, env](const Napi::CallbackInfo&) -> Napi::Value {
+            auto deferred{Napi::Promise::Deferred::New(env)};
+            auto promise{deferred.Promise()};
+
+            arcana::task<void, std::exception_ptr> enableRenderTask;
+            {
+                std::scoped_lock lock{m_bgfxState.Mutex};
+                enableRenderTask = m_enableRenderTaskCompletionSource.as_task();
+            }
+
+            auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
+            enableRenderTask.then(arcana::inline_scheduler, JsRuntime::InternalState::GetFromJavaScript(env).Cancellation, [&jsRuntime, deferred{std::move(deferred)}]() mutable {
+                jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
                     deferred.Resolve(env.Null());
                 });
             });
-        }
+
+            return std::move(promise);
+        }, JS_GRAPHICS_READY_NAME));
     }
 
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
@@ -281,6 +319,16 @@ namespace Babylon
     void Graphics::AddToJavaScript(Napi::Env env)
     {
         m_impl->AddToJavaScript(env);
+    }
+
+    void Graphics::EnableRendering()
+    {
+        m_impl->EnableRendering();
+    }
+
+    void Graphics::DisableRendering()
+    {
+        m_impl->DisableRendering();
     }
 
     void Graphics::StartRenderingCurrentFrame()

@@ -41,7 +41,9 @@ namespace UrlLib
 
         arcana::task<void, std::exception_ptr> SendAsync()
         {
-            NSURL* url{[NSURL URLWithString:[NSString stringWithUTF8String:m_url.data()]]};
+            // encode URL so characters like space are replaced by %20
+            NSString* urlString = [[NSString stringWithUTF8String:m_url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
+            NSURL* url{[NSURL URLWithString:urlString]};
             NSString* scheme{url.scheme};
             if ([scheme isEqual:@"app"])
             {
@@ -56,6 +58,11 @@ namespace UrlLib
 
             NSURLSession* session{[NSURLSession sharedSession]};
             NSURLRequest* request{[NSURLRequest requestWithURL:url]};
+            if (url == nil)
+            {
+                // Complete the task, but retain the default status code of 0 to indicate a client side error.
+                return arcana::task_from_result<std::exception_ptr>();
+            }
 
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 

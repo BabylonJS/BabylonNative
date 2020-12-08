@@ -5,6 +5,7 @@
 
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
+#include <arcana/threading/affinity.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -30,6 +31,9 @@ namespace Babylon
         arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
         arcana::task<void, std::exception_ptr> GetAfterRenderTask();
 
+        void EnableRendering();
+        void DisableRendering();
+
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
@@ -44,6 +48,8 @@ namespace Babylon
         BgfxCallback Callback{};
 
     private:
+        arcana::affinity m_renderThreadAffinity{};
+
         bool m_rendering{false};
 
         struct
@@ -55,6 +61,7 @@ namespace Babylon
             bool Dirty{};
         } m_bgfxState{};
 
+        arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
 
