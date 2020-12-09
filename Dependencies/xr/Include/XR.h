@@ -63,7 +63,7 @@ namespace xr
     {
         float X{0.f};
         float Y{0.f};
-        float Z{1.f};
+        float Z{0.f};
     };
 
     struct Vector4f
@@ -282,6 +282,7 @@ namespace xr
                     std::vector<xr::Vector3f> Positions{};
                     std::vector<IndexType> Indices{};
                     bool HasNormals{ false };
+                    bool IsClockwiseWindingOrder{ true };
                     std::vector<xr::Vector3f> Normals;
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 

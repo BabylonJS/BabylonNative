@@ -1604,6 +1604,7 @@ namespace Babylon
                         InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
                         InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
+                        InstanceAccessor("isClockwiseWindingOrder", &XRMesh::GetIsClockwiseWindingOrder, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
                         InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
                         InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
@@ -1663,19 +1664,29 @@ namespace Babylon
             {
                 const auto& mesh = GetMesh();
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
+                bool updateValues = false;
                 if (!m_jsPositions ||
                     m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
                 {
                     m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
                     m_jsPositions.Reset();
                     m_jsPositions = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsPositions));
-                    memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::Vector3f));
-                    m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
+                    updateValues = true;
                 }
                 else if (m_lastPositionsUpdatedTimestamp != m_lastUpdatedTimestamp)
                 {
-                    memcpy(m_jsPositions.Value().Data(), mesh.Positions.data(), mesh.Positions.size() * sizeof(xr::Vector3f));
                     m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
+                    updateValues = true;
+                }
+
+                if (updateValues)
+                {
+                    for (size_t n = 0; n < mesh.Positions.size(); n++)
+                    {
+                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Positions.at(n).X;
+                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Positions.at(n).Y;
+                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Positions.at(n).Z;
+                    }
                 }
 
                 return m_jsPositions.Value();
@@ -1703,6 +1714,12 @@ namespace Babylon
                 return m_jsIndices.Value();
             }
 
+            Napi::Value GetIsClockwiseWindingOrder(const Napi::CallbackInfo& info)
+            {
+                const auto& mesh = GetMesh();
+                return Napi::Boolean::From(info.Env(), mesh.IsClockwiseWindingOrder);
+            }
+
             Napi::Value GetNormals(const Napi::CallbackInfo& info)
             {
                 const auto& mesh = GetMesh();
@@ -1718,12 +1735,22 @@ namespace Babylon
                     m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
                     m_jsNormals.Reset();
                     m_jsNormals = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsNormals));
-                    memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::Vector3f));
+                    for (size_t n = 0; n < mesh.Normals.size(); n++)
+                    {
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
+                    }
                     m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
                 else if (m_lastNormalsUpdatedTimestamp != m_lastUpdatedTimestamp)
                 {
-                    memcpy(m_jsNormals.Value().Data(), mesh.Normals.data(), mesh.Normals.size() * sizeof(xr::Vector3f));
+                    for (size_t n = 0; n < mesh.Normals.size(); n++)
+                    {
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
+                    }
                     m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
 

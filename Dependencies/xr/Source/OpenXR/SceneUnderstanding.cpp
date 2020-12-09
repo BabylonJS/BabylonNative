@@ -126,7 +126,7 @@ public:
             switch (m_state)
             {
             case State::Ready:
-                HandleReady(time, space, extensions);
+                HandleReady(time, extensions);
                 break;
             case State::ComputingScene:
                 HandleComputingScene(time, space, extensions);
@@ -140,14 +140,11 @@ public:
         }
     }
 
-    void HandleReady(const XrTime time, const XrSpace& space, const XrSupportedExtensions& extensions)
+    void HandleReady(const XrTime time, const XrSupportedExtensions& extensions)
     {
         XrNewSceneComputeInfoMSFT computeInfo{ XR_TYPE_NEW_SCENE_COMPUTE_INFO_MSFT };
-        computeInfo.bounds.space = space;
+        computeInfo.bounds.space = m_viewSpace.Get();
         computeInfo.bounds.time = time;
-
-        XrSpaceLocation viewInLocal{ XR_TYPE_SPACE_LOCATION };
-        CHECK_XRCMD(xrLocateSpace(m_viewSpace.Get(), space, time, &viewInLocal));
 
         XrSceneSphereBoundMSFT sphere{};
         XrSceneOrientedBoxBoundMSFT box{};
@@ -155,25 +152,26 @@ public:
         switch (m_detectionBoundary.Type)
         {
         case DetectionBoundaryType::Sphere:
-            if (xr::math::Pose::IsPoseValid(viewInLocal)) {
-                sphere.center = viewInLocal.pose.position;
-                sphere.radius = std::get<float>(m_detectionBoundary.Data);
+        {
+            sphere.center = XrVector3f{ 0.f, 0.f, 0.f };
+            sphere.radius = std::get<float>(m_detectionBoundary.Data);
 
-                computeInfo.bounds.sphereCount = 1;
-                computeInfo.bounds.spheres = &sphere;
-            }
+            computeInfo.bounds.sphereCount = 1;
+            computeInfo.bounds.spheres = &sphere;
             break;
+        }
         case DetectionBoundaryType::Box:
-            if (xr::math::Pose::IsPoseValid(viewInLocal)) {
-                box.pose = viewInLocal.pose;
-                const auto& boxDimensions = std::get<xr::Vector3f>(m_detectionBoundary.Data);
-                box.extents = XrVector3f{ boxDimensions.X, boxDimensions.Y, boxDimensions.Z };
+        {
+            box.pose = XrPosef{ XrQuaternionf{0.f, 0.f, 0.f, 1.f}, XrVector3f{0.f, 0.f, 0.f} };
+            const auto& boxDimensions = std::get<xr::Vector3f>(m_detectionBoundary.Data);
+            box.extents = XrVector3f{ boxDimensions.X, boxDimensions.Y, boxDimensions.Z };
 
-                computeInfo.bounds.boxCount = 1;
-                computeInfo.bounds.boxes = &box;
-            }
+            computeInfo.bounds.boxCount = 1;
+            computeInfo.bounds.boxes = &box;
             break;
+        }
         case DetectionBoundaryType::Frustum:
+        {
             const auto& frustumData = std::get<xr::Frustum>(m_detectionBoundary.Data);
             frustum.farDistance = frustumData.FarDistance;
             frustum.pose = XrPosef
@@ -203,6 +201,7 @@ public:
             computeInfo.bounds.frustumCount = 1;
             computeInfo.bounds.frustums = &frustum;
             break;
+        }
         }
 
         CHECK_XRCMD(extensions.xrComputeNewSceneMSFT(m_sceneObserverHandle.Get(), &computeInfo));
@@ -461,6 +460,9 @@ public:
 
                 babylonMesh.Indices.resize(xrMesh.indices.size());
                 memcpy(babylonMesh.Indices.data(), xrMesh.indices.data(), xrMesh.indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
+
+                // OpenXR uses counter clockwise winding order
+                babylonMesh.IsClockwiseWindingOrder = false;
 
                 babylonMesh.HasNormals = false;
                 babylonMesh.Normals.resize(0);
