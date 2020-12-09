@@ -312,8 +312,6 @@ namespace xr
             static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
             static constexpr uint32_t THUMBSTICK_X_AXIS = 2;
             static constexpr uint32_t THUMBSTICK_Y_AXIS = 3;
-
-            XrBool32 ControllerBinding{ true };
         } ControllerInfo;
 
         struct HandInfo
@@ -808,7 +806,7 @@ namespace xr
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
             microsoftSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
             microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
-            ControllerInfo.ControllerBinding = XR_SUCCEEDED(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
@@ -1432,60 +1430,33 @@ namespace xr
 
                 // Get gamepad data 
                 const auto& controllerInfo = sessionImpl.ControllerInfo;
-                if (controllerInfo.ControllerBinding)
                 {
-                     auto& inputSource = InputSources[idx];
-                     inputSource.GamepadTrackedThisFrame = true;
+                    auto& inputSource = InputSources[idx];
 
-                    // Get trigger value data
-                    float currentTriggerValue;
-                    if (m_impl->QueryControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, currentTriggerValue))
+                    // Get data
+                    float currentTriggerValue, currentTrackpadXAxis, currentTrackpadYAxis, currentThumbstickXAxis, currentThumbstickYAxis;
+                    bool currentSqueezeValue, currentTrackpadValue, currentTrackpadTouch, currentThumbstickValue;
+
+                    // Don't send partial data
+                    if (m_impl->QueryControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, currentTriggerValue) &&
+                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, currentSqueezeValue) &&
+                        m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis) &&
+                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, currentTrackpadValue) &&
+                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, currentTrackpadTouch) &&
+                        m_impl->QueryControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, currentThumbstickXAxis, currentThumbstickYAxis) &&
+                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, currentThumbstickValue))
                     {
                         inputSource.GamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = currentTriggerValue;
-                    }
-
-                    // Get squeeze click data
-                    bool currentSqueezeValue;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, currentSqueezeValue))
-                    {
                         inputSource.GamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed = currentSqueezeValue;
-                    }
-
-                    // Get trackpad axes data
-                    float currentTrackpadXAxis, currentTrackpadYAxis;
-                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis))
-                    {
                         inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS] = currentTrackpadXAxis;
                         inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = currentTrackpadYAxis;
-                    }
-
-                    //Get trackpad click data
-                    bool currentTrackpadValue;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, currentTrackpadValue))
-                    {
                         inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed = currentTrackpadValue;
-                    }
-
-                    //Get trackpad touch data
-                    bool currentTrackpadTouch;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, currentTrackpadTouch))
-                    {
                         inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched = currentTrackpadTouch;
-                    }
-
-                    // Get thumbstick axes data
-                    float currentThumbstickXAxis, currentThumbstickYAxis;
-                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, currentThumbstickXAxis, currentThumbstickYAxis))
-                    {
                         inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] = currentThumbstickXAxis;
                         inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = currentThumbstickYAxis;
-                    }
-
-                    //Get thumbstick click data
-                    bool currentThumbstickValue;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, currentThumbstickValue))
-                    {
                         inputSource.GamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed = currentThumbstickValue;
+
+                        inputSource.GamepadTrackedThisFrame = false;
                     }
 
                 }
