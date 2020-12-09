@@ -1113,53 +1113,68 @@ namespace xr
             depthInfoView.subImage.imageArrayIndex = 0;
         }
 
-        bool QueryControllerFloatAction(XrAction controllerAction, XrSession session, float& currentFloatState)
+        // Returns true if the action is supported on the current input
+        bool TryUpdateControllerFloatAction(XrAction controllerAction, XrSession session, float& currentFloatState)
         {
             // query input action state
             XrActionStateFloat floatActionState{XR_TYPE_ACTION_STATE_FLOAT};
             XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             getInfo.action = controllerAction;
             XrCheck(xrGetActionStateFloat(session, &getInfo, &floatActionState));
-            auto controllerInfo = sessionImpl.ControllerInfo;
+            if (!floatActionState.isActive)
+            {
+                return false;
+            }
+
             if (floatActionState.changedSinceLastSync)
             {
                 currentFloatState = floatActionState.currentState;
-                return true;
             }
-            return false;
+
+            return true;
         }
 
-       bool QueryControllerBooleanAction(XrAction controllerAction, XrSession session, bool& currentBooleanState)
-       {
-           // query input action state
-           XrActionStateBoolean booleanActionState{XR_TYPE_ACTION_STATE_BOOLEAN};
-           XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-           getInfo.action = controllerAction;
-           XrCheck(xrGetActionStateBoolean(session, &getInfo, &booleanActionState));
-           auto controllerInfo = sessionImpl.ControllerInfo;
-           if (booleanActionState.changedSinceLastSync)
-           {
+        // Returns true if the action is supported on the current input
+        bool TryUpdateControllerBooleanAction(XrAction controllerAction, XrSession session, bool& currentBooleanState)
+        {
+            // query input action state
+            XrActionStateBoolean booleanActionState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            getInfo.action = controllerAction;
+            XrCheck(xrGetActionStateBoolean(session, &getInfo, &booleanActionState));
+            if (!booleanActionState.isActive)
+            {
+                return false;
+            }
+
+            if (booleanActionState.changedSinceLastSync)
+            {
                currentBooleanState = booleanActionState.currentState;
-               return true;
-           }
-           return false;
-       }
+            }
+
+            return true;
+        }
         
-        bool QueryControllerVector2fAction(XrAction controllerAction, XrSession session, float& currentXState, float& currentYState)
+        // Returns true if the action is supported on the current input
+        bool TryUpdateControllerVector2fAction(XrAction controllerAction, XrSession session, float& currentXState, float& currentYState)
         {
             // query input action state
             XrActionStateVector2f vector2fActionState{XR_TYPE_ACTION_STATE_VECTOR2F};
             XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             getInfo.action = controllerAction;
             XrCheck(xrGetActionStateVector2f(session, &getInfo, &vector2fActionState));
-            auto controllerInfo = sessionImpl.ControllerInfo;
+            if (!vector2fActionState.isActive)
+            {
+                return false;
+            }
+
             if (vector2fActionState.changedSinceLastSync)
             {
                 currentXState = vector2fActionState.currentState.x;
                 currentYState = vector2fActionState.currentState.y;
-                return true;
             }
-            return false;
+
+            return true;
         }
     };
 
@@ -1429,36 +1444,22 @@ namespace xr
                 }
 
                 // Get gamepad data 
-                const auto& controllerInfo = sessionImpl.ControllerInfo;
                 {
-                    auto& inputSource = InputSources[idx];
+                    const auto& controllerInfo = sessionImpl.ControllerInfo;
+                    auto gamepadObject = InputSources[idx].GamepadObject;
 
-                    // Get data
-                    float currentTriggerValue, currentTrackpadXAxis, currentTrackpadYAxis, currentThumbstickXAxis, currentThumbstickYAxis;
-                    bool currentSqueezeValue, currentTrackpadValue, currentTrackpadTouch, currentThumbstickValue;
-
-                    // Don't send partial data
-                    if (m_impl->QueryControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, currentTriggerValue) &&
-                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, currentSqueezeValue) &&
-                        m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis) &&
-                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, currentTrackpadValue) &&
-                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, currentTrackpadTouch) &&
-                        m_impl->QueryControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, currentThumbstickXAxis, currentThumbstickYAxis) &&
-                        m_impl->QueryControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, currentThumbstickValue))
+                    // Update gamepad data
+                    if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
+                        (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
+                        (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
                     {
-                        inputSource.GamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = currentTriggerValue;
-                        inputSource.GamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed = currentSqueezeValue;
-                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS] = currentTrackpadXAxis;
-                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = currentTrackpadYAxis;
-                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed = currentTrackpadValue;
-                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched = currentTrackpadTouch;
-                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] = currentThumbstickXAxis;
-                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = currentThumbstickYAxis;
-                        inputSource.GamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed = currentThumbstickValue;
-
-                        inputSource.GamepadTrackedThisFrame = false;
+                        // Only signal that gamepad data is available if the actions were available
+                        InputSources[idx].GamepadTrackedThisFrame = true;
                     }
-
                 }
 
                 // Get joint data
