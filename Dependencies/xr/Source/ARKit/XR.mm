@@ -526,6 +526,7 @@ namespace xr {
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
+        ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         
@@ -641,6 +642,15 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
+            // We may or may not be under the scope of an autoreleasepool already, so to guard against both cases grab the
+            // current frame inside a locally scoped autoreleasepool and manually retain the frame without marking for autorelease.
+            // DEVNOTE: We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see:
+            // https://github.com/BabylonJS/BabylonNative/issues/527
+            @autoreleasepool {
+                currentFrame = session.currentFrame;
+                [currentFrame retain];
+            }
+            
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
                 UIView* currentSuperview = [xrView superview];
@@ -651,7 +661,6 @@ namespace xr {
                     [desiredSuperview addSubview:xrView];
                 }
                 
-                ARFrame* currentFrame = [session currentFrame];
                 [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
             });
 
@@ -803,6 +812,11 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    
+                    if (currentFrame != nil) {
+                        [currentFrame release];
+                        currentFrame = nil;
+                    }
                 }
                 @catch (NSException* exception) {
                     if (cameraTextureY != nil) {
@@ -820,7 +834,7 @@ namespace xr {
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
             @autoreleasepool {
-                if (session != nil && session.currentFrame != nil && session.currentFrame.camera != nil && [session.currentFrame.camera trackingState] == ARTrackingStateNormal) {
+                if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
                     if (@available(iOS 13.0, *)) {
                         GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                     } else {
@@ -996,7 +1010,7 @@ namespace xr {
             // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
             // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
             // ARTrackingStateNormal.
-            return session.currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
+            return currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
 
     private:
@@ -1133,7 +1147,7 @@ namespace xr {
             }
 
             // Now perform the actual hit test and process the results
-            auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            auto hitTestResults = [currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
             for (ARHitTestResult* result in hitTestResults) {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
@@ -1212,7 +1226,7 @@ namespace xr {
 
     arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType) {
         // Only IMMERSIVE_AR is supported for now.
-        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
+        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR && ARWorldTrackingConfiguration.isSupported);
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {

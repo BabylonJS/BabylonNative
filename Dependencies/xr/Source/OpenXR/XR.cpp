@@ -663,7 +663,8 @@ namespace xr
                 XrCheck(xrStringToPath(instance, ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx], &ActionResources.ControllerSubactionPaths[idx]));
             }
 
-            std::vector<XrActionSuggestedBinding> bindings{};
+            std::vector<XrActionSuggestedBinding> defaultBindings{};
+            std::vector<XrActionSuggestedBinding> microsoftControllerBindings{};
 
             // Create controller get grip pose action, suggested bindings, and spaces
             {
@@ -680,8 +681,12 @@ namespace xr
                     // Create suggested binding
                     std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
                     path.append(ActionResources.CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX);
-                    bindings.push_back({ ActionResources.ControllerGetGripPoseAction });
-                    XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+
+                    defaultBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &defaultBindings.back().binding));
+
+                    microsoftControllerBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
 
                     // Create subaction space
                     XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -707,8 +712,12 @@ namespace xr
                     // Create suggested binding
                     std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
                     path.append(ActionResources.CONTROLLER_GET_AIM_POSE_PATH_SUFFIX);
-                    bindings.push_back({ ActionResources.ControllerGetAimPoseAction });
-                    XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
+
+                    defaultBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &defaultBindings.back().binding));
+                    
+                    microsoftControllerBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
+                    XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
 
                     // Create subaction space
                     XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -726,7 +735,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX,
                 &ActionResources.ControllerGetTriggerValueAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
 
             // Create controller get squeeze click action and suggested bindings
@@ -736,7 +745,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX,
                 &ActionResources.ControllerGetSqueezeClickAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
 
             // Create controller get trackpad axes action and suggested bindings
@@ -746,7 +755,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX,
                 &ActionResources.ControllerGetTrackpadAxesAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
 
             // Create controller get trackpad click action and suggested bindings
@@ -756,7 +765,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX,
                 &ActionResources.ControllerGetTrackpadClickAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
 
             // Create controller get trackpad touch action and suggested bindings
@@ -766,7 +775,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX,
                 &ActionResources.ControllerGetTrackpadTouchAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
 
             // Create controller get thumbstick axes action and suggested bindings
@@ -776,7 +785,7 @@ namespace xr
                 ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX,
                 &ActionResources.ControllerGetThumbstickAxesAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
 
             // Create controller get thumbstick click action and suggested bindings
@@ -786,30 +795,22 @@ namespace xr
                 ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME,
                 ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX,
                 &ActionResources.ControllerGetThumbstickClickAction,
-                bindings,
+                microsoftControllerBindings,
                 instance);
+
+            // Provide default suggested bindings to instance
+            XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
+            suggestedBindings.suggestedBindings = defaultBindings.data();
+            suggestedBindings.countSuggestedBindings = (uint32_t)defaultBindings.size();
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
 
             // Provide Microsoft suggested binding to instance
             XrInteractionProfileSuggestedBinding microsoftSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
-            microsoftSuggestedBindings.suggestedBindings = bindings.data();
-            microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-
-            // Fallback on the default bindings if the Microsoft bindings fail
-            if (XR_FAILED(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings)))
-            {
-                ControllerInfo.ControllerBinding = false;
-            }
-
-            if (!ControllerInfo.ControllerBinding)
-            {
-                // Provide default suggested bindings to instance
-                XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-                XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
-                suggestedBindings.suggestedBindings = bindings.data();
-                suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-                XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
-            }
+            microsoftSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
+            microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
+            ControllerInfo.ControllerBinding = XR_SUCCEEDED(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
