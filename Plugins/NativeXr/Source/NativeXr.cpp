@@ -1604,7 +1604,6 @@ namespace Babylon
                         InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
                         InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
-                        InstanceAccessor("isClockwiseWindingOrder", &XRMesh::GetIsClockwiseWindingOrder, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
                         InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
                         InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
@@ -1662,6 +1661,7 @@ namespace Babylon
 
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
             {
+                // NOTE: WebXR reports positions as right-handed coordinates
                 const auto& mesh = GetMesh();
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 bool updateValues = false;
@@ -1694,6 +1694,7 @@ namespace Babylon
 
             Napi::Value GetIndices(const Napi::CallbackInfo& info)
             {
+                // NOTE: WebXR reports indices in a counterclockwise winding order
                 assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
                 const auto& mesh = GetMesh();
                 if (!m_jsIndices ||
@@ -1714,14 +1715,9 @@ namespace Babylon
                 return m_jsIndices.Value();
             }
 
-            Napi::Value GetIsClockwiseWindingOrder(const Napi::CallbackInfo& info)
-            {
-                const auto& mesh = GetMesh();
-                return Napi::Boolean::From(info.Env(), mesh.IsClockwiseWindingOrder);
-            }
-
             Napi::Value GetNormals(const Napi::CallbackInfo& info)
             {
+                // NOTE: WebXR reports normals as right-handed vectors
                 const auto& mesh = GetMesh();
                 if (!mesh.HasNormals)
                 {

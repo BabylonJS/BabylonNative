@@ -461,9 +461,6 @@ public:
                 babylonMesh.Indices.resize(xrMesh.indices.size());
                 memcpy(babylonMesh.Indices.data(), xrMesh.indices.data(), xrMesh.indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
 
-                // OpenXR uses counter clockwise winding order
-                babylonMesh.IsClockwiseWindingOrder = false;
-
                 babylonMesh.HasNormals = false;
                 babylonMesh.Normals.resize(0);
 

@@ -282,7 +282,6 @@ namespace xr
                     std::vector<xr::Vector3f> Positions{};
                     std::vector<IndexType> Indices{};
                     bool HasNormals{ false };
-                    bool IsClockwiseWindingOrder{ true };
                     std::vector<xr::Vector3f> Normals;
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
