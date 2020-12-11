@@ -111,7 +111,7 @@ namespace Babylon
     {
     public:
         ViewClearState(uint16_t viewId, ClearState& clearState)
-            : m_viewId{viewId} 
+            : m_viewId{viewId}
             , m_clearState{clearState}
             , m_callbackTicket{m_clearState.AddUpdateCallback([this]() { Update(); })}
         {
@@ -280,8 +280,15 @@ namespace Babylon
             m_renderingToTarget = !m_boundFrameBuffer->ActAsBackBuffer;
         }
 
-        FrameBufferData& GetBound() const
+        FrameBufferData& GetBound()
         {
+            // Babylon.js minimizes how frequently Bind() is called, causing there
+            // to be some scenarios where the currently bound frame buffer can retain
+            // an invalid view id when another FrameBuffer is created but not bound.
+            // To prevent this, make sure the bound frameBuffer has a clean ViewId.
+            if (m_boundFrameBuffer->IsViewIdDirty){
+                Bind(m_boundFrameBuffer);
+            }
             return *m_boundFrameBuffer;
         }
 
@@ -522,7 +529,7 @@ namespace Babylon
 
         template<typename SchedulerT>
         arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
-        
+
         bool m_isRenderScheduled{false};
 
         arcana::cancellation_source m_cancelSource{};
@@ -551,7 +558,7 @@ namespace Babylon
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
-        
+
         Napi::FunctionReference m_requestAnimationFrameCallback{};
 
         // webgl/opengl draw call parameters allow to set first index and number of indices used for that call
