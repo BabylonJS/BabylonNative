@@ -19,6 +19,7 @@ namespace xr
         const XrSessionState State() const;
         const XrSpace Space() const;
         const SceneUnderstanding& SceneUnderstanding() const;
+        const bool IsSessionRunning() const;
 
         struct Impl;
         std::unique_ptr<Impl> ContextImpl;

@@ -296,7 +296,10 @@ jobs:
 - job: Android_V8_Mac
   pool:
     vmImage: 'macOS-10.14'
-    
+
+  variables:
+    HOMEBREW_NO_INSTALL_CLEANUP: 1
+
   steps:
   - script: |
       git submodule update --init --recursive
@@ -307,7 +310,9 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+      cd ../../ValidationTests/Android
+      npm install
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -316,12 +321,24 @@ jobs:
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
         tasks: 'assembleRelease'
-    displayName: 'Build androidV8'
+    displayName: 'Build Playground AndroidV8'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidV8'
 
 - job: Android_JSC_Mac
   pool:
     vmImage: 'macOS-10.14'
-    
+
+  variables:
+    HOMEBREW_NO_INSTALL_CLEANUP: 1
+
   steps:
   - script: |
       git submodule update --init --recursive
@@ -331,6 +348,8 @@ jobs:
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
+      npm install
+      cd ../../ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
@@ -341,7 +360,16 @@ jobs:
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
         tasks: 'assembleRelease'
-    displayName: 'Build androidJSC'
+    displayName: 'Build Playground AndroidJSC'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidJSC'
 
 - job: Android_V8_Linux
   pool:
@@ -358,6 +386,8 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
+      cd ../../ValidationTests/Android
+      npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
     inputs:
@@ -367,7 +397,16 @@ jobs:
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
         tasks: 'assembleRelease'
-    displayName: 'Build androidV8'
+    displayName: 'Build Playground AndroidV8'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidV8'
 
 - job: Android_JSC_Linux
   pool:
@@ -384,6 +423,8 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
+      cd ../../ValidationTests/Android
+      npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
     inputs:
@@ -393,7 +434,16 @@ jobs:
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
         tasks: 'assembleRelease'
-    displayName: 'Build androidJSC'
+    displayName: 'Build Playground AndroidJSC'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidJSC'
 
 - job: Ubuntu_Clang8_JSC
   timeoutInMinutes: 30
