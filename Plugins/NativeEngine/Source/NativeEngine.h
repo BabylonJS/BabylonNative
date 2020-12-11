@@ -286,7 +286,8 @@ namespace Babylon
             // to be some scenarios where the currently bound frame buffer can retain
             // an invalid view id when another FrameBuffer is created but not bound.
             // To prevent this, make sure the bound frameBuffer has a clean ViewId.
-            if (m_boundFrameBuffer->IsViewIdDirty){
+            if (m_boundFrameBuffer->IsViewIdDirty)
+            {
                 Bind(m_boundFrameBuffer);
             }
             return *m_boundFrameBuffer;
