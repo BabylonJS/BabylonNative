@@ -64,9 +64,9 @@ namespace xr
         ~SceneUnderstanding();
         void Initialize(const InitOptions& options) const;
         void UpdateFrame(UpdateFrameArgs& args) const;
-        System::Session::Frame::SceneObject& TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const;
-        System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
-        System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const;
+        System::Session::Frame::SceneObject& GetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const;
+        System::Session::Frame::Plane& GetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
+        System::Session::Frame::Mesh& GetMeshByID(const System::Session::Frame::Mesh::Identifier id) const;
 
     private:
         struct Impl;

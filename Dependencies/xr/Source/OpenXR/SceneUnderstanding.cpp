@@ -493,7 +493,7 @@ public:
         }
     }
 
-    System::Session::Frame::SceneObject& TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id)
+    System::Session::Frame::SceneObject& GetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id)
     {
         if (m_sceneObjects.count(id) > 0)
         {
@@ -503,7 +503,7 @@ public:
         throw std::exception(/*unknown scene object id*/);
     }
 
-    System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id)
+    System::Session::Frame::Plane& GetPlaneByID(const System::Session::Frame::Plane::Identifier id)
     {
         if (m_babylonPlanesById.count(id) > 0)
         {
@@ -513,7 +513,7 @@ public:
         throw std::exception(/*unknown plane id*/);
     }
 
-    System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id)
+    System::Session::Frame::Mesh& GetMeshByID(const System::Session::Frame::Mesh::Identifier id)
     {
         if (m_babylonMeshesById.count(id) > 0)
         {
@@ -586,17 +586,17 @@ void SceneUnderstanding::UpdateFrame(UpdateFrameArgs& args) const
     m_impl->UpdateFrame(args);
 }
 
-System::Session::Frame::SceneObject& SceneUnderstanding::TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const
+System::Session::Frame::SceneObject& SceneUnderstanding::GetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const
 {
-    return m_impl->TryGetSceneObjectByID(id);
+    return m_impl->GetSceneObjectByID(id);
 }
 
-System::Session::Frame::Plane& SceneUnderstanding::TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const
+System::Session::Frame::Plane& SceneUnderstanding::GetPlaneByID(const System::Session::Frame::Plane::Identifier id) const
 {
-    return m_impl->TryGetPlaneByID(id);
+    return m_impl->GetPlaneByID(id);
 }
 
-System::Session::Frame::Mesh& SceneUnderstanding::TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const
+System::Session::Frame::Mesh& SceneUnderstanding::GetMeshByID(const System::Session::Frame::Mesh::Identifier id) const
 {
-    return m_impl->TryGetMeshByID(id);
+    return m_impl->GetMeshByID(id);
 }
