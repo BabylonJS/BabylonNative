@@ -62,8 +62,8 @@ namespace xr
 
         SceneUnderstanding();
         ~SceneUnderstanding();
-        void Initialize(InitOptions options) const;
-        void UpdateFrame(UpdateFrameArgs args) const;
+        void Initialize(const InitOptions& options) const;
+        void UpdateFrame(UpdateFrameArgs& args) const;
         System::Session::Frame::SceneObject& TryGetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id) const;
         System::Session::Frame::Plane& TryGetPlaneByID(const System::Session::Frame::Plane::Identifier id) const;
         System::Session::Frame::Mesh& TryGetMeshByID(const System::Session::Frame::Mesh::Identifier id) const;

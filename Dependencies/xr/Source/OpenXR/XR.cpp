@@ -1368,21 +1368,21 @@ namespace xr
             }
 
             const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-            su.UpdateFrame(
-                SceneUnderstanding::UpdateFrameArgs
-                {
-                    sceneSpace,
-                    extensions,
-                    displayTime,
-                    UpdatedSceneObjects,
-                    RemovedSceneObjects,
-                    Planes,
-                    UpdatedPlanes,
-                    RemovedPlanes,
-                    Meshes,
-                    UpdatedMeshes,
-                    RemovedMeshes
-                });
+            SceneUnderstanding::UpdateFrameArgs args
+            {
+                sceneSpace,
+                extensions,
+                displayTime,
+                UpdatedSceneObjects,
+                RemovedSceneObjects,
+                Planes,
+                UpdatedPlanes,
+                RemovedPlanes,
+                Meshes,
+                UpdatedMeshes,
+                RemovedMeshes
+            };
+            su.UpdateFrame(args);
 
             // Locate all the things.
             auto& actionResources = m_impl->sessionImpl.ActionResources;

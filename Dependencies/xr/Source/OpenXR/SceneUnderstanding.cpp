@@ -71,7 +71,7 @@ SceneUnderstanding::SceneUnderstanding::InitOptions::InitOptions(
 struct SceneUnderstanding::SceneUnderstanding::Impl
 {
 public:
-    void Initialize(InitOptions options)
+    void Initialize(const InitOptions& options)
     {
         const auto& session = options.Session;
         const auto& extensions = options.Extensions;
@@ -576,12 +576,12 @@ SceneUnderstanding::~SceneUnderstanding()
 {
 }
 
-void SceneUnderstanding::Initialize(InitOptions options) const
+void SceneUnderstanding::Initialize(const InitOptions& options) const
 {
     m_impl->Initialize(options);
 }
 
-void SceneUnderstanding::UpdateFrame(UpdateFrameArgs args) const
+void SceneUnderstanding::UpdateFrame(UpdateFrameArgs& args) const
 {
     m_impl->UpdateFrame(args);
 }

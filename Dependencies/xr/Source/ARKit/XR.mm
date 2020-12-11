@@ -1185,6 +1185,10 @@ namespace xr {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier) const {
+        throw std::runtime_error("not implemented");
+    }
+
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
     }

@@ -203,9 +203,8 @@ namespace
         return Napi::Persistent(jsInputSource);
     }
 
-    xr::DetectionBoundary CreateDetectionBoundary(const Napi::Object& object)
+    void PopulateDetectionBoundary(const Napi::Object& object, xr::DetectionBoundary& detectionBoundary)
     {
-        xr::DetectionBoundary detectionBoundary{};
         if (object.Has("type"))
         {
             const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap
@@ -266,8 +265,6 @@ namespace
             }
             break;
         }
-
-        return detectionBoundary;
     }
 
     xr::GeometryDetectorOptions CreateDetectorOptions(const Napi::Object& object)
@@ -281,7 +278,7 @@ namespace
         if (object.Has("detectionBoundary"))
         {
             const auto& detectionBoundary = object.Get("detectionBoundary").As<Napi::Object>();
-            options.DetectionBoundary = CreateDetectionBoundary(detectionBoundary);
+            PopulateDetectionBoundary(detectionBoundary, options.DetectionBoundary);
         }
 
         return options;
