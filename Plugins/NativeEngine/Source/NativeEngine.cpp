@@ -1423,7 +1423,11 @@ namespace Babylon
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateFlags(info);
+        // When a clear is asked, always reassign a new viewId so clearing is taken into account.
+        // Otherwise, the framebuffer's view flags are updated but only 1 clearing is processed.
+        auto& boundFrameBuffer = m_frameBufferManager.GetBound();
+        boundFrameBuffer.UseViewId(m_frameBufferManager.GetNewViewId());
+        boundFrameBuffer.ViewClearState.UpdateFlags(info);
     }
 
     void NativeEngine::ClearColor(const Napi::CallbackInfo& info)
