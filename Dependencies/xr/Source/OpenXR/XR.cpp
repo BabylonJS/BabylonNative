@@ -297,7 +297,9 @@ namespace xr
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
+            std::vector<Frame::SceneObject> SceneObjects{};
             std::vector<Frame::Plane> Planes{};
+            std::vector<Frame::Mesh> Meshes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
@@ -1169,9 +1171,14 @@ namespace xr
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
         , Planes { sessionImpl.ActionResources.Planes }
+        , Meshes { sessionImpl.ActionResources.Meshes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
+        , UpdatedSceneObjects{}
+        , RemovedSceneObjects{}
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
         // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
         // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
         , IsTracking{true}
@@ -1362,7 +1369,21 @@ namespace xr
             }
 
             const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-            su.UpdateFrame(SceneUnderstanding::UpdateFrameArgs{ sceneSpace, extensions, displayTime, Planes, UpdatedPlanes, RemovedPlanes });
+            SceneUnderstanding::UpdateFrameArgs args
+            {
+                sceneSpace,
+                extensions,
+                displayTime,
+                UpdatedSceneObjects,
+                RemovedSceneObjects,
+                Planes,
+                UpdatedPlanes,
+                RemovedPlanes,
+                Meshes,
+                UpdatedMeshes,
+                RemovedMeshes
+            };
+            su.UpdateFrame(args);
 
             // Locate all the things.
             auto& actionResources = m_impl->sessionImpl.ActionResources;
@@ -1748,10 +1769,22 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier id) const
+    {
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.GetSceneObjectByID(id);
+    }
+
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier id) const
     {
         const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-        return su.TryGetPlaneByID(id);
+        return su.GetPlaneByID(id);
+    }
+
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier id) const
+    {
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.GetMeshByID(id);
     }
 
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
@@ -1769,5 +1802,57 @@ namespace xr
     {
         // Point cloud system not yet supported.
         return false;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& detectorOptions)
+    {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+
+        SceneUnderstanding::InitOptions initOptions
+        {
+            session,
+            extensions,
+            detectorOptions.DetectionBoundary,
+            detectorOptions.UpdateInterval
+        };
+
+        su.Initialize(initOptions);
+
+        return true;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
+    {
+        if (enabled)
+        {
+            const auto& session = m_impl->HmdImpl.Context.Session();
+            const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+            SceneUnderstanding::InitOptions initOptions{ session, extensions };
+            su.Initialize(initOptions);
+        }
+
+        return true;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& detectorOptions)
+    {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+
+        SceneUnderstanding::InitOptions initOptions
+        {
+            session,
+            extensions,
+            detectorOptions.DetectionBoundary,
+            detectorOptions.UpdateInterval
+        };
+
+        su.Initialize(initOptions);
+
+        return true;
     }
 }
