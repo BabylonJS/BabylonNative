@@ -14,6 +14,7 @@
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+constexpr bool RENDER_ON_JS_THREAD{true};
 
 @interface EngineView : MTKView <MTKViewDelegate>
 
@@ -30,7 +31,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
 - (void)drawInMTKView:(MTKView *)__unused view
 {
-    if (graphics != nullptr) {
+    if (graphics != nullptr && !RENDER_ON_JS_THREAD) {
         graphics->RenderCurrentFrame();
     }
 }
@@ -77,7 +78,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
         Babylon::Polyfills::Canvas::Initialize(env);
 
         graphics->AddToJavaScript(env);
-        Babylon::Plugins::NativeEngine::Initialize(env, false); // render on UI Thread
+        Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
 
         Babylon::TestUtils::CreateInstance(env, windowPtr);
     });
