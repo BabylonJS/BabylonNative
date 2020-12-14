@@ -3,6 +3,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeInput.h>
 
+#include <algorithm>
 #include <sstream>
 
 namespace Babylon::Plugins
