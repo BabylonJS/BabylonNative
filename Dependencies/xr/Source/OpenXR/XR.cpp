@@ -1446,7 +1446,7 @@ namespace xr
                 // Get gamepad data 
                 {
                     const auto& controllerInfo = sessionImpl.ControllerInfo;
-                    auto gamepadObject = InputSources[idx].GamepadObject;
+                    auto& gamepadObject = InputSources[idx].GamepadObject;
 
                     // Update gamepad data
                     if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
