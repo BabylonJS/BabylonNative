@@ -201,7 +201,7 @@ namespace xr
                     {
                         bool Pressed{ false };
                         bool Touched{ false };
-                        double Value{0};
+                        float Value{0};
                     };
 
                     std::array<float, DEFAULT_CONTROLLER_AXES> Axes;
