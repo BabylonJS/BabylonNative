@@ -75,6 +75,12 @@ _native.whenGraphicsReady().then(function () {
     var engine = new BABYLON.NativeEngine();
     var scene = new BABYLON.Scene(engine);
 
+    engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
+        if (premulAlpha === void 0) { premulAlpha = false; }
+        this._native.copyTexture(texture._webGLTexture, canvas.getCanvasTexture());
+        texture.isReady = true;
+    };
+
     CreateBoxAsync().then(function () {
     //CreateSpheresAsync().then(function () {
     //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
