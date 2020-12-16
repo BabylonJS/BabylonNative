@@ -21,6 +21,7 @@ namespace Babylon
 
         void* GetNativeWindow();
         void SetNativeWindow(void* nativeWindowPtr);
+        void SetWindowType(void* windowTypePtr);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);

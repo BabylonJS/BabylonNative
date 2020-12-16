@@ -56,6 +56,15 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
+    void Graphics::Impl::SetWindowType(void* windowTypePtr)
+    {
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        m_bgfxState.Dirty = true;
+
+        auto& pd = m_bgfxState.InitState.platformData;
+        pd.ndt = windowTypePtr;
+    }
+
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
@@ -225,6 +234,11 @@ namespace Babylon
     void Graphics::UpdateWindow<void*>(void* windowPtr)
     {
         m_impl->SetNativeWindow(windowPtr);
+    }
+
+    void Graphics::UpdateWindowType(void* windowType)
+    {
+        m_impl->SetWindowType(windowType);
     }
 
     void Graphics::UpdateSize(size_t width, size_t height)

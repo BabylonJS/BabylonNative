@@ -18,6 +18,7 @@ namespace Babylon
 
         template<typename NativeWindowT>
         void UpdateWindow(NativeWindowT window);
+        void UpdateWindowType(void* type);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
