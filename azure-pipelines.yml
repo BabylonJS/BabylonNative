@@ -35,8 +35,17 @@ jobs:
       sdk: 'macosx'
       useXcpretty: false
       configuration: RelWithDebInfo
-    displayName: 'Build macOS'
-    
+    displayName: 'Build Playground macOS'
+
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+      scheme: 'ValidationTests'
+      sdk: 'macosx'
+      useXcpretty: false
+      configuration: RelWithDebInfo
+    displayName: 'Build ValidationTests macOS'
+
 - job: iOS
   pool:
     vmImage: 'macOS-10.14'
@@ -67,7 +76,16 @@ jobs:
       sdk: 'iphoneos'
       useXcpretty: false
       configuration: RelWithDebInfo
-    displayName: 'Build iOS'
+    displayName: 'Build Playground iOS'
+    
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+      scheme: 'ValidationTests'
+      sdk: 'iphoneos'
+      useXcpretty: false
+      configuration: RelWithDebInfo
+    displayName: 'Build ValidationTests iOS'
     
 - job: win32_x64
   timeoutInMinutes: 30
@@ -82,7 +100,7 @@ jobs:
   - script: |
       mkdir buildWin32_x64
       cd buildWin32_x64
-      cmake -G "Visual Studio 16 2019" -A x64 ..
+      cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
     displayName: 'Generate Win32_x64 solution'
 
   - task: MSBuild@1
@@ -150,7 +168,7 @@ jobs:
   - script: |
       mkdir buildWin32_x86
       cd buildWin32_x86
-      cmake .. -G "Visual Studio 16 2019" -A Win32
+      cmake .. -G "Visual Studio 16 2019" -A Win32 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
     displayName: 'Generate Win32_x86 solution'
 
   - task: MSBuild@1
@@ -274,10 +292,14 @@ jobs:
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x86'
 
-- job: Android_V8
+
+- job: Android_V8_Mac
   pool:
     vmImage: 'macOS-10.14'
-    
+
+  variables:
+    HOMEBREW_NO_INSTALL_CLEANUP: 1
+
   steps:
   - script: |
       git submodule update --init --recursive
@@ -288,7 +310,9 @@ jobs:
   - script: |
       cd Apps/Playground/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+      cd ../../ValidationTests/Android
+      npm install
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -297,12 +321,24 @@ jobs:
         options: '-PJSEngine=v8android'
         publishJUnitResults: false
         tasks: 'assembleRelease'
-    displayName: 'Build androidV8'
+    displayName: 'Build Playground AndroidV8'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidV8'
 
-- job: Android_JSC
+- job: Android_JSC_Mac
   pool:
     vmImage: 'macOS-10.14'
-    
+
+  variables:
+    HOMEBREW_NO_INSTALL_CLEANUP: 1
+
   steps:
   - script: |
       git submodule update --init --recursive
@@ -312,6 +348,8 @@ jobs:
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
+      npm install
+      cd ../../ValidationTests/Android
       npm install
     displayName: 'Install JS engine NPMs'    
   - task: Gradle@2
@@ -322,7 +360,90 @@ jobs:
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
         tasks: 'assembleRelease'
-    displayName: 'Build androidJSC'
+    displayName: 'Build Playground AndroidJSC'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidJSC'
+
+- job: Android_V8_Linux
+  pool:
+    vmImage: 'ubuntu-latest'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      sudo apt-get update
+      sudo apt-get install ninja-build
+    displayName: 'Install packages'
+  - script: |
+      cd Apps/Playground/Android
+      npm install
+      cd ../../ValidationTests/Android
+      npm install
+    displayName: 'Install JS engine NPMs'    
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/Playground/Android'
+        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build Playground AndroidV8'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidV8'
+
+- job: Android_JSC_Linux
+  pool:
+    vmImage: 'ubuntu-latest'
+    
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      sudo apt-get update
+      sudo apt-get install ninja-build
+    displayName: 'Install packages'
+  - script: |
+      cd Apps/Playground/Android
+      npm install
+      cd ../../ValidationTests/Android
+      npm install
+    displayName: 'Install JS engine NPMs'    
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/Playground/Android'
+        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build Playground AndroidJSC'
+  - task: Gradle@2
+    inputs:
+        workingDirectory: 'Apps/ValidationTests/Android'
+        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=jsc'
+        publishJUnitResults: false
+        tasks: 'assembleRelease'
+    displayName: 'Build ValidationTests AndroidJSC'
 
 - job: Ubuntu_Clang8_JSC
   timeoutInMinutes: 30
@@ -368,7 +489,7 @@ jobs:
   - script: |
       mkdir build
       cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
       ninja
     displayName: 'Build X11'
 

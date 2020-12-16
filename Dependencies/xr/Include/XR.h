@@ -59,22 +59,25 @@ namespace xr
         size_t Height{};
     };
 
+    struct Vector3f
+    {
+        float X{0.f};
+        float Y{0.f};
+        float Z{0.f};
+    };
+
+    struct Vector4f
+    {
+        float X{0.f};
+        float Y{0.f};
+        float Z{0.f};
+        float W{1.f};
+    };
+
     struct Pose
     {
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-        } Position;
-
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-            float W{};
-        } Orientation;
+        Vector3f Position;
+        Vector4f Orientation;
     };
 
     using NativeTrackablePtr = void*;
@@ -86,19 +89,8 @@ namespace xr
 
     struct Ray
     {
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-        } Origin;
-
-        struct
-        {
-            float X{};
-            float Y{};
-            float Z{};
-        } Direction;
+        Vector3f Origin;
+        Vector3f Direction;
     };
 
     using NativeAnchorPtr = void*;
@@ -120,11 +112,68 @@ namespace xr
         Identifier ID{};
     };
 
+    struct FieldOfView
+    {
+        float AngleLeft;
+        float AngleRight;
+        float AngleUp;
+        float AngleDown;
+    };
+
+    enum class DetectionBoundaryType
+    {
+        Box,
+        Frustum,
+        Sphere
+    };
+
+    struct Frustum
+    {
+        Pose Pose{};
+        FieldOfView FOV{};
+        float FarDistance;
+    };
+
+    struct DetectionBoundary
+    {
+        DetectionBoundaryType Type{ DetectionBoundaryType::Sphere };
+        std::variant<float, Frustum, Vector3f> Data{ 5.f };
+    };
+
+    struct GeometryDetectorOptions
+    {
+        xr::DetectionBoundary DetectionBoundary{};
+        double UpdateInterval{10};
+    };
+
+    enum class SceneObjectType
+    {
+        Unknown,
+        Background,
+        Wall,
+        Floor,
+        Ceiling,
+        Platform,
+        Undefined
+    };
+
+    const std::map<xr::SceneObjectType, std::string> SceneObjectTypeNames
+    {
+        {xr::SceneObjectType::Unknown, "unknown" },
+        {xr::SceneObjectType::Background, "background" },
+        {xr::SceneObjectType::Ceiling, "ceiling" },
+        {xr::SceneObjectType::Floor, "floor" },
+        {xr::SceneObjectType::Platform, "platform" },
+        {xr::SceneObjectType::Wall, "wall" }
+    };
+
     class System
     {
     public:
         static constexpr float DEFAULT_DEPTH_NEAR_Z{ 0.5f };
         static constexpr float DEFAULT_DEPTH_FAR_Z{ 1000.f };
+        static constexpr uint32_t DEFAULT_CONTROLLER_BUTTONS{ 4 };
+        static constexpr uint32_t DEFAULT_CONTROLLER_AXES{ 4 };
 
         class Session
         {
@@ -146,17 +195,23 @@ namespace xr
                     bool PoseTracked{ false };
                 };
 
+                struct GamePad
+                {
+                    struct Button
+                    {
+                        bool Pressed{ false };
+                        bool Touched{ false };
+                        float Value{0};
+                    };
+
+                    std::array<float, DEFAULT_CONTROLLER_AXES> Axes;
+                    std::array<Button, DEFAULT_CONTROLLER_BUTTONS> Buttons;
+                };
+
                 struct View
                 {
                     Space Space{};
-
-                    struct
-                    {
-                        float AngleLeft{};
-                        float AngleRight{};
-                        float AngleUp{};
-                        float AngleDown{};
-                    } FieldOfView;
+                    std::array<float, 16> ProjectionMatrix{};
 
                     TextureFormat ColorTextureFormat{};
                     void* ColorTexturePointer{};
@@ -185,6 +240,8 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
+                    bool GamepadTrackedThisFrame{};
+                    GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
                     HandednessEnum Handedness{};
@@ -192,6 +249,15 @@ namespace xr
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
+                };
+
+                struct SceneObject
+                {
+                    using Identifier = int32_t;
+                    const static Identifier INVALID_ID = -1;
+
+                    Identifier ID{ INVALID_ID };
+                    SceneObjectType Type{ SceneObjectType::Undefined };
                 };
 
                 struct Plane
@@ -202,18 +268,41 @@ namespace xr
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
                     PolygonFormat PolygonFormat{};
-                
+                    SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
+
                 private:
-                    static inline Identifier NEXT_ID{0};
+                    static inline Identifier NEXT_ID{ 0 };
+                };
+
+                struct Mesh
+                {
+                    using IndexType = uint32_t;
+                    using Identifier = size_t;
+                    const Identifier ID{ NEXT_ID++ };
+                    std::vector<xr::Vector3f> Positions{};
+                    std::vector<IndexType> Indices{};
+                    bool HasNormals{ false };
+                    std::vector<xr::Vector3f> Normals;
+                    SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
                 };
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<Plane>& Planes;
+                std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
-                
+
+                std::vector<SceneObject::Identifier>UpdatedSceneObjects;
+                std::vector<SceneObject::Identifier>RemovedSceneObjects;
                 std::vector<Plane::Identifier>UpdatedPlanes;
                 std::vector<Plane::Identifier>RemovedPlanes;
+                std::vector<Mesh::Identifier>UpdatedMeshes;
+                std::vector<Mesh::Identifier>RemovedMeshes;
+
+                bool IsTracking;
 
                 Frame(System::Session::Impl&);
                 ~Frame();
@@ -222,7 +311,9 @@ namespace xr
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
+                SceneObject& GetSceneObjectByID(SceneObject::Identifier) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
+                Mesh& GetMeshByID(Mesh::Identifier) const;
 
             private:
                 struct Impl;
@@ -242,6 +333,10 @@ namespace xr
             void SetDepthsNearFar(float depthNear, float depthFar);
             void SetPlaneDetectionEnabled(bool enabled) const;
             bool TrySetFeaturePointCloudEnabled(bool enabled) const;
+
+            bool TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions& options);
+            bool TrySetMeshDetectorEnabled(const bool enabled);
+            bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
 
         private:
             std::unique_ptr<Impl> m_impl{};

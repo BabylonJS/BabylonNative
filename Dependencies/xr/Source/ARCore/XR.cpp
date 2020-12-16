@@ -323,6 +323,7 @@ namespace xr
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
+        std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -525,19 +526,7 @@ namespace xr
             if (geometryChanged || ActiveFrameViews[0].DepthNearZ != DepthNearZ || ActiveFrameViews[0].DepthFarZ != DepthFarZ)
             {
                 // Get the current projection matrix
-                glm::mat4 projectionMatrix{};
-                ArCamera_getProjectionMatrix(session, camera, ActiveFrameViews[0].DepthNearZ, ActiveFrameViews[0].DepthFarZ, glm::value_ptr(projectionMatrix));
-
-                // Calculate the aspect ratio and field of view
-                float a = projectionMatrix[0][0];
-                float b = projectionMatrix[1][1];
-
-                float aspectRatio = b / a;
-                float fieldOfView = std::atan(1.0f / b);
-
-                // Set the horizontal and vertical field of view
-                ActiveFrameViews[0].FieldOfView.AngleDown = -(ActiveFrameViews[0].FieldOfView.AngleUp = fieldOfView);
-                ActiveFrameViews[0].FieldOfView.AngleLeft = -(ActiveFrameViews[0].FieldOfView.AngleRight = fieldOfView * aspectRatio);
+                ArCamera_getProjectionMatrix(session, camera, DepthNearZ, DepthFarZ, ActiveFrameViews[0].ProjectionMatrix.data());
             }
 
             ActiveFrameViews[0].DepthNearZ = DepthNearZ;
@@ -821,7 +810,7 @@ namespace xr
 
         void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes)
         {
-            if (!IsTracking() || !PlaneDetectionEnabled)
+            if (!PlaneDetectionEnabled)
             {
                 return;
             }
@@ -885,7 +874,7 @@ namespace xr
 
         void UpdateFeaturePointCloud()
         {
-            if (!IsTracking() || !FeaturePointCloudEnabled)
+            if (!FeaturePointCloudEnabled)
             {
                 return;
             }
@@ -961,6 +950,18 @@ namespace xr
             }
 
             throw std::runtime_error{"Tried to get non-existent plane."};
+        }
+
+        /**
+         * Checks whether the AR camera is currently tracking.
+         **/
+        bool IsTracking()
+        {
+            ArCamera* camera{};
+            ArTrackingState trackingState{};
+            ArFrame_acquireCamera(session, frame, &camera);
+            ArCamera_getTrackingState(session, camera, &trackingState);
+            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
         }
 
     private:
@@ -1103,18 +1104,6 @@ namespace xr
             plane.PolygonFormat = PolygonFormat::XZ;
             updatedPlanes.push_back(plane.ID);
         }
-
-        /**
-         * Checks whether the AR camera is currently tracking.
-         **/
-        bool IsTracking()
-        {
-            ArCamera* camera{};
-            ArTrackingState trackingState{};
-            ArFrame_acquireCamera(session, frame, &camera);
-            ArCamera_getTrackingState(session, camera, &trackingState);
-            return trackingState == ArTrackingState::AR_TRACKING_STATE_TRACKING;
-        }
     };
 
     struct System::Session::Frame::Impl
@@ -1131,13 +1120,22 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , Planes{ sessionImpl.Planes }
+        , Meshes { sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , UpdatedSceneObjects{}
+        , RemovedSceneObjects{}
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
+        , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
-        m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
-        m_impl->sessionImpl.UpdateFeaturePointCloud();
+        if (IsTracking)
+        {
+            m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+            m_impl->sessionImpl.UpdateFeaturePointCloud();
+        }
     }
 
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
@@ -1160,9 +1158,19 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier /*sceneObjectID*/) const
+    {
+        throw std::runtime_error{"Scene object detection is not supported on current platform."};
+    }
+
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const
     {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier /*meshID*/) const
+    {
+        throw std::runtime_error{"Mesh detection is not supported on current platform."};
     }
 
     System::Session::Frame::~Frame()
@@ -1289,5 +1297,23 @@ namespace xr
         // Point cloud system not yet supported.
         m_impl->FeaturePointCloudEnabled = enabled;
         return enabled;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& /*options*/)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool /*enabled*/)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& /*options*/)
+    {
+        // TODO
+        return false;
     }
 }

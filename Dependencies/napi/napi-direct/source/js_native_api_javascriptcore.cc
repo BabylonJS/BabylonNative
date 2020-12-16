@@ -1,4 +1,4 @@
-#include "js_native_api_JavaScriptCore.h"
+#include "js_native_api_javascriptcore.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -2329,6 +2329,7 @@ napi_status napi_reject_deferred(napi_env env,
 napi_status napi_is_promise(napi_env env,
                             napi_value promise,
                             bool* is_promise) {
+  CHECK_ENV(env);
   CHECK_ARG(env, promise);
   CHECK_ARG(env, is_promise);
 
@@ -2343,6 +2344,7 @@ napi_status napi_is_promise(napi_env env,
 napi_status napi_run_script(napi_env env,
                             napi_value script,
                             napi_value* result) {
+  CHECK_ENV(env);
   CHECK_ARG(env, script);
   CHECK_ARG(env, result);
 
@@ -2362,6 +2364,7 @@ napi_status napi_run_script(napi_env env,
                             napi_value script,
                             const char* source_url,
                             napi_value* result) {
+  CHECK_ENV(env);
   CHECK_ARG(env, script);
   CHECK_ARG(env, result);
 
@@ -2393,6 +2396,7 @@ napi_status napi_add_finalizer(napi_env env,
 napi_status napi_adjust_external_memory(napi_env env,
                                         int64_t change_in_bytes,
                                         int64_t* adjusted_value) {
+  CHECK_ENV(env);
   CHECK_ARG(env, adjusted_value);
 
   // TODO: Determine if JSC needs or is able to do anything here

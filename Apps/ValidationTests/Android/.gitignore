@@ -1,0 +1,10 @@
+*.iml
+.gradle/
+.idea/
+local.properties
+
+app/.cxx/
+app/build/
+app/src/main/jniLibs
+app/src/main/assets
+node_modules/

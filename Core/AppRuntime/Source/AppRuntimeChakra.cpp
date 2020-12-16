@@ -58,10 +58,13 @@ namespace Babylon
 #endif
 
         Napi::Env env = Napi::Attach();
+
         Run(env);
-        Napi::Detach(env);
 
         ThrowIfFailed(JsSetCurrentContext(JS_INVALID_REFERENCE));
         ThrowIfFailed(JsDisposeRuntime(jsRuntime));
+
+        // Detach must come after JsDisposeRuntime since it triggers finalizers which require env.
+        Napi::Detach(env);
     }
 }

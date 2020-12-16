@@ -207,8 +207,8 @@ namespace {
 
         // Check if our orientation or size has changed and update camera UVs if necessary.
         if ([self checkAndUpdateCameraUVs:frame]) {
-            // If our camera UVs updated, then also update the FoV to match the updated UVs.
-            [self updateFoV:frame.camera];
+            // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
+            [self updateProjectionMatrix:frame.camera];
         }
 
         // Finally update the XR pose based on the current transform from ARKit.
@@ -274,31 +274,17 @@ namespace {
 }
 
 /**
- Finds the FoV of the AR Camera, and applies it to the frameView.
+ Gets the projection matrix of the AR Camera, and applies it to the frameView.
 */
-- (void)updateFoV:(ARCamera*)camera {
+- (void)updateProjectionMatrix:(ARCamera*)camera {
     // Get the viewport size and the orientation of the device.
     auto& frameView = activeFrameViews->at(0);
     auto viewportSize = [self viewportSize];
     auto orientation = [self orientation];
-    
-    // Grab the projection matrix for the image based on the viewport.
-    auto projection = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
-    
-    // Pull out the xScale, and yScale values from the projection matrix.
-    float xScale = projection.columns[0][0];
-    float yScale = projection.columns[1][1];
-    
-    // Calculate the aspect ratio of the projection.
-    float aspectRatio = yScale / xScale;
 
-    // Calculate FoV and apply it to the frame view.
-    // TODO: Validate if this actually gives the right FoV, it seems to be stretched vertically in Landscape
-    // mode likely due to the image being cropped by the transformation in checkAndUpdateCameraUVs vs being
-    // aspect fitted by projectionMatrixForOrientation.
-    float fov =  atanf(1 / yScale);
-    frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = fov);
-    frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = fov * aspectRatio);
+    // Grab the projection matrix for the image based on the viewport.
+    auto projectionMatrix = [camera projectionMatrixForOrientation:orientation viewportSize:viewportSize zNear:frameView.DepthNearZ zFar:frameView.DepthFarZ];
+    memcpy(frameView.ProjectionMatrix.data(), projectionMatrix.columns, sizeof(float) * frameView.ProjectionMatrix.size());
 }
 
 /**
@@ -538,7 +524,9 @@ namespace xr {
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources;
         std::vector<Frame::Plane> Planes{};
+        std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
+        ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         
@@ -602,11 +590,6 @@ namespace xr {
             
             [pipelineStateDescriptor release];
             commandQueue = [metalDevice newCommandQueue];
-            
-            // default fov values to avoid NaN at startup
-            auto& frameView = ActiveFrameViews[0];
-            frameView.FieldOfView.AngleDown = -(frameView.FieldOfView.AngleUp = 0.5);
-            frameView.FieldOfView.AngleLeft = -(frameView.FieldOfView.AngleRight = 0.5);
         }
 
         ~Impl() {
@@ -659,6 +642,15 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
+            // We may or may not be under the scope of an autoreleasepool already, so to guard against both cases grab the
+            // current frame inside a locally scoped autoreleasepool and manually retain the frame without marking for autorelease.
+            // DEVNOTE: We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see:
+            // https://github.com/BabylonJS/BabylonNative/issues/527
+            @autoreleasepool {
+                currentFrame = session.currentFrame;
+                [currentFrame retain];
+            }
+            
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
                 UIView* currentSuperview = [xrView superview];
@@ -669,7 +661,6 @@ namespace xr {
                     [desiredSuperview addSubview:xrView];
                 }
                 
-                ARFrame* currentFrame = [session currentFrame];
                 [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
             });
 
@@ -821,6 +812,11 @@ namespace xr {
 
                     // Finalize rendering here & push the command buffer to the GPU.
                     [commandBuffer commit];
+                    
+                    if (currentFrame != nil) {
+                        [currentFrame release];
+                        currentFrame = nil;
+                    }
                 }
                 @catch (NSException* exception) {
                     if (cameraTextureY != nil) {
@@ -838,7 +834,7 @@ namespace xr {
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
             @autoreleasepool {
-                if (session != nil && session.currentFrame != nil && session.currentFrame.camera != nil && [session.currentFrame.camera trackingState] == ARTrackingStateNormal) {
+                if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
                     if (@available(iOS 13.0, *)) {
                         GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                     } else {
@@ -1008,26 +1004,34 @@ namespace xr {
             planeDetectionEnabled = enabled;
             [sessionDelegate SetPlaneDetectionEnabled:enabled];
         }
+        
+        bool IsTracking() const {
+            // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
+            // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
+            // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
+            // ARTrackingStateNormal.
+            return currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
+        }
 
-        private:
-            ARSession* session{};
-            std::function<UIView*()> getMainView{};
-            MTKView* xrView{};
-            bool sessionEnded{ false };
-            id<MTLDevice> metalDevice{};
+    private:
+        ARSession* session{};
+        std::function<UIView*()> getMainView{};
+        MTKView* xrView{};
+        bool sessionEnded{ false };
+        id<MTLDevice> metalDevice{};
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
-            CAMetalLayer* metalLayer{};
+        CAMetalLayer* metalLayer{};
 #pragma clang diagnostic pop
-            SessionDelegate* sessionDelegate{};
-            id<MTLRenderPipelineState> pipelineState{};
-            vector_uint2 viewportSize{};
-            id<MTLCommandQueue> commandQueue;
-            std::vector<ARAnchor*> nativeAnchors{};
-            std::vector<float> planePolygonBuffer{};
-            std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
-            bool planeDetectionEnabled{ false };
+        SessionDelegate* sessionDelegate{};
+        id<MTLRenderPipelineState> pipelineState{};
+        vector_uint2 viewportSize{};
+        id<MTLCommandQueue> commandQueue;
+        std::vector<ARAnchor*> nativeAnchors{};
+        std::vector<float> planePolygonBuffer{};
+        std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
+        bool planeDetectionEnabled{ false };
         
         /*
          Helper function to translate a world transform into a hit test result.
@@ -1143,7 +1147,7 @@ namespace xr {
             }
 
             // Now perform the actual hit test and process the results
-            auto hitTestResults = [session.currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            auto hitTestResults = [currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
             for (ARHitTestResult* result in hitTestResults) {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
@@ -1162,9 +1166,13 @@ namespace xr {
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
         , Planes{ sessionImpl.Planes }
+        , Meshes{ sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
+        , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
@@ -1191,8 +1199,16 @@ namespace xr {
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier) const {
+        throw std::runtime_error("not implemented");
+    }
+
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier) const {
+        throw std::runtime_error("not implemented");
     }
 
     System::System(const char* appName)
@@ -1210,7 +1226,7 @@ namespace xr {
 
     arcana::task<bool, std::exception_ptr> System::IsSessionSupportedAsync(SessionType sessionType) {
         // Only IMMERSIVE_AR is supported for now.
-        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR);
+        return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR && ARWorldTrackingConfiguration.isSupported);
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
@@ -1252,6 +1268,24 @@ namespace xr {
     bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
     {
         // Point cloud system not yet supported.
+        return false;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions&)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool)
+    {
+        // TODO
+        return false;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions&)
+    {
+        // TODO
         return false;
     }
 }

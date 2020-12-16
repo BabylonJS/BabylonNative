@@ -2,6 +2,40 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Texture cache",
+            "playgroundId": "#20OAV9#237",
+            "referenceImage": "texture cache.png"
+        },
+        {
+            "title": "Sharpen",
+            "playgroundId": "#NAW8EA#1",
+            "renderCount": 20,
+            "referenceImage": "sharpen.png"
+        },
+        {
+            "title": "GLTF BoomBox with Unlit Material",
+            "playgroundId": "#GYM97C#2",
+            "referenceImage": "gltfUnlit.png"
+        },
+        {
+            "title": "Ribbon morphing",
+            "playgroundId": "#ACKC2#1",
+            "renderCount": 50,
+            "referenceImage": "ribbon morphing.png"
+        },
+        {
+            "title": "Solid particle system",
+            "playgroundId": "#WCDZS#92",
+            "renderCount": 150,
+            "referenceImage": "sps.png",
+            "errorRatio": 60.0
+        },
+        {
+            "title": "GLTF Buggy with Draco Mesh Compression",
+            "playgroundId": "#JNW207#1",
+            "referenceImage": "gltfBuggyDraco.png"
+        },
+        {
             "title": "LightFalloff",
             "playgroundId": "#20OAV9#201",
             "referenceImage": "lightFalloff.png"
@@ -43,6 +77,7 @@
         {
             "title": "Black and White post-process",
             "playgroundId": "#N55Q2M#0",
+            "renderCount": 20,
             "referenceImage": "bwpp.png"
         },
         {
