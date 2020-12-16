@@ -381,6 +381,7 @@ namespace Babylon
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
+                InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
@@ -438,6 +439,7 @@ namespace Babylon
                 InstanceValue("ADDRESS_MODE_BORDER", Napi::Number::From(env, BGFX_SAMPLER_U_BORDER)),
                 InstanceValue("ADDRESS_MODE_MIRROR_ONCE", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
 
+                InstanceValue("TEXTURE_FORMAT_RGB8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
 
@@ -1097,6 +1099,39 @@ namespace Babylon
                 {
                     onSuccessRef.Call({});
                 }
+            });
+    }
+
+    void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto data = info[1].As<Napi::TypedArray>();
+        const auto width = info[2].As<Napi::Number>().Uint32Value();
+        const auto height = info[3].As<Napi::Number>().Uint32Value();
+        const auto format = static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
+        const auto generateMips = info[5].As<Napi::Boolean>().Value();
+        const auto invertY = info[6].As<Napi::Boolean>().Value();
+        
+        const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+
+        arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
+            [this, bytes, width, height, format, generateMips, invertY]() {
+                bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
+                if (invertY)
+                {
+                    FlipY(image);
+                }
+                if (generateMips)
+                {
+                    GenerateMips(&m_allocator, &image);
+                }
+                return image;
+            })
+            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, dataRef{ Napi::Persistent(data) }](bimg::ImageContainer* image) {
+                ScheduleRender();
+                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
+                    CreateTextureFromImage(texture, image);
+                    });
             });
     }
 
