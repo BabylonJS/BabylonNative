@@ -45,6 +45,9 @@ namespace Babylon
 
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
+        float GetHardwareScalingLevel();
+        void SetHardwareScalingLevel(float level);
+
         BgfxCallback Callback{};
 
     private:
@@ -61,6 +64,14 @@ namespace Babylon
             bool Dirty{};
         } m_bgfxState{};
 
+        struct
+        {
+            std::mutex Mutex{};
+            size_t width;
+            size_t height;
+        } m_resolution{};
+
+
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
@@ -68,6 +79,8 @@ namespace Babylon
         arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
         std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
         std::mutex m_renderWorkTasksMutex{};
+
+        float m_hardwareScalingLevel{1.0f};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
     };
