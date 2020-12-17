@@ -70,11 +70,9 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        std::scoped_lock resolutionLock{m_resolution.Mutex};
         m_resolution.width = width;
         m_resolution.height = height;
 
-        std::scoped_lock bgfxStateLock{m_bgfxState.Mutex};
         m_bgfxState.Dirty = true;
 
         auto& res = m_bgfxState.InitState.resolution;
