@@ -403,6 +403,8 @@ namespace Babylon
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+                InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
+                InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -688,7 +690,7 @@ namespace Babylon
 
         std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
-        
+
         try
         {
             shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
@@ -1529,5 +1531,14 @@ namespace Babylon
         m_runtime.Dispatch([function = std::move(function)](Napi::Env) {
             function();
         });
+    }
+
+    void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info){
+        const auto level = info[0].As<Napi::Number>().FloatValue();
+        m_graphicsImpl.SetHardwareScalingLevel(level);
+    }
+
+    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info){
+        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
     }
 }

@@ -64,12 +64,17 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        std::scoped_lock lock{m_bgfxState.Mutex};
+        std::scoped_lock resolutionLock{m_resolution.Mutex};
+        m_resolution.width = width;
+        m_resolution.height = height;
+
+        std::scoped_lock bgfxStateLock{m_bgfxState.Mutex};
         m_bgfxState.Dirty = true;
 
         auto& res = m_bgfxState.InitState.resolution;
-        res.width = static_cast<uint32_t>(width);
-        res.height = static_cast<uint32_t>(height);
+        auto ratio = GetHardwareScalingLevel();
+        res.width = static_cast<uint32_t>(m_resolution.width * ratio);
+        res.height = static_cast<uint32_t>(m_resolution.height * ratio);
     }
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
@@ -249,6 +254,21 @@ namespace Babylon
         Callback.SetDiagnosticOutput(std::move(outputFunction));
     }
 
+    float Graphics::Impl::GetHardwareScalingLevel()
+    {
+        return m_hardwareScalingLevel;
+    }
+
+    void Graphics::Impl::SetHardwareScalingLevel(float level)
+    {
+        m_hardwareScalingLevel = level;
+
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        m_bgfxState.Dirty = true;
+
+        Resize(m_resolution.width, m_resolution.height);
+    }
+
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
@@ -353,5 +373,13 @@ namespace Babylon
     void Graphics::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
+    }
+
+    void Graphics::SetHardwareScalingLevel(float level){
+        m_impl->SetHardwareScalingLevel(level);
+    }
+
+    float Graphics::GetHardwareScalingLevel(){
+        return m_impl->GetHardwareScalingLevel();
     }
 }
