@@ -8,10 +8,6 @@ warnings_as_errors(XMLHttpRequest)
 
 target_include_directories(XMLHttpRequest PUBLIC "Include")
 
-if(WIN32)
-    target_compile_definitions(XMLHttpRequest PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-endif()
-
 target_link_to_dependencies(XMLHttpRequest
     PUBLIC JsRuntime
     PRIVATE arcana
