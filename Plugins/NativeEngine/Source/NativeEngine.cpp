@@ -397,9 +397,6 @@ namespace Babylon
                 InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
                 InstanceMethod("draw", &NativeEngine::Draw),
                 InstanceMethod("clear", &NativeEngine::Clear),
-                InstanceMethod("clearColor", &NativeEngine::ClearColor),
-                InstanceMethod("clearDepth", &NativeEngine::ClearDepth),
-                InstanceMethod("clearStencil", &NativeEngine::ClearStencil),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
@@ -1423,22 +1420,42 @@ namespace Babylon
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateFlags(info);
-    }
+        FrameBufferData& frameBufferData{m_frameBufferManager.GetBound()};
+        frameBufferData.UseViewId(m_frameBufferManager.GetNewViewId());
 
-    void NativeEngine::ClearColor(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateColor(info);
-    }
+        ViewClearState& viewClearState{frameBufferData.ViewClearState};
+        uint16_t flags{0};
 
-    void NativeEngine::ClearStencil(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateStencil(info);
-    }
+        if (info[0].IsObject())
+        {
+            const auto color{info[0].As<Napi::Object>()};
+            const auto r = color.Get("r");
+            const auto g = color.Get("g");
+            const auto b = color.Get("b");
+            const auto a = color.Get("a");
 
-    void NativeEngine::ClearDepth(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateDepth(info);
+            viewClearState.UpdateColor(
+                r.As<Napi::Number>().FloatValue(),
+                g.As<Napi::Number>().FloatValue(),
+                b.As<Napi::Number>().FloatValue(),
+                a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue());
+
+            flags |= BGFX_CLEAR_COLOR;
+        }
+
+        if (info[1].IsNumber())
+        {
+            viewClearState.UpdateDepth(info[1].As<Napi::Number>().FloatValue());
+            flags |= BGFX_CLEAR_DEPTH;
+        }
+
+        if (info[2].IsNumber())
+        {
+            viewClearState.UpdateStencil(static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value()));
+            flags |= BGFX_CLEAR_STENCIL;
+        }
+
+        viewClearState.UpdateFlags(flags);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
