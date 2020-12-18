@@ -1114,25 +1114,16 @@ namespace Babylon
         
         const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
 
-        arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, bytes, width, height, format, generateMips, invertY]() {
-                bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
-                if (invertY)
-                {
-                    FlipY(image);
-                }
-                if (generateMips)
-                {
-                    GenerateMips(&m_allocator, &image);
-                }
-                return image;
-            })
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, dataRef{ Napi::Persistent(data) }](bimg::ImageContainer* image) {
-                ScheduleRender();
-                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
-                    CreateTextureFromImage(texture, image);
-                    });
-            });
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
+        if (invertY)
+        {
+            FlipY(image);
+        }
+        if (generateMips)
+        {
+            GenerateMips(&m_allocator, &image);
+        }
+        CreateTextureFromImage(texture, image);
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
