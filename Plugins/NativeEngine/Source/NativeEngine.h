@@ -210,6 +210,10 @@ namespace Babylon
         ~FrameBufferData()
         {
             bgfx::destroy(FrameBuffer);
+
+            // Force BGFX to mark the frame buffer as unused.
+            // This is likely broken for multi-threaded scenarios, and we need to find a real fix for this.
+            bgfx::frame(false);
         }
 
         void UseViewId(uint16_t viewId)
@@ -249,6 +253,11 @@ namespace Babylon
         // When this flag is true, projection matrix will not be flipped for API that would normaly need it.
         // Namely Direct3D and Metal.
         bool ActAsBackBuffer{false};
+
+        // This is a hack to keep track of whether this frame buffer has been passed back to Babylon.js
+        // and if its deletion should be owned by Javascript and tied to the lifetime of a texture or whether
+        // only BabylonNative knows about its existence, and should own deletion. Blame Gary.
+        bool OwnedByJS{false};
     };
 
     struct FrameBufferManager final

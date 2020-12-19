@@ -1051,7 +1051,9 @@ namespace Babylon
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
 
-        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
+        const auto frameBufferData = m_frameBufferManager.CreateNew(frameBufferHandle, width, height);
+        frameBufferData->OwnedByJS = true;
+        return Napi::External<FrameBufferData>::New(info.Env(), frameBufferData);
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
@@ -1258,8 +1260,12 @@ namespace Babylon
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        delete texture;
+        // It is possible that we were called on an null/undefined texture if so no action required.
+        if (!info[0].IsNull() && !info[0].IsUndefined())
+        {
+            const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+            delete texture;
+        }
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
@@ -1305,14 +1311,21 @@ namespace Babylon
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
-
+        const auto frameBufferData = m_frameBufferManager.CreateNew(frameBufferHandle, width, height);
+        frameBufferData->OwnedByJS = true;
         return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
+        // Check if this native frame buffer is marked as owned by JavaScript.  It's possible that
+        // we do not recognize it as having been passed back to JS in which case BabylonNative should be
+        // responsible for deleting this frame buffer instead.
         const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        delete frameBufferData;
+        if (frameBufferData->OwnedByJS)
+        {
+            delete frameBufferData;
+        }
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
