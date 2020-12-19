@@ -297,7 +297,9 @@ namespace xr
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
+            std::vector<Frame::SceneObject> SceneObjects{};
             std::vector<Frame::Plane> Planes{};
+            std::vector<Frame::Mesh> Meshes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
@@ -312,8 +314,6 @@ namespace xr
             static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
             static constexpr uint32_t THUMBSTICK_X_AXIS = 2;
             static constexpr uint32_t THUMBSTICK_Y_AXIS = 3;
-
-            XrBool32 ControllerBinding{ true };
         } ControllerInfo;
 
         struct HandInfo
@@ -808,7 +808,7 @@ namespace xr
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
             microsoftSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
             microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
-            ControllerInfo.ControllerBinding = XR_SUCCEEDED(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
@@ -1115,53 +1115,68 @@ namespace xr
             depthInfoView.subImage.imageArrayIndex = 0;
         }
 
-        bool QueryControllerFloatAction(XrAction controllerAction, XrSession session, float& currentFloatState)
+        // Returns true if the action is supported on the current input
+        bool TryUpdateControllerFloatAction(XrAction controllerAction, XrSession session, float& currentFloatState)
         {
             // query input action state
             XrActionStateFloat floatActionState{XR_TYPE_ACTION_STATE_FLOAT};
             XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             getInfo.action = controllerAction;
             XrCheck(xrGetActionStateFloat(session, &getInfo, &floatActionState));
-            auto controllerInfo = sessionImpl.ControllerInfo;
+            if (!floatActionState.isActive)
+            {
+                return false;
+            }
+
             if (floatActionState.changedSinceLastSync)
             {
                 currentFloatState = floatActionState.currentState;
-                return true;
             }
-            return false;
+
+            return true;
         }
 
-       bool QueryControllerBooleanAction(XrAction controllerAction, XrSession session, bool& currentBooleanState)
-       {
-           // query input action state
-           XrActionStateBoolean booleanActionState{XR_TYPE_ACTION_STATE_BOOLEAN};
-           XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-           getInfo.action = controllerAction;
-           XrCheck(xrGetActionStateBoolean(session, &getInfo, &booleanActionState));
-           auto controllerInfo = sessionImpl.ControllerInfo;
-           if (booleanActionState.changedSinceLastSync)
-           {
+        // Returns true if the action is supported on the current input
+        bool TryUpdateControllerBooleanAction(XrAction controllerAction, XrSession session, bool& currentBooleanState)
+        {
+            // query input action state
+            XrActionStateBoolean booleanActionState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            getInfo.action = controllerAction;
+            XrCheck(xrGetActionStateBoolean(session, &getInfo, &booleanActionState));
+            if (!booleanActionState.isActive)
+            {
+                return false;
+            }
+
+            if (booleanActionState.changedSinceLastSync)
+            {
                currentBooleanState = booleanActionState.currentState;
-               return true;
-           }
-           return false;
-       }
+            }
+
+            return true;
+        }
         
-        bool QueryControllerVector2fAction(XrAction controllerAction, XrSession session, float& currentXState, float& currentYState)
+        // Returns true if the action is supported on the current input
+        bool TryUpdateControllerVector2fAction(XrAction controllerAction, XrSession session, float& currentXState, float& currentYState)
         {
             // query input action state
             XrActionStateVector2f vector2fActionState{XR_TYPE_ACTION_STATE_VECTOR2F};
             XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             getInfo.action = controllerAction;
             XrCheck(xrGetActionStateVector2f(session, &getInfo, &vector2fActionState));
-            auto controllerInfo = sessionImpl.ControllerInfo;
+            if (!vector2fActionState.isActive)
+            {
+                return false;
+            }
+
             if (vector2fActionState.changedSinceLastSync)
             {
                 currentXState = vector2fActionState.currentState.x;
                 currentYState = vector2fActionState.currentState.y;
-                return true;
             }
-            return false;
+
+            return true;
         }
     };
 
@@ -1169,9 +1184,14 @@ namespace xr
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
         , Planes { sessionImpl.ActionResources.Planes }
+        , Meshes { sessionImpl.ActionResources.Meshes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
+        , UpdatedSceneObjects{}
+        , RemovedSceneObjects{}
         , UpdatedPlanes{}
         , RemovedPlanes{}
+        , UpdatedMeshes{}
+        , RemovedMeshes{}
         // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
         // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
         , IsTracking{true}
@@ -1362,7 +1382,21 @@ namespace xr
             }
 
             const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-            su.UpdateFrame(SceneUnderstanding::UpdateFrameArgs{ sceneSpace, extensions, displayTime, Planes, UpdatedPlanes, RemovedPlanes });
+            SceneUnderstanding::UpdateFrameArgs args
+            {
+                sceneSpace,
+                extensions,
+                displayTime,
+                UpdatedSceneObjects,
+                RemovedSceneObjects,
+                Planes,
+                UpdatedPlanes,
+                RemovedPlanes,
+                Meshes,
+                UpdatedMeshes,
+                RemovedMeshes
+            };
+            su.UpdateFrame(args);
 
             // Locate all the things.
             auto& actionResources = m_impl->sessionImpl.ActionResources;
@@ -1431,63 +1465,22 @@ namespace xr
                 }
 
                 // Get gamepad data 
-                const auto& controllerInfo = sessionImpl.ControllerInfo;
-                if (controllerInfo.ControllerBinding)
                 {
-                     auto& inputSource = InputSources[idx];
-                     inputSource.GamepadTrackedThisFrame = true;
+                    const auto& controllerInfo = sessionImpl.ControllerInfo;
+                    auto& gamepadObject = InputSources[idx].GamepadObject;
 
-                    // Get trigger value data
-                    float currentTriggerValue;
-                    if (m_impl->QueryControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, currentTriggerValue))
+                    // Update gamepad data
+                    if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
+                        (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
+                        (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
+                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
                     {
-                        inputSource.GamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = currentTriggerValue;
+                        // Only signal that gamepad data is available if the actions were available
+                        InputSources[idx].GamepadTrackedThisFrame = true;
                     }
-
-                    // Get squeeze click data
-                    bool currentSqueezeValue;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, currentSqueezeValue))
-                    {
-                        inputSource.GamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed = currentSqueezeValue;
-                    }
-
-                    // Get trackpad axes data
-                    float currentTrackpadXAxis, currentTrackpadYAxis;
-                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, currentTrackpadXAxis, currentTrackpadYAxis))
-                    {
-                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS] = currentTrackpadXAxis;
-                        inputSource.GamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = currentTrackpadYAxis;
-                    }
-
-                    //Get trackpad click data
-                    bool currentTrackpadValue;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, currentTrackpadValue))
-                    {
-                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed = currentTrackpadValue;
-                    }
-
-                    //Get trackpad touch data
-                    bool currentTrackpadTouch;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, currentTrackpadTouch))
-                    {
-                        inputSource.GamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched = currentTrackpadTouch;
-                    }
-
-                    // Get thumbstick axes data
-                    float currentThumbstickXAxis, currentThumbstickYAxis;
-                    if (m_impl->QueryControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, currentThumbstickXAxis, currentThumbstickYAxis))
-                    {
-                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] = currentThumbstickXAxis;
-                        inputSource.GamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = currentThumbstickYAxis;
-                    }
-
-                    //Get thumbstick click data
-                    bool currentThumbstickValue;
-                    if (m_impl->QueryControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, currentThumbstickValue))
-                    {
-                        inputSource.GamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed = currentThumbstickValue;
-                    }
-
                 }
 
                 // Get joint data
@@ -1748,10 +1741,22 @@ namespace xr
         m_impl->sessionImpl.DeleteAnchor(anchor);
     }
 
+    System::Session::Frame::SceneObject& System::Session::Frame::GetSceneObjectByID(System::Session::Frame::SceneObject::Identifier id) const
+    {
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.GetSceneObjectByID(id);
+    }
+
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier id) const
     {
         const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-        return su.TryGetPlaneByID(id);
+        return su.GetPlaneByID(id);
+    }
+
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier id) const
+    {
+        const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+        return su.GetMeshByID(id);
     }
 
     void System::Session::SetPlaneDetectionEnabled(bool enabled) const
@@ -1769,5 +1774,57 @@ namespace xr
     {
         // Point cloud system not yet supported.
         return false;
+    }
+
+    bool System::Session::TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& detectorOptions)
+    {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+
+        SceneUnderstanding::InitOptions initOptions
+        {
+            session,
+            extensions,
+            detectorOptions.DetectionBoundary,
+            detectorOptions.UpdateInterval
+        };
+
+        su.Initialize(initOptions);
+
+        return true;
+    }
+
+    bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
+    {
+        if (enabled)
+        {
+            const auto& session = m_impl->HmdImpl.Context.Session();
+            const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+            SceneUnderstanding::InitOptions initOptions{ session, extensions };
+            su.Initialize(initOptions);
+        }
+
+        return true;
+    }
+
+    bool System::Session::TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& detectorOptions)
+    {
+        const auto& session = m_impl->HmdImpl.Context.Session();
+        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+        auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+
+        SceneUnderstanding::InitOptions initOptions
+        {
+            session,
+            extensions,
+            detectorOptions.DetectionBoundary,
+            detectorOptions.UpdateInterval
+        };
+
+        su.Initialize(initOptions);
+
+        return true;
     }
 }
