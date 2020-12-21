@@ -394,12 +394,21 @@ namespace Babylon
         } while (!shouldEndSession);
 
         // Destroy any bgfx FrameBuffers that are not marked as owned by JS.
+        bool frameBuffersDestroyed{false};
         for (auto& pair : m_texturesToFrameBuffers)
         {
             if (!pair.second->OwnedByJS)
             {
+                frameBuffersDestroyed = true;
                 delete pair.second;
             }
+        }
+
+        // If any frame buffers were destroyed, we need to call bgfx::frame once to force clean up.
+        // This is likely broken for multi-threaded scenarios.
+        if (frameBuffersDestroyed)
+        {
+            bgfx::frame();
         }
 
         m_texturesToFrameBuffers.clear();

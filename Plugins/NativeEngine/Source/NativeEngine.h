@@ -210,10 +210,6 @@ namespace Babylon
         ~FrameBufferData()
         {
             bgfx::destroy(FrameBuffer);
-
-            // Force BGFX to mark the frame buffer as unused.
-            // This is likely broken for multi-threaded scenarios, and we need to find a real fix for this.
-            bgfx::frame(false);
         }
 
         void UseViewId(uint16_t viewId)
