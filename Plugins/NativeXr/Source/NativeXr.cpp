@@ -203,6 +203,87 @@ namespace
         return Napi::Persistent(jsInputSource);
     }
 
+    void PopulateDetectionBoundary(const Napi::Object& object, xr::DetectionBoundary& detectionBoundary)
+    {
+        if (object.Has("type"))
+        {
+            const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap
+            {
+                {"box", xr::DetectionBoundaryType::Box},
+                {"frustum", xr::DetectionBoundaryType::Frustum},
+                {"sphere", xr::DetectionBoundaryType::Sphere}
+            };
+            detectionBoundary.Type = detectionBoundaryTypeMap.at(object.Get("type").As<Napi::String>());
+        }
+
+        switch (detectionBoundary.Type)
+        {
+        case xr::DetectionBoundaryType::Box:
+            if (object.Has("extent"))
+            {
+                const auto& vector = object.Get("extent").As<Napi::Object>();
+                xr::Vector3f boxDimensions{};
+                boxDimensions.X = vector.Get("x").As<Napi::Number>();
+                boxDimensions.Y = vector.Get("y").As<Napi::Number>();
+                boxDimensions.Z = vector.Get("z").As<Napi::Number>();
+                detectionBoundary.Data = boxDimensions;
+            }
+            break;
+        case xr::DetectionBoundaryType::Frustum:
+            if (object.Has("frustum"))
+            {
+                const auto& frustum = object.Get("frustum").As<Napi::Object>();
+                xr::Frustum frustumData{};
+                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+
+                const auto& vector = frustum.Get("position").As<Napi::Object>();
+                frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
+                frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
+                frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
+
+                const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
+                frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
+                frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
+                frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
+                frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
+
+                const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
+                frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
+                frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
+                frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
+                frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
+
+                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+
+                detectionBoundary.Data = frustumData;
+            }
+            break;
+        case xr::DetectionBoundaryType::Sphere:
+            if (object.Has("radius"))
+            {
+                detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
+            }
+            break;
+        }
+    }
+
+    xr::GeometryDetectorOptions CreateDetectorOptions(const Napi::Object& object)
+    {
+        xr::GeometryDetectorOptions options{};
+        if (object.Has("updateInterval"))
+        {
+            options.UpdateInterval = object.Get("updateInterval").As<Napi::Number>();
+        }
+
+        if (object.Has("detectionBoundary"))
+        {
+            const auto& detectionBoundary = object.Get("detectionBoundary").As<Napi::Object>();
+            PopulateDetectionBoundary(detectionBoundary, options.DetectionBoundary);
+        }
+
+        return options;
+    }
+    
     void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
@@ -318,6 +399,21 @@ namespace Babylon
         bool TrySetFeaturePointCloudEnabled(bool enabled)
         {
             return m_session->TrySetFeaturePointCloudEnabled(enabled);
+        }
+
+        bool TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& options)
+        {
+            return m_session->TrySetPreferredPlaneDetectorOptions(options);
+        }
+
+        bool TrySetMeshDetectorEnabled(const bool enabled)
+        {
+            return m_session->TrySetMeshDetectorEnabled(enabled);
+        }
+
+        bool TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& options)
+        {
+            return m_session->TrySetPreferredMeshDetectorOptions(options);
         }
 
     private:
@@ -1425,6 +1521,7 @@ namespace Babylon
                         InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
                         InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
+                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1502,11 +1599,205 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
+            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
+
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
 
             // The underlying native plane.
             xr::System::Session::Frame::Plane::Identifier m_nativePlaneID{};
+
+            // Pointer to the XRFrame object.
+            XRFrame* m_frame{};
+        };
+
+        class XRMesh : public Napi::ObjectWrap<XRMesh>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRMesh";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
+                        InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
+                        InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
+                        InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
+                        InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
+                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::Env& env)
+            {
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRMesh(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRMesh>{info}
+            {
+            }
+
+            ~XRMesh()
+            {
+                m_jsPositions.Reset();
+                m_jsIndices.Reset();
+                m_jsNormals.Reset();
+            }
+
+            void SetLastUpdatedTime(uint32_t timestamp)
+            {
+                m_lastUpdatedTimestamp = timestamp;
+            }
+
+            void SetNativeMeshId(xr::System::Session::Frame::Mesh::Identifier meshID)
+            {
+                m_nativeMeshID = meshID;
+            }
+
+            void SetXRFrame(XRFrame* frame)
+            {
+                m_frame = frame;
+            }
+
+        private:
+            xr::System::Session::Frame::Mesh& GetMesh();
+
+            Napi::Value GetMeshSpace(const Napi::CallbackInfo& info)
+            {
+                Napi::Object napiTransform = XRRigidTransform::New(info);
+                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
+
+                // TODO: update to not use identity pose as needed
+                rigidTransform->Update(xr::Pose{});
+
+                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
+                return std::move(napiSpace);
+            }
+
+            Napi::Value GetPositions(const Napi::CallbackInfo& info)
+            {
+                // NOTE: WebXR reports positions as right-handed coordinates
+                const auto& mesh = GetMesh();
+                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
+                bool updateValues = false;
+                if (!m_jsPositions ||
+                    m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
+                {
+                    m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
+                    m_jsPositions.Reset();
+                    m_jsPositions = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsPositions));
+                    updateValues = true;
+                }
+                else if (m_lastPositionsUpdatedTimestamp != m_lastUpdatedTimestamp)
+                {
+                    m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
+                    updateValues = true;
+                }
+
+                if (updateValues)
+                {
+                    for (size_t n = 0; n < mesh.Positions.size(); n++)
+                    {
+                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Positions.at(n).X;
+                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Positions.at(n).Y;
+                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Positions.at(n).Z;
+                    }
+                }
+
+                return m_jsPositions.Value();
+            }
+
+            Napi::Value GetIndices(const Napi::CallbackInfo& info)
+            {
+                // NOTE: WebXR reports indices in a counterclockwise winding order
+                assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
+                const auto& mesh = GetMesh();
+                if (!m_jsIndices ||
+                    m_numJsIndices != mesh.Indices.size())
+                {
+                    m_numJsIndices = mesh.Indices.size();
+                    m_jsIndices.Reset();
+                    m_jsIndices = Napi::Persistent(Napi::Uint32Array::New(info.Env(), m_numJsIndices));
+                    memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
+                    m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
+                }
+                else if (m_lastIndicesUpdatedTimestamp != m_lastUpdatedTimestamp)
+                {
+                    memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
+                    m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
+                }
+
+                return m_jsIndices.Value();
+            }
+
+            Napi::Value GetNormals(const Napi::CallbackInfo& info)
+            {
+                // NOTE: WebXR reports normals as right-handed vectors
+                const auto& mesh = GetMesh();
+                if (!mesh.HasNormals)
+                {
+                    return info.Env().Undefined();
+                }
+
+                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
+                if (!m_jsNormals ||
+                    m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
+                {
+                    m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
+                    m_jsNormals.Reset();
+                    m_jsNormals = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsNormals));
+                    for (size_t n = 0; n < mesh.Normals.size(); n++)
+                    {
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
+                    }
+                    m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
+                }
+                else if (m_lastNormalsUpdatedTimestamp != m_lastUpdatedTimestamp)
+                {
+                    for (size_t n = 0; n < mesh.Normals.size(); n++)
+                    {
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
+                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
+                    }
+                    m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
+                }
+
+                return m_jsNormals.Value();
+            }
+
+            Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
+            }
+
+            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
+
+            // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
+            uint32_t m_lastUpdatedTimestamp{ 0 };
+            uint32_t m_lastPositionsUpdatedTimestamp{ 0 };
+            uint32_t m_lastIndicesUpdatedTimestamp{ 0 };
+            uint32_t m_lastNormalsUpdatedTimestamp{ 0 };
+
+            size_t m_numJsPositions{ 0 };
+            Napi::Reference<Napi::Float32Array> m_jsPositions{};
+            size_t m_numJsIndices{ 0 };
+            Napi::Reference<Napi::Uint32Array> m_jsIndices{};
+            size_t m_numJsNormals{ 0 };
+            Napi::Reference<Napi::Float32Array> m_jsNormals{};
+
+            // The underlying native mesh.
+            xr::System::Session::Frame::Mesh::Identifier m_nativeMeshID{};
 
             // Pointer to the XRFrame object.
             XRFrame* m_frame{};
@@ -1577,7 +1868,7 @@ namespace Babylon
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
-                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr)
+                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1610,8 +1901,14 @@ namespace Babylon
                 // Update anchor positions.
                 UpdateAnchors();
 
+                // Update scene objects.
+                UpdateSceneObjects(env);
+
                 // Update planes.
                 UpdatePlanes(env, timestamp);
+
+                // Update meshes.
+                UpdateMeshes(env, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -1637,6 +1934,22 @@ namespace Babylon
             {
                 return m_frame->GetPlaneByID(planeID);
             }
+            
+            xr::System::Session::Frame::Mesh& GetMeshFromID(xr::System::Session::Frame::Mesh::Identifier meshID)
+            {
+                return m_frame->GetMeshByID(meshID);
+            }
+
+            Napi::Value GetJSSceneObjectFromID(const Napi::CallbackInfo& info, const xr::System::Session::Frame::SceneObject::Identifier objectID)
+            {
+                if (objectID == xr::System::Session::Frame::SceneObject::INVALID_ID)
+                {
+                    return info.Env().Undefined();
+                }
+
+                assert(m_sceneObjects.count(objectID) > 0);
+                return m_sceneObjects.at(objectID).Value();
+            }
 
         private:
             const xr::System::Session::Frame* m_frame{};
@@ -1644,6 +1957,9 @@ namespace Babylon
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
+            std::unordered_map<xr::System::Session::Frame::Mesh::Identifier, Napi::ObjectReference> m_trackedMeshes{};
+            Napi::ObjectReference m_meshSet{};
+            std::unordered_map<xr::System::Session::Frame::SceneObject::Identifier, Napi::ObjectReference> m_sceneObjects{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
@@ -1813,6 +2129,12 @@ namespace Babylon
 
                 // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
+
+                if (m_meshSet)
+                {
+                    worldInformationObj.Set("detectedMeshes", m_meshSet.Value());
+                }
+
                 return std::move(worldInformationObj);
             }
 
@@ -1833,6 +2155,25 @@ namespace Babylon
                 }
 
                 return std::move(featurePointArray);
+            }
+
+            void UpdateSceneObjects(const Napi::Env& env)
+            {
+                for (const auto& sceneObjectID : m_frame->UpdatedSceneObjects)
+                {
+                    if (m_sceneObjects.count(sceneObjectID) == 0)
+                    {
+                        m_sceneObjects[sceneObjectID] = Napi::Persistent(Napi::Object::New(env));
+                    }
+
+                    const auto& sceneObject = m_frame->GetSceneObjectByID(sceneObjectID);
+                    m_sceneObjects.at(sceneObjectID).Value().Set("type", xr::SceneObjectTypeNames.at(sceneObject.Type));
+                }
+
+                for (const auto& removedObjectID : m_frame->RemovedSceneObjects)
+                {
+                    m_sceneObjects.erase(removedObjectID);
+                }
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
@@ -1868,6 +2209,42 @@ namespace Babylon
                     m_trackedPlanes.erase(trackedPlaneIterator);
                 }
             }
+
+            void UpdateMeshes(const Napi::Env& env, uint32_t timestamp)
+            {
+                for (auto meshID : m_frame->UpdatedMeshes)
+                {
+                    XRMesh* xrMesh{};
+                    auto trackedMeshIterator = m_trackedMeshes.find(meshID);
+
+                    if (trackedMeshIterator == m_trackedMeshes.end())
+                    {
+                        auto napiMesh = Napi::Persistent(XRMesh::New(env));
+                        xrMesh = XRMesh::Unwrap(napiMesh.Value());
+                        xrMesh->SetNativeMeshId(meshID);
+                        xrMesh->SetXRFrame(this);
+                        m_trackedMeshes.insert({meshID, std::move(napiMesh)});
+                    }
+                    else
+                    {
+                        xrMesh = XRMesh::Unwrap(trackedMeshIterator->second.Value());
+                    }
+
+                    xrMesh->SetLastUpdatedTime(timestamp);
+                }
+
+                for (auto meshID : m_frame->RemovedMeshes)
+                {
+                    m_trackedMeshes.erase(meshID);
+                }
+
+                // Create a new mesh set every frame, detected meshes are assumed immutable
+                m_meshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
+                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
+                {
+                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), { meshNapiValue.Value() });
+                }
+            }
         };
 
         // Creates an anchor from a hit result.
@@ -1879,6 +2256,23 @@ namespace Babylon
         xr::System::Session::Frame::Plane& XRPlane::GetPlane()
         {
             return m_frame->GetPlaneFromID(m_nativePlaneID);
+        }
+
+        Napi::Value XRPlane::GetParentSceneObject(const Napi::CallbackInfo& info)
+        {
+            const auto& plane = GetPlane();
+            return m_frame->GetJSSceneObjectFromID(info, plane.ParentSceneObjectID);
+        }
+
+        xr::System::Session::Frame::Mesh& XRMesh::GetMesh()
+        {
+            return m_frame->GetMeshFromID(m_nativeMeshID);
+        }
+
+        Napi::Value XRMesh::GetParentSceneObject(const Napi::CallbackInfo& info)
+        {
+            const auto& mesh = GetMesh();
+            return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
@@ -1906,7 +2300,10 @@ namespace Babylon
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
                         InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
-                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled)
+                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled),
+                        InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
+                        InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
+                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -2204,6 +2601,45 @@ namespace Babylon
                 deferred.Resolve(XRHitTestSource::New(info));
                 return deferred.Promise();
             }
+
+            Napi::Value TrySetPreferredPlaneDetectorOptions(const Napi::CallbackInfo& info)
+            {
+                if (info.Length() != 1 ||
+                    !info[0].IsObject())
+                {
+                    throw std::exception(/*invalid arguments*/);
+                }
+
+                const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
+                const auto result = m_xr.TrySetPreferredPlaneDetectorOptions(options);
+                return Napi::Value::From(info.Env(), result);
+            }
+
+            Napi::Value TrySetMeshDetectorEnabled(const Napi::CallbackInfo& info)
+            {
+                if (info.Length() != 1 ||
+                    !info[0].IsBoolean())
+                {
+                    throw std::exception(/*invalid arguments*/);
+                }
+
+                const auto enabled = info[0].As<Napi::Boolean>();
+                const auto result = m_xr.TrySetMeshDetectorEnabled(enabled);
+                return Napi::Value::From(info.Env(), result);
+            }
+
+            Napi::Value TrySetPreferredMeshDetectorOptions(const Napi::CallbackInfo& info)
+            {
+                if (info.Length() != 1 ||
+                    !info[0].IsObject())
+                {
+                    throw std::exception(/*invalid arguments*/);
+                }
+
+                const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
+                const auto result = m_xr.TrySetPreferredMeshDetectorOptions(options);
+                return Napi::Value::From(info.Env(), result);
+            }
         };
 
         class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget>
@@ -2428,6 +2864,7 @@ namespace Babylon
             XRFrame::Initialize(env);
             XRHand::Initialize(env);
             XRPlane::Initialize(env);
+            XRMesh::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);

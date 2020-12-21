@@ -41,16 +41,14 @@ namespace Babylon
             }
         }
 
-        void UpdateFlags(const Napi::CallbackInfo& info)
+        void UpdateFlags(uint16_t flags)
         {
-            const auto flags = static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value());
             Flags = flags;
             Update();
         }
 
-        void UpdateDepth(const Napi::CallbackInfo& info)
+        void UpdateDepth(float depth)
         {
-            const auto depth = info[0].As<Napi::Number>().FloatValue();
             const bool needToUpdate = Depth != depth;
             if (needToUpdate)
             {
@@ -59,9 +57,8 @@ namespace Babylon
             }
         }
 
-        void UpdateStencil(const Napi::CallbackInfo& info)
+        void UpdateStencil(uint8_t stencil)
         {
-            const auto stencil = static_cast<uint8_t>(info[0].As<Napi::Number>().Int32Value());
             const bool needToUpdate = Stencil != stencil;
             if (needToUpdate)
             {
@@ -111,7 +108,7 @@ namespace Babylon
     {
     public:
         ViewClearState(uint16_t viewId, ClearState& clearState)
-            : m_viewId{viewId} 
+            : m_viewId{viewId}
             , m_clearState{clearState}
             , m_callbackTicket{m_clearState.AddUpdateCallback([this]() { Update(); })}
         {
@@ -122,28 +119,19 @@ namespace Babylon
             m_clearState.UpdateColor(r, g, b, a);
         }
 
-        void UpdateColor(const Napi::CallbackInfo& info)
+        void UpdateFlags(uint16_t flags)
         {
-            const auto r = info[0].As<Napi::Number>().FloatValue();
-            const auto g = info[1].As<Napi::Number>().FloatValue();
-            const auto b = info[2].As<Napi::Number>().FloatValue();
-            const auto a = info[3].IsUndefined() ? 1.f : info[3].As<Napi::Number>().FloatValue();
-            m_clearState.UpdateColor(r, g, b, a);
+            m_clearState.UpdateFlags(flags);
         }
 
-        void UpdateFlags(const Napi::CallbackInfo& info)
+        void UpdateDepth(float depth)
         {
-            m_clearState.UpdateFlags(info);
+            m_clearState.UpdateDepth(depth);
         }
 
-        void UpdateDepth(const Napi::CallbackInfo& info)
+        void UpdateStencil(uint8_t stencil)
         {
-            m_clearState.UpdateDepth(info);
-        }
-
-        void UpdateStencil(const Napi::CallbackInfo& info)
-        {
-            m_clearState.UpdateStencil(info);
+            m_clearState.UpdateStencil(stencil);
         }
 
         void UpdateViewId(uint16_t viewId)
@@ -285,8 +273,16 @@ namespace Babylon
             m_renderingToTarget = !m_boundFrameBuffer->ActAsBackBuffer;
         }
 
-        FrameBufferData& GetBound() const
+        FrameBufferData& GetBound()
         {
+            // Babylon.js minimizes how frequently Bind() is called, causing there
+            // to be some scenarios where the currently bound frame buffer can retain
+            // an invalid view id when another FrameBuffer is created but not bound.
+            // To prevent this, make sure the bound frameBuffer has a clean ViewId.
+            if (m_boundFrameBuffer->IsViewIdDirty)
+            {
+                Bind(m_boundFrameBuffer);
+            }
             return *m_boundFrameBuffer;
         }
 
@@ -488,6 +484,7 @@ namespace Babylon
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateDepthTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
+        void LoadRawTexture(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
@@ -504,9 +501,6 @@ namespace Babylon
         void DrawIndexed(const Napi::CallbackInfo& info);
         void Draw(const Napi::CallbackInfo& info);
         void Clear(const Napi::CallbackInfo& info);
-        void ClearColor(const Napi::CallbackInfo& info);
-        void ClearStencil(const Napi::CallbackInfo& info);
-        void ClearDepth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
@@ -515,7 +509,7 @@ namespace Babylon
 
         template<typename SchedulerT>
         arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
-        
+
         bool m_isRenderScheduled{false};
 
         arcana::cancellation_source m_cancelSource{};
@@ -544,7 +538,7 @@ namespace Babylon
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
-        
+
         Napi::FunctionReference m_requestAnimationFrameCallback{};
 
         // webgl/opengl draw call parameters allow to set first index and number of indices used for that call
