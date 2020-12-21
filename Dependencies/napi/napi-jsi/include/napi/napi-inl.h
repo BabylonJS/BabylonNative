@@ -1566,6 +1566,11 @@ inline bool Reference<T>::operator !=(const Reference<T> &other) const {
 }
 
 template <typename T>
+inline Reference<T>::operator bool() const {
+  return _env != nullptr;
+}
+
+template <typename T>
 inline Napi::Env Reference<T>::Env() const {
   return {_env};
 }
