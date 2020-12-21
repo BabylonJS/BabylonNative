@@ -488,6 +488,9 @@ namespace Babylon
                     static_cast<uint16_t>(view.ColorTextureSize.Height),
                     true);
 
+                // NativeXR owns the frame buffer until explicitly passed back to JS.
+                fbPtr->OwnedByJS = false;
+
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
                 fbPtr->ViewClearState.UpdateColor(0.f, 0.f, 0.f, 0.f);

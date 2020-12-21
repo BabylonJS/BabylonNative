@@ -1051,9 +1051,7 @@ namespace Babylon
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
 
-        const auto frameBufferData = m_frameBufferManager.CreateNew(frameBufferHandle, width, height);
-        frameBufferData->OwnedByJS = true;
-        return Napi::External<FrameBufferData>::New(info.Env(), frameBufferData);
+        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
@@ -1311,8 +1309,6 @@ namespace Babylon
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
-        const auto frameBufferData = m_frameBufferManager.CreateNew(frameBufferHandle, width, height);
-        frameBufferData->OwnedByJS = true;
         return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
