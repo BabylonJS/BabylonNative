@@ -16,9 +16,8 @@ namespace Babylon
         template<typename... Ts>
         static std::unique_ptr<Graphics> CreateGraphics(Ts...);
 
-        template<typename NativeWindowT>
-        void UpdateWindow(NativeWindowT window);
-        void UpdateWindowType(void* type);
+        template<typename... Ts>
+        void UpdateWindow(Ts...);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
