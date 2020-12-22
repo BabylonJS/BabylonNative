@@ -1328,14 +1328,19 @@ namespace Babylon
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
-
         return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
+        // Check if this native frame buffer is marked as owned by JavaScript.  It's possible that
+        // we do not recognize it as having been passed back to JS in which case BabylonNative should be
+        // responsible for deleting this frame buffer instead.
         const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        delete frameBufferData;
+        if (frameBufferData->OwnedByJS)
+        {
+            delete frameBufferData;
+        }
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
