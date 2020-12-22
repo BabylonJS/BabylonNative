@@ -23,12 +23,6 @@ namespace Babylon
         constexpr auto JS_GRAPHICS_READY_NAME = "whenGraphicsReady";
     }
 
-    // Forward declares of important specializations.
-    // clang-format off
-    template<> std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void*, size_t, size_t);
-    template<> void Graphics::UpdateWindow<void*>(void*);
-    // clang-format on
-
     Graphics::Impl::Impl()
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
