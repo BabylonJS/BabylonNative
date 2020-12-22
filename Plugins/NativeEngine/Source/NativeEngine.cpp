@@ -1281,12 +1281,8 @@ namespace Babylon
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        // It is possible that we were called on an null/undefined texture if so no action required.
-        if (!info[0].IsNull() && !info[0].IsUndefined())
-        {
-            const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-            delete texture;
-        }
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        delete texture;
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)

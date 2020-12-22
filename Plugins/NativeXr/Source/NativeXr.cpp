@@ -502,6 +502,7 @@ namespace Babylon
 
         // If any frame buffers were destroyed, we need to call bgfx::frame once to force clean up.
         // This is likely broken for multi-threaded scenarios.
+        // TODO #555: Replace usage of bgfx::frame in NativeXR when creating/deleting frame buffers 
         if (frameBuffersDestroyed)
         {
             bgfx::frame();
@@ -567,6 +568,7 @@ namespace Babylon
                 auto depthTex = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
 
                 // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
+                // TODO #555: Replace usage of bgfx::frame in NativeXR when creating/deleting frame buffers
                 bgfx::frame();
 
                 bgfx::overrideInternal(colorTex, colorTexPtr);
