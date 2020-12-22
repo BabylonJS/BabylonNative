@@ -417,7 +417,7 @@ namespace Babylon
         }
 
     private:
-        std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
+        std::map<uintptr_t, FrameBufferData*> m_texturesToFrameBuffers{};
         xr::System m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
@@ -488,7 +488,26 @@ namespace Babylon
             m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
             m_frame.reset();
         } while (!shouldEndSession);
-        // Clear frameBufferData and destroy bgfx FrameBuffers
+
+        // Destroy any bgfx FrameBuffers that are not marked as owned by JS.
+        bool frameBuffersDestroyed{false};
+        for (auto& pair : m_texturesToFrameBuffers)
+        {
+            if (!pair.second->OwnedByJS)
+            {
+                frameBuffersDestroyed = true;
+                delete pair.second;
+            }
+        }
+
+        // If any frame buffers were destroyed, we need to call bgfx::frame once to force clean up.
+        // This is likely broken for multi-threaded scenarios.
+        // TODO #555: Replace usage of bgfx::frame in NativeXR when creating/deleting frame buffers 
+        if (frameBuffersDestroyed)
+        {
+            bgfx::frame();
+        }
+
         m_texturesToFrameBuffers.clear();
         m_session.reset();
     }
@@ -506,11 +525,17 @@ namespace Babylon
             auto it = m_texturesToFrameBuffers.find(texPtr);
             if (it != m_texturesToFrameBuffers.end())
             {
-                if (&m_engineImpl->GetFrameBufferManager().GetBound() == it->second.get())
+                if (&m_engineImpl->GetFrameBufferManager().GetBound() == it->second)
                 {
                     // bind back buffer because currently bound FrameBuffer will be destroyed
-                    m_engineImpl->GetFrameBufferManager().Unbind(it->second.get());
+                    m_engineImpl->GetFrameBufferManager().Unbind(it->second);
                 }
+
+                // We are changing the XR Render Target frame buffer while the XR session is still active, which means
+                // from the JS perspective the Texture is still alive it will just point to a new frame buffer
+                // take back ownership and destroy the old frame buffer immediately.
+                it->second->OwnedByJS = false;
+                delete it->second;
                 m_texturesToFrameBuffers.erase(it);
             }
         });
@@ -525,7 +550,7 @@ namespace Babylon
             auto colorTexPtr = reinterpret_cast<uintptr_t>(view.ColorTexturePointer);
 
             auto it = m_texturesToFrameBuffers.find(colorTexPtr);
-            if (it == m_texturesToFrameBuffers.end() || it->second.get()->Width != view.ColorTextureSize.Width || it->second.get()->Height != view.ColorTextureSize.Height)
+            if (it == m_texturesToFrameBuffers.end() || it->second->Width != view.ColorTextureSize.Width || it->second->Height != view.ColorTextureSize.Height)
             {
                 // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
                 assert(view.ColorTextureSize.Width);
@@ -543,6 +568,7 @@ namespace Babylon
                 auto depthTex = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
 
                 // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
+                // TODO #555: Replace usage of bgfx::frame in NativeXR when creating/deleting frame buffers
                 bgfx::frame();
 
                 bgfx::overrideInternal(colorTex, colorTexPtr);
@@ -560,16 +586,18 @@ namespace Babylon
                     static_cast<uint16_t>(view.ColorTextureSize.Height),
                     true);
 
+                // NativeXR owns the frame buffer until explicitly passed back to JS.
+                fbPtr->OwnedByJS = false;
+
                 // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                 // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
                 fbPtr->ViewClearState.UpdateColor(0.f, 0.f, 0.f, 0.f);
-                m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{fbPtr};
-
+                m_texturesToFrameBuffers[colorTexPtr] = fbPtr;
                 m_activeFrameBuffers.push_back(fbPtr);
             }
             else
             {
-                m_activeFrameBuffers.push_back(it->second.get());
+                m_activeFrameBuffers.push_back(it->second);
             }
         }
     }
@@ -2352,7 +2380,9 @@ namespace Babylon
 
             FrameBufferData* GetFrameBufferForEye(const std::string& eye) const
             {
-                return m_xr.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
+                FrameBufferData* frameBufferData = m_xr.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
+                frameBufferData->OwnedByJS = true;
+                return frameBufferData;
             }
 
             xr::Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
