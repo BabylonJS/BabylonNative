@@ -10,10 +10,6 @@ warnings_as_errors(JsRuntime)
 target_include_directories(JsRuntime PRIVATE "Include/Babylon")
 target_include_directories(JsRuntime PUBLIC "Include")
 
-if(WIN32)
-    target_compile_definitions(JsRuntime PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-endif()
-
 target_link_to_dependencies(JsRuntime
     PUBLIC napi
     PRIVATE arcana)

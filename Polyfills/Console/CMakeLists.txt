@@ -8,10 +8,6 @@ warnings_as_errors(Console)
 
 target_include_directories(Console PUBLIC "Include")
 
-if(WIN32)
-    target_compile_definitions(Console PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-endif()
-
 target_link_to_dependencies(Console PUBLIC napi)
 
 set_property(TARGET Console PROPERTY FOLDER Polyfills)

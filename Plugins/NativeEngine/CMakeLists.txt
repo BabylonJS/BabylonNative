@@ -28,10 +28,6 @@ add_library(NativeEngine ${SOURCES})
 
 target_include_directories(NativeEngine PUBLIC "Include")
 
-if(WIN32)
-    target_compile_definitions(NativeEngine PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-endif()
-
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
     INTERFACE Graphics

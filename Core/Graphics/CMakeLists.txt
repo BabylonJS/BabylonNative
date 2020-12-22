@@ -11,10 +11,6 @@ warnings_as_errors(Graphics)
 target_include_directories(Graphics
     PUBLIC "Include")
 
-if(WIN32)
-    target_compile_definitions(Graphics PRIVATE _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-endif()
-
 target_link_to_dependencies(Graphics
     PUBLIC JsRuntime
     PRIVATE JsRuntimeInternal
