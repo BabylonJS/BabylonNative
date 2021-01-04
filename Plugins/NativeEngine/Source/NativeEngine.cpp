@@ -1071,6 +1071,16 @@ namespace Babylon
                 {
                     throw std::runtime_error("Unable to decode image."); // exception will be forwarded to JS
                 }
+                if (image->m_format == bimg::TextureFormat::R8)
+                {
+                    // Images with only 1 channel are interpreted as luminance texture with RGB containing the same value as R and alpha as 255
+                    // To emulate this behavior, the format is switched to alpha8 and converted to RGB8 when packing and unpacking take care of 
+                    // component swizzling.
+                    image->m_format = bimg::TextureFormat::A8;
+                    bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGB8, *image, false);
+                    bimg::imageFree(image);
+                    image = rgba;
+                }
                 if (invertY)
                 {
                     FlipY(image);
