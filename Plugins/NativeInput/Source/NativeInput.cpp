@@ -3,6 +3,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeInput.h>
 
+#include <algorithm>
 #include <sstream>
 
 namespace Babylon::Plugins
@@ -173,7 +174,7 @@ namespace Babylon::Plugins
 
     void NativeInput::Impl::SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs, bool raiseEvents)
     {
-        std::optional<uint32_t> previousState = deviceInputs[inputIndex];
+        std::optional<int32_t> previousState = deviceInputs[inputIndex];
         if (previousState != inputState)
         {
             deviceInputs[inputIndex] = inputState;
