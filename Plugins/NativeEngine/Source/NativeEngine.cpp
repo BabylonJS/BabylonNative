@@ -379,7 +379,6 @@ namespace Babylon
                 InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
-                InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
@@ -1032,25 +1031,6 @@ namespace Babylon
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
-    }
-
-    Napi::Value NativeEngine::CreateDepthTexture(const Napi::CallbackInfo& info)
-    {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        bgfx::FrameBufferHandle frameBufferHandle{};
-
-        // This is WIP
-        auto depthStencilFormat = bgfx::TextureFormat::D32;
-        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false /*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
-        bgfx::Attachment attachment;
-        attachment.init(textureHandle);
-        frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
-
-        texture->Handle = bgfx::getTexture(frameBufferHandle);
-
-        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
