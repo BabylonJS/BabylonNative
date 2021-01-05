@@ -959,6 +959,7 @@ namespace Napi {
 
     bool operator ==(const Reference<T> &other) const;
     bool operator !=(const Reference<T> &other) const;
+    operator bool() const;
 
     Napi::Env Env() const;
     bool IsEmpty() const;
