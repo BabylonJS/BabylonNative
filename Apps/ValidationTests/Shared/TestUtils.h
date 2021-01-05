@@ -22,11 +22,17 @@
 
 namespace
 {
-#if !defined(__APPLE__) && !defined(ANDROID)
-    std::filesystem::path GetModulePath();
-#endif
     std::atomic<bool> doExit{};
     int errorCode{};
+
+#ifdef WIN32
+    std::filesystem::path GetModulePath()
+    {
+        char buffer[1024];
+        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
+        return std::filesystem::path{ buffer }.parent_path();
+    }
+#endif
 }
 
 // can't externalize variable with ObjC++. Using a function instead.
@@ -217,34 +223,22 @@ namespace Babylon
         {
 #ifdef ANDROID
             auto path = "app://";
-#else
-#ifdef __APPLE__
+#elif __APPLE__
             std::string path = "app:///";
-#else
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-            path += "/Scripts/";
-#endif
+#elif WIN32
+            std::string path = "app:///Scripts/";
 #endif
             return Napi::Value::From(info.Env(), path);
         }
 
-        
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-#else
-#ifdef __APPLE__
+#elif __APPLE__
             std::string path = getenv("HOME");
-#else
+#elif WIN32
             auto path = GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-#endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }
