@@ -19,15 +19,13 @@ import com.facebook.react.uimanager.events.EventDispatcher;
 import java.io.ByteArrayOutputStream;
 
 public final class EngineView extends SurfaceView implements SurfaceHolder.Callback, View.OnTouchListener {
-    private final ReactContext reactContext;
     private final EventDispatcher reactEventDispatcher;
 
     public EngineView(ReactContext reactContext) {
         super(reactContext);
-        this.reactContext = reactContext;
         this.getHolder().addCallback(this);
         this.setOnTouchListener(this);
-        this.reactEventDispatcher = this.reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
+        this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
     }
 
     @Override
@@ -37,17 +35,16 @@ public final class EngineView extends SurfaceView implements SurfaceHolder.Callb
 
     @Override
     public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int width, int height) {
-        BabylonNativeInterop.setView(this.reactContext, surfaceHolder.getSurface());
+        BabylonNativeInterop.updateView(surfaceHolder.getSurface());
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-
     }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        BabylonNativeInterop.reportMotionEvent(this.reactContext, motionEvent);
+        BabylonNativeInterop.reportMotionEvent(motionEvent);
         return true;
     }
 

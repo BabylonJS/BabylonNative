@@ -1,33 +1,24 @@
 import { NativeModules } from 'react-native';
-import { NativeEngine } from '@babylonjs/core';
 
-// This global object is part of Babylon Native.
-declare const _native: {
-    whenGraphicsReady: () => Promise<void>;
-    engineInstance: NativeEngine;
-}
+declare const global: {
+    nativeCallSyncHook: any;
+};
+const isRemoteDebuggingEnabled = !global.nativeCallSyncHook;
 
-const NativeBabylonModule: {
-    initialize(): Promise<boolean>;
-    whenInitialized(): Promise<boolean>;
-    reset(): Promise<boolean>;
+// This legacy React Native module is created by Babylon React Native, and is only used to bootstrap the JSI object creation.
+// This will likely be removed when the BabylonNative global object is eventually converted to a TurboModule.
+const BabylonModule: {
+    initialize(): Promise<void>;
 } = NativeModules.BabylonModule;
 
-export const BabylonModule = {
-    initialize: async () => {
-        const initialized = await NativeBabylonModule.initialize();
-        if (initialized) {
-            await _native.whenGraphicsReady();
-        }
-        return initialized;
-    },
-
-    whenInitialized: NativeBabylonModule.whenInitialized,
-    reset: NativeBabylonModule.reset,
-
-    createEngine: () => {
-        const engine = new NativeEngine();
-        _native.engineInstance = engine;
-        return engine;
+export async function ensureInitialized(): Promise<boolean> {
+    if (isRemoteDebuggingEnabled) {
+        // When remote debugging is enabled, JavaScript runs on the debugging host machine, not on the device where the app is running.
+        // JSI (which Babylon Native uses heavily) can not work in this mode. In the future, this debugging mode will be phased out as it is incompatible with TurboModules for the same reason.
+        return false;
+    } else {
+        // This does the first stage of Babylon Native initialization, including creating the BabylonNative JSI object.
+        await BabylonModule.initialize();
+        return true;
     }
-};
+}

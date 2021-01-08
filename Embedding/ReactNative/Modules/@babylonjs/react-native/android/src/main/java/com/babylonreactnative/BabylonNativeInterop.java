@@ -7,169 +7,104 @@ import android.view.MotionEvent;
 import android.view.Surface;
 
 import com.facebook.react.bridge.ActivityEventListener;
-import com.facebook.react.bridge.JavaScriptContextHolder;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.turbomodule.core.interfaces.CallInvokerHolder;
 
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
+public final class BabylonNativeInterop {
 
-final class BabylonNativeInterop {
-    // JNI interface
-    static {
-        System.loadLibrary("BabylonNative");
-    }
-
-    private static boolean isInitialized;
-    private static final Hashtable<JavaScriptContextHolder, CompletableFuture<Long>> nativeInstances = new Hashtable<>();
-
-    private static native void initialize(Context context);
-    private static native void setCurrentActivity(Activity activity);
-    private static native void pause();
-    private static native void resume();
-    private static native long create(long jsiRuntimeRef, CallInvokerHolder callInvokerHolder, Surface surface);
-    private static native void refresh(long instanceRef, Surface surface);
-    private static native void setPointerButtonState(long instanceRef, int pointerId, int buttonId, boolean isDown, int x, int y);
-    private static native void setPointerPosition(long instanceRef, int pointerId, int x, int y);
-    private static native void reset(long instanceRef);
-    private static native void destroy(long instanceRef);
-
-    // Must be called from the Android UI thread
-    static void setView(ReactContext reactContext, Surface surface) {
-        // This is global initialization that only needs to happen once
-        if (!BabylonNativeInterop.isInitialized) {
-            BabylonNativeInterop.initialize(reactContext);
-            BabylonNativeInterop.isInitialized = true;
+    private static class BabylonNative {
+        static {
+            System.loadLibrary("BabylonNative");
         }
 
-        BabylonNativeInterop.destroyOldNativeInstances(reactContext);
+        public static native void initialize(Context context, long jsiRuntimeRef, CallInvokerHolder jsCallInvokerHolder);
+        public static native void deinitialize();
+        public static native void setCurrentActivity(Activity activity);
+        public static native void pause();
+        public static native void resume();
+        public static native void updateView(Surface surface);
+        public static native void setPointerButtonState(int pointerId, int buttonId, boolean isDown, int x, int y);
+        public static native void setPointerPosition(int pointerId, int x, int y);
+    }
 
-        CompletableFuture<Long> instanceRefFuture = BabylonNativeInterop.getOrCreateFuture(reactContext);
+    private static LifecycleEventListener lifeCycleEventListener;
+    private static ActivityEventListener activityEventListener;
 
-        reactContext.runOnJSQueueThread(() -> {
-            Long instanceRef = instanceRefFuture.getNow(null);
-            if (instanceRef == null)
-            {
-                long jsiRuntimeRef = reactContext.getJavaScriptContextHolder().get();
-                if (jsiRuntimeRef == 0) {
-                    instanceRefFuture.complete(0L);
-                } else {
-                    instanceRef = BabylonNativeInterop.create(jsiRuntimeRef, reactContext.getCatalystInstance().getJSCallInvokerHolder(), surface);
-                    final long finalInstanceRef = instanceRef;
+    public static void initialize(ReactContext reactContext) {
+        long jsiRuntimeRef = reactContext.getJavaScriptContextHolder().get();
+        CallInvokerHolder jsCallInvokerHolder = reactContext.getCatalystInstance().getJSCallInvokerHolder();
+        BabylonNative.initialize(reactContext, jsiRuntimeRef, jsCallInvokerHolder);
 
-                    reactContext.addLifecycleEventListener(new LifecycleEventListener() {
-                        @Override
-                        public void onHostResume() {
-                            BabylonNativeInterop.setCurrentActivity(reactContext.getCurrentActivity());
-                            BabylonNativeInterop.resume();
-                        }
+        if (BabylonNativeInterop.lifeCycleEventListener != null) {
+            reactContext.removeLifecycleEventListener(lifeCycleEventListener);
+        }
 
-                        @Override
-                        public void onHostPause() {
-                            BabylonNativeInterop.pause();
-                        }
-
-                        @Override
-                        public void onHostDestroy() {
-                            BabylonNativeInterop.deinitialize();
-                        }
-                    });
-
-                    reactContext.addActivityEventListener(new ActivityEventListener() {
-                        @Override
-                        public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
-                            // Nothing to do here
-                        }
-
-                        @Override
-                        public void onNewIntent(Intent intent) {
-                            BabylonNativeInterop.setCurrentActivity(reactContext.getCurrentActivity());
-                        }
-                    });
-
-                    instanceRefFuture.complete(finalInstanceRef);
-                }
-            } else if (instanceRef != 0) {
-                BabylonNativeInterop.refresh(instanceRef, surface);
+        BabylonNativeInterop.lifeCycleEventListener = new LifecycleEventListener() {
+            @Override
+            public void onHostResume() {
+                BabylonNative.setCurrentActivity(reactContext.getCurrentActivity());
+                BabylonNative.resume();
             }
-        });
-    }
 
-    static void reportMotionEvent(ReactContext reactContext, MotionEvent motionEvent) {
-        CompletableFuture<Long> instanceRefFuture = BabylonNativeInterop.nativeInstances.get(reactContext.getJavaScriptContextHolder());
-        if (instanceRefFuture != null) {
-            Long instanceRef = instanceRefFuture.getNow(null);
-            if (instanceRef != null) {
-                int maskedAction = motionEvent.getActionMasked();
-                boolean isPointerDown = maskedAction == MotionEvent.ACTION_DOWN || maskedAction == MotionEvent.ACTION_POINTER_DOWN;
-                boolean isPointerUp = maskedAction == MotionEvent.ACTION_UP || maskedAction == MotionEvent.ACTION_POINTER_UP;
-                boolean isPointerMove = maskedAction == MotionEvent.ACTION_MOVE;
-
-                if (isPointerDown || isPointerUp) {
-                    int pointerIndex = motionEvent.getActionIndex();
-                    int pointerId = motionEvent.getPointerId(pointerIndex);
-                    int buttonId = motionEvent.getActionButton();
-                    int x = (int)motionEvent.getX(pointerIndex);
-                    int y = (int)motionEvent.getY(pointerIndex);
-                    BabylonNativeInterop.setPointerButtonState(instanceRef, pointerId, buttonId, isPointerDown, x, y);
-                } else if (isPointerMove) {
-                    for (int pointerIndex = 0; pointerIndex < motionEvent.getPointerCount(); pointerIndex++) {
-                        int pointerId = motionEvent.getPointerId(pointerIndex);
-                        int x = (int)motionEvent.getX(pointerIndex);
-                        int y = (int)motionEvent.getY(pointerIndex);
-                        BabylonNativeInterop.setPointerPosition(instanceRef, pointerId, x, y);
-                    }
-                }
+            @Override
+            public void onHostPause() {
+                BabylonNative.pause();
             }
-        }
-    }
 
-    // Must be called from the Android UI thread
-    static CompletionStage<Long> whenInitialized(ReactContext reactContext) {
-        return BabylonNativeInterop.getOrCreateFuture(reactContext);
-    }
-
-    // Must be called from the JavaScript thread
-    static void deinitialize() {
-        BabylonNativeInterop.destroyOldNativeInstances(null);
-    }
-
-    static void reset(ReactContext reactContext) {
-        JavaScriptContextHolder jsContext = reactContext.getJavaScriptContextHolder();
-        CompletableFuture<Long> instanceRefFuture = BabylonNativeInterop.nativeInstances.get(jsContext);
-        if (instanceRefFuture != null) {
-            Long instanceRef = instanceRefFuture.getNow(null);
-            if (instanceRef != null) {
-                BabylonNativeInterop.reset(instanceRef);
+            @Override
+            public void onHostDestroy() {
+                BabylonNative.deinitialize();
             }
+        };
+
+        reactContext.addLifecycleEventListener(lifeCycleEventListener);
+
+        if (BabylonNativeInterop.activityEventListener != null) {
+            reactContext.removeActivityEventListener(BabylonNativeInterop.activityEventListener);
         }
+
+        BabylonNativeInterop.activityEventListener = new ActivityEventListener() {
+            @Override
+            public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
+                // Nothing to do here
+            }
+
+            @Override
+            public void onNewIntent(Intent intent) {
+                BabylonNative.setCurrentActivity(reactContext.getCurrentActivity());
+            }
+        };
+
+        reactContext.addActivityEventListener(BabylonNativeInterop.activityEventListener);
     }
 
-    private static CompletableFuture<Long> getOrCreateFuture(ReactContext reactContext) {
-        JavaScriptContextHolder jsContext = reactContext.getJavaScriptContextHolder();
-        CompletableFuture<Long> instanceRefFuture = BabylonNativeInterop.nativeInstances.get(jsContext);
-        if (instanceRefFuture == null)
-        {
-            instanceRefFuture = new CompletableFuture<>();
-            BabylonNativeInterop.nativeInstances.put(jsContext, instanceRefFuture);
-        }
-        return instanceRefFuture;
+    public static void deinitialize() {
+        BabylonNative.deinitialize();
     }
 
-    private static void destroyOldNativeInstances(ReactContext currentReactContext) {
-        Iterator<Map.Entry<JavaScriptContextHolder, CompletableFuture<Long>>> nativeInstanceIterator = BabylonNativeInterop.nativeInstances.entrySet().iterator();
-        while (nativeInstanceIterator.hasNext()) {
-            Map.Entry<JavaScriptContextHolder, CompletableFuture<Long>> nativeInstanceInfo = nativeInstanceIterator.next();
-            if (currentReactContext == null || nativeInstanceInfo.getKey() != currentReactContext.getJavaScriptContextHolder()) {
-                Long oldInstanceRef = nativeInstanceInfo.getValue().getNow(null);
-                if (oldInstanceRef != null && oldInstanceRef != 0) {
-                    BabylonNativeInterop.destroy(oldInstanceRef);
-                }
-                nativeInstanceIterator.remove();
+    public static void updateView(Surface surface) {
+        BabylonNative.updateView(surface);
+    }
+
+    public static void reportMotionEvent(MotionEvent motionEvent) {
+        int maskedAction = motionEvent.getActionMasked();
+        boolean isPointerDown = maskedAction == MotionEvent.ACTION_DOWN || maskedAction == MotionEvent.ACTION_POINTER_DOWN;
+        boolean isPointerUp = maskedAction == MotionEvent.ACTION_UP || maskedAction == MotionEvent.ACTION_POINTER_UP;
+        boolean isPointerMove = maskedAction == MotionEvent.ACTION_MOVE;
+
+        if (isPointerDown || isPointerUp) {
+            int pointerIndex = motionEvent.getActionIndex();
+            int pointerId = motionEvent.getPointerId(pointerIndex);
+            int x = (int)motionEvent.getX(pointerIndex);
+            int y = (int)motionEvent.getY(pointerIndex);
+            BabylonNative.setPointerButtonState(pointerId, 0, isPointerDown, x, y);
+        } else if (isPointerMove) {
+            for (int pointerIndex = 0; pointerIndex < motionEvent.getPointerCount(); pointerIndex++) {
+                int pointerId = motionEvent.getPointerId(pointerIndex);
+                int x = (int)motionEvent.getX(pointerIndex);
+                int y = (int)motionEvent.getY(pointerIndex);
+                BabylonNative.setPointerPosition(pointerId, x, y);
             }
         }
     }

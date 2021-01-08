@@ -48,6 +48,11 @@ const copyCommonFiles = () => {
     .pipe(gulp.dest('Assembled'));
 };
 
+const copySharedFiles = () => {
+  return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/BabylonNative.h')
+    .pipe(gulp.dest('Assembled/shared'));
+};
+
 const copyIOSFiles = () => {
   return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.h')
     .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.mm'))
@@ -84,6 +89,8 @@ const validate = async () => {
   const expected =
 `Assembled
 Assembled/EngineHook.ts
+Assembled/shared
+Assembled/shared/BabylonNative.h
 Assembled/EngineView.tsx
 Assembled/ios
 Assembled/ios/BabylonNativeInterop.mm
@@ -122,9 +129,7 @@ Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace
 Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace/xcshareddata
 Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
 Assembled/ios/BabylonModule.mm
-Assembled/ios/BabylonNative.h
 Assembled/README.md
-Assembled/EngineHelpers.ts
 Assembled/package.json
 Assembled/android
 Assembled/android/build.gradle
@@ -153,6 +158,7 @@ Assembled/android/src/main/jniLibs/arm64-v8a/libBabylonNative.so
 Assembled/react-native-babylon.podspec
 Assembled/index.ts
 Assembled/BabylonModule.ts
+Assembled/ReactNativeEngine.ts
 `;
 
   const result = shelljs.exec('find Assembled', {silent: true});
@@ -165,7 +171,7 @@ const createPackage = async () => {
   exec('npm pack', 'Assembled');
 };
 
-const copyFiles = gulp.parallel(copyCommonFiles, copyIOSFiles, copyAndroidFiles);
+const copyFiles = gulp.parallel(copyCommonFiles, copySharedFiles, copyIOSFiles, copyAndroidFiles);
 
 const build = gulp.series(buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validate);
 const rebuild = gulp.series(clean, build);

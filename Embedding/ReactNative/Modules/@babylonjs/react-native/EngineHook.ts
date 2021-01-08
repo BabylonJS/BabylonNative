@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
-import { Engine, NativeEngine, WebXRSessionManager } from '@babylonjs/core';
-import { BabylonModule } from './BabylonModule';
-import { DisposeEngine } from './EngineHelpers';
+import { Engine, WebXRSessionManager } from '@babylonjs/core';
+import { ReactNativeEngine } from './ReactNativeEngine';
 import * as base64 from 'base-64';
 
 // These are errors that are normally thrown by WebXR's requestSession, so we should throw the same errors under similar circumstances so app code can be written the same for browser or native.
@@ -66,29 +65,17 @@ export function useEngine(): Engine | undefined {
     const [engine, setEngine] = useState<Engine>();
 
     useEffect(() => {
-        let disposed = false;
-        let engine: Engine | undefined = undefined;
+        const abortController = new AbortController();
+        let engine: ReactNativeEngine | undefined = undefined;
 
         (async () => {
-            if (await BabylonModule.initialize() && !disposed)
-            {
-                engine = BabylonModule.createEngine();
-                setEngine(engine);
-            }
+            setEngine(engine = await ReactNativeEngine.tryCreateAsync(abortController.signal) ?? undefined);
         })();
 
         return () => {
-            disposed = true;
+            abortController.abort();
             // NOTE: Do not use setEngine with a callback to dispose the engine instance as that callback does not get called during component unmount when compiled in release.
-            if (engine) {
-                DisposeEngine(engine);
-            }
-            // Ideally we would always do a reset here as we don't want different behavior between debug and release. Unfortunately, fast refresh has some strange behavior that
-            // makes it quite difficult to get this to work correctly (e.g. it re-runs previous useEffect instances, which means it can try to use Babylon Native in a de-initialized state).
-            // TODO: https://github.com/BabylonJS/BabylonReactNative/issues/125
-            if (!__DEV__) {
-                BabylonModule.reset();
-            }
+            engine?.dispose();
             setEngine(undefined);
         };
     }, []);

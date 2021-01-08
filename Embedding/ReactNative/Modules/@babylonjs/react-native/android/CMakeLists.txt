@@ -19,6 +19,8 @@ cmake_minimum_required(VERSION 3.13.2)
 #                    detection.
 #   [24, infinite)   ES2 & ES3 & Vulkan
 project(ReactNativeBabylon)
+include(${CMAKE_CURRENT_LIST_DIR}/../shared/CMakeLists.txt)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(BABYLON_NATIVE_PLATFORM "Android")
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -55,7 +57,10 @@ target_link_libraries(turbomodulejsijni
     fbjni)
 
 add_library(BabylonNative SHARED
-    src/main/cpp/BabylonNativeInterop.cpp)
+    src/main/cpp/BabylonNativeInterop.cpp
+    ${SHARED_SOURCES})
+
+target_include_directories(BabylonNative PRIVATE ${SHARED_INCLUDES})
 
 target_link_libraries(BabylonNative
     GLESv3
@@ -67,7 +72,6 @@ target_link_libraries(BabylonNative
     fbjni
     jsi
     turbomodulejsijni
-    BabylonReactNativeShared
     AndroidExtensions
     Graphics
     JsRuntime

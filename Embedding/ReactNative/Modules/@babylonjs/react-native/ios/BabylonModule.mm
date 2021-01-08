@@ -19,16 +19,8 @@ RCT_EXPORT_MODULE();
 @synthesize bridge = _bridge;
 
 RCT_EXPORT_METHOD(initialize:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-    [BabylonNativeInterop whenInitialized:self.bridge resolve:resolve];
-}
-
-RCT_EXPORT_METHOD(whenInitialized:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-    [BabylonNativeInterop whenInitialized:self.bridge resolve:resolve];
-}
-
-RCT_EXPORT_METHOD(reset:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-    self.bridge.jsCallInvoker->invokeAsync([resolve]() {
-        [BabylonNativeInterop reset];
+    self.bridge.jsCallInvoker->invokeAsync([bridge{ self.bridge }, resolve]() {
+        [BabylonNativeInterop initialize:bridge];
         resolve([NSNull null]);
     });
 }

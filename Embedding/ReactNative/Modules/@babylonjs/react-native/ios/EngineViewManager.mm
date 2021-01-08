@@ -2,6 +2,7 @@
 
 #import <React/RCTViewManager.h>
 #import <React/RCTUIManager.h>
+#import <ReactCommon/CallInvoker.h>
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -15,13 +16,11 @@
 
 @implementation EngineView {
     RCTBridge* bridge;
-    NSRunLoop* runLoop;
 }
 
-- (instancetype)init:(RCTBridge*)_bridge runLoop:(NSRunLoop*)_runLoop {
+- (instancetype)init:(RCTBridge*)_bridge {
     if (self = [super initWithFrame:CGRectZero device:MTLCreateSystemDefaultDevice()]) {
         bridge = _bridge;
-        runLoop = _runLoop;
 
         super.translatesAutoresizingMaskIntoConstraints = false;
         super.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
@@ -32,23 +31,23 @@
 
 - (void)setBounds:(CGRect)bounds {
     [super setBounds:bounds];
-    [BabylonNativeInterop setView:bridge jsRunLoop:runLoop mktView:self];
+    [BabylonNativeInterop updateView:self];
 }
 
 - (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
-    [BabylonNativeInterop reportTouchEvent:touches withEvent:event];
+    [BabylonNativeInterop reportTouchEvent:self touches:touches event:event];
 }
 
 - (void)touchesMoved:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
-    [BabylonNativeInterop reportTouchEvent:touches withEvent:event];
+    [BabylonNativeInterop reportTouchEvent:self touches:touches event:event];
 }
 
 - (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
-    [BabylonNativeInterop reportTouchEvent:touches withEvent:event];
+    [BabylonNativeInterop reportTouchEvent:self touches:touches event:event];
 }
 
 - (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
-    [BabylonNativeInterop reportTouchEvent:touches withEvent:event];
+    [BabylonNativeInterop reportTouchEvent:self touches:touches event:event];
 }
 
 - (void)takeSnapshot {
@@ -79,9 +78,7 @@
 @interface EngineViewManager : RCTViewManager
 @end
 
-@implementation EngineViewManager {
-    NSRunLoop* runLoop;
-}
+@implementation EngineViewManager
 
 RCT_EXPORT_MODULE(EngineViewManager)
 
@@ -98,13 +95,8 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber*) reactTag) {
     }];
 }
 
-RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(setJSThread) {
-    runLoop = [NSRunLoop currentRunLoop];
-    return nil;
-}
-
 - (UIView*)view {
-    return [[EngineView alloc] init:self.bridge runLoop:runLoop];
+    return [[EngineView alloc] init:self.bridge];
 }
 
 @end
