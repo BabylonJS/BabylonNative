@@ -604,10 +604,16 @@ namespace xr
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
-                // Present to the screen
-                // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
-                //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
-                eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+                // TODO: This is a hacky work around for https://github.com/BabylonJS/BabylonNative/issues/568
+                //       Remove this code once we actually resolve that issue.
+                if (hasTracked)
+                {
+                    // Present to the screen
+                    // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
+                    //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
+                    eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+                }
+                hasTracked |= IsTracking();
 
                 glUseProgram(0);
             }
@@ -967,6 +973,7 @@ namespace xr
     private:
         bool isInitialized{false};
         bool sessionEnded{false};
+        bool hasTracked{false};
         std::vector<ArTrackable*> frameTrackables{};
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
