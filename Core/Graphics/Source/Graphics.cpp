@@ -23,6 +23,12 @@ namespace Babylon
         constexpr auto JS_GRAPHICS_READY_NAME = "whenGraphicsReady";
     }
 
+    // Forward declares of important specializations.
+    // clang-format off
+    template<> std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void*, size_t, size_t);
+    template<> void Graphics::UpdateWindow<void*>(void*);
+    // clang-format on
+
     Graphics::Impl::Impl()
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
@@ -49,13 +55,13 @@ namespace Babylon
         return m_bgfxState.InitState.platformData.nwh;
     }
 
-    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr)
+    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr)
     {
         std::scoped_lock lock{m_bgfxState.Mutex};
         m_bgfxState.Dirty = true;
 
         auto& pd = m_bgfxState.InitState.platformData;
-        pd.ndt = windowTypePtr;
+        pd.ndt = nullptr;
         pd.nwh = nativeWindowPtr;
         pd.context = nullptr;
         pd.backBuffer = nullptr;
@@ -64,9 +70,11 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
+        std::scoped_lock resolutionLock{m_resolution.Mutex};
         m_resolution.width = width;
         m_resolution.height = height;
 
+        std::scoped_lock bgfxStateLock{m_bgfxState.Mutex};
         m_bgfxState.Dirty = true;
 
         auto& res = m_bgfxState.InitState.resolution;
@@ -279,33 +287,18 @@ namespace Babylon
     Graphics::~Graphics() = default;
 
     template<>
-    void Graphics::UpdateWindow<void*>(void* windowPtr)
-    {
-        m_impl->SetNativeWindow(windowPtr, nullptr);
-    }
-
-    template<>
-    void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
-    {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr);
-    }
-
-    template<>
     std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*>(nativeWindowPtr);
+        graphics->UpdateWindow(nativeWindowPtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }
 
     template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+    void Graphics::UpdateWindow<void*>(void* windowPtr)
     {
-        std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
-        graphics->UpdateSize(width, height);
-        return graphics;
+        m_impl->SetNativeWindow(windowPtr);
     }
 
     void Graphics::UpdateSize(size_t width, size_t height)
