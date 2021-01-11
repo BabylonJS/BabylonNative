@@ -237,6 +237,11 @@ namespace Babylon
         // When this flag is true, projection matrix will not be flipped for API that would normaly need it.
         // Namely Direct3D and Metal.
         bool ActAsBackBuffer{false};
+
+        // This is a hack to keep track of whether this frame buffer has been passed back to Babylon.js
+        // and if its deletion should be owned by Javascript and tied to the lifetime of a texture or whether
+        // only BabylonNative knows about its existence, and should own deletion. Blame Gary.
+        bool OwnedByJS{true};
     };
 
     struct FrameBufferManager final
@@ -479,6 +484,7 @@ namespace Babylon
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateDepthTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
+        void LoadRawTexture(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);

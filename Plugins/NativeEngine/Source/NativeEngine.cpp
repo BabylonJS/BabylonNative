@@ -381,6 +381,7 @@ namespace Babylon
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
+                InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
@@ -435,6 +436,7 @@ namespace Babylon
                 InstanceValue("ADDRESS_MODE_BORDER", Napi::Number::From(env, BGFX_SAMPLER_U_BORDER)),
                 InstanceValue("ADDRESS_MODE_MIRROR_ONCE", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
 
+                InstanceValue("TEXTURE_FORMAT_RGB8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
 
@@ -1097,6 +1099,30 @@ namespace Babylon
             });
     }
 
+    void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto data = info[1].As<Napi::TypedArray>();
+        const auto width = info[2].As<Napi::Number>().Uint32Value();
+        const auto height = info[3].As<Napi::Number>().Uint32Value();
+        const auto format = static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
+        const auto generateMips = info[5].As<Napi::Boolean>().Value();
+        const auto invertY = info[6].As<Napi::Boolean>().Value();
+        
+        const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
+        if (invertY)
+        {
+            FlipY(image);
+        }
+        if (generateMips)
+        {
+            GenerateMips(&m_allocator, &image);
+        }
+        CreateTextureFromImage(texture, image);
+    }
+
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
@@ -1302,14 +1328,19 @@ namespace Babylon
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
-
         return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
+        // Check if this native frame buffer is marked as owned by JavaScript.  It's possible that
+        // we do not recognize it as having been passed back to JS in which case BabylonNative should be
+        // responsible for deleting this frame buffer instead.
         const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        delete frameBufferData;
+        if (frameBufferData->OwnedByJS)
+        {
+            delete frameBufferData;
+        }
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
