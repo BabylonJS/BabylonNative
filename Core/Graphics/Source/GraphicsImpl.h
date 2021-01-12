@@ -68,8 +68,8 @@ namespace Babylon
         struct
         {
             std::mutex Mutex{};
-            size_t width;
-            size_t height;
+            size_t width{};
+            size_t height{};
             float hardwareScalingLevel{1.0f};
         } m_resolution{};
 
