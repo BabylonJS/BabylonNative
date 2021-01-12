@@ -308,6 +308,15 @@ namespace Babylon
         return graphics;
     }
 
+    template<>
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+    {
+        std::unique_ptr<Graphics> graphics{new Graphics()};
+        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
+        graphics->UpdateSize(width, height);
+        return graphics;
+    }
+
     void Graphics::UpdateSize(size_t width, size_t height)
     {
         m_impl->Resize(width, height);
