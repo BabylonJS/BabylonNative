@@ -52,6 +52,7 @@ namespace Babylon
 
     private:
         arcana::affinity m_renderThreadAffinity{};
+        void Resize();
 
         bool m_rendering{false};
 
@@ -69,6 +70,7 @@ namespace Babylon
             std::mutex Mutex{};
             size_t width;
             size_t height;
+            float hardwareScalingLevel{1.0f};
         } m_resolution{};
 
 
@@ -79,8 +81,6 @@ namespace Babylon
         arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
         std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
         std::mutex m_renderWorkTasksMutex{};
-
-        float m_hardwareScalingLevel{1.0f};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
     };

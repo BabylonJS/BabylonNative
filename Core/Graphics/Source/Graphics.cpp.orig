@@ -64,23 +64,28 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        {
-            std::scoped_lock lock(m_resolution.Mutex);
-            m_resolution.width = width;
-            m_resolution.height = height;
-        }
-        Resize();
-    }
+<<<<<<< HEAD
+        m_resolution.width = width;
+        m_resolution.height = height;
 
-    void Graphics::Impl::Resize()
-    {
-        std::scoped_lock bgfxStateLock(m_bgfxState.Mutex);
-        std::scoped_lock resolutionLock(m_resolution.Mutex);
+=======
+        std::scoped_lock resolutionLock{m_resolution.Mutex};
+        m_resolution.width = width;
+        m_resolution.height = height;
+
+        std::scoped_lock bgfxStateLock{m_bgfxState.Mutex};
+>>>>>>> ba5e500... Add Native engine implmentation of getHardwareScalingLevel
         m_bgfxState.Dirty = true;
+
         auto& res = m_bgfxState.InitState.resolution;
-        auto level = m_resolution.hardwareScalingLevel;
-        res.width = static_cast<uint32_t>(m_resolution.width / level);
-        res.height = static_cast<uint32_t>(m_resolution.height / level);
+        auto ratio = GetHardwareScalingLevel();
+<<<<<<< HEAD
+        res.width = static_cast<uint32_t>(m_resolution.width / ratio);
+        res.height = static_cast<uint32_t>(m_resolution.height / ratio);
+=======
+        res.width = static_cast<uint32_t>(m_resolution.width * ratio);
+        res.height = static_cast<uint32_t>(m_resolution.height * ratio);
+>>>>>>> ba5e500... Add Native engine implmentation of getHardwareScalingLevel
     }
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
@@ -262,22 +267,24 @@ namespace Babylon
 
     float Graphics::Impl::GetHardwareScalingLevel()
     {
-        std::scoped_lock lock(m_resolution.Mutex);
-        return m_resolution.hardwareScalingLevel;
+        return m_hardwareScalingLevel;
     }
 
     void Graphics::Impl::SetHardwareScalingLevel(float level)
     {
+<<<<<<< HEAD
         if (level == 0)
         {
             throw std::runtime_error{"HardwareScalingValue cannot be set to 0."};
         }
-        {
-            std::scoped_lock lock(m_resolution.Mutex);
-            m_resolution.hardwareScalingLevel = level;
-        }
+=======
+>>>>>>> ba5e500... Add Native engine implmentation of getHardwareScalingLevel
+        m_hardwareScalingLevel = level;
 
-        Resize();
+        std::scoped_lock lock{m_bgfxState.Mutex};
+        m_bgfxState.Dirty = true;
+
+        Resize(m_resolution.width, m_resolution.height);
     }
 
     Graphics::Graphics()
@@ -304,6 +311,15 @@ namespace Babylon
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow<void*>(nativeWindowPtr);
+        graphics->UpdateSize(width, height);
+        return graphics;
+    }
+
+    template<>
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+    {
+        std::unique_ptr<Graphics> graphics{new Graphics()};
+        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }
