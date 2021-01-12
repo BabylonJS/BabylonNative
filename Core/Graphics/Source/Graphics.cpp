@@ -268,7 +268,7 @@ namespace Babylon
 
     void Graphics::Impl::SetHardwareScalingLevel(float level)
     {
-        if (level <= FLT_EPSILON)
+        if (level <= std::numeric_limits<float>::epsilon())
         {
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
