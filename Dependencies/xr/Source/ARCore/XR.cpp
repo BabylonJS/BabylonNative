@@ -61,6 +61,27 @@ namespace xr
         constexpr GLfloat VERTEX_POSITIONS[]{ -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f };
         constexpr size_t VERTEX_COUNT{ std::size(VERTEX_POSITIONS) / 2 };
 
+        constexpr char CAMERA_VERT_SHADER[] = R"(#version 300 es
+            precision highp float;
+            uniform vec2 vertexPositions[4];
+            uniform vec2 cameraFrameUVs[4];
+            out vec2 cameraFrameUV;
+            void main() {
+                gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
+                cameraFrameUV = cameraFrameUVs[gl_VertexID];
+            }
+        )";
+
+        constexpr char BABYLON_VERT_SHADER[] = R"(#version 300 es
+            precision highp float;
+            uniform vec2 vertexPositions[4];
+            out vec2 babylonUV;
+            void main() {
+                gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
+                babylonUV = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
+            }
+        )";
+
         constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
             precision highp float;
             uniform vec2 vertexPositions[4];
@@ -71,6 +92,28 @@ namespace xr
                 gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
                 cameraFrameUV = cameraFrameUVs[gl_VertexID];
                 babylonUV = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
+            }
+        )";
+
+        constexpr char CAMERA_FRAG_SHADER[] = R"(#version 300 es
+            #extension GL_OES_EGL_image_external_essl3 : require
+            precision mediump float;
+            in vec2 cameraFrameUV;
+            uniform samplerExternalOES cameraTexture;
+            layout(location = 0) out vec4 oFragColor;
+            void main() {
+                oFragColor = texture(cameraTexture, cameraFrameUV);
+            }
+        )";
+
+        constexpr char BABYLON_FRAG_SHADER[] = R"(#version 300 es
+            #extension GL_OES_EGL_image_external_essl3 : require
+            precision mediump float;
+            in vec2 babylonUV;
+            uniform sampler2D babylonTexture;
+            out vec4 oFragColor;
+            void main() {
+                oFragColor = texture(babylonTexture, babylonUV);
             }
         )";
 
@@ -122,10 +165,10 @@ namespace xr
             return shader;
         }
 
-        GLuint CreateShaderProgram()
+        GLuint CreateShaderProgram(const char* vertShaderSource, const char* fragShaderSource)
         {
-            GLuint vertShader = LoadShader(GL_VERTEX_SHADER, QUAD_VERT_SHADER);
-            GLuint fragShader = LoadShader(GL_FRAGMENT_SHADER, QUAD_FRAG_SHADER);
+            GLuint vertShader = LoadShader(GL_VERTEX_SHADER, vertShaderSource);
+            GLuint fragShader = LoadShader(GL_FRAGMENT_SHADER, fragShaderSource);
 
             GLuint program = glCreateProgram();
             if (!program)
@@ -214,20 +257,30 @@ namespace xr
                 return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() { glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor)); });
             }
 
-            auto ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
+//            auto ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
+//            {
+//                GLfloat previousClearColor[4];
+//                glGetFloatv(GL_COLOR_CLEAR_VALUE, previousClearColor);
+//                glClearColor(red, green, blue, alpha);
+//                return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
+//            }
+
+            auto BindSampler(GLenum unit, GLenum target, GLuint id)
             {
-                GLfloat previousClearColor[4];
-                glGetFloatv(GL_COLOR_CLEAR_VALUE, previousClearColor);
-                glClearColor(red, green, blue, alpha);
-                return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
+                glActiveTexture(unit);
+                GLint previousId;
+                glGetIntegerv(GL_SAMPLER_BINDING, &previousId);
+                glBindSampler(unit - GL_TEXTURE0, id);
+                return gsl::finally([unit, id = previousId]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
             }
 
-            auto Sampler(int unit)
+            auto BindTexture(GLenum unit, GLenum target, GLenum binding, GLuint id)
             {
-                glActiveTexture(GL_TEXTURE0 + unit);
-                GLint previousSampler;
-                glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
-                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
+                glActiveTexture(unit);
+                GLint previousId;
+                glGetIntegerv(binding, &previousId);
+                glBindTexture(target, id);
+                return gsl::finally([unit, target, id = previousId]() { glActiveTexture(unit); glBindTexture(target, id); });
             }
         }
 
@@ -353,6 +406,8 @@ namespace xr
                 ArSession_destroy(session);
 
                 glDeleteTextures(1, &cameraTextureId);
+                glDeleteProgram(cameraShaderProgramId);
+                glDeleteProgram(babylonShaderProgramId);
                 glDeleteProgram(shaderProgramId);
                 glDeleteFramebuffers(1, &clearFrameBufferId);
 
@@ -373,7 +428,9 @@ namespace xr
             }
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
-            shaderProgramId = CreateShaderProgram();
+            cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            babylonShaderProgramId = CreateShaderProgram(BABYLON_VERT_SHADER, BABYLON_FRAG_SHADER);
+            shaderProgramId = CreateShaderProgram(QUAD_VERT_SHADER, QUAD_FRAG_SHADER);
 
             // Create the ARCore ArSession
             {
@@ -510,14 +567,6 @@ namespace xr
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)), 0);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)), 0);
             }
-            else
-            {
-                // Clear the color and depth texture
-                // Whether or not to clear is an implementation detail - OpenXR (for example) provides a color texture that is already filled with the camera texture, so the common XR layer should not assume a clear is required
-                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(clearFrameBufferId);
-                auto clearColorTransaction = GLTransactions::ClearColor(0, 0, 0, 0);
-                glClear(GL_COLOR_BUFFER_BIT);
-            }
 
             int32_t geometryChanged{0};
             ArFrame_getDisplayGeometryChanged(session, frame, &geometryChanged);
@@ -541,6 +590,46 @@ namespace xr
             }
 
             ArCamera_release(camera);
+
+            // Suppress rendering if the camera did not produce the first frame yet.
+            // This is to avoid drawing possible leftover data from previous sessions if
+            // the texture is reused.
+            int64_t frameTimestamp{};
+            ArFrame_getTimestamp(session, frame, &frameTimestamp);
+            if (frameTimestamp)
+            {
+                // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
+                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(clearFrameBufferId);
+                auto cullFaceTransaction = GLTransactions::SetCapability(GL_CULL_FACE, false);
+                auto depthTestTransaction = GLTransactions::SetCapability(GL_DEPTH_TEST, false);
+                auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
+                auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
+                auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                //auto sampler0Transation = GLTransactions::Sampler(0);
+
+                glUseProgram(cameraShaderProgramId);
+
+                // Configure the quad vertex positions
+                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
+                glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
+
+                // Configure the camera texture
+                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
+                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                auto bindTextureTransaction{ GLTransactions::BindTexture(GL_TEXTURE0, GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_BINDING_EXTERNAL_OES, cameraTextureId) };
+//                glActiveTexture(GL_TEXTURE0);
+//                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+//                glBindSampler(0, 0);
+
+                // Configure the camera frame UVs
+                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
+                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
+
+                // Draw the quad
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
+
+                glUseProgram(0);
+            }
 
             return std::make_unique<Session::Frame>(*this);
         }
@@ -573,33 +662,33 @@ namespace xr
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 auto sampler0Transation = GLTransactions::Sampler(0);
-                auto sampler1Transation = GLTransactions::Sampler(1);
+                //auto sampler1Transation = GLTransactions::Sampler(1);
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
-                glUseProgram(shaderProgramId);
+                glUseProgram(babylonShaderProgramId);
 
                 // Configure the quad vertex positions
                 auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
                 glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
                 // Configure the camera texture
-                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
-                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-                glBindSampler(0, 0);
+//                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
+//                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+//                glActiveTexture(GL_TEXTURE0);
+//                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+//                glBindSampler(0, 0);
 
                 // Configure the camera frame UVs
-                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
-                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
+//                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
+//                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
 
                 // Configure the babylon render texture
                 auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId, "babylonTexture");
-                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
-                glActiveTexture(GL_TEXTURE1);
+                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                glActiveTexture(GL_TEXTURE0);
                 auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-                glBindSampler(1, 0);
+                glBindSampler(0, 0);
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
@@ -974,6 +1063,8 @@ namespace xr
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID = 0;
 
+        GLuint cameraShaderProgramId{};
+        GLuint babylonShaderProgramId{};
         GLuint shaderProgramId{};
         GLuint cameraTextureId{};
         GLuint clearFrameBufferId{};

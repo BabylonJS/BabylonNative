@@ -728,7 +728,7 @@ namespace xr {
             }
 
             @autoreleasepool {
-                // Clear the color and depth texture before handing it off to Babylon
+                // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
                 id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
                 commandBuffer.label = @"DrawCameraToBabylonTextureCommandBuffer";
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
