@@ -265,22 +265,12 @@ namespace xr
 //                return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
 //            }
 
-            auto BindSampler(GLenum unit, GLenum target, GLuint id)
+            auto Sampler(int unit)
             {
-                glActiveTexture(unit);
-                GLint previousId;
-                glGetIntegerv(GL_SAMPLER_BINDING, &previousId);
-                glBindSampler(unit - GL_TEXTURE0, id);
-                return gsl::finally([unit, id = previousId]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
-            }
-
-            auto BindTexture(GLenum unit, GLenum target, GLenum binding, GLuint id)
-            {
-                glActiveTexture(unit);
-                GLint previousId;
-                glGetIntegerv(binding, &previousId);
-                glBindTexture(target, id);
-                return gsl::finally([unit, target, id = previousId]() { glActiveTexture(unit); glBindTexture(target, id); });
+                glActiveTexture(GL_TEXTURE0 + unit);
+                GLint previousSampler;
+                glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
+                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
             }
         }
 
@@ -605,7 +595,7 @@ namespace xr
                 auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                //auto sampler0Transation = GLTransactions::Sampler(0);
+                auto sampler0Transation = GLTransactions::Sampler(0);
 
                 glUseProgram(cameraShaderProgramId);
 
@@ -616,10 +606,9 @@ namespace xr
                 // Configure the camera texture
                 auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-                auto bindTextureTransaction{ GLTransactions::BindTexture(GL_TEXTURE0, GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_BINDING_EXTERNAL_OES, cameraTextureId) };
-//                glActiveTexture(GL_TEXTURE0);
-//                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-//                glBindSampler(0, 0);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+                glBindSampler(0, 0);
 
                 // Configure the camera frame UVs
                 auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
@@ -662,7 +651,6 @@ namespace xr
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 auto sampler0Transation = GLTransactions::Sampler(0);
-                //auto sampler1Transation = GLTransactions::Sampler(1);
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(babylonShaderProgramId);
@@ -670,17 +658,6 @@ namespace xr
                 // Configure the quad vertex positions
                 auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
                 glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
-
-                // Configure the camera texture
-//                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
-//                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-//                glActiveTexture(GL_TEXTURE0);
-//                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-//                glBindSampler(0, 0);
-
-                // Configure the camera frame UVs
-//                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
-//                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
 
                 // Configure the babylon render texture
                 auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId, "babylonTexture");
