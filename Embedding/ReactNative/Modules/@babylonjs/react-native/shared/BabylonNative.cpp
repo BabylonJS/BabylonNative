@@ -14,12 +14,18 @@ namespace Babylon
 {
     using namespace facebook;
 
+    namespace
+    {
+        Dispatcher g_inlineDispatcher{[](const std::function<void()>& func) { func(); }};
+    }
+
     class ReactNativeModule : public jsi::HostObject
     {
     public:
-        ReactNativeModule(jsi::Runtime& jsiRuntime, Dispatcher jsDispatcher)
+        ReactNativeModule(jsi::Runtime& jsiRuntime, Dispatcher jsDispatcher, bool autoRender)
             : m_env{ Napi::Attach<facebook::jsi::Runtime&>(jsiRuntime) }
             , m_jsDispatcher{ std::move(jsDispatcher) }
+            , m_autoRender{ autoRender }
             , m_isRunning{ std::make_shared<bool>(true) }
         {
             // Initialize a JS promise that will be returned by whenInitialized, and completed when NativeEngine is initialized.
@@ -71,18 +77,28 @@ namespace Babylon
 
         void UpdateView(void* windowPtr, size_t width, size_t height)
         {
-            // TODO: We shouldn't have to dispatch to the JS thread most of this, but not doing so results in a crash.
-            //       I don't understand the issue yet, but for now just retain the pre-refactor logic. We'll need to
-            //       resolve this to enable manual non-JS thread rendering. Note this only repros in release builds
-            //       where we actually call ResetView.
-            m_jsDispatcher([this, windowPtr, width, height]()
+            // TODO: We shouldn't have to dispatch to the JS thread for CreateGraphics/UpdateWindow/UpdateSize, but not doing so results in a crash.
+            //       I don't understand the issue yet, but for now just retain the pre-refactor logic. We'll need to resolve this to enable manual
+            //       non-JS thread rendering. Note this only repros in release builds where we actually call ResetView.
+
+            // When auto rendering is enabled, we render from the JS thread. In this case, we dispatch to the JS thread to initialize/update graphics,
+            // and stay on this thread (with an inline dispatcher) to interact with the JS runtime.
+            // When auto rendering is disabled, we render from a different thread. In this case, we assume this function was called from the render thread
+            // and do an inline dispatch (e.g. execute synchronously on the calling thread), and switch to the JS thread to interact with the JS runtime.
+            auto renderDispatcher = m_autoRender ? m_jsDispatcher : g_inlineDispatcher;
+            auto jsDispatcher = m_autoRender ? g_inlineDispatcher : m_jsDispatcher;
+
+            renderDispatcher([this, windowPtr, width, height, jsDispatcher{ std::move(jsDispatcher) }]()
             {
                 if (!m_graphics)
                 {
                     m_graphics = Graphics::CreateGraphics(windowPtr, width, height);
-                    m_graphics->AddToJavaScript(m_env);
-                    Plugins::NativeEngine::Initialize(m_env, true);
-                    m_resolveInitPromise();
+                    jsDispatcher([this]()
+                    {
+                        m_graphics->AddToJavaScript(m_env);
+                        Plugins::NativeEngine::Initialize(m_env, m_autoRender);
+                        m_resolveInitPromise();
+                    });
                 }
                 else
                 {
@@ -93,12 +109,24 @@ namespace Babylon
             });
         }
 
+        void RenderView()
+        {
+            if (m_autoRender)
+            {
+                throw std::runtime_error{ "RenderView can only be called when automatic rendering is disabled." };
+            }
+
+            m_graphics->RenderCurrentFrame();
+        }
+
         void ResetView()
         {
             // TODO: We shouldn't have to dispatch to the JS thread for this since we are already on the JS thread,
             //       but there is an issue in NativeEngine where it will Dispatch a call to RenderCurrentFrame, then
             //       get disposed, then try to actually render the frame. This results in immediately re-enabling
             //       graphics after disabling it here. For now, retain the pre-refactor logic (queueing on the JS thread).
+            // TODO: This is called from JS code (and therefore the JS thread), so we need to figure out a good way
+            //       to get on the proper (render) thread to make this call.
             m_jsDispatcher([this]()
             {
                 if (m_graphics)
@@ -170,6 +198,7 @@ namespace Babylon
 
         Napi::Env m_env;
         Dispatcher m_jsDispatcher{};
+        bool m_autoRender{};
 
         std::shared_ptr<bool> m_isRunning{};
         std::unique_ptr<Graphics> m_graphics{};
@@ -184,11 +213,11 @@ namespace Babylon
         std::weak_ptr<ReactNativeModule> g_nativeModule{};
     }
 
-    void Initialize(facebook::jsi::Runtime& jsiRuntime, Dispatcher jsDispatcher)
+    void Initialize(facebook::jsi::Runtime& jsiRuntime, Dispatcher jsDispatcher, bool autoRender)
     {
         if (!jsiRuntime.global().hasProperty(jsiRuntime, JS_INSTANCE_NAME))
         {
-            auto nativeModule{ std::make_shared<ReactNativeModule>(jsiRuntime, jsDispatcher) };
+            auto nativeModule{ std::make_shared<ReactNativeModule>(jsiRuntime, jsDispatcher, autoRender) };
             jsiRuntime.global().setProperty(jsiRuntime, JS_INSTANCE_NAME, jsi::Object::createFromHostObject(jsiRuntime, nativeModule));
             g_nativeModule = nativeModule;
         }
@@ -211,6 +240,18 @@ namespace Babylon
         else
         {
             throw std::runtime_error{ "UpdateView must not be called before Initialize." };
+        }
+    }
+
+    void RenderView()
+    {
+        if (auto nativeModule{ g_nativeModule.lock() })
+        {
+            nativeModule->RenderView();
+        }
+        else
+        {
+            throw std::runtime_error{ "RenderView must not be called before Initialize." };
         }
     }
 
