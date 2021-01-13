@@ -27,7 +27,7 @@ namespace Babylon
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
-        
+
         void RenderCurrentFrame()
         {
             StartRenderingCurrentFrame();
@@ -35,6 +35,9 @@ namespace Babylon
         }
 
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+
+        float GetHardwareScalingLevel();
+        void SetHardwareScalingLevel(float level);
 
     private:
         Graphics();

@@ -45,21 +45,37 @@ namespace Babylon
 
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
+        float GetHardwareScalingLevel();
+        void SetHardwareScalingLevel(float level);
+
         BgfxCallback Callback{};
 
     private:
         arcana::affinity m_renderThreadAffinity{};
+        void UpdateBgfxResolution();
 
         bool m_rendering{false};
 
         struct
         {
-            std::mutex Mutex{};
+            std::recursive_mutex Mutex{};
 
-            bgfx::Init InitState{};
-            bool Initialized{};
-            bool Dirty{};
-        } m_bgfxState{};
+            struct
+            {
+                bgfx::Init InitState{};
+                bool Initialized{};
+                bool Dirty{};
+            } Bgfx{};
+
+            struct
+            {
+                size_t width{};
+                size_t height{};
+                float hardwareScalingLevel{1.0f};
+            } Resolution{};
+        } m_state{};
+
+
 
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
