@@ -429,7 +429,13 @@ namespace {
 @end
 namespace xr {
     namespace {
-        const char* shaderSource = R"(
+        // This shader is used to render *either* the camera texture or the final composited texture.
+        // It could be split into two shaders, but this is a bit simpler since they use the same structs
+        // and have some common logic.
+        // The shader is used in two passes:
+        // 1. Render the camera texture to the color render texture (see GetNextFrame).
+        // 2. Render the composited texture to the screen (see DrawFrame).
+        constexpr char shaderSource[] = R"(
             #include <metal_stdlib>
             #include <simd/simd.h>
 
