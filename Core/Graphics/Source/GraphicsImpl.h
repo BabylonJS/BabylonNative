@@ -58,7 +58,7 @@ namespace Babylon
 
         struct
         {
-            std::mutex Mutex{};
+            std::recursive_mutex Mutex{};
 
             struct
             {
@@ -69,7 +69,6 @@ namespace Babylon
 
             struct
             {
-                std::mutex Mutex{};
                 size_t width{};
                 size_t height{};
                 float hardwareScalingLevel{1.0f};

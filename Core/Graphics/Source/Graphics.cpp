@@ -65,11 +65,9 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        {
-            std::scoped_lock lock(m_state.Mutex);
-            m_state.Resolution.width = width;
-            m_state.Resolution.height = height;
-        }
+        std::scoped_lock lock(m_state.Mutex);
+        m_state.Resolution.width = width;
+        m_state.Resolution.height = height;
         UpdateBgfxResolution();
     }
 
@@ -386,11 +384,13 @@ namespace Babylon
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
     }
 
-    void Graphics::SetHardwareScalingLevel(float level){
+    void Graphics::SetHardwareScalingLevel(float level)
+    {
         m_impl->SetHardwareScalingLevel(level);
     }
 
-    float Graphics::GetHardwareScalingLevel(){
+    float Graphics::GetHardwareScalingLevel()
+    {
         return m_impl->GetHardwareScalingLevel();
     }
 }
