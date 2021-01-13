@@ -52,7 +52,7 @@ namespace Babylon
 
     private:
         arcana::affinity m_renderThreadAffinity{};
-        void Resize();
+        void UpdateBgfxResolution();
 
         bool m_rendering{false};
 
@@ -60,18 +60,22 @@ namespace Babylon
         {
             std::mutex Mutex{};
 
-            bgfx::Init InitState{};
-            bool Initialized{};
-            bool Dirty{};
-        } m_bgfxState{};
+            struct
+            {
+                bgfx::Init InitState{};
+                bool Initialized{};
+                bool Dirty{};
+            } Bgfx{};
 
-        struct
-        {
-            std::mutex Mutex{};
-            size_t width{};
-            size_t height{};
-            float hardwareScalingLevel{1.0f};
-        } m_resolution{};
+            struct
+            {
+                std::mutex Mutex{};
+                size_t width{};
+                size_t height{};
+                float hardwareScalingLevel{1.0f};
+            } Resolution{};
+        } m_state{};
+
 
 
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
