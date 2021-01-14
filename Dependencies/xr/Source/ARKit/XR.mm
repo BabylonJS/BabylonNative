@@ -535,6 +535,7 @@ namespace xr {
             , getMainView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<UIView*>(windowProvider()); } }
             , metalDevice{ id<MTLDevice>(graphicsContext) } {
             UIView* mainView = getMainView();
+            [mainView retain];
 
             // Create the XR View to stay within the safe area of the main view.
             dispatch_sync(dispatch_get_main_queue(), ^{
@@ -614,6 +615,7 @@ namespace xr {
             [session release];
             [pipelineState release];
             [xrView releaseDrawables];
+            [[xrView superview] release];
             dispatch_sync(dispatch_get_main_queue(), ^{
                 [xrView removeFromSuperview]; });
             [xrView release];
@@ -650,14 +652,18 @@ namespace xr {
                 currentFrame = session.currentFrame;
                 [currentFrame retain];
             }
-            
+
             dispatch_sync(dispatch_get_main_queue(), ^{
                 // Check whether the main view has changed, and if so, reparent the xr view.
                 UIView* currentSuperview = [xrView superview];
                 UIView* desiredSuperview = getMainView();
                 if (currentSuperview != desiredSuperview) {
+                    [currentSuperview release];
                     [xrView removeFromSuperview];
+
                     [xrView setFrame:desiredSuperview.bounds];
+
+                    [desiredSuperview retain];
                     [desiredSuperview addSubview:xrView];
                 }
                 
@@ -669,7 +675,7 @@ namespace xr {
             viewportSize.y = viewSize.height;
             uint32_t width = viewportSize.x;
             uint32_t height = viewportSize.y;
-            
+
             if (ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) {
                 // Color texture
                 {

@@ -41,16 +41,14 @@ namespace Babylon
             }
         }
 
-        void UpdateFlags(const Napi::CallbackInfo& info)
+        void UpdateFlags(uint16_t flags)
         {
-            const auto flags = static_cast<uint16_t>(info[0].As<Napi::Number>().Uint32Value());
             Flags = flags;
             Update();
         }
 
-        void UpdateDepth(const Napi::CallbackInfo& info)
+        void UpdateDepth(float depth)
         {
-            const auto depth = info[0].As<Napi::Number>().FloatValue();
             const bool needToUpdate = Depth != depth;
             if (needToUpdate)
             {
@@ -59,9 +57,8 @@ namespace Babylon
             }
         }
 
-        void UpdateStencil(const Napi::CallbackInfo& info)
+        void UpdateStencil(uint8_t stencil)
         {
-            const auto stencil = static_cast<uint8_t>(info[0].As<Napi::Number>().Int32Value());
             const bool needToUpdate = Stencil != stencil;
             if (needToUpdate)
             {
@@ -122,28 +119,19 @@ namespace Babylon
             m_clearState.UpdateColor(r, g, b, a);
         }
 
-        void UpdateColor(const Napi::CallbackInfo& info)
+        void UpdateFlags(uint16_t flags)
         {
-            const auto r = info[0].As<Napi::Number>().FloatValue();
-            const auto g = info[1].As<Napi::Number>().FloatValue();
-            const auto b = info[2].As<Napi::Number>().FloatValue();
-            const auto a = info[3].IsUndefined() ? 1.f : info[3].As<Napi::Number>().FloatValue();
-            m_clearState.UpdateColor(r, g, b, a);
+            m_clearState.UpdateFlags(flags);
         }
 
-        void UpdateFlags(const Napi::CallbackInfo& info)
+        void UpdateDepth(float depth)
         {
-            m_clearState.UpdateFlags(info);
+            m_clearState.UpdateDepth(depth);
         }
 
-        void UpdateDepth(const Napi::CallbackInfo& info)
+        void UpdateStencil(uint8_t stencil)
         {
-            m_clearState.UpdateDepth(info);
-        }
-
-        void UpdateStencil(const Napi::CallbackInfo& info)
-        {
-            m_clearState.UpdateStencil(info);
+            m_clearState.UpdateStencil(stencil);
         }
 
         void UpdateViewId(uint16_t viewId)
@@ -249,6 +237,11 @@ namespace Babylon
         // When this flag is true, projection matrix will not be flipped for API that would normaly need it.
         // Namely Direct3D and Metal.
         bool ActAsBackBuffer{false};
+
+        // This is a hack to keep track of whether this frame buffer has been passed back to Babylon.js
+        // and if its deletion should be owned by Javascript and tied to the lifetime of a texture or whether
+        // only BabylonNative knows about its existence, and should own deletion. Blame Gary.
+        bool OwnedByJS{true};
     };
 
     struct FrameBufferManager final
@@ -489,9 +482,9 @@ namespace Babylon
         void SetFloat3(const Napi::CallbackInfo& info);
         void SetFloat4(const Napi::CallbackInfo& info);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
-        Napi::Value CreateDepthTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(const Napi::CallbackInfo& info);
+        void LoadRawTexture(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
@@ -508,14 +501,13 @@ namespace Babylon
         void DrawIndexed(const Napi::CallbackInfo& info);
         void Draw(const Napi::CallbackInfo& info);
         void Clear(const Napi::CallbackInfo& info);
-        void ClearColor(const Napi::CallbackInfo& info);
-        void ClearStencil(const Napi::CallbackInfo& info);
-        void ClearDepth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
         void GetFramebufferData(const Napi::CallbackInfo& info);
         Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
+        Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
+        void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
 
         template<typename SchedulerT>
         arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);

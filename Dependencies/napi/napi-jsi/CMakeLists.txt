@@ -16,4 +16,8 @@ target_include_directories(napi
 target_link_to_dependencies(napi
     PUBLIC jsi)
 
+if(WIN32)
+    target_compile_definitions(napi PUBLIC _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
+endif()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

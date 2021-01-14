@@ -379,8 +379,8 @@ namespace Babylon
                 InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
-                InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
+                InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("copyTexture", &NativeEngine::CopyTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -398,14 +398,13 @@ namespace Babylon
                 InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
                 InstanceMethod("draw", &NativeEngine::Draw),
                 InstanceMethod("clear", &NativeEngine::Clear),
-                InstanceMethod("clearColor", &NativeEngine::ClearColor),
-                InstanceMethod("clearDepth", &NativeEngine::ClearDepth),
-                InstanceMethod("clearStencil", &NativeEngine::ClearStencil),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+                InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
+                InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -439,6 +438,7 @@ namespace Babylon
                 InstanceValue("ADDRESS_MODE_BORDER", Napi::Number::From(env, BGFX_SAMPLER_U_BORDER)),
                 InstanceValue("ADDRESS_MODE_MIRROR_ONCE", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
 
+                InstanceValue("TEXTURE_FORMAT_RGB8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
 
@@ -690,7 +690,7 @@ namespace Babylon
 
         std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
-        
+
         try
         {
             shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
@@ -1036,32 +1036,6 @@ namespace Babylon
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
     }
 
-    Napi::Value NativeEngine::CreateDepthTexture(const Napi::CallbackInfo& info)
-    {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        bgfx::FrameBufferHandle frameBufferHandle{};
-
-        // This is WIP
-        auto depthStencilFormat = bgfx::TextureFormat::D32;
-        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false /*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
-        bgfx::Attachment attachment;
-        attachment.init(textureHandle);
-        frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
-
-        texture->Handle = bgfx::getTexture(frameBufferHandle);
-
-        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
-    }
-
-    void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
-    {
-        const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
-        const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
-        textureDestination->Handle = textureSource->Handle;
-    }
-
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
@@ -1106,6 +1080,30 @@ namespace Babylon
                     onSuccessRef.Call({});
                 }
             });
+    }
+
+    void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto data = info[1].As<Napi::TypedArray>();
+        const auto width = info[2].As<Napi::Number>().Uint32Value();
+        const auto height = info[3].As<Napi::Number>().Uint32Value();
+        const auto format = static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
+        const auto generateMips = info[5].As<Napi::Boolean>().Value();
+        const auto invertY = info[6].As<Napi::Boolean>().Value();
+
+        const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes);
+        if (invertY)
+        {
+            FlipY(image);
+        }
+        if (generateMips)
+        {
+            GenerateMips(&m_allocator, &image);
+        }
+        CreateTextureFromImage(texture, image);
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
@@ -1313,14 +1311,19 @@ namespace Babylon
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
-
         return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
+        // Check if this native frame buffer is marked as owned by JavaScript.  It's possible that
+        // we do not recognize it as having been passed back to JS in which case BabylonNative should be
+        // responsible for deleting this frame buffer instead.
         const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        delete frameBufferData;
+        if (frameBufferData->OwnedByJS)
+        {
+            delete frameBufferData;
+        }
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
@@ -1400,7 +1403,7 @@ namespace Babylon
 
             // We need to explicitly swap the culling state flags (instead of XOR)
             // because we would like to preserve the no culling configuration, which is 00.
-            const auto cullCW  = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
+            const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
             const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
 
             uint64_t m_engineStateYFlipped = m_engineState;
@@ -1431,22 +1434,42 @@ namespace Babylon
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateFlags(info);
-    }
+        FrameBufferData& frameBufferData{m_frameBufferManager.GetBound()};
+        frameBufferData.UseViewId(m_frameBufferManager.GetNewViewId());
 
-    void NativeEngine::ClearColor(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateColor(info);
-    }
+        ViewClearState& viewClearState{frameBufferData.ViewClearState};
+        uint16_t flags{0};
 
-    void NativeEngine::ClearStencil(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateStencil(info);
-    }
+        if (info[0].IsObject())
+        {
+            const auto color{info[0].As<Napi::Object>()};
+            const auto r = color.Get("r");
+            const auto g = color.Get("g");
+            const auto b = color.Get("b");
+            const auto a = color.Get("a");
 
-    void NativeEngine::ClearDepth(const Napi::CallbackInfo& info)
-    {
-        m_frameBufferManager.GetBound().ViewClearState.UpdateDepth(info);
+            viewClearState.UpdateColor(
+                r.As<Napi::Number>().FloatValue(),
+                g.As<Napi::Number>().FloatValue(),
+                b.As<Napi::Number>().FloatValue(),
+                a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue());
+
+            flags |= BGFX_CLEAR_COLOR;
+        }
+
+        if (info[1].IsNumber())
+        {
+            viewClearState.UpdateDepth(info[1].As<Napi::Number>().FloatValue());
+            flags |= BGFX_CLEAR_DEPTH;
+        }
+
+        if (info[2].IsNumber())
+        {
+            viewClearState.UpdateStencil(static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value()));
+            flags |= BGFX_CLEAR_STENCIL;
+        }
+
+        viewClearState.UpdateFlags(flags);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -1489,5 +1512,16 @@ namespace Babylon
         m_runtime.Dispatch([function = std::move(function)](Napi::Env) {
             function();
         });
+    }
+
+    void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        const auto level = info[0].As<Napi::Number>().FloatValue();
+        m_graphicsImpl.SetHardwareScalingLevel(level);
+    }
+
+    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
     }
 }
