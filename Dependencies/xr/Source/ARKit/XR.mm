@@ -808,7 +808,7 @@ namespace xr {
                 id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                if(renderPassDescriptor != nil) {
+                if (renderPassDescriptor != nil) {
                     renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
