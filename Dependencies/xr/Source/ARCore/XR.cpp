@@ -222,14 +222,6 @@ namespace xr
                 return gsl::finally([previousDepthMask]() { glDepthMask(previousDepthMask); });
             }
 
-            auto BlendFunc(GLenum blendFuncName, GLenum blendFuncSFactor, GLenum blendFuncTFactor)
-            {
-                GLint previousBlendFuncTFactor;
-                glGetIntegerv(blendFuncName, &previousBlendFuncTFactor);
-                glBlendFunc(blendFuncSFactor, blendFuncTFactor);
-                return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() { glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor)); });
-            }
-
             auto BindSampler(GLenum unit, GLuint id)
             {
                 glActiveTexture(unit);
@@ -557,7 +549,6 @@ namespace xr
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
                 auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
                 auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
-                auto blendFuncTransaction{ GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) };
 
                 glUseProgram(cameraShaderProgramId);
 
@@ -611,7 +602,6 @@ namespace xr
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
                 auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
                 auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
-                auto blendFuncTransaction{ GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) };
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(babylonShaderProgramId);
