@@ -82,19 +82,6 @@ namespace xr
             }
         )";
 
-        constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
-            precision highp float;
-            uniform vec2 vertexPositions[4];
-            uniform vec2 cameraFrameUVs[4];
-            out vec2 cameraFrameUV;
-            out vec2 babylonUV;
-            void main() {
-                gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
-                cameraFrameUV = cameraFrameUVs[gl_VertexID];
-                babylonUV = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
-            }
-        )";
-
         constexpr char CAMERA_FRAG_SHADER[] = R"(#version 300 es
             #extension GL_OES_EGL_image_external_essl3 : require
             precision mediump float;
@@ -114,21 +101,6 @@ namespace xr
             out vec4 oFragColor;
             void main() {
                 oFragColor = texture(babylonTexture, babylonUV);
-            }
-        )";
-
-        constexpr char QUAD_FRAG_SHADER[] = R"(#version 300 es
-            #extension GL_OES_EGL_image_external_essl3 : require
-            precision mediump float;
-            in vec2 cameraFrameUV;
-            in vec2 babylonUV;
-            uniform samplerExternalOES cameraTexture;
-            uniform sampler2D babylonTexture;
-            out vec4 oFragColor;
-            void main() {
-                vec4 cameraColor = texture(cameraTexture, cameraFrameUV);
-                vec4 babylonColor = texture(babylonTexture, babylonUV);
-                oFragColor = mix(cameraColor, babylonColor, babylonColor.a);
             }
         )";
 
@@ -398,7 +370,6 @@ namespace xr
                 glDeleteTextures(1, &cameraTextureId);
                 glDeleteProgram(cameraShaderProgramId);
                 glDeleteProgram(babylonShaderProgramId);
-                glDeleteProgram(shaderProgramId);
                 glDeleteFramebuffers(1, &clearFrameBufferId);
 
                 DestroyDisplayResources();
@@ -420,7 +391,6 @@ namespace xr
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
             cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
             babylonShaderProgramId = CreateShaderProgram(BABYLON_VERT_SHADER, BABYLON_FRAG_SHADER);
-            shaderProgramId = CreateShaderProgram(QUAD_VERT_SHADER, QUAD_FRAG_SHADER);
 
             // Create the ARCore ArSession
             {
@@ -600,18 +570,18 @@ namespace xr
                 glUseProgram(cameraShaderProgramId);
 
                 // Configure the quad vertex positions
-                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
+                auto vertexPositionsUniformLocation = glGetUniformLocation(cameraShaderProgramId, "vertexPositions");
                 glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
                 // Configure the camera texture
-                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
+                auto cameraTextureUniformLocation = glGetUniformLocation(cameraShaderProgramId, "cameraTexture");
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
                 glBindSampler(0, 0);
 
                 // Configure the camera frame UVs
-                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
+                auto cameraFrameUVsUniformLocation = glGetUniformLocation(cameraShaderProgramId, "cameraFrameUVs");
                 glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
 
                 // Draw the quad
@@ -656,11 +626,11 @@ namespace xr
                 glUseProgram(babylonShaderProgramId);
 
                 // Configure the quad vertex positions
-                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
+                auto vertexPositionsUniformLocation = glGetUniformLocation(babylonShaderProgramId, "vertexPositions");
                 glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
                 // Configure the babylon render texture
-                auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId, "babylonTexture");
+                auto babylonTextureUniformLocation = glGetUniformLocation(babylonShaderProgramId, "babylonTexture");
                 glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
@@ -1042,7 +1012,6 @@ namespace xr
 
         GLuint cameraShaderProgramId{};
         GLuint babylonShaderProgramId{};
-        GLuint shaderProgramId{};
         GLuint cameraTextureId{};
         GLuint clearFrameBufferId{};
 
