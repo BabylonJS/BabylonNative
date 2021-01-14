@@ -229,20 +229,13 @@ namespace xr
                 return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() { glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor)); });
             }
 
-//            auto ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
-//            {
-//                GLfloat previousClearColor[4];
-//                glGetFloatv(GL_COLOR_CLEAR_VALUE, previousClearColor);
-//                glClearColor(red, green, blue, alpha);
-//                return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
-//            }
-
-            auto Sampler(int unit)
+            auto BindSampler(GLenum unit, GLuint id)
             {
-                glActiveTexture(GL_TEXTURE0 + unit);
-                GLint previousSampler;
-                glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
-                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
+                glActiveTexture(unit);
+                GLint previousId;
+                glGetIntegerv(GL_SAMPLER_BINDING, &previousId);
+                glBindSampler(unit - GL_TEXTURE0, id);
+                return gsl::finally([unit, id = previousId]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
             }
         }
 
@@ -565,7 +558,6 @@ namespace xr
                 auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                auto sampler0Transation = GLTransactions::Sampler(0);
 
                 glUseProgram(cameraShaderProgramId);
 
@@ -578,7 +570,7 @@ namespace xr
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-                glBindSampler(0, 0);
+                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
 
                 // Configure the camera frame UVs
                 auto cameraFrameUVsUniformLocation = glGetUniformLocation(cameraShaderProgramId, "cameraFrameUVs");
@@ -620,7 +612,6 @@ namespace xr
                 auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
                 auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
                 auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                auto sampler0Transation = GLTransactions::Sampler(0);
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(babylonShaderProgramId);
@@ -635,7 +626,7 @@ namespace xr
                 glActiveTexture(GL_TEXTURE0);
                 auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-                glBindSampler(0, 0);
+                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
