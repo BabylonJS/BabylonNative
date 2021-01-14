@@ -37,7 +37,7 @@ using namespace android::global;
 namespace xr
 {
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
-    const int PERMISSION_REQUEST_ID = 8435;
+    const int PERMISSION_REQUEST_ID{ 8435 };
 
     struct System::Impl
     {
@@ -61,37 +61,53 @@ namespace xr
         constexpr GLfloat VERTEX_POSITIONS[]{ -1.0f, -1.0f, +1.0f, -1.0f, -1.0f, +1.0f, +1.0f, +1.0f };
         constexpr size_t VERTEX_COUNT{ std::size(VERTEX_POSITIONS) / 2 };
 
-        constexpr char QUAD_VERT_SHADER[] = R"(#version 300 es
+        constexpr char CAMERA_VERT_SHADER[]{ R"(#version 300 es
             precision highp float;
             uniform vec2 vertexPositions[4];
             uniform vec2 cameraFrameUVs[4];
             out vec2 cameraFrameUV;
-            out vec2 babylonUV;
             void main() {
                 gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
                 cameraFrameUV = cameraFrameUVs[gl_VertexID];
+            }
+        )"};
+
+        constexpr char BABYLON_VERT_SHADER[]{ R"(#version 300 es
+            precision highp float;
+            uniform vec2 vertexPositions[4];
+            out vec2 babylonUV;
+            void main() {
+                gl_Position = vec4(vertexPositions[gl_VertexID], 0.0, 1.0);
                 babylonUV = vec2(gl_Position.x + 1.0, gl_Position.y + 1.0) * 0.5;
             }
-        )";
+        )"};
 
-        constexpr char QUAD_FRAG_SHADER[] = R"(#version 300 es
+        constexpr char CAMERA_FRAG_SHADER[]{ R"(#version 300 es
             #extension GL_OES_EGL_image_external_essl3 : require
             precision mediump float;
             in vec2 cameraFrameUV;
-            in vec2 babylonUV;
             uniform samplerExternalOES cameraTexture;
+            // Location 0 is GL_COLOR_ATTACHMENT0, which in turn is the babylonTexture
+            layout(location = 0) out vec4 oFragColor;
+            void main() {
+                oFragColor = texture(cameraTexture, cameraFrameUV);
+            }
+        )"};
+
+        constexpr char BABYLON_FRAG_SHADER[]{ R"(#version 300 es
+            #extension GL_OES_EGL_image_external_essl3 : require
+            precision mediump float;
+            in vec2 babylonUV;
             uniform sampler2D babylonTexture;
             out vec4 oFragColor;
             void main() {
-                vec4 cameraColor = texture(cameraTexture, cameraFrameUV);
-                vec4 babylonColor = texture(babylonTexture, babylonUV);
-                oFragColor = mix(cameraColor, babylonColor, babylonColor.a);
+                oFragColor = texture(babylonTexture, babylonUV);
             }
-        )";
+        )"};
 
         GLuint LoadShader(GLenum shader_type, const char* shader_source)
         {
-            GLuint shader = glCreateShader(shader_type);
+            GLuint shader{ glCreateShader(shader_type) };
             if (!shader)
             {
                 throw std::runtime_error{ "Failed to create shader" };
@@ -99,12 +115,12 @@ namespace xr
 
             glShaderSource(shader, 1, &shader_source, nullptr);
             glCompileShader(shader);
-            GLint compileStatus = GL_FALSE;
+            GLint compileStatus{ GL_FALSE };
             glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
 
             if (compileStatus != GL_TRUE)
             {
-                GLint infoLogLength = 0;
+                GLint infoLogLength{};
 
                 glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
                 if (!infoLogLength)
@@ -122,12 +138,12 @@ namespace xr
             return shader;
         }
 
-        GLuint CreateShaderProgram()
+        GLuint CreateShaderProgram(const char* vertShaderSource, const char* fragShaderSource)
         {
-            GLuint vertShader = LoadShader(GL_VERTEX_SHADER, QUAD_VERT_SHADER);
-            GLuint fragShader = LoadShader(GL_FRAGMENT_SHADER, QUAD_FRAG_SHADER);
+            GLuint vertShader{ LoadShader(GL_VERTEX_SHADER, vertShaderSource) };
+            GLuint fragShader{ LoadShader(GL_FRAGMENT_SHADER, fragShaderSource) };
 
-            GLuint program = glCreateProgram();
+            GLuint program{ glCreateProgram() };
             if (!program)
             {
                 throw std::runtime_error{ "Failed to create shader program" };
@@ -137,7 +153,7 @@ namespace xr
             glAttachShader(program, fragShader);
 
             glLinkProgram(program);
-            GLint linkStatus = GL_FALSE;
+            GLint linkStatus{ GL_FALSE };
             glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
 
             glDetachShader(program, vertShader);
@@ -147,7 +163,7 @@ namespace xr
 
             if (linkStatus != GL_TRUE)
             {
-                GLint infoLogLength = 0;
+                GLint infoLogLength{};
                 glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
                 if (!infoLogLength)
                 {
@@ -173,7 +189,7 @@ namespace xr
         {
             auto SetCapability(GLenum capability, bool isEnabled)
             {
-                const auto setCapability = [capability](bool isEnabled)
+                const auto setCapability{ [capability](bool isEnabled)
                 {
                     if (isEnabled)
                     {
@@ -183,9 +199,9 @@ namespace xr
                     {
                         glDisable(capability);
                     }
-                };
+                }};
 
-                const auto wasEnabled = glIsEnabled(capability);
+                const auto wasEnabled{ glIsEnabled(capability) };
                 setCapability(isEnabled);
                 return gsl::finally([wasEnabled, setCapability]() { setCapability(wasEnabled); });
             }
@@ -206,42 +222,26 @@ namespace xr
                 return gsl::finally([previousDepthMask]() { glDepthMask(previousDepthMask); });
             }
 
-            auto BlendFunc(GLenum blendFuncName, GLenum blendFuncSFactor, GLenum blendFuncTFactor)
+            auto BindSampler(GLenum unit, GLuint id)
             {
-                GLint previousBlendFuncTFactor;
-                glGetIntegerv(blendFuncName, &previousBlendFuncTFactor);
-                glBlendFunc(blendFuncSFactor, blendFuncTFactor);
-                return gsl::finally([blendFuncSFactor, previousBlendFuncTFactor]() { glBlendFunc(blendFuncSFactor, static_cast<GLenum>(previousBlendFuncTFactor)); });
-            }
-
-            auto ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
-            {
-                GLfloat previousClearColor[4];
-                glGetFloatv(GL_COLOR_CLEAR_VALUE, previousClearColor);
-                glClearColor(red, green, blue, alpha);
-                return gsl::finally([red = previousClearColor[0], green = previousClearColor[1], blue = previousClearColor[2], alpha = previousClearColor[3]]() { glClearColor(red, green, blue, alpha); });
-            }
-
-            auto Sampler(int unit)
-            {
-                glActiveTexture(GL_TEXTURE0 + unit);
-                GLint previousSampler;
-                glGetIntegerv(GL_SAMPLER_BINDING, &previousSampler);
-                return gsl::finally([unit, sampler = previousSampler]() { glActiveTexture(GL_TEXTURE0 + unit); glBindSampler(unit, sampler); });
+                glActiveTexture(unit);
+                GLint previousId;
+                glGetIntegerv(GL_SAMPLER_BINDING, &previousId);
+                glBindSampler(unit - GL_TEXTURE0, id);
+                return gsl::finally([unit, id{ previousId }]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
             }
         }
 
         bool CheckARCoreInstallStatus(bool requestInstall)
         {
             ArInstallStatus install_status;
-            ArStatus installStatus = ArCoreApk_requestInstall(
-                GetEnvForCurrentThread(), GetCurrentActivity(), requestInstall, &install_status);
+            ArStatus installStatus{ ArCoreApk_requestInstall(GetEnvForCurrentThread(), GetCurrentActivity(), requestInstall, &install_status) };
             return installStatus == AR_SUCCESS && install_status == AR_INSTALL_STATUS_INSTALLED;
         }
 
         arcana::task<void, std::exception_ptr> CheckAndInstallARCoreAsync()
         {
-            auto task = arcana::task_from_result<std::exception_ptr>();
+            auto task{ arcana::task_from_result<std::exception_ptr>() };
 
             // Check if ARCore is already installed.
             if (!CheckARCoreInstallStatus(false))
@@ -276,7 +276,7 @@ namespace xr
 
         arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
         {
-            auto task = arcana::task_from_result<std::exception_ptr>();
+            auto task{ arcana::task_from_result<std::exception_ptr>() };
 
             // Check if permissions are already granted.
             if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA()))
@@ -308,7 +308,7 @@ namespace xr
 
                 // Kick off the permission check request, and set the task for our caller to wait on.
                 GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(), PERMISSION_REQUEST_ID);
-                task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket = std::move(permissionTicket)](){
+                task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket{ std::move(permissionTicket) }](){
                     return;
                 });
             }
@@ -353,7 +353,8 @@ namespace xr
                 ArSession_destroy(session);
 
                 glDeleteTextures(1, &cameraTextureId);
-                glDeleteProgram(shaderProgramId);
+                glDeleteProgram(cameraShaderProgramId);
+                glDeleteProgram(babylonShaderProgramId);
                 glDeleteFramebuffers(1, &clearFrameBufferId);
 
                 DestroyDisplayResources();
@@ -373,11 +374,12 @@ namespace xr
             }
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
-            shaderProgramId = CreateShaderProgram();
+            cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            babylonShaderProgramId = CreateShaderProgram(BABYLON_VERT_SHADER, BABYLON_FRAG_SHADER);
 
             // Create the ARCore ArSession
             {
-                ArStatus status = ArSession_create(GetEnvForCurrentThread(), GetAppContext(), &session);
+                ArStatus status{ ArSession_create(GetEnvForCurrentThread(), GetAppContext(), &session) };
                 if (status != ArStatus::AR_SUCCESS)
                 {
                     std::ostringstream message;
@@ -411,7 +413,7 @@ namespace xr
 
             // Start the ArSession
             {
-                ArStatus status = ArSession_resume(session);
+                ArStatus status{ ArSession_resume(session) };
                 if (status != ArStatus::AR_SUCCESS)
                 {
                     std::ostringstream message;
@@ -454,15 +456,15 @@ namespace xr
             // Get the current surface dimensions
             size_t width{}, height{};
             {
-                EGLDisplay display = eglGetCurrentDisplay();
-                EGLSurface surface = eglGetCurrentSurface(EGL_DRAW);
+                EGLDisplay display{ eglGetCurrentDisplay() };
+                EGLSurface surface{ eglGetCurrentSurface(EGL_DRAW) };
                 EGLint _width{}, _height{};
                 eglQuerySurface(display, surface, EGL_WIDTH, &_width);
                 eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
                 width = static_cast<size_t>(_width);
                 height = static_cast<size_t>(_height);
             }
-            
+
             // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
             width = std::max(width, size_t(8));
             height = std::max(height, size_t(8));
@@ -472,7 +474,7 @@ namespace xr
             {
                 DestroyDisplayResources(deletedTextureCallback);
 
-                int rotation = GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation();
+                int rotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() };
 
                 // Update the width and height of the display with ARCore (this is used to adjust the UVs for the camera texture so we can draw a portion of the camera frame that matches the size of the UI element displaying it)
                 ArSession_setDisplayGeometry(session, rotation, static_cast<int32_t>(width), static_cast<int32_t>(height));
@@ -506,17 +508,9 @@ namespace xr
                 }
 
                 // Bind the color and depth texture to the clear color frame buffer
-                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(clearFrameBufferId);
+                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)), 0);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)), 0);
-            }
-            else
-            {
-                // Clear the color and depth texture
-                // Whether or not to clear is an implementation detail - OpenXR (for example) provides a color texture that is already filled with the camera texture, so the common XR layer should not assume a clear is required
-                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(clearFrameBufferId);
-                auto clearColorTransaction = GLTransactions::ClearColor(0, 0, 0, 0);
-                glClear(GL_COLOR_BUFFER_BIT);
             }
 
             int32_t geometryChanged{0};
@@ -542,6 +536,41 @@ namespace xr
 
             ArCamera_release(camera);
 
+            // Draw the camera texture to the Babylon render texture, but only if the session has started providing AR frames.
+            int64_t frameTimestamp{};
+            ArFrame_getTimestamp(session, frame, &frameTimestamp);
+            if (frameTimestamp)
+            {
+                // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
+                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
+                auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
+                auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
+                auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
+                auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+
+                glUseProgram(cameraShaderProgramId);
+
+                // Configure the quad vertex positions
+                auto vertexPositionsUniformLocation{ glGetUniformLocation(cameraShaderProgramId, "vertexPositions") };
+                glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
+
+                // Configure the camera texture
+                auto cameraTextureUniformLocation{ glGetUniformLocation(cameraShaderProgramId, "cameraTexture") };
+                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
+
+                // Configure the camera frame UVs
+                auto cameraFrameUVsUniformLocation{ glGetUniformLocation(cameraShaderProgramId, "cameraFrameUVs") };
+                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
+
+                // Draw the quad
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
+
+                glUseProgram(0);
+            }
+
             return std::make_unique<Session::Frame>(*this);
         }
 
@@ -559,47 +588,31 @@ namespace xr
 
         void DrawFrame()
         {
-            // Suppress rendering if the camera did not produce the first frame yet.
-            // This is to avoid drawing possible leftover data from previous sessions if
-            // the texture is reused.
+            // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
             if (frameTimestamp)
             {
-                auto bindFrameBufferTransaction = GLTransactions::BindFrameBuffer(0);
-                auto cullFaceTransaction = GLTransactions::SetCapability(GL_CULL_FACE, false);
-                auto depthTestTransaction = GLTransactions::SetCapability(GL_DEPTH_TEST, false);
-                auto blendTransaction = GLTransactions::SetCapability(GL_BLEND, false);
-                auto depthMaskTransaction = GLTransactions::DepthMask(GL_FALSE);
-                auto blendFuncTransaction = GLTransactions::BlendFunc(GL_BLEND_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                auto sampler0Transation = GLTransactions::Sampler(0);
-                auto sampler1Transation = GLTransactions::Sampler(1);
+                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
+                auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
+                auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
+                auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
+                auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
-                glUseProgram(shaderProgramId);
+                glUseProgram(babylonShaderProgramId);
 
                 // Configure the quad vertex positions
-                auto vertexPositionsUniformLocation = glGetUniformLocation(shaderProgramId, "vertexPositions");
+                auto vertexPositionsUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "vertexPositions") };
                 glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
-                // Configure the camera texture
-                auto cameraTextureUniformLocation = glGetUniformLocation(shaderProgramId, "cameraTexture");
-                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-                glBindSampler(0, 0);
-
-                // Configure the camera frame UVs
-                auto cameraFrameUVsUniformLocation = glGetUniformLocation(shaderProgramId, "cameraFrameUVs");
-                glUniform2fv(cameraFrameUVsUniformLocation, VERTEX_COUNT, CameraFrameUVs);
-
                 // Configure the babylon render texture
-                auto babylonTextureUniformLocation = glGetUniformLocation(shaderProgramId, "babylonTexture");
-                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE1));
-                glActiveTexture(GL_TEXTURE1);
-                auto babylonTextureId = (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer;
+                auto babylonTextureUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "babylonTexture") };
+                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                glActiveTexture(GL_TEXTURE0);
+                auto babylonTextureId{ (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer };
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-                glBindSampler(1, 0);
+                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
@@ -725,7 +738,7 @@ namespace xr
             // Create the actual anchor. If a trackable was passed in (from a hit test result) create the
             // anchor against the tracakble. Otherwise create it against the session.
             ArAnchor* arAnchor{};
-            auto trackableObj = reinterpret_cast<ArTrackable*>(trackable);
+            auto trackableObj{ reinterpret_cast<ArTrackable*>(trackable) };
             if (trackableObj)
             {
                 ArTrackable_acquireNewAnchor(session, trackableObj, arPose, &arAnchor);
@@ -746,7 +759,7 @@ namespace xr
         void UpdateAnchor(xr::Anchor& anchor)
         {
             // First check if the anchor still exists, if not then mark the anchor as no longer valid.
-            auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
+            auto arAnchor{ reinterpret_cast<ArAnchor*>(anchor.NativeAnchor) };
             if (arAnchor == nullptr)
             {
                 anchor.IsValid = false;
@@ -777,7 +790,7 @@ namespace xr
             // and clean up its state in memory.
             if (anchor.NativeAnchor != nullptr)
             {
-                auto arAnchor = reinterpret_cast<ArAnchor*>(anchor.NativeAnchor);
+                auto arAnchor{ reinterpret_cast<ArAnchor*>(anchor.NativeAnchor) };
                 ArAnchor_detach(session, arAnchor);
                 CleanupAnchor(arAnchor);
                 anchor.NativeAnchor = nullptr;
@@ -788,7 +801,7 @@ namespace xr
         {
             // Iterate over the list of anchors if arAnchor is null then clean up all anchors
             // otherwise clean up only the target anchor and return.
-            auto anchorIter = arCoreAnchors.begin();
+            auto anchorIter{ arCoreAnchors.begin() };
             while (anchorIter != arCoreAnchors.end())
             {
                 if (arAnchor == nullptr || arAnchor == *anchorIter)
@@ -855,7 +868,7 @@ namespace xr
                 ArPlane_getPolygon(session, planeTrackable, planePolygonBuffer.data());
 
                 // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
-                auto planeIterator = planeMap.find(planeTrackable);
+                auto planeIterator{ planeMap.find(planeTrackable) };
                 if (planeIterator != planeMap.end())
                 {
                     UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), rawPose, planePolygonBuffer, polygonSize);
@@ -865,7 +878,7 @@ namespace xr
                 {
                     // This is a new plane, create it and initialize its values.
                     Planes.emplace_back();
-                    auto& plane = Planes.back();
+                    auto& plane{ Planes.back() };
                     planeMap.insert({planeTrackable, plane.ID});
                     UpdatePlane(updatedPlanes, plane, rawPose, planePolygonBuffer, polygonSize);
                 }
@@ -880,11 +893,11 @@ namespace xr
             }
 
             // Get the feature point cloud from ArCore.
-            ArPointCloud *pointCloud = nullptr;
-            int32_t numberOfPoints = 0;
-            const int32_t* pointCloudIDs = nullptr;
-            const float *pointCloudData = nullptr;
-            ArStatus status = ArFrame_acquirePointCloud(session, frame, &pointCloud);
+            ArPointCloud *pointCloud{};
+            int32_t numberOfPoints{};
+            const int32_t* pointCloudIDs{};
+            const float *pointCloudData{};
+            ArStatus status{ ArFrame_acquirePointCloud(session, frame, &pointCloud) };
 
             if (status != AR_SUCCESS)
             {
@@ -902,8 +915,8 @@ namespace xr
                 for (int32_t i = 0; i < numberOfPoints; i++)
                 {
                     FeaturePointCloud.emplace_back();
-                    auto& featurePoint = FeaturePointCloud.back();
-                    int32_t dataIndex = i * 4;
+                    auto& featurePoint{ FeaturePointCloud.back() };
+                    int32_t dataIndex{ i * 4 };
 
                     // Grab the position and confidence value from the point cloud.
                     // Reflect the point across the Z axis, as we want to report this
@@ -914,7 +927,7 @@ namespace xr
                     featurePoint.ConfidenceValue = pointCloudData[dataIndex + 3];
 
                     // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
-                    const int32_t id = pointCloudIDs[i];
+                    const int32_t id{ pointCloudIDs[i] };
                     auto featurePointIterator = featurePointIDMap.find(id);
                     if (featurePointIterator != featurePointIDMap.end())
                     {
@@ -972,9 +985,10 @@ namespace xr
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
-        FeaturePoint::Identifier nextFeaturePointID = 0;
+        FeaturePoint::Identifier nextFeaturePointID{};
 
-        GLuint shaderProgramId{};
+        GLuint cameraShaderProgramId{};
+        GLuint babylonShaderProgramId{};
         GLuint cameraTextureId{};
         GLuint clearFrameBufferId{};
 
@@ -1011,14 +1025,14 @@ namespace xr
         {
             if (ActiveFrameViews[0].ColorTexturePointer)
             {
-                auto colorTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer));
+                auto colorTextureId{ static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)) };
                 glDeleteTextures(1, &colorTextureId);
                 deletedTextureCallback(ActiveFrameViews[0].ColorTexturePointer);
             }
 
             if (ActiveFrameViews[0].DepthTexturePointer)
             {
-                auto depthTextureId = static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer));
+                auto depthTextureId{ static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)) };
                 glDeleteTextures(1, &depthTextureId);
             }
 
@@ -1052,13 +1066,13 @@ namespace xr
          **/
         void CheckForSubsumedPlanes(std::vector<Frame::Plane::Identifier>& subsumedPlanes)
         {
-            auto planeMapIterator = planeMap.begin();
+            auto planeMapIterator{ planeMap.begin() };
             while (planeMapIterator != planeMap.end())
             {
-                auto [arPlane, planeID] = *planeMapIterator;
+                auto [arPlane, planeID]{ *planeMapIterator };
 
                 // Check if the plane has been subsumed, and if we should stop tracking it.
-                ArPlane* subsumingPlane = nullptr;
+                ArPlane* subsumingPlane{};
                 ArPlane_acquireSubsumedBy(session, arPlane, &subsumingPlane);
 
                 // Plane has been subsumed, stop tracking it explicitly.
@@ -1066,10 +1080,10 @@ namespace xr
                 {
                     subsumedPlanes.push_back(planeID);
 
-                    auto& plane = GetPlaneByID(planeID);
+                    auto& plane{ GetPlaneByID(planeID) };
                     plane.Polygon.clear();
                     plane.PolygonSize = 0;
-                    
+
                     planeMapIterator = planeMap.erase(planeMapIterator);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(arPlane));
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(subsumingPlane));
