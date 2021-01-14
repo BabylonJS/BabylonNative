@@ -536,9 +536,7 @@ namespace xr
 
             ArCamera_release(camera);
 
-            // Suppress rendering if the camera did not produce the first frame yet.
-            // This is to avoid drawing possible leftover data from previous sessions if
-            // the texture is reused.
+            // Draw the camera texture to the Babylon render texture, but only if the session has started providing AR frames.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
             if (frameTimestamp)
@@ -590,9 +588,7 @@ namespace xr
 
         void DrawFrame()
         {
-            // Suppress rendering if the camera did not produce the first frame yet.
-            // This is to avoid drawing possible leftover data from previous sessions if
-            // the texture is reused.
+            // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
             if (frameTimestamp)
