@@ -11,7 +11,7 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
     
   - script: |
@@ -52,7 +52,7 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
       
   - script: |
@@ -94,7 +94,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
 
   - script: |
@@ -162,7 +162,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
 
   - script: |
@@ -229,7 +229,7 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
     
   - script: |
@@ -252,7 +252,7 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
     
   - script: |
@@ -275,7 +275,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
 
   - script: |
@@ -302,7 +302,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
   - script: |
       brew install ninja
@@ -341,7 +341,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
   - script: |
       brew install ninja
@@ -377,7 +377,7 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
@@ -414,7 +414,7 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
@@ -456,7 +456,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
@@ -480,7 +480,7 @@ jobs:
 
   steps:
   - script: |
-      git submodule update --init --recursive
+      git submodule update --init --recursive --depth 1
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
