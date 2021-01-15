@@ -1082,6 +1082,13 @@ namespace Babylon
             });
     }
 
+    void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
+    {
+        const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
+        const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
+        textureDestination->Handle = textureSource->Handle;
+    }
+
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
