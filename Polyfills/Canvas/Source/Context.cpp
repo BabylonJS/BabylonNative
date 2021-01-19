@@ -2,7 +2,11 @@
 #include <map>
 #include <algorithm>
 #include <assert.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "nanovg/nanovg.h"
+#pragma GCC diagnostic pop
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
 #include "Canvas.h"

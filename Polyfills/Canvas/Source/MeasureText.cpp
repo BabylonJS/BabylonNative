@@ -3,7 +3,10 @@
 #include "Canvas.h"
 #include "Context.h"
 #include "MeasureText.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "nanovg/nanovg.h"
+#pragma GCC diagnostic pop
 
 namespace Babylon::Polyfills::Internal
 {
@@ -51,3 +54,4 @@ namespace Babylon::Polyfills::Internal
         m_height = value.As<Napi::Number>().Uint32Value();
     }
 }
+
