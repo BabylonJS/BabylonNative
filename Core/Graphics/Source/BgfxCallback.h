@@ -1,11 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <mutex>
+#include <napi/napi.h>
+
+#include <arcana/containers/ticketed_collection.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include <napi/napi.h>
+
+#include <mutex>
 #include <queue>
+#include <vector>
 
 namespace Babylon
 {
@@ -14,6 +18,22 @@ namespace Babylon
         virtual ~BgfxCallback() = default;
 
         void addScreenShotCallback(Napi::Function callback);
+
+        struct CaptureData
+        {
+            uint32_t Width{};
+            uint32_t Height{};
+            uint32_t Pitch{};
+            bgfx::TextureFormat::Enum Format{};
+            bool YFlip{};
+            const void* Data{};
+            uint32_t DataSize{};
+        };
+
+        auto AddCaptureCallback(std::function<void(const CaptureData&)> callback)
+        {
+            return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
+        }
 
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
     protected:
@@ -31,8 +51,13 @@ namespace Babylon
         void captureFrame(const void* _data, uint32_t _size) override;
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
+        std::function<void(const char* output)> m_outputFunction;
+        
         std::mutex m_ssCallbackAccess;
         std::queue<Napi::FunctionReference> m_screenshotCallbacks;
-        std::function<void(const char* output)> m_outputFunction;
+        
+        CaptureData m_captureData{};
+        std::mutex m_captureCallbacksMutex{};
+        arcana::ticketed_collection<std::function<void(const CaptureData&)>> m_captureCallbacks{};
     };
 }

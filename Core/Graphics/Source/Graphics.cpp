@@ -65,20 +65,20 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        std::scoped_lock lock(m_state.Mutex);
-        m_state.Resolution.width = width;
-        m_state.Resolution.height = height;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Resolution.Width = width;
+        m_state.Resolution.Height = height;
         UpdateBgfxResolution();
     }
 
     void Graphics::Impl::UpdateBgfxResolution()
     {
-        std::scoped_lock lock(m_state.Mutex);
+        std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
         auto& res = m_state.Bgfx.InitState.resolution;
-        auto level = m_state.Resolution.hardwareScalingLevel;
-        res.width = static_cast<uint32_t>(m_state.Resolution.width / level);
-        res.height = static_cast<uint32_t>(m_state.Resolution.height / level);
+        auto level = m_state.Resolution.HardwareScalingLevel;
+        res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
+        res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
     }
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
@@ -156,7 +156,7 @@ namespace Babylon
             {
                 bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
                 auto& res = m_state.Bgfx.InitState.resolution;
-                bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
+                bgfx::reset(res.width, res.height, res.reset);
                 bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
 #if __APPLE__
@@ -260,8 +260,8 @@ namespace Babylon
 
     float Graphics::Impl::GetHardwareScalingLevel()
     {
-        std::scoped_lock lock(m_state.Mutex);
-        return m_state.Resolution.hardwareScalingLevel;
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Resolution.HardwareScalingLevel;
     }
 
     void Graphics::Impl::SetHardwareScalingLevel(float level)
@@ -271,11 +271,25 @@ namespace Babylon
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
         {
-            std::scoped_lock lock(m_state.Mutex);
-            m_state.Resolution.hardwareScalingLevel = level;
+            std::scoped_lock lock{m_state.Mutex};
+            m_state.Resolution.HardwareScalingLevel = level;
         }
 
         UpdateBgfxResolution();
+    }
+
+    void Graphics::Impl::StartCapture()
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        m_state.Bgfx.InitState.resolution.reset |= BGFX_RESET_CAPTURE;
+    }
+
+    void Graphics::Impl::StopCapture()
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = false;
+        m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
     }
 
     Graphics::Graphics()

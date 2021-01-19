@@ -6,7 +6,9 @@
 #include <stdarg.h>
 #include <bgfx/bgfx.h>
 #include <Babylon/JsRuntime.h>
+
 #include <assert.h>
+#include <sstream>
 
 namespace Babylon
 {
@@ -123,15 +125,28 @@ namespace Babylon
         });
     }
 
-    void BgfxCallback::captureBegin(uint32_t /*width*/, uint32_t /*height*/, uint32_t /*pitch*/, bgfx::TextureFormat::Enum /*format*/, bool /*yflip*/)
+    void BgfxCallback::captureBegin(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yflip)
     {
+        m_captureData.Width = width;
+        m_captureData.Height = height;
+        m_captureData.Pitch = pitch;
+        m_captureData.Format = format;
+        m_captureData.YFlip = yflip;
     }
 
     void BgfxCallback::captureEnd()
     {
     }
 
-    void BgfxCallback::captureFrame(const void* /*_data*/, uint32_t /*_size*/)
+    void BgfxCallback::captureFrame(const void* data, uint32_t size)
     {
+        m_captureData.Data = data;
+        m_captureData.DataSize = size;
+
+        std::scoped_lock lock{m_captureCallbacksMutex};
+        for (const auto& callback : m_captureCallbacks)
+        {
+            callback(m_captureData);
+        }
     }
 }

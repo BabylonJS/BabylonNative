@@ -48,6 +48,13 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        auto AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback)
+        {
+            return Callback.AddCaptureCallback(std::move(callback));
+        }
+        void StartCapture();
+        void StopCapture();
+
         BgfxCallback Callback{};
 
     private:
@@ -69,13 +76,11 @@ namespace Babylon
 
             struct
             {
-                size_t width{};
-                size_t height{};
-                float hardwareScalingLevel{1.0f};
+                size_t Width{};
+                size_t Height{};
+                float HardwareScalingLevel{1.0f};
             } Resolution{};
         } m_state{};
-
-
 
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
