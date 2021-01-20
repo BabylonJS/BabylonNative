@@ -109,16 +109,16 @@ namespace
                     fflush(stdout);
                 });
 
-                Babylon::Polyfills::Window::Initialize(env);
+                Babylon::Polyfills::Window::Initialize(env, (void*)&hWnd);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                Babylon::Polyfills::Window::Initialize(env);
+                Babylon::Polyfills::Window::Initialize(env, (void*)&hWnd);
 
                 // Initialize NativeEngine plugin.
                 graphics->AddToJavaScript(env);
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
-                Babylon::TestUtils::CreateInstance(env, hWnd);
+                Babylon::TestUtils::CreateInstance(env, (void*)&hWnd);
             });
 
         // Scripts are copied to the parent of the executable due to CMake issues.

@@ -1,7 +1,7 @@
-#include "Window.h"
 #include <basen.hpp>
 #include <chrono>
 #include <iterator>
+#include "Window.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -10,18 +10,20 @@ namespace Babylon::Polyfills::Internal
         constexpr auto JS_CLASS_NAME = "Window";
         constexpr auto JS_SET_TIMEOUT_NAME = "setTimeout";
         constexpr auto JS_A_TO_B_NAME = "atob";
+
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
     }
 
-    void Window::Initialize(Napi::Env env)
+    void Window::Initialize(Napi::Env env, void* windowPtr)
     {
         Napi::HandleScope scope{env};
 
         Napi::Function constructor = DefineClass(
             env,
             JS_CLASS_NAME,
-            {});
+            {},
+            windowPtr);
 
         auto global = env.Global();
         auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
@@ -60,9 +62,12 @@ namespace Babylon::Polyfills::Internal
         return *Window::Unwrap(JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_WINDOW_NAME).As<Napi::Object>());
     }
 
+    #ifdef WIN32
     Window::Window(const Napi::CallbackInfo& info)
+    #endif
         : Napi::ObjectWrap<Window>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
+        , m_windowPtr{info.Data()}
     {
     }
 
@@ -113,8 +118,10 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::Window
 {
-    void Initialize(Napi::Env env)
+#ifdef WIN32
+    void Initialize(Napi::Env env, void* windowPtr)
     {
-        Internal::Window::Initialize(env);
+        Internal::Window::Initialize(env, windowPtr);
     }
+#endif
 }

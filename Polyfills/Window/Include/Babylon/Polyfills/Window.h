@@ -4,5 +4,5 @@
 
 namespace Babylon::Polyfills::Window
 {
-    void Initialize(Napi::Env env);
+    void Initialize(Napi::Env env, void* windowPtr);
 }

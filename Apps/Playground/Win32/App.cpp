@@ -109,7 +109,7 @@ namespace
                 OutputDebugStringA(message);
             });
 
-            Babylon::Polyfills::Window::Initialize(env);
+            Babylon::Polyfills::Window::Initialize(env, (void*)&hWnd);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeEngine plugin.
