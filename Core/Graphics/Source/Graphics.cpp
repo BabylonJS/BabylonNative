@@ -288,7 +288,7 @@ namespace Babylon
     void Graphics::Impl::StopCapture()
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = false;
+        m_state.Bgfx.Dirty = true;
         m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
     }
 

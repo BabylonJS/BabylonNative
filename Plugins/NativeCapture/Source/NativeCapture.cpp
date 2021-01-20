@@ -20,7 +20,8 @@ namespace Babylon::Plugins::Internal
                 env,
                 JS_CLASS_NAME,
                 {
-                    NativeCapture::InstanceMethod("error", &NativeCapture::Dispose),
+                    NativeCapture::InstanceMethod("addOnCaptureCallback", &NativeCapture::AddOnCaptureCallback),
+                    NativeCapture::InstanceMethod("dispose", &NativeCapture::Dispose),
                 });
 
             env.Global().Set(JS_CLASS_NAME, func);
@@ -29,8 +30,10 @@ namespace Babylon::Plugins::Internal
         NativeCapture(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<NativeCapture>{info}
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-            , m_ticket{Graphics::Impl::GetFromJavaScript(info.Env()).AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); })}
+            , m_graphicsImpl(Graphics::Impl::GetFromJavaScript(info.Env()))
+            , m_ticket{m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); })}
         {
+            m_graphicsImpl.StartCapture();
         }
 
     private:
@@ -58,10 +61,12 @@ namespace Babylon::Plugins::Internal
 
         void Dispose(const Napi::CallbackInfo&)
         {
-            m_callbacks.resize(0);
+            m_graphicsImpl.StopCapture();
+            m_callbacks.clear();
         }
 
         JsRuntime& m_runtime;
+        Graphics::Impl& m_graphicsImpl;
         std::vector<Napi::FunctionReference> m_callbacks{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket m_ticket;
     };
