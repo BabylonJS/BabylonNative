@@ -40,7 +40,7 @@ namespace Babylon::Plugins::Internal
         void AddOnCaptureCallback(const Napi::CallbackInfo& info)
         {
             auto listener = info[0].As<Napi::Function>();
-            m_callbacks.push_back(std::move(Napi::Persistent(listener)));
+            m_callbacks.push_back(Napi::Persistent(listener));
         }
 
         void CaptureDataReceived(const BgfxCallback::CaptureData& data)
