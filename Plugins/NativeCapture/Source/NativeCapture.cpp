@@ -48,7 +48,7 @@ namespace Babylon::Plugins::Internal
             std::vector<uint8_t> bytes{};
             bytes.resize(data.DataSize);
             std::memcpy(bytes.data(), data.Data, data.DataSize);
-            m_runtime.Dispatch([this, data, bytes{std::move(bytes)}](Napi::Env env) mutable {
+            m_runtime.Dispatch([this, data{data}, bytes{std::move(bytes)}](Napi::Env env) mutable {
                 data.Data = bytes.data();
 
                 auto external = Napi::External<BgfxCallback::CaptureData>::New(env, &data);
