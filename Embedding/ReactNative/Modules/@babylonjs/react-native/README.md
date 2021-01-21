@@ -26,6 +26,15 @@ When running from XCode (with the debugger attached), `API Metal Validation` mus
 1. Select the `Options` tab.
 1. Change `API Metal Validation` to `Disabled`.
 
+### Universal Windows Platform (UWP) Configuration
+
+The minimum UWP target platform version is 10.0.18362.0. UWP BabylonReactNative requires the following NPM dependencies. These versions contradict the peer dependencies declared in package.json in order to support Android and iOS consumers using older versions of react and react-native.
+
+* `"react":"^17.0.1"`
+* `"react-native":"^0.64.0-rc.0"`
+* `"react-native-permissions":"^3.0.0"`
+* `"react-native-windows":"preview"`
+
 ### `useEngine`
 
 `useEngine` is a **custom React hook** that manages the lifecycle of a Babylon engine instance in the context of an owning React component. `useEngine` creates an engine instance **asynchronously** which is used to create and configure scenes. Typically scene initialization code should exist in a `useEffect` triggered by an `engine` state change. For example:

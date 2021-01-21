@@ -80,7 +80,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 13)
 
 ### **Configuring a Windows Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.3.6528147), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/), [Visual Studio 2019](https://visualstudio.microsoft.com/vs/)
 
 - The `PATH` environment variable must include the path to adb (typically %LOCALAPPDATA%/Android/sdk/platform-tools/).
 - The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).  
@@ -140,6 +140,16 @@ npm run ios
 ```
 
 After having run the above commands, you can also open `Apps/Playground/ios/Playground.xcworkspace` in XCode and run the app from there.
+
+#### Universal Windows Platform (UWP)
+
+UWP can only be built on a PC. `CMake` must be manually run to generate project definitions for BabylonNative dependencies.
+
+1. Run `npm install` in Apps\Playground.
+1. Run `Modules\@babylonjs\react-native\windows\scripts\Setup.bat` in an administrator command prompt. This script will run `CMake` and generate visual studio projects for all of the required BabylonNative dependencies.
+1. Run `Modules\@babylonjs\react-native\windows\scripts\Build.bat` in an administrator command prompt. This script will compile BabylonNative dependencies and BabylonReactNative.dll for all platforms and configurations.
+1. In Apps\Playground, run `npm run windows`.
+> Note: if you experience build issues for Apps\Playground related to autolinking, try running `npx react-native autolink-windows -logging` in the Apps\Playground folder. You can also run `npm run windows-verbose` to view logging.
 
 ### **Testing in the Playground App** ###
 

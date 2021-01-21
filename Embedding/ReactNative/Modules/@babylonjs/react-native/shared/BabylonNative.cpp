@@ -75,7 +75,7 @@ namespace Babylon
             }
         }
 
-        void UpdateView(void* windowPtr, size_t width, size_t height)
+        void UpdateView(void* windowPtr, void* windowTypePtr, size_t width, size_t height)
         {
             // TODO: We shouldn't have to dispatch to the JS thread for CreateGraphics/UpdateWindow/UpdateSize, but not doing so results in a crash.
             //       I don't understand the issue yet, but for now just retain the pre-refactor logic. We'll need to resolve this to enable manual
@@ -88,11 +88,11 @@ namespace Babylon
             auto renderDispatcher = m_autoRender ? m_jsDispatcher : g_inlineDispatcher;
             auto jsDispatcher = m_autoRender ? g_inlineDispatcher : m_jsDispatcher;
 
-            renderDispatcher([this, windowPtr, width, height, jsDispatcher{ std::move(jsDispatcher) }]()
+            renderDispatcher([this, windowPtr, width, height, windowTypePtr, jsDispatcher{ std::move(jsDispatcher) }]()
             {
                 if (!m_graphics)
                 {
-                    m_graphics = Graphics::CreateGraphics(windowPtr, width, height);
+                    m_graphics = Graphics::CreateGraphics(windowPtr, windowTypePtr, width, height);
                     jsDispatcher([this]()
                     {
                         m_graphics->AddToJavaScript(m_env);
@@ -102,7 +102,7 @@ namespace Babylon
                 }
                 else
                 {
-                    m_graphics->UpdateWindow(windowPtr);
+                    m_graphics->UpdateWindow(windowPtr, windowTypePtr);
                     m_graphics->UpdateSize(width, height);
                     m_graphics->EnableRendering();
                 }
@@ -231,11 +231,11 @@ namespace Babylon
         }
     }
 
-    void UpdateView(void* windowPtr, size_t width, size_t height)
+    void UpdateView(void* windowPtr, size_t width, size_t height, void* windowTypePtr)
     {
         if (auto nativeModule{ g_nativeModule.lock() })
         {
-            nativeModule->UpdateView(windowPtr, width, height);
+            nativeModule->UpdateView(windowPtr, windowTypePtr, width, height);
         }
         else
         {

@@ -4,9 +4,9 @@
  *
  * @format
  */
-
 const path = require('path');
 const fs = require('fs');
+const exclusionList = require('metro-config/src/defaults/exclusionList');
 
 // NOTE: The Metro bundler does not support symlinks (see https://github.com/facebook/metro/issues/1), which NPM uses for local packages.
 //       To work around this, we explicity tell the metro bundler where to find local/linked packages.
@@ -62,14 +62,24 @@ module.exports = {
   resolver: {
     // Register an "extra modules proxy" for resolving modules outside of the normal resolution logic.
     extraNodeModules: new Proxy(
-        // Provide the set of known local package mappings.
-        moduleMappings,
-        {
-            // Provide a mapper function, which uses the above mappings for associated package ids,
-            // otherwise fall back to the standard behavior and just look in the node_modules directory.
-            get: (target, name) => name in target ? target[name] : path.join(__dirname, `node_modules/${name}`),
-        },
+      // Provide the set of known local package mappings.
+      moduleMappings,
+      {
+        // Provide a mapper function, which uses the above mappings for associated package ids,
+        // otherwise fall back to the standard behavior and just look in the node_modules directory.
+        get: (target, name) => name in target ? target[name] : path.join(__dirname, `node_modules/${name}`),
+      },
     ),
+    
+    blockList: exclusionList([
+      // Avoid error EBUSY: resource busy or locked, open 'D:\a\1\s\packages\playground\msbuild.ProjectImports.zip' in pipeline
+      /.*\.ProjectImports\.zip/,
+  
+      // This stops "react-native run-windows" from causing the metro server to crash if its already running
+      new RegExp(
+        `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
+      ),
+    ]),
   },
 
   projectRoot: path.resolve(__dirname),

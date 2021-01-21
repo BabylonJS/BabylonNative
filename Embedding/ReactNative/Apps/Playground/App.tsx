@@ -130,7 +130,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
               </View>
             }
             <EngineView style={props.style} camera={camera} onInitialized={onInitialized} />
-            <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} value={defaultScale} onValueChange={setScale} />
+            <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} step={0.01} value={defaultScale} onValueChange={setScale} />
             <Text style={{fontSize: 12, color: 'yellow',  position: 'absolute', margin: 10}}>{trackingStateToString(trackingState)}</Text>
           </View>
         }

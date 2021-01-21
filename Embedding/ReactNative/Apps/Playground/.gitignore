@@ -61,3 +61,8 @@ buck-out/
 
 # CocoaPods
 /ios/Pods/
+
+# UWP
+build.binlog
+deploy.binlog
+msbuild.binlog

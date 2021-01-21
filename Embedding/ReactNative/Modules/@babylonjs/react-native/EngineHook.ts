@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
-import { Engine, WebXRSessionManager } from '@babylonjs/core';
+import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color3 } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
 import * as base64 from 'base-64';
 
@@ -26,12 +26,19 @@ class DOMException {
 {
     const originalInitializeSessionAsync: (...args: any[]) => Promise<any> = WebXRSessionManager.prototype.initializeSessionAsync;
     WebXRSessionManager.prototype.initializeSessionAsync = async function (...args: any[]): Promise<any> {
+        if (Platform.OS === "windows")
+        {
+            // Launching into immersive mode on Windows HMDs doesn't require a runtime permission check.
+            // The Spatial Perception capability should be enabled in the project's Package.appxmanifest.
+            return originalInitializeSessionAsync.apply(this, args);
+        }
+
         const cameraPermission = Platform.select({
             android: PERMISSIONS.ANDROID.CAMERA,
             ios: PERMISSIONS.IOS.CAMERA,
         });
 
-        // Only Android and iOS are supported.
+        // Only Android, iOS and Windows are supported.
         if (cameraPermission === undefined) {
             throw new DOMException(DOMError.NotSupportedError);
         }
@@ -53,6 +60,17 @@ class DOMException {
             case "granted":
                 return originalInitializeSessionAsync.apply(this, args);
         }
+    }
+}
+
+if (Platform.OS == "windows") {
+    const originalEnterXRAsync: (...args: any[]) => Promise<any> = WebXRExperienceHelper.prototype.enterXRAsync;
+    WebXRExperienceHelper.prototype.enterXRAsync = async function (...args: any[]): Promise<any> {
+        // TODO: https://github.com/BabylonJS/BabylonNative/issues/577
+        // Windows HMDs require different rendering behaviors than default xr rendering for mobile devices
+        await originalEnterXRAsync.apply(this, args);
+        this.scene.clearColor = Color3.Black().toColor4();
+        this.scene.autoClear = true;
     }
 }
 

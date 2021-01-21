@@ -40,6 +40,16 @@ const buildAndroid = async () => {
   exec('./gradlew babylonjs_react-native:assembleRelease', '../Apps/Playground/android');
 };
 
+const makeUWPProject = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native\\windows\\scripts\\Setup.bat');
+}
+
+const buildUWPProject = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native\\windows\\scripts\\Build.bat');
+}
+
+const buildUWP = gulp.series(makeUWPProject, buildUWPProject);
+
 const copyCommonFiles = () => {
   return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/package.json')
     .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/README.md'))
@@ -181,6 +191,8 @@ exports.buildIOS = buildIOS;
 exports.buildAndroid = buildAndroid;
 exports.createIOSUniversalLibs = createIOSUniversalLibs;
 exports.copyFiles = copyFiles;
+
+exports.buildUWP = buildUWP;
 
 exports.clean = clean;
 exports.build = build;
