@@ -4,6 +4,7 @@ const readdirAsync = util.promisify(fs.readdir);
 const log = require('fancy-log');
 const gulp = require('gulp');
 const shelljs = require('shelljs');
+const rename = require('gulp-rename');
 
 function exec(command, workingDirectory = '.', logCommand = true) {
   if (logCommand) {
@@ -59,7 +60,7 @@ const copyCommonFiles = () => {
 };
 
 const copySharedFiles = () => {
-  return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/BabylonNative.h')
+  return gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/BabylonNative.h')
     .pipe(gulp.dest('Assembled/shared'));
 };
 
@@ -79,11 +80,11 @@ const createIOSUniversalLibs = async () => {
 
 const copyAndroidFiles = async () => {
   await new Promise(resolve => {
-          gulp.src('Android/build.gradle')
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/src**/main/AndroidManifest.xml'))
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/src**/main/java/**/*'))
-    .pipe(gulp.dest('Assembled/android'))
-    .on('end', resolve);
+    gulp.src('Android/build.gradle')
+      .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/src**/main/AndroidManifest.xml'))
+      .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/src**/main/java/**/*'))
+      .pipe(gulp.dest('Assembled/android'))
+      .on('end', resolve);
   });
 
   await new Promise(resolve => {
@@ -92,6 +93,89 @@ const copyAndroidFiles = async () => {
     .on('end', resolve);
   });
 };
+
+const createUWPDirectories = async () => {
+  shelljs.mkdir('-p', 'Assembled/windows');
+  shelljs.mkdir('-p', 'Assembled/windows/libs');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/arm');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/arm/Debug');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/arm/Release');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/arm64');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/arm64/Debug');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/arm64/Release');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/x86');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/x86/Debug');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/x86/Release');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/x64');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/x64/Debug');
+  shelljs.mkdir('-p', 'Assembled/windows/libs/x64/Release');
+  shelljs.mkdir('-p', 'Assembled/windows/BabylonReactNative');
+}
+
+const copyx86DebugUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86/**/Debug/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/x86/Debug'));
+}
+
+const copyx86ReleaseUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86/**/Release/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/x86/Release'));
+}
+
+const copyx64DebugUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64/**/Debug/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/x64/Debug'));
+}
+
+const copyx64ReleaseUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64/**/Release/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/x64/Release'));
+}
+
+const copyARMDebugUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm/**/Debug/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/arm/Debug'));
+}
+
+const copyARMReleaseUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm/**/Release/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/arm/Release'));
+}
+
+const copyARM64DebugUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64/**/Debug/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/arm64/Debug'));
+}
+
+const copyARM64ReleaseUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64/**/Release/**/*.{lib,pri}')
+    .pipe(rename({ dirname: '' }))
+    .pipe(gulp.dest('Assembled/windows/libs/arm64/Release'));
+}
+
+const copyVCXProjUWPFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/windows/BabylonReactNative/*.*')
+    .pipe(gulp.dest('Assembled/windows/BabylonReactNative'));
+}
+
+const copyUWPFiles = gulp.parallel(
+  createUWPDirectories,
+  copyx86DebugUWPFiles,
+  copyx86ReleaseUWPFiles,
+  copyx64DebugUWPFiles,
+  copyx64ReleaseUWPFiles,
+  copyARMDebugUWPFiles,
+  copyARMReleaseUWPFiles,
+  copyARM64DebugUWPFiles,
+  copyARM64ReleaseUWPFiles,
+  copyVCXProjUWPFiles);
 
 const validate = async () => {
   // When the package contents are updated *and validated*, update the expected below by running 'find Assembled | pbcopy' and pasting it over the expected string.
@@ -198,5 +282,13 @@ exports.clean = clean;
 exports.build = build;
 exports.rebuild = rebuild;
 exports.pack = pack;
+
+const packUWP = gulp.series(clean, buildUWP, copyCommonFiles, copySharedFiles, copyUWPFiles, createPackage);
+const packUWPNoBuild = gulp.series(clean, copyCommonFiles, copySharedFiles, copyUWPFiles, createPackage);
+
+exports.buildUWP = buildUWP;
+exports.copyUWPFiles = copyUWPFiles;
+exports.packUWP = packUWP;
+exports.packUWPNoBuild = packUWPNoBuild;
 
 exports.default = build;

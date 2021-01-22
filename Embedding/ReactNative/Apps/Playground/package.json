@@ -18,7 +18,7 @@
     "@react-native-community/slider": "4.0.0-rc.2",
     "logkitty": "^0.7.1",
     "react": "^17.0.1",
-    "react-native": "^0.64.0-rc.0",
+    "react-native": "0.64.0-rc.0",
     "react-native-permissions": "^3.0.0",
     "react-native-windows": "0.64.0-preview.5"
   },
@@ -36,6 +36,7 @@
     "babel-jest": "^25.1.0",
     "eslint": "7.12.0",
     "jest": "^25.1.0",
+    "metro-config": "^0.64.0",
     "metro-react-native-babel-preset": "^0.59.0",
     "prettier": "^2.0.4",
     "react-test-renderer": "^17.0.1",

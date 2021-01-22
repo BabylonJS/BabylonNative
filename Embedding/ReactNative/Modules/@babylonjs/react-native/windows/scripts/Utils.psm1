@@ -72,3 +72,21 @@ function Compile-Solution {
         Write-Host "Completed building $Platform $Configuration dependencies.`n" -ForegroundColor Green
     }
 }
+
+function Clean-Solution {
+    param(
+        $Solution,
+        $Platform,
+        $Configuration
+    )
+
+    $MSBuild = Get-MSBuildPath
+    & "$MSBuild" /t:Clean /p:Configuration="$Configuration" /p:Platform="$Platform" $Solution
+    if ($? -Eq $False) {
+        Write-Error "$Platform $Configuration Clean failed."
+        exit 1
+    }
+    else {
+        Write-Host "Completed cleaning $Platform $Configuration dependencies.`n" -ForegroundColor Green
+    }
+}
