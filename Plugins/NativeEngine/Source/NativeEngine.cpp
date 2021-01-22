@@ -1421,7 +1421,7 @@ namespace Babylon
             bgfx::setState(m_engineState | fillModeState);
         }
 
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
+        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM | BGFX_DISCARD_BINDINGS);
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
