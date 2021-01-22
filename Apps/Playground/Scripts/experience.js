@@ -53,7 +53,7 @@ function CreateInputHandling(scene) {
 
 _native.whenGraphicsReady().then(function () {
 
-    var engine = new BABYLON.NativeEngine();
+    var engine = new BABYLON.NativeEngine(true);
     var scene = new BABYLON.Scene(engine);
 
     CreateBoxAsync().then(function () {
@@ -244,6 +244,30 @@ _native.whenGraphicsReady().then(function () {
                 });
             }, 5000);
         }
+
+        //let scalings = [0.1, 0.2, 0.5, 1, 2, 5, 10];
+        //let increment = true;
+        //let idx = -1;
+        //let incrementTimer = 0;
+        //let incrementTimeInterval = 40;
+        //scene.onBeforeRenderObservable.add(() => {
+        //    incrementTimer += 1;
+        //    if (incrementTimer >= incrementTimeInterval) {
+        //        incrementTimer = 0;
+        //        if (increment){
+        //            idx++;
+        //        } else {
+        //            idx--;
+        //        }
+        //        if (idx < 0 || idx >= scalings.length-1){
+        //            increment = !increment;
+        //        }
+        //        idx = Math.max(Math.min(idx, scalings.length-1), 0);
+        //        console.log("incrementIndex = " + idx);
+        //        engine.setHardwareScalingLevel(scalings[idx]);
+        //        console.log("Setting hardware scaling level to: " + engine.getHardwareScalingLevel());
+        //    }
+        //});
 
         if (text) {
             var Writer = BABYLON.MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
