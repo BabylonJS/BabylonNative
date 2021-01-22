@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iterator>
 #include "Window.h"
+#include "WindowPlatform.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -13,16 +14,19 @@ namespace Babylon::Polyfills::Internal
 
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
+        auto JS_DEVICE_PIXEL_RATIO_NAME = "devicePixelRatio";
     }
 
     void Window::Initialize(Napi::Env env, void* windowPtr)
     {
         Napi::HandleScope scope{env};
 
-        Napi::Function constructor = DefineClass(
+        Napi::Function constructor = Window::DefineClass(
             env,
             JS_CLASS_NAME,
-            {},
+            {
+                InstanceAccessor(JS_DEVICE_PIXEL_RATIO_NAME, &Window::GetDevicePixelRatio, &Window::SetDevicePixelRatio)
+            },
             windowPtr);
 
         auto global = env.Global();

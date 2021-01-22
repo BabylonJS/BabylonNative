@@ -16,4 +16,6 @@ namespace Babylon::Polyfills::Internal
         UINT dpi = GetDpiForWindow(*((HWND*)(window.m_windowPtr)));
         return Napi::Value::From(info.Env(), (float)dpi / 96.0f);
     }
+
+    void Window::SetDevicePixelRatio(const Napi::CallbackInfo&, const Napi::Value& ){};
 }
