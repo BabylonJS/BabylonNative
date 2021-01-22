@@ -379,7 +379,6 @@ namespace Babylon
                 InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
-                InstanceMethod("createDepthTexture", &NativeEngine::CreateDepthTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
@@ -403,6 +402,8 @@ namespace Babylon
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
                 InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
+                InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
+                InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -688,7 +689,7 @@ namespace Babylon
 
         std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
-        
+
         try
         {
             shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
@@ -1034,25 +1035,6 @@ namespace Babylon
         return Napi::External<TextureData>::New(info.Env(), new TextureData());
     }
 
-    Napi::Value NativeEngine::CreateDepthTexture(const Napi::CallbackInfo& info)
-    {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        bgfx::FrameBufferHandle frameBufferHandle{};
-
-        // This is WIP
-        auto depthStencilFormat = bgfx::TextureFormat::D32;
-        bgfx::TextureHandle textureHandle{bgfx::createTexture2D(width, height, false /*generateMips*/, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
-        bgfx::Attachment attachment;
-        attachment.init(textureHandle);
-        frameBufferHandle = bgfx::createFrameBuffer(1, &attachment, true);
-
-        texture->Handle = bgfx::getTexture(frameBufferHandle);
-
-        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
-    }
-
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
@@ -1118,10 +1100,10 @@ namespace Babylon
         const auto format = static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
         const auto generateMips = info[5].As<Napi::Boolean>().Value();
         const auto invertY = info[6].As<Napi::Boolean>().Value();
-        
+
         const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes);
         if (invertY)
         {
             FlipY(image);
@@ -1430,7 +1412,7 @@ namespace Babylon
 
             // We need to explicitly swap the culling state flags (instead of XOR)
             // because we would like to preserve the no culling configuration, which is 00.
-            const auto cullCW  = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
+            const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
             const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
 
             uint64_t m_engineStateYFlipped = m_engineState;
@@ -1539,5 +1521,16 @@ namespace Babylon
         m_runtime.Dispatch([function = std::move(function)](Napi::Env) {
             function();
         });
+    }
+
+    void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        const auto level = info[0].As<Napi::Number>().FloatValue();
+        m_graphicsImpl.SetHardwareScalingLevel(level);
+    }
+
+    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
     }
 }

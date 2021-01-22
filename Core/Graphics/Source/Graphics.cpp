@@ -3,6 +3,7 @@
 #include <JsRuntimeInternalState.h>
 
 #include <cassert>
+#include <limits>
 
 #if (ANDROID)
 // MSAA is disabled on Android.
@@ -25,10 +26,10 @@ namespace Babylon
 
     Graphics::Impl::Impl()
     {
-        std::scoped_lock lock{m_bgfxState.Mutex};
-        m_bgfxState.Initialized = false;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Initialized = false;
 
-        auto& init = m_bgfxState.InitState;
+        auto& init = m_state.Bgfx.InitState;
 #if (ANDROID)
         init.type = bgfx::RendererType::OpenGLES;
 #else
@@ -45,16 +46,16 @@ namespace Babylon
 
     void* Graphics::Impl::GetNativeWindow()
     {
-        std::scoped_lock lock{m_bgfxState.Mutex};
-        return m_bgfxState.InitState.platformData.nwh;
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Bgfx.InitState.platformData.nwh;
     }
 
     void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr)
     {
-        std::scoped_lock lock{m_bgfxState.Mutex};
-        m_bgfxState.Dirty = true;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
 
-        auto& pd = m_bgfxState.InitState.platformData;
+        auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = windowTypePtr;
         pd.nwh = nativeWindowPtr;
         pd.context = nullptr;
@@ -64,12 +65,20 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        std::scoped_lock lock{m_bgfxState.Mutex};
-        m_bgfxState.Dirty = true;
+        std::scoped_lock lock(m_state.Mutex);
+        m_state.Resolution.width = width;
+        m_state.Resolution.height = height;
+        UpdateBgfxResolution();
+    }
 
-        auto& res = m_bgfxState.InitState.resolution;
-        res.width = static_cast<uint32_t>(width);
-        res.height = static_cast<uint32_t>(height);
+    void Graphics::Impl::UpdateBgfxResolution()
+    {
+        std::scoped_lock lock(m_state.Mutex);
+        m_state.Bgfx.Dirty = true;
+        auto& res = m_state.Bgfx.InitState.resolution;
+        auto level = m_state.Resolution.hardwareScalingLevel;
+        res.width = static_cast<uint32_t>(m_state.Resolution.width / level);
+        res.height = static_cast<uint32_t>(m_state.Resolution.height / level);
     }
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
@@ -90,23 +99,23 @@ namespace Babylon
 
     void Graphics::Impl::EnableRendering()
     {
-        std::scoped_lock lock{m_bgfxState.Mutex};
+        std::scoped_lock lock{m_state.Mutex};
 
-        if (!m_bgfxState.Initialized)
+        if (!m_state.Bgfx.Initialized)
         {
             // Set the thread affinity (all other rendering operations must happen on this thread).
             m_renderThreadAffinity = std::this_thread::get_id();
 
             // Initialize bgfx.
-            auto& init{m_bgfxState.InitState};
+            auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
             bgfx::init(init);
             bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
             bgfx::touch(0);
 
-            m_bgfxState.Initialized = true;
-            m_bgfxState.Dirty = false;
+            m_state.Bgfx.Initialized = true;
+            m_state.Bgfx.Dirty = false;
 
             // Allow JS awaiters to start doing graphics operations.
             m_enableRenderTaskCompletionSource.complete();
@@ -117,12 +126,12 @@ namespace Babylon
     {
         assert(m_renderThreadAffinity.check());
 
-        std::scoped_lock lock{m_bgfxState.Mutex};
+        std::scoped_lock lock{m_state.Mutex};
 
-        if (m_bgfxState.Initialized)
+        if (m_state.Bgfx.Initialized)
         {
             bgfx::shutdown();
-            m_bgfxState.Initialized = false;
+            m_state.Bgfx.Initialized = false;
             m_enableRenderTaskCompletionSource = {};
             m_renderThreadAffinity = {};
         }
@@ -142,11 +151,11 @@ namespace Babylon
         EnableRendering();
 
         {
-            std::scoped_lock lock{m_bgfxState.Mutex};
-            if (m_bgfxState.Dirty)
+            std::scoped_lock lock{m_state.Mutex};
+            if (m_state.Bgfx.Dirty)
             {
-                bgfx::setPlatformData(m_bgfxState.InitState.platformData);
-                auto& res = m_bgfxState.InitState.resolution;
+                bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
+                auto& res = m_state.Bgfx.InitState.resolution;
                 bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
                 bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
@@ -156,7 +165,7 @@ namespace Babylon
                 bgfx::touch(0);
 #endif
 
-                m_bgfxState.Dirty = false;
+                m_state.Bgfx.Dirty = false;
             }
         }
 
@@ -191,8 +200,8 @@ namespace Babylon
         if (workDone)
         {
             {
-                std::scoped_lock lock{m_bgfxState.Mutex};
-                if (m_bgfxState.Dirty)
+                std::scoped_lock lock{m_state.Mutex};
+                if (m_state.Bgfx.Dirty)
                 {
                     bgfx::discard();
                 }
@@ -249,6 +258,26 @@ namespace Babylon
         Callback.SetDiagnosticOutput(std::move(outputFunction));
     }
 
+    float Graphics::Impl::GetHardwareScalingLevel()
+    {
+        std::scoped_lock lock(m_state.Mutex);
+        return m_state.Resolution.hardwareScalingLevel;
+    }
+
+    void Graphics::Impl::SetHardwareScalingLevel(float level)
+    {
+        if (level <= std::numeric_limits<float>::epsilon())
+        {
+            throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
+        }
+        {
+            std::scoped_lock lock(m_state.Mutex);
+            m_state.Resolution.hardwareScalingLevel = level;
+        }
+
+        UpdateBgfxResolution();
+    }
+
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
@@ -302,7 +331,7 @@ namespace Babylon
 
             arcana::task<void, std::exception_ptr> enableRenderTask;
             {
-                std::scoped_lock lock{m_bgfxState.Mutex};
+                std::scoped_lock lock{m_state.Mutex};
                 enableRenderTask = m_enableRenderTaskCompletionSource.as_task();
             }
 
@@ -353,5 +382,15 @@ namespace Babylon
     void Graphics::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
+    }
+
+    void Graphics::SetHardwareScalingLevel(float level)
+    {
+        m_impl->SetHardwareScalingLevel(level);
+    }
+
+    float Graphics::GetHardwareScalingLevel()
+    {
+        return m_impl->GetHardwareScalingLevel();
     }
 }
