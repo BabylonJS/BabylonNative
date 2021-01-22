@@ -3,6 +3,7 @@
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <arcana/containers/weak_table.h>
+#include <arcana/threading/dispatcher.h>
 
 #include <optional>
 #include <unordered_map>
@@ -60,6 +61,8 @@ namespace Babylon::Plugins
         arcana::weak_table<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
         arcana::weak_table<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};
         arcana::weak_table<InputStateChangedCallback> m_inputChangedCallbacks{};
+
+        arcana::manual_dispatcher<64> m_eventDispatcher{};
 
         class DeviceInputSystem;
     };
