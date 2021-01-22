@@ -25,7 +25,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CLASS_NAME,
             {
-                InstanceAccessor(JS_DEVICE_PIXEL_RATIO_NAME, &Window::GetDevicePixelRatio, &Window::SetDevicePixelRatio)
+                StaticAccessor(JS_DEVICE_PIXEL_RATIO_NAME, &Window::GetDevicePixelRatio, &Window::SetDevicePixelRatio)
             },
             windowPtr);
 
