@@ -66,9 +66,7 @@ namespace Babylon::Polyfills::Internal
         return *Window::Unwrap(JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_WINDOW_NAME).As<Napi::Object>());
     }
 
-    #ifdef WIN32
     Window::Window(const Napi::CallbackInfo& info)
-    #endif
         : Napi::ObjectWrap<Window>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
         , m_windowPtr{info.Data()}
@@ -122,10 +120,8 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::Window
 {
-#ifdef WIN32
     void Initialize(Napi::Env env, void* windowPtr)
     {
         Internal::Window::Initialize(env, windowPtr);
     }
-#endif
 }
