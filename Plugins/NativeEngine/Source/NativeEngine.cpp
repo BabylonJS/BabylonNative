@@ -1132,6 +1132,10 @@ namespace Babylon
             dataRefs[face] = Napi::Persistent(typedArray);
             tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
+                // if texture is R8, it needs to be converted as luminance (r=g=b=luminance and alpha = 1)
+                // see what's done in loadTexture
+                // keeping an assert here until we find some assets to test.
+                assert(image->m_format != bimg::TextureFormat::R8);
                 if (generateMips)
                 {
                     GenerateMips(&m_allocator, &image);
@@ -1179,6 +1183,7 @@ namespace Babylon
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
                 tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan]() {
                     bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
+                    assert(image->m_format != bimg::TextureFormat::R8);
                     FlipY(image);
                     return image;
                 });
