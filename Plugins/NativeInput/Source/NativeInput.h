@@ -23,7 +23,7 @@ namespace Babylon::Plugins
 
         void PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType);
         void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType);
-        void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y, DeviceType deviceType = DeviceType::Touch);
+        void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y, DeviceType deviceType);
 
         DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);
         DeviceStatusChangedCallbackTicket AddDeviceDisconnectedCallback(DeviceStatusChangedCallback&& callback);
