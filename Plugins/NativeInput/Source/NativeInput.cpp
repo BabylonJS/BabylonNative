@@ -40,19 +40,19 @@ namespace Babylon::Plugins
         return *env.Global().Get(JS_NATIVE_INPUT_NAME).As<Napi::External<NativeInput>>().Data();
     }
 
-    void NativeInput::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_impl->PointerDown(pointerId, buttonIndex, x, y);
+        m_impl->PointerDown(pointerId, buttonIndex, x, y, deviceType);
     }
 
-    void NativeInput::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_impl->PointerUp(pointerId, buttonIndex, x, y);
+        m_impl->PointerUp(pointerId, buttonIndex, x, y, deviceType);
     }
 
-    void NativeInput::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    void NativeInput::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_impl->PointerMove(pointerId, x, y);
+        m_impl->PointerMove(pointerId, x, y, deviceType);
     }
 
     NativeInput::Impl::Impl(Napi::Env env)
@@ -61,28 +61,28 @@ namespace Babylon::Plugins
         NativeInput::Impl::DeviceInputSystem::Initialize(env);
     }
 
-    void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
-            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+        m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
+            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
 
             // We need to record the x/y so they can be queried in a pointer down handler, but we don't want to raise x/y change events before raising the pointer down event.
-            SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
-            SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
-            SetInputState(DeviceType::Touch, pointerId, inputIndex, 1, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
+            SetInputState(deviceType, pointerId, inputIndex, 1, deviceInputs, true);
         });
     }
 
-    void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
-            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+        m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
+            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
 
-            SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
-            SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
-            SetInputState(DeviceType::Touch, pointerId, inputIndex, 0, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
+            SetInputState(deviceType, pointerId, inputIndex, 0, deviceInputs, true);
 
             // If all "buttons" are up, then remove the device (e.g. device "disconnected").
             for (size_t index = 0; index < deviceInputs.size(); index++)
@@ -93,16 +93,16 @@ namespace Babylon::Plugins
                 }
             }
 
-            RemoveInputMap(DeviceType::Touch, pointerId);
+            RemoveInputMap(deviceType, pointerId);
         });
     }
 
-    void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, x, y, this]() {
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
-            SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
-            SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
+        m_runtimeScheduler([pointerId, x, y, deviceType, this]() {
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
         });
     }
 

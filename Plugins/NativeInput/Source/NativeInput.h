@@ -12,17 +12,6 @@ namespace Babylon::Plugins
     class NativeInput::Impl final
     {
     public:
-        enum class DeviceType
-        {
-            Generic = 0,
-            Keyboard = 1,
-            Mouse = 2,
-            Touch = 3,
-            DualShock = 4,
-            Xbox = 5,
-            Switch = 6,
-        };
-
         using DeviceStatusChangedCallback = std::function<void(DeviceType deviceType, int32_t deviceSlot)>;
         using DeviceStatusChangedCallbackTicket = arcana::weak_table<DeviceStatusChangedCallback>::ticket;
 
@@ -31,9 +20,9 @@ namespace Babylon::Plugins
 
         Impl(Napi::Env);
 
-        void PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
-        void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
-        void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y);
+        void PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType);
+        void PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType);
+        void PointerMove(uint32_t pointerId, uint32_t x, uint32_t y, DeviceType deviceType = DeviceType::Touch);
 
         DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);
         DeviceStatusChangedCallbackTicket AddDeviceDisconnectedCallback(DeviceStatusChangedCallback&& callback);
