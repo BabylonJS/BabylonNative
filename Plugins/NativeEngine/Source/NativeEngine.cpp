@@ -1053,6 +1053,16 @@ namespace Babylon
                 {
                     throw std::runtime_error("Unable to decode image."); // exception will be forwarded to JS
                 }
+                if (image->m_format == bimg::TextureFormat::R8)
+                {
+                    // Images with only 1 channel are interpreted as luminance texture with RGB containing the same value as R and alpha as 255
+                    // To emulate this behavior, the format is switched to alpha8 and converted to RGB8 when packing and unpacking take care of 
+                    // component swizzling.
+                    image->m_format = bimg::TextureFormat::A8;
+                    bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGB8, *image, false);
+                    bimg::imageFree(image);
+                    image = rgba;
+                }
                 if (invertY)
                 {
                     FlipY(image);
@@ -1122,6 +1132,10 @@ namespace Babylon
             dataRefs[face] = Napi::Persistent(typedArray);
             tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
+                // if texture is R8, it needs to be converted as luminance (r=g=b=luminance and alpha = 1)
+                // see what's done in loadTexture
+                // keeping an assert here until we find some assets to test.
+                assert(image->m_format != bimg::TextureFormat::R8);
                 if (generateMips)
                 {
                     GenerateMips(&m_allocator, &image);
@@ -1169,6 +1183,7 @@ namespace Babylon
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
                 tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan]() {
                     bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
+                    assert(image->m_format != bimg::TextureFormat::R8);
                     FlipY(image);
                     return image;
                 });
