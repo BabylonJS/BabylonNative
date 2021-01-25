@@ -67,10 +67,12 @@ namespace Babylon::Plugins
             const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
             std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
 
-            // We need to record the x/y so they can be queried in a pointer down handler, but we don't want to raise x/y change events before raising the pointer down event.
+            // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
             SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
             SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
             SetInputState(deviceType, pointerId, inputIndex, 1, deviceInputs, true);
+
+            m_eventDispatcher.tick(arcana::cancellation::none());
         });
     }
 
@@ -80,9 +82,12 @@ namespace Babylon::Plugins
             const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
             std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
 
-            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
-            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
+            // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
             SetInputState(deviceType, pointerId, inputIndex, 0, deviceInputs, true);
+
+            m_eventDispatcher.tick(arcana::cancellation::none());
 
             // If all "buttons" are up, then remove the device (e.g. device "disconnected").
             for (size_t index = 0; index < deviceInputs.size(); index++)
@@ -94,6 +99,7 @@ namespace Babylon::Plugins
             }
 
             RemoveInputMap(deviceType, pointerId);
+            m_eventDispatcher.tick(arcana::cancellation::none());
         });
     }
 
@@ -103,6 +109,8 @@ namespace Babylon::Plugins
             std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
             SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
             SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
+
+            m_eventDispatcher.tick(arcana::cancellation::none());
         });
     }
 
@@ -152,8 +160,10 @@ namespace Babylon::Plugins
 
         if (newSize != previousSize)
         {
-            m_deviceConnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback) {
-                callback(deviceType, deviceSlot);
+            m_eventDispatcher.queue([this, deviceType, deviceSlot]() {
+                m_deviceConnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback) {
+                    callback(deviceType, deviceSlot);
+                });
             });
         }
 
@@ -166,8 +176,10 @@ namespace Babylon::Plugins
     {
         if (m_inputs.erase({deviceType, deviceSlot}))
         {
-            m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback){
-                callback(deviceType, deviceSlot);
+            m_eventDispatcher.queue([this, deviceType, deviceSlot]() {
+                m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback){
+                    callback(deviceType, deviceSlot);
+                });
             });
         }
     }
@@ -180,8 +192,10 @@ namespace Babylon::Plugins
             deviceInputs[inputIndex] = inputState;
             if (raiseEvents)
             {
-                m_inputChangedCallbacks.apply_to_all([deviceType, deviceSlot, inputIndex, previousState, inputState](auto& callback) {
-                    callback(deviceType, deviceSlot, inputIndex, previousState, inputState);
+                m_eventDispatcher.queue([this, deviceType, deviceSlot, inputIndex, previousState, inputState]() {
+                    m_inputChangedCallbacks.apply_to_all([deviceType, deviceSlot, inputIndex, previousState, inputState](auto& callback) {
+                        callback(deviceType, deviceSlot, inputIndex, previousState, inputState);
+                    });
                 });
             }
         }
