@@ -61,13 +61,15 @@ document = {
         }
         else if (type === "div") {
             return {
-                style: {}, appendChild: function () { }, getBoundingClientRect: function () { return { top: 0 }; } };
+                style: {}, appendChild: function () { }, getBoundingClientRect: function () { return { top: 0 }; }
+            };
         }
         return {};
     },
     removeEventListener: function () { },
     body: {
-        appendChild: function () { }, removeChild: function () { }}
+        appendChild: function () { }, removeChild: function () { }
+    }
 }
 
 _native.whenGraphicsReady().then(function () {
@@ -77,28 +79,29 @@ _native.whenGraphicsReady().then(function () {
 
     engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
         if (premulAlpha === void 0) { premulAlpha = false; }
-        this._native.copyTexture(texture._webGLTexture, canvas.getCanvasTexture());
+        var webGLTexture = texture._hardwareTexture.underlyingResource;
+        this._native.copyTexture(webGLTexture, canvas.getCanvasTexture());
         texture.isReady = true;
     };
 
     CreateBoxAsync().then(function () {
-    //CreateSpheresAsync().then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Suzanne/glTF/Suzanne.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Sponza/glTF/Sponza.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BrainStem/glTF/BrainStem.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF/BoxAnimated.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/AnimatedMorphCube/glTF/AnimatedMorphCube.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedSimple/glTF/RiggedSimple.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/stevk/glTF-Asset-Generator/skins/Output/Animation_Skin/Animation_Skin_01.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
-    //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
+        //CreateSpheresAsync().then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Suzanne/glTF/Suzanne.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Sponza/glTF/Sponza.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BrainStem/glTF/BrainStem.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF/BoxAnimated.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/AnimatedMorphCube/glTF/AnimatedMorphCube.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedSimple/glTF/RiggedSimple.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/stevk/glTF-Asset-Generator/skins/Output/Animation_Skin/Animation_Skin_01.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
+        //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
         BABYLON.Tools.Log("Loaded");
         /*
         scene.createDefaultCamera(true);
@@ -109,9 +112,29 @@ _native.whenGraphicsReady().then(function () {
         camera.setTarget(BABYLON.Vector3.Zero());
         //camera.attachControl(canvas, true);
         CreateInputHandling(scene);
-
+        
         BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
             OffscreenCanvas.loadTTF("droidsans", data);
+            /*
+            var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
+            ground.rotation.x = Math.PI * 0.5;
+            ground.position.z = 2;
+
+            //Create dynamic texture
+            var textureResolution = 512;
+            var textureGround = new BABYLON.DynamicTexture("dynamic texture", textureResolution, scene);
+            var textureContext = textureGround.getContext();
+
+            var materialGround = new BABYLON.StandardMaterial("Mat", scene);
+            materialGround.diffuseTexture = textureGround;
+            ground.material = materialGround;
+            materialGround.backFaceCulling = false;
+
+            var font = "bold 44px monospace";
+            textureGround.clear();
+            textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
+            */
+
             var manager = new BABYLON.GUI.GUI3DManager(scene);
 
             const addButtonPanel = function (manager) {
@@ -142,7 +165,7 @@ _native.whenGraphicsReady().then(function () {
             }
 
             addButtonPanel(manager);
-
+            
             const addPushButton = (scene, manager) => {
                 var pushButtonCore;
 
@@ -182,7 +205,7 @@ _native.whenGraphicsReady().then(function () {
             }
 
             addPushButton(scene, manager);
-
+            
         }, undefined, undefined, true);
 
 
