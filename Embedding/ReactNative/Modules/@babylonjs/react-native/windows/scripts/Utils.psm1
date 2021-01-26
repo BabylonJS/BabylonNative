@@ -1,6 +1,12 @@
 # MSBuild lookup adapted from https://blog.lextudio.com/locate-msbuild-via-powershell-on-different-operating-systems-140757bb8e18
 function Get-MSBuildPath {
     $msbuild = ""
+    $MSBuildExistsInPath = $null -ne (Get-Command "msbuild" -ErrorAction SilentlyContinue)
+    if ($MSBuildExistsInPath) {
+        $msbuild = "msbuild.exe"
+        return $msbuild
+    }
+
     if (-not(Get-PackageProvider NuGet -ErrorAction silentlyContinue)) {
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Confirm:$False -Force
     }
@@ -63,7 +69,7 @@ function Compile-Solution {
     )
 
     $MSBuild = Get-MSBuildPath
-    & "$MSBuild" /p:Configuration="$Configuration" /p:Platform="$Platform" $Solution
+    & "$MSBuild" /p:Configuration="$Configuration" /p:Platform="$Platform" /m $Solution
     if ($? -Eq $False) {
         Write-Error "$Platform $Configuration Build failed."
         exit 1
