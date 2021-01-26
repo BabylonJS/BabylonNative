@@ -156,6 +156,8 @@ namespace Babylon
             {
                 bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
                 auto& res = m_state.Bgfx.InitState.resolution;
+                
+                // Ensure bgfx rebinds all texture information.
                 bgfx::discard(BGFX_DISCARD_ALL);
                 bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
                 bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
