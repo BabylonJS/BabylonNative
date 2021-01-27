@@ -751,11 +751,11 @@ namespace xr {
                         renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
                         renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
                         renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
-                        
+ 
                         // Create and end the render encoder.
                         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                         renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
-                        
+
                         // Set the shader pipeline.
                         [renderEncoder setRenderPipelineState:pipelineState];
 
