@@ -84,11 +84,6 @@ namespace Babylon::Plugins
         }
     }
 
-    bool NativeInput::Impl::HasMouse()
-    {
-        return true;
-    }
-
     void NativeInput::Impl::MouseDown(uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
         PointerDown(MOUSE_POINTER_ID, buttonIndex, x, y, DeviceType::Mouse);

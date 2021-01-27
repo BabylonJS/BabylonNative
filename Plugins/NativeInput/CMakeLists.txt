@@ -1,9 +1,20 @@
 set(SOURCES 
     "Include/Babylon/Plugins/NativeInput.h"
-    "Source/NativeInput.cpp"
-    "Source/NativeInput.h"
-    "Source/DeviceInputSystem.cpp"
-    "Source/DeviceInputSystem.h")
+    "Source/Shared/NativeInput.cpp"
+    "Source/Shared/NativeInput.h"
+    "Source/Shared/DeviceInputSystem.cpp"
+    "Source/Shared/DeviceInputSystem.h")
+
+if (ANDROID)
+    set(SOURCES ${SOURCES}
+        "Source/Android/NativeInputAndroid.cpp")
+elseif (IOS)
+    set(SOURCES ${SOURCES}
+        "Source/iOS/NativeInputIOS.cpp")
+else()
+    set(SOURCES ${SOURCES}
+        "Source/Windows/NativeInputWindows.cpp")
+endif()
 
 add_library(NativeInput ${SOURCES})
 warnings_as_errors(NativeInput)
