@@ -538,6 +538,7 @@ namespace xr {
         ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
+        bool FeaturePointCloudEnabled{ false };
 
         Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
@@ -750,11 +751,11 @@ namespace xr {
                         renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
                         renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
                         renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
-
+                        
                         // Create and end the render encoder.
                         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                         renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
-
+                        
                         // Set the shader pipeline.
                         [renderEncoder setRenderPipelineState:pipelineState];
 
@@ -977,6 +978,40 @@ namespace xr {
             }
         }
 
+        void UpdateFeaturePointCloud() {
+            if (!FeaturePointCloudEnabled) {
+                return;
+            }
+
+            ARPointCloud *pointCloud = currentFrame.rawFeaturePoints;
+
+            FeaturePointCloud.resize(pointCloud.count);
+            for (NSUInteger i = 0; i < pointCloud.count; i++) {
+                FeaturePointCloud.emplace_back();
+                auto& featurePoint { FeaturePointCloud.back() };
+
+                // Grab the position from the point cloud.
+                // Reflect the point across the Z axis, as we want to report this
+                // value in camera space.
+                featurePoint.X = pointCloud.points[i][0];
+                featurePoint.Y = pointCloud.points[i][1];
+                featurePoint.Z = -1 * pointCloud.points[i][2];
+
+                // ARKit feature points don't have confidence values, so just default to 1.0f
+                featurePoint.ConfidenceValue = 1.0f;
+                
+                // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
+                const uint64_t id { pointCloud.identifiers[i] };
+                auto featurePointIterator = featurePointIDMap.find(id);
+                if (featurePointIterator != featurePointIDMap.end()) {
+                    featurePoint.ID = featurePointIterator->second;
+                } else {
+                    featurePoint.ID = nextFeaturePointID++;
+                    featurePointIDMap.insert({id, featurePoint.ID});
+                }
+            }
+        }
+
         Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
         {
             // Loop over the plane vector and find the correct plane.
@@ -1046,6 +1081,8 @@ namespace xr {
         std::vector<ARAnchor*> nativeAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
+        FeaturePoint::Identifier nextFeaturePointID{};
         bool planeDetectionEnabled{ false };
 
         /*
@@ -1182,7 +1219,7 @@ namespace xr {
         , InputSources{ sessionImpl.InputSources}
         , Planes{ sessionImpl.Planes }
         , Meshes{ sessionImpl.Meshes }
-        , FeaturePointCloud{ sessionImpl.FeaturePointCloud } // NYI
+        , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , UpdatedMeshes{}
@@ -1192,6 +1229,7 @@ namespace xr {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+        m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
     System::Session::Frame::~Frame() {
@@ -1280,10 +1318,10 @@ namespace xr {
         m_impl->SetPlaneDetectionEnabled(enabled);
     }
 
-    bool System::Session::TrySetFeaturePointCloudEnabled(bool) const
+    bool System::Session::TrySetFeaturePointCloudEnabled(bool enabled) const
     {
-        // Point cloud system not yet supported.
-        return false;
+        m_impl->FeaturePointCloudEnabled = enabled;
+        return enabled;
     }
 
     bool System::Session::TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions&)
