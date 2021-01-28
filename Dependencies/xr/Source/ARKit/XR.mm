@@ -983,7 +983,7 @@ namespace xr {
                 return;
             }
 
-            ARPointCloud *pointCloud = currentFrame.rawFeaturePoints;
+            ARPointCloud* pointCloud = currentFrame.rawFeaturePoints;
 
             FeaturePointCloud.resize(pointCloud.count);
             for (NSUInteger i = 0; i < pointCloud.count; i++) {
