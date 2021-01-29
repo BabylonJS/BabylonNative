@@ -793,25 +793,22 @@ namespace Babylon
     void NativeEngine::SetState(const Napi::CallbackInfo& info)
     {
         const auto culling = info[0].As<Napi::Boolean>().Value();
-        const auto reverseSide = info[2].As<Napi::Boolean>().Value();
+        const auto cullBackFaces = info[2].As<Napi::Boolean>().Value();
+        const auto reverseSide = info[3].As<Napi::Boolean>().Value();
 
         m_engineState &= ~BGFX_STATE_CULL_MASK;
-        if (reverseSide)
-        {
-            m_engineState &= ~BGFX_STATE_FRONT_CCW;
 
-            if (culling)
+        m_engineState |= reverseSide ? 0 : BGFX_STATE_FRONT_CCW;
+
+        if (culling)
+        {
+            if (reverseSide)
             {
-                m_engineState |= BGFX_STATE_CULL_CW;
+                m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CCW : BGFX_STATE_CULL_CW;
             }
-        }
-        else
-        {
-            m_engineState |= BGFX_STATE_FRONT_CCW;
-
-            if (culling)
+            else
             {
-                m_engineState |= BGFX_STATE_CULL_CCW;
+                m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CW : BGFX_STATE_CULL_CCW;
             }
         }
 
