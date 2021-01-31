@@ -82,7 +82,7 @@ target_include_directories( bgfx
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # bgfx depends on bx and bimg
-target_link_libraries( bgfx PUBLIC bx bimg )
+target_link_libraries( bgfx PRIVATE bx bimg )
 
 # ovr support
 if( BGFX_USE_OVR )
