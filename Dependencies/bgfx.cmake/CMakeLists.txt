@@ -116,7 +116,6 @@ if( BGFX_INSTALL )
 	)
 
 	install(FILES ${BGFX_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licences/${PROJECT_NAME})
-	install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 	install( TARGETS bgfx bimg bx astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc
 			 EXPORT "${TARGETS_EXPORT_NAME}"
