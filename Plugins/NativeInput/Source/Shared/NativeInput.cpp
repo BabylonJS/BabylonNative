@@ -24,11 +24,6 @@ namespace Babylon::Plugins
         }
     }
 
-    const uint32_t NativeInput::LEFT_MOUSE_BUTTON_ID;
-    const uint32_t NativeInput::MIDDLE_MOUSE_BUTTON_ID;
-    const uint32_t NativeInput::RIGHT_MOUSE_BUTTON_ID;
-    const uint32_t NativeInput::TOUCH_BUTTON_ID;
-
     NativeInput::NativeInput(Napi::Env env)
         : m_impl{ std::make_unique<Impl>(env) }
     {
