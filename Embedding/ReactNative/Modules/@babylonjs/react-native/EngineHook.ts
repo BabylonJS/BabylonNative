@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
 import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color3 } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
+import './VersionValidation';
 import * as base64 from 'base-64';
 
 // These are errors that are normally thrown by WebXR's requestSession, so we should throw the same errors under similar circumstances so app code can be written the same for browser or native.

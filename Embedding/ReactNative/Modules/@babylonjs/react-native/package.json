@@ -24,7 +24,8 @@
   "licenseFilename": "LICENSE",
   "readmeFilename": "README.md",
   "dependencies": {
-    "base-64": "^0.1.0"
+    "base-64": "^0.1.0",
+    "semver": "^7.3.2"
   },
   "peerDependencies": {
     "@babylonjs/core": "^5.0.0-alpha.6",
@@ -44,6 +45,7 @@
     "@types/react-native": "^0.63.1",
     "@types/react-native-permissions": "^2.0.0",
     "@types/react-test-renderer": "^16.9.2",
+    "@types/semver": "^7.3.4",
     "typescript": "^3.8.3",
     "eslint": "7.12.0",
     "just-scripts": "^0.44.7",
