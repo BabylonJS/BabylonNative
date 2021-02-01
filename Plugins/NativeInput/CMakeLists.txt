@@ -7,13 +7,13 @@ set(SOURCES
 
 if (ANDROID)
     set(SOURCES ${SOURCES}
-        "Source/Android/NativeInputAndroid.cpp")
+        "Source/Android/NativeInput.cpp")
 elseif (IOS)
     set(SOURCES ${SOURCES}
-        "Source/iOS/NativeInputIOS.cpp")
+        "Source/iOS/NativeInput.cpp")
 else()
     set(SOURCES ${SOURCES}
-        "Source/Windows/NativeInputWindows.cpp")
+        "Source/Windows/NativeInput.cpp")
 endif()
 
 add_library(NativeInput ${SOURCES})

@@ -37,8 +37,8 @@ namespace Babylon::Plugins
         void MouseDown(uint32_t buttonIndex, uint32_t x, uint32_t y);
         void MouseUp(uint32_t buttonIndex, uint32_t x, uint32_t y);
         void MouseMove(uint32_t x, uint32_t y);
-        void TouchDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
-        void TouchUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
+        void TouchDown(uint32_t pointerId, uint32_t x, uint32_t y);
+        void TouchUp(uint32_t pointerId, uint32_t x, uint32_t y);
         void TouchMove(uint32_t pointerId, uint32_t x, uint32_t y);
 
         DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);

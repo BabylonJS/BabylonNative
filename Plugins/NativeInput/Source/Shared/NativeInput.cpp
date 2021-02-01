@@ -24,6 +24,11 @@ namespace Babylon::Plugins
         }
     }
 
+    const uint32_t NativeInput::LEFT_MOUSE_BUTTON_ID;
+    const uint32_t NativeInput::MIDDLE_MOUSE_BUTTON_ID;
+    const uint32_t NativeInput::RIGHT_MOUSE_BUTTON_ID;
+    const uint32_t NativeInput::TOUCH_BUTTON_ID;
+
     NativeInput::NativeInput(Napi::Env env)
         : m_impl{ std::make_unique<Impl>(env) }
     {
@@ -57,14 +62,14 @@ namespace Babylon::Plugins
         m_impl->MouseMove(x, y);
     }
 
-    void NativeInput::TouchDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::TouchDown(uint32_t pointerId, uint32_t x, uint32_t y)
     {
-        m_impl->TouchDown(pointerId, buttonIndex, x, y);
+        m_impl->TouchDown(pointerId, x, y);
     }
 
-    void NativeInput::TouchUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::TouchUp(uint32_t pointerId, uint32_t x, uint32_t y)
     {
-        m_impl->TouchUp(pointerId, buttonIndex, x, y);
+        m_impl->TouchUp(pointerId, x, y);
     }
 
     void NativeInput::TouchMove(uint32_t pointerId, uint32_t x, uint32_t y)
@@ -99,14 +104,14 @@ namespace Babylon::Plugins
         PointerMove(MOUSE_POINTER_ID, x, y, DeviceType::Mouse);
     }
 
-    void NativeInput::Impl::TouchDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::TouchDown(uint32_t pointerId, uint32_t x, uint32_t y)
     {
-        PointerDown(pointerId, buttonIndex, x, y, DeviceType::Touch);
+        PointerDown(pointerId, TOUCH_BUTTON_ID, x, y, DeviceType::Touch);
     }
 
-    void NativeInput::Impl::TouchUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::TouchUp(uint32_t pointerId, uint32_t x, uint32_t y)
     {
-        PointerUp(pointerId, buttonIndex, x, y, DeviceType::Touch);
+        PointerUp(pointerId, TOUCH_BUTTON_ID, x, y, DeviceType::Touch);
     }
 
     void NativeInput::Impl::TouchMove(uint32_t pointerId, uint32_t x, uint32_t y)

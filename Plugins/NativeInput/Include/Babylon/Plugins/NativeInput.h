@@ -15,9 +15,14 @@ namespace Babylon::Plugins
         void MouseDown(uint32_t buttonIndex, uint32_t x, uint32_t y);
         void MouseUp(uint32_t buttonIndex, uint32_t x, uint32_t y);
         void MouseMove(uint32_t x, uint32_t y);
-        void TouchDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
-        void TouchUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y);
+        void TouchDown(uint32_t pointerId, uint32_t x, uint32_t y);
+        void TouchUp(uint32_t pointerId, uint32_t x, uint32_t y);
         void TouchMove(uint32_t pointerId, uint32_t x, uint32_t y);
+
+        static const uint32_t LEFT_MOUSE_BUTTON_ID{ 0 };
+        static const uint32_t MIDDLE_MOUSE_BUTTON_ID{ 1 };
+        static const uint32_t RIGHT_MOUSE_BUTTON_ID{ 2 };
+        static const uint32_t TOUCH_BUTTON_ID{ 0 };
 
     private:
         NativeInput(const NativeInput&) = delete;
