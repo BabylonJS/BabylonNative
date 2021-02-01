@@ -84,6 +84,7 @@ namespace Babylon::Plugins
 
         if (HasMouse())
         {
+            // Create a mouse input map on initialization when available to match web behavior
             const uint32_t inputIndex{ GetPointerButtonInputIndex(0) };
             GetOrCreateInputMap(DeviceType::Mouse, MOUSE_POINTER_ID, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX });
         }
