@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <limits>
 
 namespace Babylon::Plugins
 {
@@ -15,6 +16,7 @@ namespace Babylon::Plugins
         constexpr uint32_t POINTER_X_INPUT_INDEX{0};
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
         constexpr uint32_t POINTER_BUTTON_BASE_INDEX{2};
+        constexpr uint32_t MOUSE_POINTER_ID{0};
 
         constexpr uint32_t GetPointerButtonInputIndex(uint32_t buttonIndex)
         {
@@ -40,54 +42,112 @@ namespace Babylon::Plugins
         return *env.Global().Get(JS_NATIVE_INPUT_NAME).As<Napi::External<NativeInput>>().Data();
     }
 
-    void NativeInput::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::MouseDown(uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
-        m_impl->PointerDown(pointerId, buttonIndex, x, y);
+        m_impl->MouseDown(buttonIndex, x, y);
     }
 
-    void NativeInput::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::MouseUp(uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
-        m_impl->PointerUp(pointerId, buttonIndex, x, y);
+        m_impl->MouseUp(buttonIndex, x, y);
     }
 
-    void NativeInput::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    void NativeInput::MouseMove(uint32_t x, uint32_t y)
     {
-        m_impl->PointerMove(pointerId, x, y);
+        m_impl->MouseMove(x, y);
+    }
+
+    void NativeInput::TouchDown(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        m_impl->TouchDown(pointerId, x, y);
+    }
+
+    void NativeInput::TouchUp(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        m_impl->TouchUp(pointerId, x, y);
+    }
+
+    void NativeInput::TouchMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        m_impl->TouchMove(pointerId, x, y);
     }
 
     NativeInput::Impl::Impl(Napi::Env env)
         : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
     {
         NativeInput::Impl::DeviceInputSystem::Initialize(env);
+
+        if (HasMouse())
+        {
+            // Create a mouse input map on initialization when available to match web behavior
+            const uint32_t inputIndex{ GetPointerButtonInputIndex(0) };
+            GetOrCreateInputMap(DeviceType::Mouse, MOUSE_POINTER_ID, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX });
+        }
     }
 
-    void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::MouseDown(uint32_t buttonIndex, uint32_t x, uint32_t y)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
-            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+        PointerDown(MOUSE_POINTER_ID, buttonIndex, x, y, DeviceType::Mouse);
+    }
+
+    void NativeInput::Impl::MouseUp(uint32_t buttonIndex, uint32_t x, uint32_t y)
+    {
+        PointerUp(MOUSE_POINTER_ID, buttonIndex, x, y, DeviceType::Mouse);
+    }
+
+    void NativeInput::Impl::MouseMove(uint32_t x, uint32_t y)
+    {
+        PointerMove(MOUSE_POINTER_ID, x, y, DeviceType::Mouse);
+    }
+
+    void NativeInput::Impl::TouchDown(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        PointerDown(pointerId, TOUCH_BUTTON_ID, x, y, DeviceType::Touch);
+    }
+
+    void NativeInput::Impl::TouchUp(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        PointerUp(pointerId, TOUCH_BUTTON_ID, x, y, DeviceType::Touch);
+    }
+
+    void NativeInput::Impl::TouchMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    {
+        PointerMove(pointerId, x, y, DeviceType::Touch);
+    }
+
+    void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType)
+    {
+        m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
+            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
-            SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
-            SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
-            SetInputState(DeviceType::Touch, pointerId, inputIndex, 1, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
+            SetInputState(deviceType, pointerId, inputIndex, 1, deviceInputs, true);
 
             m_eventDispatcher.tick(arcana::cancellation::none());
         });
     }
 
-    void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, x, y, this]() {
-            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
+        m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
+            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
-            SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
-            SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
-            SetInputState(DeviceType::Touch, pointerId, inputIndex, 0, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
+            SetInputState(deviceType, pointerId, inputIndex, 0, deviceInputs, true);
 
             m_eventDispatcher.tick(arcana::cancellation::none());
+
+            // Cleanup mouse device in destructor
+            if (deviceType == DeviceType::Mouse)
+            {
+                return;
+            }
 
             // If all "buttons" are up, then remove the device (e.g. device "disconnected").
             for (size_t index = 0; index < deviceInputs.size(); index++)
@@ -98,18 +158,17 @@ namespace Babylon::Plugins
                 }
             }
 
-            RemoveInputMap(DeviceType::Touch, pointerId);
-
+            RemoveInputMap(deviceType, pointerId);
             m_eventDispatcher.tick(arcana::cancellation::none());
         });
     }
 
-    void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y)
+    void NativeInput::Impl::PointerMove(uint32_t pointerId, uint32_t x, uint32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, x, y, this]() {
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Touch, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX })};
-            SetInputState(DeviceType::Touch, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
-            SetInputState(DeviceType::Touch, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
+        m_runtimeScheduler([pointerId, x, y, deviceType, this]() {
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
 
             m_eventDispatcher.tick(arcana::cancellation::none());
         });
@@ -117,7 +176,13 @@ namespace Babylon::Plugins
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceConnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
     {
-        return m_deviceConnectedCallbacks.insert(std::move(callback));
+        // Firing this callback on registration to mimic web behavior
+        for (auto [key, state] : m_inputs)
+        {
+            callback(key.first, key.second);
+        }
+
+        return  m_deviceConnectedCallbacks.insert(std::move(callback));
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceDisconnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
