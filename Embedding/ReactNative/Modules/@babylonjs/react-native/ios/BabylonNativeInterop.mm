@@ -79,13 +79,13 @@ static NSMutableArray* activeTouches;
                     } else {
                         [activeTouches replaceObjectAtIndex:pointerId withObject:touch];
                     }
-                    Babylon::SetPointerButtonState(static_cast<uint32_t>(pointerId), 0, true, x, y);
+                    Babylon::SetTouchButtonState(static_cast<uint32_t>(pointerId), true, x, y);
                     break;
                 }
 
                 case UITouchPhaseMoved: {
                     NSUInteger pointerId = [activeTouches indexOfObject:touch];
-                    Babylon::SetPointerPosition(static_cast<uint32_t>(pointerId), x, y);
+                    Babylon::SetTouchPosition(static_cast<uint32_t>(pointerId), x, y);
                     break;
                 }
 
@@ -93,7 +93,7 @@ static NSMutableArray* activeTouches;
                 case UITouchPhaseCancelled: {
                     NSUInteger pointerId = [activeTouches indexOfObject:touch];
                     [activeTouches replaceObjectAtIndex:pointerId withObject:[NSNull null]];
-                    Babylon::SetPointerButtonState(static_cast<uint32_t>(pointerId), 0, false, x, y);
+                    Babylon::SetTouchButtonState(static_cast<uint32_t>(pointerId), false, x, y);
                     break;
                 }
 

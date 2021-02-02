@@ -24,8 +24,8 @@ public final class BabylonNativeInterop {
         public static native void pause();
         public static native void resume();
         public static native void updateView(Surface surface);
-        public static native void setPointerButtonState(int pointerId, int buttonId, boolean isDown, int x, int y);
-        public static native void setPointerPosition(int pointerId, int x, int y);
+        public static native void setTouchButtonState(int pointerId, boolean isDown, int x, int y);
+        public static native void setTouchPosition(int pointerId, int x, int y);
     }
 
     private static LifecycleEventListener lifeCycleEventListener;
@@ -98,13 +98,13 @@ public final class BabylonNativeInterop {
             int pointerId = motionEvent.getPointerId(pointerIndex);
             int x = (int)motionEvent.getX(pointerIndex);
             int y = (int)motionEvent.getY(pointerIndex);
-            BabylonNative.setPointerButtonState(pointerId, 0, isPointerDown, x, y);
+            BabylonNative.setTouchButtonState(pointerId, isPointerDown, x, y);
         } else if (isPointerMove) {
             for (int pointerIndex = 0; pointerIndex < motionEvent.getPointerCount(); pointerIndex++) {
                 int pointerId = motionEvent.getPointerId(pointerIndex);
                 int x = (int)motionEvent.getX(pointerIndex);
                 int y = (int)motionEvent.getY(pointerIndex);
-                BabylonNative.setPointerPosition(pointerId, x, y);
+                BabylonNative.setTouchPosition(pointerId, x, y);
             }
         }
     }

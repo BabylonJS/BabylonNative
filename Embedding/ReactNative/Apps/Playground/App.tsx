@@ -9,7 +9,7 @@ import React, { useState, FunctionComponent, useEffect, useCallback } from 'reac
 import { SafeAreaView, StatusBar, Button, View, Text, ViewProps, Image } from 'react-native';
 
 import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-native';
-import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState } from '@babylonjs/core';
+import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState, Nullable } from '@babylonjs/core';
 import '@babylonjs/loaders';
 import Slider from '@react-native-community/slider';
 
@@ -40,18 +40,28 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
       setRootNode(rootNode);
 
       const deviceSourceManager = new DeviceSourceManager(engine);
+      const handlePointerInput = (inputIndex: PointerInput, previousState: Nullable<number>, currentState: Nullable<number>) => {
+        if (inputIndex === PointerInput.Horizontal &&
+          currentState && previousState) {
+          rootNode.rotate(Vector3.Down(), (currentState - previousState) * 0.005);
+        };
+      };
+
       deviceSourceManager.onDeviceConnectedObservable.add(device => {
         if (device.deviceType === DeviceType.Touch) {
           const touch: DeviceSource<DeviceType.Touch> = deviceSourceManager.getDeviceSource(device.deviceType, device.deviceSlot)!;
           touch.onInputChangedObservable.add(touchEvent => {
-            if (touchEvent.inputIndex === PointerInput.Horizontal) {
-              if (touchEvent.currentState && touchEvent.previousState) {
-                rootNode.rotate(Vector3.Down(), (touchEvent.currentState - touchEvent.previousState) * 0.005);
-              }
+            handlePointerInput(touchEvent.inputIndex, touchEvent.previousState, touchEvent.currentState);
+          });
+        } else if (device.deviceType === DeviceType.Mouse) {
+          const mouse: DeviceSource<DeviceType.Mouse> = deviceSourceManager.getDeviceSource(device.deviceType, device.deviceSlot)!;
+          mouse.onInputChangedObservable.add(mouseEvent => {
+            if (mouse.getInput(PointerInput.LeftClick)) {
+              handlePointerInput(mouseEvent.inputIndex, mouseEvent.previousState, mouseEvent.currentState);
             }
-          })
+          });
         }
-      })
+      });
 
       const transformContainer = new TransformNode("Transform Container", scene);
       transformContainer.parent = rootNode;
