@@ -1,4 +1,4 @@
-#include "..\Shared\NativeInput.h"
+#include "../Shared/NativeInput.h"
 
 namespace Babylon::Plugins
 {
