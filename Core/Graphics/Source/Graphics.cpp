@@ -25,6 +25,7 @@ namespace Babylon
     }
 
     Graphics::Impl::Impl()
+        : Callback{[this](const auto& data) { CaptureCallback(data); }}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -278,18 +279,38 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
-    void Graphics::Impl::StartCapture()
+    Graphics::Impl::CaptureCallbackTicketT Graphics::Impl::AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback)
     {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
-        m_state.Bgfx.InitState.resolution.reset |= BGFX_RESET_CAPTURE;
+        // If we're not already capturing, start.
+        {
+            std::scoped_lock lock{m_state.Mutex};
+            if ((m_state.Bgfx.InitState.resolution.reset & BGFX_RESET_CAPTURE) == 0)
+            {
+                m_state.Bgfx.Dirty = true;
+                m_state.Bgfx.InitState.resolution.reset |= BGFX_RESET_CAPTURE;
+            }
+        }
+
+        return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
     }
 
-    void Graphics::Impl::StopCapture()
+    void Graphics::Impl::CaptureCallback(const BgfxCallback::CaptureData& data)
     {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
-        m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
+        std::scoped_lock callbackLock{m_captureCallbacksMutex};
+        
+        // If no one is listening anymore, stop capturing.
+        if (m_captureCallbacks.empty())
+        {
+            std::scoped_lock stateLock{m_state.Mutex};
+            m_state.Bgfx.Dirty = true;
+            m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
+            return;
+        }
+        
+        for (const auto& callback : m_captureCallbacks)
+        {
+            callback(data);
+        }
     }
 
     Graphics::Graphics()

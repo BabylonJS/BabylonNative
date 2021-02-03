@@ -15,10 +15,6 @@ namespace Babylon
 {
     struct BgfxCallback : public bgfx::CallbackI
     {
-        virtual ~BgfxCallback() = default;
-
-        void addScreenShotCallback(Napi::Function callback);
-
         struct CaptureData
         {
             uint32_t Width{};
@@ -30,10 +26,10 @@ namespace Babylon
             uint32_t DataSize{};
         };
 
-        auto AddCaptureCallback(std::function<void(const CaptureData&)> callback)
-        {
-            return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
-        }
+        BgfxCallback(std::function<void(const CaptureData&)>);
+        virtual ~BgfxCallback() = default;
+
+        void addScreenShotCallback(Napi::Function callback);
 
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
     protected:
@@ -57,7 +53,6 @@ namespace Babylon
         std::queue<Napi::FunctionReference> m_screenshotCallbacks;
         
         CaptureData m_captureData{};
-        std::mutex m_captureCallbacksMutex{};
-        arcana::ticketed_collection<std::function<void(const CaptureData&)>> m_captureCallbacks{};
+        const std::function<void(const CaptureData&)> m_captureCallback{};
     };
 }
