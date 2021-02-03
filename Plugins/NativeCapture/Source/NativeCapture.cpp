@@ -9,6 +9,8 @@ namespace Babylon::Plugins::Internal
 {
     class NativeCapture : public Napi::ObjectWrap<NativeCapture>
     {
+        using TicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
+
     public:
         static constexpr auto JS_CLASS_NAME = "NativeCapture";
 
@@ -31,7 +33,7 @@ namespace Babylon::Plugins::Internal
             : Napi::ObjectWrap<NativeCapture>{info}
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
             , m_graphicsImpl(Graphics::Impl::GetFromJavaScript(info.Env()))
-            , m_ticket{m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); })}
+            , m_ticket{std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); }))}
         {
             m_graphicsImpl.StartCapture();
         }
@@ -63,12 +65,13 @@ namespace Babylon::Plugins::Internal
         {
             m_graphicsImpl.StopCapture();
             m_callbacks.clear();
+            m_ticket.reset();
         }
 
         JsRuntime& m_runtime;
         Graphics::Impl& m_graphicsImpl;
         std::vector<Napi::FunctionReference> m_callbacks{};
-        arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket m_ticket;
+        std::unique_ptr<TicketT> m_ticket{};
     };
 }
 
