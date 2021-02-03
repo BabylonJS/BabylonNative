@@ -6,9 +6,7 @@
 #include <stdarg.h>
 #include <bgfx/bgfx.h>
 #include <Babylon/JsRuntime.h>
-
 #include <assert.h>
-#include <sstream>
 
 namespace Babylon
 {
