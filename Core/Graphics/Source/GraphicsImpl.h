@@ -10,6 +10,8 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <GraphicsPlatform.h>
+
 namespace Babylon
 {
     class Graphics::Impl
@@ -20,8 +22,8 @@ namespace Babylon
         Impl();
         ~Impl();
 
-        void* GetNativeWindow();
-        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
+        WindowType GetNativeWindow();
+        void SetNativeWindow(WindowType nativeWindowPtr, void* windowTypePtr);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);

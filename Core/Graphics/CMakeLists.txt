@@ -11,6 +11,18 @@ warnings_as_errors(Graphics)
 target_include_directories(Graphics
     PUBLIC "Include")
 
+if(WINDOWS_STORE)
+elseif(WIN32)
+    set(SOURCES
+        ${SOURCES}
+        "Source/GraphicsWin32.cpp"
+        "Include/Babylon/Win32/GraphicsPlatform.h")
+    target_include_directories(Graphics
+    PUBLIC "Include/Babylon/Win32")
+    target_link_to_dependencies(Graphics
+        PRIVATE "shlwapi.lib")
+endif()
+
 target_link_to_dependencies(Graphics
     PUBLIC JsRuntime
     PRIVATE JsRuntimeInternal

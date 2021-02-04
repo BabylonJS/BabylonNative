@@ -44,25 +44,27 @@ namespace Babylon
         DisableRendering();
     }
 
-    void* Graphics::Impl::GetNativeWindow()
+    WindowType Graphics::Impl::GetNativeWindow()
     {
         std::scoped_lock lock{m_state.Mutex};
-        return m_state.Bgfx.InitState.platformData.nwh;
+        return (WindowType)m_state.Bgfx.InitState.platformData.nwh;
     }
 
-    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr)
+    
+    void Graphics::Impl::SetNativeWindow(WindowType nativeWindowPtr, void* windowTypePtr)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
 
         auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = windowTypePtr;
-        pd.nwh = nativeWindowPtr;
+        pd.nwh = (void*)nativeWindowPtr;
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
     }
 
+    
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
         std::scoped_lock lock(m_state.Mutex);
@@ -71,6 +73,7 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
+    
     void Graphics::Impl::UpdateBgfxResolution()
     {
         std::scoped_lock lock(m_state.Mutex);
@@ -81,22 +84,26 @@ namespace Babylon
         res.height = static_cast<uint32_t>(m_state.Resolution.height / level);
     }
 
+    
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
     {
         std::scoped_lock RenderWorkTasksLock{m_renderWorkTasksMutex};
         m_renderWorkTasks.push_back(std::move(renderWorkTask));
     }
 
+    
     arcana::task<void, std::exception_ptr> Graphics::Impl::GetBeforeRenderTask()
     {
         return m_beforeRenderTaskCompletionSource.as_task();
     }
 
+    
     arcana::task<void, std::exception_ptr> Graphics::Impl::GetAfterRenderTask()
     {
         return m_afterRenderTaskCompletionSource.as_task();
     }
 
+    
     void Graphics::Impl::EnableRendering()
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -122,6 +129,7 @@ namespace Babylon
         }
     }
 
+    
     void Graphics::Impl::DisableRendering()
     {
         assert(m_renderThreadAffinity.check());
@@ -137,6 +145,7 @@ namespace Babylon
         }
     }
 
+    
     void Graphics::Impl::StartRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
@@ -177,6 +186,7 @@ namespace Babylon
         oldBeforeRenderTaskCompletionSource.complete();
     }
 
+    
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
@@ -220,6 +230,7 @@ namespace Babylon
         m_rendering = false;
     }
 
+    
     arcana::task<void, std::exception_ptr> Graphics::Impl::RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error)
     {
         bool anyTasks{};
@@ -256,17 +267,20 @@ namespace Babylon
         }
     }
 
+    
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         Callback.SetDiagnosticOutput(std::move(outputFunction));
     }
 
+    
     float Graphics::Impl::GetHardwareScalingLevel()
     {
         std::scoped_lock lock(m_state.Mutex);
         return m_state.Resolution.hardwareScalingLevel;
     }
 
+    
     void Graphics::Impl::SetHardwareScalingLevel(float level)
     {
         if (level <= std::numeric_limits<float>::epsilon())
@@ -281,48 +295,55 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
+    
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
     }
 
+    
     Graphics::~Graphics() = default;
 
-    template<>
-    void Graphics::UpdateWindow<void*>(void* windowPtr)
+    
+    template<typename... Ts>
+    void Graphics::UpdateWindow<Ts...>(Ts... windowPtr)
     {
-        m_impl->SetNativeWindow(windowPtr, nullptr);
+        m_impl->SetNativeWindow<Ts...>(windowPtr, nullptr);
     }
 
-    template<>
-    void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
+    
+    template<typename... Ts>
+    void Graphics::UpdateWindow<WindowType, void*>(WindowType windowPtr, void* windowTypePtr)
     {
         m_impl->SetNativeWindow(windowPtr, windowTypePtr);
     }
 
     template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
+    
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<WindowType, size_t, size_t>(WindowType nativeWindowPtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*>(nativeWindowPtr);
+        graphics->UpdateWindow<WindowType>(nativeWindowPtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }
 
     template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<WindowType, void*, size_t, size_t>(WindowType nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
+        graphics->UpdateWindow<WindowType, void*>(nativeWindowPtr, nativeWindowTypePtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }
 
+    
     void Graphics::UpdateSize(size_t width, size_t height)
     {
         m_impl->Resize(width, height);
     }
 
+    
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -349,6 +370,7 @@ namespace Babylon
         }, JS_GRAPHICS_READY_NAME));
     }
 
+    
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -357,41 +379,49 @@ namespace Babylon
                     .Data();
     }
 
+    
     void Graphics::AddToJavaScript(Napi::Env env)
     {
         m_impl->AddToJavaScript(env);
     }
 
+    
     void Graphics::EnableRendering()
     {
         m_impl->EnableRendering();
     }
 
+    
     void Graphics::DisableRendering()
     {
         m_impl->DisableRendering();
     }
 
+    
     void Graphics::StartRenderingCurrentFrame()
     {
         m_impl->StartRenderingCurrentFrame();
     }
 
+    
     void Graphics::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
     }
 
+    
     void Graphics::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
     }
 
+    
     void Graphics::SetHardwareScalingLevel(float level)
     {
         m_impl->SetHardwareScalingLevel(level);
     }
 
+    
     float Graphics::GetHardwareScalingLevel()
     {
         return m_impl->GetHardwareScalingLevel();

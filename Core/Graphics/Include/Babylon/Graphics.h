@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
+#include <GraphicsPlatform.h>
 
 #include <memory>
 
@@ -16,8 +17,7 @@ namespace Babylon
         template<typename... Ts>
         static std::unique_ptr<Graphics> CreateGraphics(Ts...);
 
-        template<typename... Ts>
-        void UpdateWindow(Ts...);
+        void UpdateWindow(WindowType);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -38,6 +38,8 @@ namespace Babylon
 
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
+
+        float GetDevicePixelRatio();
 
     private:
         Graphics();
