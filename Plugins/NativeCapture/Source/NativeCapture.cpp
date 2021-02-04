@@ -62,11 +62,31 @@ namespace Babylon::Plugins::Internal
             m_runtime.Dispatch([this, data{data}, bytes{std::move(bytes)}](Napi::Env env) mutable {
                 data.Data = bytes.data();
 
-                auto external = Napi::External<BgfxCallback::CaptureData>::New(env, &data);
+                Napi::Object jsData = Napi::Object::New(env);
+                jsData.Set("width", static_cast<double>(data.Width));
+                jsData.Set("height", static_cast<double>(data.Height));
+                jsData.Set("pitch", static_cast<double>(data.Pitch));
+                constexpr auto FORMAT_MEMBER_NAME = "format";
+                switch (data.Format)
+                {
+                    case bgfx::TextureFormat::BGRA8:
+                        jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
+                        break;
+                    default:
+                        jsData.Set(FORMAT_MEMBER_NAME, env.Undefined());
+                        break;
+                }
+                jsData.Set("yFlip", data.YFlip);
+                jsData.Set("data", Napi::ArrayBuffer::New(env, bytes.data(), data.DataSize));
+                jsData.Set("_nativeData", Napi::External<BgfxCallback::CaptureData>::New(env, &data));
+
                 for (const auto& callback : m_callbacks)
                 {
-                    callback.Call({external});
+                    callback.Call({jsData});
                 }
+
+                jsData.Set("data", env.Undefined());
+                jsData.Set("_nativeData", env.Undefined());
             });
         }
 
