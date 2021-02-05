@@ -1,5 +1,5 @@
 #include <Babylon/Graphics.h>
-#include "GraphicsImpl.h"
+#include "../GraphicsImpl.h"
 #include <GraphicsPlatform.h>
 
 namespace Babylon

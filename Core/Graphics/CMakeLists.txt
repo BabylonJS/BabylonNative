@@ -5,7 +5,7 @@ set(SOURCES
     "Source/BgfxCallback.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.h"
-    "Source/Graphics${BABYLON_NATIVE_PLATFORM}.cpp")
+    "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
