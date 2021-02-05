@@ -17,7 +17,8 @@ namespace Babylon
         template<typename... Ts>
         static std::unique_ptr<Graphics> CreateGraphics(Ts...);
 
-        void UpdateWindow(WindowType);
+        template<typename... Ts>
+        void UpdateWindow(Ts...);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -39,7 +40,7 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
-        float GetDevicePixelRatio();
+        float GetDevicePixelRatio() const;
 
     private:
         Graphics();

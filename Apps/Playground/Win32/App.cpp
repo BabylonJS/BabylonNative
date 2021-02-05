@@ -99,7 +99,7 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        graphics = Babylon::Graphics::CreateGraphics<HWND>(hWnd, width, height);
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -108,8 +108,7 @@ namespace
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
-
-            Babylon::Polyfills::Window::Initialize(env, (void*)&hWnd);
+            Babylon::Polyfills::Window::Initialize(env, *graphics.get());
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeEngine plugin.

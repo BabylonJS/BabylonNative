@@ -1,24 +1,21 @@
 set(SOURCES
     "Include/Babylon/Graphics.h"
+    "Include/Babylon/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/Graphics.cpp"
-    "Source/GraphicsImpl.h")
+    "Source/GraphicsImpl.h"
+    "Source/Graphics${BABYLON_NATIVE_PLATFORM}.cpp")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
-    PUBLIC "Include")
+    PUBLIC "Include"
+    PUBLIC "Include/Babylon/${BABYLON_NATIVE_PLATFORM}")
 
 if(WINDOWS_STORE)
 elseif(WIN32)
-    set(SOURCES
-        ${SOURCES}
-        "Source/GraphicsWin32.cpp"
-        "Include/Babylon/Win32/GraphicsPlatform.h")
-    target_include_directories(Graphics
-    PUBLIC "Include/Babylon/Win32")
     target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
 endif()

@@ -91,7 +91,7 @@ namespace
 
     void Initialize(HWND hWnd)
     {
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
+        graphics = Babylon::Graphics::CreateGraphics<HWND>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
 
         runtime = std::make_unique<Babylon::AppRuntime>();
@@ -109,10 +109,10 @@ namespace
                     fflush(stdout);
                 });
 
-                Babylon::Polyfills::Window::Initialize(env, (void*)&hWnd);
+                Babylon::Polyfills::Window::Initialize(env, *graphics.get());
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                Babylon::Polyfills::Window::Initialize(env, (void*)&hWnd);
+                Babylon::Polyfills::Window::Initialize(env, *graphics.get());
 
                 // Initialize NativeEngine plugin.
                 graphics->AddToJavaScript(env);

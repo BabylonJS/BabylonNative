@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
         constexpr auto JS_DEVICE_PIXEL_RATIO_NAME = "devicePixelRatio";
     }
 
-    void Window::Initialize(Napi::Env env, Graphics& graphics)
+    void Window::Initialize(Napi::Env env, const Graphics& graphics)
     {
         Napi::HandleScope scope{env};
 
@@ -26,7 +26,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CLASS_NAME,
             {},
-            &graphics);
+            (void*)&graphics);
 
         auto global = env.Global();
         auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
@@ -80,7 +80,7 @@ namespace Babylon::Polyfills::Internal
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_graphics{*(Graphics*)info.Data()}
+        , m_graphics{*(const Graphics*)info.Data()}
     {
     }
 
@@ -131,14 +131,14 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info) 
     {
         auto& window = *static_cast<Window*>(info.Data());
-        return Napi::Value::From(window.m_graphics.GetDevicePixelRatio());
+        return Napi::Value::From(info.Env(), window.m_graphics.GetDevicePixelRatio());
     }
 }
 
 namespace Babylon::Polyfills::Window
 {
-    void Initialize(Napi::Env env, void*)
+    void Initialize(Napi::Env env, const Graphics& graphics)
     {
-        Internal::Window::Initialize(env); //, windowPtr);
+        Internal::Window::Initialize(env, graphics);
     }
 }

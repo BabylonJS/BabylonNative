@@ -1,11 +1,12 @@
 #include <Babylon/Graphics.h>
-#include <Babylon/Win32/Graphics.h>
+#include "GraphicsImpl.h"
+#include <GraphicsPlatform.h>
 
 namespace Babylon
 {
     float Graphics::Impl::GetDevicePixelRatio()
     {
-        //UINT dpi = GetDpiForWindow(*((HWND*)(m_graphics.GetNativeWindow())));
-        return (float)96.0f / 96.0f;
+        UINT dpi = GetDpiForWindow(GetNativeWindow());
+        return (float)dpi / 96.0f;
     }
 }

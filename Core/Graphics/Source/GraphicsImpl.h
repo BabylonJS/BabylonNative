@@ -50,6 +50,8 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        float GetDevicePixelRatio();
+
         BgfxCallback Callback{};
 
     private:

@@ -50,7 +50,6 @@ namespace Babylon
         return (WindowType)m_state.Bgfx.InitState.platformData.nwh;
     }
 
-    
     void Graphics::Impl::SetNativeWindow(WindowType nativeWindowPtr, void* windowTypePtr)
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -73,7 +72,6 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
-    
     void Graphics::Impl::UpdateBgfxResolution()
     {
         std::scoped_lock lock(m_state.Mutex);
@@ -84,26 +82,22 @@ namespace Babylon
         res.height = static_cast<uint32_t>(m_state.Resolution.height / level);
     }
 
-    
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
     {
         std::scoped_lock RenderWorkTasksLock{m_renderWorkTasksMutex};
         m_renderWorkTasks.push_back(std::move(renderWorkTask));
     }
 
-    
     arcana::task<void, std::exception_ptr> Graphics::Impl::GetBeforeRenderTask()
     {
         return m_beforeRenderTaskCompletionSource.as_task();
     }
 
-    
     arcana::task<void, std::exception_ptr> Graphics::Impl::GetAfterRenderTask()
     {
         return m_afterRenderTaskCompletionSource.as_task();
     }
 
-    
     void Graphics::Impl::EnableRendering()
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -129,7 +123,6 @@ namespace Babylon
         }
     }
 
-    
     void Graphics::Impl::DisableRendering()
     {
         assert(m_renderThreadAffinity.check());
@@ -145,7 +138,6 @@ namespace Babylon
         }
     }
 
-    
     void Graphics::Impl::StartRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
@@ -186,7 +178,6 @@ namespace Babylon
         oldBeforeRenderTaskCompletionSource.complete();
     }
 
-    
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
@@ -230,7 +221,6 @@ namespace Babylon
         m_rendering = false;
     }
 
-    
     arcana::task<void, std::exception_ptr> Graphics::Impl::RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error)
     {
         bool anyTasks{};
@@ -267,20 +257,17 @@ namespace Babylon
         }
     }
 
-    
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         Callback.SetDiagnosticOutput(std::move(outputFunction));
     }
 
-    
     float Graphics::Impl::GetHardwareScalingLevel()
     {
         std::scoped_lock lock(m_state.Mutex);
         return m_state.Resolution.hardwareScalingLevel;
     }
 
-    
     void Graphics::Impl::SetHardwareScalingLevel(float level)
     {
         if (level <= std::numeric_limits<float>::epsilon())
@@ -295,31 +282,26 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
-    
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
     }
 
-    
     Graphics::~Graphics() = default;
 
-    
-    template<typename... Ts>
-    void Graphics::UpdateWindow<Ts...>(Ts... windowPtr)
+    template<>
+    void Graphics::UpdateWindow<WindowType>(WindowType windowPtr)
     {
-        m_impl->SetNativeWindow<Ts...>(windowPtr, nullptr);
+        m_impl->SetNativeWindow(windowPtr, nullptr);
     }
 
-    
-    template<typename... Ts>
+    template<>
     void Graphics::UpdateWindow<WindowType, void*>(WindowType windowPtr, void* windowTypePtr)
     {
         m_impl->SetNativeWindow(windowPtr, windowTypePtr);
     }
 
     template<>
-    
     std::unique_ptr<Graphics> Graphics::CreateGraphics<WindowType, size_t, size_t>(WindowType nativeWindowPtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
@@ -337,13 +319,11 @@ namespace Babylon
         return graphics;
     }
 
-    
     void Graphics::UpdateSize(size_t width, size_t height)
     {
         m_impl->Resize(width, height);
     }
 
-    
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -370,7 +350,6 @@ namespace Babylon
         }, JS_GRAPHICS_READY_NAME));
     }
 
-    
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -379,51 +358,48 @@ namespace Babylon
                     .Data();
     }
 
-    
     void Graphics::AddToJavaScript(Napi::Env env)
     {
         m_impl->AddToJavaScript(env);
     }
 
-    
     void Graphics::EnableRendering()
     {
         m_impl->EnableRendering();
     }
 
-    
     void Graphics::DisableRendering()
     {
         m_impl->DisableRendering();
     }
 
-    
     void Graphics::StartRenderingCurrentFrame()
     {
         m_impl->StartRenderingCurrentFrame();
     }
 
-    
     void Graphics::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
     }
 
-    
     void Graphics::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
     }
 
-    
     void Graphics::SetHardwareScalingLevel(float level)
     {
         m_impl->SetHardwareScalingLevel(level);
     }
 
-    
     float Graphics::GetHardwareScalingLevel()
     {
         return m_impl->GetHardwareScalingLevel();
+    }
+
+    float Graphics::GetDevicePixelRatio() const
+    {
+        return m_impl->GetDevicePixelRatio();
     }
 }
