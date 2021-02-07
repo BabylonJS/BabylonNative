@@ -409,37 +409,6 @@ namespace xr
             xrRequestExitSession(session);
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
-        {
-            auto& primaryRenderResource = RenderResources.ResourceMap.at(HmdImpl.PrimaryViewConfigurationType);
-            auto primaryViewConfigTypeSwapchainCount = primaryRenderResource.ColorSwapchains.size();
-            if (viewIndex < primaryViewConfigTypeSwapchainCount)
-            {
-                const auto& swapchain = primaryRenderResource.ColorSwapchains.at(viewIndex);
-                return{ static_cast<size_t>(swapchain.Width), static_cast<size_t>(swapchain.Height) };
-            }
-            else if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported &&
-                HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
-            {
-                size_t secondaryViewIndex = viewIndex - primaryViewConfigTypeSwapchainCount;
-                for (const auto& viewConfigType : HmdImpl.SupportedSecondaryViewConfigurationTypes)
-                {
-                    const auto& state = RenderResources.ResourceMap.at(viewConfigType).ViewState;
-                    if (state.Views.size() <= secondaryViewIndex)
-                    {
-                        secondaryViewIndex -= state.Views.size();
-                        continue;
-                    }
-
-                    const auto& viewConfig = state.ViewConfigViews.at(secondaryViewIndex);
-                    return { viewConfig.recommendedImageRectWidth, viewConfig.recommendedImageRectHeight };
-                }
-            }
-
-            // On emulators, SecondaryViewConfigurationTypes aren't populated but still need a size
-            return { 0, 0 };
-        }
-
         void PopulateSwapchains(ViewConfigurationState& viewState)
         {
             const auto& session = HmdImpl.Context.Session();
@@ -1722,11 +1691,6 @@ namespace xr
     void System::Session::RequestEndSession()
     {
         m_impl->RequestEndSession();
-    }
-
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
-    {
-        return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 
     void System::Session::SetDepthsNearFar(float depthNear, float depthFar)

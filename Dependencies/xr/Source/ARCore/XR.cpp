@@ -580,12 +580,6 @@ namespace xr
             sessionEnded = true;
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const
-        {
-            // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
-            return {1,1};
-        }
-
         void DrawFrame()
         {
             // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
@@ -1288,11 +1282,6 @@ namespace xr
     void System::Session::RequestEndSession()
     {
         m_impl->RequestEndSession();
-    }
-
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
-    {
-        return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 
     void System::Session::SetDepthsNearFar(float depthNear, float depthFar)

@@ -51,7 +51,7 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done) {
-    /*var canvasImageData =*/ engine._native.getFramebufferData(function (screenshot) { 
+    /*var canvasImageData =*/ engine._native.getFrameBufferData(function (screenshot) { 
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {

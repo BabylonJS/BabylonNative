@@ -329,7 +329,6 @@ namespace xr
 
             std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){});
             void RequestEndSession();
-            Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
             void SetPlaneDetectionEnabled(bool enabled) const;
             bool TrySetFeaturePointCloudEnabled(bool enabled) const;

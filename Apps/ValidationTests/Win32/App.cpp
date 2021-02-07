@@ -85,6 +85,11 @@ namespace
 
     void Uninitialize()
     {
+        if (graphics)
+        {
+            graphics->FinishRenderingCurrentFrame();
+        }
+
         runtime.reset();
         graphics.reset();
     }
@@ -93,33 +98,29 @@ namespace
     {
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+        graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
-        runtime->Dispatch([hWnd](Napi::Env env)
-            {
-                const int width = TEST_WIDTH;
-                const int height = TEST_HEIGHT;
+        runtime->Dispatch([hWnd](Napi::Env env) {
+            graphics->AddToJavaScript(env);
 
-                Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                    OutputDebugStringA(message);
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                OutputDebugStringA(message);
 
-                    printf("%s", message);
-                    fflush(stdout);
-                });
-
-                Babylon::Polyfills::Window::Initialize(env);
-                Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-                Babylon::Polyfills::Window::Initialize(env);
-
-                // Initialize NativeEngine plugin.
-                graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env);
-
-                Babylon::TestUtils::CreateInstance(env, hWnd);
+                printf("%s", message);
+                fflush(stdout);
             });
+
+            Babylon::Polyfills::Window::Initialize(env);
+
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+            Babylon::Plugins::NativeEngine::Initialize(env);
+
+            Babylon::TestUtils::CreateInstance(env, hWnd);
+        });
 
         // Scripts are copied to the parent of the executable due to CMake issues.
         // See the CMakeLists.txt comments for more details.
@@ -254,14 +255,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
+            if (graphics)
+            {
+                graphics->FinishRender();
+                graphics->StartRender();
+            }
+
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
             EndPaint(hWnd, &ps);
+
+            InvalidateRect(hWnd, nullptr, FALSE);
             break;
         }
         case WM_SIZE:
         {
-            if (graphics != nullptr)
+            if (graphics)
             {
                 size_t width = static_cast<size_t>(LOWORD(lParam));
                 size_t height = static_cast<size_t>(HIWORD(lParam));

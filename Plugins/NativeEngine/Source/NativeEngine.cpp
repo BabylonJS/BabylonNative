@@ -2,6 +2,7 @@
 #include "ShaderCompiler.h"
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
+#include <arcana/macros.h>
 
 #include <napi/env.h>
 
@@ -211,13 +212,13 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void SetBgfxIndexBuffer(uint32_t firstIndex, uint32_t numIndices) const
+        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const
         {
-            const auto nonDynamic = [firstIndex, numIndices](auto handle) {
-                bgfx::setIndexBuffer(handle, firstIndex, numIndices);
+            const auto nonDynamic = [&encoder, firstIndex, numIndices](auto handle) {
+                encoder->setIndexBuffer(handle, firstIndex, numIndices);
             };
-            const auto dynamic = [firstIndex, numIndices](auto handle) {
-                bgfx::setIndexBuffer(handle, firstIndex, numIndices);
+            const auto dynamic = [&encoder, firstIndex, numIndices](auto handle) {
+                encoder->setIndexBuffer(handle, firstIndex, numIndices);
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -312,13 +313,13 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        void SetAsBgfxVertexBuffer(uint8_t index, uint32_t startVertex, bgfx::VertexLayoutHandle layout) const
+        void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const
         {
-            const auto nonDynamic = [index, startVertex, layout](auto handle) {
-                bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
+            const auto nonDynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
+                encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
             };
-            const auto dynamic = [index, startVertex, layout](auto handle) {
-                bgfx::setVertexBuffer(index, handle, startVertex, UINT32_MAX, layout);
+            const auto dynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
+                encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -327,16 +328,17 @@ namespace Babylon
         std::vector<uint8_t> m_bytes{};
     };
 
-    void NativeEngine::Initialize(Napi::Env env, bool autoRender)
+    void NativeEngine::Initialize(Napi::Env env)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
 
+        // clang-format off
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
-            {InstanceMethod("dispose", &NativeEngine::Dispose),
-                InstanceMethod("getEngine", &NativeEngine::GetEngine),
+            {
+                InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
                 InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
@@ -400,10 +402,9 @@ namespace Babylon
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
-                InstanceMethod("getFramebufferData", &NativeEngine::GetFramebufferData),
-                InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
                 InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
                 InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
+                InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -456,15 +457,10 @@ namespace Babylon
                 InstanceValue("ALPHA_PREMULTIPLIED_PORTERDUFF", Napi::Number::From(env, AlphaMode::PREMULTIPLIED_PORTERDUFF)),
                 InstanceValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
                 InstanceValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
-
-                InstanceValue(JS_AUTO_RENDER_PROPERTY_NAME, Napi::Boolean::New(env, autoRender))});
+            });
+        // clang-format on
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
-
-        if (autoRender)
-        {
-            Graphics::Impl::GetFromJavaScript(env).EnableRendering();
-        }
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
@@ -474,7 +470,6 @@ namespace Babylon
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
-        , AutomaticRenderingEnabled{info.This().As<Napi::Object>().Get(JS_AUTO_RENDER_PROPERTY_NAME).ToBoolean()}
         , RuntimeScheduler{runtime}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
@@ -487,53 +482,11 @@ namespace Babylon
         Dispose();
     }
 
-    template<typename SchedulerT>
-    arcana::task<void, std::exception_ptr> NativeEngine::GetRequestAnimationFrameTask(SchedulerT& scheduler)
+    void NativeEngine::Dispatch(std::function<void()> function)
     {
-        return arcana::make_task(scheduler, m_cancelSource, [this] {
-            m_isRenderScheduled = false;
-
-            if (!m_requestAnimationFrameCallback.IsEmpty())
-            {
-                // We can get here from either the normal RequestAnimationFrame or the XR RequestAnimationFrame,
-                // so we need to clear out the regular RequestAnimationFrame callback to make sure we don't incorrectly
-                // call it when we have transitioned to the XR RequestAnimationFrame.
-                auto callback{std::move(m_requestAnimationFrameCallback)};
-                callback({});
-            }
-
-            GetFrameBufferManager().Reset();
+        m_runtime.Dispatch([function = std::move(function)](Napi::Env) {
+            function();
         });
-    }
-
-    void NativeEngine::ScheduleRender()
-    {
-        if (!m_isRenderScheduled)
-        {
-            m_isRenderScheduled = true;
-
-            m_graphicsImpl.GetBeforeRenderTask().then(arcana::inline_scheduler, m_cancelSource, [this]() mutable {
-                if (AutomaticRenderingEnabled)
-                {
-                    m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(arcana::inline_scheduler));
-                }
-                else
-                {
-                    m_graphicsImpl.AddRenderWorkTask(GetRequestAnimationFrameTask(RuntimeScheduler));
-                }
-            });
-            if (AutomaticRenderingEnabled)
-            {
-                Dispatch([this] {
-                    m_graphicsImpl.RenderCurrentFrame();
-                });
-            }
-        }
-    }
-
-    FrameBufferManager& NativeEngine::GetFrameBufferManager()
-    {
-        return m_frameBufferManager;
     }
 
     void NativeEngine::Dispose()
@@ -549,23 +502,12 @@ namespace Babylon
         Dispose();
     }
 
-    // NativeEngine definitions
-    Napi::Value NativeEngine::GetEngine(const Napi::CallbackInfo& info)
-    {
-        return Napi::External<NativeEngine>::New(info.Env(), this);
-    }
-
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
-        auto callback = info[0].As<Napi::Function>();
+        auto callback{info[0].As<Napi::Function>()};
 
-        if (m_requestAnimationFrameCallback.IsEmpty() ||
-            m_requestAnimationFrameCallback.Value() != callback)
-        {
-            m_requestAnimationFrameCallback = Napi::Persistent(callback);
-        }
-
-        ScheduleRender();
+        m_requestAnimationFrameCallbacks.emplace_back(Napi::Persistent(callback));
+        ScheduleFrame();
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
@@ -580,17 +522,8 @@ namespace Babylon
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
-        const auto& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
-
-        // a vertex array might not have an index buffer associated with
-        m_currentBoundIndexBuffer = vertexArray.indexBuffer.data;
-
-        const auto& vertexBuffers = vertexArray.vertexBuffers;
-        for (auto vertexBufferPair : vertexBuffers)
-        {
-            const auto& vertexBuffer = vertexBufferPair.second;
-            vertexBuffer.data->SetAsBgfxVertexBuffer(static_cast<uint8_t>(vertexBufferPair.first), vertexBuffer.startVertex, vertexBuffer.vertexLayoutHandle);
-        }
+        const VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
+        m_boundVertexArray = &vertexArray;
     }
 
     Napi::Value NativeEngine::CreateIndexBuffer(const Napi::CallbackInfo& info)
@@ -657,7 +590,7 @@ namespace Babylon
         vertexLayout.begin();
 
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-        const auto attribType = static_cast<bgfx::AttribType::Enum>(type);
+        const bgfx::AttribType::Enum attribType = static_cast<bgfx::AttribType::Enum>(type);
         vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
         vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
         vertexLayout.end();
@@ -1035,12 +968,13 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, generateMips, invertY]() {
+            [this, dataSpan, generateMips, invertY, texture]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (image == nullptr)
                 {
                     throw std::runtime_error("Unable to decode image."); // exception will be forwarded to JS
                 }
+
                 if (image->m_format == bimg::TextureFormat::R8)
                 {
                     // Images with only 1 channel are interpreted as luminance texture with RGB containing the same value as R and alpha as 255
@@ -1051,23 +985,20 @@ namespace Babylon
                     bimg::imageFree(image);
                     image = rgba;
                 }
+
                 if (invertY)
                 {
                     FlipY(image);
                 }
+
                 if (generateMips)
                 {
                     GenerateMips(&m_allocator, &image);
                 }
-                return image;
+
+                CreateTextureFromImage(texture, image);
             })
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, dataRef{Napi::Persistent(data)}](bimg::ImageContainer* image) {
-                ScheduleRender();
-                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, image] {
-                    CreateTextureFromImage(texture, image);
-                });
-            })
-            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1089,17 +1020,20 @@ namespace Babylon
         const auto generateMips = info[5].As<Napi::Boolean>().Value();
         const auto invertY = info[6].As<Napi::Boolean>().Value();
 
+        // TODO: probably should assert data byte length is equal to allocated size
         const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes);
         if (invertY)
         {
             FlipY(image);
         }
+
         if (generateMips)
         {
             GenerateMips(&m_allocator, &image);
         }
+
         CreateTextureFromImage(texture, image);
     }
 
@@ -1115,8 +1049,8 @@ namespace Babylon
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
         for (uint32_t face = 0; face < data.Length(); face++)
         {
-            const auto typedArray = data[face].As<Napi::TypedArray>();
-            const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
+            const auto typedArray{data[face].As<Napi::TypedArray>()};
+            const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
             tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
@@ -1133,13 +1067,10 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, generateMips, dataRefs{std::move(dataRefs)}](std::vector<bimg::ImageContainer*> images) {
-                ScheduleRender();
-                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips, images = std::move(images)] {
-                    CreateCubeTextureFromImages(texture, images, generateMips);
-                });
+            .then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips](std::vector<bimg::ImageContainer*> images) {
+                CreateCubeTextureFromImages(texture, images, generateMips);
             })
-            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1158,7 +1089,7 @@ namespace Babylon
         const auto onSuccess = info[2].As<Napi::Function>();
         const auto onError = info[3].As<Napi::Function>();
 
-        const auto numMips = data.Length();
+        const auto numMips{static_cast<size_t>(data.Length())};
         std::vector<Napi::Reference<Napi::TypedArray>> dataRefs(6 * numMips);
         std::vector<arcana::task<bimg::ImageContainer*, std::exception_ptr>> tasks(6 * numMips);
         for (uint32_t mip = 0; mip < numMips; mip++)
@@ -1179,13 +1110,10 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(RuntimeScheduler, arcana::cancellation::none(), [this, texture, dataRefs{std::move(dataRefs)}](std::vector<bimg::ImageContainer*> images) {
-                ScheduleRender();
-                return m_graphicsImpl.GetAfterRenderTask().then(arcana::inline_scheduler, m_cancelSource, [texture, images = std::move(images)] {
-                    CreateCubeTextureFromImages(texture, images, true);
-                });
+            .then(arcana::inline_scheduler, m_cancelSource, [texture](std::vector<bimg::ImageContainer*> images) {
+                CreateCubeTextureFromImages(texture, images, true);
             })
-            .then(RuntimeScheduler, m_cancelSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(RuntimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1258,10 +1186,12 @@ namespace Babylon
 
     void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
     {
+        bgfx::Encoder* encoder{BeginUpdate()};
+
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto texture = info[1].As<Napi::External<TextureData>>().Data();
 
-        bgfx::setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle, texture->Flags);
+        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle, texture->Flags);
     }
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
@@ -1313,64 +1243,215 @@ namespace Babylon
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
-        return Napi::External<FrameBufferData>::New(info.Env(), m_frameBufferManager.CreateNew(frameBufferHandle, width, height));
+
+        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
+        return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
-        // Check if this native frame buffer is marked as owned by JavaScript.  It's possible that
-        // we do not recognize it as having been passed back to JS in which case BabylonNative should be
-        // responsible for deleting this frame buffer instead.
-        const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        if (frameBufferData->OwnedByJS)
-        {
-            delete frameBufferData;
-        }
+        const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
+        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        m_frameBufferManager.Bind(frameBufferData);
+        auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
+        frameBuffer.Bind();
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const auto frameBufferData = info[0].As<Napi::External<FrameBufferData>>().Data();
-        m_frameBufferManager.Unbind(frameBufferData);
+        const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
+
+        assert(&frameBuffer == &m_graphicsImpl.BoundFrameBuffer());
+        UNUSED(frameBuffer);
+
+        m_graphicsImpl.DefaultFrameBuffer().Bind();
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto elementStart = info[1].As<Napi::Number>().Int32Value();
-        const auto elementCount = info[2].As<Napi::Number>().Int32Value();
-        // TODO: handle viewport
+        bgfx::Encoder* encoder{BeginUpdate()};
 
-        if (m_currentBoundIndexBuffer)
+        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+        const auto indexStart = info[1].As<Napi::Number>().Int32Value();
+        const auto indexCount = info[2].As<Napi::Number>().Int32Value();
+
+        encoder->discard(BGFX_DISCARD_INDEX_BUFFER | BGFX_DISCARD_VERTEX_STREAMS);
+
+        if (m_boundVertexArray != nullptr)
         {
-            m_currentBoundIndexBuffer->SetBgfxIndexBuffer(elementStart, elementCount);
+
+            const auto indexBufferData{m_boundVertexArray->indexBuffer.data};
+            if (indexBufferData != nullptr)
+            {
+                indexBufferData->SetBgfxIndexBuffer(encoder, indexStart, indexCount);
+            }
+
+            const auto& vertexBuffers = m_boundVertexArray->vertexBuffers;
+            for (const auto& vertexBufferPair : vertexBuffers)
+            {
+                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
+                const auto& vertexBuffer{vertexBufferPair.second};
+                vertexBuffer.data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.startVertex, UINT_MAX, vertexBuffer.vertexLayoutHandle);
+            }
         }
 
-        // TODO: support other fill modes
-        uint64_t fillModeState = 0; //indexed tri list
+        Draw(encoder, fillMode);
+    }
+
+    void NativeEngine::Draw(const Napi::CallbackInfo& info)
+    {
+        bgfx::Encoder* encoder{BeginUpdate()};
+
+        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+        const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
+        const auto verticesCount = info[2].As<Napi::Number>().Int32Value();
+
+        encoder->discard(BGFX_DISCARD_INDEX_BUFFER | BGFX_DISCARD_VERTEX_STREAMS);
+
+        if (m_boundVertexArray != nullptr)
+        {
+            const auto& vertexBuffers = m_boundVertexArray->vertexBuffers;
+            for (const auto& vertexBufferPair : vertexBuffers)
+            {
+                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
+                const auto& vertexBuffer = vertexBufferPair.second;
+                vertexBuffer.data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.startVertex + verticesStart, verticesCount, vertexBuffer.vertexLayoutHandle);
+            }
+        }
+
+        Draw(encoder, fillMode);
+    }
+
+    void NativeEngine::Clear(const Napi::CallbackInfo& info)
+    {
+        BeginUpdate();
+
+        uint16_t flags{0};
+        uint32_t rgba{0x000000ff};
+        float depth{1.0f};
+        uint8_t stencil{0};
+
+        if (!info[0].IsUndefined())
+        {
+            const auto color{info[0].As<Napi::Object>()};
+            const auto r = color.Get("r");
+            const auto g = color.Get("g");
+            const auto b = color.Get("b");
+            const auto a = color.Get("a");
+
+            rgba =
+                (static_cast<uint8_t>(r.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 24) +
+                (static_cast<uint8_t>(g.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 16) +
+                (static_cast<uint8_t>(b.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 8) +
+                static_cast<uint8_t>((a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue()) * std::numeric_limits<uint8_t>::max());
+
+            flags |= BGFX_CLEAR_COLOR;
+        }
+
+        if (!info[1].IsUndefined())
+        {
+            depth = info[1].As<Napi::Number>().FloatValue();
+            flags |= BGFX_CLEAR_DEPTH;
+        }
+
+        if (!info[2].IsUndefined())
+        {
+            stencil = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
+            flags |= BGFX_CLEAR_STENCIL;
+        }
+
+        m_graphicsImpl.BoundFrameBuffer().Clear(flags, rgba, depth, stencil);
+    }
+
+    Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), bgfx::getStats()->width);
+    }
+
+    Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), bgfx::getStats()->height);
+    }
+
+    void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
+    {
+        BeginUpdate();
+
+        const auto x = info[0].As<Napi::Number>().FloatValue();
+        const auto y = info[1].As<Napi::Number>().FloatValue();
+        const auto width = info[2].As<Napi::Number>().FloatValue();
+        const auto height = info[3].As<Napi::Number>().FloatValue();
+        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
+
+        m_graphicsImpl.BoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
+    }
+
+    void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
+    {
+        const auto callback{info[0].As<Napi::Function>()};
+
+        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
+        m_graphicsImpl.Callback().AddScreenShotCallback([&runtime{m_runtime}, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
+            runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
+                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
+                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
+                callbackPtr->Value().Call({typedArray});
+            });
+        });
+
+        arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancelSource, []() {
+            bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "GetImageData");
+        });
+    }
+
+    void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)
+    {
+        uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
         {
-            case 2: // MATERIAL_PointFillMode
-                fillModeState = BGFX_STATE_PT_POINTS;
-                break;
-            case 4: // MATERIAL_LineListDrawMode
-                fillModeState = BGFX_STATE_PT_LINES;
-                break;
-            case 6: // MATERIAL_LineStripDrawMode
-                fillModeState = BGFX_STATE_PT_LINESTRIP;
-                break;
-            case 7: // MATERIAL_TriangleStripDrawMode
-                fillModeState = BGFX_STATE_PT_TRISTRIP;
-                break;
+        case 0: // MATERIAL_TriangleFillMode
+        {
+            fillModeState = 0;
+            break;
+        }
+        case 1: // MATERIAL_WireFrameFillMode
+        case 4: // MATERIAL_LineListDrawMode
+        {
+            fillModeState = BGFX_STATE_PT_LINES;
+            break;
+        }
+        case 2: // MATERIAL_PointFillMode
+        case 3: // MATERIAL_PointListDrawMode
+        {
+            fillModeState = BGFX_STATE_PT_POINTS;
+            break;
+        }
+        case 5: // MATERIAL_LineLoopDrawMode
+        {
+            // TODO: unsupported mode
+            break;
+        }
+        case 6: // MATERIAL_LineStripDrawMode
+        {
+            fillModeState = BGFX_STATE_PT_LINESTRIP;
+            break;
+        }
+        case 7: // MATERIAL_TriangleStripDrawMode
+        {
+            fillModeState = BGFX_STATE_PT_TRISTRIP;
+            break;
+        }
+        case 8: // MATERIAL_TriangleFanDrawMode
+        {
+            // TODO: unsupported mode
+            break;
+        }
         }
 
-        if (m_frameBufferManager.IsRenderingToTarget() && (!bgfx::getCaps()->originBottomLeft))
+        if (!m_graphicsImpl.BoundFrameBuffer().BackBuffer() && !bgfx::getCaps()->originBottomLeft)
         {
             // UV coordinates system are different between OpenGL and Direct3D/Metal
             // This is not an issue with loaded textures (png/jpg...) because
@@ -1390,130 +1471,78 @@ namespace Babylon
                 if (value.YFlip)
                 {
                     float tmpMatrix[16];
-                    static const float flipMatrix[16] = {1.f, 0.f, 0.f, 0.f,
+                    static const float flipMatrix[16] = {
+                        1.f, 0.f, 0.f, 0.f,
                         0.f, -1.f, 0.f, 0.f,
                         0.f, 0.f, 1.f, 0.f,
-                        0.f, 0.f, 0.f, 1.f};
+                        0.f, 0.f, 0.f, 1.f
+                    };
                     bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
-                    bgfx::setUniform({it.first}, tmpMatrix, value.ElementLength);
+                    encoder->setUniform({it.first}, tmpMatrix, value.ElementLength);
                 }
                 else
                 {
-                    bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+                    encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
                 }
             }
 
             // We need to explicitly swap the culling state flags (instead of XOR)
             // because we would like to preserve the no culling configuration, which is 00.
-            const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
+            const auto cullCW  = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
             const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
 
-            uint64_t m_engineStateYFlipped = m_engineState;
-            m_engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
-            m_engineStateYFlipped |= (cullCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
+            uint64_t engineStateYFlipped = m_engineState;
+            engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
+            engineStateYFlipped |= (cullCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
 
-            bgfx::setState(m_engineStateYFlipped | fillModeState);
+            encoder->setState(engineStateYFlipped | fillModeState);
         }
         else
         {
             for (const auto& it : m_currentProgram->Uniforms)
             {
                 const ProgramData::UniformValue& value = it.second;
-                bgfx::setUniform({it.first}, value.Data.data(), value.ElementLength);
+                encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
             }
-            bgfx::setState(m_engineState | fillModeState);
+
+            encoder->setState(m_engineState | fillModeState);
         }
 
-        bgfx::submit(m_frameBufferManager.GetBound().ViewId, m_currentProgram->Program, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
+        m_graphicsImpl.BoundFrameBuffer().Submit(encoder, m_currentProgram->Program);
     }
 
-    void NativeEngine::Draw(const Napi::CallbackInfo& info)
+    bgfx::Encoder* NativeEngine::BeginUpdate()
     {
-        bgfx::discard(BGFX_DISCARD_INDEX_BUFFER);
-        m_currentBoundIndexBuffer = nullptr;
-        DrawIndexed(info);
+        ScheduleFrame();
+        return m_graphicsImpl.GetUpdateTokenForThread().Begin();
     }
 
-    void NativeEngine::Clear(const Napi::CallbackInfo& info)
+    void NativeEngine::ScheduleFrame()
     {
-        FrameBufferData& frameBufferData{m_frameBufferManager.GetBound()};
-        frameBufferData.UseViewId(m_frameBufferManager.GetNewViewId());
-
-        ViewClearState& viewClearState{frameBufferData.ViewClearState};
-        uint16_t flags{0};
-
-        if (info[0].IsObject())
+        if (m_frameScheduled)
         {
-            const auto color{info[0].As<Napi::Object>()};
-            const auto r = color.Get("r");
-            const auto g = color.Get("g");
-            const auto b = color.Get("b");
-            const auto a = color.Get("a");
-
-            viewClearState.UpdateColor(
-                r.As<Napi::Number>().FloatValue(),
-                g.As<Napi::Number>().FloatValue(),
-                b.As<Napi::Number>().FloatValue(),
-                a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue());
-
-            flags |= BGFX_CLEAR_COLOR;
+            return;
         }
 
-        if (info[1].IsNumber())
-        {
-            viewClearState.UpdateDepth(info[1].As<Napi::Number>().FloatValue());
-            flags |= BGFX_CLEAR_DEPTH;
-        }
+        m_frameScheduled = true;
 
-        if (info[2].IsNumber())
-        {
-            viewClearState.UpdateStencil(static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value()));
-            flags |= BGFX_CLEAR_STENCIL;
-        }
+        auto& updateToken{m_graphicsImpl.GetUpdateTokenForThread()};
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this, &updateToken]() {
+            updateToken.Lock();
+        }).then(RuntimeScheduler, m_cancelSource, [this, &updateToken]() {
+            m_frameScheduled = false;
 
-        viewClearState.UpdateFlags(flags);
-    }
+            auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
+            for (auto& callback : callbacks)
+            {
+                callback.Value().Call({});
+            }
 
-    Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), bgfx::getStats()->width);
-    }
-
-    Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), bgfx::getStats()->height);
-    }
-
-    void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
-    {
-        const auto x = info[0].As<Napi::Number>().FloatValue();
-        const auto y = info[1].As<Napi::Number>().FloatValue();
-        const auto width = info[2].As<Napi::Number>().FloatValue();
-        const auto height = info[3].As<Napi::Number>().FloatValue();
-        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
-
-        m_frameBufferManager.GetBound().SetViewPort(x, yOrigin, width, height);
-    }
-
-    void NativeEngine::GetFramebufferData(const Napi::CallbackInfo& info)
-    {
-        bgfx::FrameBufferHandle fbh = BGFX_INVALID_HANDLE;
-        const auto callback = info[0].As<Napi::Function>();
-
-        m_graphicsImpl.Callback.addScreenShotCallback(callback);
-        bgfx::requestScreenShot(fbh, "GetImageData");
-    }
-
-    Napi::Value NativeEngine::GetRenderAPI(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), static_cast<int>(bgfx::getRendererType()));
-    }
-
-    void NativeEngine::Dispatch(std::function<void()> function)
-    {
-        m_runtime.Dispatch([function = std::move(function)](Napi::Env) {
-            function();
+            updateToken.End();
+            updateToken.Unlock();
         });
+
+        // TODO: check if error handling is necessary
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)

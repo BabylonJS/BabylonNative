@@ -1,21 +1,22 @@
 #pragma once
 
-#include <vector>
-#include <mutex>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include <napi/napi.h>
-#include <queue>
+#include <arcana/threading/blocking_concurrent_queue.h>
 
 namespace Babylon
 {
-    struct BgfxCallback : public bgfx::CallbackI
+    class BgfxCallback : public bgfx::CallbackI
     {
+    public:
+        BgfxCallback() = default;
+        BgfxCallback(const BgfxCallback&) = delete;
+        BgfxCallback(BgfxCallback&&) = delete;
         virtual ~BgfxCallback() = default;
 
-        void addScreenShotCallback(Napi::Function callback);
-
+        void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+
     protected:
         void fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str) override;
         void traceVargs(const char* filePath, uint16_t line, const char* format, va_list argList) override;
@@ -31,8 +32,7 @@ namespace Babylon
         void captureFrame(const void* _data, uint32_t _size) override;
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
-        std::mutex m_ssCallbackAccess;
-        std::queue<Napi::FunctionReference> m_screenshotCallbacks;
+        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
         std::function<void(const char* output)> m_outputFunction;
     };
 }

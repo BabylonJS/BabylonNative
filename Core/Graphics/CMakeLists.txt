@@ -2,7 +2,12 @@ set(SOURCES
     "Include/Babylon/Graphics.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
+    "Source/FrameBuffer.cpp"
+    "Source/FrameBuffer.h"
+    "Source/FrameBufferManager.cpp"
+    "Source/FrameBufferManager.h"
     "Source/Graphics.cpp"
+    "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h")
 
 add_library(Graphics ${SOURCES})

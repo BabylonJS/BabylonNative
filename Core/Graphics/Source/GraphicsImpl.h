@@ -2,6 +2,7 @@
 
 #include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
+#include "FrameBufferManager.h"
 
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
@@ -10,13 +11,55 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <shared_mutex>
+#include <memory>
+#include <map>
+
 namespace Babylon
 {
     class Graphics::Impl
     {
-        static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-
     public:
+        class UpdateToken final
+        {
+        public:
+            // Must be called from update thread.
+            explicit UpdateToken(FrameBufferManager& frameBufferManager, std::shared_mutex& mutex);
+
+            UpdateToken(const UpdateToken&) = delete;
+            UpdateToken(UpdateToken&&) = delete;
+
+            // May be called from any thread.
+            void Lock();
+            void Unlock();
+
+            // Must be called from update thread.
+            bgfx::Encoder* Begin();
+            void End();
+
+        private:
+            friend class Impl;
+
+            FrameBufferManager& m_frameBufferManager;
+            std::shared_mutex& m_mutex;
+            bgfx::Encoder* m_encoder{};
+        };
+
+        class RenderScheduler final
+        {
+        public:
+            template<typename CallableT>
+            void operator()(CallableT&& callable)
+            {
+                m_dispatcher(callable);
+            }
+
+        private:
+            friend Impl;
+
+            arcana::manual_dispatcher<128> m_dispatcher;
+        };
+
         Impl();
         ~Impl();
 
@@ -27,9 +70,8 @@ namespace Babylon
         void AddToJavaScript(Napi::Env);
         static Impl& GetFromJavaScript(Napi::Env);
 
-        void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
-        arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
-        arcana::task<void, std::exception_ptr> GetAfterRenderTask();
+        RenderScheduler& BeforeRenderScheduler();
+        RenderScheduler& AfterRenderScheduler();
 
         void EnableRendering();
         void DisableRendering();
@@ -37,24 +79,29 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        void RenderCurrentFrame()
-        {
-            StartRenderingCurrentFrame();
-            FinishRenderingCurrentFrame();
-        }
+        UpdateToken& GetUpdateTokenForThread();
 
-        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+        void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
-        BgfxCallback Callback{};
+        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
+        FrameBuffer& DefaultFrameBuffer();
+        FrameBuffer& BoundFrameBuffer();
+
+        BgfxCallback& Callback();
 
     private:
-        arcana::affinity m_renderThreadAffinity{};
+        void UpdateBgfxState();
         void UpdateBgfxResolution();
+        void DiscardIfDirty();
+        void Frame();
 
-        bool m_rendering{false};
+        arcana::affinity m_renderThreadAffinity{};
+
+        arcana::cancellation_source m_cancellationSource{};
 
         struct
         {
@@ -75,16 +122,17 @@ namespace Babylon
             } Resolution{};
         } m_state{};
 
-
-
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
 
-        arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
-        std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
-        std::mutex m_renderWorkTasksMutex{};
+        std::shared_mutex m_updateMutex{};
 
-        arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
+        RenderScheduler m_beforeRenderScheduler;
+        RenderScheduler m_afterRenderScheduler;
+
+        BgfxCallback m_callback{};
+
+        std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
+
+        std::map<std::thread::id, UpdateToken> m_updateTokens{};
     };
 }

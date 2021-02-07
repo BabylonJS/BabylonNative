@@ -3,8 +3,8 @@
 
 namespace Babylon::Plugins::NativeEngine
 {
-    void Initialize(Napi::Env env, bool renderAutomatically)
+    void Initialize(Napi::Env env)
     {
-        Babylon::NativeEngine::Initialize(env, renderAutomatically);
+        Babylon::NativeEngine::Initialize(env);
     }
 }

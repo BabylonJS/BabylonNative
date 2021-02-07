@@ -36,8 +36,6 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    constexpr bool RENDER_ON_JS_THREAD{true};
-
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
@@ -81,6 +79,11 @@ namespace
 
     void Uninitialize()
     {
+        if (graphics)
+        {
+            graphics->FinishRenderingCurrentFrame();
+        }
+
         inputBuffer.reset();
         runtime.reset();
         graphics.reset();
@@ -100,25 +103,26 @@ namespace
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        graphics->StartRenderingCurrentFrame();
+
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         runtime->Dispatch([width, height, hWnd](Napi::Env env) {
-            // Initialize console plugin.
+            graphics->AddToJavaScript(env);
+
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
 
             Babylon::Polyfills::Window::Initialize(env);
+
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-            // Initialize NativeEngine plugin.
-            graphics->AddToJavaScript(env);
-            Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
-            // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
-                        
+
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 
@@ -165,8 +169,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Place code here.
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -298,27 +300,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
-            if constexpr (!RENDER_ON_JS_THREAD)
+            if (graphics)
             {
-                if (graphics != nullptr)
-                {
-                    graphics->RenderCurrentFrame();
-                }
+                graphics->FinishRenderingCurrentFrame();
+                graphics->StartRenderingCurrentFrame();
             }
 
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
             EndPaint(hWnd, &ps);
 
-            if constexpr (!RENDER_ON_JS_THREAD)
-            {
-                InvalidateRgn(hWnd, nullptr, false);
-            }
+            InvalidateRect(hWnd, nullptr, FALSE);
             break;
         }
         case WM_SIZE:
         {
-            if (runtime != nullptr)
+            if (graphics)
             {
                 auto width = static_cast<size_t>(LOWORD(lParam));
                 auto height = static_cast<size_t>(HIWORD(lParam));
@@ -342,7 +339,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_MOUSEMOVE:
         {
-            if (inputBuffer != nullptr)
+            if (inputBuffer)
             {
                 inputBuffer->SetPointerPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
@@ -351,7 +348,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONDOWN:
         {
             SetCapture(hWnd);
-            if (inputBuffer != nullptr)
+            if (inputBuffer)
             {
                 inputBuffer->SetPointerDown(true);
             }
@@ -359,7 +356,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_LBUTTONUP:
         {
-            if (inputBuffer != nullptr)
+            if (inputBuffer)
             {
                 inputBuffer->SetPointerDown(false);
             }
