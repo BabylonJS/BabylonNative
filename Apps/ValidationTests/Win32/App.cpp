@@ -109,10 +109,10 @@ namespace
                     fflush(stdout);
                 });
 
-                Babylon::Polyfills::Window::Initialize(env, *graphics.get());
+                Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                Babylon::Polyfills::Window::Initialize(env, *graphics.get());
+                Babylon::Polyfills::Window::Initialize(env);
 
                 // Initialize NativeEngine plugin.
                 graphics->AddToJavaScript(env);

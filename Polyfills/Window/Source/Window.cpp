@@ -4,6 +4,7 @@
 #include "Window.h"
 
 #include <Babylon/Graphics.h>
+#include "GraphicsImpl.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -18,15 +19,14 @@ namespace Babylon::Polyfills::Internal
         constexpr auto JS_DEVICE_PIXEL_RATIO_NAME = "devicePixelRatio";
     }
 
-    void Window::Initialize(Napi::Env env, const Graphics& graphics)
+    void Window::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
         Napi::Function constructor = Window::DefineClass(
             env,
             JS_CLASS_NAME,
-            {},
-            (void*)&graphics);
+            {});
 
         auto global = env.Global();
         auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
@@ -66,7 +66,7 @@ namespace Babylon::Polyfills::Internal
         // Create an accessor to add to the window object to define window.devicePixelRatio
         Napi::Object descriptor{Napi::Object::New(env)};
         descriptor.Set("enumerable", Napi::Value::From(env, true));
-        descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, "devicePixelRatio"));
+        descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, "devicePixelRatio", jsWindow));
         Napi::Object object{global.Get("Object").As<Napi::Object>()};
         Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
         defineProperty.Call(object, {global, Napi::String::New(env, "devicePixelRatio"), descriptor});
@@ -80,7 +80,6 @@ namespace Babylon::Polyfills::Internal
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_graphics{*(const Graphics*)info.Data()}
     {
     }
 
@@ -130,15 +129,15 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info) 
     {
-        auto& window = *static_cast<Window*>(info.Data());
-        return Napi::Value::From(info.Env(), window.m_graphics.GetDevicePixelRatio());
+        auto env = info.Env();
+        return Napi::Value::From(env, Graphics::Impl::GetFromJavaScript(env).GetDevicePixelRatio());
     }
 }
 
 namespace Babylon::Polyfills::Window
 {
-    void Initialize(Napi::Env env, const Graphics& graphics)
+    void Initialize(Napi::Env env)
     {
-        Internal::Window::Initialize(env, graphics);
+        Internal::Window::Initialize(env);
     }
 }

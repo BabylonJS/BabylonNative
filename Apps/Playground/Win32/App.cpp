@@ -108,7 +108,7 @@ namespace
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
-            Babylon::Polyfills::Window::Initialize(env, *graphics.get());
+            Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             // Initialize NativeEngine plugin.

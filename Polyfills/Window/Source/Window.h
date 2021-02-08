@@ -10,13 +10,12 @@ namespace Babylon::Polyfills::Internal
         static constexpr auto JS_WINDOW_NAME = "window";
 
     public:
-        static void Initialize(Napi::Env env, const Graphics& graphics);
+        static void Initialize(Napi::Env env);
         static Window& GetFromJavaScript(Napi::Env);
 
         Window(const Napi::CallbackInfo& info);
     private:
         JsRuntime& m_runtime;
-        const Graphics& m_graphics;
 
         static void SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);

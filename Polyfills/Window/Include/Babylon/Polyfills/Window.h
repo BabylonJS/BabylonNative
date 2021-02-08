@@ -5,5 +5,5 @@
 
 namespace Babylon::Polyfills::Window
 {
-    void Initialize(Napi::Env env, const Graphics& graphics);
+    void Initialize(Napi::Env env);
 }
