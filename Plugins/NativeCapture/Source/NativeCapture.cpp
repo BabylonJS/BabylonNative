@@ -34,7 +34,10 @@ namespace Babylon::Plugins::Internal
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
             , m_graphicsImpl(Graphics::Impl::GetFromJavaScript(info.Env()))
             , m_ticket{std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); }))}
+            , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
         {
+            Napi::Object jsData = m_jsData.Value();
+            jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));
         }
 
         ~NativeCapture()
@@ -62,7 +65,7 @@ namespace Babylon::Plugins::Internal
             m_runtime.Dispatch([this, data{data}, bytes{std::move(bytes)}](Napi::Env env) mutable {
                 data.Data = bytes.data();
 
-                Napi::Object jsData = Napi::Object::New(env);
+                Napi::Object jsData = m_jsData.Value();
                 jsData.Set("width", static_cast<double>(data.Width));
                 jsData.Set("height", static_cast<double>(data.Height));
                 jsData.Set("pitch", static_cast<double>(data.Pitch));
@@ -77,16 +80,21 @@ namespace Babylon::Plugins::Internal
                         break;
                 }
                 jsData.Set("yFlip", data.YFlip);
-                jsData.Set("data", Napi::ArrayBuffer::New(env, bytes.data(), data.DataSize));
+
+                auto jsBytes = jsData.Get("data").As<Napi::ArrayBuffer>();
+                if (data.DataSize != jsBytes.ByteLength())
+                {
+                    jsBytes = Napi::ArrayBuffer::New(env, data.DataSize);
+                    jsData.Set("data", jsBytes);
+                }
+                std::memcpy(jsBytes.Data(), bytes.data(), data.DataSize);
+
                 jsData.Set("_nativeData", Napi::External<BgfxCallback::CaptureData>::New(env, &data));
 
                 for (const auto& callback : m_callbacks)
                 {
                     callback.Call({jsData});
                 }
-
-                jsData.Set("data", env.Undefined());
-                jsData.Set("_nativeData", env.Undefined());
             });
         }
 
@@ -105,6 +113,7 @@ namespace Babylon::Plugins::Internal
         Graphics::Impl& m_graphicsImpl;
         std::vector<Napi::FunctionReference> m_callbacks{};
         std::unique_ptr<TicketT> m_ticket{};
+        Napi::ObjectReference m_jsData{};
     };
 }
 
