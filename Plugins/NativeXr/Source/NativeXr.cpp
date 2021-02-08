@@ -148,7 +148,7 @@ namespace
                 handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
             }
             
-            auto jointGetter = [handJointCollection, env](const Napi::CallbackInfo& info) -> Napi::Value {
+            auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
                 return handJointCollection.Get(info[0].As<Napi::String>());
             };
             
