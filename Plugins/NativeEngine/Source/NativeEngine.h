@@ -30,13 +30,14 @@ namespace Babylon
     {
         ~TextureData()
         {
-            if (bgfx::isValid(Handle))
+            if (OwnsHandle && bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
             }
         }
 
         bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
+        bool OwnsHandle{true};
         uint32_t Width{0};
         uint32_t Height{0};
         uint32_t Flags{0};
@@ -58,14 +59,17 @@ namespace Babylon
 
         ~ProgramData()
         {
-            bgfx::destroy(Program);
+            if (bgfx::isValid(Handle))
+            {
+                bgfx::destroy(Handle);
+            }
         }
 
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
         std::unordered_map<std::string, UniformInfo> VertexUniformInfos{};
         std::unordered_map<std::string, UniformInfo> FragmentUniformInfos{};
 
-        bgfx::ProgramHandle Program{};
+        bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
 
         struct UniformValue
         {
@@ -126,10 +130,6 @@ namespace Babylon
         ~NativeEngine();
 
         static void Initialize(Napi::Env env);
-
-        void Dispatch(std::function<void()>);
-
-        JsRuntimeScheduler RuntimeScheduler;
 
     private:
         void Dispose();
@@ -216,6 +216,8 @@ namespace Babylon
 
         JsRuntime& m_runtime;
         Graphics::Impl& m_graphicsImpl;
+
+        JsRuntimeScheduler m_runtimeScheduler;
 
         bool m_frameScheduled{};
 

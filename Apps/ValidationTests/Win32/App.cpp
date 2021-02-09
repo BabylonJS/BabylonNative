@@ -257,8 +257,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (graphics)
             {
-                graphics->FinishRender();
-                graphics->StartRender();
+                graphics->FinishRenderingCurrentFrame();
+                graphics->StartRenderingCurrentFrame();
             }
 
             PAINTSTRUCT ps;

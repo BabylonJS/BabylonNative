@@ -22,7 +22,6 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-    constexpr auto JS_GRAPHICS_READY_NAME = "whenGraphicsReady";
 
     bool g_bgfxRenderFrameCalled{false};
 }
@@ -71,6 +70,9 @@ namespace Babylon
 
     Graphics::Impl::Impl()
     {
+        // Set the thread affinity (all other rendering operations must happen on this thread).
+        m_renderThreadAffinity = std::this_thread::get_id();
+
         if (!g_bgfxRenderFrameCalled)
         {
             bgfx::renderFrame();
@@ -116,38 +118,17 @@ namespace Babylon
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Resolution.width = width;
-        m_state.Resolution.height = height;
+        m_state.Resolution.Width = width;
+        m_state.Resolution.Height = height;
         UpdateBgfxResolution();
     }
 
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
     {
+        m_jsThreadAffinity = std::this_thread::get_id();
+
         JsRuntime::NativeObject::GetFromJavaScript(env)
             .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
-
-        auto readyCallback{[this, env](const Napi::CallbackInfo&) -> Napi::Value {
-            auto deferred{Napi::Promise::Deferred::New(env)};
-            auto promise{deferred.Promise()};
-
-            arcana::task<void, std::exception_ptr> enableRenderTask;
-            {
-                std::scoped_lock lock{m_state.Mutex};
-                enableRenderTask = m_enableRenderTaskCompletionSource.as_task();
-            }
-
-            auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
-            enableRenderTask.then(arcana::inline_scheduler, JsRuntime::InternalState::GetFromJavaScript(env).Cancellation, [&jsRuntime, deferred{std::move(deferred)}]() mutable {
-                jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
-                    deferred.Resolve(env.Null());
-                });
-            });
-
-            return std::move(promise);
-        }};
-
-        JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Set(JS_GRAPHICS_READY_NAME, Napi::Function::New(env, readyCallback, JS_GRAPHICS_READY_NAME));
     }
 
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
@@ -170,13 +151,12 @@ namespace Babylon
 
     void Graphics::Impl::EnableRendering()
     {
+        assert(m_renderThreadAffinity.check());
+
         std::scoped_lock lock{m_state.Mutex};
 
         if (!m_state.Bgfx.Initialized)
         {
-            // Set the thread affinity (all other rendering operations must happen on this thread).
-            m_renderThreadAffinity = std::this_thread::get_id();
-
             // Initialize bgfx.
             auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
@@ -186,9 +166,6 @@ namespace Babylon
             m_state.Bgfx.Dirty = false;
 
             m_frameBufferManager = std::make_unique<FrameBufferManager>();
-
-            // Allow JS awaiters to start doing graphics operations.
-            m_enableRenderTaskCompletionSource.complete();
         }
     }
 
@@ -206,7 +183,7 @@ namespace Babylon
 
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
-            m_enableRenderTaskCompletionSource = {};
+
             m_renderThreadAffinity = {};
         }
     }
@@ -226,6 +203,8 @@ namespace Babylon
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
+        assert(m_renderThreadAffinity.check());
+
         Frame();
 
         m_afterRenderScheduler.m_dispatcher.tick(m_cancellationSource);
@@ -233,18 +212,20 @@ namespace Babylon
 
     Graphics::Impl::UpdateToken& Graphics::Impl::GetUpdateTokenForThread()
     {
+        // TODO: thread contention
         return m_updateTokens.try_emplace(std::this_thread::get_id(), *m_frameBufferManager, m_updateMutex).first->second;
     }
 
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
+        assert(m_renderThreadAffinity.check());
         m_callback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
     float Graphics::Impl::GetHardwareScalingLevel()
     {
-        std::scoped_lock lock(m_state.Mutex);
-        return m_state.Resolution.hardwareScalingLevel;
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Resolution.HardwareScalingLevel;
     }
 
     void Graphics::Impl::SetHardwareScalingLevel(float level)
@@ -254,8 +235,8 @@ namespace Babylon
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
         {
-            std::scoped_lock lock(m_state.Mutex);
-            m_state.Resolution.hardwareScalingLevel = level;
+            std::scoped_lock lock{m_state.Mutex};
+            m_state.Resolution.HardwareScalingLevel = level;
         }
 
         UpdateBgfxResolution();
@@ -263,21 +244,25 @@ namespace Babylon
 
     FrameBuffer& Graphics::Impl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
     {
+        assert(m_jsThreadAffinity.check());
         return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
     }
 
     void Graphics::Impl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
+        assert(m_jsThreadAffinity.check());
         return m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
     }
 
     FrameBuffer& Graphics::Impl::DefaultFrameBuffer()
     {
+        assert(m_jsThreadAffinity.check());
         return m_frameBufferManager->DefaultFrameBuffer();
     }
 
     FrameBuffer& Graphics::Impl::BoundFrameBuffer()
     {
+        assert(m_jsThreadAffinity.check());
         return m_frameBufferManager->BoundFrameBuffer();
     }
 
@@ -292,10 +277,11 @@ namespace Babylon
         if (m_state.Bgfx.Dirty)
         {
             bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
-            auto& res = m_state.Bgfx.InitState.resolution;
 
             // Ensure bgfx rebinds all texture information.
             bgfx::discard(BGFX_DISCARD_ALL);
+
+            auto& res = m_state.Bgfx.InitState.resolution;
             bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
@@ -308,9 +294,9 @@ namespace Babylon
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
         auto& res = m_state.Bgfx.InitState.resolution;
-        auto level = m_state.Resolution.hardwareScalingLevel;
-        res.width = static_cast<uint32_t>(m_state.Resolution.width / level);
-        res.height = static_cast<uint32_t>(m_state.Resolution.height / level);
+        auto level = m_state.Resolution.HardwareScalingLevel;
+        res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
+        res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
     }
 
     void Graphics::Impl::DiscardIfDirty()

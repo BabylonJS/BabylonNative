@@ -1542,6 +1542,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * A class to handle setting up the rendering of opaque objects to be shown through transmissive objects.
  */
@@ -1556,6 +1557,7 @@ var TransmissionHelper = /** @class */ (function () {
         this._opaqueRenderTarget = null;
         this._opaqueMeshesCache = [];
         this._transparentMeshesCache = [];
+        this._materialObservers = {};
         this._options = Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])(Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])({}, TransmissionHelper._getDefaultOptions()), options);
         this._scene = scene;
         this._scene._transmissionHelper = this;
@@ -1571,7 +1573,11 @@ var TransmissionHelper = /** @class */ (function () {
      */
     TransmissionHelper._getDefaultOptions = function () {
         return {
-            renderSize: 1024
+            renderSize: 1024,
+            samples: 4,
+            lodGenerationScale: 1,
+            lodGenerationOffset: -4,
+            renderTargetTextureType: babylonjs_Materials_PBR_pbrMaterial__WEBPACK_IMPORTED_MODULE_1__["Constants"].TEXTURETYPE_UNSIGNED_INT
         };
     };
     /**
@@ -1589,8 +1595,13 @@ var TransmissionHelper = /** @class */ (function () {
         var oldOptions = this._options;
         this._options = newOptions;
         // If size changes, recreate everything
-        if (newOptions.renderSize !== oldOptions.renderSize) {
+        if (newOptions.renderSize !== oldOptions.renderSize || newOptions.renderTargetTextureType !== oldOptions.renderTargetTextureType || !this._opaqueRenderTarget) {
             this._setupRenderTargets();
+        }
+        else {
+            this._opaqueRenderTarget.samples = newOptions.samples;
+            this._opaqueRenderTarget.lodGenerationScale = newOptions.lodGenerationScale;
+            this._opaqueRenderTarget.lodGenerationOffset = newOptions.lodGenerationOffset;
         }
     };
     TransmissionHelper.prototype.getOpaqueTarget = function () {
@@ -1607,7 +1618,7 @@ var TransmissionHelper = /** @class */ (function () {
     };
     TransmissionHelper.prototype._addMesh = function (mesh) {
         if (mesh instanceof babylonjs_Materials_PBR_pbrMaterial__WEBPACK_IMPORTED_MODULE_1__["Mesh"]) {
-            mesh.onMaterialChangedObservable.add(this.onMeshMaterialChanged.bind(this));
+            this._materialObservers[mesh.uniqueId] = mesh.onMaterialChangedObservable.add(this.onMeshMaterialChanged.bind(this));
             if (this.shouldRenderAsTransmission(mesh.material)) {
                 this._transparentMeshesCache.push(mesh);
             }
@@ -1618,7 +1629,8 @@ var TransmissionHelper = /** @class */ (function () {
     };
     TransmissionHelper.prototype._removeMesh = function (mesh) {
         if (mesh instanceof babylonjs_Materials_PBR_pbrMaterial__WEBPACK_IMPORTED_MODULE_1__["Mesh"]) {
-            mesh.onMaterialChangedObservable.remove(this.onMeshMaterialChanged.bind(this));
+            mesh.onMaterialChangedObservable.remove(this._materialObservers[mesh.uniqueId]);
+            delete this._materialObservers[mesh.uniqueId];
             var idx = this._transparentMeshesCache.indexOf(mesh);
             if (idx !== -1) {
                 this._transparentMeshesCache.splice(idx, 1);
@@ -1672,45 +1684,15 @@ var TransmissionHelper = /** @class */ (function () {
      */
     TransmissionHelper.prototype._setupRenderTargets = function () {
         var _this = this;
-        var opaqueRTIndex = -1;
-        // Remove any layers rendering to the opaque scene.
-        if (this._scene.layers && this._opaqueRenderTarget) {
-            for (var _i = 0, _a = this._scene.layers; _i < _a.length; _i++) {
-                var layer = _a[_i];
-                var idx = layer.renderTargetTextures.indexOf(this._opaqueRenderTarget);
-                if (idx >= 0) {
-                    layer.renderTargetTextures.splice(idx, 1);
-                }
-            }
-        }
-        // Remove opaque render target
-        if (this._opaqueRenderTarget) {
-            opaqueRTIndex = this._scene.customRenderTargets.indexOf(this._opaqueRenderTarget);
-            this._opaqueRenderTarget.dispose();
-        }
-        this._opaqueRenderTarget = new babylonjs_Materials_PBR_pbrMaterial__WEBPACK_IMPORTED_MODULE_1__["RenderTargetTexture"]("opaqueSceneTexture", this._options.renderSize, this._scene, true);
+        this._opaqueRenderTarget = new babylonjs_Materials_PBR_pbrMaterial__WEBPACK_IMPORTED_MODULE_1__["RenderTargetTexture"]("opaqueSceneTexture", this._options.renderSize, this._scene, true, undefined, this._options.renderTargetTextureType);
         this._opaqueRenderTarget.renderList = this._opaqueMeshesCache;
         // this._opaqueRenderTarget.clearColor = new Color4(0.0, 0.0, 0.0, 0.0);
         this._opaqueRenderTarget.gammaSpace = true;
-        this._opaqueRenderTarget.lodGenerationScale = 1;
-        this._opaqueRenderTarget.lodGenerationOffset = -4;
-        this._opaqueRenderTarget.samples = 4;
-        if (opaqueRTIndex >= 0) {
-            this._scene.customRenderTargets.splice(opaqueRTIndex, 0, this._opaqueRenderTarget);
-        }
-        else {
-            opaqueRTIndex = this._scene.customRenderTargets.length;
-            this._scene.customRenderTargets.push(this._opaqueRenderTarget);
-        }
-        // If there are other layers, they should be included in the render of the opaque background.
-        if (this._scene.layers && this._opaqueRenderTarget) {
-            for (var _b = 0, _c = this._scene.layers; _b < _c.length; _b++) {
-                var layer = _c[_b];
-                layer.renderTargetTextures.push(this._opaqueRenderTarget);
-            }
-        }
+        this._opaqueRenderTarget.lodGenerationScale = this._options.lodGenerationScale;
+        this._opaqueRenderTarget.lodGenerationOffset = this._options.lodGenerationOffset;
+        this._opaqueRenderTarget.samples = this._options.samples;
         this._transparentMeshesCache.forEach(function (mesh) {
-            if (_this.shouldRenderAsTransmission(mesh.material) && mesh.material instanceof babylonjs_Materials_PBR_pbrMaterial__WEBPACK_IMPORTED_MODULE_1__["PBRMaterial"]) {
+            if (_this.shouldRenderAsTransmission(mesh.material)) {
                 mesh.material.refractionTexture = _this._opaqueRenderTarget;
             }
         });
@@ -2047,28 +2029,27 @@ var KHR_materials_variants = /** @class */ (function () {
                     var root = _this._loader.rootBabylonMesh;
                     var metadata = (root.metadata = root.metadata || {});
                     var gltf = (metadata.gltf = metadata.gltf || {});
-                    var extensionMetadata = (gltf[NAME] = gltf[NAME] || { lastSelected: null, original: [], variants: {} });
+                    var extensionMetadata_1 = (gltf[NAME] = gltf[NAME] || { lastSelected: null, original: [], variants: {} });
                     // Store the original material.
-                    extensionMetadata.original.push({ mesh: babylonMesh, material: babylonMesh.material });
-                    // For each mapping, look at the variants and make a new entry for them.
-                    var variants_1 = extensionMetadata.variants;
-                    for (var _i = 0, _a = extension.mappings; _i < _a.length; _i++) {
-                        var mapping = _a[_i];
-                        var _loop_1 = function (variantIndex) {
-                            var variant = _glTFLoader__WEBPACK_IMPORTED_MODULE_0__["ArrayItem"].Get(extensionContext + "/mapping/" + variantIndex, _this._variants, variantIndex);
-                            var material = _glTFLoader__WEBPACK_IMPORTED_MODULE_0__["ArrayItem"].Get("#/materials/", _this._loader.gltf.materials, mapping.material);
-                            promises.push(_this._loader._loadMaterialAsync("#/materials/" + mapping.material, material, babylonMesh, babylonDrawMode, function (babylonMaterial) {
-                                variants_1[variant.name] = variants_1[variant.name] || [];
-                                variants_1[variant.name].push({
+                    extensionMetadata_1.original.push({ mesh: babylonMesh, material: babylonMesh.material });
+                    var _loop_1 = function (mappingIndex) {
+                        var mapping = extension.mappings[mappingIndex];
+                        var material = _glTFLoader__WEBPACK_IMPORTED_MODULE_0__["ArrayItem"].Get(extensionContext + "/mappings/" + mappingIndex + "/material", _this._loader.gltf.materials, mapping.material);
+                        promises.push(_this._loader._loadMaterialAsync("#/materials/" + mapping.material, material, babylonMesh, babylonDrawMode, function (babylonMaterial) {
+                            for (var mappingVariantIndex = 0; mappingVariantIndex < mapping.variants.length; ++mappingVariantIndex) {
+                                var variantIndex = mapping.variants[mappingVariantIndex];
+                                var variant = _glTFLoader__WEBPACK_IMPORTED_MODULE_0__["ArrayItem"].Get("/extensions/" + NAME + "/variants/" + variantIndex, _this._variants, variantIndex);
+                                extensionMetadata_1.variants[variant.name] = extensionMetadata_1.variants[variant.name] || [];
+                                extensionMetadata_1.variants[variant.name].push({
                                     mesh: babylonMesh,
                                     material: babylonMaterial
                                 });
-                            }));
-                        };
-                        for (var _b = 0, _c = mapping.variants; _b < _c.length; _b++) {
-                            var variantIndex = _c[_b];
-                            _loop_1(variantIndex);
-                        }
+                            }
+                        }));
+                    };
+                    // For each mapping, look at the variants and make a new entry for them.
+                    for (var mappingIndex = 0; mappingIndex < extension.mappings.length; ++mappingIndex) {
+                        _loop_1(mappingIndex);
                     }
                 }
             }));
@@ -2451,7 +2432,6 @@ var MSFT_audio_emitter = /** @class */ (function () {
                     sound.maxDistance = emitter.maxDistance || 256;
                     sound.rolloffFactor = emitter.rolloffFactor || 1;
                     sound.distanceModel = emitter.distanceModel || 'exponential';
-                    sound._positionInEmitterSpace = true;
                 }));
             };
             var this_1 = this;
@@ -3799,7 +3779,9 @@ var GLTFLoader = /** @class */ (function () {
         var babylonAbstractMesh;
         var promise;
         if (shouldInstance && primitive._instanceData) {
+            this._babylonScene._blockEntityCollection = this._forAssetContainer;
             babylonAbstractMesh = primitive._instanceData.babylonSourceMesh.createInstance(name);
+            this._babylonScene._blockEntityCollection = false;
             promise = primitive._instanceData.promise;
         }
         else {

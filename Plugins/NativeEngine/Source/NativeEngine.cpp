@@ -392,10 +392,10 @@ namespace Babylon
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 InstanceMethod("setTexture", &NativeEngine::SetTexture),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
-                InstanceMethod("createFramebuffer", &NativeEngine::CreateFrameBuffer),
-                InstanceMethod("deleteFramebuffer", &NativeEngine::DeleteFrameBuffer),
-                InstanceMethod("bindFramebuffer", &NativeEngine::BindFrameBuffer),
-                InstanceMethod("unbindFramebuffer", &NativeEngine::UnbindFrameBuffer),
+                InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
+                InstanceMethod("deleteFrameBuffer", &NativeEngine::DeleteFrameBuffer),
+                InstanceMethod("bindFrameBuffer", &NativeEngine::BindFrameBuffer),
+                InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
                 InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
                 InstanceMethod("draw", &NativeEngine::Draw),
                 InstanceMethod("clear", &NativeEngine::Clear),
@@ -470,7 +470,7 @@ namespace Babylon
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
-        , RuntimeScheduler{runtime}
+        , m_runtimeScheduler{runtime}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_engineState{BGFX_STATE_DEFAULT}
@@ -480,13 +480,6 @@ namespace Babylon
     NativeEngine::~NativeEngine()
     {
         Dispose();
-    }
-
-    void NativeEngine::Dispatch(std::function<void()> function)
-    {
-        m_runtime.Dispatch([function = std::move(function)](Napi::Env) {
-            function();
-        });
     }
 
     void NativeEngine::Dispose()
@@ -659,7 +652,7 @@ namespace Babylon
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos);
 
-        programData->Program = bgfx::createProgram(vertexShader, fragmentShader, true);
+        programData->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         auto* rawProgramData = programData.get();
         auto ticket = m_programDataCollection.insert(std::move(programData));
         auto finalizer = [ticket = std::move(ticket)](Napi::Env, ProgramData*) {};
@@ -998,7 +991,7 @@ namespace Babylon
 
                 CreateTextureFromImage(texture, image);
             })
-            .then(RuntimeScheduler, m_cancelSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler, m_cancelSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1070,7 +1063,7 @@ namespace Babylon
             .then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, generateMips);
             })
-            .then(RuntimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1113,7 +1106,7 @@ namespace Babylon
             .then(arcana::inline_scheduler, m_cancelSource, [texture](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, true);
             })
-            .then(RuntimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1202,25 +1195,16 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        auto format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
-        //int samplingMode = info[4].As<Napi::Number>().Uint32Value();
-        bool generateStencilBuffer = info[5].As<Napi::Boolean>();
-        bool generateDepth = info[6].As<Napi::Boolean>();
-        bool generateMips = info[7].As<Napi::Boolean>();
+        TextureData* texture = info[0].As<Napi::External<TextureData>>().Data();
+        uint16_t width{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
+        uint16_t height{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        bgfx::TextureFormat::Enum format{static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value())};
+        bool generateStencilBuffer{info[4].As<Napi::Boolean>()};
+        bool generateDepth{info[5].As<Napi::Boolean>()};
+        bool generateMips{info[6].As<Napi::Boolean>()};
 
         bgfx::FrameBufferHandle frameBufferHandle{};
-        if (generateStencilBuffer && !generateDepth)
-        {
-            throw std::runtime_error{"Does this case even make any sense?"};
-        }
-        else if (!generateStencilBuffer && !generateDepth)
-        {
-            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
-        }
-        else
+        if (generateDepth)
         {
             auto depthStencilFormat = bgfx::TextureFormat::D32;
             if (generateStencilBuffer)
@@ -1241,8 +1225,14 @@ namespace Babylon
             }
             frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
         }
+        else
+        {
+            assert(!generateStencilBuffer);
+            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
+        }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
+        texture->OwnsHandle = false;
 
         auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
         return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
@@ -1389,6 +1379,17 @@ namespace Babylon
         m_graphicsImpl.BoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
     }
 
+    void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        const auto level = info[0].As<Napi::Number>().FloatValue();
+        m_graphicsImpl.SetHardwareScalingLevel(level);
+    }
+
+    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
+    }
+
     void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
     {
         const auto callback{info[0].As<Napi::Function>()};
@@ -1412,43 +1413,43 @@ namespace Babylon
         uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
         {
-        case 0: // MATERIAL_TriangleFillMode
-        {
-            fillModeState = 0;
-            break;
-        }
-        case 1: // MATERIAL_WireFrameFillMode
-        case 4: // MATERIAL_LineListDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_LINES;
-            break;
-        }
-        case 2: // MATERIAL_PointFillMode
-        case 3: // MATERIAL_PointListDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_POINTS;
-            break;
-        }
-        case 5: // MATERIAL_LineLoopDrawMode
-        {
-            // TODO: unsupported mode
-            break;
-        }
-        case 6: // MATERIAL_LineStripDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_LINESTRIP;
-            break;
-        }
-        case 7: // MATERIAL_TriangleStripDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_TRISTRIP;
-            break;
-        }
-        case 8: // MATERIAL_TriangleFanDrawMode
-        {
-            // TODO: unsupported mode
-            break;
-        }
+            case 0: // MATERIAL_TriangleFillMode
+            {
+                fillModeState = 0;
+                break;
+            }
+            case 1: // MATERIAL_WireFrameFillMode
+            case 4: // MATERIAL_LineListDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_LINES;
+                break;
+            }
+            case 2: // MATERIAL_PointFillMode
+            case 3: // MATERIAL_PointListDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_POINTS;
+                break;
+            }
+            case 5: // MATERIAL_LineLoopDrawMode
+            {
+                // TODO: unsupported mode
+                break;
+            }
+            case 6: // MATERIAL_LineStripDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_LINESTRIP;
+                break;
+            }
+            case 7: // MATERIAL_TriangleStripDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_TRISTRIP;
+                break;
+            }
+            case 8: // MATERIAL_TriangleFanDrawMode
+            {
+                // TODO: unsupported mode
+                break;
+            }
         }
 
         if (!m_graphicsImpl.BoundFrameBuffer().BackBuffer() && !bgfx::getCaps()->originBottomLeft)
@@ -1508,7 +1509,7 @@ namespace Babylon
             encoder->setState(m_engineState | fillModeState);
         }
 
-        m_graphicsImpl.BoundFrameBuffer().Submit(encoder, m_currentProgram->Program);
+        m_graphicsImpl.BoundFrameBuffer().Submit(encoder, m_currentProgram->Handle);
     }
 
     bgfx::Encoder* NativeEngine::BeginUpdate()
@@ -1529,7 +1530,7 @@ namespace Babylon
         auto& updateToken{m_graphicsImpl.GetUpdateTokenForThread()};
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this, &updateToken]() {
             updateToken.Lock();
-        }).then(RuntimeScheduler, m_cancelSource, [this, &updateToken]() {
+        }).then(m_runtimeScheduler, m_cancelSource, [this, &updateToken]() {
             m_frameScheduled = false;
 
             auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
@@ -1543,16 +1544,5 @@ namespace Babylon
         });
 
         // TODO: check if error handling is necessary
-    }
-
-    void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
-    {
-        const auto level = info[0].As<Napi::Number>().FloatValue();
-        m_graphicsImpl.SetHardwareScalingLevel(level);
-    }
-
-    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
     }
 }

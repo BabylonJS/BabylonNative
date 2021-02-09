@@ -100,6 +100,7 @@ namespace Babylon
         void Frame();
 
         arcana::affinity m_renderThreadAffinity{};
+        arcana::affinity m_jsThreadAffinity{};
 
         arcana::cancellation_source m_cancellationSource{};
 
@@ -116,13 +117,11 @@ namespace Babylon
 
             struct
             {
-                size_t width{};
-                size_t height{};
-                float hardwareScalingLevel{1.0f};
+                size_t Width{};
+                size_t Height{};
+                float HardwareScalingLevel{1.0f};
             } Resolution{};
-        } m_state{};
-
-        arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
+        } m_state;
 
         std::shared_mutex m_updateMutex{};
 
