@@ -99,36 +99,36 @@ namespace
 
     constexpr std::array<const char*, 25> HAND_JOINT_NAMES
     {
-        "WRIST",
+        "wrist",
 
-        "THUMB_METACARPAL",
-        "THUMB_PHALANX_PROXIMAL",
-        "THUMB_PHALANX_DISTAL",
-        "THUMB_PHALANX_TIP",
+        "thumb-metacarpal",
+        "thumb-phalanx-proximal",
+        "thumb-phalanx-distal",
+        "thumb-tip",
 
-        "INDEX_METACARPAL",
-        "INDEX_PHALANX_PROXIMAL",
-        "INDEX_PHALANX_INTERMEDIATE",
-        "INDEX_PHALANX_DISTAL",
-        "INDEX_PHALANX_TIP",
+        "index-finger-metacarpal",
+        "index-finger-phalanx-proximal",
+        "index-finger-phalanx-intermediate",
+        "index-finger-phalanx-distal",
+        "index-finger-tip",
 
-        "MIDDLE_METACARPAL",
-        "MIDDLE_PHALANX_PROXIMAL",
-        "MIDDLE_PHALANX_INTERMEDIATE",
-        "MIDDLE_PHALANX_DISTAL",
-        "MIDDLE_PHALANX_TIP",
+        "middle-finger-metacarpal",
+        "middle-finger-phalanx-proximal",
+        "middle-finger-phalanx-intermediate",
+        "middle-finger-phalanx-distal",
+        "middle-finger-tip",
 
-        "RING_METACARPAL",
-        "RING_PHALANX_PROXIMAL",
-        "RING_PHALANX_INTERMEDIATE",
-        "RING_PHALANX_DISTAL",
-        "RING_PHALANX_TIP",
+        "ring-finger-metacarpal",
+        "ring-finger-phalanx-proximal",
+        "ring-finger-phalanx-intermediate",
+        "ring-finger-phalanx-distal",
+        "ring-finger-tip",
 
-        "LITTLE_METACARPAL",
-        "LITTLE_PHALANX_PROXIMAL",
-        "LITTLE_PHALANX_INTERMEDIATE",
-        "LITTLE_PHALANX_DISTAL",
-        "LITTLE_PHALANX_TIP"
+        "pinky-finger-metacarpal",
+        "pinky-finger-phalanx-proximal",
+        "pinky-finger-phalanx-intermediate",
+        "pinky-finger-phalanx-distal",
+        "pinky-finger-tip"
     };
 
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
@@ -145,11 +145,16 @@ namespace
             for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
             {
                 auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
-                handJointCollection.Set(static_cast<int>(i), napiJoint);
-                handJointCollection.Set(HAND_JOINT_NAMES[i], static_cast<int>(i));
+                handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
             }
+            
+            auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
+                return handJointCollection.Get(info[0].As<Napi::String>());
+            };
+            
+            handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
+            handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
 
-            handJointCollection.Set("length", static_cast<int>(HAND_JOINT_NAMES.size()));
             jsInputSource.Set("hand", handJointCollection);
         }
     }
@@ -1822,7 +1827,7 @@ namespace Babylon
                     initList.push_back(StaticValue(HAND_JOINT_NAMES[idx], Napi::Value::From(env, idx)));
                 }
 
-                initList.push_back(StaticAccessor("length", &XRHand::GetLength, nullptr));
+                initList.push_back(StaticAccessor("size", &XRHand::GetSize, nullptr));
 
                 Napi::Function func = DefineClass(
                     env,
@@ -1844,7 +1849,7 @@ namespace Babylon
             }
 
         private:
-            static Napi::Value GetLength(const Napi::CallbackInfo& info)
+            static Napi::Value GetSize(const Napi::CallbackInfo& info)
             {
                 return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
             }
