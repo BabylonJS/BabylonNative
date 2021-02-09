@@ -102,7 +102,13 @@ void App::Run()
 {
     while (!m_windowClosed)
     {
-        CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+        CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+
+        if (m_graphics)
+        {
+            m_graphics->FinishRenderingCurrentFrame();
+            m_graphics->StartRenderingCurrentFrame();
+        }
     }
 }
 
@@ -111,6 +117,11 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
+    if (m_graphics)
+    {
+        m_graphics->FinishRenderingCurrentFrame();
+    }
+
     m_inputBuffer.reset();
     m_runtime.reset();
     m_graphics.reset();
@@ -146,24 +157,26 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
     m_graphics = Babylon::Graphics::CreateGraphics<void*>(windowPtr, width, height);
+    m_graphics->StartRenderingCurrentFrame();
+
     m_runtime = std::make_unique<Babylon::AppRuntime>();
     m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
     m_runtime->Dispatch([this, windowPtr, width, height](Napi::Env env)
     {
+        m_graphics->AddToJavaScript(env);
+
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
         {
             OutputDebugStringA(message);
         });
 
         Babylon::Polyfills::Window::Initialize(env);
+
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        // Initialize NativeEngine plugin.
-        m_graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
-        // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
 
         InputManager<Babylon::AppRuntime>::Initialize(env, *m_inputBuffer);
