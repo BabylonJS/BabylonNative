@@ -69,7 +69,19 @@ namespace Babylon
         m_views[viewId].SubmitCalled = true;
     }
 
-    void FrameBufferManager::BeginUpdate()
+    void FrameBufferManager::Check()
+    {
+        for (bgfx::ViewId viewId = 0; viewId < m_views.size(); ++viewId)
+        {
+            const auto& view{m_views[viewId]};
+            if (view.ClearCalled && !view.SubmitCalled)
+            {
+                bgfx::touch(viewId);
+            }
+        }
+    }
+
+    void FrameBufferManager::Reset()
     {
         for (bgfx::ViewId viewId = 0; viewId < m_views.size(); ++viewId)
         {
@@ -84,17 +96,5 @@ namespace Babylon
         }
 
         m_default.Reset();
-    }
-
-    void FrameBufferManager::EndUpdate(bgfx::Encoder* encoder)
-    {
-        for (bgfx::ViewId viewId = 0; viewId < m_views.size(); ++viewId)
-        {
-            const auto& view{m_views[viewId]};
-            if (view.ClearCalled && !view.SubmitCalled)
-            {
-                encoder->touch(viewId);
-            }
-        }
     }
 }

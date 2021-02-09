@@ -28,9 +28,8 @@ namespace
 
 namespace Babylon
 {
-    Graphics::Impl::UpdateToken::UpdateToken(FrameBufferManager& frameBufferManager, std::shared_mutex& mutex)
-        : m_frameBufferManager{frameBufferManager}
-        , m_mutex{mutex}
+    Graphics::Impl::UpdateToken::UpdateToken(std::shared_mutex& mutex)
+        : m_mutex{mutex}
     {
     }
 
@@ -50,8 +49,6 @@ namespace Babylon
         {
             m_encoder = bgfx::begin(true);
             assert(m_encoder != nullptr);
-
-            m_frameBufferManager.BeginUpdate();
         }
 
         return m_encoder;
@@ -61,8 +58,6 @@ namespace Babylon
     {
         if (m_encoder != nullptr)
         {
-            m_frameBufferManager.EndUpdate(m_encoder);
-
             bgfx::end(m_encoder);
             m_encoder = nullptr;
         }
@@ -212,8 +207,8 @@ namespace Babylon
 
     Graphics::Impl::UpdateToken& Graphics::Impl::GetUpdateTokenForThread()
     {
-        // TODO: thread contention
-        return m_updateTokens.try_emplace(std::this_thread::get_id(), *m_frameBufferManager, m_updateMutex).first->second;
+        std::scoped_lock lock{m_updateTokensMutex};
+        return m_updateTokens.try_emplace(std::this_thread::get_id(), m_updateMutex).first->second;
     }
 
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
@@ -311,7 +306,17 @@ namespace Babylon
     void Graphics::Impl::Frame()
     {
         std::unique_lock lock{m_updateMutex};
+
+        // Check for bgfx views that only called clear and not submit.
+        m_frameBufferManager->Check();
+
+        // Discard everything if the bgfx state is dirty.
         DiscardIfDirty();
+
+        // Advance frame and render!
         bgfx::frame();
+
+        // Reset the frame buffers.
+        m_frameBufferManager->Reset();
     }
 }

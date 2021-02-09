@@ -24,7 +24,7 @@ namespace Babylon
         {
         public:
             // Must be called from update thread.
-            explicit UpdateToken(FrameBufferManager& frameBufferManager, std::shared_mutex& mutex);
+            explicit UpdateToken(std::shared_mutex& mutex);
 
             UpdateToken(const UpdateToken&) = delete;
             UpdateToken(UpdateToken&&) = delete;
@@ -40,7 +40,6 @@ namespace Babylon
         private:
             friend class Impl;
 
-            FrameBufferManager& m_frameBufferManager;
             std::shared_mutex& m_mutex;
             bgfx::Encoder* m_encoder{};
         };
@@ -132,6 +131,7 @@ namespace Babylon
 
         std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
 
+        std::mutex m_updateTokensMutex{};
         std::map<std::thread::id, UpdateToken> m_updateTokens{};
     };
 }

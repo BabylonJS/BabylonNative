@@ -25,8 +25,8 @@ namespace Babylon
         void OnViewClearCalled(bgfx::ViewId viewId);
         void OnViewSubmitCalled(bgfx::ViewId viewId);
 
-        void BeginUpdate();
-        void EndUpdate(bgfx::Encoder* encoder);
+        void Reset();
+        void Check();
 
     private:
         struct ViewInfo
