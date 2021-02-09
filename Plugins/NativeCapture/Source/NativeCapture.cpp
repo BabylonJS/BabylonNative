@@ -88,8 +88,7 @@ namespace Babylon::Plugins::Internal
                     jsData.Set("data", jsBytes);
                 }
                 std::memcpy(jsBytes.Data(), bytes.data(), data.DataSize);
-
-                jsData.Set("_nativeData", Napi::External<BgfxCallback::CaptureData>::New(env, &data));
+                bytes.clear();
 
                 for (const auto& callback : m_callbacks)
                 {
