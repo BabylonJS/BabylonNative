@@ -5,6 +5,7 @@ const log = require('fancy-log');
 const gulp = require('gulp');
 const shelljs = require('shelljs');
 const rename = require('gulp-rename');
+const { join } = require('path');
 
 function exec(command, workingDirectory = '.', logCommand = true) {
   if (logCommand) {
@@ -18,6 +19,10 @@ function exec(command, workingDirectory = '.', logCommand = true) {
 
 const clean = async () => {
   if (shelljs.test('-d', 'Assembled')) {
+    shelljs.rm('-r', 'Assembled');
+  }
+
+  if (shelljs.test('-d', 'Assembled-Windows')) {
     shelljs.rm('-r', 'Assembled');
   }
 };
@@ -41,36 +46,36 @@ const buildAndroid = async () => {
   exec('./gradlew babylonjs_react-native:assembleRelease', '../Apps/Playground/android');
 };
 
-const makeUWPProject = async () => {
+const initializeSubmodulesWindowsAgent = async () => {
   // windows build agents don't support the path lengths required for initializing arcore dependencies,
   // so we manually initialize the submodules we need here.
   exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive "./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+}
+
+const makeUWPProject = async () => {
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm ./../../../windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm64 ./../../../windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm64 ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
 }
 
 const buildUWPProject = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native\\windows\\scripts\\Build.bat');
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat');
 }
 
 const buildUWP = gulp.series(makeUWPProject, buildUWPProject);
 
 const makeUWPProjectPR = async () => {
-  // windows build agents don't support the path lengths required for initializing arcore dependencies,
-  // so we manually initialize the submodules we need here.
-  exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive "./../Modules/@babylonjs/react-native/submodules/BabylonNative');
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
 }
 
 const buildUWPProjectPR = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native\\windows\\scripts\\PRBuild.bat');
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\PRBuild.bat');
 }
 
 const buildUWPPR = gulp.series(makeUWPProjectPR, buildUWPProjectPR);
@@ -127,87 +132,97 @@ const copyAndroidFiles = async () => {
 };
 
 const createUWPDirectories = async () => {
-  shelljs.mkdir('-p', 'Assembled/windows');
-  shelljs.mkdir('-p', 'Assembled/windows/libs');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/arm');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/arm/Debug');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/arm/Release');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/arm64');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/arm64/Debug');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/arm64/Release');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/x86');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/x86/Debug');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/x86/Release');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/x64');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/x64/Debug');
-  shelljs.mkdir('-p', 'Assembled/windows/libs/x64/Release');
-  shelljs.mkdir('-p', 'Assembled/windows/BabylonReactNative');
+  shelljs.mkdir('-p', 'Assembled-Windows');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/arm');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/arm/Debug');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/arm/Release');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/arm64');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/arm64/Debug');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/arm64/Release');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x86');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x86/Debug');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x86/Release');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x64');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x64/Debug');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x64/Release');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/BabylonReactNative');
+}
+
+const copyCommonFilesUWP = () => {
+  return gulp.src('../Modules/@babylonjs/react-native-windows/package.json')
+  .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/README.md'))
+  .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/*.ts*'))
+  .pipe(gulp.dest('Assembled-Windows'));
 }
 
 const copyx86DebugUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/x86/Debug'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/x86/Debug'));
 }
 
 const copyx86ReleaseUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/x86/Release'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/x86/Release'));
 }
 
 const copyx64DebugUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/x64/Debug'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/x64/Debug'));
 }
 
 const copyx64ReleaseUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/x64/Release'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/x64/Release'));
 }
 
 const copyARMDebugUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/arm/Debug'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/arm/Debug'));
 }
 
 const copyARMReleaseUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/arm/Release'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/arm/Release'));
 }
 
 const copyARM64DebugUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/arm64/Debug'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/arm64/Debug'));
 }
 
 const copyARM64ReleaseUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest('Assembled/windows/libs/arm64/Release'));
+    .pipe(gulp.dest('Assembled-Windows/windows/libs/arm64/Release'));
 }
 
 const copyVCXProjUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/windows/BabylonReactNative/*.*')
-    .pipe(gulp.dest('Assembled/windows/BabylonReactNative'));
+  return gulp.src('../Modules/@babylonjs/react-native-windows/windows/BabylonReactNative/*.*')
+    .pipe(gulp.dest('Assembled-Windows/windows/BabylonReactNative'));
 }
 
-const copyUWPFiles = gulp.parallel(
+const copyUWPFiles = gulp.series(
   createUWPDirectories,
-  copyx86DebugUWPFiles,
-  copyx86ReleaseUWPFiles,
-  copyx64DebugUWPFiles,
-  copyx64ReleaseUWPFiles,
-  copyARMDebugUWPFiles,
-  copyARMReleaseUWPFiles,
-  copyARM64DebugUWPFiles,
-  copyARM64ReleaseUWPFiles,
-  copyVCXProjUWPFiles);
+  gulp.parallel(
+    copyCommonFilesUWP,
+    copyx86DebugUWPFiles,
+    copyx86ReleaseUWPFiles,
+    copyx64DebugUWPFiles,
+    copyx64ReleaseUWPFiles,
+    copyARMDebugUWPFiles,
+    copyARMReleaseUWPFiles,
+    copyARM64DebugUWPFiles,
+    copyARM64ReleaseUWPFiles,
+    copyVCXProjUWPFiles));
 
 const validate = async () => {
   // When the package contents are updated *and validated*, update the expected below by running 'find Assembled | pbcopy' and pasting it over the expected string.
@@ -298,6 +313,10 @@ const createPackage = async () => {
   exec('npm pack', 'Assembled');
 };
 
+const createPackageUWP = async () => {
+  exec('npm pack', 'Assembled-Windows');
+}
+
 const copyFiles = gulp.parallel(copyCommonFiles, copySharedFiles, copyIOSFiles, copyAndroidFiles);
 
 const build = gulp.series(buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validate);
@@ -322,9 +341,10 @@ exports.packAndroid = packAndroid;
 
 const copyPackageFilesUWP = gulp.series(copyCommonFiles, copySharedFiles, copyUWPFiles);
 const buildUWPPublish = gulp.series(buildUWP, copyPackageFilesUWP);
-const packUWP = gulp.series(clean, buildUWP, copyPackageFilesUWP, createPackage);
-const packUWPNoBuild = gulp.series(clean, copyPackageFilesUWP, createPackage);
+const packUWP = gulp.series(clean, buildUWP, copyPackageFilesUWP, createPackage, createPackageUWP);
+const packUWPNoBuild = gulp.series(clean, copyPackageFilesUWP, createPackage, createPackageUWP);
 
+exports.initializeSubmodulesWindowsAgent = initializeSubmodulesWindowsAgent;
 exports.makeUWPProject = makeUWPProject;
 exports.buildUWPProject = buildUWPProject;
 exports.makeUWPProjectPR = makeUWPProjectPR;

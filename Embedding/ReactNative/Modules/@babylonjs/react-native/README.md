@@ -28,12 +28,7 @@ When running from XCode (with the debugger attached), `API Metal Validation` mus
 
 ### Universal Windows Platform (UWP) Configuration
 
-The minimum UWP target platform version is 10.0.18362.0. UWP BabylonReactNative requires the following NPM dependencies. These versions contradict the peer dependencies declared in package.json in order to support Android and iOS consumers using older versions of react and react-native.
-
-* `"react":"^17.0.1"`
-* `"react-native":"^0.64.0-rc.0"`
-* `"react-native-permissions":"^3.0.0"`
-* `"react-native-windows":"preview"`
+For windows support, install `@babylonjs/react-native-windows`.
 
 ### `useEngine`
 

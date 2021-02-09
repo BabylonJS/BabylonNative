@@ -30,4 +30,4 @@
 #define NODE_ADDON_API_DISABLE_DEPRECATED
 #endif
 
-#include "../../shared/BabylonNative.h"
+#include "BabylonNative.h"
