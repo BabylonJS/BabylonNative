@@ -5,6 +5,8 @@
 
 namespace Babylon
 {
+    class FrameBufferManager;
+
     class FrameBuffer
     {
     public:

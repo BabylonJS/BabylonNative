@@ -6,8 +6,8 @@
 namespace Babylon
 {
     FrameBufferManager::FrameBufferManager()
-        : m_frameBuffers{}
-        , m_views{}
+        : m_views{}
+        , m_frameBuffers{}
         , m_default{*this, BGFX_INVALID_HANDLE, 0, 0, true}
         , m_bound{}
     {

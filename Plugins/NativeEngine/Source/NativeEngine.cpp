@@ -470,10 +470,9 @@ namespace Babylon
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
-        , m_runtimeScheduler{runtime}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
-        , m_engineState{BGFX_STATE_DEFAULT}
+        , m_runtimeScheduler{runtime}
     {
     }
 
@@ -1528,7 +1527,7 @@ namespace Babylon
         m_frameScheduled = true;
 
         auto& updateToken{m_graphicsImpl.GetUpdateTokenForThread()};
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this, &updateToken]() {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [&updateToken]() {
             updateToken.Lock();
         }).then(m_runtimeScheduler, m_cancelSource, [this, &updateToken]() {
             m_frameScheduled = false;

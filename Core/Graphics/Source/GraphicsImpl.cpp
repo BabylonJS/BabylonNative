@@ -4,8 +4,6 @@
 
 #include <cassert>
 
-#include <Windows.h>
-
 #if (ANDROID)
 // MSAA is disabled on Android.
 // See issue https://github.com/BabylonJS/BabylonNative/issues/494#issuecomment-731135918
