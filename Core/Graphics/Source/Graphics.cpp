@@ -25,6 +25,7 @@ namespace Babylon
     }
 
     Graphics::Impl::Impl()
+        : Callback{[this](const auto& data) { CaptureCallback(data); }}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -65,20 +66,20 @@ namespace Babylon
 
     void Graphics::Impl::Resize(size_t width, size_t height)
     {
-        std::scoped_lock lock(m_state.Mutex);
-        m_state.Resolution.width = width;
-        m_state.Resolution.height = height;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Resolution.Width = width;
+        m_state.Resolution.Height = height;
         UpdateBgfxResolution();
     }
 
     void Graphics::Impl::UpdateBgfxResolution()
     {
-        std::scoped_lock lock(m_state.Mutex);
+        std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
         auto& res = m_state.Bgfx.InitState.resolution;
-        auto level = m_state.Resolution.hardwareScalingLevel;
-        res.width = static_cast<uint32_t>(m_state.Resolution.width / level);
-        res.height = static_cast<uint32_t>(m_state.Resolution.height / level);
+        auto level = m_state.Resolution.HardwareScalingLevel;
+        res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
+        res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
     }
 
     void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
@@ -159,7 +160,7 @@ namespace Babylon
                 
                 // Ensure bgfx rebinds all texture information.
                 bgfx::discard(BGFX_DISCARD_ALL);
-                bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
+                bgfx::reset(res.width, res.height, res.reset);
                 bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
 #if __APPLE__
@@ -263,8 +264,8 @@ namespace Babylon
 
     float Graphics::Impl::GetHardwareScalingLevel()
     {
-        std::scoped_lock lock(m_state.Mutex);
-        return m_state.Resolution.hardwareScalingLevel;
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Resolution.HardwareScalingLevel;
     }
 
     void Graphics::Impl::SetHardwareScalingLevel(float level)
@@ -274,11 +275,45 @@ namespace Babylon
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
         {
-            std::scoped_lock lock(m_state.Mutex);
-            m_state.Resolution.hardwareScalingLevel = level;
+            std::scoped_lock lock{m_state.Mutex};
+            m_state.Resolution.HardwareScalingLevel = level;
         }
 
         UpdateBgfxResolution();
+    }
+
+    Graphics::Impl::CaptureCallbackTicketT Graphics::Impl::AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback)
+    {
+        // If we're not already capturing, start.
+        {
+            std::scoped_lock lock{m_state.Mutex};
+            if ((m_state.Bgfx.InitState.resolution.reset & BGFX_RESET_CAPTURE) == 0)
+            {
+                m_state.Bgfx.Dirty = true;
+                m_state.Bgfx.InitState.resolution.reset |= BGFX_RESET_CAPTURE;
+            }
+        }
+
+        return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
+    }
+
+    void Graphics::Impl::CaptureCallback(const BgfxCallback::CaptureData& data)
+    {
+        std::scoped_lock callbackLock{m_captureCallbacksMutex};
+        
+        // If no one is listening anymore, stop capturing.
+        if (m_captureCallbacks.empty())
+        {
+            std::scoped_lock stateLock{m_state.Mutex};
+            m_state.Bgfx.Dirty = true;
+            m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
+            return;
+        }
+        
+        for (const auto& callback : m_captureCallbacks)
+        {
+            callback(data);
+        }
     }
 
     Graphics::Graphics()

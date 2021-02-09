@@ -1,3 +1,6 @@
+# Add NativeCapture
+add_subdirectory(NativeCapture)
+
 # Add NativeInput
 add_subdirectory(NativeInput)
 
