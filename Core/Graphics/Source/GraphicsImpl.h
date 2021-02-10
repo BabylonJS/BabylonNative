@@ -36,13 +36,13 @@ class ShiftManager
 public:
     ShiftManager()
     {
-        m_mutex.lock();
+        m_lock.emplace(m_mutex);
     }
 
     void BeginShift()
     {
         m_postCount = 0;
-        m_mutex.unlock();
+        m_lock.reset();
     }
 
     void EndShift()
@@ -50,13 +50,13 @@ public:
         bool wait{false};
         do
         {
-            m_mutex.lock();
+            m_lock.emplace(m_mutex);
             wait = m_postCount > 0;
             m_postCount -= 1;
 
             if (wait)
             {
-                m_mutex.unlock();
+                m_lock.reset();
             }
         } while (wait && m_semaphore.wait());
     }
@@ -73,6 +73,7 @@ private:
     Semaphore m_semaphore{};
     size_t m_postCount{};
     std::mutex m_mutex{};
+    std::optional<std::scoped_lock<std::mutex>> m_lock{};
 };
 
 namespace Babylon
@@ -83,7 +84,7 @@ namespace Babylon
         class UpdateToken final
         {
         public:
-            UpdateToken(const UpdateToken&) = delete;
+            UpdateToken(const UpdateToken& other) = delete;
             UpdateToken(UpdateToken&&) = default;
 
             bgfx::Encoder& GetEncoder();

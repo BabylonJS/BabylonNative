@@ -1513,15 +1513,16 @@ namespace Babylon
 
     bgfx::Encoder* NativeEngine::BeginUpdate()
     {
-        ScheduleFrame();
+        std::scoped_lock lock{m_updateTokenMutex};
+        if (!m_updateToken)
         {
-            std::scoped_lock lock{m_updateTokenMutex};
-            if (!m_updateToken)
-            {
-                m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
-            }
-            return &m_updateToken.value().GetEncoder();
+            m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
+            m_runtime.Dispatch([this](auto) {
+                std::scoped_lock lock{m_updateTokenMutex};
+                m_updateToken.reset();
+            });
         }
+        return &m_updateToken.value().GetEncoder();
     }
 
     void NativeEngine::ScheduleFrame()
@@ -1534,23 +1535,16 @@ namespace Babylon
         m_frameScheduled = true;
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this]() {
-            std::scoped_lock lock{m_updateTokenMutex};
-            if (!m_updateToken)
-            {
-                m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
-            }
-        }).then(m_runtimeScheduler, m_cancelSource, [this]() {
+            return new Graphics::Impl::UpdateToken(std::move(m_graphicsImpl.GetUpdateToken()));
+        }).then(m_runtimeScheduler, m_cancelSource, [this](auto* tokenPtr) {
+            const auto tokenScopeGuard = gsl::finally([tokenPtr]() { delete tokenPtr; });
+            
             m_frameScheduled = false;
 
             auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
             for (auto& callback : callbacks)
             {
                 callback.Value().Call({});
-            }
-
-            {
-                std::scoped_lock lock{m_updateTokenMutex};
-                m_updateToken.reset();
             }
         });
 
