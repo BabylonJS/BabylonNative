@@ -2,7 +2,6 @@ set(SOURCES
     "Include/Babylon/Graphics.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
-    "Source/braking_shared_mutex.h"
     "Source/FrameBuffer.cpp"
     "Source/FrameBuffer.h"
     "Source/FrameBufferManager.cpp"
