@@ -470,10 +470,9 @@ namespace Babylon
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
-        , m_runtimeScheduler{runtime}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
-        , m_engineState{BGFX_STATE_DEFAULT}
+        , m_runtimeScheduler{runtime}
     {
     }
 

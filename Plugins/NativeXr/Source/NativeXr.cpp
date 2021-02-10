@@ -627,7 +627,6 @@ namespace Babylon
             static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
-            static constexpr size_t MAX_EYE_INDEX = 3;
 
             static auto IndexToEye(size_t idx)
             {
