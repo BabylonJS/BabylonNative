@@ -205,7 +205,6 @@ namespace Babylon
         void Draw(Graphics::Impl::UpdateToken& updateToken, int fillMode);
 
         Graphics::Impl::UpdateToken& GetUpdateToken();
-        void ScheduleFrame();
 
         arcana::cancellation_source m_cancelSource{};
 
@@ -222,7 +221,8 @@ namespace Babylon
         std::optional<Graphics::Impl::UpdateToken> m_updateToken;
         std::mutex m_updateTokenMutex{};
 
-        bool m_frameScheduled{};
+        void ScheduleRequestAnimationFrameCallbacks();
+        bool m_requestAnimationFrameCallbacksScheduled{};
 
         bx::DefaultAllocator m_allocator{};
         uint64_t m_engineState{};

@@ -30,7 +30,7 @@ namespace Babylon
 {
     Graphics::Impl::UpdateToken::UpdateToken(Graphics::Impl& graphicsImpl)
         : m_graphicsImpl(graphicsImpl)
-        , m_punchCard{m_graphicsImpl.m_shiftManager.PunchIn()}
+        , m_guarantee{m_graphicsImpl.m_safeTimespanGuarantor.GetSafetyGuarantee()}
     {
     }
 
@@ -193,14 +193,14 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
-        m_shiftManager.BeginShift();
+        m_safeTimespanGuarantor.BeginSafeTimespan();
         m_beforeRenderScheduler.m_dispatcher.tick(m_cancellationSource);
     }
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
-        m_shiftManager.EndShift();
+        m_safeTimespanGuarantor.EndSafeTimespan();
 
         {
             std::scoped_lock lock{m_threadIdToEncoderMutex};

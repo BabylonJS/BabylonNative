@@ -9,7 +9,9 @@ set(SOURCES
     "Source/FrameBufferManager.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
-    "Source/GraphicsImpl.h")
+    "Source/GraphicsImpl.h"
+    "Source/SafeTimespanGuarantor.cpp"
+    "Source/SafeTimespanGuarantor.h")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)

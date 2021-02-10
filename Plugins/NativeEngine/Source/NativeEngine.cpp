@@ -500,7 +500,7 @@ namespace Babylon
         auto callback{info[0].As<Napi::Function>()};
 
         m_requestAnimationFrameCallbacks.emplace_back(Napi::Persistent(callback));
-        ScheduleFrame();
+        ScheduleRequestAnimationFrameCallbacks();
     }
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
@@ -1524,21 +1524,21 @@ namespace Babylon
         return m_updateToken.value();
     }
 
-    void NativeEngine::ScheduleFrame()
+    void NativeEngine::ScheduleRequestAnimationFrameCallbacks()
     {
-        if (m_frameScheduled)
+        if (m_requestAnimationFrameCallbacksScheduled)
         {
             return;
         }
 
-        m_frameScheduled = true;
+        m_requestAnimationFrameCallbacksScheduled = true;
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this]() {
             return new Graphics::Impl::UpdateToken(m_graphicsImpl.GetUpdateToken());
         }).then(m_runtimeScheduler, m_cancelSource, [this](auto* tokenPtr) {
             const auto tokenScopeGuard = gsl::finally([tokenPtr]() { delete tokenPtr; });
 
-            m_frameScheduled = false;
+            m_requestAnimationFrameCallbacksScheduled = false;
 
             auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
             for (auto& callback : callbacks)

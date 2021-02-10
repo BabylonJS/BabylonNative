@@ -3,11 +3,11 @@
 #include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
 #include "FrameBufferManager.h"
+#include "SafeTimespanGuarantor.h"
 
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
-#include "braking_shared_mutex.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -16,65 +16,6 @@
 #include <shared_mutex>
 #include <memory>
 #include <map>
-
-using MutexT = arcana::braking_shared_mutex;
-//using MutexT = std::shared_mutex;
-
-class Semaphore : public bx::Semaphore
-{
-public:
-    auto GetPostFinalAction()
-    {
-        return gsl::finally([this]() {
-            post();
-        });
-    }
-};
-
-class ShiftManager
-{
-public:
-    ShiftManager()
-    {
-        m_lock.emplace(m_mutex);
-    }
-
-    void BeginShift()
-    {
-        m_postCount = 0;
-        m_lock.reset();
-    }
-
-    void EndShift()
-    {
-        bool wait{false};
-        do
-        {
-            m_lock.emplace(m_mutex);
-            wait = m_postCount > 0;
-            m_postCount -= 1;
-
-            if (wait)
-            {
-                m_lock.reset();
-            }
-        } while (wait && m_semaphore.wait());
-    }
-
-    using PunchCard = decltype(std::declval<Semaphore>().GetPostFinalAction());
-    PunchCard PunchIn()
-    {
-        std::scoped_lock lock{m_mutex};
-        m_postCount += 1;
-        return m_semaphore.GetPostFinalAction();
-    }
-
-private:
-    Semaphore m_semaphore{};
-    size_t m_postCount{};
-    std::mutex m_mutex{};
-    std::optional<std::scoped_lock<std::mutex>> m_lock{};
-};
 
 namespace Babylon
 {
@@ -100,7 +41,7 @@ namespace Babylon
             UpdateToken(Graphics::Impl&);
 
             Impl& m_graphicsImpl;
-            ShiftManager::PunchCard m_punchCard;
+            SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
         };
 
         class RenderScheduler final
@@ -183,7 +124,7 @@ namespace Babylon
             } Resolution{};
         } m_state;
 
-        ShiftManager m_shiftManager{};
+        SafeTimespanGuarantor m_safeTimespanGuarantor{};
 
         RenderScheduler m_beforeRenderScheduler;
         RenderScheduler m_afterRenderScheduler;
