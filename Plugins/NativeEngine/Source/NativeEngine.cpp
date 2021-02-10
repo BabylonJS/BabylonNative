@@ -1512,12 +1512,10 @@ namespace Babylon
 
     Graphics::Impl::UpdateToken& NativeEngine::GetUpdateToken()
     {
-        std::scoped_lock lock{m_updateTokenMutex};
         if (!m_updateToken)
         {
             m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
             m_runtime.Dispatch([this](auto) {
-                std::scoped_lock lock{m_updateTokenMutex};
                 m_updateToken.reset();
             });
         }
