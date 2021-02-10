@@ -28,46 +28,21 @@ namespace
 
 namespace Babylon
 {
-    Graphics::Impl::UpdateToken::UpdateToken(MutexT& mutex)
-        : m_mutex{mutex}
+    Graphics::Impl::UpdateToken::UpdateToken(Graphics::Impl& graphicsImpl)
+        : m_graphicsImpl(graphicsImpl)
+        , m_punchCard{m_graphicsImpl.m_shiftManager.PunchIn()}
     {
     }
 
-    void Graphics::Impl::UpdateToken::Lock()
+    bgfx::Encoder& Graphics::Impl::UpdateToken::GetEncoder()
     {
-        m_mutex.lock_shared();
-    }
-
-    void Graphics::Impl::UpdateToken::Unlock()
-    {
-        m_mutex.unlock_shared();
-    }
-
-    bgfx::Encoder* Graphics::Impl::UpdateToken::Begin()
-    {
-        if (m_encoder == nullptr)
-        {
-            m_encoder = bgfx::begin(true);
-            assert(m_encoder != nullptr);
-        }
-
-        return m_encoder;
-    }
-
-    void Graphics::Impl::UpdateToken::End()
-    {
-        if (m_encoder != nullptr)
-        {
-            bgfx::end(m_encoder);
-            m_encoder = nullptr;
-        }
+        return m_graphicsImpl.GetEncoderForThread();
     }
 
     Graphics::Impl::Impl()
     {
         // Set the thread affinity (all other rendering operations must happen on this thread).
         m_renderThreadAffinity = std::this_thread::get_id();
-        m_updateMutex.lock();
 
         if (!g_bgfxRenderFrameCalled)
         {
@@ -130,9 +105,9 @@ namespace Babylon
     Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Get(JS_GRAPHICS_NAME)
-            .As<Napi::External<Graphics::Impl>>()
-            .Data();
+                    .Get(JS_GRAPHICS_NAME)
+                    .As<Napi::External<Graphics::Impl>>()
+                    .Data();
     }
 
     Graphics::Impl::RenderScheduler& Graphics::Impl::BeforeRenderScheduler()
@@ -194,24 +169,32 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
-        m_updateMutex.unlock();
+        m_shiftManager.BeginShift();
         m_beforeRenderScheduler.m_dispatcher.tick(m_cancellationSource);
-        m_updateMutex.lock(); // TODO: 
     }
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
+        m_shiftManager.EndShift();
+
+        {
+            std::scoped_lock lock{m_threadIdToEncoderMutex};
+            for (auto [threadId, encoder] : m_threadIdToEncoder)
+            {
+                bgfx::end(encoder);
+            }
+            m_threadIdToEncoder.clear();
+        }
 
         Frame();
 
         m_afterRenderScheduler.m_dispatcher.tick(m_cancellationSource);
     }
 
-    Graphics::Impl::UpdateToken& Graphics::Impl::GetUpdateTokenForThread()
+    Graphics::Impl::UpdateToken Graphics::Impl::GetUpdateToken()
     {
-        std::scoped_lock lock{m_updateTokensMutex};
-        return m_updateTokens.try_emplace(std::this_thread::get_id(), m_updateMutex).first->second;
+        return {*this};
     }
 
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
@@ -319,5 +302,24 @@ namespace Babylon
 
         // Reset the frame buffers.
         m_frameBufferManager->Reset();
+    }
+
+    bgfx::Encoder& Graphics::Impl::GetEncoderForThread()
+    {
+        assert(!m_renderThreadAffinity.check());
+        std::scoped_lock lock{m_threadIdToEncoderMutex};
+
+        const auto threadId = std::this_thread::get_id();
+        auto found = m_threadIdToEncoder.find(threadId);
+        if (found == m_threadIdToEncoder.end())
+        {
+            bgfx::Encoder* encoder = bgfx::begin(true);
+            m_threadIdToEncoder.emplace(threadId, encoder);
+            return *encoder;
+        }
+        else
+        {
+            return *found->second;
+        }
     }
 }

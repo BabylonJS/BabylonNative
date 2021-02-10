@@ -971,7 +971,7 @@ namespace Babylon
                 if (image->m_format == bimg::TextureFormat::R8)
                 {
                     // Images with only 1 channel are interpreted as luminance texture with RGB containing the same value as R and alpha as 255
-                    // To emulate this behavior, the format is switched to alpha8 and converted to RGB8 when packing and unpacking take care of 
+                    // To emulate this behavior, the format is switched to alpha8 and converted to RGB8 when packing and unpacking take care of
                     // component swizzling.
                     image->m_format = bimg::TextureFormat::A8;
                     bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGB8, *image, false);
@@ -1015,7 +1015,7 @@ namespace Babylon
 
         // TODO: probably should assert data byte length is equal to allocated size
         const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes); 
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes);
 
         if (invertY)
         {
@@ -1476,8 +1476,7 @@ namespace Babylon
                         1.f, 0.f, 0.f, 0.f,
                         0.f, -1.f, 0.f, 0.f,
                         0.f, 0.f, 1.f, 0.f,
-                        0.f, 0.f, 0.f, 1.f
-                    };
+                        0.f, 0.f, 0.f, 1.f};
                     bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
                     encoder->setUniform({it.first}, tmpMatrix, value.ElementLength);
                 }
@@ -1489,7 +1488,7 @@ namespace Babylon
 
             // We need to explicitly swap the culling state flags (instead of XOR)
             // because we would like to preserve the no culling configuration, which is 00.
-            const auto cullCW  = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
+            const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
             const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
 
             uint64_t engineStateYFlipped = m_engineState;
@@ -1515,7 +1514,14 @@ namespace Babylon
     bgfx::Encoder* NativeEngine::BeginUpdate()
     {
         ScheduleFrame();
-        return m_graphicsImpl.GetUpdateTokenForThread().Begin();
+        {
+            std::scoped_lock lock{m_updateTokenMutex};
+            if (!m_updateToken)
+            {
+                m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
+            }
+            return &m_updateToken.value().GetEncoder();
+        }
     }
 
     void NativeEngine::ScheduleFrame()
@@ -1527,10 +1533,13 @@ namespace Babylon
 
         m_frameScheduled = true;
 
-        auto& updateToken{m_graphicsImpl.GetUpdateTokenForThread()};
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this, &updateToken]() {
-            updateToken.Lock();
-        }).then(m_runtimeScheduler, m_cancelSource, [this, &updateToken]() {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this]() {
+            std::scoped_lock lock{m_updateTokenMutex};
+            if (!m_updateToken)
+            {
+                m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
+            }
+        }).then(m_runtimeScheduler, m_cancelSource, [this]() {
             m_frameScheduled = false;
 
             auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
@@ -1539,8 +1548,10 @@ namespace Babylon
                 callback.Value().Call({});
             }
 
-            updateToken.End();
-            updateToken.Unlock();
+            {
+                std::scoped_lock lock{m_updateTokenMutex};
+                m_updateToken.reset();
+            }
         });
 
         // TODO: check if error handling is necessary

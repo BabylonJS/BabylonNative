@@ -461,12 +461,11 @@ namespace Babylon
 
         m_scheduleFrameCallbacks.emplace_back(callback);
 
-        auto& updateToken{m_graphicsImpl.GetUpdateTokenForThread()};
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this, &updateToken] {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this] {
+            auto updateToken = m_graphicsImpl.GetUpdateToken();
             BeginFrame();
 
-            updateToken.Lock();
-            arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, &updateToken]() {
+            arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, updateToken{std::move(updateToken)}]() {
                 m_frameScheduled = false;
 
                 BeginUpdate();
@@ -478,9 +477,6 @@ namespace Babylon
                 }
 
                 EndUpdate();
-
-                updateToken.End();
-                updateToken.Unlock();
             }).then(m_graphicsImpl.AfterRenderScheduler(), m_cancellationSource, [this] {
                 EndFrame();
             });

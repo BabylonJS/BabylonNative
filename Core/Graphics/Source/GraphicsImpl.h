@@ -47,7 +47,7 @@ public:
 
     void EndShift()
     {
-        bool wait = false;
+        bool wait{false};
         do
         {
             m_mutex.lock();
@@ -83,25 +83,18 @@ namespace Babylon
         class UpdateToken final
         {
         public:
-            // Must be called from update thread.
-            explicit UpdateToken(MutexT& mutex);
-
             UpdateToken(const UpdateToken&) = delete;
-            UpdateToken(UpdateToken&&) = delete;
+            UpdateToken(UpdateToken&&) = default;
 
-            // May be called from any thread.
-            void Lock();
-            void Unlock();
-
-            // Must be called from update thread.
-            bgfx::Encoder* Begin();
-            void End();
+            bgfx::Encoder& GetEncoder();
 
         private:
-            friend class Impl;
+            friend class Graphics::Impl;
 
-            MutexT& m_mutex;
-            bgfx::Encoder* m_encoder{};
+            UpdateToken(Graphics::Impl&);
+
+            Impl& m_graphicsImpl;
+            ShiftManager::PunchCard m_punchCard;
         };
 
         class RenderScheduler final
@@ -138,7 +131,7 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        UpdateToken& GetUpdateTokenForThread();
+        UpdateToken GetUpdateToken();
 
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
@@ -153,10 +146,13 @@ namespace Babylon
         BgfxCallback& Callback();
 
     private:
+        friend class UpdateToken;
+
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         void DiscardIfDirty();
         void Frame();
+        bgfx::Encoder& GetEncoderForThread();
 
         arcana::affinity m_renderThreadAffinity{};
         arcana::affinity m_jsThreadAffinity{};
@@ -182,7 +178,7 @@ namespace Babylon
             } Resolution{};
         } m_state;
 
-        MutexT m_updateMutex{};
+        ShiftManager m_shiftManager{};
 
         RenderScheduler m_beforeRenderScheduler;
         RenderScheduler m_afterRenderScheduler;
@@ -191,7 +187,7 @@ namespace Babylon
 
         std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
 
-        std::mutex m_updateTokensMutex{};
-        std::map<std::thread::id, UpdateToken> m_updateTokens{};
+        std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
+        std::mutex m_threadIdToEncoderMutex{};
     };
 }

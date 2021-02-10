@@ -219,6 +219,9 @@ namespace Babylon
 
         JsRuntimeScheduler m_runtimeScheduler;
 
+        std::optional<Graphics::Impl::UpdateToken> m_updateToken;
+        std::mutex m_updateTokenMutex{};
+
         bool m_frameScheduled{};
 
         bx::DefaultAllocator m_allocator{};
