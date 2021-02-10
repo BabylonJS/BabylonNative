@@ -1179,7 +1179,7 @@ namespace Babylon
 
     void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
     {
-        bgfx::Encoder* encoder{BeginUpdate()};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto texture = info[1].As<Napi::External<TextureData>>().Data();
@@ -1234,14 +1234,14 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
+        auto& frameBuffer{GetUpdateToken().AddFrameBuffer(frameBufferHandle, width, height, false)};
         return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
-        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
+        GetUpdateToken().RemoveFrameBuffer(frameBuffer);
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
@@ -1254,15 +1254,16 @@ namespace Babylon
     {
         const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
 
-        assert(&frameBuffer == &m_graphicsImpl.BoundFrameBuffer());
+        assert(&frameBuffer == &GetUpdateToken().BoundFrameBuffer());
         UNUSED(frameBuffer);
 
-        m_graphicsImpl.DefaultFrameBuffer().Bind();
+        GetUpdateToken().DefaultFrameBuffer().Bind();
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
-        bgfx::Encoder* encoder{BeginUpdate()};
+        auto& updateToken{GetUpdateToken()};
+        bgfx::Encoder* encoder{updateToken.GetEncoder()};
 
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto indexStart = info[1].As<Napi::Number>().Int32Value();
@@ -1288,12 +1289,13 @@ namespace Babylon
             }
         }
 
-        Draw(encoder, fillMode);
+        Draw(updateToken, fillMode);
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
-        bgfx::Encoder* encoder{BeginUpdate()};
+        auto& updateToken{GetUpdateToken()};
+        bgfx::Encoder* encoder{updateToken.GetEncoder()};
 
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
@@ -1312,13 +1314,11 @@ namespace Babylon
             }
         }
 
-        Draw(encoder, fillMode);
+        Draw(updateToken, fillMode);
     }
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
-        BeginUpdate();
-
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
         float depth{1.0f};
@@ -1353,7 +1353,7 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        m_graphicsImpl.BoundFrameBuffer().Clear(flags, rgba, depth, stencil);
+        GetUpdateToken().BoundFrameBuffer().Clear(flags, rgba, depth, stencil);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -1368,15 +1368,13 @@ namespace Babylon
 
     void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
     {
-        BeginUpdate();
-
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_graphicsImpl.BoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
+        GetUpdateToken().BoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
@@ -1408,8 +1406,9 @@ namespace Babylon
         });
     }
 
-    void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)
+    void NativeEngine::Draw(Graphics::Impl::UpdateToken& updateToken, int fillMode)
     {
+        bgfx::Encoder* encoder{updateToken.GetEncoder()};
         uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
         {
@@ -1452,7 +1451,7 @@ namespace Babylon
             }
         }
 
-        if (!m_graphicsImpl.BoundFrameBuffer().BackBuffer() && !bgfx::getCaps()->originBottomLeft)
+        if (!updateToken.BoundFrameBuffer().BackBuffer() && !bgfx::getCaps()->originBottomLeft)
         {
             // UV coordinates system are different between OpenGL and Direct3D/Metal
             // This is not an issue with loaded textures (png/jpg...) because
@@ -1508,10 +1507,10 @@ namespace Babylon
             encoder->setState(m_engineState | fillModeState);
         }
 
-        m_graphicsImpl.BoundFrameBuffer().Submit(encoder, m_currentProgram->Handle);
+        updateToken.BoundFrameBuffer().Submit(encoder, m_currentProgram->Handle);
     }
 
-    bgfx::Encoder* NativeEngine::BeginUpdate()
+    Graphics::Impl::UpdateToken& NativeEngine::GetUpdateToken()
     {
         std::scoped_lock lock{m_updateTokenMutex};
         if (!m_updateToken)
@@ -1522,7 +1521,7 @@ namespace Babylon
                 m_updateToken.reset();
             });
         }
-        return &m_updateToken.value().GetEncoder();
+        return m_updateToken.value();
     }
 
     void NativeEngine::ScheduleFrame()

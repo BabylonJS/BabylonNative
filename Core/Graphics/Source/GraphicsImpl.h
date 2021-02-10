@@ -87,7 +87,12 @@ namespace Babylon
             UpdateToken(const UpdateToken& other) = delete;
             UpdateToken(UpdateToken&&) = default;
 
-            bgfx::Encoder& GetEncoder();
+            bgfx::Encoder* GetEncoder();
+
+            FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+            void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
+            FrameBuffer& DefaultFrameBuffer();
+            FrameBuffer& BoundFrameBuffer();
 
         private:
             friend class Graphics::Impl;
@@ -139,21 +144,20 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
-        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
-        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
-        FrameBuffer& DefaultFrameBuffer();
-        FrameBuffer& BoundFrameBuffer();
-
         BgfxCallback& Callback();
 
     private:
         friend class UpdateToken;
 
+        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
+        FrameBuffer& DefaultFrameBuffer();
+        FrameBuffer& BoundFrameBuffer();
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         void DiscardIfDirty();
         void Frame();
-        bgfx::Encoder& GetEncoderForThread();
+        bgfx::Encoder* GetEncoderForThread();
 
         arcana::affinity m_renderThreadAffinity{};
         arcana::affinity m_jsThreadAffinity{};

@@ -202,9 +202,9 @@ namespace Babylon
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
 
-        void Draw(bgfx::Encoder* encoder, int fillMode);
+        void Draw(Graphics::Impl::UpdateToken& updateToken, int fillMode);
 
-        bgfx::Encoder* BeginUpdate();
+        Graphics::Impl::UpdateToken& GetUpdateToken();
         void ScheduleFrame();
 
         arcana::cancellation_source m_cancelSource{};

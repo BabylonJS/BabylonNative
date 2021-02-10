@@ -34,9 +34,33 @@ namespace Babylon
     {
     }
 
-    bgfx::Encoder& Graphics::Impl::UpdateToken::GetEncoder()
+    bgfx::Encoder* Graphics::Impl::UpdateToken::GetEncoder()
     {
         return m_graphicsImpl.GetEncoderForThread();
+    }
+
+    FrameBuffer& Graphics::Impl::UpdateToken::AddFrameBuffer(
+        bgfx::FrameBufferHandle handle,
+        uint16_t width,
+        uint16_t height,
+        bool backBuffer)
+    {
+        return m_graphicsImpl.AddFrameBuffer(handle, width, height, backBuffer);
+    }
+
+    void Graphics::Impl::UpdateToken::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
+    {
+        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
+    }
+
+    FrameBuffer& Graphics::Impl::UpdateToken::DefaultFrameBuffer()
+    {
+        return m_graphicsImpl.DefaultFrameBuffer();
+    }
+
+    FrameBuffer& Graphics::Impl::UpdateToken::BoundFrameBuffer()
+    {
+        return m_graphicsImpl.BoundFrameBuffer();
     }
 
     Graphics::Impl::Impl()
@@ -304,7 +328,7 @@ namespace Babylon
         m_frameBufferManager->Reset();
     }
 
-    bgfx::Encoder& Graphics::Impl::GetEncoderForThread()
+    bgfx::Encoder* Graphics::Impl::GetEncoderForThread()
     {
         assert(!m_renderThreadAffinity.check());
         std::scoped_lock lock{m_threadIdToEncoderMutex};
@@ -315,11 +339,11 @@ namespace Babylon
         {
             bgfx::Encoder* encoder = bgfx::begin(true);
             m_threadIdToEncoder.emplace(threadId, encoder);
-            return *encoder;
+            return encoder;
         }
         else
         {
-            return *found->second;
+            return found->second;
         }
     }
 }

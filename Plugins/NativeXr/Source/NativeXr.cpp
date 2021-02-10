@@ -553,7 +553,8 @@ namespace Babylon
                     attachments[1].init(depthTexture);
                     auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                    auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle,
+                    auto updateToken{m_graphicsImpl.GetUpdateToken()};
+                    auto& frameBuffer{updateToken.AddFrameBuffer(frameBufferHandle,
                         static_cast<uint16_t>(view.ColorTextureSize.Width),
                         static_cast<uint16_t>(view.ColorTextureSize.Height),
                         true)};
