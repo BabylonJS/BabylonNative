@@ -28,7 +28,7 @@ namespace
 
 namespace Babylon
 {
-    Graphics::Impl::UpdateToken::UpdateToken(std::shared_mutex& mutex)
+    Graphics::Impl::UpdateToken::UpdateToken(MutexT& mutex)
         : m_mutex{mutex}
     {
     }
@@ -67,6 +67,7 @@ namespace Babylon
     {
         // Set the thread affinity (all other rendering operations must happen on this thread).
         m_renderThreadAffinity = std::this_thread::get_id();
+        m_updateMutex.lock();
 
         if (!g_bgfxRenderFrameCalled)
         {
@@ -193,7 +194,9 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
+        m_updateMutex.unlock();
         m_beforeRenderScheduler.m_dispatcher.tick(m_cancellationSource);
+        m_updateMutex.lock(); // TODO: 
     }
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
@@ -305,8 +308,6 @@ namespace Babylon
 
     void Graphics::Impl::Frame()
     {
-        std::unique_lock lock{m_updateMutex};
-
         // Check for bgfx views that only called clear and not submit.
         m_frameBufferManager->Check();
 
