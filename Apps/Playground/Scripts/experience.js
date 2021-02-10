@@ -134,6 +134,12 @@ CreateBoxAsync().then(function () {
         scene.render();
     });
 
+    /*const renderLoop = function () {
+        scene.render();
+        setTimeout(renderLoop, 16);
+    };
+    renderLoop();*/
+
     if (vr || ar || hololens) {
         setTimeout(function () {
             scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {

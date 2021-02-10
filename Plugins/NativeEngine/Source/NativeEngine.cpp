@@ -1535,10 +1535,10 @@ namespace Babylon
         m_frameScheduled = true;
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this]() {
-            return new Graphics::Impl::UpdateToken(std::move(m_graphicsImpl.GetUpdateToken()));
+            return new Graphics::Impl::UpdateToken(m_graphicsImpl.GetUpdateToken());
         }).then(m_runtimeScheduler, m_cancelSource, [this](auto* tokenPtr) {
             const auto tokenScopeGuard = gsl::finally([tokenPtr]() { delete tokenPtr; });
-            
+
             m_frameScheduled = false;
 
             auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
@@ -1546,6 +1546,16 @@ namespace Babylon
             {
                 callback.Value().Call({});
             }
+
+            // NOTE: To allow rendering the earliest possible opportunity to occur, uncomment
+            // the following. I personally would prefer to leave this commented as it's (1)
+            // unnecessary and (2) a tether between token scenarios that are otherwise wholly
+            // decoupled; but if we want to explicitly allow early-as-possible rendering for
+            // requestAnimationFrame, this does that.
+            //{
+            //    std::scoped_lock lock{m_updateTokenMutex};
+            //    m_updateToken.reset();
+            //}
         });
 
         // TODO: check if error handling is necessary
