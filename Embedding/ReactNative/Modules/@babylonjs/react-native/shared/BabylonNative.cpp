@@ -2,6 +2,7 @@
 
 #include <Babylon/Graphics.h>
 #include <Babylon/JsRuntime.h>
+#include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeXr.h>
@@ -52,7 +53,8 @@ namespace Babylon
 
             // Initialize Babylon Native plugins
             Plugins::NativeXr::Initialize(m_env);
-            m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
+            Plugins::NativeCapture::Initialize(m_env);
+            m_nativeInput = &Plugins::NativeInput::CreateForJavaScript(m_env);
 
             // Initialize Babylon Native polyfills
             Polyfills::Window::Initialize(m_env);

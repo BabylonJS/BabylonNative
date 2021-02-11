@@ -16,6 +16,7 @@ set(PACKAGED_LIBS
     OSDependent
     MachineIndependent
     napi
+    NativeCapture
     NativeEngine
     NativeInput
     NativeXr

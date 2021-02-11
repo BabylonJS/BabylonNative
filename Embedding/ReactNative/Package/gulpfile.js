@@ -244,6 +244,7 @@ Assembled/ios/libs/libOGLCompiler.a
 Assembled/ios/libs/libastc.a
 Assembled/ios/libs/libNativeEngine.a
 Assembled/ios/libs/libNativeXr.a
+Assembled/ios/libs/libNativeCapture.a
 Assembled/ios/libs/libspirv-cross-glsl.a
 Assembled/ios/libs/libNativeInput.a
 Assembled/ios/libs/libJsRuntime.a
@@ -297,6 +298,7 @@ Assembled/android/src/main/jniLibs/arm64-v8a
 Assembled/android/src/main/jniLibs/arm64-v8a/libturbomodulejsijni.so
 Assembled/android/src/main/jniLibs/arm64-v8a/libBabylonNative.so
 Assembled/react-native-babylon.podspec
+Assembled/NativeCapture.ts
 Assembled/index.ts
 Assembled/VersionValidation.ts
 Assembled/BabylonModule.ts

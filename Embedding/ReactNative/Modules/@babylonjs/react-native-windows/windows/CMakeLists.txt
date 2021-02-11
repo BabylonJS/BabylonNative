@@ -37,6 +37,7 @@ target_link_libraries(BabylonNative
     Graphics
     jsi
     JsRuntime
+    NativeCapture
     NativeEngine
     NativeInput
     NativeXr
