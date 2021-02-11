@@ -5,6 +5,7 @@
 #include "FrameBufferManager.h"
 #include "SafeTimespanGuarantor.h"
 
+#include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>

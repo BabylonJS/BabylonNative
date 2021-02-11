@@ -1,6 +1,5 @@
 #pragma once
 
-#include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
 
 #include <bgfx/bgfx.h>
