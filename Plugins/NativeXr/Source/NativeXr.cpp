@@ -462,10 +462,9 @@ namespace Babylon
         m_scheduleFrameCallbacks.emplace_back(callback);
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this] {
-            auto updateToken = m_graphicsImpl.GetUpdateToken();
             BeginFrame();
 
-            arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, updateToken{std::move(updateToken)}]() {
+            arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}]() {
                 m_frameScheduled = false;
 
                 BeginUpdate();
@@ -552,8 +551,8 @@ namespace Babylon
                     attachments[0].init(colorTexture);
                     attachments[1].init(depthTexture);
                     auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
-
                     auto updateToken{m_graphicsImpl.GetUpdateToken()};
+
                     auto& frameBuffer{updateToken.AddFrameBuffer(frameBufferHandle,
                         static_cast<uint16_t>(view.ColorTextureSize.Width),
                         static_cast<uint16_t>(view.ColorTextureSize.Height),
@@ -561,7 +560,7 @@ namespace Babylon
 
                     // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                     // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                    frameBuffer.Clear(BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                    frameBuffer.Clear(updateToken.GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
 
                     m_textureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
 

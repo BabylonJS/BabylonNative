@@ -23,9 +23,9 @@ namespace Babylon
         bool BackBuffer() const;
 
         void Bind();
-        void Clear(uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
+        void Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
         void SetViewPort(float x, float y, float width, float height);
-        void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle);
+        void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
 
     private:
         struct ViewPort
@@ -38,7 +38,7 @@ namespace Babylon
             bool Equals(const ViewPort& other) const;
         };
 
-        void NewView(const ViewPort& viewPort);
+        void NewView(bgfx::Encoder* encoder, const ViewPort& viewPort);
         void Reset();
 
         FrameBufferManager& m_manager;

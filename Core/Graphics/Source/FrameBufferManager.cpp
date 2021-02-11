@@ -6,7 +6,7 @@
 namespace Babylon
 {
     FrameBufferManager::FrameBufferManager()
-        : m_views{}
+        : m_nextViewId{}
         , m_frameBuffers{}
         , m_default{*this, BGFX_INVALID_HANDLE, 0, 0, true}
         , m_bound{}
@@ -48,9 +48,7 @@ namespace Babylon
 
     bgfx::ViewId FrameBufferManager::NewViewId()
     {
-        m_views.push_back({});
-
-        auto viewId{static_cast<bgfx::ViewId>(m_views.size() - 1)};
+        bgfx::ViewId viewId{m_nextViewId++};
         if (viewId >= bgfx::getCaps()->limits.maxViews)
         {
             throw std::runtime_error{"Too many views"};
@@ -59,36 +57,14 @@ namespace Babylon
         return viewId;
     }
 
-    void FrameBufferManager::OnViewClearCalled(bgfx::ViewId viewId)
-    {
-        m_views[viewId].ClearCalled = true;
-    }
-
-    void FrameBufferManager::OnViewSubmitCalled(bgfx::ViewId viewId)
-    {
-        m_views[viewId].SubmitCalled = true;
-    }
-
-    void FrameBufferManager::Check()
-    {
-        for (bgfx::ViewId viewId = 0; viewId < m_views.size(); ++viewId)
-        {
-            const auto& view{m_views[viewId]};
-            if (view.ClearCalled && !view.SubmitCalled)
-            {
-                bgfx::touch(viewId);
-            }
-        }
-    }
-
     void FrameBufferManager::Reset()
     {
-        for (bgfx::ViewId viewId = 0; viewId < m_views.size(); ++viewId)
+        for (bgfx::ViewId viewId = 0; viewId < m_nextViewId; ++viewId)
         {
             bgfx::resetView(viewId);
         }
 
-        m_views.clear();
+        m_nextViewId = 0;
 
         for (std::unique_ptr<FrameBuffer>& frameBuffer : m_frameBuffers)
         {

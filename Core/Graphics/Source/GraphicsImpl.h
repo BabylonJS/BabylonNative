@@ -13,7 +13,6 @@
 #include <bgfx/platform.h>
 #include <bx/semaphore.h>
 
-#include <shared_mutex>
 #include <memory>
 #include <map>
 
@@ -82,26 +81,22 @@ namespace Babylon
 
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
+        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
-
-        BgfxCallback& Callback();
 
     private:
         friend class UpdateToken;
 
-        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
-        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
-        FrameBuffer& DefaultFrameBuffer();
-        FrameBuffer& BoundFrameBuffer();
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         void DiscardIfDirty();
         void Frame();
         bgfx::Encoder* GetEncoderForThread();
+        void EndEncoders();
 
         arcana::affinity m_renderThreadAffinity{};
-        arcana::affinity m_jsThreadAffinity{};
 
         arcana::cancellation_source m_cancellationSource{};
 
@@ -129,7 +124,7 @@ namespace Babylon
         RenderScheduler m_beforeRenderScheduler;
         RenderScheduler m_afterRenderScheduler;
 
-        BgfxCallback m_callback{};
+        BgfxCallback m_bgfxCallback{};
 
         std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
 

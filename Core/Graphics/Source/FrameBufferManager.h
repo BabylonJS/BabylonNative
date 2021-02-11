@@ -22,11 +22,7 @@ namespace Babylon
         void BindFrameBuffer(FrameBuffer* frameBuffer);
 
         bgfx::ViewId NewViewId();
-        void OnViewClearCalled(bgfx::ViewId viewId);
-        void OnViewSubmitCalled(bgfx::ViewId viewId);
-
         void Reset();
-        void Check();
 
     private:
         struct ViewInfo
@@ -35,7 +31,7 @@ namespace Babylon
             bool SubmitCalled{false};
         };
 
-        std::vector<ViewInfo> m_views;
+        bgfx::ViewId m_nextViewId;
         std::list<std::unique_ptr<FrameBuffer>> m_frameBuffers;
         FrameBuffer m_default;
         FrameBuffer* m_bound;

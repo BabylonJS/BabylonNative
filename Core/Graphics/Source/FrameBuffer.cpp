@@ -43,12 +43,11 @@ namespace Babylon
         m_manager.BindFrameBuffer(this);
     }
 
-    void FrameBuffer::Clear(uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
+    void FrameBuffer::Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
-        NewView({});
+        NewView(encoder, {});
 
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
-        m_manager.OnViewClearCalled(m_viewId.value());
     }
 
     void FrameBuffer::SetViewPort(float x, float y, float width, float height)
@@ -56,19 +55,18 @@ namespace Babylon
         m_requestedViewPort = {x, y, width, height};
     }
 
-    void FrameBuffer::Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle)
+    void FrameBuffer::Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
         if (m_requestedViewPort.has_value() && !m_requestedViewPort->Equals(m_viewPort))
         {
-            NewView(m_requestedViewPort.value());
+            NewView(encoder, m_requestedViewPort.value());
         }
         else if (!m_viewId.has_value())
         {
-            NewView({});
+            NewView(encoder, {});
         }
 
-        encoder->submit(m_viewId.value(), programHandle, 0, BGFX_DISCARD_INSTANCE_DATA | BGFX_DISCARD_STATE | BGFX_DISCARD_TRANSFORM);
-        m_manager.OnViewSubmitCalled(m_viewId.value());
+        encoder->submit(m_viewId.value(), programHandle, 0, flags);
     }
 
     void FrameBuffer::Reset()
@@ -87,7 +85,7 @@ namespace Babylon
             std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
     }
 
-    void FrameBuffer::NewView(const ViewPort& viewPort)
+    void FrameBuffer::NewView(bgfx::Encoder* encoder, const ViewPort& viewPort)
     {
         m_viewId = m_manager.NewViewId();
         m_viewPort = viewPort;
@@ -100,5 +98,9 @@ namespace Babylon
             static_cast<uint16_t>(m_viewPort.Y * Height()),
             static_cast<uint16_t>(m_viewPort.Width * Width()),
             static_cast<uint16_t>(m_viewPort.Height * Height()));
+
+        // This dummy draw call is here to make sure that the view is cleared
+        // if no other draw calls are submitted to the view.
+        encoder->touch(m_viewId.value());
     }
 }

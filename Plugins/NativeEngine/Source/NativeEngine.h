@@ -96,27 +96,27 @@ namespace Babylon
     {
         ~VertexArray()
         {
-            for (auto& vertexBufferPair : vertexBuffers)
+            for (auto& vertexBufferPair : VertexBuffers)
             {
-                bgfx::destroy(vertexBufferPair.second.vertexLayoutHandle);
+                bgfx::destroy(vertexBufferPair.second.VertexLayoutHandle);
             }
         }
 
         struct IndexBuffer
         {
-            const IndexBufferData* data{};
+            const IndexBufferData* Data{};
         };
 
         IndexBuffer indexBuffer{};
 
         struct VertexBuffer
         {
-            const VertexBufferData* data{};
-            uint32_t startVertex{};
-            bgfx::VertexLayoutHandle vertexLayoutHandle{};
+            const VertexBufferData* Data{};
+            uint32_t StartVertex{};
+            bgfx::VertexLayoutHandle VertexLayoutHandle{};
         };
 
-        std::unordered_map<uint32_t, VertexBuffer> vertexBuffers;
+        std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>

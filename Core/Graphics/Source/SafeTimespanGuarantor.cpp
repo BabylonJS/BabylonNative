@@ -20,7 +20,7 @@ namespace Babylon
         {
             m_lock.emplace(m_mutex);
             wait = m_postCount > 0;
-            m_postCount -= 1;
+            --m_postCount;
 
             if (wait)
             {
@@ -32,7 +32,7 @@ namespace Babylon
     SafeTimespanGuarantor::SafetyGuarantee SafeTimespanGuarantor::GetSafetyGuarantee()
     {
         std::scoped_lock lock{m_mutex};
-        m_postCount += 1;
+        ++m_postCount;
         return m_semaphore.GetPostFinalAction();
     }
 }

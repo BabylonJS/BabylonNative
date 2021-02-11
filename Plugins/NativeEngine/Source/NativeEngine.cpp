@@ -485,6 +485,8 @@ namespace Babylon
     {
         m_cancelSource.cancel();
 
+        // TODO: clean up bound vertex array
+
         // This collection contains bgfx data, so it must be cleared before bgfx::shutdown is called.
         m_programDataCollection.clear();
     }
@@ -509,7 +511,9 @@ namespace Babylon
 
     void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
     {
-        delete info[0].As<Napi::External<VertexArray>>().Data();
+        auto vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        assert(vertexArray != m_boundVertexArray);
+        delete vertexArray;
     }
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
@@ -539,7 +543,7 @@ namespace Babylon
         VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
         const IndexBufferData* indexBufferData = info[1].As<Napi::External<IndexBufferData>>().Data();
 
-        vertexArray.indexBuffer.data = indexBufferData;
+        vertexArray.indexBuffer.Data = indexBufferData;
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
@@ -589,7 +593,7 @@ namespace Babylon
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.vertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
+        vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
@@ -1268,23 +1272,20 @@ namespace Babylon
         const auto indexStart = info[1].As<Napi::Number>().Int32Value();
         const auto indexCount = info[2].As<Napi::Number>().Int32Value();
 
-        encoder->discard(BGFX_DISCARD_INDEX_BUFFER | BGFX_DISCARD_VERTEX_STREAMS);
-
         if (m_boundVertexArray != nullptr)
         {
-
-            const auto indexBufferData{m_boundVertexArray->indexBuffer.data};
+            const auto indexBufferData{m_boundVertexArray->indexBuffer.Data};
             if (indexBufferData != nullptr)
             {
                 indexBufferData->SetBgfxIndexBuffer(encoder, indexStart, indexCount);
             }
 
-            const auto& vertexBuffers = m_boundVertexArray->vertexBuffers;
+            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
             for (const auto& vertexBufferPair : vertexBuffers)
             {
                 const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
                 const auto& vertexBuffer{vertexBufferPair.second};
-                vertexBuffer.data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.startVertex, UINT_MAX, vertexBuffer.vertexLayoutHandle);
+                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex, UINT_MAX, vertexBuffer.VertexLayoutHandle);
             }
         }
 
@@ -1300,16 +1301,14 @@ namespace Babylon
         const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
         const auto verticesCount = info[2].As<Napi::Number>().Int32Value();
 
-        encoder->discard(BGFX_DISCARD_INDEX_BUFFER | BGFX_DISCARD_VERTEX_STREAMS);
-
         if (m_boundVertexArray != nullptr)
         {
-            const auto& vertexBuffers = m_boundVertexArray->vertexBuffers;
+            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
             for (const auto& vertexBufferPair : vertexBuffers)
             {
                 const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
                 const auto& vertexBuffer = vertexBufferPair.second;
-                vertexBuffer.data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.startVertex + verticesStart, verticesCount, vertexBuffer.vertexLayoutHandle);
+                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex + verticesStart, verticesCount, vertexBuffer.VertexLayoutHandle);
             }
         }
 
@@ -1352,7 +1351,8 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        GetUpdateToken().BoundFrameBuffer().Clear(flags, rgba, depth, stencil);
+        auto& updateToken{GetUpdateToken()};
+        updateToken.BoundFrameBuffer().Clear(updateToken.GetEncoder(), flags, rgba, depth, stencil);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -1392,17 +1392,17 @@ namespace Babylon
         const auto callback{info[0].As<Napi::Function>()};
 
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_graphicsImpl.Callback().AddScreenShotCallback([&runtime{m_runtime}, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
-            runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
-                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
-                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
-                callbackPtr->Value().Call({typedArray});
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this, callbackPtr{std::move(callbackPtr)}]() {
+            m_graphicsImpl.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
+                m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
+                    auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
+                    auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
+                    callbackPtr->Value().Call({typedArray});
+                });
             });
         });
 
-        arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancelSource, []() {
-            bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "GetImageData");
-        });
+        // TODO: handle errors
     }
 
     void NativeEngine::Draw(Graphics::Impl::UpdateToken& updateToken, int fillMode)
@@ -1506,7 +1506,8 @@ namespace Babylon
             encoder->setState(m_engineState | fillModeState);
         }
 
-        updateToken.BoundFrameBuffer().Submit(encoder, m_currentProgram->Handle);
+        // Discard everything except bindings since we keep the state of everything else.
+        updateToken.BoundFrameBuffer().Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     Graphics::Impl::UpdateToken& NativeEngine::GetUpdateToken()

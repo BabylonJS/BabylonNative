@@ -43,22 +43,22 @@ namespace Babylon
         uint16_t height,
         bool backBuffer)
     {
-        return m_graphicsImpl.AddFrameBuffer(handle, width, height, backBuffer);
+        return m_graphicsImpl.m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
     }
 
     void Graphics::Impl::UpdateToken::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
-        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
+        m_graphicsImpl.m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
     }
 
     FrameBuffer& Graphics::Impl::UpdateToken::DefaultFrameBuffer()
     {
-        return m_graphicsImpl.DefaultFrameBuffer();
+        return m_graphicsImpl.m_frameBufferManager->DefaultFrameBuffer();
     }
 
     FrameBuffer& Graphics::Impl::UpdateToken::BoundFrameBuffer()
     {
-        return m_graphicsImpl.BoundFrameBuffer();
+        return m_graphicsImpl.m_frameBufferManager->BoundFrameBuffer();
     }
 
     Graphics::Impl::Impl()
@@ -81,7 +81,7 @@ namespace Babylon
         init.type = bgfx::RendererType::Direct3D11;
 #endif
         init.resolution.reset = BGFX_RESET_FLAGS;
-        init.callback = &m_callback;
+        init.callback = &m_bgfxCallback;
     }
 
     Graphics::Impl::~Impl()
@@ -118,8 +118,6 @@ namespace Babylon
 
     void Graphics::Impl::AddToJavaScript(Napi::Env env)
     {
-        m_jsThreadAffinity = std::this_thread::get_id();
-
         JsRuntime::NativeObject::GetFromJavaScript(env)
             .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
     }
@@ -192,22 +190,15 @@ namespace Babylon
         UpdateBgfxState();
 
         m_safeTimespanGuarantor.BeginSafeTimespan();
+
         m_beforeRenderScheduler.m_dispatcher.tick(m_cancellationSource);
     }
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
     {
         assert(m_renderThreadAffinity.check());
-        m_safeTimespanGuarantor.EndSafeTimespan();
 
-        {
-            std::scoped_lock lock{m_threadIdToEncoderMutex};
-            for (auto [threadId, encoder] : m_threadIdToEncoder)
-            {
-                bgfx::end(encoder);
-            }
-            m_threadIdToEncoder.clear();
-        }
+        m_safeTimespanGuarantor.EndSafeTimespan();
 
         Frame();
 
@@ -222,7 +213,14 @@ namespace Babylon
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
         assert(m_renderThreadAffinity.check());
-        m_callback.SetDiagnosticOutput(std::move(diagnosticOutput));
+        m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
+    }
+
+    void Graphics::Impl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    {
+        assert(m_renderThreadAffinity.check());
+        m_bgfxCallback.AddScreenShotCallback(callback);
+        bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "Graphics::Impl::RequestScreenShot");
     }
 
     float Graphics::Impl::GetHardwareScalingLevel()
@@ -243,35 +241,6 @@ namespace Babylon
         }
 
         UpdateBgfxResolution();
-    }
-
-    FrameBuffer& Graphics::Impl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
-    {
-        assert(m_jsThreadAffinity.check());
-        return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
-    }
-
-    void Graphics::Impl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
-    {
-        assert(m_jsThreadAffinity.check());
-        return m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
-    }
-
-    FrameBuffer& Graphics::Impl::DefaultFrameBuffer()
-    {
-        assert(m_jsThreadAffinity.check());
-        return m_frameBufferManager->DefaultFrameBuffer();
-    }
-
-    FrameBuffer& Graphics::Impl::BoundFrameBuffer()
-    {
-        assert(m_jsThreadAffinity.check());
-        return m_frameBufferManager->BoundFrameBuffer();
-    }
-
-    BgfxCallback& Graphics::Impl::Callback()
-    {
-        return m_callback;
     }
 
     void Graphics::Impl::UpdateBgfxState()
@@ -313,8 +282,8 @@ namespace Babylon
 
     void Graphics::Impl::Frame()
     {
-        // Check for bgfx views that only called clear and not submit.
-        m_frameBufferManager->Check();
+        // Automatically end bgfx encoders.
+        EndEncoders();
 
         // Discard everything if the bgfx state is dirty.
         DiscardIfDirty();
@@ -331,17 +300,26 @@ namespace Babylon
         assert(!m_renderThreadAffinity.check());
         std::scoped_lock lock{m_threadIdToEncoderMutex};
 
-        const auto threadId = std::this_thread::get_id();
-        auto found = m_threadIdToEncoder.find(threadId);
-        if (found == m_threadIdToEncoder.end())
+        const auto threadId{std::this_thread::get_id()};
+        auto it{m_threadIdToEncoder.find(threadId)};
+        if (it == m_threadIdToEncoder.end())
         {
-            bgfx::Encoder* encoder = bgfx::begin(true);
-            m_threadIdToEncoder.emplace(threadId, encoder);
-            return encoder;
+            bgfx::Encoder* encoder{bgfx::begin(true)};
+            it = m_threadIdToEncoder.emplace(threadId, encoder).first;
         }
-        else
+
+        return it->second;
+    }
+
+    void Graphics::Impl::EndEncoders()
+    {
+        std::scoped_lock lock{m_threadIdToEncoderMutex};
+
+        for (auto [threadId, encoder] : m_threadIdToEncoder)
         {
-            return found->second;
+            bgfx::end(encoder);
         }
+
+        m_threadIdToEncoder.clear();
     }
 }
