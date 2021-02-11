@@ -9,6 +9,11 @@
 
 namespace Babylon
 {
+    BgfxCallback::BgfxCallback(std::function<void(const CaptureData&)> captureCallback)
+        : m_captureCallback{std::move(captureCallback)}
+    {
+    }
+
     void BgfxCallback::AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback)
     {
         m_screenShotCallbacks.push(std::move(callback));
@@ -109,16 +114,25 @@ namespace Babylon
         }
     }
 
-    void BgfxCallback::captureBegin(uint32_t /*width*/, uint32_t /*height*/, uint32_t /*pitch*/, bgfx::TextureFormat::Enum /*format*/, bool /*yflip*/)
+    void BgfxCallback::captureBegin(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yflip)
     {
+        m_captureData.Width = width;
+        m_captureData.Height = height;
+        m_captureData.Pitch = pitch;
+        m_captureData.Format = format;
+        m_captureData.YFlip = yflip;
     }
 
     void BgfxCallback::captureEnd()
     {
     }
 
-    void BgfxCallback::captureFrame(const void* /*_data*/, uint32_t /*_size*/)
+    void BgfxCallback::captureFrame(const void* data, uint32_t size)
     {
+        m_captureData.Data = data;
+        m_captureData.DataSize = size;
+
+        m_captureCallback(m_captureData);
     }
 
     void BgfxCallback::trace(const char* _filePath, uint16_t _line, const char* _format, ...)

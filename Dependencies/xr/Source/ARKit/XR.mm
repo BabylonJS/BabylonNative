@@ -795,11 +795,6 @@ namespace xr {
             sessionEnded = true;
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t) const {
-            // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
-            return {1,1};
-        }
-
         void DrawFrame() {
             @autoreleasepool {
                 // Create a new command buffer for each render pass to the current drawable.
@@ -1302,10 +1297,6 @@ namespace xr {
 
     void System::Session::RequestEndSession() {
         m_impl->RequestEndSession();
-    }
-
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const {
-        return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 
     void System::Session::SetDepthsNearFar(float depthNear, float depthFar) {

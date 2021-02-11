@@ -1,5 +1,6 @@
 #include "FrameBuffer.h"
 #include "FrameBufferManager.h"
+#include <cmath>
 
 namespace Babylon
 {

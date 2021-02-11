@@ -135,6 +135,7 @@ namespace Babylon
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
+        Napi::Value HomogeneousDepth(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);

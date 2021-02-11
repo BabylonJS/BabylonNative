@@ -339,6 +339,7 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 InstanceMethod("dispose", &NativeEngine::Dispose),
+                InstanceAccessor("homogeneousDepth", &NativeEngine::HomogeneousDepth, nullptr),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
                 InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
@@ -494,6 +495,11 @@ namespace Babylon
     void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
     {
         Dispose();
+    }
+
+    Napi::Value NativeEngine::HomogeneousDepth(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), bgfx::getCaps()->homogeneousDepth);
     }
 
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)

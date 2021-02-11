@@ -1,17 +1,28 @@
 #pragma once
 
+#include <arcana/containers/ticketed_collection.h>
+#include <arcana/threading/blocking_concurrent_queue.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include <arcana/threading/blocking_concurrent_queue.h>
 
 namespace Babylon
 {
     class BgfxCallback : public bgfx::CallbackI
     {
     public:
-        BgfxCallback() = default;
-        BgfxCallback(const BgfxCallback&) = delete;
-        BgfxCallback(BgfxCallback&&) = delete;
+        struct CaptureData
+        {
+            uint32_t Width{};
+            uint32_t Height{};
+            uint32_t Pitch{};
+            bgfx::TextureFormat::Enum Format{};
+            bool YFlip{};
+            const void* Data{};
+            uint32_t DataSize{};
+        };
+
+        BgfxCallback(std::function<void(const CaptureData&)>);
         virtual ~BgfxCallback() = default;
 
         void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
@@ -32,7 +43,12 @@ namespace Babylon
         void captureFrame(const void* _data, uint32_t _size) override;
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
-        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
+    private:
         std::function<void(const char* output)> m_outputFunction;
+
+        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
+
+        CaptureData m_captureData{};
+        const std::function<void(const CaptureData&)> m_captureCallback{};
     };
 }

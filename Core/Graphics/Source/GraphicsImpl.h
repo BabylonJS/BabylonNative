@@ -86,6 +86,9 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
+        CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
+
     private:
         friend class UpdateToken;
 
@@ -95,6 +98,7 @@ namespace Babylon
         void Frame();
         bgfx::Encoder* GetEncoderForThread();
         void EndEncoders();
+        void CaptureCallback(const BgfxCallback::CaptureData&);
 
         arcana::affinity m_renderThreadAffinity{};
 
@@ -119,14 +123,17 @@ namespace Babylon
             } Resolution{};
         } m_state;
 
+        BgfxCallback m_bgfxCallback;
+
         SafeTimespanGuarantor m_safeTimespanGuarantor{};
 
         RenderScheduler m_beforeRenderScheduler;
         RenderScheduler m_afterRenderScheduler;
 
-        BgfxCallback m_bgfxCallback{};
-
         std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
+
+        std::mutex m_captureCallbacksMutex{};
+        arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
         std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
         std::mutex m_threadIdToEncoderMutex{};

@@ -12,6 +12,7 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
@@ -120,6 +121,8 @@ namespace
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             Babylon::Plugins::NativeEngine::Initialize(env);
+
+            Babylon::Plugins::NativeCapture::Initialize(env);
 
             Babylon::Plugins::NativeXr::Initialize(env);
 
