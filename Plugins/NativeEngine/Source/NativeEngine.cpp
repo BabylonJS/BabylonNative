@@ -20,7 +20,7 @@
 
 namespace CameraFeed
 {
-void Update(bgfx::TextureHandle textureHandle);
+bgfx::TextureHandle Update(bgfx::TextureHandle textureHandle);
 }
 
 namespace Babylon
@@ -1539,11 +1539,11 @@ namespace Babylon
         return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
     }
 
-    void NativeEngine::UpdateCameraTexture(const Napi::CallbackInfo& /*info*/)
+    void NativeEngine::UpdateCameraTexture(const Napi::CallbackInfo& info)
     {
-        //const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        //if (texture) {
-        CameraFeed::Update({bgfx::kInvalidHandle});//texture->Handle);
-        //}
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        if (texture) {
+            texture->Handle = CameraFeed::Update(texture->Handle);
+        }
     }
 }

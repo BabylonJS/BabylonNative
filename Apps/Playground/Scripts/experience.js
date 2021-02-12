@@ -135,13 +135,14 @@ _native.whenGraphicsReady().then(function () {
         }
 
 
-        var plane = BABYLON.Mesh.CreatePlane("sphere1", 1, scene);
-        plane.rotation.z = Math.PI;
-        plane.rotation.y = Math.PI;
-
+        //var plane = BABYLON.Mesh.CreatePlane("sphere1", 0.5, scene);
+        //plane.rotation.x = Math.PI;
+        //plane.rotation.y = Math.PI;
+        //plane.rotation.x = Math.PI * 0.5;
+        var plane = BABYLON.Mesh.CreateBox("box1", 0.3);
 
         var mat = new BABYLON.StandardMaterial("mat", scene);
-        mat.diffuseColor = BABYLON.Color3.White();
+        mat.diffuseColor = BABYLON.Color3.Black();
 
         BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
             mat.emissiveTexture = videoTexture;
