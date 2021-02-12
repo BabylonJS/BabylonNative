@@ -11,7 +11,7 @@ var text = false;
 var hololens = false;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
+    BABYLON.Mesh.CreateBox("box1", 0.2).setEnabled(false);
     return Promise.resolve();
 }
 
@@ -75,10 +75,72 @@ _native.whenGraphicsReady().then(function () {
     //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
     //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
         BABYLON.Tools.Log("Loaded");
-
+        
         scene.createDefaultCamera(true);
         scene.activeCamera.alpha += Math.PI;
         CreateInputHandling(scene);
+        
+
+
+        navigator.mediaDevices = {};
+        navigator.mediaDevices.getUserMedia = function () { return Promise.resolve(); }
+
+
+        var createVideoStream = function() {
+            return {
+                srcObject: {},
+                setAttribute: function () { },
+                muted: true,
+                addEventListener: function (type, callback) {
+                    this.cb = callback;
+                },
+                play: function () {
+                    this.cb();
+                },
+                readyState: 10,
+                HAVE_CURRENT_DATA: 1,
+                videoWidth: 256,
+                videoHeight: 256,
+            } // video stream
+        };
+
+        engine.updateVideoTexture = function (texture, video, invertY) {
+            console.log("texture updated");
+            texture.isReady = true;
+        };
+
+
+        BABYLON.VideoTexture.prototype._getVideo = function () {
+            return createVideoStream();
+        }
+        document.createElement = function (type) {
+            return createVideoStream();
+        }
+
+        engine.createDynamicTexture = function (width, height, generateMipMaps, samplingMode) {
+            console.log("createDynamicTexture ");
+            return engine.createRawTexture(new Uint8Array(width * height * 4), width, height, BABYLON.Constants.TEXTUREFORMAT_RGBA, false, false, BABYLON.Constants.TEXTURE_LINEAR_LINEAR);
+        }
+
+        engine.updateDynamicTexture = function (texture, source, invertY, premulAlpha, format, forceBindTexture) {
+            console.log("updateDynamicTexture ");
+        }
+
+
+        var plane = BABYLON.Mesh.CreatePlane("sphere1", 1, scene);
+        plane.rotation.z = Math.PI;
+        plane.rotation.y = Math.PI;
+
+
+        var mat = new BABYLON.StandardMaterial("mat", scene);
+        mat.diffuseColor = BABYLON.Color3.White();
+
+        BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+            mat.emissiveTexture = videoTexture;
+            plane.material = mat;
+        }, { maxWidth: 256, maxHeight: 256 });
+        
+
 
         if (ibl) {
             scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
