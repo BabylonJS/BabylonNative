@@ -18,6 +18,11 @@
 #include <sstream>
 #include <variant>
 
+namespace CameraFeed
+{
+void Update(bgfx::TextureHandle textureHandle);
+}
+
 namespace Babylon
 {
     namespace
@@ -391,6 +396,7 @@ namespace Babylon
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 InstanceMethod("setTexture", &NativeEngine::SetTexture),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
+                InstanceMethod("updateCameraTexture", &NativeEngine::UpdateCameraTexture),
                 InstanceMethod("createFramebuffer", &NativeEngine::CreateFrameBuffer),
                 InstanceMethod("deleteFramebuffer", &NativeEngine::DeleteFrameBuffer),
                 InstanceMethod("bindFramebuffer", &NativeEngine::BindFrameBuffer),
@@ -1531,5 +1537,13 @@ namespace Babylon
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
         return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
+    }
+
+    void NativeEngine::UpdateCameraTexture(const Napi::CallbackInfo& /*info*/)
+    {
+        //const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        //if (texture) {
+        CameraFeed::Update({bgfx::kInvalidHandle});//texture->Handle);
+        //}
     }
 }

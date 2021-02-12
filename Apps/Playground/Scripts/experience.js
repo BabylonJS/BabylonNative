@@ -105,8 +105,9 @@ _native.whenGraphicsReady().then(function () {
         };
 
         engine.updateVideoTexture = function (texture, video, invertY) {
-            console.log("texture updated");
             texture.isReady = true;
+            engine._native.updateCameraTexture(texture);
+            console.log("texture updated");
         };
 
 
