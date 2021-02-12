@@ -106,11 +106,18 @@ _native.whenGraphicsReady().then(function () {
 
         engine.updateVideoTexture = function (texture, video, invertY) {
             texture.isReady = true;
-            engine._native.updateCameraTexture(texture);
+            var webGLTexture = texture._hardwareTexture.underlyingResource;
+            try {
+                engine._native.updateCameraTexture(webGLTexture);
+            }
+            catch (_a) {
+                console.log(_a);
+            }
+            
             console.log("texture updated");
         };
 
-
+        
         BABYLON.VideoTexture.prototype._getVideo = function () {
             return createVideoStream();
         }
