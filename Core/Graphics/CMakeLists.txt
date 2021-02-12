@@ -18,6 +18,10 @@ if(WINDOWS_STORE)
 elseif(WIN32)
     target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
+elseif(ANDROID)
+    target_link_to_dependencies(Graphics
+        PRIVATE android
+        PRIVATE AndroidExtensions)
 endif()
 
 target_link_to_dependencies(Graphics

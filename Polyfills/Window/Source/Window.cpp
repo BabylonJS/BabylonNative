@@ -66,7 +66,7 @@ namespace Babylon::Polyfills::Internal
         // Create an accessor to add to the window object to define window.devicePixelRatio
         Napi::Object descriptor{Napi::Object::New(env)};
         descriptor.Set("enumerable", Napi::Value::From(env, true));
-        descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, "devicePixelRatio", jsWindow));
+        descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, JS_DEVICE_PIXEL_RATIO_NAME, jsWindow));
         Napi::Object object{global.Get("Object").As<Napi::Object>()};
         Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
         defineProperty.Call(object, {global, Napi::String::New(env, "devicePixelRatio"), descriptor});
