@@ -276,7 +276,7 @@ namespace Babylon
         }
         {
             std::scoped_lock lock{m_state.Mutex};
-            m_state.Resolution.HardwareScalingLevel = level;
+            m_state.Resolution.HardwareScalingLevel = std::max(level, 1.0f); // Disallow upscaling.
         }
 
         UpdateBgfxResolution();
