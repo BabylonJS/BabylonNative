@@ -104,36 +104,23 @@ _native.whenGraphicsReady().then(function () {
             } // video stream
         };
 
-        engine.updateVideoTexture = function (texture, video, invertY) {
-            texture.isReady = true;
-            var webGLTexture = texture._hardwareTexture.underlyingResource;
-            try {
-                engine._native.updateCameraTexture(webGLTexture);
-            }
-            catch (_a) {
-                console.log(_a);
-            }
-            
-            console.log("texture updated");
-        };
-
         
         BABYLON.VideoTexture.prototype._getVideo = function () {
             return createVideoStream();
         }
+        
         document.createElement = function (type) {
             return createVideoStream();
         }
 
         engine.createDynamicTexture = function (width, height, generateMipMaps, samplingMode) {
-            console.log("createDynamicTexture ");
             return engine.createRawTexture(new Uint8Array(width * height * 4), width, height, BABYLON.Constants.TEXTUREFORMAT_RGBA, false, false, BABYLON.Constants.TEXTURE_LINEAR_LINEAR);
         }
 
-        engine.updateDynamicTexture = function (texture, source, invertY, premulAlpha, format, forceBindTexture) {
-            console.log("updateDynamicTexture ");
-        }
-
+        engine.updateVideoTexture = function (texture, video, invertY) {
+            var webGLTexture = texture._hardwareTexture.underlyingResource;
+            engine._native.updateCameraTexture(webGLTexture);
+        };
 
         //var plane = BABYLON.Mesh.CreatePlane("sphere1", 0.5, scene);
         //plane.rotation.x = Math.PI;
