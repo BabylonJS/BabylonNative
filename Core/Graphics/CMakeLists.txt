@@ -47,5 +47,5 @@ target_link_to_dependencies(GraphicsInternal
     INTERFACE bimg
     INTERFACE bx)
 
-    target_compile_definitions(GraphicsInternal
+target_compile_definitions(GraphicsInternal
     INTERFACE NOMINMAX)
