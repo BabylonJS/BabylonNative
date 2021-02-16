@@ -270,13 +270,13 @@ namespace Babylon
 
     void Graphics::Impl::SetHardwareScalingLevel(float level)
     {
-        if (level <= std::numeric_limits<float>::epsilon())
+        if (level < 1) // Disallow upscaling.
         {
-            throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
+            throw std::runtime_error{"HardwareScalingValue cannot be less than 1."};
         }
         {
             std::scoped_lock lock{m_state.Mutex};
-            m_state.Resolution.HardwareScalingLevel = std::max(level, 1.0f); // Disallow upscaling.
+            m_state.Resolution.HardwareScalingLevel = level;
         }
 
         UpdateBgfxResolution();
