@@ -1,7 +1,9 @@
 #include "AppRuntime.h"
 
 #include "v8/V8Inc.h"
+#ifdef V8_USE_INSPECTOR
 #include "v8/V8InspectorAgent.h"
+#endif
 
 namespace Babylon
 {
@@ -64,8 +66,10 @@ namespace Babylon
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
 
+#ifdef V8_USE_INSPECTOR
             Babylon::V8InspectorAgent inspector{ *Module::Instance().Platform(), isolate, context, "BabylonNative", 5643 };
             inspector.start();
+#endif
 
             Napi::Env env = Napi::Attach(context);
             Run(env);
