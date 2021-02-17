@@ -69,12 +69,10 @@ if (Platform.OS == "windows") {
     WebXRExperienceHelper.prototype.enterXRAsync = async function (...args: any[]): Promise<any> {
         // TODO: https://github.com/BabylonJS/BabylonNative/issues/577
         // Windows HMDs require different rendering behaviors than default xr rendering for mobile devices
-        return new Promise<any>(async (resolve) => {
-            const sessionManager = await originalEnterXRAsync.apply(this, args);
-            this.scene.clearColor = Color3.Black().toColor4();
-            this.scene.autoClear = true;
-            resolve(sessionManager);
-        });
+        const sessionManager = await originalEnterXRAsync.apply(this, args);
+        this.scene.clearColor = Color3.Black().toColor4();
+        this.scene.autoClear = true;
+        return sessionManager;
     }
 }
 
