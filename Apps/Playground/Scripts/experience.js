@@ -20,7 +20,7 @@ function CreateSpheresAsync() {
     for (var i = 0; i < size; i++) {
         for (var j = 0; j < size; j++) {
             for (var k = 0; k < size; k++) {
-                var sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9, scene);
+                var sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9);
                 sphere.position.x = i;
                 sphere.position.y = j;
                 sphere.position.z = k;
@@ -32,22 +32,37 @@ function CreateSpheresAsync() {
 }
 
 function CreateInputHandling(scene) {
-    var inputManager = new InputManager();
-    var priorX = inputManager.pointerX;
-    var priorY = inputManager.pointerY;
-    var x = 0;
-    var y = 0;
-    scene.onBeforeRenderObservable.add(function () {
-        x = inputManager.pointerX;
-        y = inputManager.pointerY;
+    const deviceSourceManager = new BABYLON.DeviceSourceManager(scene.getEngine());
+    let priorX = undefined;
+    let priorY = undefined;
 
-        if (inputManager.isPointerDown) {
-            scene.activeCamera.alpha += 0.01 * (priorX - x);
-            scene.activeCamera.beta += 0.01 * (priorY - y);
+    scene.onBeforeRenderObservable.add(function () {
+        let x = undefined;
+        let y = undefined;
+
+        let pointer = deviceSourceManager.getDeviceSource(BABYLON.DeviceType.Touch);
+        if (pointer === null) {
+            pointer = deviceSourceManager.getDeviceSource(BABYLON.DeviceType.Mouse);
+            if (pointer !== null && pointer.getInput(BABYLON.PointerInput.LeftClick) === 0) {
+                pointer = null;
+            }
         }
 
-        priorX = x;
-        priorY = y;
+        if (pointer !== null) {
+            x = pointer.getInput(BABYLON.PointerInput.Horizontal);
+            y = pointer.getInput(BABYLON.PointerInput.Vertical);
+
+            if (priorX !== undefined && priorY !== undefined) {
+                scene.activeCamera.alpha += 0.01 * (priorX - x);
+                scene.activeCamera.beta += 0.01 * (priorY - y);
+            }
+
+            priorX = x;
+            priorY = y;
+        } else {
+            priorX = undefined;
+            priorY = undefined;
+        }
     });
 }
 
