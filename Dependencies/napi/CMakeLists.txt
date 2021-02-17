@@ -3,8 +3,10 @@ cmake_minimum_required(VERSION 3.12)
 project(napi)
 
 # Set per-platform defaults if no JS engine is set.
-if (WIN32)
+if (WINDOWS_STORE)
     set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
+elseif (WIN32)
+    set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for N-API.")
 elseif (ANDROID)
     # engine is selected in native build cmakelists.txt
 elseif (APPLE OR UNIX)
