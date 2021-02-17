@@ -127,7 +127,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info) 
     {
-        auto env = info.Env();
+        auto env{info.Env()};
         return Napi::Value::From(env, Graphics::Impl::GetFromJavaScript(env).GetDevicePixelRatio());
     }
 }

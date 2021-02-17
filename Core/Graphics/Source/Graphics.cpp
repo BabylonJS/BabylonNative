@@ -57,7 +57,7 @@ namespace Babylon
 
         auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = windowTypePtr;
-        pd.nwh = (void*)nativeWindowPtr;
+        pd.nwh = static_cast<void*>(nativeWindowPtr);
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
