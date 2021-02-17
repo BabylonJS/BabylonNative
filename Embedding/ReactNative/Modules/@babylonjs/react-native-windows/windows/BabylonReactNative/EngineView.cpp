@@ -25,16 +25,17 @@ namespace winrt::BabylonReactNative::implementation {
                     static_cast<uint32_t>(Windows::UI::Core::CoreInputDeviceTypes::Mouse) |
                     static_cast<uint32_t>(Windows::UI::Core::CoreInputDeviceTypes::Touch) |
                     static_cast<uint32_t>(Windows::UI::Core::CoreInputDeviceTypes::Pen));
-                auto coreInput = trueThis->CreateCoreIndependentInputSource(deviceTypes);
+                trueThis->_inputSource = trueThis->CreateCoreIndependentInputSource(deviceTypes);
 
-                trueThis->_revokerData.PointerPressedRevoker = coreInput.PointerPressed(winrt::auto_revoke, { trueThis.get(), &EngineView::OnPointerPressed });
-                trueThis->_revokerData.PointerMovedRevoker = coreInput.PointerMoved(winrt::auto_revoke, { trueThis.get(), &EngineView::OnPointerMoved });
-                trueThis->_revokerData.PointerReleasedRevoker = coreInput.PointerReleased(winrt::auto_revoke, { trueThis.get(), &EngineView::OnPointerReleased });
+                trueThis->_revokerData.PointerPressedRevoker = trueThis->_inputSource.PointerPressed(winrt::auto_revoke, { trueThis.get(), &EngineView::OnPointerPressed });
+                trueThis->_revokerData.PointerMovedRevoker = trueThis->_inputSource.PointerMoved(winrt::auto_revoke, { trueThis.get(), &EngineView::OnPointerMoved });
+                trueThis->_revokerData.PointerReleasedRevoker = trueThis->_inputSource.PointerReleased(winrt::auto_revoke, { trueThis.get(), &EngineView::OnPointerReleased });
 
-                coreInput.Dispatcher().ProcessEvents(Windows::UI::Core::CoreProcessEventsOption::ProcessUntilQuit);
+                trueThis->_inputSource.Dispatcher().ProcessEvents(Windows::UI::Core::CoreProcessEventsOption::ProcessUntilQuit);
             }
         });
 
+        // TODO: move to std::thread compared to consuming ThreadPool resources once engine lifecycle bugs are addressed and EngineView's destructor can be successfully invoked.
         _inputLoopWorker = ThreadPool::RunAsync(workItemHandler, WorkItemPriority::High, WorkItemOptions::TimeSliced);
 
         _revokerData.RenderingRevoker = CompositionTarget::Rendering(winrt::auto_revoke, [weakThis{ this->get_weak() }](auto const&, auto const&)
@@ -66,6 +67,14 @@ namespace winrt::BabylonReactNative::implementation {
         const auto position = point.Position();
         const uint32_t x = position.X < 0 ? 0 : static_cast<uint32_t>(position.X);
         const uint32_t y = position.Y < 0 ? 0 : static_cast<uint32_t>(position.Y);
+        const auto pointerId = point.PointerId();
+
+        if (!_inputSource.HasCapture())
+        {
+            _inputSource.SetPointerCapture();
+        }
+
+        _pressedPointers.insert(pointerId);
 
         if (deviceType == PointerDeviceType::Mouse)
         {
@@ -89,7 +98,6 @@ namespace winrt::BabylonReactNative::implementation {
         }
         else
         {
-            const auto pointerId = point.PointerId();
             Babylon::SetTouchButtonState(pointerId, true, x, y);
         }
     }
@@ -121,6 +129,14 @@ namespace winrt::BabylonReactNative::implementation {
         const auto position = point.Position();
         const uint32_t x = position.X < 0 ? 0 : static_cast<uint32_t>(position.X);
         const uint32_t y = position.Y < 0 ? 0 : static_cast<uint32_t>(position.Y);
+        const auto pointerId = point.PointerId();
+
+        _pressedPointers.erase(pointerId);
+        if (_pressedPointers.size() == 0 &&
+            _inputSource.HasCapture())
+        {
+            _inputSource.ReleasePointerCapture();
+        }
 
         if (point.PointerDevice().PointerDeviceType() == PointerDeviceType::Mouse)
         {
@@ -147,7 +163,6 @@ namespace winrt::BabylonReactNative::implementation {
         }
         else
         {
-            const auto pointerId = point.PointerId();
             Babylon::SetTouchButtonState(pointerId, false, x, y);
         }
     }
