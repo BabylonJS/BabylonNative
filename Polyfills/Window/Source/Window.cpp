@@ -13,7 +13,6 @@ namespace Babylon::Polyfills::Internal
         constexpr auto JS_CLASS_NAME = "Window";
         constexpr auto JS_SET_TIMEOUT_NAME = "setTimeout";
         constexpr auto JS_A_TO_B_NAME = "atob";
-
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
         constexpr auto JS_DEVICE_PIXEL_RATIO_NAME = "devicePixelRatio";
@@ -23,7 +22,7 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::HandleScope scope{env};
 
-        Napi::Function constructor = Window::DefineClass(
+        Napi::Function constructor = DefineClass(
             env,
             JS_CLASS_NAME,
             {});
@@ -58,18 +57,17 @@ namespace Babylon::Polyfills::Internal
         {
             global.Set(JS_REMOVE_EVENT_LISTENER_NAME, Napi::Function::New(env, &Window::RemoveEventListener, JS_REMOVE_EVENT_LISTENER_NAME));
         }
-        
-        //global.Set(JS_DEVICE_PIXEL_RATIO_NAME,Napi::PropertyDescriptor::Accessor(env, global, JS_DEVICE_PIXEL_RATIO_NAME, &Window::GetDevicePixelRatio, napi_default, nullptr));
-        //auto prop = Napi::PropertyDescriptor::Accessor(env, global, JS_DEVICE_PIXEL_RATIO_NAME, &Window::GetDevicePixelRatio, napi_default, nullptr);
-        //global.DefineProperty(prop);
 
-        // Create an accessor to add to the window object to define window.devicePixelRatio
-        Napi::Object descriptor{Napi::Object::New(env)};
-        descriptor.Set("enumerable", Napi::Value::From(env, true));
-        descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, JS_DEVICE_PIXEL_RATIO_NAME, jsWindow));
-        Napi::Object object{global.Get("Object").As<Napi::Object>()};
-        Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
-        defineProperty.Call(object, {global, Napi::String::New(env, "devicePixelRatio"), descriptor});
+        if (global.Get(JS_DEVICE_PIXEL_RATIO_NAME).IsUndefined()){
+            // Create an accessor to add to the window object to define window.devicePixelRatio
+            Napi::Object descriptor{Napi::Object::New(env)};
+            descriptor.Set("enumerable", Napi::Value::From(env, true));
+            descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, JS_DEVICE_PIXEL_RATIO_NAME, jsWindow));
+            Napi::Object object{global.Get("Object").As<Napi::Object>()};
+            Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
+            defineProperty.Call(object, {global, Napi::String::New(env, JS_DEVICE_PIXEL_RATIO_NAME), descriptor});
+        }
+        
     }
 
     Window& Window::GetFromJavaScript(Napi::Env env)
