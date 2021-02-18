@@ -28,6 +28,7 @@ namespace xr
             DepthExtensionSupported = TryEnableExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
             UnboundedRefSpaceSupported = TryEnableExtension(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME);
             SpatialAnchorSupported = TryEnableExtension(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
+            SpatialAnchorInteropSupported = TryEnableExtension(XR_MSFT_PERCEPTION_ANCHOR_INTEROP_EXTENSION_NAME);
             SecondaryViewConfigurationSupported = TryEnableExtension(XR_MSFT_SECONDARY_VIEW_CONFIGURATION_EXTENSION_NAME);
             FirstPersonObserverSupported = TryEnableExtension(XR_MSFT_FIRST_PERSON_OBSERVER_EXTENSION_NAME);
             HandTrackingSupported = TryEnableExtension(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
@@ -63,6 +64,7 @@ namespace xr
         bool DepthExtensionSupported{ false };
         bool UnboundedRefSpaceSupported{ false };
         bool SpatialAnchorSupported{ false };
+        bool SpatialAnchorInteropSupported{ false };
         bool SecondaryViewConfigurationSupported{ false };
         bool FirstPersonObserverSupported{ false };
         bool HandTrackingSupported{ false };

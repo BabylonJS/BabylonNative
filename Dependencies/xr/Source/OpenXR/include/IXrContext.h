@@ -16,14 +16,14 @@
 
 typedef struct IXrContext
 {
-    bool (OPENXR_CONTEXT_INTERFACE_API * IsInitialized)();
-    xr::ExtensionDispatchTable (OPENXR_CONTEXT_INTERFACE_API* Extensions)();
-    XrInstance (OPENXR_CONTEXT_INTERFACE_API * Instance)();
-    XrSystemId (OPENXR_CONTEXT_INTERFACE_API * SystemId)();
-    XrTime (OPENXR_CONTEXT_INTERFACE_API * DisplayTime)();
-    bool (OPENXR_CONTEXT_INTERFACE_API * TryEnableExtension)(const char* name);
-    XrSession (OPENXR_CONTEXT_INTERFACE_API * Session)();
-    XrSessionState (OPENXR_CONTEXT_INTERFACE_API * State)();
-    XrSpace (OPENXR_CONTEXT_INTERFACE_API * Space)();
-    bool (OPENXR_CONTEXT_INTERFACE_API * IsSessionRunning)();
+    virtual bool OPENXR_CONTEXT_INTERFACE_API IsInitialized() const = 0;
+    virtual xr::ExtensionDispatchTable* OPENXR_CONTEXT_INTERFACE_API ExtensionDispatchTable() const = 0;
+    virtual XrInstance OPENXR_CONTEXT_INTERFACE_API Instance() const = 0;
+    virtual XrSystemId OPENXR_CONTEXT_INTERFACE_API SystemId() const = 0;
+    virtual XrTime OPENXR_CONTEXT_INTERFACE_API DisplayTime() const = 0;
+    virtual bool OPENXR_CONTEXT_INTERFACE_API IsExtensionEnabled(const char* name) const = 0;
+    virtual XrSession OPENXR_CONTEXT_INTERFACE_API Session() const = 0;
+    virtual XrSessionState OPENXR_CONTEXT_INTERFACE_API State() const = 0;
+    virtual XrSpace OPENXR_CONTEXT_INTERFACE_API Space() const = 0;
+    virtual bool OPENXR_CONTEXT_INTERFACE_API IsSessionRunning() const = 0;
 } IXrContext;

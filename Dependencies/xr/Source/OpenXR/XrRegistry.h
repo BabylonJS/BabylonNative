@@ -1,25 +1,30 @@
 #pragma once
 
 #include "XrSupportedExtensions.h"
+#include "Include/IXrContext.h"
 
 namespace xr
 {
     struct SceneUnderstanding;
 
-    struct XrSessionContext
+    struct XrSessionContext : public IXrContext
     {
         XrSessionContext();
         ~XrSessionContext();
-        bool IsInitialized() const;
-        XrInstance Instance() const;
-        XrSystemId SystemId() const;
-        XrTime DisplayTime() const;
-        const std::unique_ptr<XrSupportedExtensions>& Extensions() const;
-        const XrSession Session() const;
-        const XrSessionState State() const;
-        const XrSpace Space() const;
+
+        virtual bool OPENXR_CONTEXT_INTERFACE_API IsInitialized() const override;
+        virtual xr::ExtensionDispatchTable* OPENXR_CONTEXT_INTERFACE_API ExtensionDispatchTable() const override;
+        virtual XrInstance OPENXR_CONTEXT_INTERFACE_API Instance() const override;
+        virtual XrSystemId OPENXR_CONTEXT_INTERFACE_API SystemId() const override;
+        virtual XrTime OPENXR_CONTEXT_INTERFACE_API DisplayTime() const override;
+        virtual bool OPENXR_CONTEXT_INTERFACE_API IsExtensionEnabled(const char* name) const override;
+        virtual XrSession OPENXR_CONTEXT_INTERFACE_API Session() const override;
+        virtual XrSessionState OPENXR_CONTEXT_INTERFACE_API State() const override;
+        virtual XrSpace OPENXR_CONTEXT_INTERFACE_API Space() const override;
+        virtual bool OPENXR_CONTEXT_INTERFACE_API IsSessionRunning() const override;
+
+        const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const;
         const SceneUnderstanding& SceneUnderstanding() const;
-        const bool IsSessionRunning() const;
 
         struct Impl;
         std::unique_ptr<Impl> ContextImpl;
@@ -28,5 +33,7 @@ namespace xr
     struct XrRegistry
     {
         static const XrSessionContext& Context();
+        static uintptr_t GetNativeExtension();
+        static std::string GetNativeExtensionName();
     };
 }

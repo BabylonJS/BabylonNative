@@ -416,6 +416,16 @@ namespace Babylon
             return m_session->TrySetPreferredMeshDetectorOptions(options);
         }
 
+        uintptr_t GetNativeExtension()
+        {
+            return m_session->GetNativeExtension();
+        }
+
+        std::string GetNativeExtensionType()
+        {
+            return m_session->GetNativeExtensionType();
+        }
+
     private:
         std::map<uintptr_t, FrameBufferData*> m_texturesToFrameBuffers{};
         xr::System m_system{};
@@ -2294,6 +2304,8 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
+                        InstanceAccessor("nativeExtension", &XRSession::GetNativeExtension, nullptr),
+                        InstanceAccessor("nativeExtensionType", &XRSession::GetNativeExtensionType, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
@@ -2305,7 +2317,7 @@ namespace Babylon
                         InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled),
                         InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
                         InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
-                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
+                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -2641,6 +2653,16 @@ namespace Babylon
                 const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
                 const auto result = m_xr.TrySetPreferredMeshDetectorOptions(options);
                 return Napi::Value::From(info.Env(), result);
+            }
+
+            Napi::Value GetNativeExtension(const Napi::CallbackInfo& info)
+            {
+                return Napi::Number::From(info.Env(), m_xr.GetNativeExtension());
+            }
+
+            Napi::Value GetNativeExtensionType(const Napi::CallbackInfo& info)
+            {
+                return Napi::String::From(info.Env(), m_xr.GetNativeExtensionType());
             }
         };
 
