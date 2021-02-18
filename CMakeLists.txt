@@ -24,6 +24,16 @@ else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
+if(${CMAKE_CXX_COMPILER} MATCHES "x86/cl.exe$")
+    set(ARCH "x86")
+elseif(${CMAKE_CXX_COMPILER} MATCHES "x64/cl.exe$")
+    set(ARCH "x64")
+elseif(${CMAKE_CXX_COMPILER} MATCHES "arm/cl.exe$")
+    set(ARCH "ARM")
+else()
+    message(FATAL_ERROR "Unrecognized compiler: ${CMAKE_CXX_COMPILER}")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

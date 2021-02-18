@@ -1,3 +1,6 @@
+# cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
+cmake_minimum_required(VERSION 3.18)
+
 # -------------------------------- CMakeExtensions --------------------------------
 add_subdirectory(CMakeExtensions)
 
@@ -133,3 +136,52 @@ set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 # Dependencies: none
 add_library(asio INTERFACE)
 target_include_directories(asio INTERFACE "asio/asio/include")
+
+# -------------------------------- llhttp --------------------------------
+# Dependencies: none
+if (V8_USE_INSPECTOR)
+    # Install node to use npm
+    set(NODE_VERSION "v14.15.5")
+    set(NODE_DIST "node-${NODE_VERSION}-win-${ARCH}")
+    set(NODE_PATH "${CMAKE_BINARY_DIR}/node")
+    set(NODE_ZIP "${NODE_PATH}/node.zip")
+    set(NPM_CMD "${NODE_PATH}/${NODE_DIST}/npm.cmd")
+    
+    if(NOT EXISTS ${NPM_CMD})
+        message(STATUS "Downloading https://nodejs.org/dist/${NODE_VERSION}/${NODE_DIST}.zip")
+        file(DOWNLOAD "https://nodejs.org/dist/${NODE_VERSION}/${NODE_DIST}.zip" ${NODE_ZIP})
+        file(ARCHIVE_EXTRACT INPUT ${NODE_ZIP} DESTINATION ${NODE_PATH})
+        file(REMOVE ${NODE_ZIP})
+    endif()
+    
+    set(LLHTTP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/llhttp")
+    
+    if (NOT EXISTS "${LLHTTP_DIR}/build")
+        message(STATUS "Generating llhttp library")
+        # Allow npm to use a relative-path installation of node
+        execute_process(COMMAND ${NPM_CMD} config set "scripts-prepend-node-path" true WORKING_DIRECTORY ${LLHTTP_DIR})
+        
+        # Download npm dependencies, if necessary
+        if (NOT EXISTS "${LLHTTP_DIR}/node_modules")
+            message(STATUS "Downloading npm dependencies...")
+            execute_process(COMMAND ${NPM_CMD} ci WORKING_DIRECTORY ${LLHTTP_DIR} OUTPUT_QUIET ERROR_VARIABLE NPM_CI_ERROR)
+        endif()
+
+        # Generate the library
+        message(STATUS "Running generation script...")
+        execute_process(COMMAND ${NPM_CMD} run build WORKING_DIRECTORY ${LLHTTP_DIR} ERROR_VARIABLE NPM_RUN_BUILD_ERROR)
+        
+        if (NOT ${NPM_RUN_BUILD_ERROR} STREQUAL "")
+            message(FATAL_ERROR "Problem with llhttp generation:\n${NPM_CI_ERROR}\n${NPM_RUN_BUILD_ERROR}")
+        endif()
+    endif()
+
+    set(LLHTTP_SOURCES
+        "llhttp/build/c/llhttp.c"
+        "llhttp/src/native/api.c"
+        "llhttp/src/native/http.c")
+    add_library(llhttp OBJECT ${LLHTTP_SOURCES})
+    target_include_directories(llhttp PUBLIC "llhttp/build")
+    target_include_directories(llhttp PUBLIC "llhttp/src/native")
+    set_property(TARGET llhttp PROPERTY FOLDER Dependencies)
+endif()

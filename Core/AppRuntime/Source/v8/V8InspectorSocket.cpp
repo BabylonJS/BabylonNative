@@ -5,7 +5,7 @@
 #include "V8InspectorSocket.h"
 #include "V8InspectorUtils.h"
 
-#include "llhttp.h"
+#include <llhttp.h>
 #include <cstddef>
 #include <algorithm>
 #include <cstdint>

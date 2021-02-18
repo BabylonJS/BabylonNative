@@ -28,3 +28,6 @@
 [submodule "Dependencies/asio"]
 	path = Dependencies/asio
 	url = https://github.com/chriskohlhoff/asio.git
+[submodule "Dependencies/llhttp"]
+	path = Dependencies/llhttp
+	url = https://github.com/nodejs/llhttp

@@ -10,10 +10,6 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
 
     if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         set(SOURCES ${SOURCES}
-            "Source/v8/llhttp_api.c"
-            "Source/v8/llhttp_http.c"
-            "Source/v8/llhttp.h"
-            "Source/v8/llhttp.c"
             "Source/v8/V8Inc.h"
             "Source/v8/V8InspectorAgent.h"
             "Source/v8/V8InspectorAgent.cpp"
@@ -47,6 +43,7 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         target_link_to_dependencies(AppRuntime PRIVATE asio)
         target_compile_definitions(AppRuntime PRIVATE ASIO_STANDALONE)
+        target_link_to_dependencies(AppRuntime PRIVATE llhttp)
     endif()
 
     target_link_to_dependencies(AppRuntime

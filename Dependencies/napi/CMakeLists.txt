@@ -7,6 +7,7 @@ if (WINDOWS_STORE)
     set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for N-API.")
 elseif (WIN32)
     set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for N-API.")
+    set(V8_USE_INSPECTOR ON CACHE BOOL "Enable the V8 inspector.")
 elseif (ANDROID)
     # engine is selected in native build cmakelists.txt
 elseif (APPLE OR UNIX)
