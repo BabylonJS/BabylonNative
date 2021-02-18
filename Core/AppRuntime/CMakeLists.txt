@@ -4,7 +4,6 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         "Include/Babylon/AppRuntime.h"
         "Source/AppRuntime.cpp"
         "Source/AppRuntime${NAPI_JAVASCRIPT_ENGINE}.cpp"
-        "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.cpp"
         "Source/WorkQueue.cpp"
         "Source/WorkQueue.h")
 
