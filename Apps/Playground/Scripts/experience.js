@@ -31,6 +31,7 @@ function CreateSpheresAsync() {
     return Promise.resolve();
 }
 
+// TODO: Remove this completely and just do scene.createDefaultCamera(true, true, true) once this bug is fixed: https://github.com/BabylonJS/BabylonNative/issues/605
 function CreateInputHandling(scene) {
     const deviceSourceManager = new BABYLON.DeviceSourceManager(scene.getEngine());
     let priorX = undefined;
