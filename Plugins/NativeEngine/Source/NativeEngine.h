@@ -207,9 +207,9 @@ namespace Babylon
 
         Graphics::Impl::UpdateToken& GetUpdateToken();
 
-        arcana::cancellation_source m_cancelSource{};
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
-        ShaderCompiler m_shaderCompiler;
+        ShaderCompiler m_shaderCompiler{};
 
         ProgramData* m_currentProgram{nullptr};
         arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};

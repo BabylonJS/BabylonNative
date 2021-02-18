@@ -151,7 +151,7 @@ namespace
             auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
                 return handJointCollection.Get(info[0].As<Napi::String>());
             };
-            
+
             handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
             handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
 
@@ -159,7 +159,7 @@ namespace
         }
     }
 
-    void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)    
+    void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
         //Set Gamepad Object
@@ -288,7 +288,7 @@ namespace
 
         return options;
     }
-    
+
     void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
@@ -308,8 +308,8 @@ namespace Babylon
 
         arcana::cancellation_source& GetCancellationSource();
 
-        arcana::task<void, std::exception_ptr> BeginSession();
-        void EndSession(); // TODO: Make this asynchronous.
+        arcana::task<void, std::exception_ptr> BeginSessionAsync();
+        arcana::task<void, std::exception_ptr> EndSessionAsync();
 
         void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
 
@@ -334,7 +334,7 @@ namespace Babylon
         {
             m_session->SetDepthsNearFar(depthNear, depthFar);
         }
-        
+
         void SetPlaneDetectionEnabled(bool enabled)
         {
             m_session->SetPlaneDetectionEnabled(enabled);
@@ -374,6 +374,7 @@ namespace Babylon
         arcana::cancellation_source m_cancellationSource{};
         bool m_frameScheduled{false};
         std::vector<std::function<void(const xr::System::Session::Frame&)>> m_scheduleFrameCallbacks{};
+        arcana::manual_dispatcher<16> m_endFrameDispatcher{};
 
         void BeginFrame();
         void BeginUpdate();
@@ -392,67 +393,69 @@ namespace Babylon
     {
         m_cancellationSource.cancel();
 
-        if (m_session != nullptr)
-        {
-            if (m_frame != nullptr)
-            {
-                EndFrame();
-            }
+        // TODO: how to handle async?
+        //if (m_session != nullptr)
+        //{
+        //    if (m_frame != nullptr)
+        //    {
+        //        EndFrame();
+        //    }
 
-            EndSession();
-        }
+        //    EndSessionAsync();
+        //}
     }
 
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSession()
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSessionAsync()
     {
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
 
-        if (!m_system.IsInitialized())
-        {
-            while (!m_system.TryInitialize())
+        return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationSource, [this, getWindow{std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)}]() {
+            if (!m_system.IsInitialized())
             {
-                // do nothing
+                while (!m_system.TryInitialize())
+                {
+                    // do nothing
+                }
             }
-        }
 
-        return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationSource, [this, getWindow = std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)]() {
             return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, std::move(getWindow))
-                .then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+                .then(m_runtimeScheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
                     m_session = std::move(session);
                 });
         });
     }
 
-    // TODO: Make this asynchronous.
-    void NativeXr::EndSession()
+    arcana::task<void, std::exception_ptr> NativeXr::EndSessionAsync()
     {
-        assert(m_session != nullptr);
-        assert(m_frame == nullptr);
+        return arcana::make_task(m_endFrameDispatcher, m_cancellationSource, [this]() {
+            assert(m_session != nullptr);
+            assert(m_frame == nullptr);
 
-        m_session->RequestEndSession();
+            m_session->RequestEndSession();
 
-        bool shouldEndSession{};
-        bool shouldRestartSession{};
-        do
-        {
-            // Block and burn frames until XR successfully shuts down.
-            m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
-            m_frame.reset();
-        } while (!shouldEndSession);
+            bool shouldEndSession{};
+            bool shouldRestartSession{};
+            do
+            {
+                // Block and burn frames until XR successfully shuts down.
+                m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+                m_frame.reset();
+            } while (!shouldEndSession);
+        }).then(m_runtimeScheduler, m_cancellationSource, [this]() {
+            // Dispose JS textures.
+            //for (auto& frameBufferToJsTexture : m_frameBufferToJsTextureMap)
+            //{
+            //    auto jsTexture{frameBufferToJsTexture.second.Value()};
+            //    jsTexture.Get("dispose").As<Napi::Function>().Call(jsTexture, {});
+            //}
 
-        // Dispose JS textures.
-        //for (auto& frameBufferToJsTexture : m_frameBufferToJsTextureMap)
-        //{
-        //    auto jsTexture{frameBufferToJsTexture.second.Value()};
-        //    jsTexture.Get("dispose").As<Napi::Function>().Call(jsTexture, {});
-        //}
+            m_frameBufferToJsTextureMap.clear();
+            m_textureToFrameBufferMap.clear();
+            m_activeTextures.clear();
 
-        m_frameBufferToJsTextureMap.clear();
-        m_textureToFrameBufferMap.clear();
-        m_activeTextures.clear();
-
-        m_session.reset();
+            m_session.reset();
+        });
     }
 
     void NativeXr::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
@@ -513,13 +516,14 @@ namespace Babylon
             });
         });
 
-        // Ending a session outside of calls to EndSession() is currently not supported.
+        // Ending a session outside of calls to EndSessionAsync() is currently not supported.
         assert(!shouldEndSession);
         assert(m_frame != nullptr);
     }
 
     void NativeXr::BeginUpdate()
     {
+        // TODO: is it okay to access m_frame from the js thread?
         m_activeTextures.reserve(m_frame->Views.size());
         for (const auto& view : m_frame->Views)
         {
@@ -589,6 +593,8 @@ namespace Babylon
         assert(m_frame != nullptr);
 
         m_frame.reset();
+
+        m_endFrameDispatcher.tick(m_cancellationSource);
     }
 
     arcana::cancellation_source& NativeXr::GetCancellationSource()
@@ -881,7 +887,7 @@ namespace Babylon
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
                 XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
-                
+
                 m_isFirstPersonObserver = isFirstPersonObserver;
             }
 
@@ -988,7 +994,7 @@ namespace Babylon
                     const auto& view = frame.Views[idx];
                     m_views[idx]->Update(idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver);
                 }
-                
+
                 // Check the frame to see if it has valid tracking, if it does not then the position should
                 // be flagged as being emulated.
                 m_isEmulatedPosition = !frame.IsTracking;
@@ -1011,7 +1017,7 @@ namespace Babylon
             {
                 return m_jsViews.Value();
             }
-            
+
             Napi::Value GetEmulatedPosition(const Napi::CallbackInfo& info)
             {
                 return Napi::Boolean::New(info.Env(), m_isEmulatedPosition);
@@ -1914,7 +1920,7 @@ namespace Babylon
             {
                 return m_frame->GetPlaneByID(planeID);
             }
-            
+
             xr::System::Session::Frame::Mesh& GetMeshFromID(xr::System::Session::Frame::Mesh::Identifier meshID)
             {
                 return m_frame->GetMeshByID(meshID);
@@ -1945,7 +1951,7 @@ namespace Babylon
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
             Napi::ObjectReference m_jsJointPose{};
-            
+
             bool m_hasBegunTracking{false};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
@@ -1962,7 +1968,7 @@ namespace Babylon
                     // We've received initial tracking, update the flag
                     m_hasBegunTracking = true;
                 }
-                
+
                 // TODO: Support reference spaces.
                 // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
@@ -2291,13 +2297,13 @@ namespace Babylon
 
             static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
             {
-                auto jsSession = Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}));
-                auto& session = *XRSession::Unwrap(jsSession.Value());
+                auto jsSession{Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}))};
+                auto& session{*XRSession::Unwrap(jsSession.Value())};
 
-                auto deferred = Napi::Promise::Deferred::New(info.Env());
-                session.m_xr.BeginSession()
-                    .then(session.m_runtimeScheduler, session.m_xr.GetCancellationSource(),
-                        [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
+                auto deferred{Napi::Promise::Deferred::New(info.Env())};
+                session.m_xr.BeginSessionAsync()
+                    .then(arcana::inline_scheduler, session.m_xr.GetCancellationSource(),
+                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
                                 deferred.Reject(Napi::Error::New(env, result.error()).Value());
@@ -2440,7 +2446,7 @@ namespace Babylon
                     {
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
-                        
+
                         //Now that input Source is created, create a gamepad object if enabled for the input source
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
                         if (inputSource.GamepadTrackedThisFrame)
@@ -2554,20 +2560,27 @@ namespace Babylon
 
             Napi::Value End(const Napi::CallbackInfo& info)
             {
-                m_runtimeScheduler([this]() {
-                    m_xr.EndSession();
-
-                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                    {
-                        if (name == JS_EVENT_NAME_END)
+                auto deferred{Napi::Promise::Deferred::New(info.Env())};
+                m_xr.EndSessionAsync().then(m_runtimeScheduler, m_xr.GetCancellationSource(),
+                    [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
+                        if (result.has_error())
                         {
-                            callback.Call({});
+                            deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
+                            return;
                         }
-                    }
-                });
 
-                auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(info.Env().Undefined());
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_END)
+                            {
+                                callback.Call({});
+                            }
+                        }
+
+
+                        deferred.Resolve(Env().Undefined());
+                    });
+
                 return deferred.Promise();
             }
 

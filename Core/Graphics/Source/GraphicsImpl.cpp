@@ -20,8 +20,6 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-
-    bool g_bgfxRenderFrameCalled{false};
 }
 
 namespace Babylon
@@ -66,11 +64,6 @@ namespace Babylon
     {
         // Set the thread affinity (all other rendering operations must happen on this thread).
         m_renderThreadAffinity = std::this_thread::get_id();
-
-        if (!g_bgfxRenderFrameCalled)
-        {
-            bgfx::renderFrame();
-        }
 
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -149,6 +142,9 @@ namespace Babylon
 
         if (!m_state.Bgfx.Initialized)
         {
+            // This tells bgfx to not create its own render thread.
+            bgfx::renderFrame();
+
             // Initialize bgfx.
             auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
@@ -158,6 +154,8 @@ namespace Babylon
             m_state.Bgfx.Dirty = false;
 
             m_frameBufferManager = std::make_unique<FrameBufferManager>();
+
+            m_cancellationSource = std::make_unique<arcana::cancellation_source>();
         }
     }
 
@@ -169,7 +167,7 @@ namespace Babylon
 
         if (m_state.Bgfx.Initialized)
         {
-            m_cancellationSource.cancel();
+            m_cancellationSource->cancel();
 
             m_frameBufferManager.reset();
 
@@ -192,7 +190,7 @@ namespace Babylon
 
         m_safeTimespanGuarantor.BeginSafeTimespan();
 
-        m_beforeRenderScheduler.m_dispatcher.tick(m_cancellationSource);
+        m_beforeRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
     }
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
@@ -203,7 +201,7 @@ namespace Babylon
 
         Frame();
 
-        m_afterRenderScheduler.m_dispatcher.tick(m_cancellationSource);
+        m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
     }
 
     Graphics::Impl::UpdateToken Graphics::Impl::GetUpdateToken()

@@ -103,7 +103,7 @@ namespace Babylon
 
         arcana::affinity m_renderThreadAffinity{};
 
-        arcana::cancellation_source m_cancellationSource{};
+        std::unique_ptr<arcana::cancellation_source> m_cancellationSource{};
 
         struct
         {

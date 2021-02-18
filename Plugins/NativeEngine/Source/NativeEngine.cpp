@@ -471,6 +471,7 @@ namespace Babylon
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
@@ -484,7 +485,7 @@ namespace Babylon
 
     void NativeEngine::Dispose()
     {
-        m_cancelSource.cancel();
+        m_cancellationSource->cancel();
 
         // TODO: clean up bound vertex array
 
@@ -518,7 +519,8 @@ namespace Babylon
     void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
     {
         auto vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
-        assert(vertexArray != m_boundVertexArray);
+        // TODO: should we clear the m_boundVertexArray if it gets deleted?
+        //assert(vertexArray != m_boundVertexArray);
         delete vertexArray;
     }
 
@@ -969,8 +971,8 @@ namespace Babylon
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
-        arcana::make_task(arcana::threadpool_scheduler, m_cancelSource,
-            [this, dataSpan, generateMips, invertY, texture]() {
+        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+            [this, dataSpan, generateMips, invertY, texture, cancellationSource{m_cancellationSource}]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 if (image == nullptr)
                 {
@@ -1000,7 +1002,7 @@ namespace Babylon
 
                 CreateTextureFromImage(texture, image);
             })
-            .then(m_runtimeScheduler, m_cancelSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1054,7 +1056,7 @@ namespace Babylon
             const auto typedArray{data[face].As<Napi::TypedArray>()};
             const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan, generateMips]() {
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, generateMips]() {
                 bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                 // if texture is R8, it needs to be converted as luminance (r=g=b=luminance and alpha = 1)
                 // see what's done in loadTexture
@@ -1069,10 +1071,10 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, m_cancelSource, [texture, generateMips](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, generateMips, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, generateMips);
             })
-            .then(m_runtimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1102,7 +1104,7 @@ namespace Babylon
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancelSource, [this, dataSpan]() {
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, cancellationSource{m_cancellationSource}]() {
                     bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
                     assert(image->m_format != bimg::TextureFormat::R8);
                     FlipY(image);
@@ -1112,10 +1114,10 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, m_cancelSource, [texture](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
                 CreateCubeTextureFromImages(texture, images, true);
             })
-            .then(m_runtimeScheduler, m_cancelSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1398,7 +1400,7 @@ namespace Babylon
         const auto callback{info[0].As<Napi::Function>()};
 
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this, callbackPtr{std::move(callbackPtr)}]() {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, callbackPtr{std::move(callbackPtr)}, cancellationSource{m_cancellationSource}]() {
             m_graphicsImpl.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
                 m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
                     auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
@@ -1537,28 +1539,26 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancelSource, [this]() {
-            return new Graphics::Impl::UpdateToken(m_graphicsImpl.GetUpdateToken());
-        }).then(m_runtimeScheduler, m_cancelSource, [this](auto* tokenPtr) {
-            const auto tokenScopeGuard = gsl::finally([tokenPtr]() { delete tokenPtr; });
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
+                m_requestAnimationFrameCallbacksScheduled = false;
 
-            m_requestAnimationFrameCallbacksScheduled = false;
+                auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
+                for (auto& callback : callbacks)
+                {
+                    callback.Value().Call({});
+                }
 
-            auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
-            for (auto& callback : callbacks)
-            {
-                callback.Value().Call({});
-            }
-
-            // NOTE: To allow rendering the earliest possible opportunity to occur, uncomment
-            // the following. I personally would prefer to leave this commented as it's (1)
-            // unnecessary and (2) a tether between token scenarios that are otherwise wholly
-            // decoupled; but if we want to explicitly allow early-as-possible rendering for
-            // requestAnimationFrame, this does that.
-            //{
-            //    std::scoped_lock lock{m_updateTokenMutex};
-            //    m_updateToken.reset();
-            //}
+                // NOTE: To allow rendering the earliest possible opportunity to occur, uncomment
+                // the following. I personally would prefer to leave this commented as it's (1)
+                // unnecessary and (2) a tether between token scenarios that are otherwise wholly
+                // decoupled; but if we want to explicitly allow early-as-possible rendering for
+                // requestAnimationFrame, this does that.
+                //{
+                //    std::scoped_lock lock{m_updateTokenMutex};
+                //    m_updateToken.reset();
+                //}
+            });
         });
 
         // TODO: check if error handling is necessary
