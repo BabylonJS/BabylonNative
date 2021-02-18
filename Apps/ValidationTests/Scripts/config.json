@@ -2,6 +2,12 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Light Projection Texture",
+            "playgroundId": "#CQNGRK#0",
+            "referenceImage": "LightProjectionTexture.png",
+            "errorRatio": 20.0
+        },
+        {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
             "referenceImage": "point-light-shadows.png",
