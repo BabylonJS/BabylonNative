@@ -621,12 +621,20 @@ inline bool Object::HasOwnProperty(const std::string& utf8name) const {
   return HasOwnProperty(utf8name.c_str());
 }
 
+inline Value Object::Get(Napi::Value key) const {
+    if (key.IsString()) {
+        return Get(key.As<Napi::String>().Utf8Value());
+    } else {
+        throw std::runtime_error("TODO");
+    }
+}
+
 inline Value Object::Get(const char* utf8name) const {
   return {_env, _object->getProperty(_env->rt, utf8name)};
 }
 
 inline Value Object::Get(const std::string& utf8name) const {
-  return Get(utf8name.c_str());
+  return Get(utf8name.data());
 }
 
 template <typename ValueType>
@@ -1156,7 +1164,7 @@ inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
                                             size_t bufferOffset,
                                             napi_typedarray_type type) {
   jsi::Function& ctor{env->typed_array_ctor[type]};
-  jsi::Value value{ctor.callAsConstructor(env->rt, arrayBuffer, static_cast<int>(bufferOffset), static_cast<int>(elementLength))};
+  jsi::Value value{ctor.callAsConstructor(env->rt, static_cast<jsi::Value&>(arrayBuffer), static_cast<int>(bufferOffset), static_cast<int>(elementLength))};
   return {env, std::move(value), type, elementLength, reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(arrayBuffer.Data()) + bufferOffset)};
 }
 
