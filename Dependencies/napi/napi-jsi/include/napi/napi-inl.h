@@ -634,7 +634,7 @@ inline Value Object::Get(const char* utf8name) const {
 }
 
 inline Value Object::Get(const std::string& utf8name) const {
-  return Get(utf8name.data());
+  return Get(utf8name.c_str());
 }
 
 template <typename ValueType>
