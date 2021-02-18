@@ -2,12 +2,13 @@
 
 #ifndef __clang__
 #pragma warning(push)
+#pragma warning(disable: 4100 4267 4127)
 #endif
 
-#pragma warning (disable: 4100 4267 4127)
-
 #include <v8.h>
+#ifdef V8_USE_INSPECTOR
 #include <v8-inspector.h>
+#endif
 #include <libplatform/libplatform.h>
 
 #ifndef __clang__

@@ -30,10 +30,6 @@ if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
     add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")
     if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND WIN32)
-        if (V8_USE_INSPECTOR)
-            target_compile_definitions(napi PUBLIC V8_USE_INSPECTOR)
-        endif()
-
         set(V8_VERSION "8.4.371.15")
         set(VS_PLAT_TOOLSET ${CMAKE_VS_PLATFORM_TOOLSET})
 

@@ -14,9 +14,13 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         target_compile_definitions(napi PUBLIC V8_COMPRESS_POINTERS)
     endif()
 
+    if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+        set(SOURCES ${SOURCES}
+                "Source/v8/V8Inc.h")
+    endif()
+
     if (V8_USE_INSPECTOR)
         set(SOURCES ${SOURCES}
-            "Source/v8/V8Inc.h"
             "Source/v8/V8InspectorAgent.h"
             "Source/v8/V8InspectorAgent.cpp"
             "Source/v8/V8InspectorSocket.h"
@@ -49,7 +53,10 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         target_link_to_dependencies(AppRuntime PRIVATE asio)
         target_compile_definitions(AppRuntime PRIVATE ASIO_STANDALONE)
-        target_link_to_dependencies(AppRuntime PRIVATE llhttp)
+        if (V8_USE_INSPECTOR)
+            target_compile_definitions(AppRuntime PUBLIC V8_USE_INSPECTOR)
+            target_link_to_dependencies(AppRuntime PRIVATE llhttp)
+        endif()
     endif()
 
     target_link_to_dependencies(AppRuntime
