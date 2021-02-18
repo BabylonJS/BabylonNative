@@ -4,8 +4,7 @@
         {
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
-            "referenceImage": "LightProjectionTexture.png",
-            "errorRatio": 20.0
+            "referenceImage": "LightProjectionTexture.png"
         },
         {
             "title": "Point light shadows",
