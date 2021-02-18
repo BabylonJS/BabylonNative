@@ -11,6 +11,8 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
 #include <queue>
@@ -405,6 +407,8 @@ namespace Babylon
                 InstanceMethod("getRenderAPI", &NativeEngine::GetRenderAPI),
                 InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
                 InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
+                InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
+                InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1531,5 +1535,97 @@ namespace Babylon
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
         return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
+    }
+
+    Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
+    {
+        auto env = info.Env();
+        if (!info[0].IsArray())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap first parameter must be an array.");
+        }
+        const auto parameters = info[0].As<Napi::Array>();
+        if (!parameters.Length())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap parameters are empty.");
+        }
+
+        const auto blob = parameters[0u].As<Napi::Array>();
+        if (!blob.Length())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap blob parameter is empty.");
+        }
+
+        const auto data = blob[0u].As<Napi::ArrayBuffer>();
+        if (!data.ByteLength())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
+        }
+
+        bimg::ImageContainer* image = bimg::imageParse(&m_allocator, data.Data(), static_cast<uint32_t>(data.ByteLength()));
+        if (image == nullptr)
+        {
+            throw Napi::Error::New(env, "Unable to decode image in createImageBitmap function.");
+        }
+
+        Napi::Object imageBitmap = Napi::Object::New(env);
+        Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(env, &image->m_data, image->m_size);
+        Napi::Array arr = Napi::Array::New(env).From(env, buf).As<Napi::Array>();
+
+        imageBitmap.Set("data", arr);
+        imageBitmap.Set("width", Napi::Number::New(env, image->m_width).As<Napi::Value>());
+        imageBitmap.Set("height", Napi::Number::New(env, image->m_height).As<Napi::Value>());
+        imageBitmap.Set("depth", Napi::Number::New(env, image->m_depth).As<Napi::Value>());
+        imageBitmap.Set("numLayers", Napi::Number::New(env, image->m_numLayers).As<Napi::Value>());
+        imageBitmap.Set("format", Napi::Number::New(env, image->m_format).As<Napi::Value>());
+
+        return imageBitmap;
+    }
+
+    Napi::Value NativeEngine::ResizeImageBitmap(const Napi::CallbackInfo& info)
+    {
+        const auto imageBitmap = info[0].As<Napi::Object>();
+        const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
+        const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
+
+        auto data = imageBitmap.Get("data").As<Napi::ArrayBuffer>();
+        auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
+        auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
+        auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
+
+        auto env = info.Env();
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        if (image == nullptr)
+        {
+            throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
+        }
+
+        if (format != bimg::TextureFormat::RGBA8)
+        {
+            if (format == bimg::TextureFormat::R8)
+            {
+                image->m_format = bimg::TextureFormat::A8;
+            }
+            bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
+            if (rgba == nullptr)
+            {
+                throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for ResizeImageBitmap.");
+            }
+            bimg::imageFree(image);
+            image = rgba;
+        }
+
+        auto outputData = Napi::Uint8Array::New(info.Env(), bufferWidth * bufferHeight * 4);
+        if (width != bufferWidth || height != bufferHeight)
+        {
+            stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
+                outputData.Data(), bufferWidth, bufferHeight, 0, 4);
+        }
+        else
+        {
+            memcpy(outputData.Data(), image->m_data, image->m_size);
+        }
+        return Napi::Value::From(info.Env(), outputData);
     }
 }

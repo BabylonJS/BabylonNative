@@ -508,6 +508,8 @@ namespace Babylon
         Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
+        Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
+        Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
 
         template<typename SchedulerT>
         arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
