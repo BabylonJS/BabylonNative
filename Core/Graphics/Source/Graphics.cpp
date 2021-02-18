@@ -51,7 +51,7 @@ namespace Babylon
         return m_state.Bgfx.InitState.platformData.nwh;
     }
 
-    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr)
+    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr, void* contextPtr, void* backBufferPtr)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
@@ -59,8 +59,8 @@ namespace Babylon
         auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = windowTypePtr;
         pd.nwh = nativeWindowPtr;
-        pd.context = nullptr;
-        pd.backBuffer = nullptr;
+        pd.context = contextPtr;
+        pd.backBuffer = backBufferPtr;
         pd.backBufferDS = nullptr;
     }
 
@@ -326,13 +326,19 @@ namespace Babylon
     template<>
     void Graphics::UpdateWindow<void*>(void* windowPtr)
     {
-        m_impl->SetNativeWindow(windowPtr, nullptr);
+        m_impl->SetNativeWindow(windowPtr, nullptr, nullptr, nullptr);
     }
 
     template<>
     void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
     {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr);
+        m_impl->SetNativeWindow(windowPtr, windowTypePtr, nullptr, nullptr);
+    }
+
+    template<>
+    void Graphics::UpdateWindow<void*, void*, void*, void*>(void* windowPtr, void* windowTypePtr, void* contextPtr, void* backBufferPtr)
+    {
+        m_impl->SetNativeWindow(windowPtr, windowTypePtr, contextPtr, backBufferPtr);
     }
 
     template<>
@@ -349,6 +355,15 @@ namespace Babylon
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
+        graphics->UpdateSize(width, height);
+        return graphics;
+    }
+
+    template<>
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, void*, void*,size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, void* contextPtr, void* nativeBackBufferPtr, size_t width, size_t height)
+    {
+        std::unique_ptr<Graphics> graphics{new Graphics()};
+        graphics->UpdateWindow<void*, void*, void*, void*>(nativeWindowPtr, nativeWindowTypePtr, contextPtr, nativeBackBufferPtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }
