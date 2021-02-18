@@ -1569,16 +1569,17 @@ namespace Babylon
         }
 
         Napi::Object imageBitmap = Napi::Object::New(env);
-        Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(env, &image->m_data, image->m_size);
-        Napi::Array arr = Napi::Array::New(env).From(env, buf).As<Napi::Array>();
+        auto buffer = Napi::Uint8Array::New(info.Env(), image->m_size);
+        memcpy(buffer.Data(), image->m_data, image->m_size);
 
-        imageBitmap.Set("data", arr);
+        imageBitmap.Set("data", buffer);
         imageBitmap.Set("width", Napi::Number::New(env, image->m_width).As<Napi::Value>());
         imageBitmap.Set("height", Napi::Number::New(env, image->m_height).As<Napi::Value>());
         imageBitmap.Set("depth", Napi::Number::New(env, image->m_depth).As<Napi::Value>());
         imageBitmap.Set("numLayers", Napi::Number::New(env, image->m_numLayers).As<Napi::Value>());
         imageBitmap.Set("format", Napi::Number::New(env, image->m_format).As<Napi::Value>());
 
+        bimg::imageFree(image);
         return imageBitmap;
     }
 
@@ -1588,7 +1589,7 @@ namespace Babylon
         const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
         const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
 
-        auto data = imageBitmap.Get("data").As<Napi::ArrayBuffer>();
+        auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
         auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
         auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
         auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
@@ -1626,6 +1627,7 @@ namespace Babylon
         {
             memcpy(outputData.Data(), image->m_data, image->m_size);
         }
+        bimg::imageFree(image);
         return Napi::Value::From(info.Env(), outputData);
     }
 }
