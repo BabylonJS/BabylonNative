@@ -29,15 +29,10 @@ target_include_directories(napi PUBLIC "include")
 if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
     add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")
-    if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND NOT ANDROID)
+    if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND WIN32)
         if (V8_USE_INSPECTOR)
             target_compile_definitions(napi PUBLIC V8_USE_INSPECTOR)
         endif()
-
-        # Enable V8 Pointer Compression
-        # https://v8.dev/blog/pointer-compression
-        # https://stackoverflow.com/q/62921373
-        target_compile_definitions(napi PUBLIC V8_COMPRESS_POINTERS)
 
         set(V8_VERSION "8.4.371.15")
         set(VS_PLAT_TOOLSET ${CMAKE_VS_PLATFORM_TOOLSET})
