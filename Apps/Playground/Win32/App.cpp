@@ -28,6 +28,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+bool minimized{false};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -275,11 +276,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if ((wParam & 0xFFF0) == SC_MINIMIZE)
             {
+                if (graphics)
+                {
+                    graphics->FinishRenderingCurrentFrame();
+                }
+
                 runtime->Suspend();
+
+                minimized = true;
             }
             else if ((wParam & 0xFFF0) == SC_RESTORE)
             {
+                minimized = false;
+
                 runtime->Resume();
+
+                if (graphics)
+                {
+                    graphics->StartRenderingCurrentFrame();
+                }
             }
             DefWindowProc(hWnd, message, wParam, lParam);
             break;
@@ -303,7 +318,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
-            if (graphics)
+            if (graphics && !minimized)
             {
                 graphics->FinishRenderingCurrentFrame();
                 graphics->StartRenderingCurrentFrame();
@@ -313,7 +328,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             BeginPaint(hWnd, &ps);
             EndPaint(hWnd, &ps);
 
-            InvalidateRect(hWnd, nullptr, FALSE);
+            if (!minimized)
+            {
+                InvalidateRect(hWnd, nullptr, FALSE);
+            }
             break;
         }
         case WM_SIZE:
