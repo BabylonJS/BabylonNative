@@ -4,14 +4,14 @@
 #import <Babylon/Graphics.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
-#import <Shared/InputManager.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
 
 @implementation LibNativeBridge
 
@@ -27,17 +27,16 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)init:(void*)view width:(int)inWidth height:(int)inHeight
 {
-    inputBuffer.reset();
+    nativeInput = nullptr;
     runtime.reset();
     graphics.reset();
 
     float width = inWidth;
     float height = inHeight;
     void* windowPtr = view;
-    
+
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
     runtime = std::make_unique<Babylon::AppRuntime>();
-    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([](Napi::Env env)
     {
@@ -50,7 +49,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -74,10 +73,19 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)setInputs:(int)x y:(int)y tap:(bool)tap
 {
-    if (inputBuffer)
+    if (nativeInput != nullptr)
     {
-        inputBuffer->SetPointerPosition(x, y);
-        inputBuffer->SetPointerDown(tap);
+        if (tap)
+        {
+            nativeInput->TouchDown(0, x, y);
+        }
+
+        nativeInput->TouchMove(0, x, y);
+
+        if (!tap)
+        {
+            nativeInput->TouchUp(0, x, y);
+        }
     }
 }
 
