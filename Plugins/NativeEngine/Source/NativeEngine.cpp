@@ -1539,7 +1539,7 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
     {
-        auto env = info.Env();
+        const auto env = info.Env();
         if (!info[0].IsArray())
         {
             throw Napi::Error::New(env, "CreateImageBitmap first parameter must be an array.");
@@ -1556,6 +1556,11 @@ namespace Babylon
             throw Napi::Error::New(env, "CreateImageBitmap blob parameter is empty.");
         }
 
+        if (!blob[0u].IsArrayBuffer())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap blob is not an array buffer.");
+        }
+
         const auto data = blob[0u].As<Napi::ArrayBuffer>();
         if (!data.ByteLength())
         {
@@ -1569,7 +1574,7 @@ namespace Babylon
         }
 
         Napi::Object imageBitmap = Napi::Object::New(env);
-        auto buffer = Napi::Uint8Array::New(info.Env(), image->m_size);
+        auto buffer = Napi::Uint8Array::New(env, image->m_size);
         memcpy(buffer.Data(), image->m_data, image->m_size);
 
         imageBitmap.Set("data", buffer);
@@ -1589,12 +1594,12 @@ namespace Babylon
         const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
         const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
 
-        auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
-        auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
-        auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
-        auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
+        const auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
+        const auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
+        const auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
+        const auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
 
-        auto env = info.Env();
+        const auto env = info.Env();
 
         bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
         if (image == nullptr)
@@ -1617,7 +1622,7 @@ namespace Babylon
             image = rgba;
         }
 
-        auto outputData = Napi::Uint8Array::New(info.Env(), bufferWidth * bufferHeight * 4);
+        auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
         if (width != bufferWidth || height != bufferHeight)
         {
             stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
@@ -1628,6 +1633,6 @@ namespace Babylon
             memcpy(outputData.Data(), image->m_data, image->m_size);
         }
         bimg::imageFree(image);
-        return Napi::Value::From(info.Env(), outputData);
+        return Napi::Value::From(env, outputData);
     }
 }
