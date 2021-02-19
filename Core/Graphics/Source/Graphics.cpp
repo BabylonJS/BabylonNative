@@ -3,7 +3,6 @@
 
 namespace Babylon
 {
-
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
