@@ -293,8 +293,19 @@ namespace xr
             static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX{ "/input/thumbstick/click" };
             XrAction ControllerGetThumbstickClickAction{};
 
+            static constexpr char* HAND_GET_SELECT_ACTION_NAME{ "hand_get_select_action" };
+            static constexpr char* HAND_GET_SELECT_ACTION_LOCALIZED_NAME{ "Hand Select" };
+            static constexpr char* HAND_GET_SELECT_PATH_SUFFIX{ "/input/select/value" };
+            XrAction HandGetSelectAction{};
+
+            static constexpr char* HAND_GET_SQUEEZE_ACTION_NAME{ "hand_get_squeeze_action" };
+            static constexpr char* HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME{ "Hand Squeeze" };
+            static constexpr char* HAND_GET_SQUEEZE_PATH_SUFFIX{ "/input/squeeze/value" };
+            XrAction HandGetSqueezeAction{};
+
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
+            static constexpr char* MICROSOFT_HAND_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/hand_interaction" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::SceneObject> SceneObjects{};
@@ -663,6 +674,7 @@ namespace xr
 
             std::vector<XrActionSuggestedBinding> defaultBindings{};
             std::vector<XrActionSuggestedBinding> microsoftControllerBindings{};
+            std::vector<XrActionSuggestedBinding> microsoftHandBindings{};
 
             // Create controller get grip pose action, suggested bindings, and spaces
             {
@@ -685,6 +697,12 @@ namespace xr
 
                     microsoftControllerBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
                     XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
+
+                    if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+                    {
+                        microsoftHandBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
+                        XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
+                    }
 
                     // Create subaction space
                     XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -716,6 +734,12 @@ namespace xr
                     
                     microsoftControllerBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
                     XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
+
+                    if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+                    {
+                        microsoftHandBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
+                        XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
+                    }
 
                     // Create subaction space
                     XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -796,6 +820,28 @@ namespace xr
                 microsoftControllerBindings,
                 instance);
 
+            if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+            {
+                // Create action and suggested bindings specific to hands
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.HAND_GET_SELECT_ACTION_NAME,
+                    ActionResources.HAND_GET_SELECT_ACTION_LOCALIZED_NAME,
+                    ActionResources.HAND_GET_SELECT_PATH_SUFFIX,
+                    &ActionResources.HandGetSelectAction,
+                    microsoftHandBindings,
+                    instance);
+
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.HAND_GET_SQUEEZE_ACTION_NAME,
+                    ActionResources.HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME,
+                    ActionResources.HAND_GET_SQUEEZE_PATH_SUFFIX,
+                    &ActionResources.HandGetSqueezeAction,
+                    microsoftHandBindings,
+                    instance);
+            }
+
             // Provide default suggested bindings to instance
             XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
             XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
@@ -803,12 +849,22 @@ namespace xr
             suggestedBindings.countSuggestedBindings = (uint32_t)defaultBindings.size();
             XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
 
-            // Provide Microsoft suggested binding to instance
-            XrInteractionProfileSuggestedBinding microsoftSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
-            microsoftSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
-            microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
+            // Provide Microsoft controller suggested binding to instance
+            XrInteractionProfileSuggestedBinding microsoftControllerSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftControllerSuggestedBindings.interactionProfile));
+            microsoftControllerSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
+            microsoftControllerSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftControllerSuggestedBindings));
+
+            if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+            {
+                // Provide Microsoft hand suggested binding to instance
+                XrInteractionProfileSuggestedBinding microsoftHandSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+                XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_HAND_INTERACTION_PROFILE, &microsoftHandSuggestedBindings.interactionProfile));
+                microsoftHandSuggestedBindings.suggestedBindings = microsoftHandBindings.data();
+                microsoftHandSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftHandBindings.size();
+                XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftHandSuggestedBindings));
+            }
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
@@ -1497,6 +1553,24 @@ namespace xr
                 // Get joint data
                 if (sessionImpl.HandData.HandsInitialized)
                 {
+                    if (sessionImpl.HmdImpl.Context.Extensions()->HandInteractionSupported)
+                    {
+                        const auto& controllerInfo = sessionImpl.ControllerInfo;
+                        auto& gamepadObject = InputSources[idx].GamepadObject;
+
+                        // Get interaction data
+                        if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
+                            (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched)))
+                        {
+                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+
+                            InputSources[idx].GamepadTrackedThisFrame = true;
+                        }
+                    }
+
                     XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
                     jointLocateInfo.baseSpace = sceneSpace;
                     jointLocateInfo.time = displayTime;
