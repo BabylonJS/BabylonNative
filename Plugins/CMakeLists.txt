@@ -10,3 +10,7 @@ add_subdirectory(NativeEngine)
 # Add NativeXr
 # Dependencies: NativeEngine
 add_subdirectory(NativeXr)
+
+if (APPLE OR ANDROID OR WIN32)
+    add_subdirectory(NativeCamera)
+endif()

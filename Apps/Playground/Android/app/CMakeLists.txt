@@ -63,7 +63,8 @@ target_link_libraries(BabylonNativeJNI
         Console
         Window
         ScriptLoader
-        XMLHttpRequest)
+        XMLHttpRequest
+        NativeCamera)
 
 configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"

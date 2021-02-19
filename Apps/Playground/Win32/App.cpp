@@ -15,6 +15,7 @@
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -119,6 +120,9 @@ namespace
 
             // Initialize NativeCapture. Like NativeEngine, depends on Graphics.
             Babylon::Plugins::NativeCapture::Initialize(env);
+
+            // Initialize Camera 
+            Babylon::Plugins::NativeCamera::Initialize(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);

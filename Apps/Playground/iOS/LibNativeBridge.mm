@@ -5,6 +5,7 @@
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
@@ -49,6 +50,9 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
+
+        // Initialize Camera 
+        Babylon::Plugins::NativeCamera::Initialize(env);
 
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });

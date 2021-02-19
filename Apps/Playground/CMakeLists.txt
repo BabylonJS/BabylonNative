@@ -23,7 +23,7 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
+        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr NativeCamera)
         set(SOURCES
             ${SOURCES}
             "iOS/AppDelegate.swift"
@@ -87,7 +87,7 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr NativeCamera)
 endif()
 
 if(WIN32)

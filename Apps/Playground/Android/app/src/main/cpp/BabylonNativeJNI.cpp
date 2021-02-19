@@ -14,6 +14,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -89,7 +90,7 @@ extern "C"
                 Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
-
+                Babylon::Plugins::NativeCamera::Initialize(env);
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
