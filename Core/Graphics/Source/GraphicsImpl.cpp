@@ -17,11 +17,7 @@ namespace Babylon
         m_state.Bgfx.Initialized = false;
 
         auto& init = m_state.Bgfx.InitState;
-#if (ANDROID)
-        init.type = bgfx::RendererType::OpenGLES;
-#else
-        init.type = bgfx::RendererType::Direct3D11;
-#endif
+        init.type = BgfxDefaultRendererType;
         init.resolution.reset = BGFX_RESET_FLAGS;
         init.callback = &Callback;
     }
