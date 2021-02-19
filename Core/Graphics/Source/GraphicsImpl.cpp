@@ -181,15 +181,15 @@ namespace Babylon
         Frame();
 
         m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
-        }
+    }
 
     Graphics::Impl::UpdateToken Graphics::Impl::GetUpdateToken()
-        {
+    {
         return {*this};
-        }
+    }
 
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
-                {
+    {
         assert(m_renderThreadAffinity.check());
         m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
@@ -240,7 +240,7 @@ namespace Babylon
     {
         std::scoped_lock lock{m_state.Mutex};
         if (m_state.Bgfx.Dirty)
-    {
+        {
             bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
 
             // Ensure bgfx rebinds all texture information.
@@ -255,14 +255,14 @@ namespace Babylon
     }
 
     void Graphics::Impl::UpdateBgfxResolution()
-        {
+    {
         std::scoped_lock lock{m_state.Mutex};
-            m_state.Bgfx.Dirty = true;
+        m_state.Bgfx.Dirty = true;
         auto& res = m_state.Bgfx.InitState.resolution;
         auto level = m_state.Resolution.HardwareScalingLevel;
         res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
         res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
-        }
+    }
 
     void Graphics::Impl::DiscardIfDirty()
     {
@@ -271,7 +271,7 @@ namespace Babylon
         {
             bgfx::discard();
         }
-        }
+    }
 
     void Graphics::Impl::Frame()
     {
@@ -296,7 +296,7 @@ namespace Babylon
         const auto threadId{std::this_thread::get_id()};
         auto it{m_threadIdToEncoder.find(threadId)};
         if (it == m_threadIdToEncoder.end())
-    {
+        {
             bgfx::Encoder* encoder{bgfx::begin(true)};
             it = m_threadIdToEncoder.emplace(threadId, encoder).first;
         }
@@ -309,12 +309,12 @@ namespace Babylon
         std::scoped_lock lock{m_threadIdToEncoderMutex};
 
         for (auto [threadId, encoder] : m_threadIdToEncoder)
-                    {
+        {
             bgfx::end(encoder);
         }
 
         m_threadIdToEncoder.clear();
-                    }
+    }
 
     void Graphics::Impl::CaptureCallback(const BgfxCallback::CaptureData& data)
     {
@@ -327,10 +327,10 @@ namespace Babylon
             m_state.Bgfx.Dirty = true;
             m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
             return;
-    }
+        }
 
         for (const auto& callback : m_captureCallbacks)
-    {
+        {
             callback(data);
         }
     }
