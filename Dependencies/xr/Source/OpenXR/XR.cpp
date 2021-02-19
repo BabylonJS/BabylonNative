@@ -1234,6 +1234,17 @@ namespace xr
 
             return true;
         }
+
+        void UpdatePoseData(xr::Pose& targetPose, XrPosef& sourcePose)
+        {
+            targetPose.Position.X = sourcePose.position.x;
+            targetPose.Position.Y = sourcePose.position.y;
+            targetPose.Position.Z = sourcePose.position.z;
+            targetPose.Orientation.X = sourcePose.orientation.x;
+            targetPose.Orientation.Y = sourcePose.orientation.y;
+            targetPose.Orientation.Z = sourcePose.orientation.z;
+            targetPose.Orientation.W = sourcePose.orientation.w;
+        }
     };
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
@@ -1483,13 +1494,7 @@ namespace xr
                     if (inputSource.TrackedThisFrame)
                     {
                         inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                        inputSource.GripSpace.Pose.Position.X = location.pose.position.x;
-                        inputSource.GripSpace.Pose.Position.Y = location.pose.position.y;
-                        inputSource.GripSpace.Pose.Position.Z = location.pose.position.z;
-                        inputSource.GripSpace.Pose.Orientation.X = location.pose.orientation.x;
-                        inputSource.GripSpace.Pose.Orientation.Y = location.pose.orientation.y;
-                        inputSource.GripSpace.Pose.Orientation.Z = location.pose.orientation.z;
-                        inputSource.GripSpace.Pose.Orientation.W = location.pose.orientation.w;
+                        m_impl->UpdatePoseData(inputSource.GripSpace.Pose, location.pose);
                     }
                 }
 
@@ -1510,13 +1515,7 @@ namespace xr
                     if (inputSource.TrackedThisFrame)
                     {
                         inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                        inputSource.AimSpace.Pose.Position.X = location.pose.position.x;
-                        inputSource.AimSpace.Pose.Position.Y = location.pose.position.y;
-                        inputSource.AimSpace.Pose.Position.Z = location.pose.position.z;
-                        inputSource.AimSpace.Pose.Orientation.X = location.pose.orientation.x;
-                        inputSource.AimSpace.Pose.Orientation.Y = location.pose.orientation.y;
-                        inputSource.AimSpace.Pose.Orientation.Z = location.pose.orientation.z;
-                        inputSource.AimSpace.Pose.Orientation.W = location.pose.orientation.w;
+                        m_impl->UpdatePoseData(inputSource.AimSpace.Pose, location.pose);
                     }
                 }
 
@@ -1605,14 +1604,8 @@ namespace xr
                             auto joint = handInfo.JointLocations[i + handInfo.UNUSED_HAND_JOINT_OFFSET];
 
                             inputSource.HandJoints[i].PoseRadius = joint.radius;
-                            inputSource.HandJoints[i].Pose.Position.X = joint.pose.position.x;
-                            inputSource.HandJoints[i].Pose.Position.Y = joint.pose.position.y;
-                            inputSource.HandJoints[i].Pose.Position.Z = joint.pose.position.z;
-                            inputSource.HandJoints[i].Pose.Orientation.X = joint.pose.orientation.x;
-                            inputSource.HandJoints[i].Pose.Orientation.Y = joint.pose.orientation.y;
-                            inputSource.HandJoints[i].Pose.Orientation.Z = joint.pose.orientation.z;
-                            inputSource.HandJoints[i].Pose.Orientation.W = joint.pose.orientation.w;
                             inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
+                            m_impl->UpdatePoseData(inputSource.HandJoints[i].Pose, joint.pose);
                         }
                     }
                     else
