@@ -1,6 +1,6 @@
 set(SOURCES
     "Include/Babylon/Graphics.h"
-    "Source/PlatformSpecificHeaders/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
+    "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/Graphics.cpp"
@@ -12,7 +12,7 @@ warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
     PUBLIC "Include"
-    PRIVATE "Source/PlatformSpecificHeaders/${BABYLON_NATIVE_PLATFORM}")
+    PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
 
 target_link_to_dependencies(Graphics
     PUBLIC JsRuntime
@@ -30,7 +30,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 add_library(GraphicsInternal INTERFACE)
 target_include_directories(GraphicsInternal
     INTERFACE "Source"
-    INTERFACE "Source/PlatformSpecificHeaders/${BABYLON_NATIVE_PLATFORM}")
+    INTERFACE "Source/${BABYLON_NATIVE_PLATFORM}")
 target_link_to_dependencies(GraphicsInternal
     INTERFACE Graphics
     INTERFACE JsRuntimeInternal
