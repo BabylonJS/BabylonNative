@@ -62,9 +62,6 @@ namespace Babylon
     Graphics::Impl::Impl()
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
     {
-        // Set the thread affinity (all other rendering operations must happen on this thread).
-        m_renderThreadAffinity = std::this_thread::get_id();
-
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
 
@@ -136,7 +133,8 @@ namespace Babylon
 
     void Graphics::Impl::EnableRendering()
     {
-        assert(m_renderThreadAffinity.check());
+        // Set the thread affinity (all other rendering operations must happen on this thread).
+        m_renderThreadAffinity = std::this_thread::get_id();
 
         std::scoped_lock lock{m_state.Mutex};
 
