@@ -18,11 +18,6 @@
 #include <sstream>
 #include <variant>
 
-namespace CameraFeed
-{
-bgfx::TextureHandle Update(bgfx::TextureHandle textureHandle);
-}
-
 namespace Babylon
 {
     namespace
@@ -1543,7 +1538,7 @@ namespace Babylon
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         if (texture) {
-            texture->Handle = CameraFeed::Update(texture->Handle);
+            //texture->Handle = CameraFeed::Update(texture->Handle);
         }
     }
 }

@@ -24,10 +24,6 @@ set(SOURCES
     "Source/ShaderCompilerTraversers.h"
     "Source/ShaderCompiler${GRAPHICS_API}.cpp")
 
-if(APPLE)
-    set(SOURCES ${SOURCES} "Source/CameraFeed.mm")
-endif()
-
 add_library(NativeEngine ${SOURCES})
 
 target_include_directories(NativeEngine PUBLIC "Include")
