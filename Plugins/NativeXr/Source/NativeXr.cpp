@@ -306,7 +306,7 @@ namespace Babylon
         NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler);
         ~NativeXr();
 
-        arcana::cancellation_source& GetCancellationSource();
+        std::shared_ptr<arcana::cancellation_source>& GetCancellationSource();
 
         arcana::task<void, std::exception_ptr> BeginSessionAsync();
         arcana::task<void, std::exception_ptr> EndSessionAsync();
@@ -371,7 +371,7 @@ namespace Babylon
         xr::System m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
-        arcana::cancellation_source m_cancellationSource{};
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         bool m_frameScheduled{false};
         std::vector<std::function<void(const xr::System::Session::Frame&)>> m_scheduleFrameCallbacks{};
         arcana::manual_dispatcher<16> m_endFrameDispatcher{};
@@ -386,12 +386,13 @@ namespace Babylon
         : m_env{env}
         , m_runtimeScheduler{runtimeScheduler}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(m_env)}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
     }
 
     NativeXr::~NativeXr()
     {
-        m_cancellationSource.cancel();
+        m_cancellationSource->cancel();
 
         // TODO: how to handle async?
         //if (m_session != nullptr)
@@ -410,25 +411,26 @@ namespace Babylon
         assert(m_session == nullptr);
         assert(m_frame == nullptr);
 
-        return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationSource, [this, getWindow{std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)}]() {
-            if (!m_system.IsInitialized())
-            {
-                while (!m_system.TryInitialize())
+        return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationSource,
+            [this, getWindow{std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)}, cancellationSource{m_cancellationSource}]() {
+                if (!m_system.IsInitialized())
                 {
-                    // do nothing
+                    while (!m_system.TryInitialize())
+                    {
+                        // do nothing
+                    }
                 }
-            }
 
-            return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, std::move(getWindow))
-                .then(m_runtimeScheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
-                    m_session = std::move(session);
-                });
-        });
+                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, std::move(getWindow))
+                    .then(m_runtimeScheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](std::shared_ptr<xr::System::Session> session) {
+                        m_session = std::move(session);
+                    });
+            });
     }
 
     arcana::task<void, std::exception_ptr> NativeXr::EndSessionAsync()
     {
-        return arcana::make_task(m_endFrameDispatcher, m_cancellationSource, [this]() {
+        return arcana::make_task(m_endFrameDispatcher, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
             assert(m_session != nullptr);
             assert(m_frame == nullptr);
 
@@ -442,7 +444,7 @@ namespace Babylon
                 m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
                 m_frame.reset();
             } while (!shouldEndSession);
-        }).then(m_runtimeScheduler, m_cancellationSource, [this]() {
+        }).then(m_runtimeScheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
             // Dispose JS textures.
             //for (auto& frameBufferToJsTexture : m_frameBufferToJsTextureMap)
             //{
@@ -469,10 +471,10 @@ namespace Babylon
 
         m_scheduleFrameCallbacks.emplace_back(callback);
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this] {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}] {
             BeginFrame();
 
-            arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}]() {
+            arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 m_frameScheduled = false;
 
                 BeginUpdate();
@@ -484,7 +486,7 @@ namespace Babylon
                 }
 
                 EndUpdate();
-            }).then(m_graphicsImpl.AfterRenderScheduler(), m_cancellationSource, [this] {
+            }).then(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}] {
                 EndFrame();
             });
         });
@@ -552,10 +554,10 @@ namespace Babylon
                 //// TODO #555: Replace usage of bgfx::frame in NativeXR when creating/deleting frame buffers
                 //bgfx::frame();
 
-                arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationSource, [colorTexture, depthTexture, &view]() {
+                arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationSource, [colorTexture, depthTexture, &view, cancellationSource{m_cancellationSource}]() {
                     bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
                     bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
-                }).then(m_runtimeScheduler, m_cancellationSource, [this, colorTexture, depthTexture, &view]() {
+                }).then(m_runtimeScheduler, *m_cancellationSource, [this, colorTexture, depthTexture, &view, cancellationSource{m_cancellationSource}]() {
                     std::array<bgfx::Attachment, 2> attachments{};
                     attachments[0].init(colorTexture);
                     attachments[1].init(depthTexture);
@@ -594,10 +596,10 @@ namespace Babylon
 
         m_frame.reset();
 
-        m_endFrameDispatcher.tick(m_cancellationSource);
+        m_endFrameDispatcher.tick(*m_cancellationSource);
     }
 
-    arcana::cancellation_source& NativeXr::GetCancellationSource()
+    std::shared_ptr<arcana::cancellation_source>& NativeXr::GetCancellationSource()
     {
         return m_cancellationSource;
     }
@@ -2302,8 +2304,8 @@ namespace Babylon
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr.BeginSessionAsync()
-                    .then(arcana::inline_scheduler, session.m_xr.GetCancellationSource(),
-                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
+                    .then(arcana::inline_scheduler, *session.m_xr.GetCancellationSource(),
+                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}, cancellationSource{session.m_xr.GetCancellationSource()}](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
                                 deferred.Reject(Napi::Error::New(env, result.error()).Value());
@@ -2561,8 +2563,8 @@ namespace Babylon
             Napi::Value End(const Napi::CallbackInfo& info)
             {
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
-                m_xr.EndSessionAsync().then(m_runtimeScheduler, m_xr.GetCancellationSource(),
-                    [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
+                m_xr.EndSessionAsync().then(m_runtimeScheduler, *m_xr.GetCancellationSource(),
+                    [this, deferred, cancellationSource{m_xr.GetCancellationSource()}](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
                             deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
