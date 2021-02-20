@@ -203,7 +203,7 @@ namespace Babylon
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
 
-        void Draw(Graphics::Impl::UpdateToken& updateToken, int fillMode);
+        void Draw(bgfx::Encoder* encoder, int fillMode);
 
         Graphics::Impl::UpdateToken& GetUpdateToken();
 
@@ -241,10 +241,7 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        // webgl/opengl draw call parameters allow to set first index and number of indices used for that call
-        // but with bgfx, those parameters must be set when binding the index buffer
-        // at the time of webgl binding, we don't know those values yet
-        // so a pointer to the to-bind buffer is kept and the buffer is bound to bgfx at the time of the drawcall
         const VertexArray* m_boundVertexArray{};
+        FrameBuffer* m_boundFrameBuffer{};
     };
 }

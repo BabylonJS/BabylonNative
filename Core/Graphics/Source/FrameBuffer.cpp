@@ -39,11 +39,6 @@ namespace Babylon
         return m_backBuffer;
     }
 
-    void FrameBuffer::Bind()
-    {
-        m_manager.BindFrameBuffer(this);
-    }
-
     void FrameBuffer::Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
         NewView(encoder, {});
@@ -51,7 +46,7 @@ namespace Babylon
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
     }
 
-    void FrameBuffer::SetViewPort(float x, float y, float width, float height)
+    void FrameBuffer::SetViewPort(bgfx::Encoder*, float x, float y, float width, float height)
     {
         m_requestedViewPort = {x, y, width, height};
     }

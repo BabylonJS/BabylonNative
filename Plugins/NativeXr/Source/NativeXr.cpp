@@ -306,8 +306,6 @@ namespace Babylon
         NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler);
         ~NativeXr();
 
-        std::shared_ptr<arcana::cancellation_source>& GetCancellationSource();
-
         arcana::task<void, std::exception_ptr> BeginSessionAsync();
         arcana::task<void, std::exception_ptr> EndSessionAsync();
 
@@ -457,6 +455,9 @@ namespace Babylon
             m_activeTextures.clear();
 
             m_session.reset();
+
+            m_cancellationSource->cancel();
+            m_cancellationSource = std::make_shared<arcana::cancellation_source>();
         });
     }
 
@@ -562,16 +563,15 @@ namespace Babylon
                     attachments[0].init(colorTexture);
                     attachments[1].init(depthTexture);
                     auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
-                    auto updateToken{m_graphicsImpl.GetUpdateToken()};
 
-                    auto& frameBuffer{updateToken.AddFrameBuffer(frameBufferHandle,
+                    auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle,
                         static_cast<uint16_t>(view.ColorTextureSize.Width),
                         static_cast<uint16_t>(view.ColorTextureSize.Height),
                         true)};
 
                     // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                     // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                    frameBuffer.Clear(updateToken.GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                    frameBuffer.Clear(m_graphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
 
                     m_textureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
 
@@ -597,11 +597,6 @@ namespace Babylon
         m_frame.reset();
 
         m_endFrameDispatcher.tick(*m_cancellationSource);
-    }
-
-    std::shared_ptr<arcana::cancellation_source>& NativeXr::GetCancellationSource()
-    {
-        return m_cancellationSource;
     }
 }
 
@@ -2304,8 +2299,8 @@ namespace Babylon
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr.BeginSessionAsync()
-                    .then(arcana::inline_scheduler, *session.m_xr.GetCancellationSource(),
-                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}, cancellationSource{session.m_xr.GetCancellationSource()}](const arcana::expected<void, std::exception_ptr>& result) {
+                    .then(arcana::inline_scheduler, arcana::cancellation::none(),
+                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
                                 deferred.Reject(Napi::Error::New(env, result.error()).Value());
@@ -2563,8 +2558,8 @@ namespace Babylon
             Napi::Value End(const Napi::CallbackInfo& info)
             {
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
-                m_xr.EndSessionAsync().then(m_runtimeScheduler, *m_xr.GetCancellationSource(),
-                    [this, deferred, cancellationSource{m_xr.GetCancellationSource()}](const arcana::expected<void, std::exception_ptr>& result) {
+                m_xr.EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
+                    [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
                             deferred.Reject(Napi::Error::New(Env(), result.error()).Value());

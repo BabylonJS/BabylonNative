@@ -20,30 +20,6 @@ namespace Babylon
         return m_graphicsImpl.GetEncoderForThread();
     }
 
-    FrameBuffer& Graphics::Impl::UpdateToken::AddFrameBuffer(
-        bgfx::FrameBufferHandle handle,
-        uint16_t width,
-        uint16_t height,
-        bool backBuffer)
-    {
-        return m_graphicsImpl.m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
-    }
-
-    void Graphics::Impl::UpdateToken::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
-    {
-        m_graphicsImpl.m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
-    }
-
-    FrameBuffer& Graphics::Impl::UpdateToken::DefaultFrameBuffer()
-    {
-        return m_graphicsImpl.m_frameBufferManager->DefaultFrameBuffer();
-    }
-
-    FrameBuffer& Graphics::Impl::UpdateToken::BoundFrameBuffer()
-    {
-        return m_graphicsImpl.m_frameBufferManager->BoundFrameBuffer();
-    }
-
     Graphics::Impl::Impl()
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
     {
@@ -186,6 +162,21 @@ namespace Babylon
     Graphics::Impl::UpdateToken Graphics::Impl::GetUpdateToken()
     {
         return {*this};
+    }
+
+    FrameBuffer& Graphics::Impl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
+    {
+        return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
+    }
+
+    void Graphics::Impl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
+    {
+        m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
+    }
+
+    FrameBuffer& Graphics::Impl::DefaultFrameBuffer()
+    {
+        return m_frameBufferManager->DefaultFrameBuffer();
     }
 
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)

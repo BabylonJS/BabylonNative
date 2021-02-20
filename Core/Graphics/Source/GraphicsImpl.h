@@ -30,11 +30,6 @@ namespace Babylon
 
             bgfx::Encoder* GetEncoder();
 
-            FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
-            void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
-            FrameBuffer& DefaultFrameBuffer();
-            FrameBuffer& BoundFrameBuffer();
-
         private:
             friend class Graphics::Impl;
 
@@ -79,6 +74,10 @@ namespace Babylon
         void FinishRenderingCurrentFrame();
 
         UpdateToken GetUpdateToken();
+
+        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
+        FrameBuffer& DefaultFrameBuffer();
 
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 

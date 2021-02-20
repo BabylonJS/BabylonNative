@@ -475,6 +475,7 @@ namespace Babylon
         , m_runtime{runtime}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
+        , m_boundFrameBuffer{&m_graphicsImpl.DefaultFrameBuffer()}
     {
     }
 
@@ -1245,36 +1246,35 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        auto& frameBuffer{GetUpdateToken().AddFrameBuffer(frameBufferHandle, width, height, false)};
+        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
         return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
     }
 
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
-        GetUpdateToken().RemoveFrameBuffer(frameBuffer);
+        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
-        frameBuffer.Bind();
+        auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        m_boundFrameBuffer = frameBuffer;
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
+        const auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
 
-        assert(&frameBuffer == &GetUpdateToken().BoundFrameBuffer());
+        assert(frameBuffer == m_boundFrameBuffer);
         UNUSED(frameBuffer);
 
-        GetUpdateToken().DefaultFrameBuffer().Bind();
+        m_boundFrameBuffer = &m_graphicsImpl.DefaultFrameBuffer();
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
-        auto& updateToken{GetUpdateToken()};
-        bgfx::Encoder* encoder{updateToken.GetEncoder()};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto indexStart = info[1].As<Napi::Number>().Int32Value();
@@ -1297,13 +1297,12 @@ namespace Babylon
             }
         }
 
-        Draw(updateToken, fillMode);
+        Draw(encoder, fillMode);
     }
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
-        auto& updateToken{GetUpdateToken()};
-        bgfx::Encoder* encoder{updateToken.GetEncoder()};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
@@ -1320,11 +1319,13 @@ namespace Babylon
             }
         }
 
-        Draw(updateToken, fillMode);
+        Draw(encoder, fillMode);
     }
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
         float depth{1.0f};
@@ -1359,8 +1360,7 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        auto& updateToken{GetUpdateToken()};
-        updateToken.BoundFrameBuffer().Clear(updateToken.GetEncoder(), flags, rgba, depth, stencil);
+        m_boundFrameBuffer->Clear(encoder, flags, rgba, depth, stencil);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -1375,13 +1375,16 @@ namespace Babylon
 
     void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
     {
+        // TODO: figure this out
+        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        GetUpdateToken().BoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
+        m_boundFrameBuffer->SetViewPort(nullptr, x, yOrigin, width, height);
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
@@ -1413,9 +1416,8 @@ namespace Babylon
         // TODO: handle errors
     }
 
-    void NativeEngine::Draw(Graphics::Impl::UpdateToken& updateToken, int fillMode)
+    void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)
     {
-        bgfx::Encoder* encoder{updateToken.GetEncoder()};
         uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
         {
@@ -1458,7 +1460,7 @@ namespace Babylon
             }
         }
 
-        if (!updateToken.BoundFrameBuffer().BackBuffer() && !bgfx::getCaps()->originBottomLeft)
+        if (!m_boundFrameBuffer->BackBuffer() && !bgfx::getCaps()->originBottomLeft)
         {
             // UV coordinates system are different between OpenGL and Direct3D/Metal
             // This is not an issue with loaded textures (png/jpg...) because
@@ -1515,7 +1517,7 @@ namespace Babylon
         }
 
         // Discard everything except bindings since we keep the state of everything else.
-        updateToken.BoundFrameBuffer().Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        m_boundFrameBuffer->Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     Graphics::Impl::UpdateToken& NativeEngine::GetUpdateToken()
@@ -1527,6 +1529,7 @@ namespace Babylon
                 m_updateToken.reset();
             });
         }
+
         return m_updateToken.value();
     }
 
@@ -1548,16 +1551,6 @@ namespace Babylon
                 {
                     callback.Value().Call({});
                 }
-
-                // NOTE: To allow rendering the earliest possible opportunity to occur, uncomment
-                // the following. I personally would prefer to leave this commented as it's (1)
-                // unnecessary and (2) a tether between token scenarios that are otherwise wholly
-                // decoupled; but if we want to explicitly allow early-as-possible rendering for
-                // requestAnimationFrame, this does that.
-                //{
-                //    std::scoped_lock lock{m_updateTokenMutex};
-                //    m_updateToken.reset();
-                //}
             });
         });
 

@@ -22,9 +22,8 @@ namespace Babylon
         uint16_t Height() const;
         bool BackBuffer() const;
 
-        void Bind();
         void Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
-        void SetViewPort(float x, float y, float width, float height);
+        void SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
 
     private:
