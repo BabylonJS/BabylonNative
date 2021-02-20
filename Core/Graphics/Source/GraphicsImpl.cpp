@@ -90,13 +90,13 @@ namespace Babylon
 
     void Graphics::Impl::EnableRendering()
     {
-        // Set the thread affinity (all other rendering operations must happen on this thread).
-        m_renderThreadAffinity = std::this_thread::get_id();
-
         std::scoped_lock lock{m_state.Mutex};
 
         if (!m_state.Bgfx.Initialized)
         {
+            // Set the thread affinity (all other rendering operations must happen on this thread).
+            m_renderThreadAffinity = std::this_thread::get_id();
+
             // This tells bgfx to not create its own render thread.
             bgfx::renderFrame();
 
