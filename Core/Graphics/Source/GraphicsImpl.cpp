@@ -86,11 +86,14 @@ namespace Babylon
 
         if (!m_state.Bgfx.Initialized)
         {
+            auto& init{m_state.Bgfx.InitState};
+
             // Set the thread affinity (all other rendering operations must happen on this thread).
-            m_renderThreadAffinity = std::this_thread::get_id();
+            // If context is specified, it is checked in an external thread.
+            if (init.platformData.context != nullptr)
+                m_renderThreadAffinity = std::this_thread::get_id();
 
             // Initialize bgfx.
-            auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
             bgfx::init(init);
             bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
