@@ -90,7 +90,7 @@ namespace Babylon
 
             // Set the thread affinity (all other rendering operations must happen on this thread).
             // If context is specified, it is checked in an external thread.
-            if (init.platformData.context != nullptr)
+            if (init.platformData.context == nullptr)
                 m_renderThreadAffinity = std::this_thread::get_id();
 
             // Initialize bgfx.
