@@ -449,7 +449,6 @@ namespace Babylon
         void DeleteIndexBuffer(const Napi::CallbackInfo& info);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
-        void UpdateCameraTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
         void DeleteVertexBuffer(const Napi::CallbackInfo& info);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);

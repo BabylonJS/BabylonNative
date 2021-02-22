@@ -79,49 +79,20 @@ _native.whenGraphicsReady().then(function () {
         scene.createDefaultCamera(true);
         scene.activeCamera.alpha += Math.PI;
         CreateInputHandling(scene);
-        
-
-
-        navigator.mediaDevices = {};
-        navigator.mediaDevices.getUserMedia = function () { return Promise.resolve(); }
-
-
-        var createVideoStream = function() {
-            return {
-                srcObject: {},
-                setAttribute: function () { },
-                muted: true,
-                addEventListener: function (type, callback) {
-                    this.cb = callback;
-                },
-                play: function () {
-                    this.cb();
-                },
-                readyState: 10,
-                HAVE_CURRENT_DATA: 1,
-                videoWidth: 256,
-                videoHeight: 256,
-            } // video stream
+        /*
+        var createVideoStream = function () {
+            return engine._nativeCamera.createVideo();
         };
 
         
         BABYLON.VideoTexture.prototype._getVideo = function () {
             return createVideoStream();
         }
-        
+        /*
         document.createElement = function (type) {
             return createVideoStream();
         }
-
-        engine.createDynamicTexture = function (width, height, generateMipMaps, samplingMode) {
-            return engine.createRawTexture(new Uint8Array(width * height * 4), width, height, BABYLON.Constants.TEXTUREFORMAT_RGBA, false, false, BABYLON.Constants.TEXTURE_LINEAR_LINEAR);
-        }
-
-        engine.updateVideoTexture = function (texture, video, invertY) {
-            var webGLTexture = texture._hardwareTexture.underlyingResource;
-            engine._native.updateCameraTexture(webGLTexture);
-        };
-
+        */
         //var plane = BABYLON.Mesh.CreatePlane("sphere1", 0.5, scene);
         //plane.rotation.x = Math.PI;
         //plane.rotation.y = Math.PI;
