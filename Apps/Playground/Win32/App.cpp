@@ -12,6 +12,7 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
@@ -114,6 +115,9 @@ namespace
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+
+            // Initialize NativeCapture. Like NativeEngine, depends on Graphics.
+            Babylon::Plugins::NativeCapture::Initialize(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
