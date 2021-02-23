@@ -3,6 +3,7 @@
 #import <MetalKit/MetalKit.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
+#include "NativeCamera.h"
 
 @interface CameraFeedImpl : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>{
 }
@@ -47,6 +48,13 @@ AVCaptureSession* captureSession;
 CameraFeedImpl* impl;
 
 bool initialized = false;
+
+
+CameraData* InitializeCameraTexture()
+{
+    return nullptr;
+}
+
 void UpdateCameraTexture(bgfx::TextureHandle textureHandle)
 {
     if (!initialized)
@@ -93,6 +101,10 @@ void UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(_textureBGRA));
     }
+}
+
+void DisposeCameraTexture(const CameraData* /*cameraData*/)
+{
 }
 
 }
