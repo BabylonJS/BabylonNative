@@ -13,6 +13,7 @@
 #include <GLES2/gl2ext.h>
 #include <GLES3/gl3.h>
 #include <EGL/egl.h>
+#include <EGL/eglext.h>
 
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
@@ -33,6 +34,9 @@
 
 using namespace android;
 using namespace android::global;
+
+extern ANativeWindow* g_xrWindowPtr;
+bool isXRActive = false;
 
 namespace xr
 {
@@ -363,6 +367,40 @@ namespace xr
 
         void Initialize()
         {
+            //EGLDisplay display{ eglGetCurrentDisplay() };
+            EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+
+            EGLint attributes[]
+            {
+                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+
+                EGL_BLUE_SIZE, 8,
+                EGL_GREEN_SIZE, 8,
+                EGL_RED_SIZE, 8,
+                EGL_ALPHA_SIZE, 8,
+
+                EGL_DEPTH_SIZE, 16,
+                EGL_STENCIL_SIZE, 8,
+
+                EGL_NONE
+            };
+
+            EGLint numConfigs{ 0 };
+            EGLConfig config{};
+            if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
+            {
+                throw std::runtime_error{ "Failed to choose EGL config." };
+            }
+
+            EGLint format{};
+            eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+
+//            auto width{ static_cast<size_t>(ANativeWindow_getWidth(g_xrWindowPtr)) };
+//            auto height{ static_cast<size_t>(ANativeWindow_getHeight(g_xrWindowPtr)) };
+//            ANativeWindow_setBuffersGeometry(g_xrWindowPtr, width, height, format);
+
+            surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
+
             // Note: graphicsContext is an EGLContext
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
@@ -454,16 +492,20 @@ namespace xr
             }
 
             // Get the current surface dimensions
-            size_t width{}, height{};
-            {
-                EGLDisplay display{ eglGetCurrentDisplay() };
-                EGLSurface surface{ eglGetCurrentSurface(EGL_DRAW) };
-                EGLint _width{}, _height{};
-                eglQuerySurface(display, surface, EGL_WIDTH, &_width);
-                eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
-                width = static_cast<size_t>(_width);
-                height = static_cast<size_t>(_height);
-            }
+//            size_t width{}, height{};
+//            {
+//                EGLDisplay display{ eglGetCurrentDisplay() };
+//                EGLSurface surface{ eglGetCurrentSurface(EGL_DRAW) };
+//                EGLint _width{}, _height{};
+//                eglQuerySurface(display, surface, EGL_WIDTH, &_width);
+//                eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
+//                width = static_cast<size_t>(_width);
+//                height = static_cast<size_t>(_height);
+//            }
+
+            auto width{ static_cast<size_t>(ANativeWindow_getWidth(g_xrWindowPtr)) };
+            auto height{ static_cast<size_t>(ANativeWindow_getHeight(g_xrWindowPtr)) };
+            //ANativeWindow_setBuffersGeometry(g_xrWindowPtr, width, height, 1 /* TODO */);
 
             // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
             width = std::max(width, size_t(8));
@@ -588,6 +630,10 @@ namespace xr
 
         void DrawFrame()
         {
+            EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
+            EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
+            eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, eglGetCurrentContext());
+
             // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
@@ -624,6 +670,8 @@ namespace xr
 
                 glUseProgram(0);
             }
+
+            eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), previousDrawSurface, previousReadSurface, eglGetCurrentContext());
         }
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType validHitTestTypes)
@@ -986,6 +1034,8 @@ namespace xr
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
+
+        EGLSurface surface{};
 
         GLuint cameraShaderProgramId{};
         GLuint babylonShaderProgramId{};
