@@ -2,35 +2,17 @@
 
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
-
+#include "NativeCamera.h"
 #include <vector>
 
 namespace Babylon::Plugins::Internal
 {
-    struct TextureData final
-    {
-        ~TextureData()
-        {
-            if (bgfx::isValid(Handle))
-            {
-                bgfx::destroy(Handle);
-            }
-        }
-
-        bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
-        uint32_t Width{0};
-        uint32_t Height{0};
-        uint32_t Flags{0};
-        uint8_t AnisotropicLevel{0};
-    };
-
-    void UpdateCameraTexture(bgfx::TextureHandle textrureHandle);
-
     class NativeCamera : public Napi::ObjectWrap<NativeCamera>
     {
         static constexpr auto JS_NAVIGATOR_NAME = "navigator";
         static constexpr auto JS_CLASS_NAME = "_NativeCamera";
         static constexpr auto JS_NATIVECAMERA_CONSTRUCTOR_NAME = "NativeCamera";
+        static constexpr auto JS_NATIVECAMERA_DATA = "_nativeCameraData";
     public:
 
         static void Initialize(Napi::Env env)
@@ -118,7 +100,16 @@ namespace Babylon::Plugins::Internal
                 cb.As<Napi::Function>().Call({ });
                 }));
 
-            video.Set("pause", Napi::Function::New(env, [](const Napi::CallbackInfo& ) { }));
+            video.Set("pause", Napi::Function::New(env, [this](const Napi::CallbackInfo& info) {
+                    auto _this = info.This().ToObject();
+                    auto cameraDataObject = _this.Get(JS_NATIVECAMERA_DATA);
+                    if (cameraDataObject.IsExternal())
+                    {
+                        const auto* cameraData = cameraDataObject.As<Napi::External<CameraData>>().Data();
+                        DisposeCameraTexture(cameraData);
+                        _this.Set(JS_NATIVECAMERA_DATA, info.Env().Undefined());
+                    }
+                }));
 
             return video;
         }
@@ -126,8 +117,14 @@ namespace Babylon::Plugins::Internal
         void UpdateVideoTexture(const Napi::CallbackInfo& info)
         {
             const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-            //const auto videoObject = info[0].As<Napi::Object>();
+            auto videoObject = info[1].As<Napi::Object>();
 
+            auto cameraDataObject = videoObject.Get(JS_NATIVECAMERA_DATA);
+            if (!cameraDataObject.IsExternal())
+            {
+                videoObject.Set(JS_NATIVECAMERA_DATA, Napi::External<CameraData>::New(info.Env(), InitializeCameraTexture()));
+            }
+            
             UpdateCameraTexture(texture->Handle);
         }
     };

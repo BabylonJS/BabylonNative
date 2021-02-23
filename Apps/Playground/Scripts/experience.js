@@ -88,6 +88,9 @@ _native.whenGraphicsReady().then(function () {
         BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
             mat.emissiveTexture = videoTexture;
             plane.material = mat;
+            setTimeout(function () {
+                mat.emissiveTexture.dispose();
+            }, 1000);
         }, { maxWidth: 256, maxHeight: 256 });
         
 

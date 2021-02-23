@@ -1,6 +1,7 @@
 set(SOURCES 
     "Include/Babylon/Plugins/NativeCamera.h"
-    "Source/NativeCamera.cpp")
+    "Source/NativeCamera.cpp"
+    "Source/NativeCamera.h")
 
 if(APPLE)
     set(SOURCES ${SOURCES} "Source/NativeCamera${BABYLON_NATIVE_PLATFORM}.mm")
