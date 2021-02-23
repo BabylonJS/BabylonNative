@@ -134,6 +134,7 @@ endif()
 
 if(APPLE)
     if(IOS)
+        target_link_libraries(Playground PUBLIC "-framework CoreMedia -framework AVFoundation")
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"

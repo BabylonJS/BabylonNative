@@ -7,6 +7,25 @@
 
 namespace Babylon::Plugins::Internal
 {
+    struct TextureData final
+    {
+        ~TextureData()
+        {
+            if (bgfx::isValid(Handle))
+            {
+                bgfx::destroy(Handle);
+            }
+        }
+
+        bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
+        uint32_t Width{0};
+        uint32_t Height{0};
+        uint32_t Flags{0};
+        uint8_t AnisotropicLevel{0};
+    };
+
+    void UpdateCameraTexture(bgfx::TextureHandle textrureHandle);
+
     class NativeCamera : public Napi::ObjectWrap<NativeCamera>
     {
         static constexpr auto JS_NAVIGATOR_NAME = "navigator";
@@ -53,7 +72,7 @@ namespace Babylon::Plugins::Internal
                         deferred.Resolve(env.Null());
                     });
                 
-                return std::move(promise);
+                return promise;
                 }));
             navigator.Set("mediaDevices", mediaDevices);
         }
@@ -106,13 +125,10 @@ namespace Babylon::Plugins::Internal
 
         void UpdateVideoTexture(const Napi::CallbackInfo& info)
         {
-            const auto nativeTextureObject = info[0].As<Napi::Object>();
-            const auto videoObject = info[0].As<Napi::Object>();
+            const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+            //const auto videoObject = info[0].As<Napi::Object>();
 
-            // Lazy video object initialization
-
-            //const auto nativeTextureHandle = nativeTextureObject.Get("Handle").As<Napi::Number>().Uint32Value();
-
+            UpdateCameraTexture(texture->Handle);
         }
     };
 }
