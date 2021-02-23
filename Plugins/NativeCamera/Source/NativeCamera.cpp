@@ -105,8 +105,8 @@ namespace Babylon::Plugins::Internal
                     auto cameraDataObject = _this.Get(JS_NATIVECAMERA_DATA);
                     if (cameraDataObject.IsExternal())
                     {
-                        const auto* cameraData = cameraDataObject.As<Napi::External<CameraData>>().Data();
-                        DisposeCameraTexture(cameraData);
+                        const auto* cameraInterface = cameraDataObject.As<Napi::External<CameraInterface>>().Data();
+                        delete cameraInterface;
                         _this.Set(JS_NATIVECAMERA_DATA, info.Env().Undefined());
                     }
                 }));
@@ -119,14 +119,14 @@ namespace Babylon::Plugins::Internal
             const auto texture = info[0].As<Napi::External<TextureData>>().Data();
             auto videoObject = info[1].As<Napi::Object>();
 
-            auto cameraDataObject = videoObject.Get(JS_NATIVECAMERA_DATA);
-            if (!cameraDataObject.IsExternal())
+            auto cameraInterfaceObject = videoObject.Get(JS_NATIVECAMERA_DATA);
+            if (!cameraInterfaceObject.IsExternal())
             {
-                cameraDataObject = Napi::External<CameraData>::New(info.Env(), InitializeCameraTexture());
-                videoObject.Set(JS_NATIVECAMERA_DATA, cameraDataObject);
+                cameraInterfaceObject = Napi::External<CameraInterface>::New(info.Env(), CameraInterface::CreateInterface());
+                videoObject.Set(JS_NATIVECAMERA_DATA, cameraInterfaceObject);
             }
-            const auto* cameraData = cameraDataObject.As<Napi::External<CameraData>>().Data();
-            UpdateCameraTexture(texture->Handle, cameraData);
+            auto* cameraInterface = cameraInterfaceObject.As<Napi::External<CameraInterface>>().Data();
+            cameraInterface->UpdateCameraTexture(texture->Handle);
         }
     };
 }

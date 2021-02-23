@@ -21,11 +21,10 @@ namespace Babylon::Plugins::Internal
         uint8_t AnisotropicLevel{ 0 };
     };
 
-    struct CameraData
+    struct CameraInterface
     {
+        virtual ~CameraInterface() = default;
+        static CameraInterface* CreateInterface();
+        virtual void UpdateCameraTexture(bgfx::TextureHandle textureHandle) = 0;
     };
-    
-    CameraData* InitializeCameraTexture();
-    void UpdateCameraTexture(bgfx::TextureHandle textureHandle, const CameraData* cameraData);
-    void DisposeCameraTexture(const CameraData* cameraData);
 }

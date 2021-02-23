@@ -9,8 +9,11 @@
 
 namespace Babylon::Plugins::Internal
 {
-struct CameraDataApple : public CameraData
+struct CameraInterfaceApple : public CameraInterface
 {
+    virtual ~CameraInterfaceApple();
+    void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
+
     CameraTextureDelegate* cameraTextureDelegate;
     AVCaptureSession* avCaptureSession;
     CVMetalTextureCacheRef textureCache;
@@ -18,15 +21,15 @@ struct CameraDataApple : public CameraData
 };
 }
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>{
-    Babylon::Plugins::Internal::CameraDataApple* cameraDataApple;
+    Babylon::Plugins::Internal::CameraInterfaceApple* cameraInterfaceApple;
 }
 @end
 
 @implementation CameraTextureDelegate
 
-- (id)init:(Babylon::Plugins::Internal::CameraDataApple*)cameraDataApple {
+- (id)init:(Babylon::Plugins::Internal::CameraInterfaceApple*)cameraInterfaceApple {
     self = [super init];
-    self->cameraDataApple = cameraDataApple;
+    self->cameraInterfaceApple = cameraInterfaceApple;
     return self;
 }
 
@@ -41,7 +44,7 @@ struct CameraDataApple : public CameraData
     MTLPixelFormat pixelFormat = MTLPixelFormatBGRA8Unorm;
     
     CVMetalTextureRef texture = NULL;
-    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, cameraDataApple->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture);
+    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, cameraInterfaceApple->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture);
     if(status == kCVReturnSuccess)
     {
         textureBGRA = CVMetalTextureGetTexture(texture);
@@ -51,7 +54,7 @@ struct CameraDataApple : public CameraData
     if(textureBGRA != nil)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            cameraDataApple->textureBGRA = textureBGRA;
+            cameraInterfaceApple->textureBGRA = textureBGRA;
         });
     }
 }
@@ -61,18 +64,18 @@ struct CameraDataApple : public CameraData
 namespace Babylon::Plugins::Internal
 {
 
-CameraData* InitializeCameraTexture()
+CameraInterface* CameraInterface::CreateInterface()
 {
-    CameraDataApple* cameraDataApple = new CameraDataApple;
+    CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple;
     auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
     dispatch_sync(dispatch_get_main_queue(), ^{
         
-        CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &cameraDataApple->textureCache);
+        CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &cameraInterfaceApple->textureCache);
         
-        cameraDataApple->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:cameraDataApple];
+        cameraInterfaceApple->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:cameraInterfaceApple];
         
-        cameraDataApple->avCaptureSession = [[AVCaptureSession alloc] init];
+        cameraInterfaceApple->avCaptureSession = [[AVCaptureSession alloc] init];
 
         NSError *error;
         // Set camera capture device to default and the media type to video.
@@ -86,40 +89,37 @@ CameraData* InitializeCameraTexture()
             return;
         }
         // Adding input souce for capture session. i.e., Camera
-        [cameraDataApple->avCaptureSession addInput:input];
+        [cameraInterfaceApple->avCaptureSession addInput:input];
 
         dispatch_queue_t sampleBufferQueue = dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL);
 
         AVCaptureVideoDataOutput * dataOutput = [[AVCaptureVideoDataOutput alloc] init];
         [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
         [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)}];
-        [dataOutput setSampleBufferDelegate:cameraDataApple->cameraTextureDelegate queue:sampleBufferQueue];
+        [dataOutput setSampleBufferDelegate:cameraInterfaceApple->cameraTextureDelegate queue:sampleBufferQueue];
 
-        [cameraDataApple->avCaptureSession addOutput:dataOutput];
-        [cameraDataApple->avCaptureSession commitConfiguration];
-        [cameraDataApple->avCaptureSession startRunning];
+        [cameraInterfaceApple->avCaptureSession addOutput:dataOutput];
+        [cameraInterfaceApple->avCaptureSession commitConfiguration];
+        [cameraInterfaceApple->avCaptureSession startRunning];
     });
-    return cameraDataApple;
+    return cameraInterfaceApple;
 }
 
-void UpdateCameraTexture(bgfx::TextureHandle textureHandle, const CameraData* cameraData)
+void CameraInterfaceApple::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
 {
-    auto cameraDataApple = static_cast<const CameraDataApple*>(cameraData);
-    if (cameraDataApple->textureBGRA)
+    if (textureBGRA)
     {
-        bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(cameraDataApple->textureBGRA));
+        bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(textureBGRA));
     }
 }
 
-void DisposeCameraTexture(const CameraData* cameraData)
+CameraInterfaceApple::~CameraInterfaceApple()
 {
-    auto cameraDataApple = static_cast<const CameraDataApple*>(cameraData);
-    [cameraDataApple->avCaptureSession stopRunning];
-    [cameraDataApple->avCaptureSession release];
-    [cameraDataApple->cameraTextureDelegate release];
-    CVMetalTextureCacheFlush(cameraDataApple->textureCache, 0);
-    CFRelease(cameraDataApple->textureCache);
-    delete cameraDataApple;
+    [avCaptureSession stopRunning];
+    [avCaptureSession release];
+    [cameraTextureDelegate release];
+    CVMetalTextureCacheFlush(textureCache, 0);
+    CFRelease(textureCache);
 }
 
 }

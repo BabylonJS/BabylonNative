@@ -2,16 +2,8 @@
 
 namespace Babylon::Plugins::Internal
 {
-    CameraData* InitializeCameraTexture()
+    CameraInterface* CameraInterface::CreateInterface()
     {
         return nullptr;
-    }
-
-    void UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/, const CameraData* /*cameraData*/)
-    {
-    }
-
-    void DisposeCameraTexture(const CameraData* /*cameraData*/)
-    {
     }
 }
