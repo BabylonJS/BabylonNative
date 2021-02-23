@@ -13,31 +13,31 @@ namespace Babylon
     Graphics::~Graphics() = default;
 
     template<>
-    void Graphics::UpdateWindow<void*>(void* windowPtr)
+    void Graphics::UpdateWindow<WindowType>(WindowType windowPtr)
     {
         m_impl->SetNativeWindow(windowPtr, nullptr);
     }
 
     template<>
-    void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
+    void Graphics::UpdateWindow<WindowType, void*>(WindowType windowPtr, void* windowTypePtr)
     {
         m_impl->SetNativeWindow(windowPtr, windowTypePtr);
     }
 
     template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<WindowType, size_t, size_t>(WindowType nativeWindowPtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*>(nativeWindowPtr);
+        graphics->UpdateWindow<WindowType>(nativeWindowPtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }
 
     template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<WindowType, void*, size_t, size_t>(WindowType nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
+        graphics->UpdateWindow<WindowType, void*>(nativeWindowPtr, nativeWindowTypePtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }

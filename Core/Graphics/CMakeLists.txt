@@ -1,21 +1,24 @@
 set(SOURCES
-    "Include/Babylon/Graphics.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
+    "Include/Shared/Babylon/Graphics.h"
+    "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
+    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
-    "Source/GraphicsImpl.h")
+    "Source/GraphicsImpl.h"
     "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
-    PUBLIC "Include"
-    PUBLIC "Source/${BABYLON_NATIVE_PLATFORM}")
+    PUBLIC "Include/Shared"
+    PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}"
+    PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
 
 if(WINDOWS_STORE)
+    # link to UWP libararies
 elseif(WIN32)
     target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
@@ -23,6 +26,10 @@ elseif(ANDROID)
     target_link_to_dependencies(Graphics
         PRIVATE android
         PRIVATE AndroidExtensions)
+elseif(APPLE)
+    # link to apple libraries
+elseif(UNIX)
+    # link to linux libraries
 endif()
 
 target_link_to_dependencies(Graphics
