@@ -1539,29 +1539,13 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
     {
-        const auto env = info.Env();
-        if (!info[0].IsArray())
+        const Napi::Env env{info.Env()};
+        if (!info[0].IsArrayBuffer())
         {
-            throw Napi::Error::New(env, "CreateImageBitmap first parameter must be an array.");
+            throw Napi::Error::New(env, "CreateImageBitmap parameter is not an array buffer.");
         }
-        const auto parameters = info[0].As<Napi::Array>();
-        if (!parameters.Length())
-        {
-            throw Napi::Error::New(env, "CreateImageBitmap parameters are empty.");
-        }
-
-        const auto blob = parameters[0u].As<Napi::Array>();
-        if (!blob.Length())
-        {
-            throw Napi::Error::New(env, "CreateImageBitmap blob parameter is empty.");
-        }
-
-        if (!blob[0u].IsArrayBuffer())
-        {
-            throw Napi::Error::New(env, "CreateImageBitmap blob is not an array buffer.");
-        }
-
-        const auto data = blob[0u].As<Napi::ArrayBuffer>();
+        
+        const auto data = info[0].As<Napi::ArrayBuffer>();
         if (!data.ByteLength())
         {
             throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
@@ -1599,7 +1583,7 @@ namespace Babylon
         const auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
         const auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
 
-        const auto env = info.Env();
+        const Napi::Env env{info.Env()};
 
         bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
         if (image == nullptr)
