@@ -89,7 +89,8 @@ namespace Babylon
             auto& init{m_state.Bgfx.InitState};
 
             // Set the thread affinity (all other rendering operations must happen on this thread).
-            // If context is specified, it is checked in an external thread.
+            // If the context is not null, it means the device was created externally
+            // and you need to call RenderCurrentFrame() on the thread in which it was created.
             if (init.platformData.context == nullptr)
                 m_renderThreadAffinity = std::this_thread::get_id();
 
