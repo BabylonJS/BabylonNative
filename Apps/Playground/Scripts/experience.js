@@ -79,24 +79,7 @@ _native.whenGraphicsReady().then(function () {
         scene.createDefaultCamera(true);
         scene.activeCamera.alpha += Math.PI;
         CreateInputHandling(scene);
-        /*
-        var createVideoStream = function () {
-            return engine._nativeCamera.createVideo();
-        };
 
-        
-        BABYLON.VideoTexture.prototype._getVideo = function () {
-            return createVideoStream();
-        }
-        /*
-        document.createElement = function (type) {
-            return createVideoStream();
-        }
-        */
-        //var plane = BABYLON.Mesh.CreatePlane("sphere1", 0.5, scene);
-        //plane.rotation.x = Math.PI;
-        //plane.rotation.y = Math.PI;
-        //plane.rotation.x = Math.PI * 0.5;
         var plane = BABYLON.Mesh.CreateBox("box1", 0.3);
 
         var mat = new BABYLON.StandardMaterial("mat", scene);
