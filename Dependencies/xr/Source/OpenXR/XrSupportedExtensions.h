@@ -30,6 +30,7 @@ namespace xr
             SpatialAnchorSupported = TryEnableExtension(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
             SecondaryViewConfigurationSupported = TryEnableExtension(XR_MSFT_SECONDARY_VIEW_CONFIGURATION_EXTENSION_NAME);
             FirstPersonObserverSupported = TryEnableExtension(XR_MSFT_FIRST_PERSON_OBSERVER_EXTENSION_NAME);
+            HandInteractionSupported = TryEnableExtension(XR_MSFT_HAND_INTERACTION_EXTENSION_NAME);
             HandTrackingSupported = TryEnableExtension(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
             SceneUnderstandingSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_PREVIEW_EXTENSION_NAME);
             SceneUnderstandingSerializationSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_SERIALIZATION_PREVIEW_EXTENSION_NAME);
@@ -65,6 +66,7 @@ namespace xr
         bool SpatialAnchorSupported{ false };
         bool SecondaryViewConfigurationSupported{ false };
         bool FirstPersonObserverSupported{ false };
+        bool HandInteractionSupported{ false };
         bool HandTrackingSupported{ false };
         bool SceneUnderstandingSupported{ false };
         bool SceneUnderstandingSerializationSupported{ false };
