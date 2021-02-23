@@ -7,7 +7,7 @@ namespace Babylon::Plugins::Internal
         return nullptr;
     }
 
-    void UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/)
+    void UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/, const CameraData* /*cameraData*/)
     {
     }
 

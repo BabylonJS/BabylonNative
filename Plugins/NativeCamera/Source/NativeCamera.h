@@ -26,6 +26,6 @@ namespace Babylon::Plugins::Internal
     };
     
     CameraData* InitializeCameraTexture();
-    void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+    void UpdateCameraTexture(bgfx::TextureHandle textureHandle, const CameraData* cameraData);
     void DisposeCameraTexture(const CameraData* cameraData);
 }

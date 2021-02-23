@@ -100,7 +100,7 @@ namespace Babylon::Plugins::Internal
                 cb.As<Napi::Function>().Call({ });
                 }));
 
-            video.Set("pause", Napi::Function::New(env, [this](const Napi::CallbackInfo& info) {
+            video.Set("pause", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
                     auto _this = info.This().ToObject();
                     auto cameraDataObject = _this.Get(JS_NATIVECAMERA_DATA);
                     if (cameraDataObject.IsExternal())
@@ -122,10 +122,11 @@ namespace Babylon::Plugins::Internal
             auto cameraDataObject = videoObject.Get(JS_NATIVECAMERA_DATA);
             if (!cameraDataObject.IsExternal())
             {
-                videoObject.Set(JS_NATIVECAMERA_DATA, Napi::External<CameraData>::New(info.Env(), InitializeCameraTexture()));
+                cameraDataObject = Napi::External<CameraData>::New(info.Env(), InitializeCameraTexture());
+                videoObject.Set(JS_NATIVECAMERA_DATA, cameraDataObject);
             }
-            
-            UpdateCameraTexture(texture->Handle);
+            const auto* cameraData = cameraDataObject.As<Napi::External<CameraData>>().Data();
+            UpdateCameraTexture(texture->Handle, cameraData);
         }
     };
 }
