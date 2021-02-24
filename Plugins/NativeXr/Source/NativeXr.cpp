@@ -2662,12 +2662,24 @@ namespace Babylon
 
             Napi::Value GetNativeExtension(const Napi::CallbackInfo& info)
             {
-                return Napi::Number::From(info.Env(), m_xr.GetNativeExtension());
+                const auto nativeExtension = m_xr.GetNativeExtension();
+                if (nativeExtension)
+                {
+                    return Napi::Number::From(info.Env(), nativeExtension);
+                }
+
+                return info.Env().Undefined();
             }
 
             Napi::Value GetNativeExtensionType(const Napi::CallbackInfo& info)
             {
-                return Napi::String::From(info.Env(), m_xr.GetNativeExtensionType());
+                const auto nativeExtensionType = m_xr.GetNativeExtensionType();
+                if (!nativeExtensionType.empty())
+                {
+                    return Napi::String::From(info.Env(), nativeExtensionType);
+                }
+
+                return info.Env().Undefined();
             }
         };
 
