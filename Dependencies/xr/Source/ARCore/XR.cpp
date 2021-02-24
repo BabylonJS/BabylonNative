@@ -1330,4 +1330,16 @@ namespace xr
         // TODO
         return false;
     }
+
+    uintptr_t System::Session::GetNativeExtension()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::Session::GetNativeExtensionType()
+    {
+        // TODO
+        return "";
+    }
 }
