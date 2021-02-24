@@ -2201,8 +2201,8 @@ ObjectWrap<T>::DefineClass(napi_env env,
       if (p.staticGetter != nullptr)
       {
           descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
-            [env, getter{ p.staticGetter }, data{ p.data }](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
-              return { rt, (*getter)({env, thisVal, args, count, nullptr, data}) };
+            [env, getter{p.staticGetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
+              return {rt, (*getter)({env, thisVal, args, count, nullptr, data})};
           }));
       }
       if (p.staticSetter != nullptr) {
