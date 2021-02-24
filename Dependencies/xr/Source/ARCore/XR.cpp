@@ -36,7 +36,7 @@ using namespace android;
 using namespace android::global;
 
 extern ANativeWindow* g_xrWindowPtr;
-bool isXRActive = false;
+bool g_isXRActive = false;
 
 namespace xr
 {
@@ -339,6 +339,7 @@ namespace xr
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
         {
+            g_isXRActive = true;
         }
 
         ~Impl()
@@ -363,43 +364,42 @@ namespace xr
 
                 DestroyDisplayResources();
             }
+
+            g_isXRActive = false;
         }
 
         void Initialize()
         {
             //EGLDisplay display{ eglGetCurrentDisplay() };
-            EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+//            EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+//
+//            EGLint attributes[]
+//            {
+//                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+//
+//                EGL_BLUE_SIZE, 8,
+//                EGL_GREEN_SIZE, 8,
+//                EGL_RED_SIZE, 8,
+//                EGL_ALPHA_SIZE, 8,
+//
+//                EGL_DEPTH_SIZE, 16,
+//                EGL_STENCIL_SIZE, 8,
+//
+//                EGL_NONE
+//            };
+//
+//            EGLint numConfigs{ 0 };
+//            EGLConfig config{};
+//            if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
+//            {
+//                throw std::runtime_error{ "Failed to choose EGL config." };
+//            }
+//
+//            EGLint format{};
+//            eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+//
+//            surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
 
-            EGLint attributes[]
-            {
-                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
-
-                EGL_BLUE_SIZE, 8,
-                EGL_GREEN_SIZE, 8,
-                EGL_RED_SIZE, 8,
-                EGL_ALPHA_SIZE, 8,
-
-                EGL_DEPTH_SIZE, 16,
-                EGL_STENCIL_SIZE, 8,
-
-                EGL_NONE
-            };
-
-            EGLint numConfigs{ 0 };
-            EGLConfig config{};
-            if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
-            {
-                throw std::runtime_error{ "Failed to choose EGL config." };
-            }
-
-            EGLint format{};
-            eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-
-//            auto width{ static_cast<size_t>(ANativeWindow_getWidth(g_xrWindowPtr)) };
-//            auto height{ static_cast<size_t>(ANativeWindow_getHeight(g_xrWindowPtr)) };
-//            ANativeWindow_setBuffersGeometry(g_xrWindowPtr, width, height, format);
-
-            surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
 
             // Note: graphicsContext is an EGLContext
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
@@ -470,6 +470,49 @@ namespace xr
                 Initialize();
             }
 
+            if (g_xrWindowPtr != window)
+            {
+                window = g_xrWindowPtr;
+
+                EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+
+                if (surface)
+                {
+                    eglDestroySurface(display, surface);
+                    surface = nullptr;
+                }
+
+                if (window)
+                {
+                    EGLint attributes[]
+                            {
+                                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+
+                                    EGL_BLUE_SIZE, 8,
+                                    EGL_GREEN_SIZE, 8,
+                                    EGL_RED_SIZE, 8,
+                                    EGL_ALPHA_SIZE, 8,
+
+                                    EGL_DEPTH_SIZE, 16,
+                                    EGL_STENCIL_SIZE, 8,
+
+                                    EGL_NONE
+                            };
+
+                    EGLint numConfigs{0};
+                    EGLConfig config{};
+                    if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
+                    {
+                        throw std::runtime_error{"Failed to choose EGL config."};
+                    }
+
+                    EGLint format{};
+                    eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+
+                    surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
+                }
+            }
+
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
@@ -503,8 +546,23 @@ namespace xr
 //                height = static_cast<size_t>(_height);
 //            }
 
-            auto width{ static_cast<size_t>(ANativeWindow_getWidth(g_xrWindowPtr)) };
-            auto height{ static_cast<size_t>(ANativeWindow_getHeight(g_xrWindowPtr)) };
+            size_t width{}, height{};
+            if (window)
+            {
+                int32_t _width{ANativeWindow_getWidth(window)};
+                int32_t _height{ANativeWindow_getHeight(window)};
+                if (_width > 0 && _height > 0)
+                {
+                    width = static_cast<size_t>(_width);
+                    height = static_cast<size_t>(_height);
+                }
+            }
+            else
+            {
+                width = 0;
+            }
+//            auto width{ static_cast<size_t>(ANativeWindow_getWidth(g_xrWindowPtr)) };
+//            auto height{ static_cast<size_t>(ANativeWindow_getHeight(g_xrWindowPtr)) };
             //ANativeWindow_setBuffersGeometry(g_xrWindowPtr, width, height, 1 /* TODO */);
 
             // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
@@ -620,6 +678,13 @@ namespace xr
         {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             sessionEnded = true;
+
+            EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+
+            if (surface)
+            {
+                eglDestroySurface(display, surface);
+            }
         }
 
         Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const
@@ -630,48 +695,51 @@ namespace xr
 
         void DrawFrame()
         {
-            EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
-            EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
-            eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, eglGetCurrentContext());
-
-            // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
-            int64_t frameTimestamp{};
-            ArFrame_getTimestamp(session, frame, &frameTimestamp);
-            if (frameTimestamp)
+            if (surface)
             {
-                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
-                auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
-                auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
-                auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
-                auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+                EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
+                EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
+                eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, eglGetCurrentContext());
 
-                glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
-                glUseProgram(babylonShaderProgramId);
+                // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
+                int64_t frameTimestamp{};
+                ArFrame_getTimestamp(session, frame, &frameTimestamp);
+                if (frameTimestamp)
+                {
+                    auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
+                    auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
+                    auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
+                    auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
+                    auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
 
-                // Configure the quad vertex positions
-                auto vertexPositionsUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "vertexPositions") };
-                glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
+                    glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
+                    glUseProgram(babylonShaderProgramId);
 
-                // Configure the babylon render texture
-                auto babylonTextureUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "babylonTexture") };
-                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-                glActiveTexture(GL_TEXTURE0);
-                auto babylonTextureId{ (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer };
-                glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
+                    // Configure the quad vertex positions
+                    auto vertexPositionsUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "vertexPositions") };
+                    glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
-                // Draw the quad
-                glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
+                    // Configure the babylon render texture
+                    auto babylonTextureUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "babylonTexture") };
+                    glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                    glActiveTexture(GL_TEXTURE0);
+                    auto babylonTextureId{ (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer };
+                    glBindTexture(GL_TEXTURE_2D, babylonTextureId);
+                    auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
 
-                // Present to the screen
-                // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
-                //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
-                eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+                    // Draw the quad
+                    glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
-                glUseProgram(0);
+                    // Present to the screen
+                    // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
+                    //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
+                    eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+
+                    glUseProgram(0);
+                }
+
+                eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), previousDrawSurface, previousReadSurface, eglGetCurrentContext());
             }
-
-            eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), previousDrawSurface, previousReadSurface, eglGetCurrentContext());
         }
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType validHitTestTypes)
@@ -1035,6 +1103,7 @@ namespace xr
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
 
+        ANativeWindow* window{};
         EGLSurface surface{};
 
         GLuint cameraShaderProgramId{};
