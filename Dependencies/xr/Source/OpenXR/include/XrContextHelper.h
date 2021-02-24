@@ -9,7 +9,9 @@ namespace BabylonReactNative
     {
         xrContext = nullptr;
         if (!xrSession.isObject() ||
-            !xrSession.asObject(jsiRuntime).hasProperty(jsiRuntime, "nativeExtension"))
+            !xrSession.asObject(jsiRuntime).hasProperty(jsiRuntime, "nativeExtension") ||
+            !xrSession.asObject(jsiRuntime).hasProperty(jsiRuntime, "nativeExtensionType") ||
+            xrSession.asObject(jsiRuntime).getProperty(jsiRuntime, "nativeExtensionType").asString(jsiRuntime).utf8(jsiRuntime) != "OpenXR")
         {
             return false;
         }
