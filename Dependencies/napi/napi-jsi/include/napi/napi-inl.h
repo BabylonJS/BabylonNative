@@ -2343,7 +2343,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
   desc.name = name;
   desc.staticMethod = method;
   desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  desc.attributes = attributes;
   return desc;
 }
 
