@@ -355,6 +355,8 @@ namespace xr
 
         ~Impl()
         {
+            g_isXRActive = false;
+
             if (isInitialized)
             {
                 Planes.clear();
@@ -376,7 +378,10 @@ namespace xr
                 DestroyDisplayResources();
             }
 
-            g_isXRActive = false;
+            if (context)
+            {
+                eglDestroyContext(display, context);
+            }
         }
 
         void Initialize()
@@ -612,6 +617,8 @@ namespace xr
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
             if (frameTimestamp)
             {
+                // TODO: Remove most of the transaction stuff since it now has its own egl context?
+
                 // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
                 auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
                 auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
