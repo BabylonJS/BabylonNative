@@ -2207,8 +2207,8 @@ ObjectWrap<T>::DefineClass(napi_env env,
       }
       if (p.staticSetter != nullptr) {
           descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
-            [env, setter{ p.staticSetter }, data{ p.data }](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
-              (*setter)({ env, thisVal, args, count, nullptr, data }, { env, {rt, args[0]} });
+            [env, setter{p.staticSetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
+              (*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
               return {};
           }));
       }
