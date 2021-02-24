@@ -370,36 +370,32 @@ namespace xr
 
         void Initialize()
         {
-            //EGLDisplay display{ eglGetCurrentDisplay() };
-//            EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
-//
-//            EGLint attributes[]
-//            {
-//                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
-//
-//                EGL_BLUE_SIZE, 8,
-//                EGL_GREEN_SIZE, 8,
-//                EGL_RED_SIZE, 8,
-//                EGL_ALPHA_SIZE, 8,
-//
-//                EGL_DEPTH_SIZE, 16,
-//                EGL_STENCIL_SIZE, 8,
-//
-//                EGL_NONE
-//            };
-//
-//            EGLint numConfigs{ 0 };
-//            EGLConfig config{};
-//            if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
-//            {
-//                throw std::runtime_error{ "Failed to choose EGL config." };
-//            }
-//
-//            EGLint format{};
-//            eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-//
-//            surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
+            {
+                display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
+                EGLint attributes[]
+                {
+                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+
+                    EGL_BLUE_SIZE, 8,
+                    EGL_GREEN_SIZE, 8,
+                    EGL_RED_SIZE, 8,
+                    EGL_ALPHA_SIZE, 8,
+
+                    EGL_DEPTH_SIZE, 16,
+                    EGL_STENCIL_SIZE, 8,
+
+                    EGL_NONE
+                };
+
+                EGLint numConfigs{};
+                if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
+                {
+                    throw std::runtime_error{"Failed to choose EGL config."};
+                }
+
+                eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+            }
 
             // Note: graphicsContext is an EGLContext
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
@@ -474,8 +470,6 @@ namespace xr
             {
                 window = g_xrWindowPtr;
 
-                EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
-
                 if (surface)
                 {
                     eglDestroySurface(display, surface);
@@ -484,31 +478,6 @@ namespace xr
 
                 if (window)
                 {
-                    EGLint attributes[]
-                            {
-                                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
-
-                                    EGL_BLUE_SIZE, 8,
-                                    EGL_GREEN_SIZE, 8,
-                                    EGL_RED_SIZE, 8,
-                                    EGL_ALPHA_SIZE, 8,
-
-                                    EGL_DEPTH_SIZE, 16,
-                                    EGL_STENCIL_SIZE, 8,
-
-                                    EGL_NONE
-                            };
-
-                    EGLint numConfigs{0};
-                    EGLConfig config{};
-                    if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
-                    {
-                        throw std::runtime_error{"Failed to choose EGL config."};
-                    }
-
-                    EGLint format{};
-                    eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-
                     surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
                 }
             }
@@ -534,18 +503,7 @@ namespace xr
                 RawToPose(rawPose, ActiveFrameViews[0].Space.Pose);
             }
 
-            // Get the current surface dimensions
-//            size_t width{}, height{};
-//            {
-//                EGLDisplay display{ eglGetCurrentDisplay() };
-//                EGLSurface surface{ eglGetCurrentSurface(EGL_DRAW) };
-//                EGLint _width{}, _height{};
-//                eglQuerySurface(display, surface, EGL_WIDTH, &_width);
-//                eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
-//                width = static_cast<size_t>(_width);
-//                height = static_cast<size_t>(_height);
-//            }
-
+            // Get the current window dimensions
             size_t width{}, height{};
             if (window)
             {
@@ -557,13 +515,6 @@ namespace xr
                     height = static_cast<size_t>(_height);
                 }
             }
-            else
-            {
-                width = 0;
-            }
-//            auto width{ static_cast<size_t>(ANativeWindow_getWidth(g_xrWindowPtr)) };
-//            auto height{ static_cast<size_t>(ANativeWindow_getHeight(g_xrWindowPtr)) };
-            //ANativeWindow_setBuffersGeometry(g_xrWindowPtr, width, height, 1 /* TODO */);
 
             // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
             width = std::max(width, size_t(8));
@@ -678,8 +629,6 @@ namespace xr
         {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             sessionEnded = true;
-
-            EGLDisplay display{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
 
             if (surface)
             {
@@ -1104,6 +1053,9 @@ namespace xr
         FeaturePoint::Identifier nextFeaturePointID{};
 
         ANativeWindow* window{};
+        EGLDisplay display{};
+        EGLConfig config{};
+        EGLint format{};
         EGLSurface surface{};
 
         GLuint cameraShaderProgramId{};
