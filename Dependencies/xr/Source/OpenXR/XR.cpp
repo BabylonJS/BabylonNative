@@ -75,6 +75,10 @@ namespace xr
     XrSessionState OPENXR_CONTEXT_INTERFACE_API XrSessionContext::State() const { return ContextImpl->State; }
     XrSpace OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
     bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsSessionRunning() const { return ContextImpl->IsSessionRunning; }
+    XrResult OPENXR_CONTEXT_INTERFACE_API XrSessionContext::GetInstanceProcAddr(const char* name, PFN_xrVoidFunction* function) const
+    {
+        return xrGetInstanceProcAddr(ContextImpl->Instance.Get(), name, function);
+    }
 
     const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->Extensions; }
     const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const { return ContextImpl->SceneUnderstanding; }

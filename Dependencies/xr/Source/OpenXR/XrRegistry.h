@@ -22,6 +22,7 @@ namespace xr
         virtual XrSessionState OPENXR_CONTEXT_INTERFACE_API State() const override;
         virtual XrSpace OPENXR_CONTEXT_INTERFACE_API Space() const override;
         virtual bool OPENXR_CONTEXT_INTERFACE_API IsSessionRunning() const override;
+        virtual XrResult OPENXR_CONTEXT_INTERFACE_API GetInstanceProcAddr(const char* name, PFN_xrVoidFunction* function) const override;
 
         const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const;
         const SceneUnderstanding& SceneUnderstanding() const;
