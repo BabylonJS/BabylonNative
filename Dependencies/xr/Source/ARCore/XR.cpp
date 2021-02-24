@@ -344,8 +344,9 @@ namespace xr
         bool PlaneDetectionEnabled{ false };
         bool FeaturePointCloudEnabled{ false };
 
-        Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
+        Impl(System::Impl& systemImpl, void* graphicsContext)
             : SystemImpl{ systemImpl }
+            , parentContext{reinterpret_cast<EGLContext>(graphicsContext) }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
         {
@@ -405,9 +406,18 @@ namespace xr
                 }
 
                 eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+
+                EGLint contextAttributes[]
+                {
+                    EGL_CONTEXT_MAJOR_VERSION_KHR, 3,
+                    EGL_CONTEXT_MINOR_VERSION_KHR, 0,
+
+                    EGL_NONE
+                };
+
+                context = eglCreateContext(display, config, parentContext, contextAttributes);
             }
 
-            // Note: graphicsContext is an EGLContext
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
                 glGenTextures(1, &cameraTextureId);
@@ -659,7 +669,7 @@ namespace xr
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
             if (frameTimestamp && surface)
             {
-                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, eglGetCurrentContext()) };
+                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, context) };
 
                 auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
                 auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
@@ -1059,6 +1069,8 @@ namespace xr
         EGLDisplay display{};
         EGLConfig config{};
         EGLint format{};
+        EGLContext parentContext{};
+        EGLContext context{};
         EGLSurface surface{};
 
         GLuint cameraShaderProgramId{};
