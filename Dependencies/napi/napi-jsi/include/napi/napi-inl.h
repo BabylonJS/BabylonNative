@@ -2173,13 +2173,40 @@ ObjectWrap<T>::DefineClass(napi_env env,
     descriptor.setProperty(rt, "configurable", jsi::Value{(p.attributes & napi_configurable) != 0});
     descriptor.setProperty(rt, "enumerable", jsi::Value{(p.attributes & napi_enumerable) != 0});
 
+    jsi::Object& owner = (p.staticVoidMethod || p.staticMethod || p.staticGetter || p.staticSetter || !p.staticValue.IsEmpty()) ?
+        constructor :
+        prototype;
+
     if (p.staticVoidMethod != nullptr) {
-      //throw std::runtime_error{"TODO"};
+      descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
+          [env, method{p.staticVoidMethod}, data{p.data}](jsi::Runtime& /*rt*/, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            (*method)({env, thisVal, args, count, nullptr, data});
+            return {};
+      }));
     } else if (p.staticMethod != nullptr) {
-      //throw std::runtime_error{"TODO"};
+      descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
+          [env, method{p.staticMethod}, data{p.data}](jsi::Runtime& /*rt*/, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            (*method)({env, thisVal, args, count, nullptr, data});
+            return {};
+      }));
     } else if (p.staticGetter != nullptr || p.staticSetter != nullptr) {
-      //throw std::runtime_error{"TODO"};
+      if (p.staticGetter != nullptr)
+      {
+          descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
+            [env, getter{ p.staticGetter }, data{ p.data }](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
+              return { rt, (*getter)({env, thisVal, args, count, nullptr, data}) };
+          }));
+      }
+      if (p.staticSetter != nullptr) {
+          descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
+            [env, setter{ p.staticSetter }, data{ p.data }](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
+              (*setter)({ env, thisVal, args, count, nullptr, data }, { env, {rt, args[0]} });
+              return {};
+          }));
+      }
     } else if (!p.staticValue.IsEmpty()) {
+        descriptor.setProperty(rt, "writable", jsi::Value{(p.attributes & napi_writable) != 0});
+        descriptor.setProperty(rt, "value", static_cast<const jsi::Value&>(p.staticValue));
     } else if (p.instanceVoidMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
         [env, method{p.instanceVoidMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
@@ -2216,7 +2243,7 @@ ObjectWrap<T>::DefineClass(napi_env env,
 
     jsi::Object object{rt.global().getPropertyAsObject(rt, "Object")};
     jsi::Function defineProperty{object.getPropertyAsFunction(rt, "defineProperty")};
-    defineProperty.callWithThis(rt, object, prototype, p.utf8name, descriptor);
+    defineProperty.callWithThis(rt, object, owner, p.utf8name, descriptor);
   }
 
   return {env, std::move(constructor)};
@@ -2254,19 +2281,14 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  (void)utf8name;
-  (void)method;
-  (void)attributes;
-  (void)data;
-  //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
+  StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.utf8name = utf8name;
-  //desc.method = T::StaticVoidMethodCallbackWrapper;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.utf8name = utf8name;
+  desc.staticVoidMethod = method;
+  desc.data = callbackData;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2275,19 +2297,14 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  (void)utf8name;
-  (void)method;
-  (void)attributes;
-  (void)data;
-  //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
+  StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.utf8name = utf8name;
-  //desc.method = T::StaticMethodCallbackWrapper;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.utf8name = utf8name;
+  desc.staticMethod = method;
+  desc.data = callbackData;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2296,19 +2313,14 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  (void)name;
-  (void)method;
-  (void)attributes;
-  (void)data;
-  //StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
+  StaticVoidMethodCallbackData* callbackData = new StaticVoidMethodCallbackData({ method, data });
 
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.method = T::StaticVoidMethodCallbackWrapper;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.name = name;
+  desc.staticVoidMethod = method;
+  desc.data = callbackData;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2317,19 +2329,14 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
     StaticMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  (void)name;
-  (void)method;
-  (void)attributes;
-  (void)data;
-  //StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
+  StaticMethodCallbackData* callbackData = new StaticMethodCallbackData({ method, data });
 
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.method = T::StaticMethodCallbackWrapper;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.name = name;
+  desc.staticMethod = method;
+  desc.data = callbackData;
+  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  return desc;
 }
 
 template <typename T>
@@ -2355,22 +2362,16 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     StaticSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  (void)name;
-  (void)getter;
-  (void)setter;
-  (void)attributes;
-  (void)data;
-  //StaticAccessorCallbackData* callbackData =
-  //  new StaticAccessorCallbackData({ getter, setter, data });
+  StaticAccessorCallbackData* callbackData =
+    new StaticAccessorCallbackData({ getter, setter, data });
 
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.getter = getter != nullptr ? T::StaticGetterCallbackWrapper : nullptr;
-  //desc.setter = setter != nullptr ? T::StaticSetterCallbackWrapper : nullptr;
-  //desc.data = callbackData;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.name = name;
+  desc.staticGetter = getter != nullptr ? getter : nullptr;
+  desc.staticSetter = setter != nullptr ? setter : nullptr;
+  desc.data = callbackData;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2407,20 +2408,15 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     InstanceVoidMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  (void)name;
-  (void)method;
-  (void)attributes;
-  (void)data;
-  //InstanceVoidMethodCallbackData* callbackData =
-  //  new InstanceVoidMethodCallbackData({ method, data});
+  InstanceVoidMethodCallbackData* callbackData =
+    new InstanceVoidMethodCallbackData({ method, data});
 
-  //napi_property_descriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.method = T::InstanceVoidMethodCallbackWrapper;
-  //desc.data = data;
-  //desc.attributes = attributes;
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.name = name;
+  desc.instanceVoidMethod = method;
+  desc.data = data;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2429,19 +2425,14 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
     InstanceMethodCallback method,
     napi_property_attributes attributes,
     void* data) {
-  (void)name;
-  (void)method;
-  (void)attributes;
-  (void)data;
-  //InstanceMethodCallbackData* callbackData = new InstanceMethodCallbackData({ method, data });
+  InstanceMethodCallbackData* callbackData = new InstanceMethodCallbackData({ method, data });
 
-  //napi_property_descriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.method = T::InstanceMethodCallbackWrapper;
-  //desc.data = callbackData;
-  //desc.attributes = attributes;
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.name = name;
+  desc.instanceMethod = method;
+  desc.data = callbackData;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2467,22 +2458,16 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceAccesso
     InstanceSetterCallback setter,
     napi_property_attributes attributes,
     void* data) {
-  (void)name;
-  (void)getter;
-  (void)setter;
-  (void)attributes;
-  (void)data;
-  //InstanceAccessorCallbackData* callbackData =
-  //  new InstanceAccessorCallbackData({ getter, setter, data });
+  InstanceAccessorCallbackData* callbackData =
+    new InstanceAccessorCallbackData({ getter, setter, data });
 
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.getter = getter != nullptr ? T::InstanceGetterCallbackWrapper : nullptr;
-  //desc.setter = setter != nullptr ? T::InstanceSetterCallbackWrapper : nullptr;
-  //desc.data = callbackData;
-  //desc.attributes = attributes;
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc{};
+  desc.name = name;
+  desc.instanceGetter = getter != nullptr ? getter : nullptr;
+  desc.instanceSetter = setter != nullptr ? setter : nullptr;
+  desc.data = callbackData;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2491,22 +2476,18 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(con
   PropertyDescriptor desc{};
   desc.utf8name = utf8name;
   desc.staticValue = std::move(value);
-  desc.attributes = static_cast<napi_property_attributes>(attributes);
+  desc.attributes = attributes;
   return desc;
 }
 
 template <typename T>
 inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(Symbol name,
     Napi::Value value, napi_property_attributes attributes) {
-  (void)name;
-  (void)value;
-  (void)attributes;
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.value = value;
-  //desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
-  //return desc;
-  throw std::runtime_error{"TODO"};
+  PropertyDescriptor desc = napi_property_descriptor();
+  desc.name = name;
+  desc.value = value;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
@@ -2526,15 +2507,11 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceValue(
     Symbol name,
     Napi::Value value,
     napi_property_attributes attributes) {
-  (void)name;
-  (void)value;
-  (void)attributes;
-  //PropertyDescriptor desc = napi_property_descriptor();
-  //desc.name = name;
-  //desc.value = value;
-  //desc.attributes = attributes;
-  //return desc;
-  throw std::runtime_error{"TODO"};
+    PropertyDescriptor desc{};
+  desc.name = name;
+  desc.value = value;
+  desc.attributes = attributes;
+  return desc;
 }
 
 template <typename T>
