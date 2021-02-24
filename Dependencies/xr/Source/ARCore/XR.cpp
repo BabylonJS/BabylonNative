@@ -234,6 +234,16 @@ namespace xr
                 glBindSampler(unit - GL_TEXTURE0, id);
                 return gsl::finally([unit, id{ previousId }]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
             }
+
+            auto MakeCurrent(EGLDisplay display, EGLSurface drawSurface, EGLSurface readSurface, EGLContext context)
+            {
+                EGLDisplay previousDisplay{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+                EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
+                EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
+                EGLContext previousContext{ eglGetCurrentContext() };
+                eglMakeCurrent(display, drawSurface, readSurface, context);
+                return gsl::finally([previousDisplay, previousDrawSurface, previousReadSurface, previousContext]() { eglMakeCurrent(previousDisplay, previousDrawSurface, previousReadSurface, previousContext); });
+            }
         }
 
         bool CheckARCoreInstallStatus(bool requestInstall)
@@ -644,50 +654,43 @@ namespace xr
 
         void DrawFrame()
         {
-            if (surface)
+            // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
+            int64_t frameTimestamp{};
+            ArFrame_getTimestamp(session, frame, &frameTimestamp);
+            if (frameTimestamp && surface)
             {
-                EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
-                EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
-                eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, eglGetCurrentContext());
+                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, eglGetCurrentContext()) };
 
-                // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
-                int64_t frameTimestamp{};
-                ArFrame_getTimestamp(session, frame, &frameTimestamp);
-                if (frameTimestamp)
-                {
-                    auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
-                    auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
-                    auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
-                    auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
-                    auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
+                auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
+                auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
+                auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
+                auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
 
-                    glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
-                    glUseProgram(babylonShaderProgramId);
+                glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
+                glUseProgram(babylonShaderProgramId);
 
-                    // Configure the quad vertex positions
-                    auto vertexPositionsUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "vertexPositions") };
-                    glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
+                // Configure the quad vertex positions
+                auto vertexPositionsUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "vertexPositions") };
+                glUniform2fv(vertexPositionsUniformLocation, VERTEX_COUNT, VERTEX_POSITIONS);
 
-                    // Configure the babylon render texture
-                    auto babylonTextureUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "babylonTexture") };
-                    glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-                    glActiveTexture(GL_TEXTURE0);
-                    auto babylonTextureId{ (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer };
-                    glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-                    auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
+                // Configure the babylon render texture
+                auto babylonTextureUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "babylonTexture") };
+                glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                glActiveTexture(GL_TEXTURE0);
+                auto babylonTextureId{ (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer };
+                glBindTexture(GL_TEXTURE_2D, babylonTextureId);
+                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
 
-                    // Draw the quad
-                    glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
+                // Draw the quad
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
-                    // Present to the screen
-                    // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
-                    //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
-                    eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+                // Present to the screen
+                // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
+                //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
+                eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
 
-                    glUseProgram(0);
-                }
-
-                eglMakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), previousDrawSurface, previousReadSurface, eglGetCurrentContext());
+                glUseProgram(0);
             }
         }
 
