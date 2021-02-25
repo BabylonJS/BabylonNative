@@ -43,19 +43,29 @@ namespace
     {
         return std::string("file://") + path.generic_string();
     }
+
+    void Uninitialize()
+    {
+        if (graphics)
+        {
+            graphics->FinishRenderingCurrentFrame();
+        }
+        runtime.reset();
+        inputBuffer.reset();
+        graphics.reset();
+    }
     
     void InitBabylon(int32_t window, int width, int height, int argc, const char* const* argv)
     {
         std::vector<std::string> scripts(argv + 1, argv + argc);
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
-        // Ensure state is properly disposed.
-        graphics.reset();
-        inputBuffer.reset();
-        runtime.reset();
+        Uninitialize();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
         graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        graphics->StartRenderingCurrentFrame();
+        
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -184,36 +194,45 @@ int main(int _argc, const char* const* _argv)
     bool exit{};
     while (!exit)
     {
-        XEvent event;
-        XNextEvent(display, &event);
-        switch (event.type)
+        if (!XPending(display) && graphics)
         {
-            case Expose:
-                break;
-            case ClientMessage:
-                if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
-                {
-                    exit = true;
-                }
-                break;
-            case ConfigureNotify:
-                {
-                    const XConfigureEvent& xev = event.xconfigure;
-                    UpdateWindowSize(xev.width, xev.height);
-                }
-                break;
-            case ButtonPress:
-                inputBuffer->SetPointerDown(true);
-                break;
-            case ButtonRelease:
-                inputBuffer->SetPointerDown(false);
-                break;
-            case MotionNotify:
-                {
-                    const XMotionEvent& xmotion = event.xmotion;
-                    inputBuffer->SetPointerPosition(xmotion.x, xmotion.y);
-                }
-                break;
+            graphics->FinishRenderingCurrentFrame();
+            graphics->StartRenderingCurrentFrame();
+        }
+        else
+        {
+            XEvent event;
+            XNextEvent(display, &event);
+            switch (event.type)
+            {
+                case Expose:
+                    break;
+                case ClientMessage:
+                    if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
+                    {
+                        Uninitialize();
+                        exit = true;
+                    }
+                    break;
+                case ConfigureNotify:
+                    {
+                        const XConfigureEvent& xev = event.xconfigure;
+                        UpdateWindowSize(xev.width, xev.height);
+                    }
+                    break;
+                case ButtonPress:
+                    inputBuffer->SetPointerDown(true);
+                    break;
+                case ButtonRelease:
+                    inputBuffer->SetPointerDown(false);
+                    break;
+                case MotionNotify:
+                    {
+                        const XMotionEvent& xmotion = event.xmotion;
+                        inputBuffer->SetPointerPosition(xmotion.x, xmotion.y);
+                    }
+                    break;
+            }
         }
     }
     XDestroyIC(ic);
