@@ -333,6 +333,9 @@ namespace xr
 
     struct System::Session::Impl
     {
+        using EGLContextPtr = std::unique_ptr<std::remove_pointer_t<EGLContext>, std::function<void(EGLContext)>>;
+        using EGLSurfacePtr = std::unique_ptr<std::remove_pointer_t<EGLSurface>, std::function<void(EGLSurface)>>;
+
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources{};
@@ -377,11 +380,6 @@ namespace xr
 
                 DestroyDisplayResources();
             }
-
-            if (context)
-            {
-                eglDestroyContext(display, context);
-            }
         }
 
         void Initialize()
@@ -420,7 +418,9 @@ namespace xr
                     EGL_NONE
                 };
 
-                context = eglCreateContext(display, config, parentContext, contextAttributes);
+                context = EGLContextPtr(eglCreateContext(display, config, parentContext, contextAttributes), [display{display}](EGLContext context) {
+                    eglDestroyContext(display, context);
+                });
             }
 
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
@@ -495,15 +495,11 @@ namespace xr
             {
                 window = g_xrWindowPtr;
 
-                if (surface)
-                {
-                    eglDestroySurface(display, surface);
-                    surface = nullptr;
-                }
-
                 if (window)
                 {
-                    surface = eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr);
+                    surface = EGLSurfacePtr(eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr), [display{display}](EGLSurface surface) {
+                        eglDestroySurface(display, surface);
+                    });
                 }
             }
 
@@ -655,10 +651,7 @@ namespace xr
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             sessionEnded = true;
 
-            if (surface)
-            {
-                eglDestroySurface(display, surface);
-            }
+            surface.reset();
         }
 
         Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const
@@ -672,9 +665,9 @@ namespace xr
             // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
-            if (frameTimestamp && surface)
+            if (frameTimestamp && surface.get())
             {
-                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface, surface, context) };
+                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface.get(), surface.get(), context.get()) };
 
                 auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
                 auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
@@ -1075,8 +1068,8 @@ namespace xr
         EGLConfig config{};
         EGLint format{};
         EGLContext parentContext{};
-        EGLContext context{};
-        EGLSurface surface{};
+        EGLContextPtr context;
+        EGLSurfacePtr surface;
 
         GLuint cameraShaderProgramId{};
         GLuint babylonShaderProgramId{};
