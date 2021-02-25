@@ -2491,7 +2491,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(con
 template <typename T>
 inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticValue(Symbol name,
     Napi::Value value, napi_property_attributes attributes) {
-  PropertyDescriptor desc = napi_property_descriptor();
+  PropertyDescriptor desc{};
   desc.name = name;
   desc.value = value;
   desc.attributes = attributes;
