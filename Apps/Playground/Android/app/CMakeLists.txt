@@ -51,6 +51,8 @@ target_include_directories(BabylonNativeJNI
 add_definitions(-DANDROID_STL=c++_shared)
 
 target_link_libraries(BabylonNativeJNI
+        camera2ndk
+        mediandk
         GLESv3
         android
         EGL

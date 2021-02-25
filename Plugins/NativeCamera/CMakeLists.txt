@@ -15,9 +15,14 @@ warnings_as_errors(NativeCamera)
 target_include_directories(NativeCamera INTERFACE "Include")
 target_include_directories(NativeCamera PRIVATE "Include/Babylon/Plugins")
 
+if(ANDROID)
+    set(EXTENSIONS AndroidExtensions)
+endif()
+
 target_link_to_dependencies(NativeCamera
     PUBLIC JsRuntime
-    PRIVATE GraphicsInternal)
+    PRIVATE GraphicsInternal
+    PRIVATE ${EXTENSIONS})
 
 set_property(TARGET NativeCamera PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
