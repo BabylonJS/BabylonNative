@@ -2201,14 +2201,14 @@ ObjectWrap<T>::DefineClass(napi_env env,
       if (p.staticGetter != nullptr)
       {
           descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
-            [env, getter{ p.staticGetter }, data{ p.data }](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
-              return { rt, (*getter)({env, thisVal, args, count, nullptr, data}) };
+            [env, getter{p.staticGetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
+              return {rt, (*getter)({env, thisVal, args, count, nullptr, data})};
           }));
       }
       if (p.staticSetter != nullptr) {
           descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
-            [env, setter{ p.staticSetter }, data{ p.data }](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
-              (*setter)({ env, thisVal, args, count, nullptr, data }, { env, {rt, args[0]} });
+            [env, setter{p.staticSetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
+              (*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
               return {};
           }));
       }
@@ -2343,7 +2343,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
   desc.name = name;
   desc.staticMethod = method;
   desc.data = callbackData;
-  desc.attributes = static_cast<napi_property_attributes>(attributes | napi_static);
+  desc.attributes = attributes;
   return desc;
 }
 
