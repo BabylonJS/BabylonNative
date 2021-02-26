@@ -166,16 +166,19 @@ namespace Babylon
 
     FrameBuffer& Graphics::Impl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
     {
+        assert(m_frameBufferManager);
         return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
     }
 
     void Graphics::Impl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
+        assert(m_frameBufferManager);
         m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
     }
 
     FrameBuffer& Graphics::Impl::DefaultFrameBuffer()
     {
+        assert(m_frameBufferManager);
         return m_frameBufferManager->DefaultFrameBuffer();
     }
 

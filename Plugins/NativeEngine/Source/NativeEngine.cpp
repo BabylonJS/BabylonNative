@@ -1375,8 +1375,7 @@ namespace Babylon
 
     void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
     {
-        // TODO: figure this out
-        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
@@ -1384,7 +1383,7 @@ namespace Babylon
         const auto height = info[3].As<Napi::Number>().FloatValue();
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_boundFrameBuffer->SetViewPort(nullptr, x, yOrigin, width, height);
+        m_boundFrameBuffer->SetViewPort(encoder, x, yOrigin, width, height);
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)

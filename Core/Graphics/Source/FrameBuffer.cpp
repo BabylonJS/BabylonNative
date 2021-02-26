@@ -1,5 +1,6 @@
 #include "FrameBuffer.h"
 #include "FrameBufferManager.h"
+#include <arcana/macros.h>
 #include <cmath>
 
 namespace Babylon
@@ -46,8 +47,9 @@ namespace Babylon
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
     }
 
-    void FrameBuffer::SetViewPort(bgfx::Encoder*, float x, float y, float width, float height)
+    void FrameBuffer::SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height)
     {
+        UNUSED(encoder);
         m_requestedViewPort = {x, y, width, height};
     }
 
