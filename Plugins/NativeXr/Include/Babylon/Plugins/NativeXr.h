@@ -4,6 +4,10 @@
 
 namespace Babylon::Plugins::NativeXr
 {
-    void Initialize(Napi::Env env);
-    void SetSessionStateChangedCallback(Napi::Env env, std::function<void(bool)> callback);
+    struct Configuration
+    {
+        std::function<void(bool)> SessionStateChangedCallback{};
+    };
+
+    void Initialize(Napi::Env env, Configuration config = {});
 }
