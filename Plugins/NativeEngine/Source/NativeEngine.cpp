@@ -1293,7 +1293,7 @@ namespace Babylon
             {
                 const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
                 const auto& vertexBuffer{vertexBufferPair.second};
-                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex, UINT_MAX, vertexBuffer.VertexLayoutHandle);
+                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex, std::numeric_limits<uint32_t>::max(), vertexBuffer.VertexLayoutHandle);
             }
         }
 

@@ -36,15 +36,18 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     void* windowPtr = view;
     
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+    graphics->EnableRendering();
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([](Napi::Env env)
     {
-        Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        
         graphics->AddToJavaScript(env);
+
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize NativeXr plugin.
@@ -69,6 +72,15 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     if (graphics)
     {
         graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+    }
+}
+
+- (void)render
+{
+    if (graphics)
+    {
+        graphics->StartRenderingCurrentFrame();
+        graphics->FinishRenderingCurrentFrame();
     }
 }
 
