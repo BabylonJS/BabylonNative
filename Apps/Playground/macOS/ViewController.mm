@@ -29,8 +29,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 - (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics) {
-        graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
+        graphics->FinishRenderingCurrentFrame();
     }
 }
 
@@ -43,10 +43,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 }
 
 - (void)uninitialize {
-    if (graphics) {
-        graphics->FinishRenderingCurrentFrame();
-    }
-
     inputBuffer.reset();
     runtime.reset();
     graphics.reset();
@@ -77,7 +73,6 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     void* windowPtr = (__bridge void*)engineView;
 
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
-    graphics->StartRenderingCurrentFrame();
     
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
