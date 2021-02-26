@@ -36,7 +36,6 @@ using namespace android;
 using namespace android::global;
 
 extern ANativeWindow* g_xrWindowPtr;
-bool g_isXRActive = false;
 
 namespace xr
 {
@@ -353,13 +352,10 @@ namespace xr
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
         {
-            g_isXRActive = true;
         }
 
         ~Impl()
         {
-            g_isXRActive = false;
-
             if (isInitialized)
             {
                 Planes.clear();

@@ -2283,6 +2283,7 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
+            static constexpr auto JS_INTERNAL_EVENT_NAME_XR_STATE_CHANGED = "_nativeXRStateChangedCallback";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2311,6 +2312,12 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
+            static void SetStateChangedCallback(Napi::Env env, std::function<void(bool)> callback)
+            {
+                Napi::Value callbackExternal = Napi::External<std::function<void(bool)>>::New(env, new std::function<void(bool)>(std::move(callback)), [](Napi::Env, std::function<void(bool)>* callback) { delete callback; });
+                env.Global().Set(JS_INTERNAL_EVENT_NAME_XR_STATE_CHANGED, callbackExternal);
+            }
+
             static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
             {
                 auto jsSession = Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}));
@@ -2327,6 +2334,11 @@ namespace Babylon
                             else
                             {
                                 deferred.Resolve(jsSession.Value());
+                                std::function<void(bool)>* xrStateChangedCallback{ GetStateChangedCallback(env) };
+                                if (xrStateChangedCallback)
+                                {
+                                    (*xrStateChangedCallback)(true);
+                                }
                             }
                         });
 
@@ -2401,6 +2413,16 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+
+            static std::function<void(bool)>* GetStateChangedCallback(Napi::Env env)
+            {
+                if (env.Global().Has(JS_INTERNAL_EVENT_NAME_XR_STATE_CHANGED))
+                {
+                    return env.Global().Get(JS_INTERNAL_EVENT_NAME_XR_STATE_CHANGED).As<Napi::External<std::function<void(bool)>>>().Data();
+                }
+
+                return nullptr;
+            }
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2580,7 +2602,7 @@ namespace Babylon
 
             Napi::Value End(const Napi::CallbackInfo& info)
             {
-                m_xr.Dispatch([this]() {
+                m_xr.Dispatch([this, env{ info.Env() }]() {
                     m_xr.EndSession();
 
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
@@ -2589,6 +2611,12 @@ namespace Babylon
                         {
                             callback.Call({});
                         }
+                    }
+
+                    std::function<void(bool)>* xrStateChangedCallback{ GetStateChangedCallback(env) };
+                    if (xrStateChangedCallback)
+                    {
+                        (*xrStateChangedCallback)(false);
                     }
                 });
 
@@ -2875,6 +2903,11 @@ namespace Babylon
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
+        }
+
+        void SetSessionStateChangedCallback(Napi::Env env, std::function<void(bool)> callback)
+        {
+            XRSession::SetStateChangedCallback(env, std::move(callback));
         }
     }
 }
