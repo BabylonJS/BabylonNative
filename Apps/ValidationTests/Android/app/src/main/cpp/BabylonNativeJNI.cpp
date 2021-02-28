@@ -21,8 +21,6 @@
 
 namespace
 {
-    constexpr bool RENDER_ON_JS_THREAD{true};
-
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
@@ -38,6 +36,11 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
+        if (g_graphics)
+        {
+            g_graphics->FinishRenderingCurrentFrame();
+        }
+
         g_scriptLoader.reset();
         g_graphics.reset();
         g_runtime.reset();
@@ -60,10 +63,13 @@ extern "C"
             int32_t width  = 600;//ANativeWindow_getWidth(window);
             int32_t height = 400;//ANativeWindow_getHeight(window);
             
+            g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+            g_graphics->StartRenderingCurrentFrame();
+
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
-                g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+                g_graphics->AddToJavaScript(env);
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -81,13 +87,14 @@ extern "C"
                     }
                 });
 
-                g_graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+                Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
 
                 Babylon::Polyfills::Window::Initialize(env);
+
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
                 Babylon::TestUtils::CreateInstance(env, window);
             });
 
@@ -185,9 +192,10 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        if (!RENDER_ON_JS_THREAD)
+        if (g_graphics)
         {
-            g_graphics->RenderCurrentFrame();
+            g_graphics->FinishRenderingCurrentFrame();
+            g_graphics->StartRenderingCurrentFrame();
         }
     }
 }
