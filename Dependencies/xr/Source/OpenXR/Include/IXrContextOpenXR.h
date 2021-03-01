@@ -27,4 +27,4 @@ typedef struct IXrContextOpenXR
     virtual XrSpace OPENXR_CONTEXT_INTERFACE_API Space() const = 0;
     virtual bool OPENXR_CONTEXT_INTERFACE_API IsSessionRunning() const = 0;
     virtual XrResult OPENXR_CONTEXT_INTERFACE_API GetInstanceProcAddr(const char* name, PFN_xrVoidFunction* function) const = 0;
-} IXrContext;
+} IXrContextOpenXR;
