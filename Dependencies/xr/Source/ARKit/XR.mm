@@ -1342,13 +1342,13 @@ namespace xr {
         return false;
     }
 
-    uintptr_t System::Session::GetNativeExtension()
+    uintptr_t System::Session::GetNativeXrContext()
     {
         // TODO
         return 0;
     }
 
-    std::string System::Session::GetNativeExtensionType()
+    std::string System::Session::GetNativeXrContextType()
     {
         // TODO
         return "";
