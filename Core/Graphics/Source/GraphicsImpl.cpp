@@ -1,5 +1,4 @@
 #include "GraphicsImpl.h"
-#include "Babylon/GraphicsPlatform.h"
 
 #include <JsRuntimeInternalState.h>
 
@@ -27,23 +26,25 @@ namespace Babylon
         DisableRendering();
     }
 
-    WindowType Graphics::Impl::GetNativeWindow()
+    void* Graphics::Impl::GetNativeWindow()
     {
         std::scoped_lock lock{m_state.Mutex};
-        return static_cast<WindowType>(m_state.Bgfx.InitState.platformData.nwh);
+        return static_cast<void*>(m_state.Bgfx.InitState.platformData.nwh);
     }
 
-    void Graphics::Impl::SetNativeWindow(WindowType nativeWindowPtr, void* windowTypePtr)
+    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
 
         auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = windowTypePtr;
-        pd.nwh = static_cast<void*>(nativeWindowPtr);
+        pd.nwh = nativeWindowPtr;
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
+
+        UpdateDevicePixelRatio();
     }
 
     void Graphics::Impl::Resize(size_t width, size_t height)
@@ -333,5 +334,10 @@ namespace Babylon
                     .Get(JS_GRAPHICS_NAME)
                     .As<Napi::External<Graphics::Impl>>()
                     .Data();
+    }
+
+    float Graphics::Impl::GetDevicePixelRatio() {
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Resolution.DevicePixelRatio;
     }
 }

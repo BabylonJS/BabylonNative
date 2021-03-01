@@ -10,7 +10,6 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
-#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsPlatformImpl.h>
 
 namespace Babylon
@@ -23,8 +22,8 @@ namespace Babylon
         Impl();
         ~Impl();
 
-        WindowType GetNativeWindow();
-        void SetNativeWindow(WindowType nativeWindowPtr, void* windowTypePtr);
+        void* GetNativeWindow();
+        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -51,6 +50,8 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        // This should only be called on the UI thread, since we interact with platform UI components
+        float UpdateDevicePixelRatio();
         float GetDevicePixelRatio();
         
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
@@ -80,8 +81,9 @@ namespace Babylon
                 size_t Width{};
                 size_t Height{};
                 float HardwareScalingLevel{1.0f};
+                float DevicePixelRatio{1.0f};
             } Resolution{};
-        } m_state{};
+        } m_state;
 
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};

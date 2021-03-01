@@ -1,25 +1,37 @@
 set(SOURCES
-    "Include/Shared/Babylon/Graphics.h"
-    "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
+    "Include/Babylon/Graphics.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
+    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h")
+
+if (WINDOWS_STORE)
+    if (BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
+        set(SOURCES
+            ${SOURCES}
+            "Source/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Graphics.cpp")
+    else()
+        set(SOURCES
+            ${SOURCES}
+            "Source/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Graphics.cpp")
+    endif()
+else()
+    set(SOURCES
+        ${SOURCES}
+        "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
+endif()
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
-    PUBLIC "Include/Shared"
-    PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}"
-    PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
+            PUBLIC "Include"
+            PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
 
-if(WINDOWS_STORE)
-    # link to UWP libararies
-elseif(WIN32)
+
+if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
 elseif(ANDROID)

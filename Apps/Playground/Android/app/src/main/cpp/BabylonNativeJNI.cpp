@@ -67,7 +67,7 @@ extern "C"
 
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
-                g_graphics = Babylon::Graphics::CreateGraphics<ANativeWindow*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+                g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -114,7 +114,7 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-                g_graphics->UpdateWindow<ANativeWindow*>(window);
+                g_graphics->UpdateWindow<void*>(window);
                 g_graphics->UpdateSize(width, height);
             });
         }

@@ -1,15 +1,18 @@
 #include <Babylon/Graphics.h>
 #include "../GraphicsImpl.h"
-#include <GraphicsPlatform.h>
 
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
 
 namespace Babylon
 {
-    float Graphics::Impl::GetDevicePixelRatio()
+    float Graphics::Impl::UpdateDevicePixelRatio()
     {
+        // In Android, the baseline DPI is 160dpi.
+        // See https://developer.android.com/training/multiscreen/screendensities#dips-pels
         auto dpi = android::global::GetAppContext().getResources().getConfiguration().getDensityDpi();
-        return (float)dpi/160.0f;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Resolution.DevicePixelRatio = (float)dpi/160.0f;
+        return m_state.Resolution.DevicePixelRatio;
     }
 }

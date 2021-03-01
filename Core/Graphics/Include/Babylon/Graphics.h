@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-#include <Babylon/GraphicsPlatform.h>
 
 #include <memory>
 

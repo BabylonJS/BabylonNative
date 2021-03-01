@@ -100,7 +100,7 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<HWND>(hWnd, width, height);
+        graphics = Babylon::Graphics::CreateGraphics<void*>(static_cast<void*>(hWnd), width, height);
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
