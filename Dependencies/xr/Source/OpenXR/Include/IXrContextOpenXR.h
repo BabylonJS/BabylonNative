@@ -14,7 +14,7 @@
     #define OPENXR_CONTEXT_INTERFACE_API
 #endif
 
-typedef struct IXrContext
+typedef struct IXrContextOpenXR
 {
     virtual bool OPENXR_CONTEXT_INTERFACE_API IsInitialized() const = 0;
     virtual xr::ExtensionDispatchTable* OPENXR_CONTEXT_INTERFACE_API ExtensionDispatchTable() const = 0;

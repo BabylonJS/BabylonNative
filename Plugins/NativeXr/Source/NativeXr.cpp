@@ -421,14 +421,14 @@ namespace Babylon
             return m_session->TrySetPreferredMeshDetectorOptions(options);
         }
 
-        uintptr_t GetNativeExtension()
+        uintptr_t GetNativeXrContext()
         {
-            return m_session->GetNativeExtension();
+            return m_session->GetNativeXrContext();
         }
 
-        std::string GetNativeExtensionType()
+        std::string GetNativeXrContextType()
         {
-            return m_session->GetNativeExtensionType();
+            return m_session->GetNativeXrContextType();
         }
 
     private:
@@ -2309,8 +2309,8 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
-                        InstanceAccessor("nativeExtension", &XRSession::GetNativeExtension, nullptr),
-                        InstanceAccessor("nativeExtensionType", &XRSession::GetNativeExtensionType, nullptr),
+                        InstanceAccessor("nativeXrContext", &XRSession::GetNativeXrContext, nullptr),
+                        InstanceAccessor("nativeXrContextType", &XRSession::GetNativeXrContextType, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
@@ -2322,7 +2322,7 @@ namespace Babylon
                         InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled),
                         InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
                         InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
-                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions)
+                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -2660,9 +2660,9 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), result);
             }
 
-            Napi::Value GetNativeExtension(const Napi::CallbackInfo& info)
+            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
             {
-                const auto nativeExtension = m_xr.GetNativeExtension();
+                const auto nativeExtension = m_xr.GetNativeXrContext();
                 if (nativeExtension)
                 {
                     return Napi::Number::From(info.Env(), nativeExtension);
@@ -2671,9 +2671,9 @@ namespace Babylon
                 return info.Env().Undefined();
             }
 
-            Napi::Value GetNativeExtensionType(const Napi::CallbackInfo& info)
+            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
             {
-                const auto nativeExtensionType = m_xr.GetNativeExtensionType();
+                const auto nativeExtensionType = m_xr.GetNativeXrContextType();
                 if (!nativeExtensionType.empty())
                 {
                     return Napi::String::From(info.Env(), nativeExtensionType);

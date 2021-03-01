@@ -338,8 +338,8 @@ namespace xr
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
 
-            uintptr_t GetNativeExtension();
-            std::string GetNativeExtensionType();
+            uintptr_t GetNativeXrContext();
+            std::string GetNativeXrContextType();
 
         private:
             std::unique_ptr<Impl> m_impl{};

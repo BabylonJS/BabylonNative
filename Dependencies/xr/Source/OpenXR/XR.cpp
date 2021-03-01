@@ -60,28 +60,73 @@ namespace xr
         : ContextImpl(std::make_unique<Impl>()) {}
 
     XrSessionContext::~XrSessionContext() {}
+
     bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsInitialized() const
     {
         return ContextImpl->Session.Get() != XR_NULL_HANDLE &&
             ContextImpl->SceneSpace.Get() != XR_NULL_HANDLE &&
             ContextImpl->State != XrSessionState::XR_SESSION_STATE_UNKNOWN;
     }
-    xr::ExtensionDispatchTable* OPENXR_CONTEXT_INTERFACE_API XrSessionContext::ExtensionDispatchTable() const { return ContextImpl->Extensions.get(); }
-    XrInstance OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Instance() const { return ContextImpl->Instance.Get(); }
-    XrSystemId OPENXR_CONTEXT_INTERFACE_API XrSessionContext::SystemId() const { return ContextImpl->SystemId; }
-    XrTime OPENXR_CONTEXT_INTERFACE_API XrSessionContext::DisplayTime() const { return ContextImpl->DisplayTime; }
-    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsExtensionEnabled(const char* name) const { return ContextImpl->Extensions->IsExtensionSupported(name); }
-    XrSession OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Session() const { return ContextImpl->Session.Get(); }
-    XrSessionState OPENXR_CONTEXT_INTERFACE_API XrSessionContext::State() const { return ContextImpl->State; }
-    XrSpace OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
-    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsSessionRunning() const { return ContextImpl->IsSessionRunning; }
+
+    xr::ExtensionDispatchTable* OPENXR_CONTEXT_INTERFACE_API XrSessionContext::ExtensionDispatchTable() const
+    {
+        return ContextImpl->Extensions.get();
+    }
+
+    XrInstance OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Instance() const
+    {
+        return ContextImpl->Instance.Get();
+    }
+
+    XrSystemId OPENXR_CONTEXT_INTERFACE_API XrSessionContext::SystemId() const
+    {
+        return ContextImpl->SystemId;
+    }
+
+    XrTime OPENXR_CONTEXT_INTERFACE_API XrSessionContext::DisplayTime() const
+    {
+        return ContextImpl->DisplayTime;
+    }
+    
+    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsExtensionEnabled(const char* name) const
+    {
+        return ContextImpl->Extensions->IsExtensionSupported(name);
+    }
+
+    XrSession OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Session() const
+    {
+        return ContextImpl->Session.Get();
+    }
+
+    XrSessionState OPENXR_CONTEXT_INTERFACE_API XrSessionContext::State() const
+    {
+        return ContextImpl->State;
+    }
+
+    XrSpace OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Space() const
+    {
+        return ContextImpl->SceneSpace.Get();
+    }
+
+    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsSessionRunning() const
+    {
+        return ContextImpl->IsSessionRunning;
+    }
+
     XrResult OPENXR_CONTEXT_INTERFACE_API XrSessionContext::GetInstanceProcAddr(const char* name, PFN_xrVoidFunction* function) const
     {
         return xrGetInstanceProcAddr(ContextImpl->Instance.Get(), name, function);
     }
 
-    const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->Extensions; }
-    const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const { return ContextImpl->SceneUnderstanding; }
+    const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const
+    {
+        return ContextImpl->Extensions;
+    }
+
+    const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const
+    {
+        return ContextImpl->SceneUnderstanding;
+    }
 
     const XrSessionContext& XrRegistry::Context()
     {
@@ -93,7 +138,7 @@ namespace xr
         return *globalXrSessionContext;
     }
 
-    uintptr_t XrRegistry::GetNativeExtension()
+    uintptr_t XrRegistry::GetNativeXrContext()
     {
         if (globalXrSessionContext == nullptr)
         {
@@ -103,7 +148,7 @@ namespace xr
         return reinterpret_cast<uintptr_t>(globalXrSessionContext.get());
     }
 
-    std::string XrRegistry::GetNativeExtensionName()
+    std::string XrRegistry::GetNativeXrContextType()
     {
         return "OpenXR";
     }
@@ -594,14 +639,14 @@ namespace xr
             openXRAnchors.erase(anchor.NativeAnchor);
         }
 
-        uintptr_t GetNativeExtension()
+        uintptr_t GetNativeXrContext()
         {
-            return XrRegistry::GetNativeExtension();
+            return XrRegistry::GetNativeXrContext();
         }
 
-        std::string GetNativeExtensionType()
+        std::string GetNativeXrContextType()
         {
-            return XrRegistry::GetNativeExtensionName();
+            return XrRegistry::GetNativeXrContextType();
         }
 
     private:
@@ -1938,13 +1983,13 @@ namespace xr
         return true;
     }
 
-    uintptr_t System::Session::GetNativeExtension()
+    uintptr_t System::Session::GetNativeXrContext()
     {
-        return m_impl->GetNativeExtension();
+        return m_impl->GetNativeXrContext();
     }
 
-    std::string System::Session::GetNativeExtensionType()
+    std::string System::Session::GetNativeXrContextType()
     {
-        return m_impl->GetNativeExtensionType();
+        return m_impl->GetNativeXrContextType();
     }
 }
