@@ -17,7 +17,7 @@ namespace BabylonReactNative
             return false;
         }
 
-        auto nativeExtensionPtr = static_cast<uintptr_t>(xrSession.asObject(jsiRuntime).getProperty(jsiRuntime, "nativeExtension").asNumber());
+        auto nativeExtensionPtr = static_cast<uintptr_t>(xrSession.asObject(jsiRuntime).getProperty(jsiRuntime, "nativeXrContext").asNumber());
         xrContext = reinterpret_cast<IXrContextOpenXR*>(nativeExtensionPtr);
         return true;
     }
