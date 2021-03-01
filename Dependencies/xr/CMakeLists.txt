@@ -27,7 +27,7 @@ else()
 
     set(SOURCES ${SOURCES}
         "Source/OpenXR/Include/IXrContextOpenXR.h"
-	"Source/OpenXR/Include/XrContextHelperOpenXR.h"
+        "Source/OpenXR/Include/XrContextHelperOpenXR.h"
         "Source/OpenXR/XrPlatformCommon.h"
         "Source/OpenXR/XrRegistry.h"
         "Source/OpenXR/XrSupportedExtensions.h"
