@@ -12,7 +12,7 @@ var hololens = false;
 var cameraTexture = true;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2).setEnabled(false);
+    BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
 }
 
