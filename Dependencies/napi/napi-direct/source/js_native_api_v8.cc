@@ -1,6 +1,7 @@
 #include <climits>  // INT_MAX
 #include <cmath>
 #include <algorithm>
+#include <sstream>
 #define NAPI_EXPERIMENTAL
 #include "js_native_api_v8.h"
 #include <napi/js_native_api.h>
@@ -2963,9 +2964,15 @@ napi_status napi_run_script(napi_env env,
 napi_status napi_run_script(napi_env env,
                             napi_value script,
                             const char* source_url,
-                            napi_value* result) {
-  // TODO: figure out what to do with source_url
-  return napi_run_script(env, script, result);
+                            napi_value* result) {    
+    // Append the source URL so V8 can locate the file.
+    std::ostringstream source_url_comment;
+    source_url_comment << std::endl << "//# sourceURL=" << source_url << std::endl;
+
+    const auto v8_script_string = v8::Local<v8::String>::Cast(v8impl::V8LocalValueFromJsValue(script));
+    const auto source_with_comment = v8::String::Concat(env->isolate, v8_script_string, OneByteString(env->isolate, source_url_comment.str().c_str(), source_url_comment.str().size()));
+
+    return napi_run_script(env, v8impl::JsValueFromV8LocalValue(source_with_comment), result);
 }
 
 napi_status napi_add_finalizer(napi_env env,
