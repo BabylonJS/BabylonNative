@@ -1,25 +1,13 @@
 #pragma once
 
-#include <bx/semaphore.h>
-
 #include <gsl/gsl>
 
 #include <mutex>
-#include <optional>
+
+#include <arcana/threading/affinity.h>
 
 namespace Babylon
 {
-    class Semaphore : public bx::Semaphore
-    {
-    public:
-        auto GetPostFinalAction()
-        {
-            return gsl::finally([this]() {
-                post();
-            });
-        }
-    };
-
     class SafeTimespanGuarantor
     {
     public:
@@ -28,13 +16,14 @@ namespace Babylon
         void BeginSafeTimespan();
         void EndSafeTimespan();
 
-        using SafetyGuarantee = decltype(std::declval<Semaphore>().GetPostFinalAction());
+        using SafetyGuarantee = gsl::final_action<std::function<void()>>;
         SafetyGuarantee GetSafetyGuarantee();
 
     private:
-        Semaphore m_semaphore{};
-        size_t m_postCount{};
+        arcana::affinity m_affinity{};
+        uint32_t m_count{};
         std::mutex m_mutex{};
-        std::optional<std::scoped_lock<std::mutex>> m_lock{};
+        std::unique_lock<std::mutex> m_lock{};
+        std::condition_variable m_condition{};
     };
 }
