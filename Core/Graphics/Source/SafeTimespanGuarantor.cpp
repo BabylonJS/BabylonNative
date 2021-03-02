@@ -56,12 +56,16 @@ namespace Babylon
         std::lock_guard<std::mutex> guard(m_mutex);
         m_count++;
 
+        // Then return a SafeteyGuarantee that should be held until caller operations are complete.
         return gsl::finally(std::function<void()>{ [this]
         {
+            // First lock the underlying mutex and decrement the outstanding SafeteyGuarantee count.
             {
                 std::lock_guard<std::mutex> guard(m_mutex);
                 m_count--;
             }
+
+            // Then signal the condition variable to recheck the condition.
             m_condition.notify_one();
         }});
     }

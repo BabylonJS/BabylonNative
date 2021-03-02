@@ -23,8 +23,6 @@ namespace Babylon
 {
     namespace
     {
-    bgfx::Encoder* g_encoder{};
-    
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -1193,8 +1191,7 @@ namespace Babylon
 
     void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
     {
-        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-        auto encoder{g_encoder};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto texture = info[1].As<Napi::External<TextureData>>().Data();
@@ -1277,8 +1274,7 @@ namespace Babylon
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
     {
-        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-        auto encoder{g_encoder};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto indexStart = info[1].As<Napi::Number>().Int32Value();
@@ -1306,8 +1302,7 @@ namespace Babylon
 
     void NativeEngine::Draw(const Napi::CallbackInfo& info)
     {
-        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-        auto encoder{g_encoder};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto fillMode = info[0].As<Napi::Number>().Int32Value();
         const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
@@ -1329,8 +1324,7 @@ namespace Babylon
 
     void NativeEngine::Clear(const Napi::CallbackInfo& info)
     {
-        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-        auto encoder{g_encoder};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
@@ -1550,7 +1544,6 @@ namespace Babylon
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() mutable {
-                g_encoder = updateToken.GetEncoder();
                 m_requestAnimationFrameCallbacksScheduled = false;
 
                 auto callbacks{std::move(m_requestAnimationFrameCallbacks)};

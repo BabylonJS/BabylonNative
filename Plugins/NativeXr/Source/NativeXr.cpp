@@ -14,18 +14,9 @@
 #include <arcana/threading/task.h>
 
 #include <sstream>
-//#include <android/log.h>
 
 namespace
 {
-    void Log(const char*)
-//    void Log(const char* message)
-    {
-//        std::stringstream ss{};
-//        ss << "Uncaught Error: " << message << std::endl;
-//        __android_log_write(ANDROID_LOG_WARN, "NativeXr.cpp", ss.str().data());
-    }
-
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
     {
         switch (format)
@@ -450,9 +441,7 @@ namespace Babylon
                 m_frame.reset();
             } while (!shouldEndSession);
 
-            Log("Starting resetting session.");
             m_session.reset();
-            Log("Finished resetting session.");
         });
     }
 
@@ -2563,9 +2552,7 @@ namespace Babylon
                         {
                             if (name == JS_EVENT_NAME_END)
                             {
-                                Log("About to fire xr end event");
                                 callback.Call({});
-                                Log("Fired xr end event");
                             }
                         }
 
