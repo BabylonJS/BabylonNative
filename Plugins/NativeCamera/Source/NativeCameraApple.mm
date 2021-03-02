@@ -64,7 +64,6 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    API_AVAILABLE(macos(10.15), ios(10.0))
     CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple;
@@ -77,7 +76,9 @@ namespace Babylon::Plugins::Internal
             cameraInterfaceApple->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:cameraInterfaceApple];
             
             cameraInterfaceApple->avCaptureSession = [[AVCaptureSession alloc] init];
-
+            
+            NSError *error;
+#if (TARGET_OS_IPHONE)
             AVCaptureDevicePosition preferredPosition;
             AVCaptureDeviceType preferredDeviceType;
             
@@ -88,8 +89,7 @@ namespace Babylon::Plugins::Internal
                 preferredPosition = AVCaptureDevicePositionBack;
                 preferredDeviceType = AVCaptureDeviceTypeBuiltInDualCamera;
             }
-            
-            NSError *error;
+
             // Set camera capture device to default and the media type to video.
             AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:preferredDeviceType mediaType:AVMediaTypeVideo position:preferredPosition];
             if (!captureDevice) {
@@ -101,7 +101,9 @@ namespace Babylon::Plugins::Internal
                     captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionFront];
                 }
             }
-
+#else
+            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVCaptureDeviceTypeBuiltInDualCamera];
+#endif
             // Set video capture input: If there a problem initialising the camera, it will give am error.
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
 
