@@ -55,6 +55,8 @@ namespace android::net
     class Uri;
 }
 
+struct ANativeWindow;
+
 // ------------
 // Declarations
 // ------------
@@ -259,6 +261,17 @@ namespace android::content::res
     };
 }
 
+namespace android::graphics
+{
+    class SurfaceTexture : public java::lang::Object
+    {
+    public:
+        SurfaceTexture(int texture);
+
+        void updateTexture() const;
+    };
+}
+
 namespace android::view
 {
     class Display : public java::lang::Object
@@ -276,6 +289,14 @@ namespace android::view
         WindowManager(jobject object);
 
         Display getDefaultDisplay();
+    };
+
+    class Surface : public java::lang::Object
+    {
+    public:
+        Surface(android::graphics::SurfaceTexture surfaceTexture);
+
+        ANativeWindow* getNativeWindow();
     };
 }
 

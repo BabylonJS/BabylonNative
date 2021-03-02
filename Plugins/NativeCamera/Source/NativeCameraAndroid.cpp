@@ -11,10 +11,9 @@
 #include <camera/NdkCaptureRequest.h>
 #include <media/NdkImageReader.h>
 #include <android/native_window_jni.h>
-#include <android/surface_texture.h>
-#include <android/surface_texture_jni.h>
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/Globals.h>
+#include <android/log.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <GLES3/gl3.h>
@@ -37,6 +36,26 @@ namespace Babylon::Plugins::Internal
         virtual ~CameraInterfaceAndroid();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
 
+        static constexpr char CAMERA_VERT_SHADER[]{ R"(#version 300 es
+            precision highp float;
+            out vec2 cameraFrameUV;
+            void main() {
+                cameraFrameUV = vec2(gl_VertexID&1, (gl_VertexID &2)>>1) * 2.f;
+                gl_Position = vec4(cameraFrameUV * 2.f - 1.f, 0.0, 1.0);
+            }
+        )"};
+
+        static constexpr char CAMERA_FRAG_SHADER[]{ R"(#version 300 es
+            #extension GL_OES_EGL_image_external_essl3 : require
+            precision mediump float;
+            in vec2 cameraFrameUV;
+            uniform samplerExternalOES cameraTexture;
+            layout(location = 0) out vec4 oFragColor;
+            void main() {
+                oFragColor = texture(cameraTexture, cameraFrameUV);
+            }
+        )"};
+
     private:
 
         std::string getBackFacingCamId();
@@ -50,7 +69,95 @@ namespace Babylon::Plugins::Internal
         ACaptureSessionOutput* textureOutput{};
         ACaptureSessionOutput* output{};
         ACaptureSessionOutputContainer* outputs{};
-        GLuint cameraTextureId{};
+        GLuint cameraOESTextureId{};
+        GLuint cameraRGBATextureId{};
+        GLuint cameraShaderProgramId{};
+        GLuint clearFrameBufferId{};
+
+        android::graphics::SurfaceTexture surfaceTexture;
+        android::view::Surface surface;
+
+        constexpr GLint GetTextureUnit(GLenum texture)
+        {
+            return texture - GL_TEXTURE0;
+        }
+
+        GLuint LoadShader(GLenum shader_type, const char* shader_source)
+        {
+            GLuint shader{ glCreateShader(shader_type) };
+            if (!shader)
+            {
+                throw std::runtime_error{ "Failed to create shader" };
+            }
+
+            glShaderSource(shader, 1, &shader_source, nullptr);
+            glCompileShader(shader);
+            GLint compileStatus{ GL_FALSE };
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
+
+            if (compileStatus != GL_TRUE)
+            {
+                GLint infoLogLength{};
+
+                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+                if (!infoLogLength)
+                {
+                    throw std::runtime_error{ "Unknown error compiling shader" };
+                }
+
+                std::string infoLog;
+                infoLog.resize(static_cast<size_t>(infoLogLength));
+                glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.data());
+                glDeleteShader(shader);
+                //throw std::runtime_error("Error compiling shader: " + infoLog);
+                __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", infoLog.c_str());
+            }
+
+            return shader;
+        }
+
+        GLuint CreateShaderProgram(const char* vertShaderSource, const char* fragShaderSource)
+        {
+            GLuint vertShader{ LoadShader(GL_VERTEX_SHADER, vertShaderSource) };
+            GLuint fragShader{ LoadShader(GL_FRAGMENT_SHADER, fragShaderSource) };
+
+            GLuint program{ glCreateProgram() };
+            if (!program)
+            {
+                throw std::runtime_error{ "Failed to create shader program" };
+            }
+
+            glAttachShader(program, vertShader);
+            glAttachShader(program, fragShader);
+
+            glLinkProgram(program);
+            GLint linkStatus{ GL_FALSE };
+            glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+
+            glDetachShader(program, vertShader);
+            glDeleteShader(vertShader);
+            glDetachShader(program, fragShader);
+            glDeleteShader(fragShader);
+
+            if (linkStatus != GL_TRUE)
+            {
+                GLint infoLogLength{};
+                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
+                if (!infoLogLength)
+                {
+                    throw std::runtime_error{ "Unknown error linking shader program" };
+                }
+
+                std::string infoLog;
+                infoLog.resize(static_cast<size_t>(infoLogLength));
+                glGetProgramInfoLog(program, infoLogLength, nullptr, infoLog.data());
+                glDeleteProgram(program);
+                //throw std::runtime_error("Error linking shader program: " + infoLog);
+                __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", infoLog.c_str());
+            }
+
+            return program;
+        }
     };
 
 
@@ -188,8 +295,22 @@ namespace Babylon::Plugins::Internal
 
         return task;
     }
+
+    static GLuint GenerateOESTexture()
+    {
+        GLuint oesTexture;
+        glGenTextures(1, &oesTexture);
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture);
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+        return oesTexture;
+    }
     
     CameraInterfaceAndroid::CameraInterfaceAndroid()
+        : cameraOESTextureId{GenerateOESTexture()}
+        , surfaceTexture(cameraOESTextureId)
+        , surface(surfaceTexture)
     {
         CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this]()
         {
@@ -197,29 +318,8 @@ namespace Babylon::Plugins::Internal
             auto id = getBackFacingCamId();
             ACameraManager_openCamera(cameraManager, id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
 
-            // Prepare surface
+            textureWindow = surface.getNativeWindow();
 
-            auto env = GetEnvForCurrentThread();
-
-            glGenTextures(1, &cameraTextureId);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
-
-            jclass surfaceTextureClass{env->FindClass("android/graphics/SurfaceTexture")};
-            auto surfaceTextureConstructor = env->GetMethodID(surfaceTextureClass, "<init>", "(I)V");
-            jobject surfaceTexture = env->NewObject(surfaceTextureClass, surfaceTextureConstructor,  cameraTextureId);
-
-            jclass surfaceClass{env->FindClass("android/view/Surface")};
-            auto surfaceConstructor = env->GetMethodID(surfaceClass, "<init>", "(Landroid/graphics/SurfaceTexture;)V");
-            jobject surface = env->NewObject(surfaceClass, surfaceConstructor,  surfaceTexture);
-/*
-            ASurfaceTexture* surfaceTexture = ASurfaceTexture_fromSurfaceTexture(env, obj);
-            ASurfaceTexture_attachToGLContext(surfaceTexture, cameraTextureId);
-            textureWindow = ASurfaceTexture_acquireANativeWindow(surfaceTexture);
-*/
-            textureWindow = ANativeWindow_fromSurface(env, surface);
             // Prepare request for texture target
             ACameraDevice_createCaptureRequest(cameraDevice, TEMPLATE_PREVIEW, &request);
 
@@ -238,6 +338,23 @@ namespace Babylon::Plugins::Internal
 
             // Start capturing continuously
             ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
+
+
+            glGenTextures(1, &cameraRGBATextureId);
+            glBindTexture(GL_TEXTURE_2D, cameraRGBATextureId);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256/*width*/, 256/*height*/, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            glGenFramebuffers(1, &clearFrameBufferId);
+            glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
+            //auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, cameraRGBATextureId, 0);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
         });
     }
 
@@ -257,14 +374,36 @@ namespace Babylon::Plugins::Internal
         ACaptureRequest_free(request);
     }
 
-    void CameraInterfaceAndroid::UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/)
+    void CameraInterfaceAndroid::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        //bgfx::overrideInternal(textureHandle, cameraTextureId);
+        if (cameraRGBATextureId) {
+            surfaceTexture.updateTexture();
+
+            glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
+            glViewport(0, 0, 256, 256);
+            glUseProgram(cameraShaderProgramId);
+
+            // Configure the camera texture
+            auto cameraTextureUniformLocation{ glGetUniformLocation(cameraShaderProgramId, "cameraTexture") };
+            glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraOESTextureId);
+            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glBindSampler(0, 0);
+
+            // Draw the quad
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
+
+            glUseProgram(0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            bgfx::overrideInternal(textureHandle, cameraRGBATextureId);
+        }
     }
 
     CameraInterface* CameraInterface::CreateInterface()
     {
-        CameraInterfaceAndroid* cameraInterfaceAndroid = new CameraInterfaceAndroid;
-        return cameraInterfaceAndroid;
+        return new CameraInterfaceAndroid;
     }
 }
