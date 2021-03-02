@@ -1,85 +1,65 @@
 #include "SafeTimespanGuarantor.h"
 
-#include <thread>
-#include <chrono>
-
 using namespace std::chrono_literals;
 
 namespace Babylon
 {
     SafeTimespanGuarantor::SafeTimespanGuarantor()
-        : m_lock{ m_mutex }
+        : m_affinity{ std::this_thread::get_id() }
+        , m_lock{ m_mutex }
     {
     }
 
     void SafeTimespanGuarantor::BeginSafeTimespan()
     {
-        if (m_begin)
+        if (!m_affinity.check())
         {
-            throw std::runtime_error{"Already started"};
+            throw std::runtime_error{ "BeginSafeTimespan must be called from the thread on which the SafeTimespanGuarantor was constructed." };
         }
-        m_begin = true;
+
+        if (!m_lock.owns_lock())
+        {
+            throw std::runtime_error{ "EndSafeTimespan must be called before BeginSafeTimespan can be called again." };
+        }
+
+        // First unlock the underlying mutex, which allows calls to GetSafetyGuarentee to acquire a SafetyGuarentee.
         m_lock.unlock();
-        //std::this_thread::sleep_for(1ms);
+
+        // Then yield to ensure calls to GetSafetyGuarentee get a chance to lock on the mutex before EndSafeTimeSpan takes the lock (e.g. prevent starvation).
         std::this_thread::yield();
-        //m_postCount = 0;
-//        m_mutexes.clear();
-//        m_lock.reset();
     }
 
     void SafeTimespanGuarantor::EndSafeTimespan()
     {
-        if (!m_begin)
+        if (!m_affinity.check())
         {
-            throw std::runtime_error{"Not started"};
+            throw std::runtime_error{ "EndSafeTimespan must be called from the thread on which the SafeTimespanGuarantor was constructed." };
         }
-//        bool wait{false};
-//        do
-//        {
-//            m_lock.emplace(m_mutex);
-//            wait = m_postCount > 0;
-//            --m_postCount;
-//
-//            if (wait)
-//            {
-//                m_lock.reset();
-//            }
-//        } while (wait && m_semaphore.wait());
 
-//        m_lock.emplace(m_mutex);
-//        for (auto& mutex : m_mutexes)
-//        {
-//            //std::lock_guard<std::mutex> guard(*(mutex.get()));
-//            std::lock_guard<std::mutex> guard(mutex);
-//        }
-        
-        //std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_lock.owns_lock())
+        {
+            throw std::runtime_error{ "BeginSafeTimespan must be called before EndSafeTimespan can be called." };
+        }
+
+        // First lock on the underlying mutex.
         m_lock.lock();
+
+        // Then wait for the count of outstanding SafeteyGuarentees to reach zero.
+        // If the condition is not met, the underlying mutex is unlocked, but we still block on the condition variable, waiting to be signated to recheck the condition.
+        // Once the condition is met, then the condition variable unblocks, but the lock on the underlying mutex (re-acquired when checking the condition) is retained.
         m_condition.wait(m_lock, [this]{ return m_count == 0; });
-        m_begin = false;
     }
 
     SafeTimespanGuarantor::SafetyGuarantee SafeTimespanGuarantor::GetSafetyGuarantee()
     {
-//        std::scoped_lock lock{m_mutex};
-//        ++m_postCount;
-//        return m_semaphore.GetPostFinalAction();
-        //std::lock_guard<std::mutex> guard(m_mutex);
-        //std::mutex mutex{};
-        //m_mutexes.push_back(std::mutex());
-        //m_mutexes.emplace_back();
-        //m_mutexes.push_back(std::unique_ptr<std::mutex>());
-        //m_mutexes.push_back({});
-//        m_mutexes.emplace_back();
-//        auto& mutex = m_mutexes.back();
-//        //return std::unique_lock<std::mutex>{ *(mutex->get()) };
-//        return std::unique_lock<std::mutex>(mutex);
+        // First lock on the underlying mutex and increment the outstanding SafeteyGuarantee count.
         std::lock_guard<std::mutex> guard(m_mutex);
         m_count++;
-        return gsl::finally(std::function<void()>{ [this]()
+
+        return gsl::finally(std::function<void()>{ [this]
         {
             {
-                std::unique_lock<std::mutex> lock(m_mutex);
+                std::lock_guard<std::mutex> guard(m_mutex);
                 m_count--;
             }
             m_condition.notify_one();
