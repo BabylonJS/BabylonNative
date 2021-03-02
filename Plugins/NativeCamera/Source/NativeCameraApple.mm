@@ -64,6 +64,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
+    API_AVAILABLE(macos(10.15), ios(10.0))
     CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple;
