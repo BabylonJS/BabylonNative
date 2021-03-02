@@ -424,7 +424,7 @@ namespace Babylon
         m_textureToFrameBufferMap.clear();
         m_activeTextures.clear();
 
-        return m_frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this]() {
+        return m_frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
             assert(m_session != nullptr);
             assert(m_frame == nullptr);
 
@@ -469,7 +469,7 @@ namespace Babylon
                 }
 
                 EndUpdate();
-            }).then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](arcana::expected<void, std::exception_ptr>) {
+            }).then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                 EndFrame();
             });
         });
