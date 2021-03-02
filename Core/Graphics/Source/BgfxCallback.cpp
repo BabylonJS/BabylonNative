@@ -16,7 +16,7 @@ namespace Babylon
 
     void BgfxCallback::AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback)
     {
-        m_screenShotCallbacks.push(std::move(callback));
+        m_screenShotCallbacks.emplace(std::move(callback));
     }
 
     void BgfxCallback::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
@@ -107,11 +107,8 @@ namespace Babylon
             }
         }
 
-        std::function<void(std::vector<uint8_t>)> callback;
-        if (m_screenShotCallbacks.try_pop(callback, arcana::cancellation::none()))
-        {
-            callback(std::move(array));
-        }
+        m_screenShotCallbacks.front()(std::move(array));
+        m_screenShotCallbacks.pop();
     }
 
     void BgfxCallback::captureBegin(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yflip)
