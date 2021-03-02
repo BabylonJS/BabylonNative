@@ -1,7 +1,5 @@
 #include "SafeTimespanGuarantor.h"
 
-using namespace std::chrono_literals;
-
 namespace Babylon
 {
     SafeTimespanGuarantor::SafeTimespanGuarantor()
