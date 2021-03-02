@@ -82,7 +82,7 @@ _native.whenGraphicsReady().then(function () {
         CreateInputHandling(scene);
 
         if (cameraTexture) {
-            var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.3);
+            var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
             var mat = new BABYLON.StandardMaterial("mat", scene);
             mat.diffuseColor = BABYLON.Color3.Black();
 
