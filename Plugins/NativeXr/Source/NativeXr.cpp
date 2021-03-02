@@ -2621,7 +2621,7 @@ namespace Babylon
 
             Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
             {
-                const auto nativeExtension = m_xr.GetNativeXrContext();
+                const auto nativeExtension = m_xr->GetNativeXrContext();
                 if (nativeExtension)
                 {
                     return Napi::Number::From(info.Env(), nativeExtension);
@@ -2632,7 +2632,7 @@ namespace Babylon
 
             Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
             {
-                const auto nativeExtensionType = m_xr.GetNativeXrContextType();
+                const auto nativeExtensionType = m_xr->GetNativeXrContextType();
                 if (!nativeExtensionType.empty())
                 {
                     return Napi::String::From(info.Env(), nativeExtensionType);
