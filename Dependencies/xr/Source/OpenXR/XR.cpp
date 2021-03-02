@@ -60,21 +60,73 @@ namespace xr
         : ContextImpl(std::make_unique<Impl>()) {}
 
     XrSessionContext::~XrSessionContext() {}
-    bool XrSessionContext::IsInitialized() const
+
+    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsInitialized() const
     {
         return ContextImpl->Session.Get() != XR_NULL_HANDLE &&
             ContextImpl->SceneSpace.Get() != XR_NULL_HANDLE &&
             ContextImpl->State != XrSessionState::XR_SESSION_STATE_UNKNOWN;
     }
-    XrInstance XrSessionContext::Instance() const { return ContextImpl->Instance.Get(); }
-    XrSystemId XrSessionContext::SystemId() const { return ContextImpl->SystemId; }
-    XrTime XrSessionContext::DisplayTime() const { return ContextImpl->DisplayTime; }
-    const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const { return ContextImpl->Extensions; }
-    const XrSession XrSessionContext::Session() const { return ContextImpl->Session.Get(); }
-    const XrSessionState XrSessionContext::State() const { return ContextImpl->State; }
-    const XrSpace XrSessionContext::Space() const { return ContextImpl->SceneSpace.Get(); }
-    const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const { return ContextImpl->SceneUnderstanding; }
-    const bool XrSessionContext::IsSessionRunning() const { return ContextImpl->IsSessionRunning; }
+
+    xr::ExtensionDispatchTable* OPENXR_CONTEXT_INTERFACE_API XrSessionContext::ExtensionDispatchTable() const
+    {
+        return ContextImpl->Extensions.get();
+    }
+
+    XrInstance OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Instance() const
+    {
+        return ContextImpl->Instance.Get();
+    }
+
+    XrSystemId OPENXR_CONTEXT_INTERFACE_API XrSessionContext::SystemId() const
+    {
+        return ContextImpl->SystemId;
+    }
+
+    XrTime OPENXR_CONTEXT_INTERFACE_API XrSessionContext::DisplayTime() const
+    {
+        return ContextImpl->DisplayTime;
+    }
+    
+    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsExtensionEnabled(const char* name) const
+    {
+        return ContextImpl->Extensions->IsExtensionSupported(name);
+    }
+
+    XrSession OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Session() const
+    {
+        return ContextImpl->Session.Get();
+    }
+
+    XrSessionState OPENXR_CONTEXT_INTERFACE_API XrSessionContext::State() const
+    {
+        return ContextImpl->State;
+    }
+
+    XrSpace OPENXR_CONTEXT_INTERFACE_API XrSessionContext::Space() const
+    {
+        return ContextImpl->SceneSpace.Get();
+    }
+
+    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsSessionRunning() const
+    {
+        return ContextImpl->IsSessionRunning;
+    }
+
+    XrResult OPENXR_CONTEXT_INTERFACE_API XrSessionContext::GetInstanceProcAddr(const char* name, PFN_xrVoidFunction* function) const
+    {
+        return xrGetInstanceProcAddr(ContextImpl->Instance.Get(), name, function);
+    }
+
+    const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const
+    {
+        return ContextImpl->Extensions;
+    }
+
+    const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const
+    {
+        return ContextImpl->SceneUnderstanding;
+    }
 
     const XrSessionContext& XrRegistry::Context()
     {
@@ -84,6 +136,21 @@ namespace xr
         }
 
         return *globalXrSessionContext;
+    }
+
+    uintptr_t XrRegistry::GetNativeXrContext()
+    {
+        if (globalXrSessionContext == nullptr)
+        {
+            globalXrSessionContext = std::make_unique<XrSessionContext>();
+        }
+
+        return reinterpret_cast<uintptr_t>(globalXrSessionContext.get());
+    }
+
+    std::string XrRegistry::GetNativeXrContextType()
+    {
+        return "OpenXR";
     }
 
     struct System::Impl
@@ -293,8 +360,19 @@ namespace xr
             static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX{ "/input/thumbstick/click" };
             XrAction ControllerGetThumbstickClickAction{};
 
+            static constexpr char* HAND_GET_SELECT_ACTION_NAME{ "hand_get_select_action" };
+            static constexpr char* HAND_GET_SELECT_ACTION_LOCALIZED_NAME{ "Hand Select" };
+            static constexpr char* HAND_GET_SELECT_PATH_SUFFIX{ "/input/select/value" };
+            XrAction HandGetSelectAction{};
+
+            static constexpr char* HAND_GET_SQUEEZE_ACTION_NAME{ "hand_get_squeeze_action" };
+            static constexpr char* HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME{ "Hand Squeeze" };
+            static constexpr char* HAND_GET_SQUEEZE_PATH_SUFFIX{ "/input/squeeze/value" };
+            XrAction HandGetSqueezeAction{};
+
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
+            static constexpr char* MICROSOFT_HAND_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/hand_interaction" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<Frame::SceneObject> SceneObjects{};
@@ -561,6 +639,16 @@ namespace xr
             openXRAnchors.erase(anchor.NativeAnchor);
         }
 
+        uintptr_t GetNativeXrContext()
+        {
+            return XrRegistry::GetNativeXrContext();
+        }
+
+        std::string GetNativeXrContextType()
+        {
+            return XrRegistry::GetNativeXrContextType();
+        }
+
     private:
         static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
 
@@ -663,6 +751,7 @@ namespace xr
 
             std::vector<XrActionSuggestedBinding> defaultBindings{};
             std::vector<XrActionSuggestedBinding> microsoftControllerBindings{};
+            std::vector<XrActionSuggestedBinding> microsoftHandBindings{};
 
             // Create controller get grip pose action, suggested bindings, and spaces
             {
@@ -685,6 +774,12 @@ namespace xr
 
                     microsoftControllerBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
                     XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
+
+                    if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+                    {
+                        microsoftHandBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
+                        XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
+                    }
 
                     // Create subaction space
                     XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -716,6 +811,12 @@ namespace xr
                     
                     microsoftControllerBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
                     XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
+
+                    if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+                    {
+                        microsoftHandBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
+                        XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
+                    }
 
                     // Create subaction space
                     XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -796,6 +897,28 @@ namespace xr
                 microsoftControllerBindings,
                 instance);
 
+            if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+            {
+                // Create action and suggested bindings specific to hands
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.HAND_GET_SELECT_ACTION_NAME,
+                    ActionResources.HAND_GET_SELECT_ACTION_LOCALIZED_NAME,
+                    ActionResources.HAND_GET_SELECT_PATH_SUFFIX,
+                    &ActionResources.HandGetSelectAction,
+                    microsoftHandBindings,
+                    instance);
+
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.HAND_GET_SQUEEZE_ACTION_NAME,
+                    ActionResources.HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME,
+                    ActionResources.HAND_GET_SQUEEZE_PATH_SUFFIX,
+                    &ActionResources.HandGetSqueezeAction,
+                    microsoftHandBindings,
+                    instance);
+            }
+
             // Provide default suggested bindings to instance
             XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
             XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
@@ -803,12 +926,22 @@ namespace xr
             suggestedBindings.countSuggestedBindings = (uint32_t)defaultBindings.size();
             XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
 
-            // Provide Microsoft suggested binding to instance
-            XrInteractionProfileSuggestedBinding microsoftSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftSuggestedBindings.interactionProfile));
-            microsoftSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
-            microsoftSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftSuggestedBindings));
+            // Provide Microsoft controller suggested binding to instance
+            XrInteractionProfileSuggestedBinding microsoftControllerSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftControllerSuggestedBindings.interactionProfile));
+            microsoftControllerSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
+            microsoftControllerSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
+            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftControllerSuggestedBindings));
+
+            if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+            {
+                // Provide Microsoft hand suggested binding to instance
+                XrInteractionProfileSuggestedBinding microsoftHandSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+                XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_HAND_INTERACTION_PROFILE, &microsoftHandSuggestedBindings.interactionProfile));
+                microsoftHandSuggestedBindings.suggestedBindings = microsoftHandBindings.data();
+                microsoftHandSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftHandBindings.size();
+                XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftHandSuggestedBindings));
+            }
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
             attachInfo.countActionSets = 1;
@@ -1178,6 +1311,17 @@ namespace xr
 
             return true;
         }
+
+        void UpdatePoseData(xr::Pose& targetPose, XrPosef& sourcePose)
+        {
+            targetPose.Position.X = sourcePose.position.x;
+            targetPose.Position.Y = sourcePose.position.y;
+            targetPose.Position.Z = sourcePose.position.z;
+            targetPose.Orientation.X = sourcePose.orientation.x;
+            targetPose.Orientation.Y = sourcePose.orientation.y;
+            targetPose.Orientation.Z = sourcePose.orientation.z;
+            targetPose.Orientation.W = sourcePose.orientation.w;
+        }
     };
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
@@ -1427,13 +1571,7 @@ namespace xr
                     if (inputSource.TrackedThisFrame)
                     {
                         inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                        inputSource.GripSpace.Pose.Position.X = location.pose.position.x;
-                        inputSource.GripSpace.Pose.Position.Y = location.pose.position.y;
-                        inputSource.GripSpace.Pose.Position.Z = location.pose.position.z;
-                        inputSource.GripSpace.Pose.Orientation.X = location.pose.orientation.x;
-                        inputSource.GripSpace.Pose.Orientation.Y = location.pose.orientation.y;
-                        inputSource.GripSpace.Pose.Orientation.Z = location.pose.orientation.z;
-                        inputSource.GripSpace.Pose.Orientation.W = location.pose.orientation.w;
+                        m_impl->UpdatePoseData(inputSource.GripSpace.Pose, location.pose);
                     }
                 }
 
@@ -1454,13 +1592,7 @@ namespace xr
                     if (inputSource.TrackedThisFrame)
                     {
                         inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                        inputSource.AimSpace.Pose.Position.X = location.pose.position.x;
-                        inputSource.AimSpace.Pose.Position.Y = location.pose.position.y;
-                        inputSource.AimSpace.Pose.Position.Z = location.pose.position.z;
-                        inputSource.AimSpace.Pose.Orientation.X = location.pose.orientation.x;
-                        inputSource.AimSpace.Pose.Orientation.Y = location.pose.orientation.y;
-                        inputSource.AimSpace.Pose.Orientation.Z = location.pose.orientation.z;
-                        inputSource.AimSpace.Pose.Orientation.W = location.pose.orientation.w;
+                        m_impl->UpdatePoseData(inputSource.AimSpace.Pose, location.pose);
                     }
                 }
 
@@ -1497,6 +1629,24 @@ namespace xr
                 // Get joint data
                 if (sessionImpl.HandData.HandsInitialized)
                 {
+                    if (sessionImpl.HmdImpl.Context.Extensions()->HandInteractionSupported)
+                    {
+                        const auto& controllerInfo = sessionImpl.ControllerInfo;
+                        auto& gamepadObject = InputSources[idx].GamepadObject;
+
+                        // Get interaction data
+                        if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
+                            (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched)))
+                        {
+                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+
+                            InputSources[idx].GamepadTrackedThisFrame = true;
+                        }
+                    }
+
                     XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
                     jointLocateInfo.baseSpace = sceneSpace;
                     jointLocateInfo.time = displayTime;
@@ -1531,14 +1681,8 @@ namespace xr
                             auto joint = handInfo.JointLocations[i + handInfo.UNUSED_HAND_JOINT_OFFSET];
 
                             inputSource.HandJoints[i].PoseRadius = joint.radius;
-                            inputSource.HandJoints[i].Pose.Position.X = joint.pose.position.x;
-                            inputSource.HandJoints[i].Pose.Position.Y = joint.pose.position.y;
-                            inputSource.HandJoints[i].Pose.Position.Z = joint.pose.position.z;
-                            inputSource.HandJoints[i].Pose.Orientation.X = joint.pose.orientation.x;
-                            inputSource.HandJoints[i].Pose.Orientation.Y = joint.pose.orientation.y;
-                            inputSource.HandJoints[i].Pose.Orientation.Z = joint.pose.orientation.z;
-                            inputSource.HandJoints[i].Pose.Orientation.W = joint.pose.orientation.w;
                             inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
+                            m_impl->UpdatePoseData(inputSource.HandJoints[i].Pose, joint.pose);
                         }
                     }
                     else
@@ -1837,5 +1981,15 @@ namespace xr
         su.Initialize(initOptions);
 
         return true;
+    }
+
+    uintptr_t System::Session::GetNativeXrContext()
+    {
+        return m_impl->GetNativeXrContext();
+    }
+
+    std::string System::Session::GetNativeXrContextType()
+    {
+        return m_impl->GetNativeXrContextType();
     }
 }
