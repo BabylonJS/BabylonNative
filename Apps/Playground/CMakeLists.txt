@@ -1,14 +1,12 @@
 set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.glTF2FileLoader.js"
     "../BabylonScripts/babylon.max.js"
+    "../BabylonScripts/babylon.max.js.map"
     "../BabylonScripts/babylonjs.materials.js"
     "../BabylonScripts/babylon.gui.js"
     "../BabylonScripts/ammo.js"
     "../BabylonScripts/meshwriter.min.js"
     "../BabylonScripts/recast.js")
-
-set(BABYLONSCRIPTMAPS
-    "../BabylonScripts/babylon.max.js.map")
 
 set(SCRIPTS
     "Scripts/experience.js"
@@ -95,7 +93,7 @@ endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${BABYLONSCRIPTS} ${BABYLONSCRIPTMAPS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 else()
     add_executable(Playground ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
@@ -175,7 +173,7 @@ if(WINDOWS_STORE)
     set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
 else()
-    foreach(script ${SCRIPTS} ${BABYLONSCRIPTS} ${BABYLONSCRIPTMAPS})
+    foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
         get_filename_component(SCRIPT_NAME "${script}" NAME)
         # Copy scripts to the parent of the executable location since CMake can't use generator
         # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
@@ -188,7 +186,7 @@ else()
 endif()
 
 set_property(TARGET Playground PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../BabylonScripts PREFIX Scripts FILES ${BABYLONSCRIPTS} ${BABYLONSCRIPTMAPS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../BabylonScripts PREFIX Scripts FILES ${BABYLONSCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)
