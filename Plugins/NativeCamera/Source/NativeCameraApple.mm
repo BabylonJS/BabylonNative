@@ -4,6 +4,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include "NativeCamera.h"
+#include <arcana/macros.h>
 
 @class CameraTextureDelegate;
 
@@ -102,7 +103,8 @@ namespace Babylon::Plugins::Internal
                 }
             }
 #else
-            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVCaptureDeviceTypeBuiltInDualCamera];
+            UNUSED(frontCamera);
+            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
 #endif
             // Set video capture input: If there a problem initialising the camera, it will give am error.
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
