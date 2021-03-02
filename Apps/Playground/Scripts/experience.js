@@ -9,7 +9,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
-var cameraTexture = true;
+var cameraTexture = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -89,7 +89,7 @@ _native.whenGraphicsReady().then(function () {
             BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
                 mat.emissiveTexture = videoTexture;
                 cameraBox.material = mat;
-            }, { maxWidth: 1024, maxHeight: 1024, facingMode: "environment" });
+            }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
         }
 
         if (ibl) {

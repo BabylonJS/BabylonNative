@@ -5,6 +5,7 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
+#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
 #import <MetalKit/MetalKit.h>
@@ -76,6 +77,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Plugins::NativeCamera::Initialize(env);
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env, false); // render on UI Thread

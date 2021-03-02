@@ -34,6 +34,7 @@ if(APPLE)
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(RESOURCE_FILES ${STORYBOARD})
+        set(ADDITIONAL_LIBRARIES PRIVATE NativeCamera)
         set(SOURCES
             ${SOURCES}
             "macOS/main.m"
@@ -158,7 +159,7 @@ if(APPLE)
             set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
             enable_language(Swift)
     else()
-        target_link_libraries(Playground PUBLIC "-framework MetalKit")
+        target_link_libraries(Playground PUBLIC "-framework MetalKit -framework CoreMedia -framework AVFoundation")
 
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
