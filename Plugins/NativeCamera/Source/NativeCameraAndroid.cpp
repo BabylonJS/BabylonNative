@@ -32,7 +32,7 @@ namespace Babylon::Plugins::Internal
 
     struct CameraInterfaceAndroid : public CameraInterface
     {
-        CameraInterfaceAndroid();
+        CameraInterfaceAndroid(uint32_t width, uint32_t height, bool frontCamera);
         virtual ~CameraInterfaceAndroid();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
 
@@ -58,8 +58,10 @@ namespace Babylon::Plugins::Internal
 
     private:
 
-        std::string getBackFacingCamId();
+        std::string getCamId(bool frontCamera);
 
+        uint32_t width;
+        uint32_t height;
         ACameraManager* cameraManager{};
         ACameraDevice* cameraDevice{};
         ACameraOutputTarget* textureTarget{};
@@ -161,7 +163,7 @@ namespace Babylon::Plugins::Internal
     };
 
 
-    std::string CameraInterfaceAndroid::getBackFacingCamId()
+    std::string CameraInterfaceAndroid::getCamId(bool frontCamera)
     {
         ACameraIdList *cameraIds = nullptr;
         ACameraManager_getCameraIdList(cameraManager, &cameraIds);
@@ -178,11 +180,10 @@ namespace Babylon::Plugins::Internal
             ACameraMetadata_const_entry lensInfo = {};
             ACameraMetadata_getConstEntry(metadataObj, ACAMERA_LENS_FACING, &lensInfo);
 
-            auto facing = static_cast<acamera_metadata_enum_android_lens_facing_t>(
-                    lensInfo.data.u8[0]);
+            auto facing = static_cast<acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
 
             // Found a back-facing camera?
-            if (facing == ACAMERA_LENS_FACING_BACK)
+            if (facing == (frontCamera?ACAMERA_LENS_FACING_FRONT:ACAMERA_LENS_FACING_BACK))
             {
                 backId = id;
                 break;
@@ -301,21 +302,23 @@ namespace Babylon::Plugins::Internal
         GLuint oesTexture;
         glGenTextures(1, &oesTexture);
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture);
-        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
         return oesTexture;
     }
     
-    CameraInterfaceAndroid::CameraInterfaceAndroid()
-        : cameraOESTextureId{GenerateOESTexture()}
+    CameraInterfaceAndroid::CameraInterfaceAndroid(uint32_t width, uint32_t height, bool frontCamera)
+        : width{width}
+        , height{height}
+        , cameraOESTextureId{GenerateOESTexture()}
         , surfaceTexture(cameraOESTextureId)
         , surface(surfaceTexture)
     {
-        CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this]()
+        CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, frontCamera]()
         {
             cameraManager = ACameraManager_create();
-            auto id = getBackFacingCamId();
+            auto id = getCamId(frontCamera);
             ACameraManager_openCamera(cameraManager, id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
 
             textureWindow = surface.getNativeWindow();
@@ -339,12 +342,11 @@ namespace Babylon::Plugins::Internal
             // Start capturing continuously
             ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
 
-
             glGenTextures(1, &cameraRGBATextureId);
             glBindTexture(GL_TEXTURE_2D, cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256/*width*/, 256/*height*/, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glBindTexture(GL_TEXTURE_2D, 0);
 
             glGenFramebuffers(1, &clearFrameBufferId);
@@ -380,7 +382,7 @@ namespace Babylon::Plugins::Internal
             surfaceTexture.updateTexture();
 
             glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
-            glViewport(0, 0, 256, 256);
+            glViewport(0, 0, width, height);
             glUseProgram(cameraShaderProgramId);
 
             // Configure the camera texture
@@ -402,8 +404,8 @@ namespace Babylon::Plugins::Internal
         }
     }
 
-    CameraInterface* CameraInterface::CreateInterface()
+    CameraInterface* CameraInterface::CreateInterface(uint32_t width, uint32_t height, bool frontCamera)
     {
-        return new CameraInterfaceAndroid;
+        return new CameraInterfaceAndroid(width, height, frontCamera);
     }
 }

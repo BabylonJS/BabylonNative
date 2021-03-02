@@ -9,6 +9,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
+var cameraTexture = true;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2).setEnabled(false);
@@ -80,20 +81,16 @@ _native.whenGraphicsReady().then(function () {
         scene.activeCamera.alpha += Math.PI;
         CreateInputHandling(scene);
 
-        var plane = BABYLON.Mesh.CreateBox("box1", 0.3);
+        if (cameraTexture) {
+            var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.3);
+            var mat = new BABYLON.StandardMaterial("mat", scene);
+            mat.diffuseColor = BABYLON.Color3.Black();
 
-        var mat = new BABYLON.StandardMaterial("mat", scene);
-        mat.diffuseColor = BABYLON.Color3.Black();
-
-        BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
-            mat.emissiveTexture = videoTexture;
-            plane.material = mat;
-            setTimeout(function () {
-                mat.emissiveTexture.dispose();
-            }, 1000);
-        }, { maxWidth: 256, maxHeight: 256 });
-        
-
+            BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+                mat.emissiveTexture = videoTexture;
+                cameraBox.material = mat;
+            }, { maxWidth: 1024, maxHeight: 1024, facingMode: "environment" });
+        }
 
         if (ibl) {
             scene.createDefaultEnvironment({ createGround: false, createSkybox: false });

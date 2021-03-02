@@ -20,6 +20,7 @@ namespace Babylon::Plugins::Internal
         id <MTLTexture> textureBGRA;
     };
 }
+
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>{
     Babylon::Plugins::Internal::CameraInterfaceApple* cameraInterfaceApple;
 }
@@ -63,7 +64,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    CameraInterface* CameraInterface::CreateInterface()
+    CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple;
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;

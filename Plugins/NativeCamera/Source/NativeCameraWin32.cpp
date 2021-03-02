@@ -1,9 +1,10 @@
 #include "NativeCamera.h"
+#include <stdexcept>
 
 namespace Babylon::Plugins::Internal
 {
-    CameraInterface* CameraInterface::CreateInterface()
+    CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
     {
-        return nullptr;
+        throw std::runtime_error{"Camera unimplemented on Win32"};
     }
 }
