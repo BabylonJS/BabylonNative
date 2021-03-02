@@ -7,16 +7,9 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         "Source/WorkQueue.cpp"
         "Source/WorkQueue.h")
 
-    if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND ARCH STREQUAL "x64")
-        # Enable V8 Pointer Compression
-        # https://v8.dev/blog/pointer-compression
-        # https://stackoverflow.com/q/62921373
-        target_compile_definitions(napi PUBLIC V8_COMPRESS_POINTERS)
-    endif()
-
     if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         set(SOURCES ${SOURCES}
-                "Source/v8/V8Inc.h")
+            "Source/v8/V8Inc.h")
     endif()
 
     if (V8_USE_INSPECTOR)

@@ -1,5 +1,6 @@
-# cmake 3.15.3+ because of a c++ regression when swift is enable
-cmake_minimum_required(VERSION 3.15.3)
+# cmake 3.15.3+ because of a c++ regression when swift is enabled
+# cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
+cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(BabylonNative)
@@ -22,18 +23,6 @@ elseif(UNIX)
     set(BABYLON_NATIVE_PLATFORM "Unix") 
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
-endif()
-
-if(${CMAKE_CXX_COMPILER} MATCHES "x86/cl.exe$")
-    set(ARCH "x86")
-elseif(${CMAKE_CXX_COMPILER} MATCHES "x64/cl.exe$")
-    set(ARCH "x64")
-elseif(${CMAKE_CXX_COMPILER} MATCHES "arm/cl.exe$")
-    set(ARCH "ARM")
-elseif(${CMAKE_CXX_COMPILER} MATCHES "arm64/cl.exe$")
-    set(ARCH "ARM64")
-elseif(WIN32)
-    message(FATAL_ERROR "Unrecognized compiler: ${CMAKE_CXX_COMPILER}")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
