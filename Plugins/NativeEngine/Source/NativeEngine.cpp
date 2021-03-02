@@ -1375,8 +1375,7 @@ namespace Babylon
 
     void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
     {
-        // todo comment this out and pass null instead
-        //bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
@@ -1384,7 +1383,7 @@ namespace Babylon
         const auto height = info[3].As<Napi::Number>().FloatValue();
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_boundFrameBuffer->SetViewPort(nullptr, x, yOrigin, width, height);
+        m_boundFrameBuffer->SetViewPort(encoder, x, yOrigin, width, height);
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
@@ -1543,7 +1542,7 @@ namespace Babylon
         m_requestAnimationFrameCallbacksScheduled = true;
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() mutable {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 
                 auto callbacks{std::move(m_requestAnimationFrameCallbacks)};

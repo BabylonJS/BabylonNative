@@ -13,8 +13,6 @@
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
 
-#include <sstream>
-
 namespace
 {
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
