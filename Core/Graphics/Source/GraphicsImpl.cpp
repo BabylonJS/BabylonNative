@@ -190,9 +190,7 @@ namespace Babylon
 
     void Graphics::Impl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
     {
-        assert(m_renderThreadAffinity.check());
-        m_bgfxCallback.AddScreenShotCallback(callback);
-        bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "Graphics::Impl::RequestScreenShot");
+        m_screenShotCallbacks.push(std::move(callback));
     }
 
     float Graphics::Impl::GetHardwareScalingLevel()
@@ -267,6 +265,16 @@ namespace Babylon
         }
     }
 
+    void Graphics::Impl::RequestScreenShots()
+    {
+        std::function<void(std::vector<uint8_t>)> callback;
+        while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
+        {
+            m_bgfxCallback.AddScreenShotCallback(std::move(callback));
+            bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "Graphics::Impl::RequestScreenShot");
+        }
+    }
+
     void Graphics::Impl::Frame()
     {
         // Automatically end bgfx encoders.
@@ -274,6 +282,9 @@ namespace Babylon
 
         // Discard everything if the bgfx state is dirty.
         DiscardIfDirty();
+
+        // Request screen shots before bgfx::frame.
+        RequestScreenShots();
 
         // Advance frame and render!
         bgfx::frame();

@@ -1402,17 +1402,13 @@ namespace Babylon
         const auto callback{info[0].As<Napi::Function>()};
 
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, callbackPtr{std::move(callbackPtr)}, cancellationSource{m_cancellationSource}]() {
-            m_graphicsImpl.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
-                m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
-                    auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
-                    auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
-                    callbackPtr->Value().Call({typedArray});
-                });
+        m_graphicsImpl.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
+            m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
+                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
+                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
+                callbackPtr->Value().Call({typedArray});
             });
         });
-
-        // TODO: handle errors
     }
 
     void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)

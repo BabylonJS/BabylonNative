@@ -6,6 +6,7 @@
 #include "SafeTimespanGuarantor.h"
 
 #include <arcana/containers/ticketed_collection.h>
+#include <arcana/threading/blocking_concurrent_queue.h>
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
@@ -95,6 +96,7 @@ namespace Babylon
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         void DiscardIfDirty();
+        void RequestScreenShots();
         void Frame();
         bgfx::Encoder* GetEncoderForThread();
         void EndEncoders();
@@ -134,6 +136,8 @@ namespace Babylon
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
+
+        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
 
         std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
         std::mutex m_threadIdToEncoderMutex{};

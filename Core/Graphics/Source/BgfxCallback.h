@@ -1,6 +1,7 @@
 #pragma once
 
-#include <arcana/threading/blocking_concurrent_queue.h>
+#include <queue>
+#include <functional>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -45,7 +46,7 @@ namespace Babylon
     private:
         std::function<void(const char* output)> m_outputFunction;
 
-        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
+        std::queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
 
         CaptureData m_captureData{};
         const std::function<void(const CaptureData&)> m_captureCallback{};
