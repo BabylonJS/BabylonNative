@@ -6,12 +6,12 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
-#include <XrEnumerate.h>
-#include <XrExtensions.h>
-#include <XrStruct.h>
-#include <XrViewConfiguration.h>
-#include <XrHandle.h>
-#include <XrMath.h>
+#include <XrUtility/XrEnumerate.h>
+#include <XrUtility/XrExtensions.h>
+#include <XrUtility/XrStruct.h>
+#include <XrUtility/XrViewConfiguration.h>
+#include <XrUtility/XrHandle.h>
+#include <XrUtility/XrMath.h>
 
 #include <assert.h>
 #include <stdexcept>

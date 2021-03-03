@@ -421,6 +421,16 @@ namespace Babylon
             return m_session->TrySetPreferredMeshDetectorOptions(options);
         }
 
+        uintptr_t GetNativeXrContext()
+        {
+            return m_session->GetNativeXrContext();
+        }
+
+        std::string GetNativeXrContextType()
+        {
+            return m_session->GetNativeXrContextType();
+        }
+
     private:
         std::map<uintptr_t, FrameBufferData*> m_texturesToFrameBuffers{};
         xr::System m_system{};
@@ -2299,6 +2309,8 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
+                        InstanceAccessor("nativeXrContext", &XRSession::GetNativeXrContext, nullptr),
+                        InstanceAccessor("nativeXrContextType", &XRSession::GetNativeXrContextType, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
@@ -2646,6 +2658,28 @@ namespace Babylon
                 const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
                 const auto result = m_xr.TrySetPreferredMeshDetectorOptions(options);
                 return Napi::Value::From(info.Env(), result);
+            }
+
+            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
+            {
+                const auto nativeExtension = m_xr.GetNativeXrContext();
+                if (nativeExtension)
+                {
+                    return Napi::Number::From(info.Env(), nativeExtension);
+                }
+
+                return info.Env().Undefined();
+            }
+
+            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
+            {
+                const auto nativeExtensionType = m_xr.GetNativeXrContextType();
+                if (!nativeExtensionType.empty())
+                {
+                    return Napi::String::From(info.Env(), nativeExtensionType);
+                }
+
+                return info.Env().Undefined();
             }
         };
 
