@@ -3,6 +3,7 @@
 #include <gsl/gsl>
 
 #include <mutex>
+#include <condition_variable>
 
 #include <arcana/threading/affinity.h>
 
