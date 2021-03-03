@@ -15,19 +15,19 @@ namespace Babylon
     template<>
     void Graphics::UpdateWindow<void*>(void* windowPtr)
     {
-        m_impl->SetNativeWindow(windowPtr, nullptr, nullptr, nullptr);
+        m_impl->SetNativeWindow(windowPtr, nullptr, nullptr, nullptr, nullptr);
     }
 
     template<>
     void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
     {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr, nullptr, nullptr);
+        m_impl->SetNativeWindow(windowPtr, windowTypePtr, nullptr, nullptr, nullptr);
     }
 
     template<>
-    void Graphics::UpdateWindow<void*, void*, void*, void*>(void* windowPtr, void* windowTypePtr, void* contextPtr, void* backBufferPtr)
+    void Graphics::UpdateWindow<void*, void*, void*, void*, void*>(void* windowPtr, void* windowTypePtr, void* contextPtr, void* backBufferPtr, void* depthBufferPtr)
     {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr, contextPtr, backBufferPtr);
+        m_impl->SetNativeWindow(windowPtr, windowTypePtr, contextPtr, backBufferPtr, depthBufferPtr);
     }
 
     template<>
@@ -49,10 +49,10 @@ namespace Babylon
     }
 
     template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, void* contextPtr, void* backBufferPtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, void*, void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, void* contextPtr, void* backBufferPtr, void* depthBufferPtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*, void*, void*>(nativeWindowPtr, nativeWindowTypePtr, contextPtr, backBufferPtr);
+        graphics->UpdateWindow<void*, void*, void*, void*, void*>(nativeWindowPtr, nativeWindowTypePtr, contextPtr, backBufferPtr, depthBufferPtr);
         graphics->UpdateSize(width, height);
         return graphics;
     }

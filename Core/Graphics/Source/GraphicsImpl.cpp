@@ -33,7 +33,7 @@ namespace Babylon
         return m_state.Bgfx.InitState.platformData.nwh;
     }
 
-    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr, void* contextPtr, void* backBufferPtr)
+    void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr, void* contextPtr, void* backBufferPtr, void* depthBufferPtr)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
@@ -43,7 +43,7 @@ namespace Babylon
         pd.nwh = nativeWindowPtr;
         pd.context = contextPtr;
         pd.backBuffer = backBufferPtr;
-        pd.backBufferDS = nullptr;
+        pd.backBufferDS = depthBufferPtr;
     }
 
     void Graphics::Impl::Resize(size_t width, size_t height)
