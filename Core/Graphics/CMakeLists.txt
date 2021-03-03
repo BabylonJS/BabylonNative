@@ -5,23 +5,8 @@ set(SOURCES
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h")
-
-if (WINDOWS_STORE)
-    if (BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
-        set(SOURCES
-            ${SOURCES}
-            "Source/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Graphics.cpp")
-    else()
-        set(SOURCES
-            ${SOURCES}
-            "Source/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Graphics.cpp")
-    endif()
-else()
-    set(SOURCES
-        ${SOURCES}
-        "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
-endif()
+    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
+    "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
