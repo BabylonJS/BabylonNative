@@ -5,8 +5,20 @@ set(SOURCES
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
+    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h")
+
+if(APPLE)
+    if(IOS)
+        set(SOURCES ${SOURCES}
+            "Source/${BABYLON_NATIVE_PLATFORM}/iOS/Graphics.mm")
+    else()
+        set(SOURCES ${SOURCES}
+            "Source/${BABYLON_NATIVE_PLATFORM}/macOS/Graphics.mm")
+    endif()
+else()
+    set(SOURCES ${SOURCES}
+        "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
+endif()
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
@@ -23,9 +35,7 @@ elseif(ANDROID)
     target_link_to_dependencies(Graphics
         PRIVATE android
         PRIVATE AndroidExtensions)
-elseif(APPLE)
-    # link to apple libraries
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
     # link to linux libraries
 endif()
 
