@@ -568,6 +568,11 @@ namespace Babylon
                     auto jsHeight{Napi::Value::From(m_env, view.ColorTextureSize.Height)};
                     auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
                     m_frameBufferToJsTextureMap[&frameBuffer] = Napi::Persistent(m_createRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                }).then(m_runtimeScheduler, m_cancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
+                    if (result.has_error())
+                    {
+                        Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                    }
                 });
             }
         }
