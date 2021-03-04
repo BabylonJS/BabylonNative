@@ -552,7 +552,6 @@ namespace xr {
             [mainView addSubview:xrView];
             xrView.userInteractionEnabled = false;
             xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-            xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
             xrView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
@@ -741,11 +740,6 @@ namespace xr {
                         // Attach the color texture, on which we'll draw the camera texture.
                         renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                         renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-
-                        // Attach the depth texture, which we will just clear.
-                        renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
-                        renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
-                        renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
 
                         // Create and end the render encoder.
                         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -1326,5 +1320,17 @@ namespace xr {
     {
         // TODO
         return false;
+    }
+
+    uintptr_t System::Session::GetNativeXrContext()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::Session::GetNativeXrContextType()
+    {
+        // TODO
+        return "";
     }
 }
