@@ -14,8 +14,6 @@ namespace Babylon
 
     namespace
     {
-        bool g_initializedProcess{false};
-
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
         {
             const std::array<const char*, 1> sources{source.data()};
@@ -54,15 +52,12 @@ namespace Babylon
 
     ShaderCompiler::ShaderCompiler()
     {
-        if (!g_initializedProcess)
-        {
-            glslang::InitializeProcess();
-        }
+        glslang::InitializeProcess();
     }
 
     ShaderCompiler::~ShaderCompiler()
     {
-        //glslang::FinalizeProcess();
+        glslang::FinalizeProcess();
     }
 
     ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
