@@ -36,7 +36,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     void* windowPtr = view;
     
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
-    graphics->EnableRendering();
+    graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -79,8 +79,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 {
     if (graphics)
     {
-        graphics->StartRenderingCurrentFrame();
         graphics->FinishRenderingCurrentFrame();
+        graphics->StartRenderingCurrentFrame();
     }
 }
 
