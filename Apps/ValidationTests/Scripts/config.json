@@ -37,11 +37,6 @@
             "errorRatio": 60.0
         },
         {
-            "title": "GLTF Buggy with Draco Mesh Compression",
-            "playgroundId": "#JNW207#1",
-            "referenceImage": "gltfBuggyDraco.png"
-        },
-        {
             "title": "LightFalloff",
             "playgroundId": "#20OAV9#201",
             "referenceImage": "lightFalloff.png"
