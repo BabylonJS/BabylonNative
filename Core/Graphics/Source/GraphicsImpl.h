@@ -50,7 +50,6 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
-        // This should only be called on the UI thread, since we interact with platform UI components
         float UpdateDevicePixelRatio();
         float GetDevicePixelRatio();
         
