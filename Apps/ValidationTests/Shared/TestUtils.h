@@ -138,8 +138,7 @@ namespace Babylon
         {
             const auto title = info[0].As<Napi::String>().Utf8Value();
 #ifdef WIN32
-            // TODO: this will cause a dead lock.
-            //SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
+            SetWindowTextA((HWND)_nativeWindowPtr, title.c_str());
 #elif ANDROID
             (void)info;
 #elif __linux__
