@@ -28,8 +28,6 @@ jobs:
       run: curl.exe -o Apps/BabylonScripts/babylon.glTF2FileLoader.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylon.glTF2FileLoader.js
     - name: Download babylon.gui.js
       run: curl.exe -o Apps/BabylonScripts/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
-    - name: Download draco_decoder_gltf.js
-      run: curl.exe -o Apps/BabylonScripts/draco_decoder_gltf.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/draco_decoder_gltf.js
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
     - name: Make validation directories 

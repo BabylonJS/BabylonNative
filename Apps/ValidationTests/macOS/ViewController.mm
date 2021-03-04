@@ -30,8 +30,8 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 - (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics) {
-        graphics->StartRenderingCurrentFrame();
         graphics->FinishRenderingCurrentFrame();
+        graphics->StartRenderingCurrentFrame();
     }
 }
 
@@ -47,6 +47,10 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 }
 
 - (void)uninitialize {
+    if (graphics) {
+        graphics->FinishRenderingCurrentFrame();
+    }
+
     runtime.reset();
     graphics.reset();
 }
@@ -69,6 +73,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     void* windowPtr = (__bridge void*)engineView;
 
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(600), static_cast<size_t>(400));
+    graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 
@@ -84,13 +89,12 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
         Babylon::TestUtils::CreateInstance(env, windowPtr);
     });
-    
+
     Babylon::ScriptLoader loader{ *runtime };
     loader.LoadScript("app:///babylon.max.js");
     loader.LoadScript("app:///babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
-    loader.LoadScript("app:///draco_decoder_gltf.js");
     loader.LoadScript("app:///validation_native.js");
 }
 
