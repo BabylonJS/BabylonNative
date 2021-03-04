@@ -122,6 +122,10 @@ namespace Babylon
 
         if (m_state.Bgfx.Initialized)
         {
+            // HACK: Render one more frame to drain the before/after render work queues.
+            StartRenderingCurrentFrame();
+            FinishRenderingCurrentFrame();
+
             m_cancellationSource->cancel();
 
             m_frameBufferManager.reset();
