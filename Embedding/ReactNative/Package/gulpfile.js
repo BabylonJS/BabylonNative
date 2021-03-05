@@ -52,33 +52,124 @@ const initializeSubmodulesWindowsAgent = async () => {
   exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive "./../Modules/@babylonjs/react-native/submodules/BabylonNative');
 }
 
-const makeUWPProject = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
+const makeUWPProjectx86 = async () => {
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
   exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
+}
+
+const makeUWPProjectx64 = async () => {
+  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
+}
+
+const makeUWPProjectARM = async () => {
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
   exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
+}
+
+const makeUWPProjectARM64 = async () => {
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
   exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm64 ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
 }
 
-const buildUWPProject = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat');
+const makeUWPProject = gulp.parallel(
+  makeUWPProjectx86,
+  makeUWPProjectx64,
+  makeUWPProjectARM,
+  makeUWPProjectARM64
+);
+
+const buildUWPx86Debug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform Win32 -Configuration Debug');
 }
+
+const buildUWPx86Release = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform Win32 -Configuration Release');
+}
+
+const buildUWPx64Debug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform x64 -Configuration Debug');
+}
+
+const buildUWPx64Release = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform x64 -Configuration Release');
+}
+
+const buildUWPARMDebug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM -Configuration Debug');
+}
+
+const buildUWPARMRelease = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM -Configuration Release');
+}
+
+const buildUWPARM64Debug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM64 -Configuration Debug');
+}
+
+const buildUWPARM64Release = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM64 -Configuration Release');
+}
+
+const buildUWPProject = gulp.parallel(
+  buildUWPx86Debug,
+  buildUWPx86Release,
+  buildUWPx64Debug,
+  buildUWPx64Release,
+  buildUWPARMDebug,
+  buildUWPARMRelease,
+  buildUWPARM64Debug,
+  buildUWPARM64Release
+);
+
+const nugetRestoreUWPPlayground = async () => {
+  exec('nuget restore Playground.sln', './../Apps/Playground/windows');
+}
+
+const buildUWPPlaygroundx86Debug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform x86 -Configuration Debug');
+}
+
+const buildUWPPlaygroundx86Release = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform x86 -Configuration Release');
+}
+
+const buildUWPPlaygroundx64Debug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform x64 -Configuration Debug');
+}
+
+const buildUWPPlaygroundx64Release = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform x64 -Configuration Release');
+}
+
+const buildUWPPlaygroundARMDebug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM -Configuration Debug');
+}
+
+const buildUWPPlaygroundARMRelease = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM -Configuration Release');
+}
+
+const buildUWPPlaygroundARM64Debug = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM64 -Configuration Debug');
+}
+
+const buildUWPPlaygroundARM64Release = async () => {
+  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM64 -Configuration Release');
+}
+
+const buildUWPPlayground = gulp.parallel(
+  buildUWPPlaygroundx86Debug,
+  buildUWPPlaygroundx86Release,
+  buildUWPPlaygroundx64Debug,
+  buildUWPPlaygroundx64Release,
+  buildUWPPlaygroundARMDebug,
+  buildUWPPlaygroundARMRelease,
+  buildUWPPlaygroundARM64Debug,
+  buildUWPPlaygroundARM64Release
+);
 
 const buildUWP = gulp.series(makeUWPProject, buildUWPProject);
-
-const makeUWPProjectPR = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
-}
-
-const buildUWPProjectPR = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\PRBuild.bat');
-}
-
-const buildUWPPR = gulp.series(makeUWPProjectPR, buildUWPProjectPR);
 
 const copyCommonFiles = () => {
   return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/package.json')
@@ -330,8 +421,6 @@ exports.buildAndroid = buildAndroid;
 exports.createIOSUniversalLibs = createIOSUniversalLibs;
 exports.copyFiles = copyFiles;
 
-exports.buildUWP = buildUWP;
-
 exports.clean = clean;
 exports.build = build;
 exports.rebuild = rebuild;
@@ -347,13 +436,36 @@ const packUWP = gulp.series(clean, buildUWP, copyPackageFilesUWP, createPackage,
 const packUWPNoBuild = gulp.series(clean, copyPackageFilesUWP, createPackage, createPackageUWP);
 
 exports.initializeSubmodulesWindowsAgent = initializeSubmodulesWindowsAgent;
+exports.makeUWPProjectx86 = makeUWPProjectx86;
+exports.makeUWPProjectx64 = makeUWPProjectx64;
+exports.makeUWPProjectARM = makeUWPProjectARM;
+exports.makeUWPProjectARM64 = makeUWPProjectARM64;
 exports.makeUWPProject = makeUWPProject;
+
+exports.buildUWPx86Debug = buildUWPx86Debug;
+exports.buildUWPx86Release = buildUWPx86Release;
+exports.buildUWPx64Debug = buildUWPx64Debug;
+exports.buildUWPx64Release = buildUWPx64Release;
+exports.buildUWPARMDebug = buildUWPARMDebug;
+exports.buildUWPARMRelease = buildUWPARMRelease;
+exports.buildUWPARM64Debug = buildUWPARM64Debug;
+exports.buildUWPARM64Release = buildUWPARM64Release;
 exports.buildUWPProject = buildUWPProject;
-exports.makeUWPProjectPR = makeUWPProjectPR;
-exports.buildUWPProjectPR = buildUWPProjectPR;
+
+exports.nugetRestoreUWPPlayground = nugetRestoreUWPPlayground;
+exports.buildUWPPlaygroundx86Debug = buildUWPPlaygroundx86Debug;
+exports.buildUWPPlaygroundx86Release = buildUWPPlaygroundx86Release;
+exports.buildUWPPlaygroundx64Debug = buildUWPPlaygroundx64Debug;
+exports.buildUWPPlaygroundx64Release = buildUWPPlaygroundx64Release;
+exports.buildUWPPlaygroundARMDebug = buildUWPPlaygroundARMDebug;
+exports.buildUWPPlaygroundARMRelease = buildUWPPlaygroundARMRelease;
+exports.buildUWPPlaygroundARM64Debug = buildUWPPlaygroundARM64Debug;
+exports.buildUWPPlaygroundARM64Release = buildUWPPlaygroundARM64Release;
+exports.buildUWPPlayground = buildUWPPlayground;
+
 exports.buildUWP = buildUWP;
-exports.buildUWPPR = buildUWPPR;
 exports.buildUWPPublish = buildUWPPublish;
+
 exports.copyUWPFiles = copyUWPFiles;
 exports.packUWP = packUWP;
 exports.packUWPNoBuild = packUWPNoBuild;
