@@ -2321,12 +2321,6 @@ namespace Babylon
                     info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
-            ~XRSession()
-            {
-                // TODO: end session if it hasn't already
-                //m_xr->EndSessionAsync();
-            }
-
             void InitializeXrLayer(Napi::Object layer)
             {
                 // NOTE: We currently only support rendering to the entire frame. Because the following values
