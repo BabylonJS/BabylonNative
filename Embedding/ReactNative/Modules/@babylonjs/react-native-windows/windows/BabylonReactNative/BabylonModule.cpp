@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "BabylonModule.h"
-#include "JSI/JsiApi.h"
+#include "JSI/JsiApiContext.h"
 
 using namespace winrt::BabylonReactNative::implementation;
 

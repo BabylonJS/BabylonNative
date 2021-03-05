@@ -29,6 +29,15 @@
   </PropertyGroup>
   <PropertyGroup Label="BabylonReactNativeProps">
     <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native')">$(ProjectDir)\..\..\..\react-native</BabylonReactNativeDir>
+    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative</BabylonNativeDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_x64\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='x86' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_x86\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_arm\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_arm64\</BabylonNativeBuildDir>
+    <BabylonNativeLibsDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' == ''">..\libs\x64\</BabylonNativeLibsDir>
+    <BabylonNativeLibsDir Condition="'$(Platform)'=='x86' And '$(BabylonNativeDir)' == ''">..\libs\x86\</BabylonNativeLibsDir>
+    <BabylonNativeLibsDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' == ''">..\libs\arm\</BabylonNativeLibsDir>
+    <BabylonNativeLibsDir Condition="'$(Platform)'=='ARM64' And '$(BabylonNativeDir)' == ''">..\libs\arm64\</BabylonNativeLibsDir>
   </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
@@ -115,6 +124,37 @@
       <SubSystem>Console</SubSystem>
       <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
       <ModuleDefinitionFile>BabylonReactNative.def</ModuleDefinitionFile>
+      <!-- Library directories when building in repo -->
+      <!-- Note: you can add BabylonNative component build folders here as needed -->
+      <AdditionalLibraryDirectories Condition="'$(BabylonNativeBuildDir)' != ''">
+        $(BabylonNativeBuildDir)\Core\JsRuntime\$(Configuration);
+        $(BabylonNativeBuildDir)\Core\Graphics\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\arcana.cpp\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\bgfx.cmake\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\glslang\glslang\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\glslang\glslang\OSDependent\Windows\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\glslang\OGLCompilersDLL\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\glslang\SPIRV\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\napi\napi-jsi\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\SPIRV-Cross\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\UrlLib\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\xr\$(Configuration);
+        $(BabylonNativeBuildDir)\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\$(Configuration);
+        $(BabylonNativeBuildDir)\jsi\$(Configuration);
+        $(BabylonNativeBuildDir)\Plugins\NativeCapture\$(Configuration);
+        $(BabylonNativeBuildDir)\Plugins\NativeEngine\$(Configuration);
+        $(BabylonNativeBuildDir)\Plugins\NativeInput\$(Configuration);
+        $(BabylonNativeBuildDir)\Plugins\NativeXr\$(Configuration);
+        $(BabylonNativeBuildDir)\Polyfills\Window\$(Configuration);
+        $(BabylonNativeBuildDir)\Polyfills\XMLHttpRequest\$(Configuration);
+        $(BabylonNativeBuildDir)\$(Configuration);
+        %(AdditionalLibraryDirectories);
+      </AdditionalLibraryDirectories>
+      <!-- Library directories when building from npm package -->
+      <AdditionalLibraryDirectories Condition="'$(BabylonNativeLibsDir)' != ''">
+        $(BabylonNativeLibsDir)\$(Configuration);
+        %(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -125,21 +165,48 @@
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <!-- Libraries built from repo will be autolinked -->
-      <AdditionalDependencies Condition="Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">WindowsApp.lib;%(AdditionalDependencies);</AdditionalDependencies>
-      <!-- Libraries built from npm package need to be declared-->
-      <AdditionalDependencies Condition="Exists('$(ProjectDir)..\libs')">arcana.lib;astc.lib;astc-codec.lib;BabylonNative.lib;bgfx.lib;bimg.lib;bx.lib;edtaa3.lib;etc1.lib;etc2.lib;GenericCodeGend.lib;glslangd.lib;Graphics.lib;iqa.lib;jsi.lib;JsRuntime.lib;MachineIndependentd.lib;napi.lib;NativeCapture.lib;NativeEngine.lib;NativeInput.lib;NativeXr.lib;nvtt.lib;OGLCompilerd.lib;openxr_loader.lib;OSDependentd.lib;pvrtc.lib;spirv-cross-core.lib;spirv-cross-glsl.lib;spirv-cross-hlsl.lib;SPIRVd.lib;squish.lib;UrlLib.lib;Window.lib;XMLHttpRequest.lib;xr.lib;WindowsApp.lib;%(AdditionalDependencies);</AdditionalDependencies>
+      <!-- Debug Libraries -->
+      <AdditionalDependencies>
+        arcana.lib;
+        astc.lib;
+        astc-codec.lib;
+        BabylonNative.lib;
+        bgfx.lib;
+        bimg.lib;
+        bx.lib;
+        edtaa3.lib;
+        etc1.lib;
+        etc2.lib;
+        GenericCodeGend.lib;
+        glslangd.lib;
+        Graphics.lib;
+        iqa.lib;
+        jsi.lib;
+        JsRuntime.lib;
+        MachineIndependentd.lib;
+        napi.lib;
+        NativeCapture.lib;
+        NativeEngine.lib;
+        NativeInput.lib;
+        NativeXr.lib;
+        nvtt.lib;
+        OGLCompilerd.lib;
+        openxr_loader.lib;
+        OSDependentd.lib;
+        pvrtc.lib;
+        spirv-cross-core.lib;
+        spirv-cross-glsl.lib;
+        spirv-cross-hlsl.lib;
+        SPIRVd.lib;
+        squish.lib;
+        UrlLib.lib;
+        Window.lib;
+        XMLHttpRequest.lib;
+        xr.lib;
+        WindowsApp.lib;
+        %(AdditionalDependencies);
+      </AdditionalDependencies>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-      <!-- Library directories when building in repo -->
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\napi\napi-jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Core\JsRuntime\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Core\Graphics\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Plugins\NativeInput\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\napi\napi-jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Core\JsRuntime\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Core\Graphics\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Plugins\NativeInput\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\napi\napi-jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Core\JsRuntime\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Core\Graphics\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Plugins\NativeInput\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\napi\napi-jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\jsi\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Core\JsRuntime\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Core\Graphics\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Plugins\NativeInput\Debug;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <!-- Library directories when building from npm package -->
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64' And Exists('$(ProjectDir)..\libs')">..\libs\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM' And Exists('$(ProjectDir)..\libs')">..\libs\arm\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And Exists('$(ProjectDir)..\libs')">..\libs\arm64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32' And Exists('$(ProjectDir)..\libs')">..\libs\x86\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -154,21 +221,48 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <!-- Libraries built from repo will be autolinked -->
-      <AdditionalDependencies Condition="Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">WindowsApp.lib;%(AdditionalDependencies)"</AdditionalDependencies>
-      <!-- Libraries built from npm package need to be declared-->
-      <AdditionalDependencies Condition="Exists('$(ProjectDir)..\libs')">arcana.lib;astc.lib;astc-codec.lib;BabylonNative.lib;bgfx.lib;bimg.lib;bx.lib;edtaa3.lib;etc1.lib;etc2.lib;GenericCodeGen.lib;glslang.lib;Graphics.lib;iqa.lib;jsi.lib;JsRuntime.lib;MachineIndependent.lib;napi.lib;NativeCapture.lib;NativeEngine.lib;NativeInput.lib;NativeXr.lib;nvtt.lib;OGLCompiler.lib;openxr_loader.lib;OSDependent.lib;pvrtc.lib;spirv-cross-core.lib;spirv-cross-glsl.lib;spirv-cross-hlsl.lib;SPIRV.lib;squish.lib;UrlLib.lib;Window.lib;XMLHttpRequest.lib;xr.lib;WindowsApp.lib;%(AdditionalDependencies);</AdditionalDependencies>
+      <!-- Release Libraries -->
+      <AdditionalDependencies>
+        arcana.lib;
+        astc.lib;
+        astc-codec.lib;
+        BabylonNative.lib;
+        bgfx.lib;
+        bimg.lib;
+        bx.lib;
+        edtaa3.lib;
+        etc1.lib;
+        etc2.lib;
+        GenericCodeGen.lib;
+        glslang.lib;
+        Graphics.lib;
+        iqa.lib;
+        jsi.lib;
+        JsRuntime.lib;
+        MachineIndependent.lib;
+        napi.lib;
+        NativeCapture.lib;
+        NativeEngine.lib;
+        NativeInput.lib;
+        NativeXr.lib;
+        nvtt.lib;
+        OGLCompiler.lib;
+        openxr_loader.lib;
+        OSDependent.lib;
+        pvrtc.lib;
+        spirv-cross-core.lib;
+        spirv-cross-glsl.lib;
+        spirv-cross-hlsl.lib;
+        SPIRV.lib;
+        squish.lib;
+        UrlLib.lib;
+        Window.lib;
+        XMLHttpRequest.lib;
+        xr.lib;
+        WindowsApp.lib;
+        %(AdditionalDependencies);
+      </AdditionalDependencies>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-      <!-- Library directories when building in repo -->
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\napi\napi-jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Core\JsRuntime\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Core\Graphics\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Plugins\NativeInput\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\napi\napi-jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Core\JsRuntime\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Core\Graphics\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Plugins\NativeInput\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM64' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\napi\napi-jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Core\JsRuntime\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Core\Graphics\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Plugins\NativeInput\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\napi\napi-jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\jsi\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Core\JsRuntime\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Core\Graphics\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Plugins\NativeInput\Release;$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <!-- Library directories when building from npm package -->
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64' And Exists('$(ProjectDir)..\libs')">..\libs\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM' And Exists('$(ProjectDir)..\libs')">..\libs\arm\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM64' And Exists('$(ProjectDir)..\libs')">..\libs\arm64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32' And Exists('$(ProjectDir)..\libs')">..\libs\x86\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -200,447 +294,6 @@
       <DeploymentContent>false</DeploymentContent>
     </Text>
   </ItemGroup>
-  <!-- Only include static library project references when building in the repo -->
-  <ItemGroup Condition="'$(Platform)' == 'x64' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Core\Graphics\Graphics.vcxproj">
-      <Project>{05668d75-fe92-3235-984b-da86d2fc7c56}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Core\JsRuntime\JsRuntime.vcxproj">
-      <Project>{873c9f38-86e7-3435-8685-d43d891ec12a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\arcana.cpp\arcana.vcxproj">
-      <Project>{f28971bd-9ba3-342c-aa88-e2918fe30835}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\astc-codec.vcxproj">
-      <Project>{dc8f2ea1-35b2-30a1-818b-39b27d0dbce3}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\astc.vcxproj">
-      <Project>{5738d9f5-a556-370e-96dc-32530677c56e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\bgfx.vcxproj">
-      <Project>{06743b7c-d521-3adf-9a1e-2d96b16413e9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\bimg.vcxproj">
-      <Project>{bf7560a4-d6b8-3215-8f92-b095a0c7a116}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\bx.vcxproj">
-      <Project>{5be4366b-e003-3838-b5d6-d049fcc0e28b}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\edtaa3.vcxproj">
-      <Project>{735a251c-1311-34c7-9e0b-ccfbe9afbe87}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\etc1.vcxproj">
-      <Project>{20c56164-1180-36b7-97d4-eb63edb15d7f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\etc2.vcxproj">
-      <Project>{0e02cb85-a4d8-3d6f-a418-bf83a48846a8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\iqa.vcxproj">
-      <Project>{98f10d41-56d7-3992-aa94-f997a5bfc740}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\nvtt.vcxproj">
-      <Project>{3e2986cb-b980-3213-9625-ae8ea3085e79}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\pvrtc.vcxproj">
-      <Project>{40280a7f-b23f-3004-985c-6266fc4f3363}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\bgfx.cmake\squish.vcxproj">
-      <Project>{7c8eefb2-1e46-3eb4-8d81-98e5afe27ec8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\glslang\glslang\GenericCodeGen.vcxproj">
-      <Project>{4c902b6d-1c49-37b3-bfff-5f4f72b06e86}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\glslang\glslang\glslang.vcxproj">
-      <Project>{967881bd-b186-37db-ae00-d6976bfb13e7}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\glslang\glslang\MachineIndependent.vcxproj">
-      <Project>{208ebfce-be18-3fba-b509-4df36c002f9d}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\glslang\glslang\OSDependent\Windows\OSDependent.vcxproj">
-      <Project>{8ca521b5-f28a-3c25-84f7-d2afde3f4ab5}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\glslang\OGLCompilersDLL\OGLCompiler.vcxproj">
-      <Project>{b24d0522-c340-3dca-84f0-3555e49cccef}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\glslang\SPIRV\SPIRV.vcxproj">
-      <Project>{961f5cba-1146-3e47-9065-0322fbf5824d}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\napi\napi-jsi\napi.vcxproj">
-      <Project>{c551b197-dcd6-3438-909f-2a002dd5e081}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\SPIRV-Cross\spirv-cross-core.vcxproj">
-      <Project>{bf78b04b-50e0-319f-8dc5-8a0581b484bd}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\SPIRV-Cross\spirv-cross-glsl.vcxproj">
-      <Project>{93280544-a612-3a4c-8172-9b6b8cd34a5c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\SPIRV-Cross\spirv-cross-hlsl.vcxproj">
-      <Project>{4eb899bb-53cb-3da2-8d86-aa9b69f107eb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\UrlLib\UrlLib.vcxproj">
-      <Project>{5b097ca3-ca34-3dec-85a6-2da92e90e2bb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\openxr_loader.vcxproj">
-      <Project>{e81c0887-dddd-331e-94ef-e5296ca437ac}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Dependencies\xr\xr.vcxproj">
-      <Project>{120ee1ae-9d09-3602-b6f7-6cf63c072f6c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\jsi\jsi.vcxproj">
-      <Project>{bddbd49e-873f-33e4-a99d-9d8e77b16433}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Plugins\NativeCapture\NativeCapture.vcxproj">
-      <Project>{20eb2920-32bc-4aa6-9ba0-969a25d6bdb9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Plugins\NativeEngine\NativeEngine.vcxproj">
-      <Project>{2c18692b-80ea-335e-a473-15a19374ace0}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Plugins\NativeInput\NativeInput.vcxproj">
-      <Project>{47ff4ba6-6479-3470-bddc-d10f277726a4}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Plugins\NativeXr\NativeXr.vcxproj">
-      <Project>{bfcc0b5c-a3f8-3aca-8aae-671355e0c5e9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Polyfills\Window\Window.vcxproj">
-      <Project>{e5663af9-8fa5-330c-a31e-5a4de0b2881c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\Polyfills\XMLHttpRequest\XMLHttpRequest.vcxproj">
-      <Project>{eb63da09-4fbd-3a65-ab6d-0a73e1d977b7}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x64\BabylonNative.vcxproj">
-      <Project>{f1c7e7ee-72d8-3bb9-8595-34c7f0e7ca2c}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <!-- Only include static library project references when building in the repo -->
-  <ItemGroup Condition="'$(Platform)' == 'ARM64' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Core\Graphics\Graphics.vcxproj">
-      <Project>{6d62bec9-7230-3cd4-9151-b7809fed1833}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Core\JsRuntime\JsRuntime.vcxproj">
-      <Project>{00ae530e-3c8d-3ce6-bebe-ea5b0f982ca8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\arcana.cpp\arcana.vcxproj">
-      <Project>{d70ef64a-7ba4-377c-b1d5-97c65b5809dc}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\astc-codec.vcxproj">
-      <Project>{9dbd7699-2679-3371-bbad-069ecbdad60a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\astc.vcxproj">
-      <Project>{ed9ccac2-7e89-33b3-8166-880ce4a61275}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\bgfx.vcxproj">
-      <Project>{eb88c809-ed52-3b2f-831b-9a13e1789b9f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\bimg.vcxproj">
-      <Project>{71a1bb5d-3e1b-3cf2-9043-9183bfbee904}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\bx.vcxproj">
-      <Project>{9c781609-1caf-3a48-92d3-e7a54a28cc64}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\edtaa3.vcxproj">
-      <Project>{091e1f59-5012-39af-9e44-bc4b14977f5f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\etc1.vcxproj">
-      <Project>{d04fcf79-f754-3ea1-901c-ad0177ca9ca8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\etc2.vcxproj">
-      <Project>{ce0b1287-f435-3fbe-8087-4b7a52175f90}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\iqa.vcxproj">
-      <Project>{62d2530d-cfdf-353a-b311-16b5c5530514}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\nvtt.vcxproj">
-      <Project>{cede82ee-f4ce-35ce-9150-b4e7f5afa775}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\pvrtc.vcxproj">
-      <Project>{ec3cc249-d971-3d4d-88c1-3452bf3a6132}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\bgfx.cmake\squish.vcxproj">
-      <Project>{6e2edf8e-cead-37ea-838f-d768464ae2a0}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\glslang\glslang\GenericCodeGen.vcxproj">
-      <Project>{9570b802-8187-31b7-9d78-f7ec51bd48c9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\glslang\glslang\glslang.vcxproj">
-      <Project>{e6e44be6-0695-3a4e-ace5-6f295335d0e2}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\glslang\glslang\MachineIndependent.vcxproj">
-      <Project>{ff5bca91-5184-3945-a359-6ad4b82ff715}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\glslang\glslang\OSDependent\Windows\OSDependent.vcxproj">
-      <Project>{ec9e20cf-67cb-3e64-94c8-fce150593fb1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\glslang\OGLCompilersDLL\OGLCompiler.vcxproj">
-      <Project>{3776b2d8-5fcc-3215-b226-51de55a3a273}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\glslang\SPIRV\SPIRV.vcxproj">
-      <Project>{e9965b38-3a61-3a8a-bdba-96991b87c5f1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\napi\napi-jsi\napi.vcxproj">
-      <Project>{35978c2c-2797-3df0-b3cf-6d6146b6b205}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\SPIRV-Cross\spirv-cross-core.vcxproj">
-      <Project>{fafce544-12c1-37ab-95a0-936317c1cdeb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\SPIRV-Cross\spirv-cross-glsl.vcxproj">
-      <Project>{a24a462c-3f39-37c4-9721-384353822f50}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\SPIRV-Cross\spirv-cross-hlsl.vcxproj">
-      <Project>{39a6b057-9d52-348f-8bb4-52b5a1dc57ce}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\UrlLib\UrlLib.vcxproj">
-      <Project>{10b964a2-d663-3ecd-a5c2-e3373b664bec}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\openxr_loader.vcxproj">
-      <Project>{61b1c2b5-22dd-39c1-82c9-a02b27f9e4c9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Dependencies\xr\xr.vcxproj">
-      <Project>{af16edcc-3803-3ffe-8112-32c565ea1f88}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\jsi\jsi.vcxproj">
-      <Project>{0897d738-8022-3a3d-95b8-2b4ff7f8365e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Plugins\NativeCapture\NativeCapture.vcxproj">
-      <Project>{47771cab-ac3b-4673-b77e-af13a702993a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Plugins\NativeEngine\NativeEngine.vcxproj">
-      <Project>{d582c0e4-9a19-3024-8039-2f8ee50bc8de}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Plugins\NativeInput\NativeInput.vcxproj">
-      <Project>{27a99ce3-bd70-3e01-af64-59507c9f8f01}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Plugins\NativeXr\NativeXr.vcxproj">
-      <Project>{5c3c2461-1df1-304b-b202-04cae73b7837}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Polyfills\Window\Window.vcxproj">
-      <Project>{7bd8f749-4bbd-3196-8c58-9460273815f1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\Polyfills\XMLHttpRequest\XMLHttpRequest.vcxproj">
-      <Project>{67d46ecf-6d6a-3717-ba4d-ad57cede8395}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm64\BabylonNative.vcxproj">
-      <Project>{98410bcc-0b0e-3ed5-8757-d5b88c45277f}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <!-- Only include static library project references when building in the repo -->
-  <ItemGroup Condition="'$(Platform)' == 'Win32' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\BabylonNative.vcxproj">
-      <Project>{9cee79e8-6b8c-3ccc-a6a9-a4a6c7c34615}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Core\Graphics\Graphics.vcxproj">
-      <Project>{ae82f281-a05b-3595-8b5c-7072f0ecb958}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Core\JsRuntime\JsRuntime.vcxproj">
-      <Project>{900dcfe2-0cc9-31ef-b25e-b8c4f19202ad}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\arcana.cpp\arcana.vcxproj">
-      <Project>{3a5d0016-834f-3d49-b1ae-84bbe52595aa}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\astc-codec.vcxproj">
-      <Project>{5b7390ab-3f50-38f1-a4d0-f76d7022757d}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\astc.vcxproj">
-      <Project>{31d3324e-df3a-313d-b70e-7b28fe08af69}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\bgfx.vcxproj">
-      <Project>{cdce8d2f-ef7f-3519-b114-9be389b8de9c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\bimg.vcxproj">
-      <Project>{409fb7cd-6f85-3737-ba16-74401acc030f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\bx.vcxproj">
-      <Project>{d017ee41-2fc3-305e-99ad-5ed190081dd9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\edtaa3.vcxproj">
-      <Project>{b4628f3b-67bb-340d-a382-740bb9cf1c93}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\etc1.vcxproj">
-      <Project>{50b0f8e4-5e2d-3857-b71e-c1de151c2902}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\etc2.vcxproj">
-      <Project>{41f69941-6270-331f-a04a-4e0d0c85dd6a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\iqa.vcxproj">
-      <Project>{96ff2a67-bdd2-3b74-ac12-5f30ee652fa7}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\nvtt.vcxproj">
-      <Project>{aeffabac-8676-324b-9943-2ddac48a00f0}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\pvrtc.vcxproj">
-      <Project>{64dde8f7-8f41-3d65-9a4a-a6046c85ca7f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\bgfx.cmake\squish.vcxproj">
-      <Project>{2244c6a3-9d8b-3b9b-903b-b40cb3eafb17}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\glslang\glslang\GenericCodeGen.vcxproj">
-      <Project>{1d104f9b-d24c-380b-b4f6-61e1c43efde1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\glslang\glslang\glslang.vcxproj">
-      <Project>{f8a40c5f-99c8-3ed6-bb51-87771c2ba511}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\glslang\glslang\MachineIndependent.vcxproj">
-      <Project>{fbe63ba2-9e38-3b5f-bae4-6833b336eca1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\glslang\glslang\OSDependent\Windows\OSDependent.vcxproj">
-      <Project>{258eda92-d6bd-3573-858a-992236927ca4}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\glslang\OGLCompilersDLL\OGLCompiler.vcxproj">
-      <Project>{8279bd64-38c0-3626-a60b-a8c7a27fc155}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\glslang\SPIRV\SPIRV.vcxproj">
-      <Project>{55e5cc88-4d72-30b6-b482-fd162fa2c3aa}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\napi\napi-jsi\napi.vcxproj">
-      <Project>{43274d22-a5e8-3e80-bd29-b54f6c15d311}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\SPIRV-Cross\spirv-cross-core.vcxproj">
-      <Project>{4d22cb17-5065-36b2-8656-f6977c50dca6}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\SPIRV-Cross\spirv-cross-glsl.vcxproj">
-      <Project>{92551477-4138-3678-8d32-a5bf8a244153}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\SPIRV-Cross\spirv-cross-hlsl.vcxproj">
-      <Project>{41d4ad4c-f617-3a48-a8db-ea4f6f699dbd}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\UrlLib\UrlLib.vcxproj">
-      <Project>{d41c3fd2-d2fe-35de-80e7-d16c8de5b283}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\openxr_loader.vcxproj">
-      <Project>{def4e3ee-45e4-3012-bb43-874f088c36ca}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\jsi\jsi.vcxproj">
-      <Project>{1b2a5e60-84f3-34c9-9318-5cf2ac668433}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Plugins\NativeCapture\NativeCapture.vcxproj">
-      <Project>{12221f10-00b8-45b6-8b56-c9b42bb54c6f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Plugins\NativeEngine\NativeEngine.vcxproj">
-      <Project>{b9a708f6-9986-3270-b7b4-a3674ffa0053}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Plugins\NativeInput\NativeInput.vcxproj">
-      <Project>{7a08a628-743b-3374-9755-3ba1fbaa647a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Plugins\NativeXr\NativeXr.vcxproj">
-      <Project>{ad7beb96-44aa-30b6-801a-9c2cd9f20bda}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Polyfills\Window\Window.vcxproj">
-      <Project>{6fbbe5f4-6e3e-3d21-a568-c2e323df6717}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_x86\Polyfills\XMLHttpRequest\XMLHttpRequest.vcxproj">
-      <Project>{31ff552a-25e1-33a4-aa8a-db84f52a9fb9}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <!-- Only include static library project references when building in the repo -->
-  <ItemGroup Condition="'$(Platform)' == 'ARM' And Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\BabylonNative.vcxproj">
-      <Project>{eda13487-0139-3915-9f06-2d89d9bb31fb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Core\Graphics\Graphics.vcxproj">
-      <Project>{24f99f1b-57ff-3c78-9709-c0432cf108f3}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Core\JsRuntime\JsRuntime.vcxproj">
-      <Project>{36ce3572-5de3-3171-9ff6-4b4c6c91c642}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\arcana.cpp\arcana.vcxproj">
-      <Project>{202e8add-f3b5-379b-801e-5a7e99ddefa7}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\astc-codec.vcxproj">
-      <Project>{7b32da68-a748-3f69-9221-a35d77065f9b}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\astc.vcxproj">
-      <Project>{6eb96678-8254-394c-a94f-b7698bce58bd}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\bgfx.vcxproj">
-      <Project>{da456e75-dd5b-377d-8577-5c38d962aaa1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\bimg.vcxproj">
-      <Project>{6082ba01-d4c8-3e39-b383-1a74e757a3f9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\bx.vcxproj">
-      <Project>{a380b06c-3377-3708-bffb-11e5bde70ece}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\edtaa3.vcxproj">
-      <Project>{d6be2e67-bb4d-32bc-89bf-5999a2b39ef8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\etc1.vcxproj">
-      <Project>{e6d91885-d943-30eb-802c-da5f01838d0a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\etc2.vcxproj">
-      <Project>{0c3639de-116c-33f0-b607-26404ee1a193}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\iqa.vcxproj">
-      <Project>{a6ff621f-74c5-3b40-969b-157dd5ebc582}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\nvtt.vcxproj">
-      <Project>{80b0f274-77fb-38cf-8b95-00398acc07aa}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\pvrtc.vcxproj">
-      <Project>{1befccb1-5b67-31b6-a7ff-416db664eff0}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\bgfx.cmake\squish.vcxproj">
-      <Project>{8eb8c3b6-692a-3688-8b6b-9291171e8b55}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\glslang\glslang\GenericCodeGen.vcxproj">
-      <Project>{17a7abe7-8df0-3b64-aa15-c49c3f71278f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\glslang\glslang\glslang.vcxproj">
-      <Project>{0fb394c6-762d-39cc-96e0-7b7f15847e77}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\glslang\glslang\MachineIndependent.vcxproj">
-      <Project>{c9cef005-58cb-3e90-bde7-c06e6fc7a019}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\glslang\glslang\OSDependent\Windows\OSDependent.vcxproj">
-      <Project>{ff1593ea-b54c-369f-a11e-59f99b94897e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\glslang\OGLCompilersDLL\OGLCompiler.vcxproj">
-      <Project>{787eb631-c298-31ab-aea7-1a8e250d30f6}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\glslang\SPIRV\SPIRV.vcxproj">
-      <Project>{5de467fa-3a6d-3858-a627-9dd251a98a37}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\napi\napi-jsi\napi.vcxproj">
-      <Project>{ddc5e18f-6dca-3882-b1c0-cf30803d53b9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\SPIRV-Cross\spirv-cross-core.vcxproj">
-      <Project>{cb5323c0-421a-307d-96a3-3af4dd7a9b40}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\SPIRV-Cross\spirv-cross-glsl.vcxproj">
-      <Project>{c2b28174-64be-346c-921c-da72a5c5f112}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\SPIRV-Cross\spirv-cross-hlsl.vcxproj">
-      <Project>{8dbc7120-aa53-360a-868b-54e307cb56be}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\UrlLib\UrlLib.vcxproj">
-      <Project>{46651d46-549b-3792-a4c7-8c171d376f4b}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\openxr_loader.vcxproj">
-      <Project>{a998397b-5427-30ae-8996-93eb3bff1b59}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Dependencies\xr\xr.vcxproj">
-      <Project>{0fc95418-32ce-380c-81b1-29043fbc9965}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\jsi\jsi.vcxproj">
-      <Project>{93d05ba2-59b9-3592-ab31-c441fb3d7989}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Plugins\NativeCapture\NativeCapture.vcxproj">
-      <Project>{21595e71-26ec-4dd4-85e3-59208622c21d}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Plugins\NativeEngine\NativeEngine.vcxproj">
-      <Project>{4c5576a1-09a2-3815-8402-1fdc77ecdaf4}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Plugins\NativeInput\NativeInput.vcxproj">
-      <Project>{a067a0e8-b520-3490-88b5-f73659b0bbfb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Plugins\NativeXr\NativeXr.vcxproj">
-      <Project>{a59daa38-9c26-3f02-b5f3-aabc15b9fa73}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Polyfills\Window\Window.vcxproj">
-      <Project>{ea0de771-b8a4-3af2-aebc-7266a8ab973e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="$(BabylonReactNativeDir)\submodules\BabylonNative\Build_uwp_arm\Polyfills\XMLHttpRequest\XMLHttpRequest.vcxproj">
-      <Project>{5c294037-45e9-3c45-a11b-ffdc8405b90b}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ReactNativeWindowsTargets">
     <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.targets" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.targets')" />
@@ -657,6 +310,12 @@
       <ErrorText>This project is missing the @babylonjs/react-native npm package. Please install this @babylonjs/react-native with npm.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(BabylonReactNativeDir)')" Text="$(ErrorText)" />
+  </Target>
+  <Target Name="EnsureBabylonReactNative" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project is missing BabylonNative static libs. These libs are either distributed with the @babylonjs/react-native-windows npm package or are found through submodule reference</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(BabylonNativeBuildDir)') And !Exists('$(BabylonNativeLibsDir)')" Text="$(ErrorText)" />
   </Target>
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.201102.2\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.201102.2\build\native\Microsoft.Windows.CppWinRT.targets')" />
