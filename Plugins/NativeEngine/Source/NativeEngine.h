@@ -201,6 +201,8 @@ namespace Babylon
         void SetViewPort(const Napi::CallbackInfo& info);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
+        Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
+        Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
 
         void Draw(bgfx::Encoder* encoder, int fillMode);
