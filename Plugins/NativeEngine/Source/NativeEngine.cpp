@@ -1392,15 +1392,98 @@ namespace Babylon
         m_boundFrameBuffer->SetViewPort(encoder, x, yOrigin, width, height);
     }
 
+    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
+    }
+
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
         const auto level = info[0].As<Napi::Number>().FloatValue();
         m_graphicsImpl.SetHardwareScalingLevel(level);
     }
 
-    Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
+    Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
+        const Napi::Env env{info.Env()};
+        if (!info[0].IsArrayBuffer())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap parameter is not an array buffer.");
+        }
+
+        const auto data = info[0].As<Napi::ArrayBuffer>();
+        if (!data.ByteLength())
+        {
+            throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
+        }
+
+        bimg::ImageContainer* image = bimg::imageParse(&m_allocator, data.Data(), static_cast<uint32_t>(data.ByteLength()));
+        if (image == nullptr)
+        {
+            throw Napi::Error::New(env, "Unable to decode image in createImageBitmap function.");
+        }
+
+        Napi::Object imageBitmap = Napi::Object::New(env);
+        auto buffer = Napi::Uint8Array::New(env, image->m_size);
+        memcpy(buffer.Data(), image->m_data, image->m_size);
+
+        imageBitmap.Set("data", buffer);
+        imageBitmap.Set("width", Napi::Number::New(env, image->m_width).As<Napi::Value>());
+        imageBitmap.Set("height", Napi::Number::New(env, image->m_height).As<Napi::Value>());
+        imageBitmap.Set("depth", Napi::Number::New(env, image->m_depth).As<Napi::Value>());
+        imageBitmap.Set("numLayers", Napi::Number::New(env, image->m_numLayers).As<Napi::Value>());
+        imageBitmap.Set("format", Napi::Number::New(env, image->m_format).As<Napi::Value>());
+
+        bimg::imageFree(image);
+        return std::move(imageBitmap);
+    }
+
+    Napi::Value NativeEngine::ResizeImageBitmap(const Napi::CallbackInfo& info)
+    {
+        const auto imageBitmap = info[0].As<Napi::Object>();
+        const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
+        const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
+
+        const auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
+        const auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
+        const auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
+        const auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
+
+        const Napi::Env env{info.Env()};
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        if (image == nullptr)
+        {
+            throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
+        }
+
+        if (format != bimg::TextureFormat::RGBA8)
+        {
+            if (format == bimg::TextureFormat::R8)
+            {
+                image->m_format = bimg::TextureFormat::A8;
+            }
+            bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
+            if (rgba == nullptr)
+            {
+                throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for ResizeImageBitmap.");
+            }
+            bimg::imageFree(image);
+            image = rgba;
+        }
+
+        auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
+        if (width != bufferWidth || height != bufferHeight)
+        {
+            stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
+                outputData.Data(), bufferWidth, bufferHeight, 0, 4);
+        }
+        else
+        {
+            memcpy(outputData.Data(), image->m_data, image->m_size);
+        }
+        bimg::imageFree(image);
+        return Napi::Value::From(env, outputData);
     }
 
     void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
@@ -1461,7 +1544,7 @@ namespace Babylon
             }
         }
 
-        if (!m_boundFrameBuffer->BackBuffer() && !bgfx::getCaps()->originBottomLeft)
+        if (!m_boundFrameBuffer->DefaultBackBuffer() && !bgfx::getCaps()->originBottomLeft)
         {
             // UV coordinates system are different between OpenGL and Direct3D/Metal
             // This is not an issue with loaded textures (png/jpg...) because
@@ -1553,94 +1636,11 @@ namespace Babylon
                     callback.Value().Call({});
                 }
             });
-        }).then(m_runtimeScheduler, *m_cancellationSource, [env{Env()}](const arcana::expected<void, std::exception_ptr>& result) {
+        }).then(arcana::inline_scheduler, *m_cancellationSource, [env{Env()}](const arcana::expected<void, std::exception_ptr>& result) {
             if (result.has_error())
             {
                 Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
             }
         });
-    }
-
-    Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
-    {
-        const Napi::Env env{info.Env()};
-        if (!info[0].IsArrayBuffer())
-        {
-            throw Napi::Error::New(env, "CreateImageBitmap parameter is not an array buffer.");
-        }
-        
-        const auto data = info[0].As<Napi::ArrayBuffer>();
-        if (!data.ByteLength())
-        {
-            throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
-        }
-
-        bimg::ImageContainer* image = bimg::imageParse(&m_allocator, data.Data(), static_cast<uint32_t>(data.ByteLength()));
-        if (image == nullptr)
-        {
-            throw Napi::Error::New(env, "Unable to decode image in createImageBitmap function.");
-        }
-
-        Napi::Object imageBitmap = Napi::Object::New(env);
-        auto buffer = Napi::Uint8Array::New(env, image->m_size);
-        memcpy(buffer.Data(), image->m_data, image->m_size);
-
-        imageBitmap.Set("data", buffer);
-        imageBitmap.Set("width", Napi::Number::New(env, image->m_width).As<Napi::Value>());
-        imageBitmap.Set("height", Napi::Number::New(env, image->m_height).As<Napi::Value>());
-        imageBitmap.Set("depth", Napi::Number::New(env, image->m_depth).As<Napi::Value>());
-        imageBitmap.Set("numLayers", Napi::Number::New(env, image->m_numLayers).As<Napi::Value>());
-        imageBitmap.Set("format", Napi::Number::New(env, image->m_format).As<Napi::Value>());
-
-        bimg::imageFree(image);
-        return imageBitmap;
-    }
-
-    Napi::Value NativeEngine::ResizeImageBitmap(const Napi::CallbackInfo& info)
-    {
-        const auto imageBitmap = info[0].As<Napi::Object>();
-        const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
-        const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
-
-        const auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
-        const auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
-        const auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
-        const auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
-
-        const Napi::Env env{info.Env()};
-
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
-        if (image == nullptr)
-        {
-            throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
-        }
-
-        if (format != bimg::TextureFormat::RGBA8)
-        {
-            if (format == bimg::TextureFormat::R8)
-            {
-                image->m_format = bimg::TextureFormat::A8;
-            }
-            bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
-            if (rgba == nullptr)
-            {
-                throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for ResizeImageBitmap.");
-            }
-            bimg::imageFree(image);
-            image = rgba;
-        }
-
-        auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
-        if (width != bufferWidth || height != bufferHeight)
-        {
-            stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
-                outputData.Data(), bufferWidth, bufferHeight, 0, 4);
-        }
-        else
-        {
-            memcpy(outputData.Data(), image->m_data, image->m_size);
-        }
-        bimg::imageFree(image);
-        return Napi::Value::From(env, outputData);
     }
 }

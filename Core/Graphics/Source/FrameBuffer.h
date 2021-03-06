@@ -12,7 +12,7 @@ namespace Babylon
     public:
         friend class FrameBufferManager;
 
-        FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+        FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -20,7 +20,7 @@ namespace Babylon
 
         uint16_t Width() const;
         uint16_t Height() const;
-        bool BackBuffer() const;
+        bool DefaultBackBuffer() const;
 
         void Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
         void SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height);
@@ -44,7 +44,7 @@ namespace Babylon
         bgfx::FrameBufferHandle m_handle;
         const uint16_t m_width;
         const uint16_t m_height;
-        const bool m_backBuffer;
+        const bool m_defaultBackBuffer;
         std::optional<bgfx::ViewId> m_viewId;
         ViewPort m_viewPort;
         std::optional<ViewPort> m_requestedViewPort;

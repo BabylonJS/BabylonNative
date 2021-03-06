@@ -141,6 +141,13 @@ namespace Babylon
     {
         assert(m_renderThreadAffinity.check());
 
+        if (m_rendering)
+        {
+            throw std::runtime_error{"Current frame cannot be started before prior frame has been finished."};
+        }
+
+        m_rendering = true;
+
         // Ensure rendering is enabled.
         EnableRendering();
 
@@ -156,11 +163,18 @@ namespace Babylon
     {
         assert(m_renderThreadAffinity.check());
 
+        if (!m_rendering)
+        {
+            throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
+        }
+
         m_safeTimespanGuarantor.EndSafeTimespan();
 
         Frame();
 
         m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+
+        m_rendering = false;
     }
 
     Graphics::Impl::UpdateToken Graphics::Impl::GetUpdateToken()
@@ -170,19 +184,31 @@ namespace Babylon
 
     FrameBuffer& Graphics::Impl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
     {
-        assert(m_frameBufferManager);
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
+        }
+
         return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
     }
 
     void Graphics::Impl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
-        assert(m_frameBufferManager);
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
+        }
+
         m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
     }
 
     FrameBuffer& Graphics::Impl::DefaultFrameBuffer()
     {
-        assert(m_frameBufferManager);
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
+        }
+
         return m_frameBufferManager->DefaultFrameBuffer();
     }
 

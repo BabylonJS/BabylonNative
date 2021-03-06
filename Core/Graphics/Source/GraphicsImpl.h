@@ -103,6 +103,7 @@ namespace Babylon
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
         arcana::affinity m_renderThreadAffinity{};
+        bool m_rendering{};
 
         std::unique_ptr<arcana::cancellation_source> m_cancellationSource{};
 

@@ -5,12 +5,12 @@
 
 namespace Babylon
 {
-    FrameBuffer::FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
+    FrameBuffer::FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer)
         : m_manager{manager}
         , m_handle{handle}
         , m_width{width}
         , m_height{height}
-        , m_backBuffer{backBuffer}
+        , m_defaultBackBuffer{defaultBackBuffer}
         , m_viewId{}
         , m_viewPort{}
         , m_requestedViewPort{}
@@ -35,9 +35,9 @@ namespace Babylon
         return (m_height == 0 ? bgfx::getStats()->height : m_height);
     }
 
-    bool FrameBuffer::BackBuffer() const
+    bool FrameBuffer::DefaultBackBuffer() const
     {
-        return m_backBuffer;
+        return m_defaultBackBuffer;
     }
 
     void FrameBuffer::Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)

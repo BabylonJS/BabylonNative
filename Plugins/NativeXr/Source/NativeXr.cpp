@@ -399,11 +399,11 @@ namespace Babylon
 
     arcana::task<void, std::exception_ptr> NativeXr::BeginSessionAsync()
     {
-        assert(m_session == nullptr);
-        assert(m_frame == nullptr);
-
         return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
             [this, thisRef{shared_from_this()}, getWindow{std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)}]() {
+                assert(m_session == nullptr);
+                assert(m_frame == nullptr);
+
                 if (!m_system.IsInitialized())
                 {
                     while (!m_system.TryInitialize())
@@ -413,7 +413,7 @@ namespace Babylon
                 }
 
                 return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, std::move(getWindow))
-                    .then(m_runtimeScheduler, m_cancellationSource, [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
+                    .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                         m_session = std::move(session);
                     });
             });
@@ -422,13 +422,6 @@ namespace Babylon
     arcana::task<void, std::exception_ptr> NativeXr::EndSessionAsync()
     {
         m_cancellationSource.cancel();
-
-        // Dispose JS textures.
-        //for (auto& frameBufferToJsTexture : m_frameBufferToJsTextureMap)
-        //{
-        //    auto jsTexture{frameBufferToJsTexture.second.Value()};
-        //    jsTexture.Get("dispose").As<Napi::Function>().Call(jsTexture, {});
-        //}
 
         m_frameBufferToJsTextureMap.clear();
         m_textureToFrameBufferMap.clear();
@@ -462,6 +455,8 @@ namespace Babylon
 
         m_frameScheduled = true;
 
+        // REVIEW: This should technically be before the check for m_frameScheduled, but for some
+        // reason requestAnimationFrame is being called twice when starting XR.
         m_scheduleFrameCallbacks.emplace_back(callback);
 
         m_frameTask = arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this, thisRef{shared_from_this()}] {
@@ -505,7 +500,6 @@ namespace Babylon
                     auto itFrameBufferToJsTexture{m_frameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
                     if (itFrameBufferToJsTexture != m_frameBufferToJsTextureMap.end())
                     {
-                        // TODO: dispose js texture.
                         m_frameBufferToJsTextureMap.erase(itFrameBufferToJsTexture);
                     }
 
