@@ -102,12 +102,19 @@ void App::Run()
 {
     while (!m_windowClosed)
     {
-        CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
-
-        if (m_graphics)
+        if (m_windowVisible)
         {
-            m_graphics->FinishRenderingCurrentFrame();
-            m_graphics->StartRenderingCurrentFrame();
+            if (m_graphics)
+            {
+                m_graphics->FinishRenderingCurrentFrame();
+                m_graphics->StartRenderingCurrentFrame();
+            }
+
+            CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+        }
+        else
+        {
+            CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
         }
     }
 }

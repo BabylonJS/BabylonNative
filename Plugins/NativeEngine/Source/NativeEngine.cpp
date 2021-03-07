@@ -1635,12 +1635,12 @@ namespace Babylon
                 {
                     callback.Value().Call({});
                 }
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
+                }
             });
-        }).then(arcana::inline_scheduler, *m_cancellationSource, [env{Env()}](const arcana::expected<void, std::exception_ptr>& result) {
-            if (result.has_error())
-            {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-            }
         });
     }
 }

@@ -187,15 +187,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_PLAYGROUNDWIN32));
 
-    MSG msg;
+    MSG msg{};
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (msg.message != WM_QUIT)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        BOOL result;
+
+        if (minimized)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            result = GetMessage(&msg, nullptr, 0, 0);
+        }
+        else
+        {
+            if (graphics)
+            {
+                graphics->FinishRenderingCurrentFrame();
+                graphics->StartRenderingCurrentFrame();
+            }
+
+            result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
+        }
+
+        if (result)
+        {
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
     }
 
@@ -313,24 +333,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     break;
                 default:
                     return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-            break;
-        }
-        case WM_PAINT:
-        {
-            if (graphics && !minimized)
-            {
-                graphics->FinishRenderingCurrentFrame();
-                graphics->StartRenderingCurrentFrame();
-            }
-
-            PAINTSTRUCT ps;
-            BeginPaint(hWnd, &ps);
-            EndPaint(hWnd, &ps);
-
-            if (!minimized)
-            {
-                InvalidateRect(hWnd, nullptr, FALSE);
             }
             break;
         }

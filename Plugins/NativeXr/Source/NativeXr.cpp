@@ -476,14 +476,14 @@ namespace Babylon
                 }
 
                 EndUpdate();
+            }).then(arcana::inline_scheduler, m_cancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
+                }
             }).then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                 EndFrame();
             });
-        }).then(m_runtimeScheduler, m_cancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
-            if (result.has_error())
-            {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-            }
         });
     }
 
