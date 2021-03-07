@@ -311,9 +311,10 @@ namespace Babylon
 
         void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
 
-        void SetCreateRenderTextureFunction(Napi::Function function)
+        void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
         {
-            m_createRenderTexture = Napi::Persistent(function);
+            m_createRenderTexture = Napi::Persistent(createFunction);
+            m_destroyRenderTexture = Napi::Persistent(destroyFunction);
         }
 
         Napi::Value GetRenderTargetForViewIndex(int viewIndex) const
@@ -373,6 +374,7 @@ namespace Babylon
         JsRuntimeScheduler& m_runtimeScheduler;
         Graphics::Impl& m_graphicsImpl;
         Napi::FunctionReference m_createRenderTexture{};
+        Napi::FunctionReference m_destroyRenderTexture{};
         std::map<void*, FrameBuffer*> m_textureToFrameBufferMap{};
         std::map<FrameBuffer*, Napi::ObjectReference> m_frameBufferToJsTextureMap{};
         std::vector<void*> m_activeTextures{};
@@ -500,6 +502,7 @@ namespace Babylon
                     auto itFrameBufferToJsTexture{m_frameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
                     if (itFrameBufferToJsTexture != m_frameBufferToJsTextureMap.end())
                     {
+                        m_destroyRenderTexture.Call({itFrameBufferToJsTexture->second.Value()});
                         m_frameBufferToJsTextureMap.erase(itFrameBufferToJsTexture);
                     }
 
@@ -562,7 +565,7 @@ namespace Babylon
                     auto jsHeight{Napi::Value::From(m_env, view.ColorTextureSize.Height)};
                     auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
                     m_frameBufferToJsTextureMap[&frameBuffer] = Napi::Persistent(m_createRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-                }).then(m_runtimeScheduler, m_cancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
+                }).then(arcana::inline_scheduler, m_cancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
                     if (result.has_error())
                     {
                         Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
@@ -2347,9 +2350,9 @@ namespace Babylon
                 return m_xr->GetRenderTargetForViewIndex(XREye::EyeToIndex(eye));
             }
 
-            void SetCreateRenderTextureFunction(Napi::Function function)
+            void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
             {
-                return m_xr->SetCreateRenderTextureFunction(function);
+                return m_xr->SetRenderTextureFunctions(createFunction, destroyFunction);
             }
 
         private:
@@ -2713,7 +2716,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0], info[1]});
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0], info[1], info[2]});
             }
 
             NativeRenderTargetProvider(const Napi::CallbackInfo& info)
@@ -2722,7 +2725,8 @@ namespace Babylon
                 , m_session{*XRSession::Unwrap(m_jsSession.Value())}
             {
                 auto createRenderTexture{info[1].As<Napi::Function>()};
-                m_session.SetCreateRenderTextureFunction(createRenderTexture);
+                auto destroyRenderTexture{info[2].As<Napi::Function>()};
+                m_session.SetRenderTextureFunctions(createRenderTexture, destroyRenderTexture);
             }
 
         private:
