@@ -13,11 +13,11 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <InputManager.h>
 
 namespace
 {
@@ -25,7 +25,7 @@ namespace
 
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
-    std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
+    Babylon::Plugins::NativeInput* g_nativeInput{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
 
@@ -41,7 +41,7 @@ extern "C"
     {
         g_scriptLoader.reset();
         g_graphics.reset();
-        g_inputBuffer.reset();
+        g_nativeInput = {};
         g_runtime.reset();
     }
 
@@ -61,9 +61,8 @@ extern "C"
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
-            
+
             g_runtime = std::make_unique<Babylon::AppRuntime>();
-            g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
@@ -90,10 +89,10 @@ extern "C"
 
                 Babylon::Plugins::NativeXr::Initialize(env);
 
+                g_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+
                 Babylon::Polyfills::Window::Initialize(env);
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-                InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
             });
 
             g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);
@@ -189,10 +188,19 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jfloat x, jfloat y, jboolean down)
     {
-        if (g_inputBuffer != nullptr)
+        if (g_nativeInput != nullptr)
         {
-            g_inputBuffer->SetPointerPosition(x, y);
-            g_inputBuffer->SetPointerDown(down);
+            if (down)
+            {
+                g_nativeInput->TouchDown(0, x, y);
+            }
+
+            g_nativeInput->TouchMove(0, x, y);
+
+            if (!down)
+            {
+                g_nativeInput->TouchUp(0, x, y);
+            }
         }
     }
 

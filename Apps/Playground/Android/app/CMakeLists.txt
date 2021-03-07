@@ -59,6 +59,7 @@ target_link_libraries(BabylonNativeJNI
         AndroidExtensions
         AppRuntime
         NativeEngine
+        NativeInput
         NativeXr
         Console
         Window
