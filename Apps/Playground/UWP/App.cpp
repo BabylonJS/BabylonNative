@@ -248,7 +248,31 @@ void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs
 
 void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
 {
+    if (m_windowVisible == args->Visible)
+    {
+        return;
+    }
+
     m_windowVisible = args->Visible;
+
+    if (m_windowVisible)
+    {
+        m_runtime->Resume();
+
+        if (m_graphics)
+        {
+            m_graphics->StartRenderingCurrentFrame();
+        }
+    }
+    else
+    {
+        if (m_graphics)
+        {
+            m_graphics->FinishRenderingCurrentFrame();
+        }
+
+        m_runtime->Suspend();
+    }
 }
 
 void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
