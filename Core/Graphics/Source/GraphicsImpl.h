@@ -10,6 +10,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsPlatformImpl.h>
 
 namespace Babylon
@@ -22,8 +23,8 @@ namespace Babylon
         Impl();
         ~Impl();
 
-        void* GetNativeWindow();
-        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
+        WindowType GetNativeWindow();
+        void SetNativeWindow(GraphicsConfiguration config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -61,6 +62,7 @@ namespace Babylon
     private:
         arcana::affinity m_renderThreadAffinity{};
         void UpdateBgfxResolution();
+        void SetNativeWindowInternal(GraphicsConfiguration config);
 
         bool m_rendering{false};
 

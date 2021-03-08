@@ -100,7 +100,8 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<void*>(static_cast<void*>(hWnd), width, height);
+        GraphicsConfiguration graphicsConfiguration = {hWnd, width, height};
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfiguration);
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -121,7 +122,7 @@ namespace
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
-                        
+
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 

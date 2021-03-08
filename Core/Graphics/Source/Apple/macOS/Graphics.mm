@@ -1,7 +1,7 @@
 #include <Babylon/Graphics.h>
+#include <Babylon/GraphicsPlatform.h>
 #include "../GraphicsImpl.h"
 
-#include <MetalKit/MetalKit.h>
 #include <AppKit/Appkit.h>
 
 namespace Babylon

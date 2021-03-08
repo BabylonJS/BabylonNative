@@ -1,5 +1,5 @@
 set(SOURCES
-    "Include/Babylon/Graphics.h"
+    "Include/Shared/Babylon/Graphics.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/Graphics.cpp"
@@ -7,16 +7,34 @@ set(SOURCES
     "Source/GraphicsImpl.h"
     "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h")
 
-if(APPLE)
+if (WINDOWS_STORE)
+    if (BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Babylon/GraphicsPlatform.h"
+            "Source/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Graphics.cpp")
+    else()
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Babylon/GraphicsPlatform.h"
+            "Source/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Graphics.cpp")
+    endif()
+elseif(APPLE)
     if(IOS)
-        set(SOURCES ${SOURCES}
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
             "Source/${BABYLON_NATIVE_PLATFORM}/iOS/Graphics.mm")
     else()
-        set(SOURCES ${SOURCES}
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
             "Source/${BABYLON_NATIVE_PLATFORM}/macOS/Graphics.mm")
     endif()
 else()
-    set(SOURCES ${SOURCES}
+    set(SOURCES
+        ${SOURCES}
+        "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
         "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
 endif()
 
@@ -24,8 +42,21 @@ add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
-            PUBLIC "Include"
+            PUBLIC "Include/Shared"
             PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
+
+if(WINDOWS_STORE)
+    if(BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
+        target_include_directories(Graphics
+            PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel")
+    else()
+        target_include_directories(Graphics
+            PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}/CoreWindow")
+    endif()
+else()
+    target_include_directories(Graphics
+            PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}")
+endif()
 
 
 if(WIN32 AND NOT WINDOWS_STORE)

@@ -13,12 +13,12 @@ namespace Babylon
 
     Graphics::~Graphics() = default;
 
-    template<>
-    void Graphics::UpdateWindow<void*>(void* windowPtr)
+    void Graphics::UpdateWindow(GraphicsConfiguration config)
     {
-        m_impl->SetNativeWindow(windowPtr, nullptr);
+        m_impl->SetNativeWindow(config);
     }
 
+/*
     template<>
     void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
     {
@@ -33,13 +33,12 @@ namespace Babylon
         graphics->UpdateSize(width, height);
         return graphics;
     }
-
-    template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+*/
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(GraphicsConfiguration config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
-        graphics->UpdateSize(width, height);
+        graphics->UpdateWindow(config);
+        graphics->UpdateSize(config.width, config.height);
         return graphics;
     }
 

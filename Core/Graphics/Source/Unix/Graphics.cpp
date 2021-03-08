@@ -1,7 +1,6 @@
 #include <Babylon/Graphics.h>
+#include <Babylon/GraphicsPlatform.h>
 #include "../GraphicsImpl.h"
-
-#include <X11/Xlib.h>
 
 constexpr float MILLIMETERS_TO_INCHES = 0.03937;
 
