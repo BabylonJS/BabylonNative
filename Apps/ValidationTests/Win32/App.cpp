@@ -156,15 +156,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VALIDATIONTESTSWIN32));
 
-    MSG msg;
+    MSG msg{};
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (msg.message != WM_QUIT)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        if (graphics)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            graphics->FinishRenderingCurrentFrame();
+            graphics->StartRenderingCurrentFrame();
+        }
+
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT)
+        {
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
     }
 
@@ -210,7 +219,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
     hInst = hInstance; // Store instance handle in our global variable
-    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
         CW_USEDEFAULT, CW_USEDEFAULT, TEST_WIDTH, TEST_HEIGHT, nullptr, nullptr, hInstance, nullptr);
 
     if (!hWnd)
@@ -239,34 +248,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-        case WM_SYSCOMMAND:
-        {
-            if ((wParam & 0xFFF0) == SC_MINIMIZE)
-            {
-                runtime->Suspend();
-            }
-            else if ((wParam & 0xFFF0) == SC_RESTORE)
-            {
-                runtime->Resume();
-            }
-            DefWindowProc(hWnd, message, wParam, lParam);
-            break;
-        }
-        case WM_PAINT:
-        {
-            if (graphics)
-            {
-                graphics->FinishRenderingCurrentFrame();
-                graphics->StartRenderingCurrentFrame();
-            }
-
-            PAINTSTRUCT ps;
-            BeginPaint(hWnd, &ps);
-            EndPaint(hWnd, &ps);
-
-            InvalidateRect(hWnd, nullptr, FALSE);
-            break;
-        }
         case WM_SIZE:
         {
             if (graphics)
