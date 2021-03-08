@@ -13,7 +13,6 @@
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include <bx/semaphore.h>
 
 #include <memory>
 #include <map>

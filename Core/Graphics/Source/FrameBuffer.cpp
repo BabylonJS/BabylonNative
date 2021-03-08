@@ -49,6 +49,8 @@ namespace Babylon
 
     void FrameBuffer::SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height)
     {
+        // We want to make sure the caller has gotten an encoder through the update token
+        // even though we don't actuall use the encoder here directly.
         UNUSED(encoder);
         m_requestedViewPort = {x, y, width, height};
     }
