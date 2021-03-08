@@ -102,7 +102,13 @@ void App::Run()
 {
     while (!m_windowClosed)
     {
-        CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+        if (m_graphics)
+        {
+            m_graphics->FinishRenderingCurrentFrame();
+            m_graphics->StartRenderingCurrentFrame();
+        }
+
+        CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
     }
 }
 
@@ -111,6 +117,11 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
+    if (m_graphics)
+    {
+        m_graphics->FinishRenderingCurrentFrame();
+    }
+
     m_inputBuffer.reset();
     m_runtime.reset();
     m_graphics.reset();
@@ -135,68 +146,6 @@ void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^
     RestartRuntime(applicationView->CoreWindow->Bounds);
 }
 
-void App::RestartRuntime(Windows::Foundation::Rect bounds)
-{
-    Uninitialize();
-
-    DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
-    m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
-    size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
-    size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
-
-    m_graphics = Babylon::Graphics::CreateGraphics<void*>(windowPtr, width, height);
-    m_runtime = std::make_unique<Babylon::AppRuntime>();
-    m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
-
-    m_runtime->Dispatch([this, windowPtr, width, height](Napi::Env env)
-    {
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
-        {
-            OutputDebugStringA(message);
-        });
-
-        Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-        // Initialize NativeEngine plugin.
-        m_graphics->AddToJavaScript(env);
-        Babylon::Plugins::NativeEngine::Initialize(env);
-
-        // Initialize NativeXr plugin.
-        Babylon::Plugins::NativeXr::Initialize(env);
-
-        InputManager<Babylon::AppRuntime>::Initialize(env, *m_inputBuffer);
-    });
-
-    Babylon::ScriptLoader loader{*m_runtime};
-    loader.Eval("document = {}", "");
-    loader.LoadScript("app:///Scripts/ammo.js");
-    loader.LoadScript("app:///Scripts/recast.js");
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.LoadScript("app:///Scripts/babylon.gui.js");
-
-    if (m_files == nullptr)
-    {
-        loader.LoadScript("app:///Scripts/experience.js");
-    }
-    else
-    {
-        for (unsigned int idx = 0; idx < m_files->Size; idx++)
-        {
-            auto file{static_cast<Windows::Storage::IStorageFile^>(m_files->GetAt(idx))};
-
-            // There is no built-in way to convert a local file path to a url in UWP, but
-            // Foundation::Uri works with a url constructed using "file:///" with a local path.
-            loader.LoadScript("file:///" + winrt::to_string(file->Path->Data()));
-        }
-
-        loader.LoadScript("app:///Scripts/playground_runner.js");
-    }
-}
-
 void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 {
     // Save app state after requesting a deferral. Holding a deferral
@@ -204,7 +153,14 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
     // aware that a deferral may not be held indefinitely. After about five seconds,
     // the app will be forced to exit.
     auto deferral = args->SuspendingOperation->GetDeferral();
+
+    if (m_graphics)
+    {
+        m_graphics->FinishRenderingCurrentFrame();
+    }
+
     m_runtime->Suspend();
+
     deferral->Complete();
 }
 
@@ -213,8 +169,12 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
     // Restore any data or state that was unloaded on suspend. By default, data
     // and state are persisted when resuming from suspend. Note that this event
     // does not occur if the app was previously terminated.
-
     m_runtime->Resume();
+
+    if (m_graphics)
+    {
+        m_graphics->StartRenderingCurrentFrame();
+    }
 }
 
 // Window event handlers.
@@ -289,4 +249,66 @@ void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
 {
     // TODO: Implement.
     //m_deviceResources->ValidateDevice();
+}
+
+void App::RestartRuntime(Windows::Foundation::Rect bounds)
+{
+    Uninitialize();
+
+    DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
+    m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
+    size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
+    size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
+    auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
+
+    m_graphics = Babylon::Graphics::CreateGraphics<void*>(windowPtr, width, height);
+    m_graphics->StartRenderingCurrentFrame();
+
+    m_runtime = std::make_unique<Babylon::AppRuntime>();
+    m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
+
+    m_runtime->Dispatch([this, windowPtr, width, height](Napi::Env env) {
+        m_graphics->AddToJavaScript(env);
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            OutputDebugStringA(message);
+        });
+
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+        Babylon::Plugins::NativeEngine::Initialize(env);
+
+        Babylon::Plugins::NativeXr::Initialize(env);
+
+        InputManager<Babylon::AppRuntime>::Initialize(env, *m_inputBuffer);
+    });
+
+    Babylon::ScriptLoader loader{*m_runtime};
+    loader.Eval("document = {}", "");
+    loader.LoadScript("app:///Scripts/ammo.js");
+    loader.LoadScript("app:///Scripts/recast.js");
+    loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/babylon.gui.js");
+
+    if (m_files == nullptr)
+    {
+        loader.LoadScript("app:///Scripts/experience.js");
+    }
+    else
+    {
+        for (unsigned int idx = 0; idx < m_files->Size; idx++)
+        {
+            auto file{static_cast<Windows::Storage::IStorageFile^>(m_files->GetAt(idx))};
+
+            // There is no built-in way to convert a local file path to a url in UWP, but
+            // Foundation::Uri works with a url constructed using "file:///" with a local path.
+            loader.LoadScript("file:///" + winrt::to_string(file->Path->Data()));
+        }
+
+        loader.LoadScript("app:///Scripts/playground_runner.js");
+    }
 }

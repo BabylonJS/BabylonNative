@@ -6,5 +6,5 @@
 
 namespace Babylon::Plugins::NativeEngine
 {
-    void Initialize(Napi::Env env, bool renderAutomatically = true);
+    void Initialize(Napi::Env env);
 }

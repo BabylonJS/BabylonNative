@@ -548,23 +548,20 @@ namespace xr {
             [mainView retain];
 
             // Create the XR View to stay within the safe area of the main view.
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                xrView = [[MTKView alloc] initWithFrame:mainView.bounds device:metalDevice];
-                [mainView addSubview:xrView];
-                xrView.userInteractionEnabled = false;
-                xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-                xrView.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-                xrView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            xrView = [[MTKView alloc] initWithFrame:mainView.bounds device:metalDevice];
+            [mainView addSubview:xrView];
+            xrView.userInteractionEnabled = false;
+            xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+            xrView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
-                metalLayer = (CAMetalLayer *)xrView.layer;
+            metalLayer = (CAMetalLayer *)xrView.layer;
 #pragma clang diagnostic pop
-                metalLayer.device = metalDevice;
-                auto scale = UIScreen.mainScreen.scale;
-                viewportSize.x = mainView.bounds.size.width * scale;
-                viewportSize.y = mainView.bounds.size.height * scale;
-            });
+            metalLayer.device = metalDevice;
+            auto scale = UIScreen.mainScreen.scale;
+            viewportSize.x = mainView.bounds.size.width * scale;
+            viewportSize.y = mainView.bounds.size.height * scale;
 
             // Create the ARSession enable plane detection, and disable lighting estimation.
             session = [ARSession new];
@@ -626,8 +623,7 @@ namespace xr {
             [pipelineState release];
             [xrView releaseDrawables];
             [[xrView superview] release];
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                [xrView removeFromSuperview]; });
+            [xrView removeFromSuperview];
             [xrView release];
             xrView = nil;
         }
@@ -663,22 +659,20 @@ namespace xr {
                 [currentFrame retain];
             }
 
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                // Check whether the main view has changed, and if so, reparent the xr view.
-                UIView* currentSuperview = [xrView superview];
-                UIView* desiredSuperview = getMainView();
-                if (currentSuperview != desiredSuperview) {
-                    [currentSuperview release];
-                    [xrView removeFromSuperview];
+            // Check whether the main view has changed, and if so, reparent the xr view.
+            UIView* currentSuperview = [xrView superview];
+            UIView* desiredSuperview = getMainView();
+            if (currentSuperview != desiredSuperview) {
+                [currentSuperview release];
+                [xrView removeFromSuperview];
 
-                    [xrView setFrame:desiredSuperview.bounds];
+                [xrView setFrame:desiredSuperview.bounds];
 
-                    [desiredSuperview retain];
-                    [desiredSuperview addSubview:xrView];
-                }
+                [desiredSuperview retain];
+                [desiredSuperview addSubview:xrView];
+            }
 
-                [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
-            });
+            [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
 
             auto viewSize = [sessionDelegate viewSize];
             viewportSize.x = viewSize.width;
@@ -747,11 +741,6 @@ namespace xr {
                         renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
                         renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
-                        // Attach the depth texture, which we will just clear.
-                        renderPassDescriptor.depthAttachment.texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
-                        renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
-                        renderPassDescriptor.depthAttachment.clearDepth = 1.0f;
-
                         // Create and end the render encoder.
                         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                         renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
@@ -793,11 +782,6 @@ namespace xr {
         void RequestEndSession() {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             sessionEnded = true;
-        }
-
-        Size GetWidthAndHeightForViewIndex(size_t) const {
-            // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
-            return {1,1};
         }
 
         void DrawFrame() {
@@ -1302,10 +1286,6 @@ namespace xr {
 
     void System::Session::RequestEndSession() {
         m_impl->RequestEndSession();
-    }
-
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const {
-        return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
     }
 
     void System::Session::SetDepthsNearFar(float depthNear, float depthFar) {

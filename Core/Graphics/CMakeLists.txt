@@ -3,9 +3,15 @@ set(SOURCES
     "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
+    "Source/FrameBuffer.cpp"
+    "Source/FrameBuffer.h"
+    "Source/FrameBufferManager.cpp"
+    "Source/FrameBufferManager.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
-    "Source/GraphicsImpl.h")
+    "Source/GraphicsImpl.h"
+    "Source/SafeTimespanGuarantor.cpp"
+    "Source/SafeTimespanGuarantor.h")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)

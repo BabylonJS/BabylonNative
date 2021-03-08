@@ -21,8 +21,6 @@
 
 namespace
 {
-    constexpr bool RENDER_ON_JS_THREAD{true};
-
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
@@ -39,6 +37,11 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
+        if (g_graphics)
+        {
+            g_graphics->FinishRenderingCurrentFrame();
+        }
+
         g_scriptLoader.reset();
         g_graphics.reset();
         g_inputBuffer.reset();
@@ -61,13 +64,16 @@ extern "C"
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
-            
+
+            g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+            g_graphics->StartRenderingCurrentFrame();
+
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
             g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
             {
-                g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+                g_graphics->AddToJavaScript(env);
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -85,12 +91,12 @@ extern "C"
                     }
                 });
 
-                g_graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+                Babylon::Plugins::NativeEngine::Initialize(env);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
 
                 Babylon::Polyfills::Window::Initialize(env);
+
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
                 InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
@@ -199,9 +205,10 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        if (!RENDER_ON_JS_THREAD)
+        if (g_graphics)
         {
-            g_graphics->RenderCurrentFrame();
+            g_graphics->FinishRenderingCurrentFrame();
+            g_graphics->StartRenderingCurrentFrame();
         }
     }
 }
