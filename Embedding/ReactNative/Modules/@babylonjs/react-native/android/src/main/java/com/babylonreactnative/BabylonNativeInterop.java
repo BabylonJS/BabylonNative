@@ -19,11 +19,12 @@ public final class BabylonNativeInterop {
         }
 
         public static native void initialize(Context context, long jsiRuntimeRef, CallInvokerHolder jsCallInvokerHolder);
-        public static native void deinitialize();
         public static native void setCurrentActivity(Activity activity);
         public static native void pause();
         public static native void resume();
         public static native void updateView(Surface surface);
+        public static native void renderView();
+        public static native void resetView();
         public static native void setTouchButtonState(int pointerId, boolean isDown, int x, int y);
         public static native void setTouchPosition(int pointerId, int x, int y);
     }
@@ -54,7 +55,6 @@ public final class BabylonNativeInterop {
 
             @Override
             public void onHostDestroy() {
-                BabylonNative.deinitialize();
             }
         };
 
@@ -79,12 +79,16 @@ public final class BabylonNativeInterop {
         reactContext.addActivityEventListener(BabylonNativeInterop.activityEventListener);
     }
 
-    public static void deinitialize() {
-        BabylonNative.deinitialize();
-    }
-
     public static void updateView(Surface surface) {
         BabylonNative.updateView(surface);
+    }
+
+    public static void renderView() {
+        BabylonNative.renderView();
+    }
+
+    public static void resetView() {
+        BabylonNative.resetView();
     }
 
     public static void reportMotionEvent(MotionEvent motionEvent) {

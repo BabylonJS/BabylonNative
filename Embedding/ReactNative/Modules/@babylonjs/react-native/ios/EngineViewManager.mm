@@ -50,6 +50,10 @@
     [BabylonNativeInterop reportTouchEvent:self touches:touches event:event];
 }
 
+- (void)drawRect:(CGRect)rect {
+    [BabylonNativeInterop renderView];
+}
+
 - (void)takeSnapshot {
     // We must take the screenshot on the main thread otherwise we might fail to get a valid handle on the view's image.
     dispatch_async(dispatch_get_main_queue(), ^{

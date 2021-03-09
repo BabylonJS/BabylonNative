@@ -49,11 +49,6 @@ extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInter
     Babylon::Initialize(*jsiRuntime, std::move(jsDispatcher));
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_deinitialize(JNIEnv* env, jclass obj)
-{
-    Babylon::Deinitialize();
-}
-
 extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_setCurrentActivity(JNIEnv* env, jclass obj, jobject activity)
 {
     android::global::SetCurrentActivity(activity);
@@ -75,6 +70,16 @@ extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInter
     auto width{ static_cast<size_t>(ANativeWindow_getWidth(windowPtr)) };
     auto height{ static_cast<size_t>(ANativeWindow_getHeight(windowPtr)) };
     Babylon::UpdateView(windowPtr, width, height);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_renderView(JNIEnv* env, jclass obj)
+{
+    Babylon::RenderView();
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_resetView(JNIEnv* env, jclass obj)
+{
+    Babylon::ResetView();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_setTouchButtonState(JNIEnv* env, jclass obj, jint pointerId, jboolean isDown, jint x, jint y)

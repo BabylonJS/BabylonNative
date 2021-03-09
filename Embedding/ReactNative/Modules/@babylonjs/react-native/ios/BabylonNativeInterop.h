@@ -6,5 +6,7 @@
 @interface BabylonNativeInterop : NSObject
 + (void)initialize:(RCTBridge*)bridge;
 + (void)updateView:(MTKView*)mtkView;
++ (void)renderView;
++ (void)resetView;
 + (void)reportTouchEvent:(MTKView*)mtkView touches:(NSSet<UITouch*>*)touches event:(UIEvent*)event;
 @end

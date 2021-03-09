@@ -27,9 +27,11 @@ public final class BabylonModule extends ReactContextBaseJavaModule {
         });
     }
 
-    // NOTE: This happens during dev mode reload, when the JS engine is being shutdown and restarted.
-    @Override
-    public void onCatalystInstanceDestroy() {
-        this.getReactApplicationContext().runOnJSQueueThread(BabylonNativeInterop::deinitialize);
+    @ReactMethod
+    public void resetView(Promise promise) {
+        this.getReactApplicationContext().runOnUiQueueThread(() -> {
+            BabylonNativeInterop.resetView();
+            promise.resolve(null);
+        });
     }
 }

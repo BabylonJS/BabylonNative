@@ -2,6 +2,7 @@ package com.babylonreactnative;
 
 import android.annotation.TargetApi;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -26,6 +27,8 @@ public final class EngineView extends SurfaceView implements SurfaceHolder.Callb
         this.getHolder().addCallback(this);
         this.setOnTouchListener(this);
         this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
+
+        setWillNotDraw(false);
     }
 
     @Override
@@ -83,5 +86,11 @@ public final class EngineView extends SurfaceView implements SurfaceHolder.Callb
             reactEventDispatcher.dispatchEvent(snapshotEvent);
             helperThread.quitSafely();
         }, helperThreadHandler);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        BabylonNativeInterop.renderView();
+        invalidate();
     }
 }

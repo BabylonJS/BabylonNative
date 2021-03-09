@@ -18,14 +18,6 @@ The minimum Android SDK version is 18. This must be set as `minSdkVersion` in th
 
 The minimum deployment target version is 12. This must be set as `iOS Deployment Target` in the consuming project's `project.pbxproj`, and must also be set as `platform` in the consuming project's `podfile`.
 
-When running from XCode (with the debugger attached), `API Metal Validation` must be disabled:
-
-1. From within XCode, select from the main menu `Product -> Scheme -> Edit Scheme...`
-1. Ensure the target for your app is selected in the upper left corner of the window.
-1. Select `Run` from the scheme list.
-1. Select the `Options` tab.
-1. Change `API Metal Validation` to `Disabled`.
-
 ### Universal Windows Platform (UWP) Configuration
 
 For windows support, install `@babylonjs/react-native-windows`.

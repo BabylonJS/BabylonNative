@@ -62,6 +62,14 @@ static NSMutableArray* activeTouches;
     }
 }
 
++ (void)renderView {
+    Babylon::RenderView();
+}
+
++ (void)resetView {
+    Babylon::ResetView();
+}
+
 + (void)reportTouchEvent:(MTKView*)mtkView touches:(NSSet<UITouch*>*)touches event:(UIEvent*)event {
     for (UITouch* touch in touches) {
         if (touch.view == mtkView) {

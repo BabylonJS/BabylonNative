@@ -24,8 +24,17 @@ void BabylonModule::CustomInitialize(const winrt::Microsoft::ReactNative::ReactP
                     });
                 }
             };
-            Babylon::Initialize(jsiRuntime, jsDispatcher, false);
+            Babylon::Initialize(jsiRuntime, jsDispatcher);
             result.Resolve(true);
         }
+    });
+}
+
+REACT_METHOD(ResetView, L"resetView");
+void BabylonModule::ResetView(const winrt::Microsoft::ReactNative::ReactPromise<bool>& result) noexcept
+{
+    _reactContext.UIDispatcher().Post([result]() {
+        Babylon::ResetView();
+        result.Resolve(true);
     });
 }

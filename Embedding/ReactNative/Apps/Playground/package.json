@@ -12,8 +12,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
-    "@babylonjs/core": "^5.0.0-alpha.9",
-    "@babylonjs/loaders": "^5.0.0-alpha.9",
+    "@babylonjs/core": "^5.0.0-alpha.13",
+    "@babylonjs/loaders": "^5.0.0-alpha.13",
     "@babylonjs/react-native": "file:../../Modules/@babylonjs/react-native",
     "@babylonjs/react-native-windows": "file:../../Modules/@babylonjs/react-native-windows",
     "@react-native-community/slider": "4.0.0-rc.2",

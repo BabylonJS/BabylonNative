@@ -12,6 +12,9 @@ namespace winrt::BabylonReactNative::implementation {
         REACT_METHOD(CustomInitialize, L"initialize");
         void CustomInitialize(const winrt::Microsoft::ReactNative::ReactPromise<bool>& result) noexcept;
 
+        REACT_METHOD(ResetView, L"resetView");
+        void ResetView(const winrt::Microsoft::ReactNative::ReactPromise<bool>& result) noexcept;
+
     private:
          winrt::Microsoft::ReactNative::ReactContext _reactContext;
     };

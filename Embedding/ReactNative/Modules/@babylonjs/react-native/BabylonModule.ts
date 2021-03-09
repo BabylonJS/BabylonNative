@@ -9,6 +9,7 @@ const isRemoteDebuggingEnabled = !global.nativeCallSyncHook;
 // This will likely be removed when the BabylonNative global object is eventually converted to a TurboModule.
 const BabylonModule: {
     initialize(): Promise<void>;
+    resetView(): Promise<void>;
 } = NativeModules.BabylonModule;
 
 export async function ensureInitialized(): Promise<boolean> {
@@ -21,4 +22,8 @@ export async function ensureInitialized(): Promise<boolean> {
         await BabylonModule.initialize();
         return true;
     }
+}
+
+export async function reset(): Promise<void> {
+    return BabylonModule.resetView();
 }
