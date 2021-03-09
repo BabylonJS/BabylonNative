@@ -477,7 +477,7 @@ namespace Babylon
 
                 EndUpdate();
             }).then(arcana::inline_scheduler, m_cancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (result.has_error())
+                if (!m_cancellationSource.cancelled() && result.has_error())
                 {
                     Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
                 }
@@ -2290,7 +2290,7 @@ namespace Babylon
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr->BeginSessionAsync()
-                    .then(arcana::inline_scheduler, arcana::cancellation::none(),
+                    .then(session.m_runtimeScheduler, arcana::cancellation::none(),
                         [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
