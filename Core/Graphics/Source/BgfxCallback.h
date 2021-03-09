@@ -1,20 +1,16 @@
 #pragma once
 
-#include <napi/napi.h>
-
-#include <arcana/containers/ticketed_collection.h>
+#include <queue>
+#include <functional>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
-#include <mutex>
-#include <queue>
-#include <vector>
-
 namespace Babylon
 {
-    struct BgfxCallback : public bgfx::CallbackI
+    class BgfxCallback : public bgfx::CallbackI
     {
+    public:
         struct CaptureData
         {
             uint32_t Width{};
@@ -29,9 +25,9 @@ namespace Babylon
         BgfxCallback(std::function<void(const CaptureData&)>);
         virtual ~BgfxCallback() = default;
 
-        void addScreenShotCallback(Napi::Function callback);
-
+        void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+
     protected:
         void fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str) override;
         void traceVargs(const char* filePath, uint16_t line, const char* format, va_list argList) override;
@@ -47,11 +43,11 @@ namespace Babylon
         void captureFrame(const void* _data, uint32_t _size) override;
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
+    private:
         std::function<void(const char* output)> m_outputFunction;
-        
-        std::mutex m_ssCallbackAccess;
-        std::queue<Napi::FunctionReference> m_screenshotCallbacks;
-        
+
+        std::queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
+
         CaptureData m_captureData{};
         const std::function<void(const CaptureData&)> m_captureCallback{};
     };

@@ -650,12 +650,6 @@ namespace xr
             surface.reset();
         }
 
-        Size GetWidthAndHeightForViewIndex(size_t /*viewIndex*/) const
-        {
-            // Return a valid (non-zero) size, but otherwise it doesn't matter as the render texture created from this isn't currently used
-            return {1,1};
-        }
-
         void DrawFrame()
         {
             // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
@@ -1370,11 +1364,6 @@ namespace xr
         m_impl->RequestEndSession();
     }
 
-    Size System::Session::GetWidthAndHeightForViewIndex(size_t viewIndex) const
-    {
-        return m_impl->GetWidthAndHeightForViewIndex(viewIndex);
-    }
-
     void System::Session::SetDepthsNearFar(float depthNear, float depthFar)
     {
         m_impl->DepthNearZ = depthNear;
@@ -1409,5 +1398,17 @@ namespace xr
     {
         // TODO
         return false;
+    }
+
+    uintptr_t System::Session::GetNativeXrContext()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::Session::GetNativeXrContextType()
+    {
+        // TODO
+        return "";
     }
 }

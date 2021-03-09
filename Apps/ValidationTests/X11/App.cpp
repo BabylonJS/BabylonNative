@@ -27,17 +27,6 @@ static const int height = 400;
 
 namespace
 {
-    void TailRecurseRender()
-    {
-        if (graphics != nullptr && runtime != nullptr)
-        {
-            runtime->Dispatch([](auto) {
-                graphics->RenderCurrentFrame();
-                TailRecurseRender();
-            });
-        }
-    }
-
     std::filesystem::path GetModulePath()
     {
         char exe[1024];
@@ -55,17 +44,27 @@ namespace
     {
         return std::string("file://") + path.generic_string();
     }
+
+    void Uninitialize()
+    {
+        if (graphics)
+        {
+            graphics->FinishRenderingCurrentFrame();
+        }
+        runtime.reset();
+        graphics.reset();
+    }
     
     void InitBabylon(int32_t window)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
-        // Separately call reset and make_unique to ensure state is destroyed before new one is created.
-        graphics.reset();
-        runtime.reset();
+        Uninitialize();
 
         graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+        graphics->StartRenderingCurrentFrame();
+
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
@@ -85,17 +84,13 @@ namespace
             Babylon::Plugins::NativeEngine::Initialize(env);
         });
 
-
         Babylon::ScriptLoader loader{*runtime};
         loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/draco_decoder_gltf.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
-
-        TailRecurseRender();
     }
 
     void UpdateWindowSize(float width, float height)
@@ -176,27 +171,35 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
     InitBabylon(window);
     UpdateWindowSize(width, height);
 
-    
     while (!doExit)
     {
-        XEvent event;
-        XNextEvent(display, &event);
-        switch (event.type)
+        if (!XPending(display) && graphics)
         {
-            case Expose:
-                break;
-            case ClientMessage:
-                if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
-                {
-                    doExit = true;
-                }
-                break;
-            case ConfigureNotify:
-                {
-                    const XConfigureEvent& xev = event.xconfigure;
-                    UpdateWindowSize(xev.width, xev.height);
-                }
-                break;
+            graphics->FinishRenderingCurrentFrame();
+            graphics->StartRenderingCurrentFrame();
+        }
+        else
+        {
+            XEvent event;
+            XNextEvent(display, &event);
+            switch (event.type)
+            {
+                case Expose:
+                    break;
+                case ClientMessage:
+                    if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
+                    {
+                        Uninitialize();
+                        doExit = true;
+                    }
+                    break;
+                case ConfigureNotify:
+                    {
+                        const XConfigureEvent& xev = event.xconfigure;
+                        UpdateWindowSize(xev.width, xev.height);
+                    }
+                    break;
+            }
         }
     }
     XDestroyIC(ic);

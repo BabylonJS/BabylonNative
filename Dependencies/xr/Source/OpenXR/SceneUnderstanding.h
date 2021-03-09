@@ -1,7 +1,7 @@
 #pragma once
 
 #include "XrSupportedExtensions.h"
-#include "XrSceneUnderstanding.h"
+#include "XrUtility/XrSceneUnderstanding.h"
 
 namespace xr
 {

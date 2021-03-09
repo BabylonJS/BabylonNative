@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ShaderCompiler.h"
 #include "BgfxCallback.h"
+#include "FrameBuffer.h"
+#include "ShaderCompiler.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
@@ -25,316 +26,18 @@
 
 namespace Babylon
 {
-    class ClearState final
-    {
-    public:
-        void UpdateColor(float r, float g, float b, float a)
-        {
-            const bool needToUpdate = r != Red || g != Green || b != Blue || a != Alpha;
-            if (needToUpdate)
-            {
-                Red = r;
-                Green = g;
-                Blue = b;
-                Alpha = a;
-                Update();
-            }
-        }
-
-        void UpdateFlags(uint16_t flags)
-        {
-            Flags = flags;
-            Update();
-        }
-
-        void UpdateDepth(float depth)
-        {
-            const bool needToUpdate = Depth != depth;
-            if (needToUpdate)
-            {
-                Depth = depth;
-                Update();
-            }
-        }
-
-        void UpdateStencil(uint8_t stencil)
-        {
-            const bool needToUpdate = Stencil != stencil;
-            if (needToUpdate)
-            {
-                Stencil = stencil;
-                Update();
-            }
-        }
-
-        arcana::weak_table<std::function<void()>>::ticket AddUpdateCallback(std::function<void()> callback)
-        {
-            return m_callbacks.insert(std::move(callback));
-        }
-
-        void Update()
-        {
-            m_callbacks.apply_to_all([](std::function<void()>& callback) {
-                callback();
-            });
-        }
-
-        uint32_t Color() const
-        {
-            uint32_t color = 0x0;
-            color += static_cast<uint8_t>(Red * std::numeric_limits<uint8_t>::max());
-            color = color << 8;
-            color += static_cast<uint8_t>(Green * std::numeric_limits<uint8_t>::max());
-            color = color << 8;
-            color += static_cast<uint8_t>(Blue * std::numeric_limits<uint8_t>::max());
-            color = color << 8;
-            color += static_cast<uint8_t>(Alpha * std::numeric_limits<uint8_t>::max());
-            return color;
-        }
-
-        float Red{68.f / 255.f};
-        float Green{51.f / 255.f};
-        float Blue{85.f / 255.f};
-        float Alpha{1.f};
-        float Depth{1.f};
-        uint16_t Flags{BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH};
-        uint8_t Stencil{0};
-
-    private:
-        arcana::weak_table<std::function<void()>> m_callbacks{};
-    };
-
-    class ViewClearState final
-    {
-    public:
-        ViewClearState(uint16_t viewId, ClearState& clearState)
-            : m_viewId{viewId}
-            , m_clearState{clearState}
-            , m_callbackTicket{m_clearState.AddUpdateCallback([this]() { Update(); })}
-        {
-        }
-
-        void UpdateColor(float r, float g, float b, float a = 1.f)
-        {
-            m_clearState.UpdateColor(r, g, b, a);
-        }
-
-        void UpdateFlags(uint16_t flags)
-        {
-            m_clearState.UpdateFlags(flags);
-        }
-
-        void UpdateDepth(float depth)
-        {
-            m_clearState.UpdateDepth(depth);
-        }
-
-        void UpdateStencil(uint8_t stencil)
-        {
-            m_clearState.UpdateStencil(stencil);
-        }
-
-        void UpdateViewId(uint16_t viewId)
-        {
-            m_viewId = viewId;
-            Update(false);
-        }
-
-    private:
-
-        void Update(bool forceClear = true) const
-        {
-            bgfx::setViewClear(m_viewId, m_clearState.Flags, m_clearState.Color(), m_clearState.Depth, m_clearState.Stencil);
-            if (forceClear)
-            {
-                // Discard any previously set state
-                bgfx::discard();
-                // Submit an empty primitive so we always clear the framebuffer on bgfx::frame,
-                // even if no other geometry is rendered to this view.
-                bgfx::touch(m_viewId);
-            }
-        }
-
-        uint16_t m_viewId{};
-        ClearState& m_clearState;
-        arcana::weak_table<std::function<void()>>::ticket m_callbackTicket;
-    };
-
-    struct FrameBufferData final
-    {
-    private:
-        arcana::weak_table<FrameBufferData*>::ticket m_managerTicket;
-        std::unique_ptr<ClearState> m_clearState{};
-
-    public:
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, arcana::weak_table<FrameBufferData*>& managerTable, uint16_t viewId, uint16_t width, uint16_t height, bool actAsBackBuffer = false, bool sizeViewToWindow = false)
-            : m_managerTicket{managerTable.insert(this)}
-            , m_clearState{std::make_unique<ClearState>()}
-            , FrameBuffer{frameBuffer}
-            , ViewClearState{viewId, *m_clearState}
-            , Width{width}
-            , Height{height}
-            , SizeViewToWindow{sizeViewToWindow}
-            , ActAsBackBuffer{actAsBackBuffer}
-        {
-            UseViewId(viewId);
-        }
-
-        FrameBufferData(bgfx::FrameBufferHandle frameBuffer, arcana::weak_table<FrameBufferData*>& managerTable, uint16_t viewId, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer = false, bool sizeViewToWindow = false)
-            : m_managerTicket{managerTable.insert(this)}
-            , m_clearState{}
-            , FrameBuffer{frameBuffer}
-            , ViewClearState{viewId, clearState}
-            , Width{width}
-            , Height{height}
-            , SizeViewToWindow{sizeViewToWindow}
-            , ActAsBackBuffer{actAsBackBuffer}
-        {
-            UseViewId(viewId);
-        }
-
-        FrameBufferData(FrameBufferData&) = delete;
-
-        ~FrameBufferData()
-        {
-            bgfx::destroy(FrameBuffer);
-        }
-
-        void UseViewId(uint16_t viewId)
-        {
-            assert(viewId < bgfx::getCaps()->limits.maxViews);
-            // Only update if we need to.
-            if (IsViewIdDirty || viewId != ViewId)
-            {
-                ViewId = viewId;
-                bgfx::setViewFrameBuffer(ViewId, FrameBuffer);
-                SetViewPort(0, 0, 1, 1); // Default to full viewport
-                ViewClearState.UpdateViewId(ViewId);
-                IsViewIdDirty = false;
-            }
-        }
-
-        void SetViewPort(const float x, const float y, const float width, const float height)
-        {
-            const auto viewRectWidth = SizeViewToWindow ? bgfx::getStats()->width : Width;
-            const auto viewRectHeight = SizeViewToWindow ? bgfx::getStats()->height : Height;
-            bgfx::setViewRect(ViewId,
-                static_cast<uint16_t>(x * viewRectWidth),
-                static_cast<uint16_t>(y * viewRectHeight),
-                static_cast<uint16_t>(width * viewRectWidth),
-                static_cast<uint16_t>(height * viewRectHeight));
-        }
-
-        bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
-        bgfx::ViewId ViewId{uint16_t(~0)};
-        bool IsViewIdDirty{true};
-        Babylon::ViewClearState ViewClearState;
-        uint16_t Width{};
-        uint16_t Height{};
-        bool SizeViewToWindow{false};
-        // When a FrameBuffer acts as a back buffer, it means it will not be used as a texture in a shader.
-        // For example as a post process. It will be used as-is in a swapchain or for direct rendering (XR)
-        // When this flag is true, projection matrix will not be flipped for API that would normaly need it.
-        // Namely Direct3D and Metal.
-        bool ActAsBackBuffer{false};
-
-        // This is a hack to keep track of whether this frame buffer has been passed back to Babylon.js
-        // and if its deletion should be owned by Javascript and tied to the lifetime of a texture or whether
-        // only BabylonNative knows about its existence, and should own deletion. Blame Gary.
-        bool OwnedByJS{true};
-    };
-
-    struct FrameBufferManager final
-    {
-        FrameBufferManager()
-        {
-            Bind(m_defaultBackBuffer = new FrameBufferData(BGFX_INVALID_HANDLE, m_activeFrameBuffers, GetNewViewId(), 0, 0, true, true));
-        }
-
-        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, uint16_t width, uint16_t height)
-        {
-            return new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, GetNewViewId(), width, height);
-        }
-
-        FrameBufferData* CreateNew(bgfx::FrameBufferHandle frameBufferHandle, ClearState& clearState, uint16_t width, uint16_t height, bool actAsBackBuffer)
-        {
-            return new FrameBufferData(frameBufferHandle, m_activeFrameBuffers, GetNewViewId(), clearState, width, height, actAsBackBuffer);
-        }
-
-        void Bind(FrameBufferData* data)
-        {
-            m_boundFrameBuffer = data;
-
-            const auto fbViewId = m_boundFrameBuffer->IsViewIdDirty ? GetNewViewId() : m_boundFrameBuffer->ViewId;
-            m_boundFrameBuffer->UseViewId(fbViewId);
-
-            // bgfx::setTexture()? Why?
-            // TODO: View order?
-            m_renderingToTarget = !m_boundFrameBuffer->ActAsBackBuffer;
-        }
-
-        FrameBufferData& GetBound()
-        {
-            // Babylon.js minimizes how frequently Bind() is called, causing there
-            // to be some scenarios where the currently bound frame buffer can retain
-            // an invalid view id when another FrameBuffer is created but not bound.
-            // To prevent this, make sure the bound frameBuffer has a clean ViewId.
-            if (m_boundFrameBuffer->IsViewIdDirty)
-            {
-                Bind(m_boundFrameBuffer);
-            }
-            return *m_boundFrameBuffer;
-        }
-
-        void Unbind(FrameBufferData* data)
-        {
-            (void)data;
-            if (m_boundFrameBuffer != m_defaultBackBuffer)
-            {
-                assert(m_boundFrameBuffer == data);
-                Bind(m_defaultBackBuffer);
-            }
-        }
-
-        uint16_t GetNewViewId()
-        {
-            m_nextId++;
-            assert(m_nextId < bgfx::getCaps()->limits.maxViews);
-            return m_nextId;
-        }
-
-        void Reset()
-        {
-            m_nextId = 0;
-            m_activeFrameBuffers.apply_to_all([](auto frameBufferData) {
-                frameBufferData->IsViewIdDirty = true;
-            });
-        }
-
-        bool IsRenderingToTarget() const
-        {
-            return m_renderingToTarget;
-        }
-
-    private:
-        FrameBufferData* m_boundFrameBuffer{nullptr};
-        FrameBufferData* m_defaultBackBuffer{nullptr};
-        arcana::weak_table<FrameBufferData*> m_activeFrameBuffers{};
-        uint16_t m_nextId{0};
-        bool m_renderingToTarget{false};
-    };
-
     struct TextureData final
     {
         ~TextureData()
         {
-            if (bgfx::isValid(Handle))
+            if (OwnsHandle && bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
             }
         }
 
         bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
+        bool OwnsHandle{true};
         uint32_t Width{0};
         uint32_t Height{0};
         uint32_t Flags{0};
@@ -356,14 +59,17 @@ namespace Babylon
 
         ~ProgramData()
         {
-            bgfx::destroy(Program);
+            if (bgfx::isValid(Handle))
+            {
+                bgfx::destroy(Handle);
+            }
         }
 
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
         std::unordered_map<std::string, UniformInfo> VertexUniformInfos{};
         std::unordered_map<std::string, UniformInfo> FragmentUniformInfos{};
 
-        bgfx::ProgramHandle Program{};
+        bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
 
         struct UniformValue
         {
@@ -390,56 +96,46 @@ namespace Babylon
     {
         ~VertexArray()
         {
-            for (auto& vertexBufferPair : vertexBuffers)
+            for (auto& vertexBufferPair : VertexBuffers)
             {
-                bgfx::destroy(vertexBufferPair.second.vertexLayoutHandle);
+                bgfx::destroy(vertexBufferPair.second.VertexLayoutHandle);
             }
         }
 
         struct IndexBuffer
         {
-            const IndexBufferData* data{};
+            const IndexBufferData* Data{};
         };
 
         IndexBuffer indexBuffer{};
 
         struct VertexBuffer
         {
-            const VertexBufferData* data{};
-            uint32_t startVertex{};
-            bgfx::VertexLayoutHandle vertexLayoutHandle{};
+            const VertexBufferData* Data{};
+            uint32_t StartVertex{};
+            bgfx::VertexLayoutHandle VertexLayoutHandle{};
         };
 
-        std::unordered_map<uint32_t, VertexBuffer> vertexBuffers;
+        std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
-        static constexpr auto JS_AUTO_RENDER_PROPERTY_NAME = "_AUTO_RENDER";
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
         NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime);
         ~NativeEngine();
 
-        static void Initialize(Napi::Env, bool autoRender);
-
-        FrameBufferManager& GetFrameBufferManager();
-        void Dispatch(std::function<void()>);
-
-        // IMPORTANT: Must be called from the JS thread.
-        void ScheduleRender();
-
-        const bool AutomaticRenderingEnabled{};
-        JsRuntimeScheduler RuntimeScheduler;
+        static void Initialize(Napi::Env env);
 
     private:
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
-        Napi::Value GetEngine(const Napi::CallbackInfo& info); // TODO: Hack, temporary method. Remove as part of the change to get rid of NapiBridge.
+        Napi::Value HomogeneousDepth(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);
@@ -503,19 +199,19 @@ namespace Babylon
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
-        void GetFramebufferData(const Napi::CallbackInfo& info);
-        Napi::Value GetRenderAPI(const Napi::CallbackInfo& info);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
+        Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
+        Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
+        void GetFrameBufferData(const Napi::CallbackInfo& info);
 
-        template<typename SchedulerT>
-        arcana::task<void, std::exception_ptr> GetRequestAnimationFrameTask(SchedulerT&);
+        void Draw(bgfx::Encoder* encoder, int fillMode);
 
-        bool m_isRenderScheduled{false};
+        Graphics::Impl::UpdateToken& GetUpdateToken();
 
-        arcana::cancellation_source m_cancelSource{};
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
-        ShaderCompiler m_shaderCompiler;
+        ShaderCompiler m_shaderCompiler{};
 
         ProgramData* m_currentProgram{nullptr};
         arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
@@ -523,10 +219,15 @@ namespace Babylon
         JsRuntime& m_runtime;
         Graphics::Impl& m_graphicsImpl;
 
-        bx::DefaultAllocator m_allocator;
-        uint64_t m_engineState;
+        JsRuntimeScheduler m_runtimeScheduler;
 
-        FrameBufferManager m_frameBufferManager{};
+        std::optional<Graphics::Impl::UpdateToken> m_updateToken{};
+
+        void ScheduleRequestAnimationFrameCallbacks();
+        bool m_requestAnimationFrameCallbacksScheduled{};
+
+        bx::DefaultAllocator m_allocator{};
+        uint64_t m_engineState{BGFX_STATE_DEFAULT};
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);
@@ -540,12 +241,9 @@ namespace Babylon
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
 
-        Napi::FunctionReference m_requestAnimationFrameCallback{};
+        std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        // webgl/opengl draw call parameters allow to set first index and number of indices used for that call
-        // but with bgfx, those parameters must be set when binding the index buffer
-        // at the time of webgl binding, we don't know those values yet
-        // so a pointer to the to-bind buffer is kept and the buffer is bound to bgfx at the time of the drawcall
-        const IndexBufferData* m_currentBoundIndexBuffer{};
+        const VertexArray* m_boundVertexArray{};
+        FrameBuffer* m_boundFrameBuffer{};
     };
 }

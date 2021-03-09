@@ -2,6 +2,11 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Light Projection Texture",
+            "playgroundId": "#CQNGRK#0",
+            "referenceImage": "LightProjectionTexture.png"
+        },
+        {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
             "referenceImage": "point-light-shadows.png",
@@ -35,11 +40,6 @@
             "renderCount": 150,
             "referenceImage": "sps.png",
             "errorRatio": 60.0
-        },
-        {
-            "title": "GLTF Buggy with Draco Mesh Compression",
-            "playgroundId": "#JNW207#1",
-            "referenceImage": "gltfBuggyDraco.png"
         },
         {
             "title": "LightFalloff",
