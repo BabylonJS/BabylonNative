@@ -4,6 +4,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include "NativeCamera.h"
+#include <arcana/macros.h>
 
 @class CameraTextureDelegate;
 
@@ -64,7 +65,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
+    CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple;
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
@@ -76,15 +77,39 @@ namespace Babylon::Plugins::Internal
             cameraInterfaceApple->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:cameraInterfaceApple];
             
             cameraInterfaceApple->avCaptureSession = [[AVCaptureSession alloc] init];
-
+            
             NSError *error;
+#if (TARGET_OS_IPHONE)
+            AVCaptureDevicePosition preferredPosition;
+            AVCaptureDeviceType preferredDeviceType;
+            
+            if (frontCamera) {
+                preferredPosition = AVCaptureDevicePositionFront;
+                preferredDeviceType = AVCaptureDeviceTypeBuiltInTrueDepthCamera;
+            } else {
+                preferredPosition = AVCaptureDevicePositionBack;
+                preferredDeviceType = AVCaptureDeviceTypeBuiltInDualCamera;
+            }
+
             // Set camera capture device to default and the media type to video.
-            AVCaptureDevice *captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo ];
+            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:preferredDeviceType mediaType:AVMediaTypeVideo position:preferredPosition];
+            if (!captureDevice) {
+                // If a rear dual camera is not available, default to the rear wide angle camera.
+                captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
+                
+                // In the event that the rear wide angle camera isn't available, default to the front wide angle camera.
+                if (!captureDevice) {
+                    captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionFront];
+                }
+            }
+#else
+            UNUSED(frontCamera);
+            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+#endif
             // Set video capture input: If there a problem initialising the camera, it will give am error.
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
 
-            if (!input)
-            {
+            if (!input) {
                 NSLog(@"Error Getting Camera Input");
                 return;
             }
