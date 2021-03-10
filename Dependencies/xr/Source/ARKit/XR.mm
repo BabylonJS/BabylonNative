@@ -133,10 +133,9 @@ namespace {
 /**
  Initializes this session delgate with the given frame views and metal graphics context.
  */
-- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext viewportSize:(CGSize)viewportSize {
+- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext {
     self = [super init];
     self->activeFrameViews = activeFrameViews;
-    self->_viewportSize = viewportSize;
 
     CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, graphicsContext, nil, &textureCache);
     if (err) {
@@ -426,6 +425,10 @@ namespace {
     return _viewportSize;
 }
 
+- (void)setViewSize:(CGSize)size {
+    _viewportSize = size;
+}
+
 @end
 namespace xr {
     namespace {
@@ -544,19 +547,6 @@ namespace xr {
             : SystemImpl{ systemImpl }
             , getXRView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<MTKView*>(windowProvider()); } }
             , metalDevice{ id<MTLDevice>(graphicsContext) } {
-            xrView = getXRView();
-            [xrView retain];
-
-            xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
-            metalLayer = (CAMetalLayer *)xrView.layer;
-#pragma clang diagnostic pop
-            metalLayer.device = metalDevice;
-            auto scale = UIScreen.mainScreen.scale;
-            viewportSize.x = xrView.bounds.size.width * scale;
-            viewportSize.y = xrView.bounds.size.height * scale;
 
             // Create the ARSession enable plane detection, and disable lighting estimation.
             session = [ARSession new];
@@ -565,9 +555,10 @@ namespace xr {
             configuration.lightEstimationEnabled = false;
             configuration.worldAlignment = ARWorldAlignmentGravity;
 
-            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice viewportSize:CGSizeMake(viewportSize.x, viewportSize.y)];
+            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
             session.delegate = sessionDelegate;
-            xrView.delegate = sessionDelegate;
+
+            UpdateXRView();
 
             [session runWithConfiguration:configuration];
 
@@ -582,7 +573,7 @@ namespace xr {
             pipelineStateDescriptor.label = @"XR Pipeline";
             pipelineStateDescriptor.vertexFunction = vertexFunction;
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-            pipelineStateDescriptor.colorAttachments[0].pixelFormat = metalLayer.pixelFormat;
+            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 
             // build pipeline
             NSError* error;
@@ -616,9 +607,44 @@ namespace xr {
             [session pause];
             [session release];
             [pipelineState release];
-            [xrView releaseDrawables];
-            [xrView release];
-            xrView = nil;
+            UpdateXRView(nil);
+        }
+
+        void UpdateXRView() {
+            UpdateXRView(getXRView());
+        }
+        
+        void UpdateXRView(MTKView* activeXRView) {
+            // Check whether the xr view has changed, and if so, reconfigure it.
+            if (activeXRView != xrView) {
+                if (xrView) {
+                    xrView.delegate = nil;
+                    [xrView releaseDrawables];
+                    [xrView release];
+                    metalLayer = nil;
+                }
+
+                xrView = activeXRView;
+
+                if (xrView) {
+                    [xrView retain];
+
+                    xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+                    metalLayer = (CAMetalLayer *)xrView.layer;
+#pragma clang diagnostic pop
+                    metalLayer.device = metalDevice;
+
+                    auto scale = UIScreen.mainScreen.scale;
+                    viewportSize.x = xrView.bounds.size.width * scale;
+                    viewportSize.y = xrView.bounds.size.height * scale;
+                    [sessionDelegate setViewSize:CGSizeMake(viewportSize.x, viewportSize.y)];
+
+                    xrView.delegate = sessionDelegate;
+                }
+            }
         }
 
         /**
@@ -652,27 +678,7 @@ namespace xr {
                 [currentFrame retain];
             }
 
-            // Check whether the xr view has changed, and if so, reconfigure it.
-            MTKView* activeXRView = getXRView();
-            if (activeXRView != xrView) {
-                [xrView release];
-                xrView = activeXRView;
-                metalLayer = nil;
-
-                if (xrView) {
-                    [xrView retain];
-
-                    xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
-                    metalLayer = (CAMetalLayer *)xrView.layer;
-#pragma clang diagnostic pop
-                    metalLayer.device = metalDevice;
-
-                    xrView.delegate = sessionDelegate;
-                }
-            }
+            UpdateXRView();
 
             [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
 
