@@ -304,7 +304,7 @@ namespace Babylon
     class NativeXr : public std::enable_shared_from_this<NativeXr>
     {
     public:
-        NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler, const std::function<void(bool)>& sessionStateChangedCallback, const std::function<void*()>& windowProvider);
+        NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider);
 
         arcana::task<void, std::exception_ptr> BeginSessionAsync();
         arcana::task<void, std::exception_ptr> EndSessionAsync();
@@ -385,8 +385,8 @@ namespace Babylon
         bool m_frameScheduled{false};
         std::vector<std::function<void(const xr::System::Session::Frame&)>> m_scheduleFrameCallbacks{};
         arcana::task<void, std::exception_ptr> m_frameTask{};
-        const std::function<void(bool)>& m_sessionStateChangedCallback{}; // TODO: This probably can't be const ref if it is called from the render thread (rather than the JS thread)
-        const std::function<void*()>& m_windowProvider{};
+        std::function<void(bool)> m_sessionStateChangedCallback{};
+        std::function<void*()> m_windowProvider{};
 
         void BeginFrame();
         void BeginUpdate();
@@ -394,19 +394,19 @@ namespace Babylon
         void EndFrame();
     };
 
-    NativeXr::NativeXr(Napi::Env env, JsRuntimeScheduler& runtimeScheduler, const std::function<void(bool)>& sessionStateChangedCallback, const std::function<void*()>& windowProvider)
+    NativeXr::NativeXr(Napi::Env env, JsRuntimeScheduler& runtimeScheduler, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider)
         : m_env{env}
         , m_runtimeScheduler{runtimeScheduler}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
-        , m_sessionStateChangedCallback{sessionStateChangedCallback}
-        , m_windowProvider{windowProvider}
+        , m_sessionStateChangedCallback{std::move(sessionStateChangedCallback)}
+        , m_windowProvider{std::move(windowProvider)}
     {
     }
 
     arcana::task<void, std::exception_ptr> NativeXr::BeginSessionAsync()
     {
         return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
-            [this, thisRef{shared_from_this()}, getWindow{m_windowProvider}]() {
+            [this, thisRef{shared_from_this()}]() {
                 assert(m_session == nullptr);
                 assert(m_frame == nullptr);
 
@@ -418,7 +418,7 @@ namespace Babylon
                     }
                 }
 
-                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, getWindow)
+                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, m_windowProvider)
                     .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                         m_session = std::move(session);
 
