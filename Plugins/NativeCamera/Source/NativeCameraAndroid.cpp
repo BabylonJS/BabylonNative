@@ -426,6 +426,11 @@ namespace Babylon::Plugins::Internal
         // Capture request for SurfaceTexture
         ANativeWindow_release(textureWindow);
         ACaptureRequest_free(request);
+
+        if (context)
+        {
+            eglDestroyContext(display, context);
+        }
     }
 
     void CameraInterfaceAndroid::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
