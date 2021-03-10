@@ -301,315 +301,315 @@ namespace
 // NativeXr implementation proper.
 namespace Babylon
 {
-    class NativeXr : public std::enable_shared_from_this<NativeXr>
+    namespace Plugins
     {
-    public:
-        NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider);
-
-        arcana::task<void, std::exception_ptr> BeginSessionAsync();
-        arcana::task<void, std::exception_ptr> EndSessionAsync();
-
-        void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
-
-        void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
+        class NativeXr::Impl : public std::enable_shared_from_this<NativeXr::Impl>
         {
-            m_createRenderTexture = Napi::Persistent(createFunction);
-            m_destroyRenderTexture = Napi::Persistent(destroyFunction);
-        }
+        public:
+            Impl(Napi::Env, JsRuntimeScheduler& runtimeScheduler, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider);
 
-        Napi::Value GetRenderTargetForViewIndex(int viewIndex) const
-        {
-            auto itTextureToFrameBuffer{m_textureToFrameBufferMap.find(m_activeTextures[viewIndex])};
-            if (itTextureToFrameBuffer == m_textureToFrameBufferMap.end())
+            arcana::task<void, std::exception_ptr> BeginSessionAsync();
+            arcana::task<void, std::exception_ptr> EndSessionAsync();
+
+            void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
+
+            void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
             {
-                return m_env.Null();
+                m_createRenderTexture = Napi::Persistent(createFunction);
+                m_destroyRenderTexture = Napi::Persistent(destroyFunction);
             }
 
-            auto itFrameBufferToJsTexture{m_frameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
-            return itFrameBufferToJsTexture->second.Value();
-        }
-
-        void SetDepthsNarFar(float depthNear, float depthFar)
-        {
-            m_session->SetDepthsNearFar(depthNear, depthFar);
-        }
-
-        void SetPlaneDetectionEnabled(bool enabled)
-        {
-            m_session->SetPlaneDetectionEnabled(enabled);
-        }
-
-        bool TrySetFeaturePointCloudEnabled(bool enabled)
-        {
-            return m_session->TrySetFeaturePointCloudEnabled(enabled);
-        }
-
-        bool TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& options)
-        {
-            return m_session->TrySetPreferredPlaneDetectorOptions(options);
-        }
-
-        bool TrySetMeshDetectorEnabled(const bool enabled)
-        {
-            return m_session->TrySetMeshDetectorEnabled(enabled);
-        }
-
-        bool TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& options)
-        {
-            return m_session->TrySetPreferredMeshDetectorOptions(options);
-        }
-
-        uintptr_t GetNativeXrContext()
-        {
-            return m_session->GetNativeXrContext();
-        }
-
-        std::string GetNativeXrContextType()
-        {
-            return m_session->GetNativeXrContextType();
-        }
-
-    private:
-        Napi::Env m_env;
-        JsRuntimeScheduler& m_runtimeScheduler;
-        Graphics::Impl& m_graphicsImpl;
-        Napi::FunctionReference m_createRenderTexture{};
-        Napi::FunctionReference m_destroyRenderTexture{};
-        std::map<void*, FrameBuffer*> m_textureToFrameBufferMap{};
-        std::map<FrameBuffer*, Napi::ObjectReference> m_frameBufferToJsTextureMap{};
-        std::vector<void*> m_activeTextures{};
-        std::unique_ptr<xr::System> m_system{};
-        std::shared_ptr<xr::System::Session> m_session{};
-        std::unique_ptr<xr::System::Session::Frame> m_frame{};
-        arcana::cancellation_source m_cancellationSource{};
-        bool m_frameScheduled{false};
-        std::vector<std::function<void(const xr::System::Session::Frame&)>> m_scheduleFrameCallbacks{};
-        arcana::task<void, std::exception_ptr> m_frameTask{};
-        std::function<void(bool)> m_sessionStateChangedCallback{};
-        std::function<void*()> m_windowProvider{};
-
-        void BeginFrame();
-        void BeginUpdate();
-        void EndUpdate();
-        void EndFrame();
-    };
-
-    NativeXr::NativeXr(Napi::Env env, JsRuntimeScheduler& runtimeScheduler, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider)
-        : m_env{env}
-        , m_runtimeScheduler{runtimeScheduler}
-        , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
-        , m_sessionStateChangedCallback{std::move(sessionStateChangedCallback)}
-        , m_windowProvider{std::move(windowProvider)}
-    {
-    }
-
-    arcana::task<void, std::exception_ptr> NativeXr::BeginSessionAsync()
-    {
-        return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
-            [this, thisRef{shared_from_this()}]() {
-                assert(m_system == nullptr);
-                assert(m_session == nullptr);
-                assert(m_frame == nullptr);
-
-                m_system = std::make_unique<xr::System>();
-
-                if (!m_system->IsInitialized())
+            Napi::Value GetRenderTargetForViewIndex(int viewIndex) const
+            {
+                auto itTextureToFrameBuffer{m_textureToFrameBufferMap.find(m_activeTextures[viewIndex])};
+                if (itTextureToFrameBuffer == m_textureToFrameBufferMap.end())
                 {
-                    while (!m_system->TryInitialize())
-                    {
-                        // do nothing
-                    }
+                    return m_env.Null();
                 }
 
-                return xr::System::Session::CreateAsync(*m_system, bgfx::getInternalData()->context, m_windowProvider)
-                    .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
-                        m_session = std::move(session);
+                auto itFrameBufferToJsTexture{m_frameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
+                return itFrameBufferToJsTexture->second.Value();
+            }
 
-                        if (m_sessionStateChangedCallback)
+            void SetDepthsNarFar(float depthNear, float depthFar)
+            {
+                m_session->SetDepthsNearFar(depthNear, depthFar);
+            }
+
+            void SetPlaneDetectionEnabled(bool enabled)
+            {
+                m_session->SetPlaneDetectionEnabled(enabled);
+            }
+
+            bool TrySetFeaturePointCloudEnabled(bool enabled)
+            {
+                return m_session->TrySetFeaturePointCloudEnabled(enabled);
+            }
+
+            bool TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& options)
+            {
+                return m_session->TrySetPreferredPlaneDetectorOptions(options);
+            }
+
+            bool TrySetMeshDetectorEnabled(const bool enabled)
+            {
+                return m_session->TrySetMeshDetectorEnabled(enabled);
+            }
+
+            bool TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& options)
+            {
+                return m_session->TrySetPreferredMeshDetectorOptions(options);
+            }
+
+            uintptr_t GetNativeXrContext()
+            {
+                return m_session->GetNativeXrContext();
+            }
+
+            std::string GetNativeXrContextType()
+            {
+                return m_session->GetNativeXrContextType();
+            }
+
+        private:
+            Napi::Env m_env;
+            JsRuntimeScheduler& m_runtimeScheduler;
+            Graphics::Impl& m_graphicsImpl;
+            Napi::FunctionReference m_createRenderTexture{};
+            Napi::FunctionReference m_destroyRenderTexture{};
+            std::map<void*, FrameBuffer*> m_textureToFrameBufferMap{};
+            std::map<FrameBuffer*, Napi::ObjectReference> m_frameBufferToJsTextureMap{};
+            std::vector<void*> m_activeTextures{};
+            std::unique_ptr<xr::System> m_system{};
+            std::shared_ptr<xr::System::Session> m_session{};
+            std::unique_ptr<xr::System::Session::Frame> m_frame{};
+            arcana::cancellation_source m_cancellationSource{};
+            bool m_frameScheduled{false};
+            std::vector<std::function<void(const xr::System::Session::Frame&)>> m_scheduleFrameCallbacks{};
+            arcana::task<void, std::exception_ptr> m_frameTask{};
+            std::function<void(bool)> m_sessionStateChangedCallback{};
+            std::function<void*()> m_windowProvider{};
+
+            void BeginFrame();
+            void BeginUpdate();
+            void EndUpdate();
+            void EndFrame();
+        };
+
+        NativeXr::Impl::Impl(Napi::Env env, JsRuntimeScheduler& runtimeScheduler, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider)
+            : m_env{env}
+            , m_runtimeScheduler{runtimeScheduler}
+            , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
+            , m_sessionStateChangedCallback{std::move(sessionStateChangedCallback)}
+            , m_windowProvider{std::move(windowProvider)}
+        {
+        }
+
+        arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
+        {
+            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
+                [this, thisRef{shared_from_this()}]() {
+                    assert(m_system == nullptr);
+                    assert(m_session == nullptr);
+                    assert(m_frame == nullptr);
+
+                    m_system = std::make_unique<xr::System>();
+
+                    if (!m_system->IsInitialized())
+                    {
+                        while (!m_system->TryInitialize())
                         {
-                            m_sessionStateChangedCallback(true);
+                            // do nothing
                         }
-                    });
+                    }
+
+                    return xr::System::Session::CreateAsync(*m_system, bgfx::getInternalData()->context, m_windowProvider)
+                        .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
+                            m_session = std::move(session);
+
+                            if (m_sessionStateChangedCallback)
+                            {
+                                m_sessionStateChangedCallback(true);
+                            }
+                        });
+                });
+        }
+
+        arcana::task<void, std::exception_ptr> NativeXr::Impl::EndSessionAsync()
+        {
+            m_cancellationSource.cancel();
+
+            m_frameBufferToJsTextureMap.clear();
+            m_textureToFrameBufferMap.clear();
+            m_activeTextures.clear();
+
+            return m_frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                assert(m_system != nullptr);
+                assert(m_session != nullptr);
+                assert(m_frame == nullptr);
+
+                m_session->RequestEndSession();
+
+                bool shouldEndSession{};
+                bool shouldRestartSession{};
+                do
+                {
+                    // Block and burn frames until XR successfully shuts down.
+                    m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+                    m_frame.reset();
+                } while (!shouldEndSession);
+
+                m_session.reset();
+                m_system.reset();
+
+                if (m_sessionStateChangedCallback)
+                {
+                    m_sessionStateChangedCallback(false);
+                }
             });
-    }
+        }
 
-    arcana::task<void, std::exception_ptr> NativeXr::EndSessionAsync()
-    {
-        m_cancellationSource.cancel();
+        void NativeXr::Impl::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
+        {
+            if (m_frameScheduled)
+            {
+                return;
+            }
 
-        m_frameBufferToJsTextureMap.clear();
-        m_textureToFrameBufferMap.clear();
-        m_activeTextures.clear();
+            m_frameScheduled = true;
 
-        return m_frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
-            assert(m_system != nullptr);
+            // REVIEW: This should technically be before the check for m_frameScheduled, but for some
+            // reason requestAnimationFrame is being called twice when starting XR.
+            m_scheduleFrameCallbacks.emplace_back(callback);
+
+            m_frameTask = arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this, thisRef{shared_from_this()}] {
+                BeginFrame();
+
+                return arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
+                    m_frameScheduled = false;
+
+                    BeginUpdate();
+
+                    auto callbacks{std::move(m_scheduleFrameCallbacks)};
+                    for (auto& callback : callbacks)
+                    {
+                        callback(*m_frame);
+                    }
+
+                    EndUpdate();
+                }).then(arcana::inline_scheduler, m_cancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
+                    if (!m_cancellationSource.cancelled() && result.has_error())
+                    {
+                        Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
+                    }
+                }).then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                    EndFrame();
+                });
+            });
+        }
+
+        void NativeXr::Impl::BeginFrame()
+        {
             assert(m_session != nullptr);
             assert(m_frame == nullptr);
 
-            m_session->RequestEndSession();
-
             bool shouldEndSession{};
             bool shouldRestartSession{};
-            do
-            {
-                // Block and burn frames until XR successfully shuts down.
-                m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
-                m_frame.reset();
-            } while (!shouldEndSession);
-
-            m_session.reset();
-            m_system.reset();
-
-            if (m_sessionStateChangedCallback)
-            {
-                m_sessionStateChangedCallback(false);
-            }
-        });
-    }
-
-    void NativeXr::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
-    {
-        if (m_frameScheduled)
-        {
-            return;
-        }
-
-        m_frameScheduled = true;
-
-        // REVIEW: This should technically be before the check for m_frameScheduled, but for some
-        // reason requestAnimationFrame is being called twice when starting XR.
-        m_scheduleFrameCallbacks.emplace_back(callback);
-
-        m_frameTask = arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_cancellationSource, [this, thisRef{shared_from_this()}] {
-            BeginFrame();
-
-            return arcana::make_task(m_runtimeScheduler, m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
-                m_frameScheduled = false;
-
-                BeginUpdate();
-
-                auto callbacks{std::move(m_scheduleFrameCallbacks)};
-                for (auto& callback : callbacks)
-                {
-                    callback(*m_frame);
-                }
-
-                EndUpdate();
-            }).then(arcana::inline_scheduler, m_cancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!m_cancellationSource.cancelled() && result.has_error())
-                {
-                    Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
-                }
-            }).then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
-                EndFrame();
-            });
-        });
-    }
-
-    void NativeXr::BeginFrame()
-    {
-        assert(m_session != nullptr);
-        assert(m_frame == nullptr);
-
-        bool shouldEndSession{};
-        bool shouldRestartSession{};
-        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-            m_runtimeScheduler([this, texturePointer]() {
-                auto itTextureToFrameBuffer{m_textureToFrameBufferMap.find(texturePointer)};
-                if (itTextureToFrameBuffer != m_textureToFrameBufferMap.end())
-                {
-                    auto itFrameBufferToJsTexture{m_frameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
-                    if (itFrameBufferToJsTexture != m_frameBufferToJsTextureMap.end())
+            m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
+                m_runtimeScheduler([this, texturePointer]() {
+                    auto itTextureToFrameBuffer{m_textureToFrameBufferMap.find(texturePointer)};
+                    if (itTextureToFrameBuffer != m_textureToFrameBufferMap.end())
                     {
-                        m_destroyRenderTexture.Call({itFrameBufferToJsTexture->second.Value()});
-                        m_frameBufferToJsTextureMap.erase(itFrameBufferToJsTexture);
-                    }
+                        auto itFrameBufferToJsTexture{m_frameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
+                        if (itFrameBufferToJsTexture != m_frameBufferToJsTextureMap.end())
+                        {
+                            m_destroyRenderTexture.Call({itFrameBufferToJsTexture->second.Value()});
+                            m_frameBufferToJsTextureMap.erase(itFrameBufferToJsTexture);
+                        }
 
-                    m_textureToFrameBufferMap.erase(itTextureToFrameBuffer);
-                }
-            });
-        });
-
-        // Ending a session outside of calls to EndSessionAsync() is currently not supported.
-        assert(!shouldEndSession);
-        assert(m_frame != nullptr);
-    }
-
-    void NativeXr::BeginUpdate()
-    {
-        m_activeTextures.reserve(m_frame->Views.size());
-        for (const auto& view : m_frame->Views)
-        {
-            m_activeTextures.push_back(view.ColorTexturePointer);
-
-            auto it{m_textureToFrameBufferMap.find(view.ColorTexturePointer)};
-            if (it == m_textureToFrameBufferMap.end() || it->second->Width() != view.ColorTextureSize.Width || it->second->Height() != view.ColorTextureSize.Height)
-            {
-                // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
-                assert(view.ColorTextureSize.Width != 0);
-                assert(view.ColorTextureSize.Height != 0);
-                assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
-                assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
-
-                // Create textures with the desired size. It will be freed and replaced with overrideInternal call
-                // This is mandatory as overrideInternal do not update texture size.
-                // And size is used for determining viewport when rendering to texture.
-                auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                auto colorTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
-
-                auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
-                auto depthTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
-
-                arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
-                    bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
-                    bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
-                }).then(m_runtimeScheduler, m_cancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &view]() {
-                    std::array<bgfx::Attachment, 2> attachments{};
-                    attachments[0].init(colorTexture);
-                    attachments[1].init(depthTexture);
-                    auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
-
-                    auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle,
-                        static_cast<uint16_t>(view.ColorTextureSize.Width),
-                        static_cast<uint16_t>(view.ColorTextureSize.Height),
-                        true)};
-
-                    // WebXR, at least in its current implementation, specifies an implicit default clear to black.
-                    // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                    frameBuffer.Clear(m_graphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
-
-                    m_textureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
-
-                    auto jsWidth{Napi::Value::From(m_env, view.ColorTextureSize.Width)};
-                    auto jsHeight{Napi::Value::From(m_env, view.ColorTextureSize.Height)};
-                    auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
-                    m_frameBufferToJsTextureMap[&frameBuffer] = Napi::Persistent(m_createRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-                }).then(arcana::inline_scheduler, m_cancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
-                    if (result.has_error())
-                    {
-                        Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                        m_textureToFrameBufferMap.erase(itTextureToFrameBuffer);
                     }
                 });
+            });
+
+            // Ending a session outside of calls to EndSessionAsync() is currently not supported.
+            assert(!shouldEndSession);
+            assert(m_frame != nullptr);
+        }
+
+        void NativeXr::Impl::BeginUpdate()
+        {
+            m_activeTextures.reserve(m_frame->Views.size());
+            for (const auto& view : m_frame->Views)
+            {
+                m_activeTextures.push_back(view.ColorTexturePointer);
+
+                auto it{m_textureToFrameBufferMap.find(view.ColorTexturePointer)};
+                if (it == m_textureToFrameBufferMap.end() || it->second->Width() != view.ColorTextureSize.Width || it->second->Height() != view.ColorTextureSize.Height)
+                {
+                    // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
+                    assert(view.ColorTextureSize.Width != 0);
+                    assert(view.ColorTextureSize.Height != 0);
+                    assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
+                    assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
+
+                    // Create textures with the desired size. It will be freed and replaced with overrideInternal call
+                    // This is mandatory as overrideInternal do not update texture size.
+                    // And size is used for determining viewport when rendering to texture.
+                    auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
+                    auto colorTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
+
+                    auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
+                    auto depthTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
+
+                    arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
+                        bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
+                        bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
+                    }).then(m_runtimeScheduler, m_cancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &view]() {
+                        std::array<bgfx::Attachment, 2> attachments{};
+                        attachments[0].init(colorTexture);
+                        attachments[1].init(depthTexture);
+                        auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+
+                        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle,
+                            static_cast<uint16_t>(view.ColorTextureSize.Width),
+                            static_cast<uint16_t>(view.ColorTextureSize.Height),
+                            true)};
+
+                        // WebXR, at least in its current implementation, specifies an implicit default clear to black.
+                        // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
+                        frameBuffer.Clear(m_graphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+
+                        m_textureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
+
+                        auto jsWidth{Napi::Value::From(m_env, view.ColorTextureSize.Width)};
+                        auto jsHeight{Napi::Value::From(m_env, view.ColorTextureSize.Height)};
+                        auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
+                        m_frameBufferToJsTextureMap[&frameBuffer] = Napi::Persistent(m_createRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                    }).then(arcana::inline_scheduler, m_cancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
+                        if (result.has_error())
+                        {
+                            Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                        }
+                    });
+                }
             }
+        }
+
+        void NativeXr::Impl::EndUpdate()
+        {
+            m_activeTextures.clear();
+        }
+
+        void NativeXr::Impl::EndFrame()
+        {
+            assert(m_session != nullptr);
+            assert(m_frame != nullptr);
+
+            m_frame.reset();
         }
     }
 
-    void NativeXr::EndUpdate()
-    {
-        m_activeTextures.clear();
-    }
-
-    void NativeXr::EndFrame()
-    {
-        assert(m_session != nullptr);
-        assert(m_frame != nullptr);
-
-        m_frame.reset();
-    }
-}
-
-namespace Babylon
-{
     namespace
     {
         class XRFrame;
@@ -2333,7 +2333,7 @@ namespace Babylon
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-                , m_xr{std::make_shared<NativeXr>(
+                , m_xr{std::make_shared<Plugins::NativeXr::Impl>(
                           info.Env(),
                           m_runtimeScheduler,
                           *info.NewTarget().As<Napi::Function>().Get(JS_SESSION_STATE_CALLBACK_NAME).As<Napi::External<std::function<void(bool)>>>().Data(),
@@ -2386,7 +2386,7 @@ namespace Babylon
 
         private:
             JsRuntimeScheduler m_runtimeScheduler;
-            std::shared_ptr<NativeXr> m_xr;
+            std::shared_ptr<Plugins::NativeXr::Impl> m_xr;
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
             uint32_t m_timestamp{0};
@@ -2868,13 +2868,7 @@ namespace Babylon
 
     namespace Plugins
     {
-        class NativeXr::Impl final
-        {
-        public:
-            //std::shared_ptr<Babylon::NativeXr> m_nativeXr{}
-        };
-
-        NativeXr::NativeXr(std::unique_ptr<Impl> impl)
+        NativeXr::NativeXr(std::shared_ptr<Impl> impl)
             : m_impl{ std::move(impl) }
         {
         }
@@ -2906,7 +2900,7 @@ namespace Babylon
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
 
-            return { std::make_unique<Impl>() };
+            return {{}};
         }
     }
 }

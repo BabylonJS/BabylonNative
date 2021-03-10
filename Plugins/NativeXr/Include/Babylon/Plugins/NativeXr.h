@@ -7,8 +7,12 @@ namespace Babylon::Plugins
     class NativeXr final
     {
     public:
-        NativeXr(const NativeXr& other) = delete;
+        class Impl;
+
+        NativeXr(std::shared_ptr<Impl> impl);
+        NativeXr(const NativeXr& other) = default;
         NativeXr(NativeXr&&) = default;
+        ~NativeXr();
 
         struct Configuration
         {
@@ -17,11 +21,8 @@ namespace Babylon::Plugins
         };
 
         static NativeXr Initialize(Napi::Env env, Configuration config);
-        ~NativeXr();
 
     private:
-        class Impl;
-        std::unique_ptr<Impl> m_impl{};
-        NativeXr(std::unique_ptr<Impl> impl);
+        std::shared_ptr<Impl> m_impl{};
     };
 }
