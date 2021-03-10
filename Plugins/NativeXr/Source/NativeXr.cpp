@@ -378,7 +378,7 @@ namespace Babylon
         std::map<void*, FrameBuffer*> m_textureToFrameBufferMap{};
         std::map<FrameBuffer*, Napi::ObjectReference> m_frameBufferToJsTextureMap{};
         std::vector<void*> m_activeTextures{};
-        xr::System m_system{};
+        std::unique_ptr<xr::System> m_system{};
         std::shared_ptr<xr::System::Session> m_session{};
         std::unique_ptr<xr::System::Session::Frame> m_frame{};
         arcana::cancellation_source m_cancellationSource{};
@@ -407,18 +407,21 @@ namespace Babylon
     {
         return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
             [this, thisRef{shared_from_this()}]() {
+                assert(m_system == nullptr);
                 assert(m_session == nullptr);
                 assert(m_frame == nullptr);
 
-                if (!m_system.IsInitialized())
+                m_system = std::make_unique<xr::System>();
+
+                if (!m_system->IsInitialized())
                 {
-                    while (!m_system.TryInitialize())
+                    while (!m_system->TryInitialize())
                     {
                         // do nothing
                     }
                 }
 
-                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, m_windowProvider)
+                return xr::System::Session::CreateAsync(*m_system, bgfx::getInternalData()->context, m_windowProvider)
                     .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                         m_session = std::move(session);
 
@@ -439,6 +442,7 @@ namespace Babylon
         m_activeTextures.clear();
 
         return m_frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+            assert(m_system != nullptr);
             assert(m_session != nullptr);
             assert(m_frame == nullptr);
 
@@ -454,6 +458,7 @@ namespace Babylon
             } while (!shouldEndSession);
 
             m_session.reset();
+            m_system.reset();
 
             if (m_sessionStateChangedCallback)
             {
@@ -2861,9 +2866,9 @@ namespace Babylon
         };
     }
 
-    namespace Plugins::NativeXr
+    namespace Plugins
     {
-        void Initialize(Napi::Env env, Configuration config)
+        void NativeXr::Initialize(Napi::Env env, Configuration config)
         {
             PointerEvent::Initialize(env);
 

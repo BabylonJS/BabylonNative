@@ -2,13 +2,28 @@
 
 #include <napi/env.h>
 
-namespace Babylon::Plugins::NativeXr
+namespace Babylon::Plugins
 {
-    struct Configuration
+    class NativeXr
     {
-        std::function<void(bool)> SessionStateChangedCallback{};
-        std::function<void*()> WindowProvider{};
-    };
+    public:
+        struct Configuration
+        {
+            std::function<void(bool)> SessionStateChangedCallback{};
+            std::function<void*()> WindowProvider{};
+        };
 
-    void Initialize(Napi::Env env, Configuration config = {});
+        static void Initialize(Napi::Env env, Configuration config);
+    };
 }
+
+//namespace Babylon::Plugins::NativeXr
+//{
+//    struct Configuration
+//    {
+//        std::function<void(bool)> SessionStateChangedCallback{};
+//        std::function<void*()> WindowProvider{};
+//    };
+//
+//    void Initialize(Napi::Env env, Configuration config = {});
+//}
