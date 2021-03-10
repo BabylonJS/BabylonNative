@@ -12,30 +12,30 @@ if (WINDOWS_STORE)
         set(SOURCES
             ${SOURCES}
             "Include/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Babylon/GraphicsPlatform.h"
-            "Source/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Graphics.cpp")
+            "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.cpp")
     else()
         set(SOURCES
             ${SOURCES}
             "Include/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Babylon/GraphicsPlatform.h"
-            "Source/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Graphics.cpp")
+            "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.cpp")
     endif()
 elseif(APPLE)
     if(IOS)
         set(SOURCES
             ${SOURCES}
             "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
-            "Source/${BABYLON_NATIVE_PLATFORM}/iOS/Graphics.mm")
+            "Source/${BABYLON_NATIVE_PLATFORM}/iOS/GraphicsPlatform.mm")
     else()
         set(SOURCES
             ${SOURCES}
             "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
-            "Source/${BABYLON_NATIVE_PLATFORM}/macOS/Graphics.mm")
+            "Source/${BABYLON_NATIVE_PLATFORM}/macOS/GraphicsPlatform.mm")
     endif()
 else()
     set(SOURCES
         ${SOURCES}
         "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
-        "Source/${BABYLON_NATIVE_PLATFORM}/Graphics.cpp")
+        "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.cpp")
 endif()
 
 add_library(Graphics ${SOURCES})
@@ -94,6 +94,11 @@ target_link_to_dependencies(GraphicsInternal
     INTERFACE bgfx
     INTERFACE bimg
     INTERFACE bx)
+
+if(WINDOWS_STORE)
+    target_compile_options(Graphics PRIVATE /await)
+    target_compile_options(GraphicsInternal INTERFACE /await)
+endif()
 
 target_compile_definitions(GraphicsInternal
     INTERFACE NOMINMAX)

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <windows.ui.core.h>
+#include <winrt/windows.ui.core.h>
+#include <winrt/Windows.ApplicationModel.h>
 
-using WindowType = ABI::Windows::UI::Core::ICoreWindow*;
+using WindowType = winrt::Windows::UI::Core::ICoreWindow*;
 
 struct GraphicsConfiguration
 {

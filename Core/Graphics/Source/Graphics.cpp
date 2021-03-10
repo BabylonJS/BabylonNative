@@ -18,22 +18,6 @@ namespace Babylon
         m_impl->SetNativeWindow(config);
     }
 
-/*
-    template<>
-    void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
-    {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr);
-    }
-
-    template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
-    {
-        std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*>(nativeWindowPtr);
-        graphics->UpdateSize(width, height);
-        return graphics;
-    }
-*/
     std::unique_ptr<Graphics> Graphics::CreateGraphics(GraphicsConfiguration config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};

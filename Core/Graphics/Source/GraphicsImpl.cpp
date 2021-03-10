@@ -137,8 +137,6 @@ namespace Babylon
             std::scoped_lock lock{m_state.Mutex};
             if (m_state.Bgfx.Dirty)
             {
-                UpdateDevicePixelRatio();
-
                 bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
                 auto& res = m_state.Bgfx.InitState.resolution;
 

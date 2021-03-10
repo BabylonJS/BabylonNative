@@ -10,7 +10,7 @@
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
 
-#include <windows.ui.core.h>
+#include <winrt/windows.ui.core.h>
 
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Core;
@@ -143,9 +143,10 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
+    auto windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
-    m_graphics = Babylon::Graphics::CreateGraphics<void*>(static_cast<void*>(windowPtr), width, height);
+    GraphicsConfiguration graphicsConfig = {windowPtr, nullptr, width, height};
+    m_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     m_runtime = std::make_unique<Babylon::AppRuntime>();
     m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
