@@ -20,14 +20,14 @@ namespace Babylon
     FrameBuffer& FrameBufferManager::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
     {
         std::scoped_lock lock{m_frameBuffersMutex};
-        m_frameBuffers.push_back(std::make_unique<FrameBuffer>(*this, handle, width, height, backBuffer));
-        return *m_frameBuffers.back();
+        m_frameBuffers.emplace_back(*this, handle, width, height, backBuffer);
+        return m_frameBuffers.back();
     }
 
     void FrameBufferManager::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
         std::scoped_lock lock{m_frameBuffersMutex};
-        auto predicate{[targetFrameBufferPtr{&frameBuffer}](const std::unique_ptr<FrameBuffer>& frameBuffer) { return frameBuffer.get() == targetFrameBufferPtr; }};
+        auto predicate{[&target{frameBuffer}](const FrameBuffer& current) { return &current == &target; }};
         m_frameBuffers.erase(std::find_if(m_frameBuffers.begin(), m_frameBuffers.end(), predicate));
     }
 
@@ -66,9 +66,9 @@ namespace Babylon
     {
         std::scoped_lock lock{m_frameBuffersMutex};
 
-        for (std::unique_ptr<FrameBuffer>& frameBuffer : m_frameBuffers)
+        for (FrameBuffer& frameBuffer : m_frameBuffers)
         {
-            frameBuffer->Reset();
+            frameBuffer.Reset();
         }
 
         m_default.Reset();
