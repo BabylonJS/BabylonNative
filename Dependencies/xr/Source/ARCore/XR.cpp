@@ -35,8 +35,6 @@
 using namespace android;
 using namespace android::global;
 
-extern ANativeWindow* g_xrWindowPtr;
-
 namespace xr
 {
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
@@ -346,11 +344,12 @@ namespace xr
         bool PlaneDetectionEnabled{ false };
         bool FeaturePointCloudEnabled{ false };
 
-        Impl(System::Impl& systemImpl, void* graphicsContext)
+        Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
+            , windowProvider{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<ANativeWindow*>(windowProvider()); } }
             , parentContext{reinterpret_cast<EGLContext>(graphicsContext) }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
-            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
+            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
         {
         }
 
@@ -487,13 +486,14 @@ namespace xr
                 Initialize();
             }
 
-            if (g_xrWindowPtr != window)
+            ANativeWindow* activeWindow{ windowProvider() };
+            if (activeWindow != window)
             {
-                window = g_xrWindowPtr;
+                window = activeWindow;
 
                 if (window)
                 {
-                    surface = EGLSurfacePtr(eglCreateWindowSurface(display, config, g_xrWindowPtr, nullptr), [display{display}](EGLSurface surface) {
+                    surface = EGLSurfacePtr(eglCreateWindowSurface(display, config, window, nullptr), [display{display}](EGLSurface surface) {
                         eglDestroySurface(display, surface);
                     });
                 }
@@ -1053,6 +1053,7 @@ namespace xr
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
 
+        std::function<ANativeWindow*()> windowProvider{};
         ANativeWindow* window{};
         EGLDisplay display{};
         EGLConfig config{};
@@ -1346,8 +1347,8 @@ namespace xr
         });
     }
 
-    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()>)
-        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
+    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, std::move(windowProvider)) }
     {}
 
     System::Session::~Session()

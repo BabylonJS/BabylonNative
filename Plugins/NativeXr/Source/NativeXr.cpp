@@ -304,7 +304,7 @@ namespace Babylon
     class NativeXr : public std::enable_shared_from_this<NativeXr>
     {
     public:
-        NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler, const std::function<void(bool)>& sessionStateChangedCallback);
+        NativeXr(Napi::Env, JsRuntimeScheduler& runtimeScheduler, const std::function<void(bool)>& sessionStateChangedCallback, const std::function<void*()>& windowProvider);
 
         arcana::task<void, std::exception_ptr> BeginSessionAsync();
         arcana::task<void, std::exception_ptr> EndSessionAsync();
@@ -385,7 +385,8 @@ namespace Babylon
         bool m_frameScheduled{false};
         std::vector<std::function<void(const xr::System::Session::Frame&)>> m_scheduleFrameCallbacks{};
         arcana::task<void, std::exception_ptr> m_frameTask{};
-        const std::function<void(bool)>& m_sessionStateChangedCallback{};
+        const std::function<void(bool)>& m_sessionStateChangedCallback{}; // TODO: This probably can't be const ref if it is called from the render thread (rather than the JS thread)
+        const std::function<void*()>& m_windowProvider{};
 
         void BeginFrame();
         void BeginUpdate();
@@ -393,18 +394,19 @@ namespace Babylon
         void EndFrame();
     };
 
-    NativeXr::NativeXr(Napi::Env env, JsRuntimeScheduler& runtimeScheduler, const std::function<void(bool)>& sessionStateChangedCallback)
+    NativeXr::NativeXr(Napi::Env env, JsRuntimeScheduler& runtimeScheduler, const std::function<void(bool)>& sessionStateChangedCallback, const std::function<void*()>& windowProvider)
         : m_env{env}
         , m_runtimeScheduler{runtimeScheduler}
         , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
         , m_sessionStateChangedCallback{sessionStateChangedCallback}
+        , m_windowProvider{windowProvider}
     {
     }
 
     arcana::task<void, std::exception_ptr> NativeXr::BeginSessionAsync()
     {
         return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
-            [this, thisRef{shared_from_this()}, getWindow{std::bind(&Graphics::Impl::GetNativeWindow, &m_graphicsImpl)}]() {
+            [this, thisRef{shared_from_this()}, getWindow{m_windowProvider}]() {
                 assert(m_session == nullptr);
                 assert(m_frame == nullptr);
 
@@ -416,7 +418,7 @@ namespace Babylon
                     }
                 }
 
-                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, std::move(getWindow))
+                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, getWindow)
                     .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                         m_session = std::move(session);
 
@@ -2266,9 +2268,10 @@ namespace Babylon
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
             static constexpr auto JS_SESSION_STATE_CALLBACK_NAME = "_sessionStateCallback";
+            static constexpr auto JS_WINDOW_PROVIDER_NAME = "_windowProvider";
 
         public:
-            static void Initialize(Napi::Env env, std::function<void(bool)> sessionStateChangedCallback)
+            static void Initialize(Napi::Env env, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider)
             {
                 Napi::Function func = DefineClass(
                     env,
@@ -2291,8 +2294,11 @@ namespace Babylon
                         InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
                     });
 
-                Napi::Value callbackExternal = Napi::External<std::function<void(bool)>>::New(env, new std::function<void(bool)>(std::move(sessionStateChangedCallback)), [](Napi::Env, std::function<void(bool)>* callback) { delete callback; });
-                func.Set(JS_SESSION_STATE_CALLBACK_NAME, callbackExternal);
+                Napi::Value sessionStateChangedCallbackExternal{Napi::External<std::function<void(bool)>>::New(env, new std::function<void(bool)>(std::move(sessionStateChangedCallback)), [](Napi::Env, std::function<void(bool)>* callback) { delete callback; }) };
+                func.Set(JS_SESSION_STATE_CALLBACK_NAME, sessionStateChangedCallbackExternal);
+
+                Napi::Value windowProviderExternal{ Napi::External<std::function<void*()>>::New(env, new std::function<void*()>(std::move(windowProvider)), [](Napi::Env, std::function<void*()>* callback) { delete callback; }) };
+                func.Set(JS_WINDOW_PROVIDER_NAME, windowProviderExternal);
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -2322,7 +2328,11 @@ namespace Babylon
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-                , m_xr{std::make_shared<NativeXr>(info.Env(), m_runtimeScheduler, *info.NewTarget().As<Napi::Function>().Get(JS_SESSION_STATE_CALLBACK_NAME).As<Napi::External<std::function<void(bool)>>>().Data())}
+                , m_xr{std::make_shared<NativeXr>(
+                          info.Env(),
+                          m_runtimeScheduler,
+                          *info.NewTarget().As<Napi::Function>().Get(JS_SESSION_STATE_CALLBACK_NAME).As<Napi::External<std::function<void(bool)>>>().Data(),
+                          *info.NewTarget().As<Napi::Function>().Get(JS_WINDOW_PROVIDER_NAME).As<Napi::External<std::function<void*()>>>().Data())}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
@@ -2871,7 +2881,7 @@ namespace Babylon
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
             XRRay::Initialize(env);
-            XRSession::Initialize(env, std::move(config.SessionStateChangedCallback));
+            XRSession::Initialize(env, std::move(config.SessionStateChangedCallback), std::move(config.WindowProvider));
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
