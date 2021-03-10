@@ -1,8 +1,6 @@
+#include <Babylon/Graphics.h>
 #include "GraphicsImpl.h"
 #include <Babylon/Graphics.h>
-
-#include <cassert>
-#include <limits>
 
 namespace Babylon
 {

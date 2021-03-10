@@ -1,16 +1,27 @@
 #include "GraphicsImpl.h"
-
+#include <GraphicsPlatform.h>
 #include <JsRuntimeInternalState.h>
+
+namespace
+{
+    constexpr auto JS_GRAPHICS_NAME = "_Graphics";
+}
 
 namespace Babylon
 {
-    namespace
+    Graphics::Impl::UpdateToken::UpdateToken(Graphics::Impl& graphicsImpl)
+        : m_graphicsImpl(graphicsImpl)
+        , m_guarantee{m_graphicsImpl.m_safeTimespanGuarantor.GetSafetyGuarantee()}
     {
-        constexpr auto JS_GRAPHICS_READY_NAME = "whenGraphicsReady";
+    }
+
+    bgfx::Encoder* Graphics::Impl::UpdateToken::GetEncoder()
+    {
+        return m_graphicsImpl.GetEncoderForThread();
     }
 
     Graphics::Impl::Impl()
-        : Callback{[this](const auto& data) { CaptureCallback(data); }}
+        : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -18,7 +29,7 @@ namespace Babylon
         auto& init = m_state.Bgfx.InitState;
         init.type = BgfxDefaultRendererType;
         init.resolution.reset = BGFX_RESET_FLAGS;
-        init.callback = &Callback;
+        init.callback = &m_bgfxCallback;
     }
 
     Graphics::Impl::~Impl()
@@ -55,30 +66,28 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
-    void Graphics::Impl::UpdateBgfxResolution()
+    void Graphics::Impl::AddToJavaScript(Napi::Env env)
     {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
-        auto& res = m_state.Bgfx.InitState.resolution;
-        auto level = m_state.Resolution.HardwareScalingLevel;
-        res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
-        res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
+        JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
     }
 
-    void Graphics::Impl::AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask)
+    Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
     {
-        std::scoped_lock RenderWorkTasksLock{m_renderWorkTasksMutex};
-        m_renderWorkTasks.push_back(std::move(renderWorkTask));
+        return *JsRuntime::NativeObject::GetFromJavaScript(env)
+                    .Get(JS_GRAPHICS_NAME)
+                    .As<Napi::External<Graphics::Impl>>()
+                    .Data();
     }
 
-    arcana::task<void, std::exception_ptr> Graphics::Impl::GetBeforeRenderTask()
+    Graphics::Impl::RenderScheduler& Graphics::Impl::BeforeRenderScheduler()
     {
-        return m_beforeRenderTaskCompletionSource.as_task();
+        return m_beforeRenderScheduler;
     }
 
-    arcana::task<void, std::exception_ptr> Graphics::Impl::GetAfterRenderTask()
+    Graphics::Impl::RenderScheduler& Graphics::Impl::AfterRenderScheduler()
     {
-        return m_afterRenderTaskCompletionSource.as_task();
+        return m_afterRenderScheduler;
     }
 
     void Graphics::Impl::EnableRendering()
@@ -90,19 +99,20 @@ namespace Babylon
             // Set the thread affinity (all other rendering operations must happen on this thread).
             m_renderThreadAffinity = std::this_thread::get_id();
 
+            // This tells bgfx to not create its own render thread.
+            bgfx::renderFrame();
+
             // Initialize bgfx.
             auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
             bgfx::init(init);
-            bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0f, 0);
-            bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(init.resolution.width), static_cast<uint16_t>(init.resolution.height));
-            bgfx::touch(0);
 
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
-            // Allow JS awaiters to start doing graphics operations.
-            m_enableRenderTaskCompletionSource.complete();
+            m_frameBufferManager = std::make_unique<FrameBufferManager>();
+
+            m_cancellationSource = std::make_unique<arcana::cancellation_source>();
         }
     }
 
@@ -114,9 +124,17 @@ namespace Babylon
 
         if (m_state.Bgfx.Initialized)
         {
+            // HACK: Render one more frame to drain the before/after render work queues.
+            StartRenderingCurrentFrame();
+            FinishRenderingCurrentFrame();
+
+            m_cancellationSource->cancel();
+
+            m_frameBufferManager.reset();
+
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
-            m_enableRenderTaskCompletionSource = {};
+
             m_renderThreadAffinity = {};
         }
     }
@@ -129,35 +147,18 @@ namespace Babylon
         {
             throw std::runtime_error{"Current frame cannot be started before prior frame has been finished."};
         }
+
         m_rendering = true;
 
-        // Ensure rendering is enabled
+        // Ensure rendering is enabled.
         EnableRendering();
-        {
-            std::scoped_lock lock{m_state.Mutex};
-            if (m_state.Bgfx.Dirty)
-            {
-                bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
-                auto& res = m_state.Bgfx.InitState.resolution;
 
-                // Ensure bgfx rebinds all texture information.
-                bgfx::discard(BGFX_DISCARD_ALL);
-                bgfx::reset(res.width, res.height, res.reset);
-                bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
+        // Update bgfx state if necessary.
+        UpdateBgfxState();
 
-#if __APPLE__
-                bgfx::frame();
-#else
-                bgfx::touch(0);
-#endif
+        m_safeTimespanGuarantor.BeginSafeTimespan();
 
-                m_state.Bgfx.Dirty = false;
-            }
-        }
-
-        auto oldBeforeRenderTaskCompletionSource = m_beforeRenderTaskCompletionSource;
-        m_beforeRenderTaskCompletionSource = {};
-        oldBeforeRenderTaskCompletionSource.complete();
+        m_beforeRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
     }
 
     void Graphics::Impl::FinishRenderingCurrentFrame()
@@ -169,79 +170,59 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        bool finished{false};
-        bool workDone{false};
-        std::exception_ptr error{};
-        RenderCurrentFrameAsync(finished, workDone, error);
-        while (!finished)
-        {
-            m_renderWorkDispatcher.blocking_tick(arcana::cancellation::none());
-        }
+        m_safeTimespanGuarantor.EndSafeTimespan();
 
-        if (error != nullptr)
-        {
-            std::rethrow_exception(error);
-        }
+        Frame();
 
-        if (workDone)
-        {
-            {
-                std::scoped_lock lock{m_state.Mutex};
-                if (m_state.Bgfx.Dirty)
-                {
-                    bgfx::discard();
-                }
-            }
-
-            bgfx::frame();
-        }
-
-        auto oldRenderTaskCompletionSource = m_afterRenderTaskCompletionSource;
-        m_afterRenderTaskCompletionSource = {};
-        oldRenderTaskCompletionSource.complete();
+        m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
 
         m_rendering = false;
     }
 
-    arcana::task<void, std::exception_ptr> Graphics::Impl::RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error)
+    Graphics::Impl::UpdateToken Graphics::Impl::GetUpdateToken()
     {
-        bool anyTasks{};
-        arcana::task<void, std::exception_ptr> whenAllTask{};
-        {
-            std::scoped_lock RenderWorkTasksLock{m_renderWorkTasksMutex};
-            anyTasks = !m_renderWorkTasks.empty();
-            if (anyTasks)
-            {
-                whenAllTask = arcana::when_all<std::exception_ptr>(m_renderWorkTasks);
-                m_renderWorkTasks.clear();
-            }
-        }
-
-        workDone = workDone || anyTasks;
-
-        if (!anyTasks)
-        {
-            finished = true;
-            return arcana::task_from_result<std::exception_ptr>();
-        }
-        else
-        {
-            return whenAllTask.then(m_renderWorkDispatcher, arcana::cancellation::none(), [this, &finished, &workDone, &error](const arcana::expected<void, std::exception_ptr>& result) mutable {
-                if (result.has_error())
-                {
-                    finished = true;
-                    error = result.error();
-                    return arcana::task_from_result<std::exception_ptr>();
-                }
-
-                return RenderCurrentFrameAsync(finished, workDone, error);
-            });
-        }
+        return {*this};
     }
 
-    void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    FrameBuffer& Graphics::Impl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
     {
-        Callback.SetDiagnosticOutput(std::move(outputFunction));
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
+        }
+
+        return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
+    }
+
+    void Graphics::Impl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
+    {
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
+        }
+
+        m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
+    }
+
+    FrameBuffer& Graphics::Impl::DefaultFrameBuffer()
+    {
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
+        }
+
+        return m_frameBufferManager->DefaultFrameBuffer();
+    }
+
+    void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
+    {
+        assert(m_renderThreadAffinity.check());
+        m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
+    }
+
+    void Graphics::Impl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    {
+        m_screenShotCallbacks.push(std::move(callback));
     }
 
     float Graphics::Impl::GetHardwareScalingLevel()
@@ -279,6 +260,99 @@ namespace Babylon
         return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
     }
 
+    void Graphics::Impl::UpdateBgfxState()
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        if (m_state.Bgfx.Dirty)
+        {
+            bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
+
+            // Ensure bgfx rebinds all texture information.
+            bgfx::discard(BGFX_DISCARD_ALL);
+
+            auto& res = m_state.Bgfx.InitState.resolution;
+            bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
+            bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
+
+            m_state.Bgfx.Dirty = false;
+        }
+    }
+
+    void Graphics::Impl::UpdateBgfxResolution()
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        auto& res = m_state.Bgfx.InitState.resolution;
+        auto level = m_state.Resolution.HardwareScalingLevel;
+        res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
+        res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
+    }
+
+    void Graphics::Impl::DiscardIfDirty()
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        if (m_state.Bgfx.Dirty)
+        {
+            bgfx::discard();
+        }
+    }
+
+    void Graphics::Impl::RequestScreenShots()
+    {
+        std::function<void(std::vector<uint8_t>)> callback;
+        while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
+        {
+            m_bgfxCallback.AddScreenShotCallback(std::move(callback));
+            bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "Graphics::Impl::RequestScreenShot");
+        }
+    }
+
+    void Graphics::Impl::Frame()
+    {
+        // Automatically end bgfx encoders.
+        EndEncoders();
+
+        // Discard everything if the bgfx state is dirty.
+        DiscardIfDirty();
+
+        // Request screen shots before bgfx::frame.
+        RequestScreenShots();
+
+        // Advance frame and render!
+        bgfx::frame();
+
+        // Reset the frame buffers.
+        m_frameBufferManager->Reset();
+    }
+
+    bgfx::Encoder* Graphics::Impl::GetEncoderForThread()
+    {
+        assert(!m_renderThreadAffinity.check());
+        std::scoped_lock lock{m_threadIdToEncoderMutex};
+
+        const auto threadId{std::this_thread::get_id()};
+        auto it{m_threadIdToEncoder.find(threadId)};
+        if (it == m_threadIdToEncoder.end())
+        {
+            bgfx::Encoder* encoder{bgfx::begin(true)};
+            it = m_threadIdToEncoder.emplace(threadId, encoder).first;
+        }
+
+        return it->second;
+    }
+
+    void Graphics::Impl::EndEncoders()
+    {
+        std::scoped_lock lock{m_threadIdToEncoderMutex};
+
+        for (auto [threadId, encoder] : m_threadIdToEncoder)
+        {
+            bgfx::end(encoder);
+        }
+
+        m_threadIdToEncoder.clear();
+    }
+
     void Graphics::Impl::CaptureCallback(const BgfxCallback::CaptureData& data)
     {
         std::scoped_lock callbackLock{m_captureCallbacksMutex};
@@ -297,45 +371,9 @@ namespace Babylon
             callback(data);
         }
     }
-
-    void Graphics::Impl::AddToJavaScript(Napi::Env env)
+    
+    float Graphics::Impl::GetDevicePixelRatio()
     {
-        JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Set(JS_GRAPHICS_NAME, Napi::External<Impl>::New(env, this));
-
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_GRAPHICS_READY_NAME,
-            Napi::Function::New(
-                env, [this, env](const Napi::CallbackInfo&) -> Napi::Value {
-                    auto deferred{Napi::Promise::Deferred::New(env)};
-                    auto promise{deferred.Promise()};
-
-                    arcana::task<void, std::exception_ptr> enableRenderTask;
-                    {
-                        std::scoped_lock lock{m_state.Mutex};
-                        enableRenderTask = m_enableRenderTaskCompletionSource.as_task();
-                    }
-
-                    auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
-                    enableRenderTask.then(arcana::inline_scheduler, JsRuntime::InternalState::GetFromJavaScript(env).Cancellation, [&jsRuntime, deferred{std::move(deferred)}]() mutable {
-                        jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
-                            deferred.Resolve(env.Null());
-                        });
-                    });
-
-                    return std::move(promise);
-                },
-                JS_GRAPHICS_READY_NAME));
-    }
-
-    Graphics::Impl& Graphics::Impl::GetFromJavaScript(Napi::Env env)
-    {
-        return *JsRuntime::NativeObject::GetFromJavaScript(env)
-                    .Get(JS_GRAPHICS_NAME)
-                    .As<Napi::External<Graphics::Impl>>()
-                    .Data();
-    }
-
-    float Graphics::Impl::GetDevicePixelRatio() {
         std::scoped_lock lock{m_state.Mutex};
         return m_state.Resolution.DevicePixelRatio;
     }

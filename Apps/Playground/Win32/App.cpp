@@ -28,6 +28,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+bool minimized{false};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -37,8 +38,6 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    constexpr bool RENDER_ON_JS_THREAD{true};
-
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
@@ -82,6 +81,11 @@ namespace
 
     void Uninitialize()
     {
+        if (graphics)
+        {
+            graphics->FinishRenderingCurrentFrame();
+        }
+
         inputBuffer.reset();
         runtime.reset();
         graphics.reset();
@@ -100,27 +104,27 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        GraphicsConfiguration graphicsConfiguration = {hWnd, width, height};
-        graphics = Babylon::Graphics::CreateGraphics(graphicsConfiguration);
+        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        graphics->StartRenderingCurrentFrame();
+
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         runtime->Dispatch([width, height, hWnd](Napi::Env env) {
-            // Initialize console plugin.
+            graphics->AddToJavaScript(env);
+
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
+
             Babylon::Polyfills::Window::Initialize(env);
+
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-            // Initialize NativeEngine plugin.
-            graphics->AddToJavaScript(env);
-            Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+            Babylon::Plugins::NativeEngine::Initialize(env);
 
-            // Initialize NativeCapture. Like NativeEngine, depends on Graphics.
             Babylon::Plugins::NativeCapture::Initialize(env);
 
-            // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
 
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
@@ -170,8 +174,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
-
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_PLAYGROUNDWIN32, szWindowClass, MAX_LOADSTRING);
@@ -185,15 +187,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_PLAYGROUNDWIN32));
 
-    MSG msg;
+    MSG msg{};
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (msg.message != WM_QUIT)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        BOOL result;
+
+        if (minimized)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            result = GetMessage(&msg, nullptr, 0, 0);
+        }
+        else
+        {
+            if (graphics)
+            {
+                graphics->FinishRenderingCurrentFrame();
+                graphics->StartRenderingCurrentFrame();
+            }
+
+            result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
+        }
+
+        if (result)
+        {
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
     }
 
@@ -274,11 +296,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if ((wParam & 0xFFF0) == SC_MINIMIZE)
             {
+                if (graphics)
+                {
+                    graphics->FinishRenderingCurrentFrame();
+                }
+
                 runtime->Suspend();
+
+                minimized = true;
             }
             else if ((wParam & 0xFFF0) == SC_RESTORE)
             {
+                minimized = false;
+
                 runtime->Resume();
+
+                if (graphics)
+                {
+                    graphics->StartRenderingCurrentFrame();
+                }
             }
             DefWindowProc(hWnd, message, wParam, lParam);
             break;
@@ -300,29 +336,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             break;
         }
-        case WM_PAINT:
-        {
-            if constexpr (!RENDER_ON_JS_THREAD)
-            {
-                if (graphics != nullptr)
-                {
-                    graphics->RenderCurrentFrame();
-                }
-            }
-
-            PAINTSTRUCT ps;
-            BeginPaint(hWnd, &ps);
-            EndPaint(hWnd, &ps);
-
-            if constexpr (!RENDER_ON_JS_THREAD)
-            {
-                InvalidateRgn(hWnd, nullptr, false);
-            }
-            break;
-        }
         case WM_SIZE:
         {
-            if (runtime != nullptr)
+            if (graphics)
             {
                 auto width = static_cast<size_t>(LOWORD(lParam));
                 auto height = static_cast<size_t>(HIWORD(lParam));
@@ -346,7 +362,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_MOUSEMOVE:
         {
-            if (inputBuffer != nullptr)
+            if (inputBuffer)
             {
                 inputBuffer->SetPointerPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
@@ -355,7 +371,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONDOWN:
         {
             SetCapture(hWnd);
-            if (inputBuffer != nullptr)
+            if (inputBuffer)
             {
                 inputBuffer->SetPointerDown(true);
             }
@@ -363,7 +379,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_LBUTTONUP:
         {
-            if (inputBuffer != nullptr)
+            if (inputBuffer)
             {
                 inputBuffer->SetPointerDown(false);
             }

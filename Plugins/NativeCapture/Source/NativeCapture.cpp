@@ -1,5 +1,7 @@
 #include "NativeCapture.h"
 
+#include <arcana/containers/ticketed_collection.h>
+
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
 

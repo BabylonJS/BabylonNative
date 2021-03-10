@@ -1,10 +1,17 @@
 set(SOURCES
-    "Include/Shared/Babylon/Graphics.h"
+    "Include/Babylon/Graphics.h"
+    "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
+    "Source/FrameBuffer.cpp"
+    "Source/FrameBuffer.h"
+    "Source/FrameBufferManager.cpp"
+    "Source/FrameBufferManager.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
+    "Source/SafeTimespanGuarantor.cpp"
+    "Source/SafeTimespanGuarantor.h")
     "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h")
 
 if (WINDOWS_STORE)
@@ -94,11 +101,3 @@ target_link_to_dependencies(GraphicsInternal
     INTERFACE bgfx
     INTERFACE bimg
     INTERFACE bx)
-
-if(WINDOWS_STORE)
-    target_compile_options(Graphics PRIVATE /await)
-    target_compile_options(GraphicsInternal INTERFACE /await)
-endif()
-
-target_compile_definitions(GraphicsInternal
-    INTERFACE NOMINMAX)
