@@ -1,5 +1,6 @@
 #pragma once
 #include <bgfx/bgfx.h>
+#include <napi/napi.h>
 
 namespace Babylon::Plugins::Internal
 {

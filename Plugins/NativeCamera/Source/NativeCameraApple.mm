@@ -5,6 +5,11 @@
 #include <bgfx/platform.h>
 #include "NativeCamera.h"
 #include <arcana/macros.h>
+#include <arcana/threading/task.h>
+#include <arcana/threading/dispatcher.h>
+#include <Babylon/JsRuntimeScheduler.h>
+#include <GraphicsImpl.h>
+#include <arcana/threading/task_schedulers.h>
 
 @class CameraTextureDelegate;
 
@@ -12,8 +17,14 @@ namespace Babylon::Plugins::Internal
 {
     struct CameraInterfaceApple : public CameraInterface
     {
+        CameraInterfaceApple(Napi::Env env)
+        : m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
+        {
+        }
         virtual ~CameraInterfaceApple();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
+
+        Graphics::Impl& m_graphicsImpl;
 
         CameraTextureDelegate* cameraTextureDelegate;
         AVCaptureSession* avCaptureSession;
@@ -65,9 +76,9 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    CameraInterface* CameraInterface::CreateInterface(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    CameraInterface* CameraInterface::CreateInterface(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
-        CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple;
+        CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple(env);
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
         dispatch_sync(dispatch_get_main_queue(), ^{
@@ -132,10 +143,12 @@ namespace Babylon::Plugins::Internal
 
     void CameraInterfaceApple::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        if (textureBGRA)
-        {
-            bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(textureBGRA));
-        }
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+            if (textureBGRA)
+            {
+                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(textureBGRA));
+            }
+        });
     }
 
     CameraInterfaceApple::~CameraInterfaceApple()
