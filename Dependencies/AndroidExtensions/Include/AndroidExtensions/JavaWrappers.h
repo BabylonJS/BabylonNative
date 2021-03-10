@@ -270,8 +270,6 @@ namespace android::graphics
 
         void initWithTexture(int texture);
         void updateTexture() const;
-    private:
-        jmethodID m_updateTextureMethod;
     };
 }
 

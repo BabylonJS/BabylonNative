@@ -418,14 +418,12 @@ namespace android::graphics
     void SurfaceTexture::initWithTexture(int texture)
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
-        m_updateTextureMethod = m_env->GetMethodID(m_class, "updateTexImage", "()V");
     }
 
     void SurfaceTexture::updateTexture() const
     {
         if (m_object) {
-            //JNIEnv *env{GetEnvForCurrentThread()};
-            m_env->CallVoidMethod(m_object, m_updateTextureMethod);
+            m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "updateTexImage", "()V"));
         }
     }
 }
