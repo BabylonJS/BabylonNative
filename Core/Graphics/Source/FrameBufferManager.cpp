@@ -27,7 +27,7 @@ namespace Babylon
     void FrameBufferManager::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
         std::scoped_lock lock{m_frameBuffersMutex};
-        auto predicate{[&target{frameBuffer}](const FrameBuffer& current) { return &current == &target; }};
+        const auto predicate{[&target{frameBuffer}](const FrameBuffer& current) { return &current == &target; }};
         m_frameBuffers.erase(std::find_if(m_frameBuffers.begin(), m_frameBuffers.end(), predicate));
     }
 
