@@ -2868,7 +2868,22 @@ namespace Babylon
 
     namespace Plugins
     {
-        void NativeXr::Initialize(Napi::Env env, Configuration config)
+        class NativeXr::Impl final
+        {
+        public:
+            //std::shared_ptr<Babylon::NativeXr> m_nativeXr{}
+        };
+
+        NativeXr::NativeXr(std::unique_ptr<Impl> impl)
+            : m_impl{ std::move(impl) }
+        {
+        }
+
+        NativeXr::~NativeXr()
+        {
+        }
+
+        NativeXr NativeXr::Initialize(Napi::Env env, Configuration config)
         {
             PointerEvent::Initialize(env);
 
@@ -2890,6 +2905,8 @@ namespace Babylon
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
+
+            return { std::make_unique<Impl>() };
         }
     }
 }
