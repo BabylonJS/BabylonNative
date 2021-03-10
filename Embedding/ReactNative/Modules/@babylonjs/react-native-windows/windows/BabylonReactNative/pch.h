@@ -1,6 +1,12 @@
 ﻿#pragma once
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+
+#ifndef WINRT_LEAN_AND_MEAN
+#define WINRT_LEAN_AND_MEAN
+#endif
 
 #include <unknwn.h>
 #include <winrt/Windows.Devices.Input.h>

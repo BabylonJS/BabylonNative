@@ -239,6 +239,9 @@ const createUWPDirectories = async () => {
   shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x64/Debug');
   shelljs.mkdir('-p', 'Assembled-Windows/windows/libs/x64/Release');
   shelljs.mkdir('-p', 'Assembled-Windows/windows/BabylonReactNative');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/include');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/OpenXR-MixedReality/include/openxr');
+  shelljs.mkdir('-p', 'Assembled-Windows/windows/OpenXR-MixedReality/include/XrUtility');
 }
 
 const copyCommonFilesUWP = () => {
@@ -301,6 +304,28 @@ const copyVCXProjUWPFiles = () => {
     .pipe(gulp.dest('Assembled-Windows/windows/BabylonReactNative'));
 }
 
+const copyOpenXRInfoFiles = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/LICENSE')
+  .pipe(gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/README.md'))
+  .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality'));
+}
+
+const copyOpenXRPreviewHeaders = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/openxr_preview/include/openxr/*')
+  .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality/include/openxr'));
+}
+
+const copyOpenXRUtilityHeaders = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/shared/XrUtility/*')
+  .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality/include/XrUtility'));
+}
+
+const copyOpenXRHelperHeaders = () => {
+  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/OpenXR/Include/*')
+  .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/windows/include/*'))
+  .pipe(gulp.dest('Assembled-Windows/windows/include'));
+}
+
 const copyUWPFiles = gulp.series(
   createUWPDirectories,
   gulp.parallel(
@@ -313,7 +338,11 @@ const copyUWPFiles = gulp.series(
     copyARMReleaseUWPFiles,
     copyARM64DebugUWPFiles,
     copyARM64ReleaseUWPFiles,
-    copyVCXProjUWPFiles));
+    copyVCXProjUWPFiles,
+    copyOpenXRInfoFiles,
+    copyOpenXRPreviewHeaders,
+    copyOpenXRUtilityHeaders,
+    copyOpenXRHelperHeaders));
 
 const validate = async () => {
   // When the package contents are updated *and validated*, update the expected below by running 'find Assembled | pbcopy' and pasting it over the expected string.
