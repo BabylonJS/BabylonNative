@@ -366,8 +366,12 @@ namespace android::view
         return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getDefaultDisplay", "()Landroid/view/Display;"))};
     }
 
-    Surface::Surface(android::graphics::SurfaceTexture surfaceTexture)
+    Surface::Surface()
         : Object("android/view/Surface")
+    {
+    }
+
+    void Surface::initWithSurfaceTexture(android::graphics::SurfaceTexture surfaceTexture)
     {
         jobject surfaceTextureObject = surfaceTexture;
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), surfaceTextureObject);
@@ -406,14 +410,22 @@ namespace android::net
 
 namespace android::graphics
 {
-    SurfaceTexture::SurfaceTexture(int texture)
+    SurfaceTexture::SurfaceTexture()
         : Object("android/graphics/SurfaceTexture")
     {
+    }
+
+    void SurfaceTexture::initWithTexture(int texture)
+    {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
+        m_updateTextureMethod = m_env->GetMethodID(m_class, "updateTexImage", "()V");
     }
 
     void SurfaceTexture::updateTexture() const
     {
-        m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "updateTexImage", "()V"));
+        if (m_object) {
+            //JNIEnv *env{GetEnvForCurrentThread()};
+            m_env->CallVoidMethod(m_object, m_updateTextureMethod);
+        }
     }
 }

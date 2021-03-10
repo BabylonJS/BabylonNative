@@ -266,9 +266,12 @@ namespace android::graphics
     class SurfaceTexture : public java::lang::Object
     {
     public:
-        SurfaceTexture(int texture);
+        SurfaceTexture();
 
+        void initWithTexture(int texture);
         void updateTexture() const;
+    private:
+        jmethodID m_updateTextureMethod;
     };
 }
 
@@ -294,8 +297,9 @@ namespace android::view
     class Surface : public java::lang::Object
     {
     public:
-        Surface(android::graphics::SurfaceTexture surfaceTexture);
+        Surface();
 
+        void initWithSurfaceTexture(android::graphics::SurfaceTexture surfaceTexture);
         ANativeWindow* getNativeWindow();
     };
 }

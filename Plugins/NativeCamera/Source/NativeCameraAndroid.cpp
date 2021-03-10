@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "NativeCamera.h"
 #include <string>
 #include <camera/NdkCameraManager.h>
@@ -22,6 +23,9 @@
 #include <bgfx/platform.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>
+#include <Babylon/JsRuntimeScheduler.h>
+#include <GraphicsImpl.h>
+#include <arcana/threading/task_schedulers.h>
 
 using namespace android;
 using namespace android::global;
@@ -32,7 +36,7 @@ namespace Babylon::Plugins::Internal
 
     struct CameraInterfaceAndroid : public CameraInterface
     {
-        CameraInterfaceAndroid(uint32_t width, uint32_t height, bool frontCamera);
+        CameraInterfaceAndroid(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera);
         virtual ~CameraInterfaceAndroid();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
 
@@ -60,6 +64,9 @@ namespace Babylon::Plugins::Internal
 
         std::string getCamId(bool frontCamera);
 
+        Graphics::Impl& m_graphicsImpl;
+        JsRuntimeScheduler m_runtimeScheduler;
+
         uint32_t width;
         uint32_t height;
         ACameraManager* cameraManager{};
@@ -78,6 +85,8 @@ namespace Babylon::Plugins::Internal
 
         android::graphics::SurfaceTexture surfaceTexture;
         android::view::Surface surface;
+
+        std::atomic<bool> initComplete{};
 
         constexpr GLint GetTextureUnit(GLenum texture)
         {
@@ -308,55 +317,62 @@ namespace Babylon::Plugins::Internal
         return oesTexture;
     }
     
-    CameraInterfaceAndroid::CameraInterfaceAndroid(uint32_t width, uint32_t height, bool frontCamera)
-        : width{width}
+    CameraInterfaceAndroid::CameraInterfaceAndroid(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
+        : m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
+        , width{width}
         , height{height}
-        , cameraOESTextureId{GenerateOESTexture()}
-        , surfaceTexture(cameraOESTextureId)
-        , surface(surfaceTexture)
     {
         CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, frontCamera]()
         {
-            cameraManager = ACameraManager_create();
-            auto id = getCamId(frontCamera);
-            ACameraManager_openCamera(cameraManager, id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
+            arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
+                cameraOESTextureId = GenerateOESTexture();
+                glGenTextures(1, &cameraRGBATextureId);
+                glBindTexture(GL_TEXTURE_2D, cameraRGBATextureId);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glBindTexture(GL_TEXTURE_2D, 0);
 
-            textureWindow = surface.getNativeWindow();
+                glGenFramebuffers(1, &clearFrameBufferId);
+                glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
+                //auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, cameraRGBATextureId, 0);
 
-            // Prepare request for texture target
-            ACameraDevice_createCaptureRequest(cameraDevice, TEMPLATE_PREVIEW, &request);
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            // Prepare outputs for session
-            ACaptureSessionOutput_create(textureWindow, &textureOutput);
-            ACaptureSessionOutputContainer_create(&outputs);
-            ACaptureSessionOutputContainer_add(outputs, textureOutput);
+                cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            }).then(m_runtimeScheduler, arcana::cancellation::none(), [this, frontCamera] {
+                surfaceTexture.initWithTexture(cameraOESTextureId);
+                surface.initWithSurfaceTexture(surfaceTexture);
 
-            // Prepare target surface
-            ANativeWindow_acquire(textureWindow);
-            ACameraOutputTarget_create(textureWindow, &textureTarget);
-            ACaptureRequest_addTarget(request, textureTarget);
+                cameraManager = ACameraManager_create();
+                auto id = getCamId(frontCamera);
+                ACameraManager_openCamera(cameraManager, id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
 
-            // Create the session
-            ACameraDevice_createCaptureSession(cameraDevice, outputs, &sessionStateCallbacks, &textureSession);
+                textureWindow = surface.getNativeWindow();
 
-            // Start capturing continuously
-            ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
+                // Prepare request for texture target
+                ACameraDevice_createCaptureRequest(cameraDevice, TEMPLATE_PREVIEW, &request);
 
-            glGenTextures(1, &cameraRGBATextureId);
-            glBindTexture(GL_TEXTURE_2D, cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_2D, 0);
+                // Prepare outputs for session
+                ACaptureSessionOutput_create(textureWindow, &textureOutput);
+                ACaptureSessionOutputContainer_create(&outputs);
+                ACaptureSessionOutputContainer_add(outputs, textureOutput);
 
-            glGenFramebuffers(1, &clearFrameBufferId);
-            glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
-            //auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, cameraRGBATextureId, 0);
+                // Prepare target surface
+                ANativeWindow_acquire(textureWindow);
+                ACameraOutputTarget_create(textureWindow, &textureTarget);
+                ACaptureRequest_addTarget(request, textureTarget);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                // Create the session
+                ACameraDevice_createCaptureSession(cameraDevice, outputs, &sessionStateCallbacks, &textureSession);
 
-            cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+                // Start capturing continuously
+                ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
+
+                initComplete = true;
+            });
         });
     }
 
@@ -378,34 +394,36 @@ namespace Babylon::Plugins::Internal
 
     void CameraInterfaceAndroid::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        if (cameraRGBATextureId) {
-            surfaceTexture.updateTexture();
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+            if (initComplete && cameraRGBATextureId) {
+                surfaceTexture.updateTexture();
 
-            glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
-            glViewport(0, 0, width, height);
-            glUseProgram(cameraShaderProgramId);
+                glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
+                glViewport(0, 0, width, height);
+                glUseProgram(cameraShaderProgramId);
 
-            // Configure the camera texture
-            auto cameraTextureUniformLocation{ glGetUniformLocation(cameraShaderProgramId, "cameraTexture") };
-            glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraOESTextureId);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glBindSampler(0, 0);
+                // Configure the camera texture
+                auto cameraTextureUniformLocation{glGetUniformLocation(cameraShaderProgramId, "cameraTexture")};
+                glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraOESTextureId);
+                glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glBindSampler(0, 0);
 
-            // Draw the quad
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
+                // Draw the quad
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
 
-            glUseProgram(0);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glUseProgram(0);
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            bgfx::overrideInternal(textureHandle, cameraRGBATextureId);
-        }
+                bgfx::overrideInternal(textureHandle, cameraRGBATextureId);
+            }
+        });
     }
 
-    CameraInterface* CameraInterface::CreateInterface(uint32_t width, uint32_t height, bool frontCamera)
+    CameraInterface* CameraInterface::CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
     {
-        return new CameraInterfaceAndroid(width, height, frontCamera);
+        return new CameraInterfaceAndroid(env, width, height, frontCamera);
     }
 }

@@ -1,3 +1,4 @@
+#include <napi/napi.h>
 #include "NativeCamera.h"
 
 #include <Babylon/JsRuntime.h>
@@ -148,7 +149,7 @@ namespace Babylon::Plugins::Internal
                 const auto height = videoObject.Get("videoHeight").As<Napi::Number>().Uint32Value();
                 const bool frontCamera = videoObject.Get("frontCamera").As<Napi::Boolean>().Value();
 
-                cameraInterfaceObject = Napi::External<CameraInterface>::New(info.Env(), CameraInterface::CreateInterface(width, height, frontCamera));
+                cameraInterfaceObject = Napi::External<CameraInterface>::New(info.Env(), CameraInterface::CreateInterface(info.Env(), width, height, frontCamera));
                 videoObject.Set(JS_NATIVECAMERA_DATA, cameraInterfaceObject);
             }
             auto* cameraInterface = cameraInterfaceObject.As<Napi::External<CameraInterface>>().Data();
