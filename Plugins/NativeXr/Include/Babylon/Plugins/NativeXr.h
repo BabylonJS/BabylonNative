@@ -1,7 +1,6 @@
 #pragma once
 
 #include <napi/env.h>
-#include <arcana/containers/ticketed_collection.h>
 
 namespace Babylon::Plugins
 {
@@ -18,10 +17,7 @@ namespace Babylon::Plugins
         static NativeXr Initialize(Napi::Env env);
 
         void UpdateWindow(void* windowPtr);
-
-        using SessionStateChangedCallback = std::function<void(bool)>;
-        using SessionStateChangedCallbackTicket = arcana::ticketed_collection<SessionStateChangedCallback>::ticket;
-        SessionStateChangedCallbackTicket AddSessionStateChangedCallback(SessionStateChangedCallback callback);
+        void SetSessionStateChangedCallback(std::function<void(bool)> callback);
 
     private:
         std::shared_ptr<Impl> m_impl{};

@@ -306,10 +306,10 @@ namespace Babylon
         class NativeXr::Impl : public std::enable_shared_from_this<NativeXr::Impl>
         {
         public:
-            Impl(Napi::Env);
+            explicit Impl(Napi::Env);
 
             void UpdateWindow(void* windowPtr);
-            SessionStateChangedCallbackTicket AddSessionStateChangedCallback(SessionStateChangedCallback callback);
+            void SetSessionStateChangedCallback(std::function<void(bool)> callback);
 
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
@@ -377,13 +377,12 @@ namespace Babylon
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
-            std::mutex m_sessionStateChangedCallbacksMutex{};
-            arcana::ticketed_collection<SessionStateChangedCallback, std::mutex> m_sessionStateChangedCallbacks{};
+            std::function<void(bool)> m_sessionStateChangedCallback{};
             void* m_windowPtr{};
 
             struct SessionState
             {
-                SessionState(Graphics::Impl& graphicsImpl)
+                explicit SessionState(Graphics::Impl& graphicsImpl)
                     : graphicsImpl{ graphicsImpl }
                 {
                 }
@@ -424,17 +423,17 @@ namespace Babylon
             m_windowPtr = windowPtr;
         }
 
-        NativeXr::SessionStateChangedCallbackTicket NativeXr::Impl::AddSessionStateChangedCallback(NativeXr::SessionStateChangedCallback callback)
+        void NativeXr::Impl::SetSessionStateChangedCallback(std::function<void(bool)> callback)
         {
-            return m_sessionStateChangedCallbacks.insert(std::move(callback), m_sessionStateChangedCallbacksMutex);
+            m_sessionStateChangedCallback = std::move(callback);
+            NotifySessionStateChanged(m_sessionState != nullptr);
         }
 
         void NativeXr::Impl::NotifySessionStateChanged(bool sessionState)
         {
-            std::lock_guard<std::mutex> lock{ m_sessionStateChangedCallbacksMutex };
-            for (const auto& callback : m_sessionStateChangedCallbacks)
+            if (m_sessionStateChangedCallback)
             {
-                callback(sessionState);
+                m_sessionStateChangedCallback(sessionState);
             }
         }
 
@@ -2929,9 +2928,9 @@ namespace Babylon
             m_impl->UpdateWindow(windowPtr);
         }
 
-        NativeXr::SessionStateChangedCallbackTicket NativeXr::AddSessionStateChangedCallback(NativeXr::SessionStateChangedCallback callback)
+        void NativeXr::SetSessionStateChangedCallback(std::function<void(bool)> callback)
         {
-            return m_impl->AddSessionStateChangedCallback(std::move(callback));
+            m_impl->SetSessionStateChangedCallback(std::move(callback));
         }
     }
 }

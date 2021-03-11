@@ -25,7 +25,6 @@ namespace
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
-    std::optional<Babylon::Plugins::NativeXr::SessionStateChangedCallbackTicket> g_xrSessionStateChangedCallbackTicket{};
     std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
     bool g_isXrActive{};
 }
@@ -45,7 +44,6 @@ extern "C"
             g_graphics->FinishRenderingCurrentFrame();
         }
 
-        g_xrSessionStateChangedCallbackTicket.reset();
         g_nativeXr.reset();
         g_scriptLoader.reset();
         g_graphics.reset();
@@ -101,7 +99,7 @@ extern "C"
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
                 g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-                g_xrSessionStateChangedCallbackTicket.emplace(g_nativeXr->AddSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; }));
+                g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
                 Babylon::Polyfills::Window::Initialize(env);
 
