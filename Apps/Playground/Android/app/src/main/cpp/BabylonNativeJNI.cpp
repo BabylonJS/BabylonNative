@@ -25,6 +25,9 @@ namespace
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
+    std::optional<Babylon::Plugins::NativeXr::SessionStateChangedCallbackTicket> g_xrSessionStateChangedCallbackTicket{};
+    std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
+    bool g_isXrActive{};
 }
 
 extern "C"
@@ -42,10 +45,14 @@ extern "C"
             g_graphics->FinishRenderingCurrentFrame();
         }
 
+        g_xrSessionStateChangedCallbackTicket.reset();
+        g_nativeXr.reset();
         g_scriptLoader.reset();
         g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
+
+        g_isXrActive = false;
     }
 
     JNIEXPORT void JNICALL
@@ -93,7 +100,8 @@ extern "C"
 
                 Babylon::Plugins::NativeEngine::Initialize(env);
 
-                Babylon::Plugins::NativeXr::Initialize(env);
+                g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
+                g_xrSessionStateChangedCallbackTicket.emplace(g_nativeXr->AddSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; }));
 
                 Babylon::Polyfills::Window::Initialize(env);
 
@@ -210,5 +218,25 @@ extern "C"
             g_graphics->FinishRenderingCurrentFrame();
             g_graphics->StartRenderingCurrentFrame();
         }
+    }
+
+    JNIEXPORT void JNICALL
+    Java_BabylonNative_Wrapper_xrSurfaceChanged(JNIEnv* env, jclass clazz, jobject surface)
+    {
+        if (g_nativeXr)
+        {
+            ANativeWindow *window{};
+            if (surface)
+            {
+                window = ANativeWindow_fromSurface(env, surface);
+            }
+            g_nativeXr->UpdateWindow(window);
+        }
+    }
+
+    JNIEXPORT jboolean JNICALL
+    Java_BabylonNative_Wrapper_isXRActive(JNIEnv* env, jclass clazz)
+    {
+        return g_isXrActive;
     }
 }

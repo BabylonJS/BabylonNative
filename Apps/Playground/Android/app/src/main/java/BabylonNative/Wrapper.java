@@ -33,4 +33,8 @@ public class Wrapper {
     public static native void eval(String source, String sourceURL);
 
     public static native void renderFrame();
+
+    public static native void xrSurfaceChanged(Surface surface);
+
+    public static native boolean isXRActive();
 }
