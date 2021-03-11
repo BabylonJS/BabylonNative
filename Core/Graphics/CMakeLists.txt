@@ -1,6 +1,6 @@
 set(SOURCES
-    "Include/Babylon/Graphics.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
+    "Include/Shared/Babylon/Graphics.h"
+    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/FrameBuffer.cpp"
@@ -11,8 +11,8 @@ set(SOURCES
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
     "Source/SafeTimespanGuarantor.cpp"
-    "Source/SafeTimespanGuarantor.h")
-    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h")
+    "Source/SafeTimespanGuarantor.h"
+    )
 
 if (WINDOWS_STORE)
     if (BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)

@@ -1,5 +1,6 @@
 #include "GraphicsImpl.h"
-#include <GraphicsPlatform.h>
+#include <Babylon/GraphicsPlatform.h>
+#include <Babylon/GraphicsPlatformImpl.h>
 #include <JsRuntimeInternalState.h>
 
 namespace

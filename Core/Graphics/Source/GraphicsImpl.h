@@ -57,8 +57,8 @@ namespace Babylon
         Impl();
         ~Impl();
 
-        void* GetNativeWindow();
-        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
+        WindowType GetNativeWindow();
+        void SetNativeWindow(GraphicsConfiguration config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -94,6 +94,7 @@ namespace Babylon
     private:
         friend class UpdateToken;
 
+        void SetNativeWindowInternal(GraphicsConfiguration config);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         float UpdateDevicePixelRatio();

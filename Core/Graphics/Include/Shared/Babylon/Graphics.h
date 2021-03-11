@@ -40,6 +40,8 @@ namespace Babylon
         Graphics(const Graphics&) = delete;
         Graphics(Graphics&&) = delete;
 
+        void UpdateWindowInternal(GraphicsConfiguration config);
+
         float UpdateDevicePixelRatio();
 
         std::unique_ptr<Impl> m_impl{};
