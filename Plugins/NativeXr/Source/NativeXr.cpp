@@ -306,7 +306,9 @@ namespace Babylon
         class NativeXr::Impl : public std::enable_shared_from_this<NativeXr::Impl>
         {
         public:
-            Impl(Napi::Env, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider);
+            Impl(Napi::Env, std::function<void(bool)> sessionStateChangedCallback);
+
+            void UpdateWindow(void* windowPtr);
 
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
@@ -374,12 +376,17 @@ namespace Babylon
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
-            Graphics::Impl& m_graphicsImpl;
             std::function<void(bool)> m_sessionStateChangedCallback{};
-            std::function<void*()> m_windowProvider{};
+            void* m_windowPtr{};
 
             struct SessionState
             {
+                SessionState(Graphics::Impl& graphicsImpl)
+                    : graphicsImpl{ graphicsImpl }
+                {
+                }
+
+                Graphics::Impl& graphicsImpl;
                 Napi::FunctionReference createRenderTexture{};
                 Napi::FunctionReference destroyRenderTexture{};
                 std::map<void*, FrameBuffer*> textureToFrameBufferMap{};
@@ -402,22 +409,27 @@ namespace Babylon
             void EndFrame();
         };
 
-        NativeXr::Impl::Impl(Napi::Env env, std::function<void(bool)> sessionStateChangedCallback, std::function<void*()> windowProvider)
+        NativeXr::Impl::Impl(Napi::Env env, std::function<void(bool)> sessionStateChangedCallback)
             : m_env{env}
             , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(env)}
-            , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
             , m_sessionStateChangedCallback{std::move(sessionStateChangedCallback)}
-            , m_windowProvider{std::move(windowProvider)}
         {
+        }
+
+        void NativeXr::Impl::UpdateWindow(void* windowPtr)
+        {
+            m_windowPtr = windowPtr;
         }
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
         {
-            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
-                [this, thisRef{shared_from_this()}]() {
+            Graphics::Impl& graphicsImpl{ Graphics::Impl::GetFromJavaScript(m_env) };
+
+            return arcana::make_task(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
+                [this, thisRef{shared_from_this()}, &graphicsImpl]() {
                     assert(m_sessionState == nullptr);
 
-                    m_sessionState = std::make_unique<SessionState>();
+                    m_sessionState = std::make_unique<SessionState>(graphicsImpl);
 
                     if (!m_sessionState->system.IsInitialized())
                     {
@@ -427,8 +439,8 @@ namespace Babylon
                         }
                     }
 
-                    return xr::System::Session::CreateAsync(m_sessionState->system, bgfx::getInternalData()->context, m_windowProvider)
-                        .then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
+                    return xr::System::Session::CreateAsync(m_sessionState->system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                        .then(m_sessionState->graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->session = std::move(session);
 
                             if (m_sessionStateChangedCallback)
@@ -447,7 +459,7 @@ namespace Babylon
             m_sessionState->textureToFrameBufferMap.clear();
             m_sessionState->activeTextures.clear();
 
-            return m_sessionState->frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+            return m_sessionState->frameTask.then(m_sessionState->graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                 assert(m_sessionState != nullptr);
                 assert(m_sessionState->session != nullptr);
                 assert(m_sessionState->frame == nullptr);
@@ -486,10 +498,10 @@ namespace Babylon
             // reason requestAnimationFrame is being called twice when starting XR.
             m_sessionState->scheduleFrameCallbacks.emplace_back(callback);
 
-            m_sessionState->frameTask = arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), m_sessionState->cancellationSource, [this, thisRef{shared_from_this()}] {
+            m_sessionState->frameTask = arcana::make_task(m_sessionState->graphicsImpl.BeforeRenderScheduler(), m_sessionState->cancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
+                return arcana::make_task(m_runtimeScheduler, m_sessionState->cancellationSource, [this, updateToken{m_sessionState->graphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
                     m_sessionState->frameScheduled = false;
 
                     BeginUpdate();
@@ -506,7 +518,7 @@ namespace Babylon
                     {
                         Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
                     }
-                }).then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                }).then(m_sessionState->graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                     EndFrame();
                 });
             });
@@ -567,7 +579,7 @@ namespace Babylon
                     auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
                     auto depthTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
 
-                    arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
+                    arcana::make_task(m_sessionState->graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
                     }).then(m_runtimeScheduler, m_sessionState->cancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &view]() {
@@ -576,14 +588,14 @@ namespace Babylon
                         attachments[1].init(depthTexture);
                         auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle,
+                        auto& frameBuffer{m_sessionState->graphicsImpl.AddFrameBuffer(frameBufferHandle,
                             static_cast<uint16_t>(view.ColorTextureSize.Width),
                             static_cast<uint16_t>(view.ColorTextureSize.Height),
                             true)};
 
                         // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                         // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                        frameBuffer.Clear(m_graphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                        frameBuffer.Clear(m_sessionState->graphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
 
                         m_sessionState->textureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
 
@@ -2877,7 +2889,7 @@ namespace Babylon
 
         NativeXr NativeXr::Initialize(Napi::Env env, Configuration config)
         {
-            auto impl{ std::make_shared<Impl>(env, std::move(config.SessionStateChangedCallback), std::move(config.WindowProvider)) };
+            auto impl{ std::make_shared<Impl>(env, std::move(config.SessionStateChangedCallback)) };
 
             PointerEvent::Initialize(env);
 
@@ -2900,7 +2912,12 @@ namespace Babylon
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env);
 
-            return {{}};
+            return { impl };
+        }
+
+        void NativeXr::UpdateWindow(void* windowPtr)
+        {
+            m_impl->UpdateWindow(windowPtr);
         }
     }
 }

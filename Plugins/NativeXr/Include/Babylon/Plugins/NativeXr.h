@@ -17,10 +17,11 @@ namespace Babylon::Plugins
         struct Configuration
         {
             std::function<void(bool)> SessionStateChangedCallback{};
-            std::function<void*()> WindowProvider{};
         };
 
         static NativeXr Initialize(Napi::Env env, Configuration config);
+
+        void UpdateWindow(void* windowPtr);
 
     private:
         std::shared_ptr<Impl> m_impl{};
