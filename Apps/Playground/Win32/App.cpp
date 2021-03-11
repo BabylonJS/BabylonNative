@@ -104,7 +104,12 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        auto configuration = GraphicsConfiguration();
+        configuration.windowPtr = hWnd;
+        configuration.width = width;
+        configuration.height = height;
+        
+        graphics = Babylon::Graphics::CreateGraphics(configuration);
         graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
