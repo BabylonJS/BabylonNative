@@ -308,6 +308,9 @@ namespace Babylon
         public:
             explicit Impl(Napi::Env);
 
+            void UpdateWindow(void* windowPtr);
+            void SetSessionStateChangedCallback(std::function<void(bool)> callback);
+
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
 
@@ -371,9 +374,6 @@ namespace Babylon
                 return m_sessionState->session->GetNativeXrContextType();
             }
 
-            void UpdateWindow(void* windowPtr);
-            void SetSessionStateChangedCallback(std::function<void(bool)> callback);
-
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
@@ -416,6 +416,26 @@ namespace Babylon
             : m_env{env}
             , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(env)}
         {
+        }
+
+        void NativeXr::Impl::UpdateWindow(void* windowPtr)
+        {
+            m_windowPtr = windowPtr;
+        }
+
+        void NativeXr::Impl::SetSessionStateChangedCallback(std::function<void(bool)> callback)
+        {
+            m_sessionStateChangedCallback = std::move(callback);
+            NotifySessionStateChanged(m_sessionState != nullptr);
+        }
+
+        void NativeXr::Impl::NotifySessionStateChanged(bool sessionState)
+        {
+            auto sessionStateChangedCallback{ m_sessionStateChangedCallback };
+            if (sessionStateChangedCallback)
+            {
+                sessionStateChangedCallback(sessionState);
+            }
         }
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
@@ -614,26 +634,6 @@ namespace Babylon
             assert(m_sessionState->frame != nullptr);
 
             m_sessionState->frame.reset();
-        }
-
-        void NativeXr::Impl::UpdateWindow(void* windowPtr)
-        {
-            m_windowPtr = windowPtr;
-        }
-
-        void NativeXr::Impl::SetSessionStateChangedCallback(std::function<void(bool)> callback)
-        {
-            m_sessionStateChangedCallback = std::move(callback);
-            NotifySessionStateChanged(m_sessionState != nullptr);
-        }
-
-        void NativeXr::Impl::NotifySessionStateChanged(bool sessionState)
-        {
-            auto sessionStateChangedCallback{ m_sessionStateChangedCallback };
-            if (sessionStateChangedCallback)
-            {
-                sessionStateChangedCallback(sessionState);
-            }
         }
     }
 
