@@ -306,9 +306,10 @@ namespace Babylon
         class NativeXr::Impl : public std::enable_shared_from_this<NativeXr::Impl>
         {
         public:
-            Impl(Napi::Env, std::function<void(bool)> sessionStateChangedCallback);
+            Impl(Napi::Env);
 
             void UpdateWindow(void* windowPtr);
+            SessionStateChangedCallbackTicket AddSessionStateChangedCallback(SessionStateChangedCallback callback);
 
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
@@ -376,7 +377,8 @@ namespace Babylon
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
-            std::function<void(bool)> m_sessionStateChangedCallback{};
+            std::mutex m_sessionStateChangedCallbacksMutex{};
+            arcana::ticketed_collection<SessionStateChangedCallback, std::mutex> m_sessionStateChangedCallbacks{};
             void* m_windowPtr{};
 
             struct SessionState
@@ -407,18 +409,33 @@ namespace Babylon
             void BeginUpdate();
             void EndUpdate();
             void EndFrame();
+
+            void NotifySessionStateChanged(bool sessionState);
         };
 
-        NativeXr::Impl::Impl(Napi::Env env, std::function<void(bool)> sessionStateChangedCallback)
+        NativeXr::Impl::Impl(Napi::Env env)
             : m_env{env}
             , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(env)}
-            , m_sessionStateChangedCallback{std::move(sessionStateChangedCallback)}
         {
         }
 
         void NativeXr::Impl::UpdateWindow(void* windowPtr)
         {
             m_windowPtr = windowPtr;
+        }
+
+        NativeXr::SessionStateChangedCallbackTicket NativeXr::Impl::AddSessionStateChangedCallback(NativeXr::SessionStateChangedCallback callback)
+        {
+            return m_sessionStateChangedCallbacks.insert(std::move(callback), m_sessionStateChangedCallbacksMutex);
+        }
+
+        void NativeXr::Impl::NotifySessionStateChanged(bool sessionState)
+        {
+            std::lock_guard<std::mutex> lock{ m_sessionStateChangedCallbacksMutex };
+            for (const auto& callback : m_sessionStateChangedCallbacks)
+            {
+                callback(sessionState);
+            }
         }
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
@@ -442,11 +459,7 @@ namespace Babylon
                     return xr::System::Session::CreateAsync(m_sessionState->system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
                         .then(m_sessionState->graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->session = std::move(session);
-
-                            if (m_sessionStateChangedCallback)
-                            {
-                                m_sessionStateChangedCallback(true);
-                            }
+                            NotifySessionStateChanged(true);
                         });
                 });
         }
@@ -477,11 +490,7 @@ namespace Babylon
 
                 m_sessionState->session.reset();
                 m_sessionState.reset();
-
-                if (m_sessionStateChangedCallback)
-                {
-                    m_sessionStateChangedCallback(false);
-                }
+                NotifySessionStateChanged(false);
             });
         }
 
@@ -2887,9 +2896,9 @@ namespace Babylon
         {
         }
 
-        NativeXr NativeXr::Initialize(Napi::Env env, Configuration config)
+        NativeXr NativeXr::Initialize(Napi::Env env)
         {
-            auto impl{ std::make_shared<Impl>(env, std::move(config.SessionStateChangedCallback)) };
+            auto impl{ std::make_shared<Impl>(env) };
 
             PointerEvent::Initialize(env);
 
@@ -2918,6 +2927,11 @@ namespace Babylon
         void NativeXr::UpdateWindow(void* windowPtr)
         {
             m_impl->UpdateWindow(windowPtr);
+        }
+
+        NativeXr::SessionStateChangedCallbackTicket NativeXr::AddSessionStateChangedCallback(NativeXr::SessionStateChangedCallback callback)
+        {
+            return m_impl->AddSessionStateChangedCallback(std::move(callback));
         }
     }
 }
