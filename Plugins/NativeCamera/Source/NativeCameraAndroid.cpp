@@ -328,7 +328,8 @@ namespace Babylon::Plugins::Internal
         CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, frontCamera]()
         {
             // Check if there is an already available context for this thread
-            if (eglGetCurrentContext() == EGL_NO_CONTEXT)
+            EGLContext currentContext = eglGetCurrentContext();
+            if (currentContext == EGL_NO_CONTEXT)
             {
                 // create a shared context with bgfx so JNI thread (by surfaceTexture) can update the texture
                 display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -409,6 +410,11 @@ namespace Babylon::Plugins::Internal
 
             // Start capturing continuously
             ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
+
+            if (eglMakeCurrent(display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
+            {
+                throw std::runtime_error{"Unable to restore GL context for camera texture init."};
+            }
         });
     }
 
@@ -436,7 +442,7 @@ namespace Babylon::Plugins::Internal
     void CameraInterfaceAndroid::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         EGLContext currentContext = eglGetCurrentContext();
-        if (context)
+        if (context != EGL_NO_CONTEXT)
         {
             // use the newly created shared context
             if (eglMakeCurrent(display, 0/*surface*/, 0/*surface*/, context) == EGL_FALSE)
