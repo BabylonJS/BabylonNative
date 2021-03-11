@@ -431,9 +431,10 @@ namespace Babylon
 
         void NativeXr::Impl::NotifySessionStateChanged(bool sessionState)
         {
-            if (m_sessionStateChangedCallback)
+            auto sessionStateChangedCallback{ m_sessionStateChangedCallback };
+            if (sessionStateChangedCallback)
             {
-                m_sessionStateChangedCallback(sessionState);
+                sessionStateChangedCallback(sessionState);
             }
         }
 
