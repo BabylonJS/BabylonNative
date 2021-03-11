@@ -108,7 +108,7 @@ namespace
         configuration.windowPtr = hWnd;
         configuration.width = width;
         configuration.height = height;
-        
+
         graphics = Babylon::Graphics::CreateGraphics(configuration);
         graphics->StartRenderingCurrentFrame();
 
