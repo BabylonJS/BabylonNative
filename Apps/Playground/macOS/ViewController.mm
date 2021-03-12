@@ -22,15 +22,16 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
 {
-    if (graphics != nullptr) {
+    if (graphics) {
         graphics->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
     }
 }
 
 - (void)drawInMTKView:(MTKView *)__unused view
 {
-    if (graphics != nullptr) {
-        graphics->RenderCurrentFrame();
+    if (graphics) {
+        graphics->FinishRenderingCurrentFrame();
+        graphics->StartRenderingCurrentFrame();
     }
 }
 
@@ -42,11 +43,19 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     [super viewDidLoad];
 }
 
-- (void)refreshBabylon {
-    // reset
+- (void)uninitialize {
+    if (graphics)
+    {
+        graphics->FinishRenderingCurrentFrame();
+    }
+
     inputBuffer.reset();
     runtime.reset();
     graphics.reset();
+}
+
+- (void)refreshBabylon {
+    [self uninitialize];
 
     // parse command line arguments
     NSArray *arguments = [[NSProcessInfo processInfo] arguments];
@@ -56,35 +65,37 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     [arguments enumerateObjectsUsingBlock:^(NSString * _Nonnull obj, NSUInteger /*idx*/, BOOL * _Nonnull /*stop*/) {
         scripts.push_back([obj UTF8String]);
     }];
-    
-    // Initialize NativeWindow plugin
-    NSSize size = [self view].frame.size;
-    float width = size.width;
-    float height = size.height;
-    
+
     EngineView* engineView = [[EngineView alloc] initWithFrame:[self view].frame device:nil];
     engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
-    
-    void* windowPtr = (__bridge void*)engineView;
 
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+    void* windowPtr = (__bridge void*)engineView;
+    NSScreen *mainScreen = [NSScreen mainScreen];
+    CGFloat screenScale = mainScreen.backingScaleFactor;
+    size_t width = [self view].frame.size.width * screenScale;
+    size_t height = [self view].frame.size.height * screenScale;
+    graphics = Babylon::Graphics::CreateGraphics(windowPtr, width, height);
+    graphics->StartRenderingCurrentFrame();
+
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([](Napi::Env env)
     {
+        graphics->AddToJavaScript(env);
+
         Babylon::Polyfills::Window::Initialize(env);
+
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Canvas::Initialize(env);
 
-        graphics->AddToJavaScript(env);
-        Babylon::Plugins::NativeEngine::Initialize(env, false); // render on UI Thread
+        Babylon::Plugins::NativeEngine::Initialize(env);
         
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
-    
+
     Babylon::ScriptLoader loader{ *runtime };
     loader.Eval("document = {}", "");
     loader.LoadScript("app:///ammo.js");
@@ -118,9 +129,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 - (void)viewDidDisappear {
     [super viewDidDisappear];
 
-    inputBuffer.reset();
-    runtime.reset();
-    graphics.reset();
+    [self uninitialize];
 }
 
 - (void)setRepresentedObject:(id)representedObject {
@@ -151,7 +160,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     }
 }
 
-- (IBAction) refresh:(id)__unused sender
+- (IBAction)refresh:(id)__unused sender
 {
     [self refreshBabylon];
 }

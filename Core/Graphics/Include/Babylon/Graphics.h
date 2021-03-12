@@ -18,6 +18,7 @@ namespace Babylon
 
         template<typename... Ts>
         void UpdateWindow(Ts...);
+
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -28,12 +29,6 @@ namespace Babylon
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
-
-        void RenderCurrentFrame()
-        {
-            StartRenderingCurrentFrame();
-            FinishRenderingCurrentFrame();
-        }
 
         typedef uint32_t CallbackHandle;
         CallbackHandle RegisterOnBeginFrame(std::function<void()> callback);

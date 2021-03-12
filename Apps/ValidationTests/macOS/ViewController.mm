@@ -14,7 +14,6 @@
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-constexpr bool RENDER_ON_JS_THREAD{true};
 
 @interface EngineView : MTKView <MTKViewDelegate>
 
@@ -24,15 +23,16 @@ constexpr bool RENDER_ON_JS_THREAD{true};
 
 - (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
 {
-    if (graphics != nullptr) {
+    if (graphics) {
         graphics->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
     }
 }
 
 - (void)drawInMTKView:(MTKView *)__unused view
 {
-    if (graphics != nullptr && !RENDER_ON_JS_THREAD) {
-        graphics->RenderCurrentFrame();
+    if (graphics) {
+        graphics->FinishRenderingCurrentFrame();
+        graphics->StartRenderingCurrentFrame();
     }
 }
 
@@ -47,11 +47,16 @@ constexpr bool RENDER_ON_JS_THREAD{true};
     self.preferredContentSize = CGSizeMake(600/screenScale, 400/screenScale);
 }
 
-- (void)refreshBabylon {
-    // reset
+- (void)uninitialize {
+    if (graphics) {
+        graphics->FinishRenderingCurrentFrame();
+    }
+
     runtime.reset();
     graphics.reset();
+}
 
+- (void)initialize {
     // parse command line arguments
     NSArray *arguments = [[NSProcessInfo processInfo] arguments];
     arguments = [arguments subarrayWithRange:NSMakeRange(1, arguments.count - 1)];
@@ -69,40 +74,42 @@ constexpr bool RENDER_ON_JS_THREAD{true};
     void* windowPtr = (__bridge void*)engineView;
 
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(600), static_cast<size_t>(400));
+    graphics->StartRenderingCurrentFrame();
+
     runtime = std::make_unique<Babylon::AppRuntime>();
 
     runtime->Dispatch([windowPtr](Napi::Env env)
     {
+        graphics->AddToJavaScript(env);
+
         Babylon::Polyfills::Window::Initialize(env);
+
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Canvas::Initialize(env);
 
-        graphics->AddToJavaScript(env);
-        Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+        Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::TestUtils::CreateInstance(env, windowPtr);
     });
-    
+
     Babylon::ScriptLoader loader{ *runtime };
     loader.LoadScript("app:///babylon.max.js");
     loader.LoadScript("app:///babylon.glTF2FileLoader.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
-    loader.LoadScript("app:///draco_decoder_gltf.js");
     loader.LoadScript("app:///validation_native.js");
 }
 
 - (void)viewDidAppear {
     [super viewDidAppear];
     
-    [self refreshBabylon];
+    [self initialize];
 }
 
 - (void)viewDidDisappear {
     [super viewDidDisappear];
 
-    runtime.reset();
-    graphics.reset();
+    [self uninitialize];
 }
 
 - (void)setRepresentedObject:(id)representedObject {
