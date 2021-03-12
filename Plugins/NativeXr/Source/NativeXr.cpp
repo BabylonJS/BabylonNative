@@ -2299,10 +2299,9 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
-            static constexpr auto JS_NATIVE_XR_IMPL_NAME = "_nativeXrImpl";
 
         public:
-            static void Initialize(Napi::Env env, std::shared_ptr<Plugins::NativeXr::Impl> nativeXr)
+            static void Initialize(Napi::Env env)
             {
                 Napi::Function func = DefineClass(
                     env,
@@ -2325,16 +2324,14 @@ namespace Babylon
                         InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
                     });
 
-                Napi::Value nativeXrExternal{ Napi::External<std::shared_ptr<Plugins::NativeXr::Impl>>::New(env, new std::shared_ptr<Plugins::NativeXr::Impl>(std::move(nativeXr)), [](Napi::Env, std::shared_ptr<Plugins::NativeXr::Impl>* nativeXrPtr) { delete nativeXrPtr; }) };
-                func.Set(JS_NATIVE_XR_IMPL_NAME, nativeXrExternal);
-
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
+            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info, std::shared_ptr<Plugins::NativeXr::Impl> nativeXr)
             {
                 auto jsSession{Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}))};
                 auto& session{*XRSession::Unwrap(jsSession.Value())};
+                session.m_xr = std::move(nativeXr);
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr->BeginSessionAsync()
@@ -2356,7 +2353,6 @@ namespace Babylon
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-                , m_xr{*info.NewTarget().As<Napi::Function>().Get(JS_NATIVE_XR_IMPL_NAME).As<Napi::External<std::shared_ptr<Plugins::NativeXr::Impl>>>().Data()}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
@@ -2797,7 +2793,7 @@ namespace Babylon
             static constexpr auto JS_NATIVE_NAME = "native";
 
         public:
-            static void Initialize(Napi::Env env)
+            static void Initialize(Napi::Env env, std::shared_ptr<Plugins::NativeXr::Impl> nativeXr)
             {
                 Napi::HandleScope scope{env};
 
@@ -2825,6 +2821,7 @@ namespace Babylon
                 }
 
                 auto xr = func.New({});
+                XR::Unwrap(xr)->m_xr = std::move(nativeXr);
                 navigator.Set(JS_XR_NAME, xr);
             }
 
@@ -2836,6 +2833,7 @@ namespace Babylon
 
         private:
             JsRuntimeScheduler m_runtimeScheduler;
+            std::shared_ptr<Plugins::NativeXr::Impl> m_xr{};
 
             Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
             {
@@ -2870,7 +2868,7 @@ namespace Babylon
 
             Napi::Value RequestSession(const Napi::CallbackInfo& info)
             {
-                return XRSession::CreateAsync(info);
+                return XRSession::CreateAsync(info, m_xr);
             }
 
             Napi::Value GetWebXRRenderTarget(const Napi::CallbackInfo& info)
@@ -2916,10 +2914,10 @@ namespace Babylon
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
             XRRay::Initialize(env);
-            XRSession::Initialize(env, impl);
+            XRSession::Initialize(env);
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
-            XR::Initialize(env);
+            XR::Initialize(env, impl);
 
             return { impl };
         }
