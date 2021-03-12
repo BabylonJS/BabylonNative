@@ -91,7 +91,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE XMLHttpRequest)
 
 if(APPLE)
-    target_link_libraries(ValidationTests PRIVATE "-framework MetalKit" "-all_load")
+    target_link_libraries(ValidationTests PRIVATE "-framework MetalKit")
     if(IOS)
         set_target_properties(ValidationTests PROPERTIES
             MACOSX_BUNDLE true
