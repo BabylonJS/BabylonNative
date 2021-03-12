@@ -9,7 +9,6 @@ namespace Babylon::Plugins
     public:
         class Impl;
 
-        NativeXr(std::shared_ptr<Impl> impl);
         NativeXr(const NativeXr& other) = default;
         NativeXr(NativeXr&&) = default;
         ~NativeXr();
@@ -20,6 +19,7 @@ namespace Babylon::Plugins
         void SetSessionStateChangedCallback(std::function<void(bool)> callback);
 
     private:
+        NativeXr(std::shared_ptr<Impl> impl);
         std::shared_ptr<Impl> m_impl{};
     };
 }

@@ -223,7 +223,7 @@ extern "C"
     {
         if (g_nativeXr)
         {
-            ANativeWindow *window{};
+            ANativeWindow* window{};
             if (surface)
             {
                 window = ANativeWindow_fromSurface(env, surface);
