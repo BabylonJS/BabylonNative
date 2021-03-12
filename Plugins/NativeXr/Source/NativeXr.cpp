@@ -148,7 +148,7 @@ namespace
                 auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
                 handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
             }
-            
+
             auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
                 return handJointCollection.Get(info[0].As<Napi::String>());
             };
@@ -224,52 +224,52 @@ namespace
 
         switch (detectionBoundary.Type)
         {
-        case xr::DetectionBoundaryType::Box:
-            if (object.Has("extent"))
-            {
-                const auto& vector = object.Get("extent").As<Napi::Object>();
-                xr::Vector3f boxDimensions{};
-                boxDimensions.X = vector.Get("x").As<Napi::Number>();
-                boxDimensions.Y = vector.Get("y").As<Napi::Number>();
-                boxDimensions.Z = vector.Get("z").As<Napi::Number>();
-                detectionBoundary.Data = boxDimensions;
-            }
-            break;
-        case xr::DetectionBoundaryType::Frustum:
-            if (object.Has("frustum"))
-            {
-                const auto& frustum = object.Get("frustum").As<Napi::Object>();
-                xr::Frustum frustumData{};
-                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+            case xr::DetectionBoundaryType::Box:
+                if (object.Has("extent"))
+                {
+                    const auto& vector = object.Get("extent").As<Napi::Object>();
+                    xr::Vector3f boxDimensions{};
+                    boxDimensions.X = vector.Get("x").As<Napi::Number>();
+                    boxDimensions.Y = vector.Get("y").As<Napi::Number>();
+                    boxDimensions.Z = vector.Get("z").As<Napi::Number>();
+                    detectionBoundary.Data = boxDimensions;
+                }
+                break;
+            case xr::DetectionBoundaryType::Frustum:
+                if (object.Has("frustum"))
+                {
+                    const auto& frustum = object.Get("frustum").As<Napi::Object>();
+                    xr::Frustum frustumData{};
+                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
 
-                const auto& vector = frustum.Get("position").As<Napi::Object>();
-                frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
-                frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
-                frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
+                    const auto& vector = frustum.Get("position").As<Napi::Object>();
+                    frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
+                    frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
+                    frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
 
-                const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
-                frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
-                frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
-                frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
-                frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
+                    const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
+                    frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
+                    frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
+                    frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
+                    frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
 
-                const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
-                frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
-                frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
-                frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
-                frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
+                    const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
+                    frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
+                    frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
+                    frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
+                    frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
 
-                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
 
-                detectionBoundary.Data = frustumData;
-            }
-            break;
-        case xr::DetectionBoundaryType::Sphere:
-            if (object.Has("radius"))
-            {
-                detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
-            }
-            break;
+                    detectionBoundary.Data = frustumData;
+                }
+                break;
+            case xr::DetectionBoundaryType::Sphere:
+                if (object.Has("radius"))
+                {
+                    detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
+                }
+                break;
         }
     }
 
@@ -384,7 +384,7 @@ namespace Babylon
             struct SessionState final
             {
                 explicit SessionState(Graphics::Impl& graphicsImpl)
-                    : GraphicsImpl{ graphicsImpl }
+                    : GraphicsImpl{graphicsImpl}
                 {
                 }
 
@@ -427,7 +427,7 @@ namespace Babylon
         void NativeXr::Impl::SetSessionStateChangedCallback(std::function<void(bool)> callback)
         {
             {
-                std::lock_guard<std::mutex> lock{ m_sessionStateChangedCallbackMutex };
+                std::lock_guard<std::mutex> lock{m_sessionStateChangedCallbackMutex};
                 m_sessionStateChangedCallback = std::move(callback);
             }
             NotifySessionStateChanged(m_sessionState != nullptr);
@@ -435,8 +435,8 @@ namespace Babylon
 
         void NativeXr::Impl::NotifySessionStateChanged(bool isSessionActive)
         {
-            std::unique_lock<std::mutex> lock{ m_sessionStateChangedCallbackMutex };
-            auto sessionStateChangedCallback{ m_sessionStateChangedCallback };
+            std::unique_lock<std::mutex> lock{m_sessionStateChangedCallbackMutex};
+            auto sessionStateChangedCallback{m_sessionStateChangedCallback};
             lock.unlock();
 
             if (sessionStateChangedCallback)
@@ -447,7 +447,7 @@ namespace Babylon
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
         {
-            Graphics::Impl& graphicsImpl{ Graphics::Impl::GetFromJavaScript(m_env) };
+            Graphics::Impl& graphicsImpl{Graphics::Impl::GetFromJavaScript(m_env)};
 
             return arcana::make_task(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
                 [this, thisRef{shared_from_this()}, &graphicsImpl]() {
@@ -910,7 +910,7 @@ namespace Babylon
                 , m_eye{XREye::IndexToEye(m_eyeIdx)}
                 , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
                 , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info))}
-                , m_isFirstPersonObserver{ false }
+                , m_isFirstPersonObserver{false}
             {
             }
 
@@ -1808,16 +1808,16 @@ namespace Babylon
             Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
-            uint32_t m_lastUpdatedTimestamp{ 0 };
-            uint32_t m_lastPositionsUpdatedTimestamp{ 0 };
-            uint32_t m_lastIndicesUpdatedTimestamp{ 0 };
-            uint32_t m_lastNormalsUpdatedTimestamp{ 0 };
+            uint32_t m_lastUpdatedTimestamp{0};
+            uint32_t m_lastPositionsUpdatedTimestamp{0};
+            uint32_t m_lastIndicesUpdatedTimestamp{0};
+            uint32_t m_lastNormalsUpdatedTimestamp{0};
 
-            size_t m_numJsPositions{ 0 };
+            size_t m_numJsPositions{0};
             Napi::Reference<Napi::Float32Array> m_jsPositions{};
-            size_t m_numJsIndices{ 0 };
+            size_t m_numJsIndices{0};
             Napi::Reference<Napi::Uint32Array> m_jsIndices{};
-            size_t m_numJsNormals{ 0 };
+            size_t m_numJsNormals{0};
             Napi::Reference<Napi::Float32Array> m_jsNormals{};
 
             // The underlying native mesh.
@@ -1849,8 +1849,7 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    initList
-                    );
+                    initList);
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -2169,7 +2168,7 @@ namespace Babylon
                 auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size() * 5);
                 for (size_t i = 0; i < pointCloud.size(); i++)
                 {
-                    int pointIndex = (int) i * 5;
+                    int pointIndex = (int)i * 5;
                     auto& featurePoint = pointCloud[i];
                     featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.X));
                     featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.Y));
@@ -2266,7 +2265,7 @@ namespace Babylon
                 m_meshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
                 for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
                 {
-                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), { meshNapiValue.Value() });
+                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), {meshNapiValue.Value()});
                 }
             }
         };
@@ -2433,13 +2432,14 @@ namespace Babylon
             {
                 auto name = info[0].As<Napi::String>().Utf8Value();
                 auto callback = info[1].As<Napi::Function>();
-                m_eventNamesAndCallbacks.erase(std::remove_if(
-                    m_eventNamesAndCallbacks.begin(),
-                    m_eventNamesAndCallbacks.end(),
-                    [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener)
-                {
-                    return listener.first == name && listener.second.Value() == callback;
-                }), m_eventNamesAndCallbacks.end());
+                m_eventNamesAndCallbacks.erase(
+                    std::remove_if(
+                        m_eventNamesAndCallbacks.begin(),
+                        m_eventNamesAndCallbacks.end(),
+                        [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener) {
+                            return listener.first == name && listener.second.Value() == callback;
+                        }),
+                    m_eventNamesAndCallbacks.end());
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
@@ -2614,7 +2614,6 @@ namespace Babylon
                                 callback.Call({});
                             }
                         }
-
 
                         deferred.Resolve(Env().Undefined());
                     });
@@ -2892,7 +2891,7 @@ namespace Babylon
     namespace Plugins
     {
         NativeXr::NativeXr(std::shared_ptr<Impl> impl)
-            : m_impl{ std::move(impl) }
+            : m_impl{std::move(impl)}
         {
         }
 
@@ -2902,7 +2901,7 @@ namespace Babylon
 
         NativeXr NativeXr::Initialize(Napi::Env env)
         {
-            auto impl{ std::make_shared<Impl>(env) };
+            auto impl{std::make_shared<Impl>(env)};
 
             PointerEvent::Initialize(env);
 
@@ -2925,7 +2924,7 @@ namespace Babylon
             NativeRenderTargetProvider::Initialize(env);
             XR::Initialize(env, impl);
 
-            return { impl };
+            return {impl};
         }
 
         void NativeXr::UpdateWindow(void* windowPtr)
