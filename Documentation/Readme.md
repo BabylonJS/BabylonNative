@@ -23,3 +23,6 @@
 ## Continuous Integration
 
 [All about the validation checks for each pull request.](ContinuousIntegration.md)
+
+## Frequently Asked Questions
+[Any other assorted information not answered in the above sections can be found here](faq.md)

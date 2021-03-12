@@ -1416,6 +1416,27 @@ namespace Napi {
 
     static T* Unwrap(napi_env env, const jsi::Object& object);
 
+    template <typename TCallback>
+    struct MethodCallbackData {
+      TCallback callback;
+      void* data;
+    };
+    typedef MethodCallbackData<StaticVoidMethodCallback> StaticVoidMethodCallbackData;
+    typedef MethodCallbackData<StaticMethodCallback> StaticMethodCallbackData;
+    typedef MethodCallbackData<InstanceVoidMethodCallback> InstanceVoidMethodCallbackData;
+    typedef MethodCallbackData<InstanceMethodCallback> InstanceMethodCallbackData;
+
+    template <typename TGetterCallback, typename TSetterCallback>
+    struct AccessorCallbackData {
+      TGetterCallback getterCallback;
+      TSetterCallback setterCallback;
+      void* data;
+    };
+    typedef AccessorCallbackData<StaticGetterCallback, StaticSetterCallback>
+      StaticAccessorCallbackData;
+    typedef AccessorCallbackData<InstanceGetterCallback, InstanceSetterCallback>
+      InstanceAccessorCallbackData;
+
     napi_env _env;
   };
 

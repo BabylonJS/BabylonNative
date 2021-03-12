@@ -80,7 +80,7 @@ _native.whenGraphicsReady().then(function () {
     engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
         if (premulAlpha === void 0) { premulAlpha = false; }
         var webGLTexture = texture._hardwareTexture.underlyingResource;
-        this._native.copyTexture(webGLTexture, canvas.getCanvasTexture());
+        this._native.copyTexture(texture._webGLTexture, canvas.getCanvasTexture());
         texture.isReady = true;
     };
 

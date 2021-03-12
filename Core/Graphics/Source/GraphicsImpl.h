@@ -54,7 +54,10 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
-        BgfxCallback Callback{};
+        using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
+        CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
+
+        BgfxCallback Callback;
 
     private:
         arcana::affinity m_renderThreadAffinity{};
@@ -75,13 +78,11 @@ namespace Babylon
 
             struct
             {
-                size_t width{};
-                size_t height{};
-                float hardwareScalingLevel{1.0f};
+                size_t Width{};
+                size_t Height{};
+                float HardwareScalingLevel{1.0f};
             } Resolution{};
         } m_state{};
-
-
 
         arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
@@ -90,6 +91,10 @@ namespace Babylon
         arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
         std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
         std::mutex m_renderWorkTasksMutex{};
+
+        void CaptureCallback(const BgfxCallback::CaptureData&);
+        std::mutex m_captureCallbacksMutex{};
+        arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
         arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
 
