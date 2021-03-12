@@ -30,7 +30,7 @@ namespace Babylon
         bgfx::ViewId m_nextViewId{};
 
         std::mutex m_frameBuffersMutex{};
-        std::list<std::unique_ptr<FrameBuffer>> m_frameBuffers{};
+        std::list<FrameBuffer> m_frameBuffers{};
 
         FrameBuffer m_default;
     };
