@@ -1023,17 +1023,21 @@ namespace Babylon
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::TypedArray>();
-        const auto width = info[2].As<Napi::Number>().Uint32Value();
-        const auto height = info[3].As<Napi::Number>().Uint32Value();
-        const auto format = static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
-        const auto generateMips = info[5].As<Napi::Boolean>().Value();
-        const auto invertY = info[6].As<Napi::Boolean>().Value();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::TypedArray>()};
+        const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const auto format{static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value())};
+        const auto generateMips{info[5].As<Napi::Boolean>().Value()};
+        const auto invertY{info[6].As<Napi::Boolean>().Value()};
 
-        // TODO: probably should assert data byte length is equal to allocated size
-        const auto bytes = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, bytes);
+        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
+        if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
+        {
+            throw std::runtime_error{"The data size does not match width, height, and format"};
+        }
+
+        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, bytes)};
 
         if (invertY)
         {
