@@ -25,9 +25,10 @@ App::App() noexcept
     InstanceSettings().UseWebDebugger(false);
     InstanceSettings().UseFastRefresh(false);
 #else
-    JavaScriptBundleFile(L"index");
-    InstanceSettings().UseWebDebugger(true);
+    JavaScriptMainModuleName(L"index");
+    InstanceSettings().UseWebDebugger(false); // BabylonReactNative accesses the jsi runtime, which isn't possible with the web debugger
     InstanceSettings().UseFastRefresh(true);
+    InstanceSettings().SourceBundleHost(L"localhost"); // Update to PC ip address when running on remote machines
 #endif
 
 #if _DEBUG
