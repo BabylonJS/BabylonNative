@@ -156,8 +156,9 @@ if(APPLE)
             set(CMAKE_Swift_COMPILER_FORCED TRUE)
             set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
             enable_language(Swift)
+        target_link_libraries(Playground PUBLIC "-all_load")
     else()
-        target_link_libraries(Playground PUBLIC "-framework MetalKit")
+        target_link_libraries(Playground PUBLIC "-framework MetalKit" "-all_load")
 
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
