@@ -377,6 +377,7 @@ namespace Babylon
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
+            std::mutex m_sessionStateChangedCallbackMutex{};
             std::function<void(bool)> m_sessionStateChangedCallback{};
             void* m_windowPtr{};
 
@@ -425,13 +426,19 @@ namespace Babylon
 
         void NativeXr::Impl::SetSessionStateChangedCallback(std::function<void(bool)> callback)
         {
-            m_sessionStateChangedCallback = std::move(callback);
+            {
+                std::lock_guard<std::mutex> lock{ m_sessionStateChangedCallbackMutex };
+                m_sessionStateChangedCallback = std::move(callback);
+            }
             NotifySessionStateChanged(m_sessionState != nullptr);
         }
 
         void NativeXr::Impl::NotifySessionStateChanged(bool sessionState)
         {
+            std::unique_lock<std::mutex> lock{ m_sessionStateChangedCallbackMutex };
             auto sessionStateChangedCallback{ m_sessionStateChangedCallback };
+            lock.release();
+
             if (sessionStateChangedCallback)
             {
                 sessionStateChangedCallback(sessionState);
