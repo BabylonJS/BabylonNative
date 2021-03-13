@@ -223,6 +223,13 @@ namespace Babylon
         m_screenShotCallbacks.push(std::move(callback));
     }
 
+    arcana::task<void, std::exception_ptr> Graphics::Impl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data)
+    {
+        arcana::task_completion_source<void, std::exception_ptr> completionSource{};
+        m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data()), completionSource);
+        return completionSource.as_task();
+    }
+
     float Graphics::Impl::GetHardwareScalingLevel()
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -317,7 +324,15 @@ namespace Babylon
         RequestScreenShots();
 
         // Advance frame and render!
-        bgfx::frame();
+        uint32_t frameNumber{bgfx::frame()};
+
+        // Process read texture requests.
+        assert(m_readTextureRequests.empty() || m_readTextureRequests.front().first >= frameNumber);
+        while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first == frameNumber)
+        {
+            m_readTextureRequests.front().second.complete();
+            m_readTextureRequests.pop();
+        }
 
         // Reset the frame buffers.
         m_frameBufferManager->Reset();

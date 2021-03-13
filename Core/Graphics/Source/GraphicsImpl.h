@@ -83,6 +83,8 @@ namespace Babylon
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
+
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
@@ -141,5 +143,7 @@ namespace Babylon
 
         std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
         std::mutex m_threadIdToEncoderMutex{};
+
+        std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
     };
 }
