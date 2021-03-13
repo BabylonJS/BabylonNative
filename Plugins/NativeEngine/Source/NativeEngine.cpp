@@ -120,7 +120,7 @@ namespace Babylon
 
             auto mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
 
-            texture->Handle = bgfx::createTexture2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
+            texture->Handle = bgfx::createTexture2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), BGFX_TEXTURE_READ_BACK, mem);
             texture->Width = image->m_width;
             texture->Height = image->m_height;
         }
@@ -148,7 +148,7 @@ namespace Babylon
                 bimg::imageFree(image);
             }
 
-            texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
+            texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, BGFX_TEXTURE_READ_BACK, mem);
             texture->Width = width;
             texture->Height = height;
         }
@@ -1006,6 +1006,12 @@ namespace Babylon
                 }
 
                 CreateTextureFromImage(texture, image);
+
+                //std::vector<uint8_t> bytes(image->m_size);
+                //m_graphicsImpl.ReadTextureAsync(texture->Handle, gsl::make_span(bytes)).then(arcana::inline_scheduler, arcana::cancellation::none(), [bytes{std::move(bytes)}]() {
+                //    int foo{0};
+                //    foo = 1;
+                //});
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
@@ -1236,8 +1242,8 @@ namespace Babylon
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
+                bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT | BGFX_TEXTURE_READ_BACK),
+                bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT | BGFX_TEXTURE_READ_BACK)};
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
             {
@@ -1248,7 +1254,7 @@ namespace Babylon
         else
         {
             assert(!generateStencilBuffer);
-            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
+            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT | BGFX_TEXTURE_READ_BACK);
         }
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
