@@ -70,6 +70,14 @@ static NSMutableArray* activeTouches;
     Babylon::ResetView();
 }
 
++ (void)updateXRView:(MTKView*)mtkView {
+    Babylon::UpdateXRView((__bridge void*)mtkView);
+}
+
++ (bool)isXRActive {
+    return Babylon::IsXRActive();
+}
+
 + (void)reportTouchEvent:(MTKView*)mtkView touches:(NSSet<UITouch*>*)touches event:(UIEvent*)event {
     for (UITouch* touch in touches) {
         if (touch.view == mtkView) {

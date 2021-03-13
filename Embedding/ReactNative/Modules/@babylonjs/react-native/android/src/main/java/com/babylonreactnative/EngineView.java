@@ -12,6 +12,7 @@ import android.view.PixelCopy;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.FrameLayout;
 
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.uimanager.UIManagerModule;
@@ -19,16 +20,46 @@ import com.facebook.react.uimanager.events.EventDispatcher;
 
 import java.io.ByteArrayOutputStream;
 
-public final class EngineView extends SurfaceView implements SurfaceHolder.Callback, View.OnTouchListener {
+public final class EngineView extends FrameLayout implements SurfaceHolder.Callback, View.OnTouchListener {
+    private static final FrameLayout.LayoutParams childViewLayoutParams = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+    private final SurfaceView primarySurfaceView;
+    private final SurfaceView xrSurfaceView;
     private final EventDispatcher reactEventDispatcher;
 
     public EngineView(ReactContext reactContext) {
         super(reactContext);
-        this.getHolder().addCallback(this);
-        this.setOnTouchListener(this);
-        this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
 
-        setWillNotDraw(false);
+        this.primarySurfaceView = new SurfaceView(reactContext);
+        this.primarySurfaceView.setLayoutParams(EngineView.childViewLayoutParams);
+        this.primarySurfaceView.getHolder().addCallback(this);
+        this.addView(this.primarySurfaceView);
+
+        this.xrSurfaceView = new SurfaceView(reactContext);
+        this.xrSurfaceView.setLayoutParams(childViewLayoutParams);
+        this.xrSurfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                // surfaceChanged is also called when the surface is created, so just do all the handling there
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                BabylonNativeInterop.updateXRView(holder.getSurface());
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                BabylonNativeInterop.updateXRView(null);
+            }
+        });
+        this.xrSurfaceView.setVisibility(View.INVISIBLE);
+        this.addView(this.xrSurfaceView);
+
+        this.setOnTouchListener(this);
+
+        this.setWillNotDraw(false);
+
+        this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
     }
 
     @Override
@@ -51,6 +82,18 @@ public final class EngineView extends SurfaceView implements SurfaceHolder.Callb
         return true;
     }
 
+    @Override
+    protected void onDraw(Canvas canvas) {
+        if (BabylonNativeInterop.isXRActive()) {
+            this.xrSurfaceView.setVisibility(View.VISIBLE);
+        } else {
+            this.xrSurfaceView.setVisibility(View.INVISIBLE);
+        }
+
+        BabylonNativeInterop.renderView();
+        invalidate();
+    }
+
     @TargetApi(24)
     public void takeSnapshot() {
         // Only supported on API level 24 and up, return a blank image.
@@ -70,8 +113,13 @@ public final class EngineView extends SurfaceView implements SurfaceHolder.Callb
         helperThread.start();
         final Handler helperThreadHandler = new Handler(helperThread.getLooper());
 
+        SurfaceView surfaceView = this.primarySurfaceView;
+        if (BabylonNativeInterop.isXRActive()) {
+            surfaceView = this.xrSurfaceView;
+        }
+
         // Request the pixel copy.
-        PixelCopy.request(this, bitmap, (copyResult) ->  {
+        PixelCopy.request(surfaceView, bitmap, (copyResult) ->  {
             // If the pixel copy was a success then convert the image to a base 64 encoded jpeg and fire the event.
             String encoded = "";
             if (copyResult == PixelCopy.SUCCESS) {
@@ -86,11 +134,5 @@ public final class EngineView extends SurfaceView implements SurfaceHolder.Callb
             reactEventDispatcher.dispatchEvent(snapshotEvent);
             helperThread.quitSafely();
         }, helperThreadHandler);
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        BabylonNativeInterop.renderView();
-        invalidate();
     }
 }

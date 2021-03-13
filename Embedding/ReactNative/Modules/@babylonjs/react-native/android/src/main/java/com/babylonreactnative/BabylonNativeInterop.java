@@ -25,6 +25,8 @@ public final class BabylonNativeInterop {
         public static native void updateView(Surface surface);
         public static native void renderView();
         public static native void resetView();
+        public static native void updateXRView(Surface surface);
+        public static native boolean isXRActive();
         public static native void setTouchButtonState(int pointerId, boolean isDown, int x, int y);
         public static native void setTouchPosition(int pointerId, int x, int y);
     }
@@ -89,6 +91,14 @@ public final class BabylonNativeInterop {
 
     public static void resetView() {
         BabylonNative.resetView();
+    }
+
+    public static void updateXRView(Surface surface) {
+        BabylonNative.updateXRView(surface);
+    }
+
+    public static boolean isXRActive() {
+        return BabylonNative.isXRActive();
     }
 
     public static void reportMotionEvent(MotionEvent motionEvent) {
