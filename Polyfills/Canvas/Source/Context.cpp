@@ -15,7 +15,7 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    Napi::Value Context::CreateInstance(Napi::Env env, Canvas* canvas, uint32_t viewId)
+    Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas, uint32_t viewId)
     {
         Napi::HandleScope scope{ env };
 
@@ -46,17 +46,17 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
             });
-        return func.New({ Napi::External<Canvas>::New(env, canvas), Napi::Value::From(env, viewId)});
+        return func.New({ Napi::External<NativeCanvas>::New(env, canvas), Napi::Value::From(env, viewId)});
     }
 
     Context::Context(const Napi::CallbackInfo& info)
         : ParentT{ info }
-        , m_canvas{ info[0].As<Napi::External<Canvas>>().Data() }
+        , m_canvas{ info[0].As<Napi::External<NativeCanvas>>().Data() }
         , m_viewId{ static_cast<bgfx::ViewId>(info[1].As<Napi::Number>().Uint32Value()) }
         , m_nvg{ nvgCreate(1, m_viewId) }
         , m_graphics{ Babylon::Graphics::GetFromJavaScript(info.Env()) }
     {
-        for (auto& font : Canvas::fontsInfos)
+        for (auto& font : NativeCanvas::fontsInfos)
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }

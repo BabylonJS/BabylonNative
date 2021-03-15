@@ -14,7 +14,7 @@ namespace Babylon::Polyfills::Internal
 
         using ParentT = Napi::ObjectWrap<Context>;
 
-        static Napi::Value CreateInstance(Napi::Env env, Canvas* canvas, uint32_t viewId);
+        static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas, uint32_t viewId);
 
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
@@ -54,7 +54,7 @@ namespace Babylon::Polyfills::Internal
         void BeginFrame();
         void EndFrame();
 
-        Canvas* m_canvas;
+        NativeCanvas* m_canvas;
         bgfx::ViewId m_viewId;
         NVGcontext* m_nvg;
 

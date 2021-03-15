@@ -4,17 +4,17 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    class Canvas final : public Napi::ObjectWrap<Canvas>
+    class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>
     {
     public:
-        static constexpr auto JS_CONSTRUCTOR_NAME = "OffscreenCanvas";
+        static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
 
-        using ParentT = Napi::ObjectWrap<Canvas>;
+        using ParentT = Napi::ObjectWrap<NativeCanvas>;
 
         static void CreateInstance(Napi::Env env);
 
-        explicit Canvas(const Napi::CallbackInfo& info);
-        virtual ~Canvas();
+        explicit NativeCanvas(const Napi::CallbackInfo& info);
+        virtual ~NativeCanvas();
 
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }

@@ -8,7 +8,7 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    void Canvas::CreateInstance(Napi::Env env)
+    void NativeCanvas::CreateInstance(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
@@ -16,22 +16,23 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
-                ParentT::StaticMethod("loadTTF", &Canvas::LoadTTF),
-                ParentT::InstanceMethod("getContext", &Canvas::GetContext),
-                InstanceAccessor("width", &Canvas::GetWidth, &Canvas::SetWidth),
-                InstanceAccessor("height", &Canvas::GetHeight, &Canvas::SetHeight),
-                ParentT::InstanceMethod("getCanvasTexture", &Canvas::GetCanvasTexture),
+                ParentT::StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
+                ParentT::InstanceMethod("getContext", &NativeCanvas::GetContext),
+                InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
+                InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
+                ParentT::InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
             });
 
-        env.Global().Set(JS_CONSTRUCTOR_NAME, func);
+        //env.Global().Set(JS_CONSTRUCTOR_NAME, func);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
 
-    Canvas::Canvas(const Napi::CallbackInfo& info)
+    NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : ParentT{info}
     {
     }
 
-    Canvas::~Canvas()
+    NativeCanvas::~NativeCanvas()
     {
         if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
         {
@@ -39,7 +40,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Canvas::LoadTTF(const Napi::CallbackInfo& info)
+    void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
     {
         std::string fontName = info[0].As<Napi::String>().Utf8Value();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
@@ -48,17 +49,17 @@ namespace Babylon::Polyfills::Internal
         memcpy(fontsInfos[fontName].data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
     }
 
-    Napi::Value Canvas::GetContext(const Napi::CallbackInfo& info)
+    Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
         return Context::CreateInstance(info.Env(), this, m_nextViewId++);
     }
 
-    Napi::Value Canvas::GetWidth(const Napi::CallbackInfo&)
+    Napi::Value NativeCanvas::GetWidth(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_width);
     }
 
-    void Canvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
+    void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         auto width = value.As<Napi::Number>().Uint32Value();
         if (width != m_width && width)
@@ -68,12 +69,12 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    Napi::Value Canvas::GetHeight(const Napi::CallbackInfo&)
+    Napi::Value NativeCanvas::GetHeight(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_height);
     }
 
-    void Canvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
+    void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         auto height = value.As<Napi::Number>().Uint32Value();
         if (height != m_height && height)
@@ -83,7 +84,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Canvas::UpdateRenderTarget()
+    void NativeCanvas::UpdateRenderTarget()
     {
         if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
         {
@@ -113,7 +114,7 @@ namespace Babylon::Polyfills::Internal
         uint8_t AnisotropicLevel{ 0 };
     };
 
-    Napi::Value Canvas::GetCanvasTexture(const Napi::CallbackInfo& info)
+    Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
         assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
         auto data = new TextureData();
@@ -128,6 +129,6 @@ namespace Babylon::Polyfills::Canvas
 {
     void Initialize(Napi::Env env)
     {
-        Internal::Canvas::CreateInstance(env);
+        Internal::NativeCanvas::CreateInstance(env);
     }
 }
