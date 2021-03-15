@@ -70,12 +70,15 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    void* windowPtr = (__bridge void*)engineView;
     NSScreen *mainScreen = [NSScreen mainScreen];
     CGFloat screenScale = mainScreen.backingScaleFactor;
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, width, height);
+    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+    graphicsConfig.windowPtr = engineView;
+    graphicsConfig.width = width;
+    graphicsConfig.height = height;
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();

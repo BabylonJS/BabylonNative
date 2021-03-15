@@ -17,4 +17,9 @@ target_link_to_dependencies(Window
 
 set_property(TARGET Window PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+# compile as objc++
+if (APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
+endif()
  

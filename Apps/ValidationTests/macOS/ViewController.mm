@@ -69,10 +69,14 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
-
+    
     void* windowPtr = (__bridge void*)engineView;
 
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(600), static_cast<size_t>(400));
+    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+    graphicsConfig.windowPtr = engineView;
+    graphicsConfig.width = static_cast<size_t>(600);
+    graphicsConfig.height = static_cast<size_t>(400);
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();

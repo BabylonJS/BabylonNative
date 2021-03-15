@@ -35,7 +35,11 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     float height = inHeight;
     void* windowPtr = view;
     
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+    graphicsConfig.windowPtr = (__bridge WindowType)windowPtr;
+    graphicsConfig.width = static_cast<size_t>(width);
+    graphicsConfig.height = static_cast<size_t>(height);
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
 
     runtime = std::make_unique<Babylon::AppRuntime>();

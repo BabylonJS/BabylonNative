@@ -6,6 +6,11 @@
 
 namespace Babylon
 {
+    void Graphics::Impl::SetNativeWindow(GraphicsConfiguration config)
+    {
+        SetNativeWindowInternal(config);
+    }
+
     float Graphics::Impl::UpdateDevicePixelRatio()
     {
         std::scoped_lock lock{m_state.Mutex};

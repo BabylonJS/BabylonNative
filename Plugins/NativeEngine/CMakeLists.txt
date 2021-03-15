@@ -69,3 +69,8 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
     INTERFACE GraphicsInternal)
+
+# compile as objc++
+if (APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
+endif()

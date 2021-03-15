@@ -35,7 +35,11 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     float height = inHeight;
     void* windowPtr = view;
     
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+    graphicsConfig.windowPtr = (__bridge WindowType)windowPtr;
+    graphicsConfig.width = static_cast<size_t>(width);
+    graphicsConfig.height = static_cast<size_t>(height);
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
