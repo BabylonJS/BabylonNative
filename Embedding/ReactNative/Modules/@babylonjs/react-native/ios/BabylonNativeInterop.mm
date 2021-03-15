@@ -24,7 +24,7 @@ namespace {
 
 @implementation BabylonNativeInterop
 
-static NSMutableArray* activeTouches;
+static NSMutableArray* activeTouches = [NSMutableArray new];
 
 + (void)initialize:(RCTBridge*)bridge {
     auto jsCallInvoker{ bridge.jsCallInvoker };
