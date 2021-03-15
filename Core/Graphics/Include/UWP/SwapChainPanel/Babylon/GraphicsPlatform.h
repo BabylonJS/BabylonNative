@@ -2,7 +2,7 @@
 
 #include <winrt/Windows.UI.Xaml.Controls.h>
 
-using WindowType = ABI::Windows::UI::Xaml::Controls::ISwapChainPanel*;
+using WindowType = winrt::Windows::UI::Xaml::Controls::ISwapChainPanel*;
 
 struct GraphicsConfiguration
 {
