@@ -3,7 +3,6 @@
 
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
-#include "NativeCamera.h"
 #include <vector>
 
 namespace Babylon::Plugins::Internal

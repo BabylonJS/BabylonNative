@@ -11,6 +11,6 @@ add_subdirectory(NativeEngine)
 # Dependencies: NativeEngine
 add_subdirectory(NativeXr)
 
-if (APPLE OR ANDROID OR (WIN32 AND NOT WINDOWS_STORE))
-    add_subdirectory(NativeCamera)
-endif()
+# Add NativeCamera
+add_subdirectory(NativeCamera)
+

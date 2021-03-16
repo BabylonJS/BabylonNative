@@ -135,7 +135,6 @@ endif()
 
 if(APPLE)
     if(IOS)
-        target_link_libraries(Playground PUBLIC "-framework CoreMedia -framework AVFoundation")
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
@@ -159,7 +158,7 @@ if(APPLE)
             set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
             enable_language(Swift)
     else()
-        target_link_libraries(Playground PUBLIC "-framework MetalKit -framework CoreMedia -framework AVFoundation")
+        target_link_libraries(Playground PUBLIC "-framework MetalKit")
 
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true

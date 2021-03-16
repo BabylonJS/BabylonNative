@@ -51,14 +51,11 @@ target_include_directories(BabylonNativeJNI
 add_definitions(-DANDROID_STL=c++_shared)
 
 target_link_libraries(BabylonNativeJNI
-        camera2ndk
-        mediandk
         GLESv3
         android
         EGL
         log
         -lz
-        AndroidExtensions
         AppRuntime
         NativeEngine
         NativeXr
@@ -66,7 +63,9 @@ target_link_libraries(BabylonNativeJNI
         Window
         ScriptLoader
         XMLHttpRequest
-        NativeCamera)
+        NativeCamera
+        AndroidExtensions
+        )
 
 configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"

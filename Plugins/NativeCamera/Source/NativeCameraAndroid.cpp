@@ -14,14 +14,8 @@
 #include <android/native_window_jni.h>
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/Globals.h>
+#include <AndroidExtensions/OpenGLHelpers.h>
 #include <android/log.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <GLES3/gl3.h>
-#include <GLES3/gl3ext.h>
-#include <GLES3/gl3platform.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <arcana/threading/task.h>
@@ -37,13 +31,14 @@ namespace Babylon::Plugins::Internal
 {
     const int PERMISSION_REQUEST_ID{ 8436 };
 
-    struct CameraInterfaceAndroid : public CameraInterface
-    {
+    struct CameraInterfaceAndroid : public CameraInterface {
         CameraInterfaceAndroid(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera);
+
         virtual ~CameraInterfaceAndroid();
+
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
 
-        static constexpr char CAMERA_VERT_SHADER[]{ R"(#version 300 es
+        static constexpr char CAMERA_VERT_SHADER[]{R"(#version 300 es
             precision highp float;
             out vec2 cameraFrameUV;
             void main() {
@@ -52,7 +47,7 @@ namespace Babylon::Plugins::Internal
             }
         )"};
 
-        static constexpr char CAMERA_FRAG_SHADER[]{ R"(#version 300 es
+        static constexpr char CAMERA_FRAG_SHADER[]{R"(#version 300 es
             #extension GL_OES_EGL_image_external_essl3 : require
             precision mediump float;
             in vec2 cameraFrameUV;
@@ -67,20 +62,20 @@ namespace Babylon::Plugins::Internal
 
         std::string getCamId(bool frontCamera);
 
-        Graphics::Impl& m_graphicsImpl;
+        Graphics::Impl &m_graphicsImpl;
         JsRuntimeScheduler m_runtimeScheduler;
 
         uint32_t width;
         uint32_t height;
-        ACameraManager* cameraManager{};
-        ACameraDevice* cameraDevice{};
-        ACameraOutputTarget* textureTarget{};
-        ACaptureRequest* request{};
-        ANativeWindow* textureWindow{};
-        ACameraCaptureSession* textureSession{};
-        ACaptureSessionOutput* textureOutput{};
-        ACaptureSessionOutput* output{};
-        ACaptureSessionOutputContainer* outputs{};
+        ACameraManager *cameraManager{};
+        ACameraDevice *cameraDevice{};
+        ACameraOutputTarget *textureTarget{};
+        ACaptureRequest *request{};
+        ANativeWindow *textureWindow{};
+        ACameraCaptureSession *textureSession{};
+        ACaptureSessionOutput *textureOutput{};
+        ACaptureSessionOutput *output{};
+        ACaptureSessionOutputContainer *outputs{};
         GLuint cameraOESTextureId{};
         GLuint cameraRGBATextureId{};
         GLuint cameraShaderProgramId{};
@@ -91,88 +86,7 @@ namespace Babylon::Plugins::Internal
 
         EGLContext context{};
         EGLDisplay display{};
-
-        constexpr GLint GetTextureUnit(GLenum texture)
-        {
-            return texture - GL_TEXTURE0;
-        }
-
-        GLuint LoadShader(GLenum shader_type, const char* shader_source)
-        {
-            GLuint shader{ glCreateShader(shader_type) };
-            if (!shader)
-            {
-                throw std::runtime_error{"Failed to create shader"};
-            }
-
-            glShaderSource(shader, 1, &shader_source, nullptr);
-            glCompileShader(shader);
-            GLint compileStatus{ GL_FALSE };
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
-
-            if (compileStatus != GL_TRUE)
-            {
-                GLint infoLogLength{};
-
-                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-                if (!infoLogLength)
-                {
-                    throw std::runtime_error{"Unknown error compiling shader"};
-                }
-
-                std::string infoLog;
-                infoLog.resize(static_cast<size_t>(infoLogLength));
-                glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.data());
-                glDeleteShader(shader);
-                throw std::runtime_error("Error compiling shader: " + infoLog);
-            }
-
-            return shader;
-        }
-
-        GLuint CreateShaderProgram(const char* vertShaderSource, const char* fragShaderSource)
-        {
-            GLuint vertShader{ LoadShader(GL_VERTEX_SHADER, vertShaderSource) };
-            GLuint fragShader{ LoadShader(GL_FRAGMENT_SHADER, fragShaderSource) };
-
-            GLuint program{ glCreateProgram() };
-            if (!program)
-            {
-                throw std::runtime_error{"Failed to create shader program"};
-            }
-
-            glAttachShader(program, vertShader);
-            glAttachShader(program, fragShader);
-
-            glLinkProgram(program);
-            GLint linkStatus{ GL_FALSE };
-            glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-
-            glDetachShader(program, vertShader);
-            glDeleteShader(vertShader);
-            glDetachShader(program, fragShader);
-            glDeleteShader(fragShader);
-
-            if (linkStatus != GL_TRUE)
-            {
-                GLint infoLogLength{};
-                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-                if (!infoLogLength)
-                {
-                    throw std::runtime_error{"Unknown error linking shader program"};
-                }
-
-                std::string infoLog;
-                infoLog.resize(static_cast<size_t>(infoLogLength));
-                glGetProgramInfoLog(program, infoLogLength, nullptr, infoLog.data());
-                glDeleteProgram(program);
-                throw std::runtime_error("Error linking shader program: " + infoLog);
-            }
-
-            return program;
-        }
     };
-
 
     std::string CameraInterfaceAndroid::getCamId(bool frontCamera)
     {
@@ -379,7 +293,7 @@ namespace Babylon::Plugins::Internal
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
             // Create the surface and surface texture that will receive the camera preview
             surfaceTexture.initWithTexture(cameraOESTextureId);
@@ -459,7 +373,7 @@ namespace Babylon::Plugins::Internal
 
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(cameraShaderProgramId, "cameraTexture")};
-        glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
+        glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraOESTextureId);
         glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

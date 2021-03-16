@@ -17,7 +17,7 @@
 
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
-
+#include <AndroidExtensions/OpenGLHelpers.h>
 #include <android/native_window.h>
 #include <android/log.h>
 #include <arcore_c_api.h>
@@ -34,6 +34,7 @@
 
 using namespace android;
 using namespace android::global;
+using namespace android::OpenGLHelpers;
 
 namespace xr
 {
@@ -105,143 +106,6 @@ namespace xr
                 oFragColor = texture(babylonTexture, babylonUV);
             }
         )"};
-
-        GLuint LoadShader(GLenum shader_type, const char* shader_source)
-        {
-            GLuint shader{ glCreateShader(shader_type) };
-            if (!shader)
-            {
-                throw std::runtime_error{ "Failed to create shader" };
-            }
-
-            glShaderSource(shader, 1, &shader_source, nullptr);
-            glCompileShader(shader);
-            GLint compileStatus{ GL_FALSE };
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
-
-            if (compileStatus != GL_TRUE)
-            {
-                GLint infoLogLength{};
-
-                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-                if (!infoLogLength)
-                {
-                    throw std::runtime_error{ "Unknown error compiling shader" };
-                }
-
-                std::string infoLog;
-                infoLog.resize(static_cast<size_t>(infoLogLength));
-                glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.data());
-                glDeleteShader(shader);
-                throw std::runtime_error("Error compiling shader: " + infoLog);
-            }
-
-            return shader;
-        }
-
-        GLuint CreateShaderProgram(const char* vertShaderSource, const char* fragShaderSource)
-        {
-            GLuint vertShader{ LoadShader(GL_VERTEX_SHADER, vertShaderSource) };
-            GLuint fragShader{ LoadShader(GL_FRAGMENT_SHADER, fragShaderSource) };
-
-            GLuint program{ glCreateProgram() };
-            if (!program)
-            {
-                throw std::runtime_error{ "Failed to create shader program" };
-            }
-
-            glAttachShader(program, vertShader);
-            glAttachShader(program, fragShader);
-
-            glLinkProgram(program);
-            GLint linkStatus{ GL_FALSE };
-            glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-
-            glDetachShader(program, vertShader);
-            glDeleteShader(vertShader);
-            glDetachShader(program, fragShader);
-            glDeleteShader(fragShader);
-
-            if (linkStatus != GL_TRUE)
-            {
-                GLint infoLogLength{};
-                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-                if (!infoLogLength)
-                {
-                    throw std::runtime_error{ "Unknown error linking shader program" };
-                }
-
-                std::string infoLog;
-                infoLog.resize(static_cast<size_t>(infoLogLength));
-                glGetProgramInfoLog(program, infoLogLength, nullptr, infoLog.data());
-                glDeleteProgram(program);
-                throw std::runtime_error("Error linking shader program: " + infoLog);
-            }
-
-            return program;
-        }
-
-        constexpr GLint GetTextureUnit(GLenum texture)
-        {
-            return texture - GL_TEXTURE0;
-        }
-
-        namespace GLTransactions
-        {
-            auto SetCapability(GLenum capability, bool isEnabled)
-            {
-                const auto setCapability{ [capability](bool isEnabled)
-                {
-                    if (isEnabled)
-                    {
-                        glEnable(capability);
-                    }
-                    else
-                    {
-                        glDisable(capability);
-                    }
-                }};
-
-                const auto wasEnabled{ glIsEnabled(capability) };
-                setCapability(isEnabled);
-                return gsl::finally([wasEnabled, setCapability]() { setCapability(wasEnabled); });
-            }
-
-            auto BindFrameBuffer(GLuint frameBufferId)
-            {
-                GLint previousFrameBufferId;
-                glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFrameBufferId);
-                glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId);
-                return gsl::finally([previousFrameBufferId]() { glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFrameBufferId)); });
-            }
-
-            auto DepthMask(GLboolean depthMask)
-            {
-                GLboolean previousDepthMask;
-                glGetBooleanv(GL_DEPTH_WRITEMASK, &previousDepthMask);
-                glDepthMask(depthMask);
-                return gsl::finally([previousDepthMask]() { glDepthMask(previousDepthMask); });
-            }
-
-            auto BindSampler(GLenum unit, GLuint id)
-            {
-                glActiveTexture(unit);
-                GLint previousId;
-                glGetIntegerv(GL_SAMPLER_BINDING, &previousId);
-                glBindSampler(unit - GL_TEXTURE0, id);
-                return gsl::finally([unit, id{ previousId }]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
-            }
-
-            auto MakeCurrent(EGLDisplay display, EGLSurface drawSurface, EGLSurface readSurface, EGLContext context)
-            {
-                EGLDisplay previousDisplay{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
-                EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
-                EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
-                EGLContext previousContext{ eglGetCurrentContext() };
-                eglMakeCurrent(display, drawSurface, readSurface, context);
-                return gsl::finally([previousDisplay, previousDrawSurface, previousReadSurface, previousContext]() { eglMakeCurrent(previousDisplay, previousDrawSurface, previousReadSurface, previousContext); });
-            }
-        }
 
         bool CheckARCoreInstallStatus(bool requestInstall)
         {
@@ -428,8 +292,8 @@ namespace xr
             }
 
             // Create the shader program used for drawing the full screen quad that is the camera frame + Babylon render texture
-            cameraShaderProgramId = CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
-            babylonShaderProgramId = CreateShaderProgram(BABYLON_VERT_SHADER, BABYLON_FRAG_SHADER);
+            cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            babylonShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(BABYLON_VERT_SHADER, BABYLON_FRAG_SHADER);
 
             // Create the ARCore ArSession
             {
