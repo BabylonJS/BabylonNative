@@ -1,6 +1,11 @@
 #include "AppRuntime.h"
 
-#include <V8Inc.h>
+#ifndef __clang__
+#pragma warning(disable : 4100 4267 4127)
+#endif
+#include <v8.h>
+#include <libplatform/libplatform.h>
+
 #ifdef V8_USE_INSPECTOR
 #include <V8InspectorAgent.h>
 #endif
