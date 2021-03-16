@@ -1262,6 +1262,11 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
+        bgfx::TextureInfo textureInfo{};
+        bgfx::calcTextureSize(textureInfo, width, height, 1, false, false, 1, format);
+        texture->StorageSize = textureInfo.storageSize;
+        texture->Format = format;
+
         auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
         return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
     }

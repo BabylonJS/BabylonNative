@@ -3,6 +3,7 @@
 #include <arcana/containers/ticketed_collection.h>
 
 #include <Babylon/JsRuntime.h>
+#include <NativeEngine.h>
 #include <GraphicsImpl.h>
 
 #include <vector>
@@ -35,18 +36,29 @@ namespace Babylon::Plugins::Internal
             : Napi::ObjectWrap<NativeCapture>{info}
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
             , m_graphicsImpl(Graphics::Impl::GetFromJavaScript(info.Env()))
-            , m_ticket{std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); }))}
             , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
+            , m_cancellationToken{std::make_shared<arcana::cancellation_source>()}
         {
             Napi::Object jsData = m_jsData.Value();
             jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));
+
+            if (info.Length() == 0)
+            {
+                m_ticket = std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); }));
+            }
+            else
+            {
+                m_textureData = info[0].As<Napi::External<TextureData>>().Data();
+                m_textureBuffer.resize(m_textureData->StorageSize);
+                ReadTextureAsync();
+            }
         }
 
         ~NativeCapture()
         {
-            if (m_ticket != nullptr)
+            if (!m_cancellationToken->cancelled())
             {
-                // If m_ticket is still active, this object is being garbage collected without
+                // If m_cancellationToken is not cancelled, this object is being garbage collected without
                 // having been disposed, so it must dispose itself.
                 Dispose();
             }
@@ -59,20 +71,33 @@ namespace Babylon::Plugins::Internal
             m_callbacks.push_back(Napi::Persistent(listener));
         }
 
+        arcana::task<void, std::exception_ptr> ReadTextureAsync()
+        {
+            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationToken, [this, cancellation{m_cancellationToken}]{
+                m_graphicsImpl.ReadTextureAsync(m_textureData->Handle, m_textureBuffer).then(arcana::inline_scheduler, *m_cancellationToken, [this]{
+                    CaptureDataReceived(m_textureData->Width, m_textureData->Height, m_textureData->StorageSize / m_textureData->Height, m_textureData->Format, true, m_textureBuffer);
+                    return ReadTextureAsync();
+                });
+            });
+        }
+
         void CaptureDataReceived(const BgfxCallback::CaptureData& data)
         {
-            std::vector<uint8_t> bytes{};
-            bytes.resize(data.DataSize);
-            std::memcpy(bytes.data(), data.Data, data.DataSize);
-            m_runtime.Dispatch([this, data{data}, bytes{std::move(bytes)}](Napi::Env env) mutable {
-                data.Data = bytes.data();
+            CaptureDataReceived(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), data.DataSize});
+        }
 
+        void CaptureDataReceived(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
+        {
+            std::vector<uint8_t> bytes{};
+            bytes.resize(data.size());
+            std::memcpy(bytes.data(), data.data(), data.size());
+            m_runtime.Dispatch([this, width, height, pitch, format, yFlip, bytes{std::move(bytes)}](Napi::Env env) mutable {
                 Napi::Object jsData = m_jsData.Value();
-                jsData.Set("width", static_cast<double>(data.Width));
-                jsData.Set("height", static_cast<double>(data.Height));
-                jsData.Set("pitch", static_cast<double>(data.Pitch));
+                jsData.Set("width", static_cast<double>(width));
+                jsData.Set("height", static_cast<double>(height));
+                jsData.Set("pitch", static_cast<double>(pitch));
                 constexpr auto FORMAT_MEMBER_NAME = "format";
-                switch (data.Format)
+                switch (format)
                 {
                     case bgfx::TextureFormat::BGRA8:
                         jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
@@ -81,15 +106,15 @@ namespace Babylon::Plugins::Internal
                         jsData.Set(FORMAT_MEMBER_NAME, env.Undefined());
                         break;
                 }
-                jsData.Set("yFlip", data.YFlip);
+                jsData.Set("yFlip", yFlip);
 
                 auto jsBytes = jsData.Get("data").As<Napi::ArrayBuffer>();
-                if (data.DataSize != jsBytes.ByteLength())
+                if (static_cast<size_t>(bytes.size()) != jsBytes.ByteLength())
                 {
-                    jsBytes = Napi::ArrayBuffer::New(env, data.DataSize);
+                    jsBytes = Napi::ArrayBuffer::New(env, bytes.size());
                     jsData.Set("data", jsBytes);
                 }
-                std::memcpy(jsBytes.Data(), bytes.data(), data.DataSize);
+                std::memcpy(jsBytes.Data(), bytes.data(), bytes.size());
                 bytes.clear();
 
                 for (const auto& callback : m_callbacks)
@@ -103,6 +128,9 @@ namespace Babylon::Plugins::Internal
         {
             m_callbacks.clear();
             m_ticket.reset();
+            //m_textureBuffer.clear();
+            //m_textureBuffer.shrink_to_fit();
+            m_cancellationToken->cancel();
         }
 
         void Dispose(const Napi::CallbackInfo&)
@@ -115,6 +143,9 @@ namespace Babylon::Plugins::Internal
         std::vector<Napi::FunctionReference> m_callbacks{};
         std::unique_ptr<TicketT> m_ticket{};
         Napi::ObjectReference m_jsData{};
+        TextureData* m_textureData{};
+        std::vector<uint8_t> m_textureBuffer{};
+        std::shared_ptr<arcana::cancellation_source> m_cancellationToken{};
     };
 }
 

@@ -276,7 +276,7 @@ namespace Babylon
             bgfx::discard(BGFX_DISCARD_ALL);
 
             auto& res = m_state.Bgfx.InitState.resolution;
-            bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
+            bgfx::reset(res.width, res.height, res.reset);
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
             m_state.Bgfx.Dirty = false;
