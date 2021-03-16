@@ -1,5 +1,4 @@
-#include <GLES2/gl2ext.h>
-#include <GLES3/gl3.h>
+#include <AndroidExtensions/OpenGLHelpers.h>
 
 namespace android::OpenGLHelpers
 {
@@ -77,6 +76,4 @@ namespace android::OpenGLHelpers
 
         return program;
     }
-};
-
 }

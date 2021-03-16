@@ -7,6 +7,7 @@
 #include <GLES3/gl3platform.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <gsl/gsl>
 
 namespace android::OpenGLHelpers
 {

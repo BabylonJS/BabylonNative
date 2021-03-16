@@ -396,8 +396,8 @@ namespace Babylon::Plugins::Internal
         });
     }
 
-    CameraInterface* CameraInterface::CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
+    Napi::Value CameraInterface::CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
     {
-        return new CameraInterfaceAndroid(env, width, height, frontCamera);
+        return Napi::External<CameraInterface>::New(env, new CameraInterfaceAndroid(env, width, height, frontCamera));
     }
 }

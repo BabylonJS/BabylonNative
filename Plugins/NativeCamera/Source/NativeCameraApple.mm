@@ -76,7 +76,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    CameraInterface* CameraInterface::CreateInterface(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    Napi::Value CameraInterface::CreateInterface(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple(env);
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
@@ -138,7 +138,7 @@ namespace Babylon::Plugins::Internal
             [cameraInterfaceApple->avCaptureSession commitConfiguration];
             [cameraInterfaceApple->avCaptureSession startRunning];
         });
-        return cameraInterfaceApple;
+        return Napi::External<CameraInterface>::New(env, cameraInterfaceApple);
     }
 
     void CameraInterfaceApple::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
