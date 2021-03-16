@@ -4,7 +4,7 @@
 
 #define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 #include "V8InspectorUtils.h"
-#include "V8Inc.h"
+#include <V8Inc.h>
 
 #include <array>
 #include <random>

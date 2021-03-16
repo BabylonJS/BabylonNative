@@ -1,8 +1,8 @@
 #include "AppRuntime.h"
 
-#include "v8/V8Inc.h"
+#include <V8Inc.h>
 #ifdef V8_USE_INSPECTOR
-#include "v8/V8InspectorAgent.h"
+#include <V8InspectorAgent.h>
 #endif
 
 namespace Babylon

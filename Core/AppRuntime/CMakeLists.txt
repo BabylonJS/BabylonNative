@@ -7,25 +7,6 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         "Source/WorkQueue.cpp"
         "Source/WorkQueue.h")
 
-    if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-        set(SOURCES ${SOURCES}
-            "Source/v8/V8Inc.h")
-    endif()
-
-    if (V8_USE_INSPECTOR)
-        set(SOURCES ${SOURCES}
-            "Source/v8/V8InspectorAgent.h"
-            "Source/v8/V8InspectorAgent.cpp"
-            "Source/v8/V8InspectorSocket.h"
-            "Source/v8/V8InspectorSocket.cpp"
-            "Source/v8/V8InspectorSocketServer.h"
-            "Source/v8/V8InspectorSocketServer.cpp"
-            "Source/v8/V8InspectorTCP.h"
-            "Source/v8/V8InspectorTCP.cpp"
-            "Source/v8/V8InspectorUtils.h"
-            "Source/v8/V8InspectorUtils.cpp")
-    endif()
-
     if(APPLE)
         set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.mm")
     else()
@@ -43,13 +24,9 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         target_include_directories(AppRuntime INTERFACE "/usr/include/webkitgtk-4.0/")
     endif()
 
-    if (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-        target_link_to_dependencies(AppRuntime PRIVATE asio)
-        target_compile_definitions(AppRuntime PRIVATE ASIO_STANDALONE)
-        if (V8_USE_INSPECTOR)
-            target_compile_definitions(AppRuntime PUBLIC V8_USE_INSPECTOR)
-            target_link_to_dependencies(AppRuntime PRIVATE llhttp)
-        endif()
+    if (V8_USE_INSPECTOR)
+        target_compile_definitions(AppRuntime PUBLIC V8_USE_INSPECTOR)
+        target_link_to_dependencies(AppRuntime PRIVATE v8inspector)
     endif()
 
     target_link_to_dependencies(AppRuntime

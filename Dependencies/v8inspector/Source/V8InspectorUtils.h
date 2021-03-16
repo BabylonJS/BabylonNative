@@ -3,7 +3,7 @@
 // This code is based on the old node inspector implementation. See LICENSE_NODE for Node.js' project license details
 #pragma once
 
-#include "V8Inc.h"
+#include <V8Inc.h>
 
 #include <string>
 #include <algorithm>
