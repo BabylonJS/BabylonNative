@@ -9,9 +9,13 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
 
+#import <optional>
+
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
+bool g_isXrActive{};
 
 @implementation LibNativeBridge
 
@@ -25,7 +29,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 {
 }
 
-- (void)init:(void*)view width:(int)inWidth height:(int)inHeight
+- (void)init:(void*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
     inputBuffer.reset();
     runtime.reset();
@@ -36,19 +40,24 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     void* windowPtr = view;
     
     graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+    graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-    runtime->Dispatch([](Napi::Env env)
+    runtime->Dispatch([xrView](Napi::Env env)
     {
-        Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        
         graphics->AddToJavaScript(env);
+
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize NativeXr plugin.
-        Babylon::Plugins::NativeXr::Initialize(env);
+        g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
+        g_nativeXr->UpdateWindow(xrView);
+        g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
@@ -72,6 +81,15 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     }
 }
 
+- (void)render
+{
+    if (graphics)
+    {
+        graphics->FinishRenderingCurrentFrame();
+        graphics->StartRenderingCurrentFrame();
+    }
+}
+
 - (void)setInputs:(int)x y:(int)y tap:(bool)tap
 {
     if (inputBuffer)
@@ -79,6 +97,11 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         inputBuffer->SetPointerPosition(x, y);
         inputBuffer->SetPointerDown(tap);
     }
+}
+
+- (bool)isXRActive
+{
+    return g_isXrActive;
 }
 
 @end
