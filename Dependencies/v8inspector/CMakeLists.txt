@@ -72,7 +72,6 @@ target_include_directories(v8inspector PUBLIC "Include")
 target_include_directories(v8inspector PRIVATE "Source")
 
 target_compile_definitions(v8inspector PRIVATE ASIO_STANDALONE)
-target_compile_definitions(v8inspector PUBLIC V8_COMPRESS_POINTERS)
 target_compile_definitions(v8inspector PUBLIC V8_USE_INSPECTOR)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
