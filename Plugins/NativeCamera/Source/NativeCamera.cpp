@@ -74,7 +74,6 @@ namespace Babylon::Plugins::Internal
 
         Napi::Value CreateVideo(const Napi::CallbackInfo& info)
         {
-            const auto env = info.Env();
             auto constraints = info[0].As<Napi::Object>();
             uint32_t maxWidth{256}, maxHeight{256};
             std::string facingMode;

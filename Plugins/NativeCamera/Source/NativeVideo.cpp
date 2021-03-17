@@ -2,6 +2,41 @@
 
 namespace Babylon::Plugins::Internal
 {
+    void NativeVideo::Initialize(Napi::Env& env)
+    {
+        Napi::Function func = DefineClass(
+            env,
+            JS_CLASS_NAME,
+            {
+                InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
+                InstanceMethod("removeEventListener", &NativeVideo::RemoveEventListener),
+                InstanceMethod("play", &NativeVideo::Play),
+                InstanceMethod("pause", &NativeVideo::Pause),
+                InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
+                InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, &NativeVideo::SetVideoWidth),
+                InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, &NativeVideo::SetVideoHeight),
+                InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
+                InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
+                InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
+                InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
+            });
+
+        env.Global().Set(JS_CLASS_NAME, func);
+    }
+
+    Napi::Object NativeVideo::New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera)
+    {
+        return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({ Napi::Value::From(info.Env(), width), Napi::Value::From(info.Env(), height), Napi::Value::From(info.Env(), frontCamera) });
+    }
+
+    NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
+        : Napi::ObjectWrap<NativeVideo>{ info }
+        , m_width{ info[0].As<Napi::Number>().Uint32Value() }
+        , m_height{ info[1].As<Napi::Number>().Uint32Value() }
+        , m_frontCamera{ info[2].As<Napi::Boolean>().Value() }
+    {
+    }
+
     void NativeVideo::SetVideoWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         m_width = value.As<Napi::Number>().Uint32Value();
