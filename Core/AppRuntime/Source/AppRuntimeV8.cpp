@@ -1,4 +1,5 @@
 #include "AppRuntime.h"
+#include "AppRuntimeV8.h"
 
 #ifndef __clang__
 #pragma warning(disable : 4100 4267 4127)
@@ -57,6 +58,8 @@ namespace Babylon
         std::unique_ptr<Module> Module::s_module;
     }
 
+    static unsigned short s_inspectorPort = 0;
+
     void AppRuntime::RunEnvironmentTier(const char* executablePath)
     {
         // Create the isolate.
@@ -73,8 +76,11 @@ namespace Babylon
             v8::Context::Scope context_scope{context};
 
 #ifdef V8_INSPECTOR_INCLUDED
-            Babylon::V8InspectorAgent inspector{ *Module::Instance().Platform(), isolate, context, "BabylonNative", 5643 };
-            inspector.start();
+            if (s_inspectorPort != 0)
+            {
+                Babylon::V8InspectorAgent inspector{*Module::Instance().Platform(), isolate, context, "BabylonNative", s_inspectorPort};
+                inspector.start();
+            }
 #endif
 
             Napi::Env env = Napi::Attach(context);
@@ -86,5 +92,20 @@ namespace Babylon
         // todo : GetArrayBufferAllocator not available?
         // delete isolate->GetArrayBufferAllocator();
         isolate->Dispose();
+    }
+
+    bool AppRuntimeV8::EnableInspector(unsigned short port)
+    {
+#ifdef V8_INSPECTOR_INCLUDED
+        s_inspectorPort = port;
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    void AppRuntimeV8::DisableInspector()
+    {
+        s_inspectorPort = 0;
     }
 }

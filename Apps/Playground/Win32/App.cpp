@@ -10,6 +10,11 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
+#if __has_include(<Babylon/AppRuntimeV8.h>)
+#include <Babylon/AppRuntimeV8.h>
+#define V8_ENGINE
+#endif
+
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
@@ -107,18 +112,25 @@ namespace
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
         graphics->StartRenderingCurrentFrame();
 
+        auto usingV8Inspector = false;
+#ifdef V8_ENGINE
+        usingV8Inspector = Babylon::AppRuntimeV8::EnableInspector(5642);
+#endif
+
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
+        runtime->Dispatch([width, height, hWnd, usingV8Inspector](Napi::Env env) {
             graphics->AddToJavaScript(env);
-          
-#ifndef V8_USE_INSPECTOR
-            // Initialize console plugin.
-            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                OutputDebugStringA(message);
-            });
-#endif
+            
+            // If we've initialized the inspector server, console messages 
+            // will be sent to the DevTools console.
+            if (!usingV8Inspector)
+            {
+                Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                    OutputDebugStringA(message);
+                });
+            }
 
             Babylon::Polyfills::Window::Initialize(env);
 
