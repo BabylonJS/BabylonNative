@@ -1,9 +1,11 @@
 #include <napi/napi.h>
 #include "NativeCamera.h"
+#include "NativeVideo.h"
 
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
 #include <vector>
+#include <algorithm>
 
 namespace Babylon::Plugins::Internal
 {
@@ -12,7 +14,6 @@ namespace Babylon::Plugins::Internal
         static constexpr auto JS_NAVIGATOR_NAME = "navigator";
         static constexpr auto JS_CLASS_NAME = "_NativeCamera";
         static constexpr auto JS_NATIVECAMERA_CONSTRUCTOR_NAME = "NativeCamera";
-        static constexpr auto JS_NATIVECAMERA_DATA = "_nativeCameraData";
 
     public:
 
@@ -70,11 +71,10 @@ namespace Babylon::Plugins::Internal
         }
 
     private:
+
         Napi::Value CreateVideo(const Napi::CallbackInfo& info)
         {
             const auto env = info.Env();
-            Napi::Object video = Napi::Object::New(env);
-            
             auto constraints = info[0].As<Napi::Object>();
             uint32_t maxWidth{256}, maxHeight{256};
             std::string facingMode;
@@ -95,70 +95,15 @@ namespace Babylon::Plugins::Internal
                 facingMode = facingModeValue.As<Napi::String>().Utf8Value();
             }
 
-            video.Set("videoWidth", Napi::Number::New(env, maxWidth).As<Napi::Value>());
-            video.Set("videoHeight", Napi::Number::New(env, maxHeight).As<Napi::Value>());
-            video.Set("frontCamera", Napi::Boolean::New(env, (facingMode == "user")).As<Napi::Value>());
-            video.Set("readyState", Napi::Number::New(env, 10).As<Napi::Value>());
-            video.Set("HAVE_CURRENT_DATA", Napi::Number::New(env, 1).As<Napi::Value>());
-            video.Set("isNative", Napi::Boolean::New(env, true).As<Napi::Value>());
-
-            video.Set("setAttribute", Napi::Function::New(env,[](const Napi::CallbackInfo& /*info*/){
-                }));
-
-            video.Set("addEventListener", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                auto _this = info.This().ToObject();
-                auto callback = info[1].As<Napi::Function>();
-                auto cb = _this.Get("_cb");
-                if (cb.IsFunction())
-                {
-                    throw Napi::Error::New(info.Env(), "Event listener has already been set for video playback.");
-                }
-                _this.Set("_cb", callback.As<Napi::Object>().As<Napi::Value>());
-                }));
-
-            video.Set("removeEventListener", Napi::Function::New(env, [](const Napi::CallbackInfo& ) { }));
-
-            video.Set("play", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                auto _this = info.This().ToObject();
-                auto cb = _this.Get("_cb");
-                if (!cb.IsFunction())
-                {
-                    throw Napi::Error::New(info.Env(), "Invalid function for video playback.");
-                }
-                cb.As<Napi::Function>().Call({ });
-                }));
-
-            video.Set("pause", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                    auto _this = info.This().ToObject();
-                    auto cameraDataObject = _this.Get(JS_NATIVECAMERA_DATA);
-                    if (cameraDataObject.IsExternal())
-                    {
-                        const auto* cameraInterface = cameraDataObject.As<Napi::External<CameraInterface>>().Data();
-                        delete cameraInterface;
-                        _this.Set(JS_NATIVECAMERA_DATA, info.Env().Undefined());
-                    }
-                }));
-
-            return video;
+            return NativeVideo::New(info, maxWidth, maxHeight, facingMode == "user");
         }
 
         void UpdateVideoTexture(const Napi::CallbackInfo& info)
         {
             const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-            auto videoObject = info[1].As<Napi::Object>();
+            auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
 
-            auto cameraInterfaceObject = videoObject.Get(JS_NATIVECAMERA_DATA);
-            if (!cameraInterfaceObject.IsExternal())
-            {
-                const auto width = videoObject.Get("videoWidth").As<Napi::Number>().Uint32Value();
-                const auto height = videoObject.Get("videoHeight").As<Napi::Number>().Uint32Value();
-                const bool frontCamera = videoObject.Get("frontCamera").As<Napi::Boolean>().Value();
-
-                cameraInterfaceObject = CameraInterface::CreateInterface(info.Env(), width, height, frontCamera);
-                videoObject.Set(JS_NATIVECAMERA_DATA, cameraInterfaceObject);
-            }
-            auto* cameraInterface = cameraInterfaceObject.As<Napi::External<CameraInterface>>().Data();
-            cameraInterface->UpdateCameraTexture(texture->Handle);
+            videoObject->UpdateTexture(texture->Handle);
         }
     };
 }
@@ -167,6 +112,7 @@ namespace Babylon::Plugins::NativeCamera
 {
     void Initialize(Napi::Env env)
     {
+        Babylon::Plugins::Internal::NativeVideo::Initialize(env);
         Babylon::Plugins::Internal::NativeCamera::Initialize(env);
     }
 }

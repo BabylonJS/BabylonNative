@@ -25,7 +25,7 @@ namespace Babylon::Plugins::Internal
     struct CameraInterface
     {
         virtual ~CameraInterface() = default;
-        static Napi::Value CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera);
+        static std::unique_ptr<CameraInterface> CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera);
         virtual void UpdateCameraTexture(bgfx::TextureHandle textureHandle) = 0;
     };
 }
