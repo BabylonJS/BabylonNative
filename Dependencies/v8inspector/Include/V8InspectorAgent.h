@@ -1,7 +1,7 @@
   
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-// This code is based on the old node inspector implementation. See LICENSE_NODE for Node.js' project license details
+// This code is based on the old node inspector implementation. See NOTICE.md for Node.js' project license details
 #pragma once
 
 #include <stddef.h>
