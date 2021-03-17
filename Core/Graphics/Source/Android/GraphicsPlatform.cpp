@@ -6,6 +6,11 @@
 
 namespace Babylon
 {
+    void Graphics::Impl::SetNativeWindow(GraphicsConfiguration config)
+    {
+        SetNativeWindowInternal(config);
+    }
+
     float Graphics::Impl::UpdateDevicePixelRatio()
     {
         // In Android, the baseline DPI is 160dpi.
