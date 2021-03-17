@@ -54,14 +54,6 @@ namespace xr
         std::unique_ptr<XrSupportedExtensions> Extensions;
         xr::SceneUnderstanding SceneUnderstanding{};
         bool IsSessionRunning{ false };
-
-        void Reset()
-        {
-            Session.Reset();
-            SceneSpace.Reset();
-            State = XrSessionState::XR_SESSION_STATE_UNKNOWN;
-            IsSessionRunning = false;
-        }
     };
 
     XrSessionContext::XrSessionContext()
