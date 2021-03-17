@@ -451,7 +451,7 @@ namespace Babylon
         {
             if (m_beginTask)
             {
-                return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive VR session at a time."}));
+                return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
             Graphics::Impl& graphicsImpl{Graphics::Impl::GetFromJavaScript(m_env)};
