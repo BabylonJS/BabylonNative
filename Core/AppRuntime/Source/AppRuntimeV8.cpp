@@ -96,8 +96,8 @@ namespace Babylon
 
     bool AppRuntimeV8::EnableInspector(unsigned short port)
     {
-#ifdef V8_INSPECTOR_INCLUDED
         s_inspectorPort = port;
+#ifdef V8_INSPECTOR_INCLUDED
         return true;
 #else
         return false;
