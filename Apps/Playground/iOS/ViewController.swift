@@ -2,9 +2,10 @@ import UIKit
 import MetalKit
 
 class ViewController: UIViewController, MTKViewDelegate {
-    
+
     var mtkView: MTKView!
-    
+    var xrView: MTKView!
+
     override func viewDidLoad() {
         super.viewDidLoad()
     }
@@ -33,15 +34,24 @@ class ViewController: UIViewController, MTKViewDelegate {
             let width = view.bounds.size.width
             let height = view.bounds.size.height
 
+            xrView = MTKView()
+            xrView.translatesAutoresizingMaskIntoConstraints = false
+            xrView.isUserInteractionEnabled = false
+            xrView.isHidden = true
+            view.addSubview(xrView)
+            view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
+            view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
+
             let mainView: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView).toOpaque()
 
-            appDelegate!._bridge!.init(mainView, width:Int32(width * scale), height:Int32(height * scale))
+            appDelegate!._bridge!.init(mainView, width:Int32(width * scale), height:Int32(height * scale), xrView:Unmanaged.passUnretained(xrView).toOpaque())
         }
     }
 
     func draw(in view: MTKView) {
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
         if appDelegate != nil {
+            xrView.isHidden = !appDelegate!._bridge!.isXRActive()
             appDelegate!._bridge!.render()
         }
     }

@@ -13,6 +13,7 @@
 #include <GLES2/gl2ext.h>
 #include <GLES3/gl3.h>
 #include <EGL/egl.h>
+#include <EGL/eglext.h>
 
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
@@ -230,6 +231,16 @@ namespace xr
                 glBindSampler(unit - GL_TEXTURE0, id);
                 return gsl::finally([unit, id{ previousId }]() { glActiveTexture(unit); glBindSampler(unit - GL_TEXTURE0, id); });
             }
+
+            auto MakeCurrent(EGLDisplay display, EGLSurface drawSurface, EGLSurface readSurface, EGLContext context)
+            {
+                EGLDisplay previousDisplay{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
+                EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
+                EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
+                EGLContext previousContext{ eglGetCurrentContext() };
+                eglMakeCurrent(display, drawSurface, readSurface, context);
+                return gsl::finally([previousDisplay, previousDrawSurface, previousReadSurface, previousContext]() { eglMakeCurrent(previousDisplay, previousDrawSurface, previousReadSurface, previousContext); });
+            }
         }
 
         bool CheckARCoreInstallStatus(bool requestInstall)
@@ -319,6 +330,9 @@ namespace xr
 
     struct System::Session::Impl
     {
+        using EGLContextPtr = std::unique_ptr<std::remove_pointer_t<EGLContext>, std::function<void(EGLContext)>>;
+        using EGLSurfacePtr = std::unique_ptr<std::remove_pointer_t<EGLSurface>, std::function<void(EGLSurface)>>;
+
         const System::Impl& SystemImpl;
         std::vector<Frame::View> ActiveFrameViews{ {} };
         std::vector<Frame::InputSource> InputSources{};
@@ -330,10 +344,12 @@ namespace xr
         bool PlaneDetectionEnabled{ false };
         bool FeaturePointCloudEnabled{ false };
 
-        Impl(System::Impl& systemImpl, void* /*graphicsContext*/)
+        Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
+            , windowProvider{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<ANativeWindow*>(windowProvider()); } }
+            , parentContext{reinterpret_cast<EGLContext>(graphicsContext) }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
-            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); })}
+            , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
         {
         }
 
@@ -363,7 +379,45 @@ namespace xr
 
         void Initialize()
         {
-            // Note: graphicsContext is an EGLContext
+            {
+                display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+                EGLint attributes[]
+                {
+                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+
+                    EGL_BLUE_SIZE, 8,
+                    EGL_GREEN_SIZE, 8,
+                    EGL_RED_SIZE, 8,
+                    EGL_ALPHA_SIZE, 8,
+
+                    EGL_DEPTH_SIZE, 16,
+                    EGL_STENCIL_SIZE, 8,
+
+                    EGL_NONE
+                };
+
+                EGLint numConfigs{};
+                if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
+                {
+                    throw std::runtime_error{"Failed to choose EGL config."};
+                }
+
+                eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+
+                EGLint contextAttributes[]
+                {
+                    EGL_CONTEXT_MAJOR_VERSION_KHR, 3,
+                    EGL_CONTEXT_MINOR_VERSION_KHR, 0,
+
+                    EGL_NONE
+                };
+
+                context = EGLContextPtr(eglCreateContext(display, config, parentContext, contextAttributes), [display{display}](EGLContext context) {
+                    eglDestroyContext(display, context);
+                });
+            }
+
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
             {
                 glGenTextures(1, &cameraTextureId);
@@ -432,6 +486,19 @@ namespace xr
                 Initialize();
             }
 
+            ANativeWindow* activeWindow{ windowProvider() };
+            if (activeWindow != window)
+            {
+                window = activeWindow;
+
+                if (window)
+                {
+                    surface = EGLSurfacePtr(eglCreateWindowSurface(display, config, window, nullptr), [display{display}](EGLSurface surface) {
+                        eglDestroySurface(display, surface);
+                    });
+                }
+            }
+
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
@@ -453,16 +520,17 @@ namespace xr
                 RawToPose(rawPose, ActiveFrameViews[0].Space.Pose);
             }
 
-            // Get the current surface dimensions
+            // Get the current window dimensions
             size_t width{}, height{};
+            if (window)
             {
-                EGLDisplay display{ eglGetCurrentDisplay() };
-                EGLSurface surface{ eglGetCurrentSurface(EGL_DRAW) };
-                EGLint _width{}, _height{};
-                eglQuerySurface(display, surface, EGL_WIDTH, &_width);
-                eglQuerySurface(display, surface, EGL_HEIGHT, &_height);
-                width = static_cast<size_t>(_width);
-                height = static_cast<size_t>(_height);
+                int32_t _width{ANativeWindow_getWidth(window)};
+                int32_t _height{ANativeWindow_getHeight(window)};
+                if (_width > 0 && _height > 0)
+                {
+                    width = static_cast<size_t>(_width);
+                    height = static_cast<size_t>(_height);
+                }
             }
 
             // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
@@ -578,6 +646,8 @@ namespace xr
         {
             // Note the end session has been requested, and respond to the request in the next call to GetNextFrame
             sessionEnded = true;
+
+            surface.reset();
         }
 
         void DrawFrame()
@@ -585,8 +655,10 @@ namespace xr
             // Draw the Babylon render texture to the display, but only if the session has started providing AR frames.
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
-            if (frameTimestamp)
+            if (frameTimestamp && surface.get())
             {
+                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface.get(), surface.get(), context.get()) };
+
                 auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
                 auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
@@ -981,6 +1053,15 @@ namespace xr
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
 
+        std::function<ANativeWindow*()> windowProvider{};
+        ANativeWindow* window{};
+        EGLDisplay display{};
+        EGLConfig config{};
+        EGLint format{};
+        EGLContext parentContext{};
+        EGLContextPtr context;
+        EGLSurfacePtr surface;
+
         GLuint cameraShaderProgramId{};
         GLuint babylonShaderProgramId{};
         GLuint cameraTextureId{};
@@ -1266,8 +1347,8 @@ namespace xr
         });
     }
 
-    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()>)
-        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice) }
+    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, std::move(windowProvider)) }
     {}
 
     System::Session::~Session()
