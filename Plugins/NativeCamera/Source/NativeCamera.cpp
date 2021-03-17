@@ -106,8 +106,14 @@ namespace Babylon::Plugins::Internal
                 }));
 
             video.Set("addEventListener", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+                auto _this = info.This().ToObject();
                 auto callback = info[1].As<Napi::Function>();
-                info.This().ToObject().Set("_cb", callback.As<Napi::Object>().As<Napi::Value>());
+                auto cb = _this.Get("_cb");
+                if (cb.IsFunction())
+                {
+                    throw Napi::Error::New(info.Env(), "Event listener has already been set for video playback.");
+                }
+                _this.Set("_cb", callback.As<Napi::Object>().As<Napi::Value>());
                 }));
 
             video.Set("removeEventListener", Napi::Function::New(env, [](const Napi::CallbackInfo& ) { }));
