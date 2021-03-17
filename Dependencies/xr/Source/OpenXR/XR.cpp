@@ -54,6 +54,14 @@ namespace xr
         std::unique_ptr<XrSupportedExtensions> Extensions;
         xr::SceneUnderstanding SceneUnderstanding{};
         bool IsSessionRunning{ false };
+
+        void Reset()
+        {
+            Session.Reset();
+            SceneSpace.Reset();
+            State = XrSessionState::XR_SESSION_STATE_UNKNOWN;
+            IsSessionRunning = false;
+        }
     };
 
     XrSessionContext::XrSessionContext()
@@ -126,6 +134,11 @@ namespace xr
     const SceneUnderstanding& XrSessionContext::SceneUnderstanding() const
     {
         return ContextImpl->SceneUnderstanding;
+    }
+
+    void XrRegistry::Reset()
+    {
+        globalXrSessionContext = nullptr;
     }
 
     const XrSessionContext& XrRegistry::Context()
@@ -465,6 +478,9 @@ namespace xr
 
                 HandData.HandsInitialized = false;
             }
+
+            // Reset OpenXR Context to release session handle and exit immersive mode
+            XrRegistry::Reset();
         }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)

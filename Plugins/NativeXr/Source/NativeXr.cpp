@@ -428,6 +428,8 @@ namespace Babylon
         m_frameBufferToJsTextureMap.clear();
         m_textureToFrameBufferMap.clear();
         m_activeTextures.clear();
+        m_scheduleFrameCallbacks.clear();
+        m_createRenderTexture.Reset();
 
         return m_frameTask.then(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
             assert(m_session != nullptr);
