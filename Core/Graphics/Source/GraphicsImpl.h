@@ -81,12 +81,6 @@ namespace Babylon
         void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
         FrameBuffer& DefaultFrameBuffer();
 
-        CallbackHandle RegisterOnBeginFrame(std::function<void()> callback);
-        void UnregisterOnBeginFrame(CallbackHandle callbackHandle);
-
-        CallbackHandle RegisterOnEndFrame(std::function<void()> callback);
-        void UnregisterOnEndFrame(CallbackHandle callbackHandle);
-
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
@@ -144,9 +138,6 @@ namespace Babylon
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
-
-        std::map<CallbackHandle, std::function<void()>> m_onBeginFrameCallbacks;
-        std::map<CallbackHandle, std::function<void()>> m_onEndFrameCallbacks;
 
         arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
 

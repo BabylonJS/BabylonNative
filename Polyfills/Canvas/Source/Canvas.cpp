@@ -21,14 +21,15 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 ParentT::InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
+                ParentT::InstanceMethod("dispose", &NativeCanvas::Dispose),
             });
 
-        //env.Global().Set(JS_CONSTRUCTOR_NAME, func);
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : ParentT{info}
+        , m_graphicsImpl{ Graphics::Impl::GetFromJavaScript(info.Env()) }
     {
     }
 
@@ -51,7 +52,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
-        return Context::CreateInstance(info.Env(), this, m_nextViewId++);
+        return Context::CreateInstance(info.Env(), this);
     }
 
     Napi::Value NativeCanvas::GetWidth(const Napi::CallbackInfo&)
@@ -65,7 +66,10 @@ namespace Babylon::Polyfills::Internal
         if (width != m_width && width)
         {
             m_width = width;
-            UpdateRenderTarget();
+            m_dirty = true;
+            /*arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
+                UpdateRenderTarget();
+                });*/
         }
     }
 
@@ -80,21 +84,30 @@ namespace Babylon::Polyfills::Internal
         if (height != m_height && height)
         {
             m_height = height;
-            UpdateRenderTarget();
+            m_dirty = true;
+            /*arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
+                UpdateRenderTarget();
+                });*/
         }
     }
 
     void NativeCanvas::UpdateRenderTarget()
     {
-        if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
+        if (m_dirty)
         {
-            bgfx::destroy(m_frameBufferHandle);
+            if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
+            {
+                m_graphicsImpl.RemoveFrameBuffer(*m_frameBuffer);
+                bgfx::destroy(m_frameBufferHandle);
+            }
+            m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+            m_frameBuffer = &m_graphicsImpl.AddFrameBuffer(m_frameBufferHandle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
+            // destroyed frame buffer will have commited resources (and available resources back)
+            // during frame rendering. Calling bgfx::frame here to get frame buffer handle
+            //bgfx::frame();
+            assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
+            m_dirty = false;
         }
-        m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-        // destroyed frame buffer will have commited resources (and available resources back)
-        // during frame rendering. Calling bgfx::frame here to get frame buffer handle
-        bgfx::frame();
-        assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
     }
 
     struct TextureData final
@@ -122,6 +135,10 @@ namespace Babylon::Polyfills::Internal
         data->Width = m_width;
         data->Height = m_height;
         return Napi::External<TextureData>::New(info.Env(), data);
+    }
+
+    void NativeCanvas::Dispose(const Napi::CallbackInfo& info)
+    {
     }
 }
 

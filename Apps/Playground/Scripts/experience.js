@@ -97,7 +97,7 @@ CreateBoxAsync().then(function () {
     BABYLON.Tools.Log("Loaded");
 
     scene.createDefaultCamera(true);
-    scene.activeCamera.alpha += Math.PI;
+    //scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
 
     if (ibl) {
@@ -107,28 +107,36 @@ CreateBoxAsync().then(function () {
         scene.createDefaultLight(true);
     }
 
+    engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
+        if (premulAlpha === void 0) { premulAlpha = false; }
+        var webGLTexture = texture._hardwareTexture.underlyingResource;
+        this._native.copyTexture(webGLTexture, canvas.getCanvasTexture());
+        texture.isReady = true;
+    };
 
+    var textureGround;
+    var font = "bold 44px monospace";
 BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-            OffscreenCanvas.loadTTF("droidsans", data);
-            /*
+            _native.NativeCanvas.loadTTF("droidsans", data);
+            
             var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
             ground.rotation.x = Math.PI * 0.5;
             ground.position.z = 2;
 
             //Create dynamic texture
             var textureResolution = 512;
-            var textureGround = new BABYLON.DynamicTexture("dynamic texture", textureResolution, scene);
-            var textureContext = textureGround.getContext();
+            textureGround = new BABYLON.DynamicTexture("dynamic texture", textureResolution, scene);
+            //var textureContext = textureGround.getContext();
 
             var materialGround = new BABYLON.StandardMaterial("Mat", scene);
             materialGround.diffuseTexture = textureGround;
             ground.material = materialGround;
             materialGround.backFaceCulling = false;
 
-            var font = "bold 44px monospace";
+            
             textureGround.clear();
             textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
-            */
+            /*
 
             var manager = new BABYLON.GUI.GUI3DManager(scene);
 
@@ -200,7 +208,7 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
             }
 
             addPushButton(scene, manager);
-            
+            */
         }, undefined, undefined, true);
         
 
@@ -250,6 +258,9 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
     }
 
     engine.runRenderLoop(function () {
+        if (textureGround) {
+            textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
+        }
         scene.render();
     });
 

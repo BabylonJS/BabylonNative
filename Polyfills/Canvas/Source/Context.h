@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <Babylon/Graphics.h>
+#include <GraphicsImpl.h>
 
 struct NVGcontext;
 
@@ -14,15 +14,13 @@ namespace Babylon::Polyfills::Internal
 
         using ParentT = Napi::ObjectWrap<Context>;
 
-        static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas, uint32_t viewId);
+        static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
 
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
 
         NVGcontext* GetNVGContext() const { return m_nvg; }
 
-        static void BeginContextsFrame();
-        static void EndContextsFrame();
     private:
 
         void FillRect(const Napi::CallbackInfo&);
@@ -51,6 +49,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetLineWidth(const Napi::CallbackInfo&);
         void SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value);
 
+        void SetDirty();
         void BeginFrame();
         void EndFrame();
 
@@ -60,9 +59,8 @@ namespace Babylon::Polyfills::Internal
 
         std::map<std::string, int> m_fonts;
 
-        Babylon::Graphics& m_graphics;
-        Babylon::Graphics::CallbackHandle m_callbackBeginFrameHandle;
-        Babylon::Graphics::CallbackHandle m_callbackEndFrameHandle;
+        Graphics::Impl& m_graphicsImpl;
+        bool m_dirty{};
 
         friend class Canvas;
     };

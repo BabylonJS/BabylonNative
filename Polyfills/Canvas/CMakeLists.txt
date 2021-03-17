@@ -6,10 +6,12 @@ set(SOURCES
     "Source/Context.h"
     "Source/MeasureText.cpp"
     "Source/MeasureText.h"
+    "Source/nanovg_babylon.cpp"
+    "Source/nanovg_babylon.h"
     )
 
 file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
-file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/*.cpp)
+file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/nanovg.cpp)
 set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
 
 add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES})
@@ -17,13 +19,16 @@ warnings_as_errors(Canvas)
 
 target_include_directories(Canvas PUBLIC "Include"
     PRIVATE "${BGFX_DIR}/3rdparty"
-    PRIVATE "${BGFX_DIR}/examples/common")
+    PRIVATE "${BGFX_DIR}/examples/common"
+    PRIVATE "${BGFX_DIR}/examples/common/nanovg")
 
 target_link_to_dependencies(Canvas PUBLIC napi
+    PUBLIC JsRuntime
+    INTERFACE Graphics
     PRIVATE bgfx
     PRIVATE bimg
     PRIVATE bx
-    PRIVATE Graphics)
+    PRIVATE GraphicsInternal)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

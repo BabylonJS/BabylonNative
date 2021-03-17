@@ -30,13 +30,6 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        typedef uint32_t CallbackHandle;
-        CallbackHandle RegisterOnBeginFrame(std::function<void()> callback);
-        void UnregisterOnBeginFrame(CallbackHandle callbackHandle);
-
-        CallbackHandle RegisterOnEndFrame(std::function<void()> callback);
-        void UnregisterOnEndFrame(CallbackHandle callbackHandle);
-
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
         float GetHardwareScalingLevel();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include <GraphicsImpl.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -20,7 +21,8 @@ namespace Babylon::Polyfills::Internal
         uint32_t GetHeight() const { return m_height; }
 
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
-        bgfx::FrameBufferHandle GetFrameBufferHandle() const { return m_frameBufferHandle; }
+        Babylon::FrameBuffer& GetFrameBuffer() { UpdateRenderTarget(); return *m_frameBuffer; }
+
     private:
 
         Napi::Value GetContext(const Napi::CallbackInfo&);
@@ -30,18 +32,16 @@ namespace Babylon::Polyfills::Internal
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
-        static void BeginContextsFrame(const Napi::CallbackInfo&);
-        static void EndContextsFrame(const Napi::CallbackInfo&);
-
-
+        void Dispose(const Napi::CallbackInfo& info);
         void UpdateRenderTarget();
 
         uint32_t m_width{1};
         uint32_t m_height{1};
 
-        bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
+        Graphics::Impl& m_graphicsImpl;
 
-        // TODO : replace with an availability list
-        static inline uint32_t m_nextViewId{100};
+        bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
+        Babylon::FrameBuffer* m_frameBuffer{};
+        bool m_dirty{};
     };
 }
