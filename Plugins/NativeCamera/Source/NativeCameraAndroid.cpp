@@ -399,6 +399,6 @@ namespace Babylon::Plugins::Internal
 
     std::unique_ptr<CameraInterface> CameraInterface::CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
     {
-        return std::make_unique(new CameraInterfaceAndroid(env, width, height, frontCamera));
+        return std::unique_ptr<CameraInterface>(new CameraInterfaceAndroid(env, width, height, frontCamera));
     }
 }
