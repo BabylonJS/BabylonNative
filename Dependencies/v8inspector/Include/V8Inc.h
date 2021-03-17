@@ -6,9 +6,7 @@
 #endif
 
 #include <v8.h>
-#ifdef V8_USE_INSPECTOR
 #include <v8-inspector.h>
-#endif
 #include <libplatform/libplatform.h>
 
 #ifndef __clang__

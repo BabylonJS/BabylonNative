@@ -6,7 +6,8 @@
 #include <v8.h>
 #include <libplatform/libplatform.h>
 
-#ifdef V8_USE_INSPECTOR
+#if __has_include(<V8InspectorAgent.h>)
+#define V8_INSPECTOR_INCLUDED
 #include <V8InspectorAgent.h>
 #endif
 
@@ -71,7 +72,7 @@ namespace Babylon
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
 
-#ifdef V8_USE_INSPECTOR
+#ifdef V8_INSPECTOR_INCLUDED
             Babylon::V8InspectorAgent inspector{ *Module::Instance().Platform(), isolate, context, "BabylonNative", 5643 };
             inspector.start();
 #endif

@@ -24,7 +24,7 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         target_include_directories(AppRuntime INTERFACE "/usr/include/webkitgtk-4.0/")
     endif()
 
-    if (V8_USE_INSPECTOR)
+    if (V8_INCLUDE_INSPECTOR)
         target_compile_definitions(AppRuntime PUBLIC V8_USE_INSPECTOR)
         target_link_to_dependencies(AppRuntime PRIVATE v8inspector)
     endif()
