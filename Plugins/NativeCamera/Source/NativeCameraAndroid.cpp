@@ -23,6 +23,7 @@
 #include <Babylon/JsRuntimeScheduler.h>
 #include <GraphicsImpl.h>
 #include <arcana/threading/task_schedulers.h>
+#include <memory>
 
 using namespace android;
 using namespace android::global;
@@ -396,8 +397,8 @@ namespace Babylon::Plugins::Internal
         });
     }
 
-    Napi::Value CameraInterface::CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
+    std::unique_ptr<CameraInterface> CameraInterface::CreateInterface(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
     {
-        return Napi::External<CameraInterface>::New(env, new CameraInterfaceAndroid(env, width, height, frontCamera));
+        return std::make_unique(new CameraInterfaceAndroid(env, width, height, frontCamera));
     }
 }

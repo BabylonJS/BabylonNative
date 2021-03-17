@@ -10,6 +10,7 @@
 #include <Babylon/JsRuntimeScheduler.h>
 #include <GraphicsImpl.h>
 #include <arcana/threading/task_schedulers.h>
+#include <memory>
 
 @class CameraTextureDelegate;
 
@@ -76,7 +77,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    Napi::Value CameraInterface::CreateInterface(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    std::unique_ptr<CameraInterface> CameraInterface::CreateInterface(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple(env);
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
@@ -138,7 +139,7 @@ namespace Babylon::Plugins::Internal
             [cameraInterfaceApple->avCaptureSession commitConfiguration];
             [cameraInterfaceApple->avCaptureSession startRunning];
         });
-        return Napi::External<CameraInterface>::New(env, cameraInterfaceApple);
+        return std::unique_ptr<CameraInterface>(cameraInterfaceApple);
     }
 
     void CameraInterfaceApple::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
