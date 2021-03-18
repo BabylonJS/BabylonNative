@@ -380,6 +380,8 @@ namespace Babylon
             std::mutex m_sessionStateChangedCallbackMutex{};
             std::function<void(bool)> m_sessionStateChangedCallback{};
             void* m_windowPtr{};
+            std::optional<arcana::task<void, std::exception_ptr>> m_beginTask{};
+            arcana::task<void, std::exception_ptr> m_endTask{arcana::task_from_result<std::exception_ptr>()};
 
             struct SessionState final
             {
@@ -400,7 +402,7 @@ namespace Babylon
                 arcana::cancellation_source CancellationSource{};
                 bool FrameScheduled{false};
                 std::vector<std::function<void(const xr::System::Session::Frame&)>> ScheduleFrameCallbacks{};
-                arcana::task<void, std::exception_ptr> FrameTask{};
+                arcana::task<void, std::exception_ptr> FrameTask{arcana::task_from_result<std::exception_ptr>()};
             };
 
             std::unique_ptr<SessionState> m_sessionState{};
@@ -447,9 +449,15 @@ namespace Babylon
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
         {
+            if (m_beginTask)
+            {
+                return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
+            }
+
             Graphics::Impl& graphicsImpl{Graphics::Impl::GetFromJavaScript(m_env)};
 
-            return arcana::make_task(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
+            // Don't try to start a session while it is still ending.
+            m_beginTask.emplace(m_endTask.then(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
                 [this, thisRef{shared_from_this()}, &graphicsImpl]() {
                     assert(m_sessionState == nullptr);
 
@@ -468,18 +476,27 @@ namespace Babylon
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
                         });
-                });
+                }));
+
+            return m_beginTask.value();
         }
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::EndSessionAsync()
         {
+            assert(m_beginTask);
+            assert(m_sessionState != nullptr);
+
             m_sessionState->CancellationSource.cancel();
 
             m_sessionState->FrameBufferToJsTextureMap.clear();
             m_sessionState->TextureToFrameBufferMap.clear();
             m_sessionState->ActiveTextures.clear();
 
-            return m_sessionState->FrameTask.then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+            // Don't try to end the session while it is still starting.
+            m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
+                // Also don't try to end the session while a frame is in progress.
+                return m_sessionState->FrameTask;
+            }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                 assert(m_sessionState != nullptr);
                 assert(m_sessionState->Session != nullptr);
                 assert(m_sessionState->Frame == nullptr);
@@ -496,8 +513,11 @@ namespace Babylon
                 } while (!shouldEndSession);
 
                 m_sessionState.reset();
+                m_beginTask.reset();
                 NotifySessionStateChanged(false);
             });
+
+            return m_endTask;
         }
 
         void NativeXr::Impl::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
