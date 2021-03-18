@@ -9,7 +9,7 @@ warnings_as_errors(Window)
 target_include_directories(Window
     PUBLIC "Include")
 
-target_link_to_dependencies(Window 
+target_link_to_dependencies(Window
     PUBLIC napi
     PRIVATE base-n
     PRIVATE JsRuntime
@@ -22,4 +22,3 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 if (APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
 endif()
- 
