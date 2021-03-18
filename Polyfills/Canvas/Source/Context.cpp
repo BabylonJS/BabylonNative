@@ -55,6 +55,8 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{ info[0].As<Napi::External<NativeCanvas>>().Data() }
         , m_nvg{ nvgCreate(1) }
         , m_graphicsImpl{ Graphics::Impl::GetFromJavaScript(info.Env()) }
+        , m_cancellationSource{ std::make_shared<arcana::cancellation_source>() }
+        , m_runtimeScheduler{ Babylon::JsRuntime::GetFromJavaScript(info.Env()) }
     {
         for (auto& font : NativeCanvas::fontsInfos)
         {
@@ -66,6 +68,7 @@ namespace Babylon::Polyfills::Internal
     Context::~Context()
     {
         nvgDelete(m_nvg);
+        m_cancellationSource->cancel();
     }
 
     NVGcolor StringToColor(const std::string& colorString)
@@ -432,9 +435,10 @@ namespace Babylon::Polyfills::Internal
 
         if (!m_fonts.empty())
         {
-            SetDirty();
+            
             nvgFontFaceId(m_nvg, m_fonts.begin()->second);
             nvgText(m_nvg, x, y, text.c_str(), nullptr);
+            SetDirty();
         }
     }
 
@@ -443,13 +447,7 @@ namespace Babylon::Polyfills::Internal
         if (!m_dirty)
         {
             m_dirty = true;
-
-            
-
-            //arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
-                EndFrame();
-                //
-              //  });
+            EndFrame();
         }
     }
 
@@ -473,21 +471,28 @@ namespace Babylon::Polyfills::Internal
 
     void Context::EndFrame()
     {
-        //Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+        m_canvas->UpdateRenderTarget();
 
-        //arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
-            
-        Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-        bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
-        frameBuffer.Clear(encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
-        frameBuffer.SetViewPort(encoder, 0, 0, m_canvas->GetWidth(), m_canvas->GetHeight());
-        nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
-        
-            //bgfx::discard();
-        nvgEndFrame(m_nvg);
-        BeginFrame();
-        m_dirty = false;
-            //});
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
 
+                // JS Thread
+                Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+                bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                frameBuffer.Clear(encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
+                frameBuffer.SetViewPort(encoder, 0, 0, m_canvas->GetWidth(), m_canvas->GetHeight());
+                nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
+
+                //bgfx::discard();
+                nvgEndFrame(m_nvg);
+                BeginFrame();
+                m_dirty = false;
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
+                if (!cancellationSource->cancelled() && result.has_error())
+                {
+                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
+                }
+            });
+        });
     }
 }

@@ -21,7 +21,9 @@ namespace Babylon::Polyfills::Internal
         uint32_t GetHeight() const { return m_height; }
 
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
-        Babylon::FrameBuffer& GetFrameBuffer() { UpdateRenderTarget(); return *m_frameBuffer; }
+
+        void UpdateRenderTarget();
+        Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
     private:
 
@@ -33,7 +35,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
-        void UpdateRenderTarget();
+        
 
         uint32_t m_width{1};
         uint32_t m_height{1};

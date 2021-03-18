@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/JsRuntimeScheduler.h>
 #include <GraphicsImpl.h>
 
 struct NVGcontext;
@@ -61,6 +62,8 @@ namespace Babylon::Polyfills::Internal
 
         Graphics::Impl& m_graphicsImpl;
         bool m_dirty{};
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+        JsRuntimeScheduler m_runtimeScheduler;
 
         friend class Canvas;
     };
