@@ -4,7 +4,7 @@
 #include "Window.h"
 
 #include <Babylon/Graphics.h>
-#include "GraphicsImpl.h"
+#include <GraphicsImpl.h>
 
 namespace Babylon::Polyfills::Internal
 {
