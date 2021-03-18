@@ -133,10 +133,9 @@ namespace {
 /**
  Initializes this session delgate with the given frame views and metal graphics context.
  */
-- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext viewportSize:(CGSize)viewportSize {
+- (id)init:(std::vector<xr::System::Session::Frame::View>*)activeFrameViews metalContext:(id<MTLDevice>)graphicsContext {
     self = [super init];
     self->activeFrameViews = activeFrameViews;
-    self->_viewportSize = viewportSize;
 
     CVReturn err = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, graphicsContext, nil, &textureCache);
     if (err) {
@@ -426,6 +425,10 @@ namespace {
     return _viewportSize;
 }
 
+- (void)setViewSize:(CGSize)size {
+    _viewportSize = size;
+}
+
 @end
 namespace xr {
     namespace {
@@ -542,26 +545,8 @@ namespace xr {
 
         Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
-            , getMainView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<UIView*>(windowProvider()); } }
+            , getXRView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<MTKView*>(windowProvider()); } }
             , metalDevice{ id<MTLDevice>(graphicsContext) } {
-            UIView* mainView = getMainView();
-            [mainView retain];
-
-            // Create the XR View to stay within the safe area of the main view.
-            xrView = [[MTKView alloc] initWithFrame:mainView.bounds device:metalDevice];
-            [mainView addSubview:xrView];
-            xrView.userInteractionEnabled = false;
-            xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-            xrView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
-            metalLayer = (CAMetalLayer *)xrView.layer;
-#pragma clang diagnostic pop
-            metalLayer.device = metalDevice;
-            auto scale = UIScreen.mainScreen.scale;
-            viewportSize.x = mainView.bounds.size.width * scale;
-            viewportSize.y = mainView.bounds.size.height * scale;
 
             // Create the ARSession enable plane detection, and disable lighting estimation.
             session = [ARSession new];
@@ -570,9 +555,10 @@ namespace xr {
             configuration.lightEstimationEnabled = false;
             configuration.worldAlignment = ARWorldAlignmentGravity;
 
-            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice viewportSize:CGSizeMake(viewportSize.x, viewportSize.y)];
+            sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
             session.delegate = sessionDelegate;
-            xrView.delegate = sessionDelegate;
+
+            UpdateXRView();
 
             [session runWithConfiguration:configuration];
 
@@ -587,7 +573,7 @@ namespace xr {
             pipelineStateDescriptor.label = @"XR Pipeline";
             pipelineStateDescriptor.vertexFunction = vertexFunction;
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-            pipelineStateDescriptor.colorAttachments[0].pixelFormat = metalLayer.pixelFormat;
+            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 
             // build pipeline
             NSError* error;
@@ -621,11 +607,44 @@ namespace xr {
             [session pause];
             [session release];
             [pipelineState release];
-            [xrView releaseDrawables];
-            [[xrView superview] release];
-            [xrView removeFromSuperview];
-            [xrView release];
-            xrView = nil;
+            UpdateXRView(nil);
+        }
+
+        void UpdateXRView() {
+            UpdateXRView(getXRView());
+        }
+        
+        void UpdateXRView(MTKView* activeXRView) {
+            // Check whether the xr view has changed, and if so, reconfigure it.
+            if (activeXRView != xrView) {
+                if (xrView) {
+                    xrView.delegate = nil;
+                    [xrView releaseDrawables];
+                    [xrView release];
+                    metalLayer = nil;
+                }
+
+                xrView = activeXRView;
+
+                if (xrView) {
+                    [xrView retain];
+
+                    xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+// NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+                    metalLayer = (CAMetalLayer *)xrView.layer;
+#pragma clang diagnostic pop
+                    metalLayer.device = metalDevice;
+
+                    auto scale = UIScreen.mainScreen.scale;
+                    viewportSize.x = xrView.bounds.size.width * scale;
+                    viewportSize.y = xrView.bounds.size.height * scale;
+                    [sessionDelegate setViewSize:CGSizeMake(viewportSize.x, viewportSize.y)];
+
+                    xrView.delegate = sessionDelegate;
+                }
+            }
         }
 
         /**
@@ -659,18 +678,7 @@ namespace xr {
                 [currentFrame retain];
             }
 
-            // Check whether the main view has changed, and if so, reparent the xr view.
-            UIView* currentSuperview = [xrView superview];
-            UIView* desiredSuperview = getMainView();
-            if (currentSuperview != desiredSuperview) {
-                [currentSuperview release];
-                [xrView removeFromSuperview];
-
-                [xrView setFrame:desiredSuperview.bounds];
-
-                [desiredSuperview retain];
-                [desiredSuperview addSubview:xrView];
-            }
+            UpdateXRView();
 
             [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
 
@@ -786,44 +794,46 @@ namespace xr {
 
         void DrawFrame() {
             @autoreleasepool {
-                // Create a new command buffer for each render pass to the current drawable.
-                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"XRDisplayCommandBuffer";
+                if (metalLayer) {
+                    // Create a new command buffer for each render pass to the current drawable.
+                    id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+                    commandBuffer.label = @"XRDisplayCommandBuffer";
 
-                id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
-                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                    id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
+                    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                if (renderPassDescriptor != nil) {
-                    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                    if (renderPassDescriptor != nil) {
+                        renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
-                    // Create a render command encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"XRDisplayEncoder";
+                        // Create a render command encoder.
+                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                        renderEncoder.label = @"XRDisplayEncoder";
 
-                    // Set the region of the drawable to draw into.
-                    [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
+                        // Set the region of the drawable to draw into.
+                        [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
 
-                    // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:pipelineState];
+                        // Set the shader pipeline.
+                        [renderEncoder setRenderPipelineState:pipelineState];
 
-                    // Set the vertex data.
-                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                        // Set the vertex data.
+                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
-                    // Set the textures.
-                    [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
+                        // Set the textures.
+                        [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
 
-                    // Draw the triangles.
-                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                        // Draw the triangles.
+                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-                    [renderEncoder endEncoding];
+                        [renderEncoder endEncoding];
 
-                    // Schedule a present once the framebuffer is complete using the current drawable.
-                    [commandBuffer presentDrawable:drawable];
+                        // Schedule a present once the framebuffer is complete using the current drawable.
+                        [commandBuffer presentDrawable:drawable];
+                    }
+
+                    // Finalize rendering here & push the command buffer to the GPU.
+                    [commandBuffer commit];
                 }
-
-                // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
 
                 if (currentFrame != nil) {
                     [currentFrame release];
@@ -1049,7 +1059,7 @@ namespace xr {
 
     private:
         ARSession* session{};
-        std::function<UIView*()> getMainView{};
+        std::function<MTKView*()> getXRView{};
         MTKView* xrView{};
         bool sessionEnded{ false };
         id<MTLDevice> metalDevice{};
