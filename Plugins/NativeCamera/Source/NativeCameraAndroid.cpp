@@ -80,7 +80,7 @@ namespace Babylon::Plugins::Internal
         GLuint cameraOESTextureId{};
         GLuint cameraRGBATextureId{};
         GLuint cameraShaderProgramId{};
-        GLuint clearFrameBufferId{};
+        GLuint frameBufferId{};
 
         android::graphics::SurfaceTexture surfaceTexture;
         android::view::Surface surface;
@@ -109,7 +109,7 @@ namespace Babylon::Plugins::Internal
             auto facing = static_cast<acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
 
             // Found a corresponding facing camera?
-            if (facing == (frontCamera?ACAMERA_LENS_FACING_FRONT:ACAMERA_LENS_FACING_BACK))
+            if (facing == (frontCamera ? ACAMERA_LENS_FACING_FRONT : ACAMERA_LENS_FACING_BACK))
             {
                 cameraId = id;
                 break;
@@ -267,7 +267,7 @@ namespace Babylon::Plugins::Internal
 
                 static const EGLint contextAttribs[] = {
                     EGL_CONTEXT_MAJOR_VERSION_KHR,
-                    3,  // Request opengl ES2.0
+                    3,
                     EGL_CONTEXT_MINOR_VERSION_KHR,
                     0,
                     EGL_NONE};
@@ -285,11 +285,12 @@ namespace Babylon::Plugins::Internal
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glGenerateMipmap(GL_TEXTURE_2D);
+
             glBindTexture(GL_TEXTURE_2D, 0);
 
-            glGenFramebuffers(1, &clearFrameBufferId);
-            glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
-            //auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
+            glGenFramebuffers(1, &frameBufferId);
+            glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, cameraRGBATextureId, 0);
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -368,7 +369,7 @@ namespace Babylon::Plugins::Internal
 
         surfaceTexture.updateTexture();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, clearFrameBufferId);
+        glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId);
         glViewport(0, 0, width, height);
         glUseProgram(cameraShaderProgramId);
 
@@ -377,9 +378,7 @@ namespace Babylon::Plugins::Internal
         glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraOESTextureId);
-        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindSampler(0, 0);
+        auto bindSamplerTransaction{ android::OpenGLHelpers::GLTransactions::BindSampler(GL_TEXTURE0, 0) };
 
         // Draw the quad
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
@@ -392,6 +391,7 @@ namespace Babylon::Plugins::Internal
         {
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
+
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             bgfx::overrideInternal(textureHandle, cameraRGBATextureId);
         });
