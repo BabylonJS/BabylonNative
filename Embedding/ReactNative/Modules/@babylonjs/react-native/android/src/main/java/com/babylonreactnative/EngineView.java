@@ -2,7 +2,6 @@ package com.babylonreactnative;
 
 import android.annotation.TargetApi;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -25,6 +24,7 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
     private final SurfaceView primarySurfaceView;
     private final SurfaceView xrSurfaceView;
     private final EventDispatcher reactEventDispatcher;
+    private Runnable renderRunnable;
 
     public EngineView(ReactContext reactContext) {
         super(reactContext);
@@ -57,14 +57,25 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
 
         this.setOnTouchListener(this);
 
-        this.setWillNotDraw(false);
-
         this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
-        // surfaceChanged is also called when the surface is created, so just do all the handling there
+        this.renderRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (BabylonNativeInterop.isXRActive()) {
+                    EngineView.this.xrSurfaceView.setVisibility(View.VISIBLE);
+                } else {
+                    EngineView.this.xrSurfaceView.setVisibility(View.INVISIBLE);
+                }
+
+                BabylonNativeInterop.renderView();
+                EngineView.this.postOnAnimation(this);
+            }
+        };
+        this.postOnAnimation(this.renderRunnable);
     }
 
     @Override
@@ -74,24 +85,14 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
 
     @Override
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+        this.removeCallbacks(this.renderRunnable);
+        this.renderRunnable = null;
     }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
         BabylonNativeInterop.reportMotionEvent(motionEvent);
         return true;
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        if (BabylonNativeInterop.isXRActive()) {
-            this.xrSurfaceView.setVisibility(View.VISIBLE);
-        } else {
-            this.xrSurfaceView.setVisibility(View.INVISIBLE);
-        }
-
-        BabylonNativeInterop.renderView();
-        invalidate();
     }
 
     @TargetApi(24)
