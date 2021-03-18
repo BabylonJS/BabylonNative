@@ -27,10 +27,10 @@ namespace Babylon::Plugins::Internal
 
         Graphics::Impl& m_graphicsImpl;
 
-        CameraTextureDelegate* cameraTextureDelegate;
-        AVCaptureSession* avCaptureSession;
-        CVMetalTextureCacheRef textureCache;
-        id <MTLTexture> textureBGRA;
+        CameraTextureDelegate* cameraTextureDelegate{};
+        AVCaptureSession* avCaptureSession{};
+        CVMetalTextureCacheRef textureCache{};
+        id <MTLTexture> textureBGRA{};
     };
 }
 
