@@ -491,6 +491,8 @@ namespace Babylon
             m_sessionState->FrameBufferToJsTextureMap.clear();
             m_sessionState->TextureToFrameBufferMap.clear();
             m_sessionState->ActiveTextures.clear();
+            m_sessionState->ScheduleFrameCallbacks.clear();
+            m_sessionState->CreateRenderTexture.Reset();
 
             // Don't try to end the session while it is still starting.
             m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {

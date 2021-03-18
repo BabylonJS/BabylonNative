@@ -128,6 +128,11 @@ namespace xr
         return ContextImpl->SceneUnderstanding;
     }
 
+    void XrRegistry::Reset()
+    {
+        globalXrSessionContext = nullptr;
+    }
+
     const XrSessionContext& XrRegistry::Context()
     {
         if (globalXrSessionContext == nullptr)
@@ -465,6 +470,9 @@ namespace xr
 
                 HandData.HandsInitialized = false;
             }
+
+            // Reset OpenXR Context to release session handle and exit immersive mode
+            XrRegistry::Reset();
         }
 
         std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession)
