@@ -65,7 +65,11 @@ extern "C"
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
 
-            g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+            GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+            graphicsConfig.windowPtr = window;
+            graphicsConfig.width = static_cast<size_t>(width);
+            graphicsConfig.height = static_cast<size_t>(height);
+            g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
             g_graphics->StartRenderingCurrentFrame();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
@@ -120,7 +124,11 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-                g_graphics->UpdateWindow<void*>(window);
+                GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+                graphicsConfig.windowPtr = window;
+                graphicsConfig.width = width;
+                graphicsConfig.height = height;
+                g_graphics->UpdateWindow(graphicsConfig);
                 g_graphics->UpdateSize(width, height);
             });
         }
