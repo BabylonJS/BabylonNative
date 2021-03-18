@@ -2,12 +2,11 @@
 
 #include <X11/Xlib.h>
 
-using WindowType = Window*;
+using WindowType = void*;
 
 struct GraphicsConfiguration
 {
     WindowType windowPtr;
-    Screen* screen;
     void* windowTypePtr;
     size_t width;
     size_t height;
