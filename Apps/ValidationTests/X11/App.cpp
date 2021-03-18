@@ -54,14 +54,19 @@ namespace
         runtime.reset();
         graphics.reset();
     }
-    
+
     void InitBabylon(int32_t window)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         Uninitialize();
 
-        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
+        graphicsConfig.windowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.width = static_cast<size_t>(width);
+        graphicsConfig.height = static_cast<size_t>(height);
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
 
@@ -78,7 +83,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            
+
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);

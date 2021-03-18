@@ -6,6 +6,11 @@ constexpr float MILLIMETERS_TO_INCHES = 0.03937;
 
 namespace Babylon
 {
+    void Graphics::Impl::SetNativeWindow(GraphicsConfiguration config)
+    {
+        SetNativeWindowInternal(config);
+    }
+
     float Graphics::Impl::UpdateDevicePixelRatio()
     {
         // TODO: We should persist a Display object instead of opening a new display.
