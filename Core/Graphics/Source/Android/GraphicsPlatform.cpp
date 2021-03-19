@@ -6,7 +6,7 @@
 
 namespace Babylon
 {
-    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& platformData)
+    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
         pd.nwh = config.windowPtr;
