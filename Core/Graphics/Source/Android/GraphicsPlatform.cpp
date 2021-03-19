@@ -8,9 +8,6 @@ namespace Babylon
 {
     void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& platformData)
     {
-        m_state.Bgfx.Dirty = true;
-
-        auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = nullptr;
         pd.nwh = config.windowPtr;
         pd.context = nullptr;
