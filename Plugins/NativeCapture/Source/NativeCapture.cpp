@@ -5,6 +5,7 @@
 #include <Babylon/JsRuntime.h>
 #include <NativeEngine.h>
 #include <GraphicsImpl.h>
+#include <FrameBuffer.h>
 
 #include <vector>
 
@@ -48,7 +49,18 @@ namespace Babylon::Plugins::Internal
             }
             else
             {
-                m_textureData = info[0].As<Napi::External<TextureData>>().Data();
+                auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
+                auto textureHandle = bgfx::getTexture(frameBuffer.Handle());
+                m_textureData = new TextureData();
+                m_textureData->Handle = textureHandle;
+                m_textureData->Width = frameBuffer.Width();
+                m_textureData->Height = frameBuffer.Height();
+                m_textureData->Format = bgfx::TextureFormat::RGBA8;
+                m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4 * 4;
+
+                m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_READ_BACK);
+
+//                m_textureData = info[0].As<Napi::External<TextureData>>().Data();
                 m_textureBuffer.resize(m_textureData->StorageSize);
                 ReadTextureAsync();
             }
@@ -74,7 +86,8 @@ namespace Babylon::Plugins::Internal
         arcana::task<void, std::exception_ptr> ReadTextureAsync()
         {
             return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationToken, [this, cancellation{m_cancellationToken}]{
-                m_graphicsImpl.ReadTextureAsync(m_textureData->Handle, m_textureBuffer).then(arcana::inline_scheduler, *m_cancellationToken, [this]{
+                bgfx::blit(10, m_blitTexture, 0, 0, m_textureData->Handle);
+                m_graphicsImpl.ReadTextureAsync(m_blitTexture, m_textureBuffer).then(arcana::inline_scheduler, *m_cancellationToken, [this]{
                     CaptureDataReceived(m_textureData->Width, m_textureData->Height, m_textureData->StorageSize / m_textureData->Height, m_textureData->Format, true, m_textureBuffer);
                     return ReadTextureAsync();
                 });
@@ -146,6 +159,7 @@ namespace Babylon::Plugins::Internal
         TextureData* m_textureData{};
         std::vector<uint8_t> m_textureBuffer{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationToken{};
+        bgfx::TextureHandle m_blitTexture{};
     };
 }
 

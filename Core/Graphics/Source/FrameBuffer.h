@@ -26,6 +26,8 @@ namespace Babylon
         void SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
 
+        bgfx::FrameBufferHandle Handle() const;
+
     private:
         struct ViewPort
         {

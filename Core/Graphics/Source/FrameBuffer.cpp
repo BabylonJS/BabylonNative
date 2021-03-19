@@ -35,6 +35,11 @@ namespace Babylon
         return (m_height == 0 ? bgfx::getStats()->height : m_height);
     }
 
+    bgfx::FrameBufferHandle FrameBuffer::Handle() const
+    {
+        return m_handle;
+    }
+
     bool FrameBuffer::DefaultBackBuffer() const
     {
         return m_defaultBackBuffer;
