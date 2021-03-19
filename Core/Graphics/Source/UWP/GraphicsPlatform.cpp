@@ -9,12 +9,8 @@ using namespace Windows::Graphics::Display;
 
 namespace Babylon
 {
-    void Graphics::Impl::SetNativeWindow(GraphicsConfiguration config)
+    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
-        SetNativeWindowInternal(config);
-
-        std::scoped_lock lock{m_state.Mutex};
-        auto& pd = m_state.Bgfx.InitState.platformData;
         pd.ndt = config.windowTypePtr;
         pd.nwh = config.windowPtr;
         pd.context = nullptr;

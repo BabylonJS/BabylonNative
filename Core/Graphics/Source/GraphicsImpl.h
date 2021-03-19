@@ -87,14 +87,14 @@ namespace Babylon
         void SetHardwareScalingLevel(float level);
 
         float GetDevicePixelRatio();
-        
+
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
     private:
         friend class UpdateToken;
 
-        void SetNativeWindowInternal(GraphicsConfiguration config);
+        void ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         float UpdateDevicePixelRatio();

@@ -6,9 +6,13 @@
 
 namespace Babylon
 {
-    void Graphics::Impl::SetNativeWindow(GraphicsConfiguration config)
+    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
-        SetNativeWindowInternal(config);
+        pd.ndt = nullptr;
+        pd.nwh = config.windowPtr;
+        pd.context = nullptr;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
     }
 
     float Graphics::Impl::UpdateDevicePixelRatio()
