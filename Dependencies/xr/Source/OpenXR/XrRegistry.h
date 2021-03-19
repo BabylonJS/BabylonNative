@@ -36,5 +36,6 @@ namespace xr
         static const XrSessionContext& Context();
         static uintptr_t GetNativeXrContext();
         static std::string GetNativeXrContextType();
+        static void Reset();
     };
 }
