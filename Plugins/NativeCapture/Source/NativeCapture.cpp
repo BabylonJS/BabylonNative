@@ -56,9 +56,9 @@ namespace Babylon::Plugins::Internal
                 m_textureData->Width = frameBuffer.Width();
                 m_textureData->Height = frameBuffer.Height();
                 m_textureData->Format = bgfx::TextureFormat::RGBA8;
-                m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4 * 4;
+                m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4;
 
-                m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_READ_BACK);
+                m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
 
 //                m_textureData = info[0].As<Napi::External<TextureData>>().Data();
                 m_textureBuffer.resize(m_textureData->StorageSize);
@@ -86,11 +86,12 @@ namespace Babylon::Plugins::Internal
         arcana::task<void, std::exception_ptr> ReadTextureAsync()
         {
             return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationToken, [this, cancellation{m_cancellationToken}]{
-                bgfx::blit(10, m_blitTexture, 0, 0, m_textureData->Handle);
+                bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, m_blitTexture, 0, 0, m_textureData->Handle);
                 m_graphicsImpl.ReadTextureAsync(m_blitTexture, m_textureBuffer).then(arcana::inline_scheduler, *m_cancellationToken, [this]{
                     CaptureDataReceived(m_textureData->Width, m_textureData->Height, m_textureData->StorageSize / m_textureData->Height, m_textureData->Format, true, m_textureBuffer);
-                    return ReadTextureAsync();
+                    //return ReadTextureAsync();
                 });
+                return ReadTextureAsync();
             });
         }
 
