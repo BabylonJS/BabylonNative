@@ -415,8 +415,8 @@ namespace xr
         {
             std::array<HandInfo, 2> HandsInfo{};
 
-            XrBool32 SupportsHandTracking{ false };
-            XrBool32 HandsInitialized{ false };
+            XrBool32 SupportsArticulatedHandTracking{ false };
+            XrBool32 HandTrackersInitialized{ false };
         } HandData;
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -461,14 +461,14 @@ namespace xr
 
         ~Impl()
         {
-            if (HandData.HandsInitialized)
+            if (HandData.HandTrackersInitialized)
             {
                 for (const HandInfo& handInfo : HandData.HandsInfo)
                 {
                     XrCheck(HmdImpl.Context.Extensions()->xrDestroyHandTrackerEXT(handInfo.HandTracker));
                 }
 
-                HandData.HandsInitialized = false;
+                HandData.HandTrackersInitialized = false;
             }
 
             // Reset OpenXR Context to release session handle and exit immersive mode
@@ -645,7 +645,7 @@ namespace xr
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
             // Initialize the hand resources
-            HandData.SupportsHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
+            HandData.SupportsArticulatedHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
             InitializeHandResources();
 
             const XrViewConfigurationType primaryType = HmdImpl.PrimaryViewConfigurationType;
@@ -662,7 +662,7 @@ namespace xr
 
         void InitializeHandResources()
         {
-            if (!HandData.SupportsHandTracking || HandData.HandsInitialized)
+            if (!HandData.SupportsArticulatedHandTracking || HandData.HandTrackersInitialized)
             {
                 return;
             }
@@ -680,7 +680,7 @@ namespace xr
                 XrCheck(HmdImpl.Context.Extensions()->xrCreateHandTrackerEXT(session, &trackerCreateInfo, &HandData.HandsInfo[i].HandTracker));
             }
 
-            HandData.HandsInitialized = true;
+            HandData.HandTrackersInitialized = true;
         }
 
         void CreateControllerActionAndBinding(
@@ -924,6 +924,8 @@ namespace xr
             attachInfo.countActionSets = 1;
             attachInfo.actionSets = &ActionResources.ActionSet;
             XrCheck(xrAttachSessionActionSets(session, &attachInfo));
+
+           // XrCheck(xr)
         }
 
         void PopulateSwapchain(XrSession session,
@@ -1086,8 +1088,30 @@ namespace xr
                     sessionState = stateEvent.state;
                     ProcessSessionState(exitRenderLoop, requestRestart);
                     break;
-                case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
                 case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
+                    ActionResources.ActiveInputSources.resize(ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size());
+                    for (size_t idx = 0; idx < ActionResources.ActiveInputSources.size(); ++idx)
+                    {
+                        XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
+                        const auto& instance = HmdImpl.Context.Instance();
+                        auto& inputSource = ActionResources.ActiveInputSources[idx];
+
+                        XrCheck(xrGetCurrentInteractionProfile(HmdImpl.Context.Session(), ActionResources.ControllerSubactionPaths[idx], &state));
+
+                        if (state.interactionProfile == XR_NULL_PATH)
+                        {
+                            inputSource.interactionProfileName = "";
+                            continue;
+                        }
+
+                        uint32_t count;
+                        XrCheck(xrPathToString(instance, state.interactionProfile, 0, &count, nullptr));
+                        inputSource.interactionProfileName.resize(count);
+                        XrCheck(xrPathToString(instance, state.interactionProfile, count, &count, inputSource.interactionProfileName.data()));
+                    }
+
+                    break;
+                case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
                 default:
                     // DEBUG_PRINT("Ignoring event type %d", header->type);
                     break;
@@ -1573,101 +1597,121 @@ namespace xr
                     }
                 }
 
-                // Get gamepad data 
+                // Get interaction data based on input profile
+                if (!InputSources[idx].interactionProfileName.empty())
                 {
-                    const auto& controllerInfo = sessionImpl.ControllerInfo;
-                    auto& gamepadObject = InputSources[idx].GamepadObject;
-
-                    // Update gamepad data
-                    if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
-                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
-                        (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
-                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
-                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
-                        (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
-                        (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
-                    {
-                        // map the openxr values to populate other states of a button and axes that webxr expects
-                        gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value == 1);
-                        gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value > 0);
-                        gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-                        gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-                        gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = -(gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS]);
-                        gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed);
-                        gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = -(gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS]);
-                        gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed);
-                        gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Touched = (gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] != 0 || gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] != 0);
-
-                        // Only signal that gamepad data is available if the actions were available
-                        InputSources[idx].GamepadTrackedThisFrame = true;
-                    }
-                }
-
-                // Get joint data
-                if (sessionImpl.HandData.HandsInitialized)
-                {
-                    if (sessionImpl.HmdImpl.Context.Extensions()->HandInteractionSupported)
-                    {
-                        const auto& controllerInfo = sessionImpl.ControllerInfo;
-                        auto& gamepadObject = InputSources[idx].GamepadObject;
-
-                        // Get interaction data
-                        if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched)))
-                        {
-                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-
-                            InputSources[idx].GamepadTrackedThisFrame = true;
-                        }
-                    }
-
-                    XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
-                    jointLocateInfo.baseSpace = sceneSpace;
-                    jointLocateInfo.time = displayTime;
-
-                    auto handInfo = sessionImpl.HandData.HandsInfo[idx];
-                    XrCheck(sessionImpl.HmdImpl.Context.Extensions()->xrLocateHandJointsEXT(handInfo.HandTracker, &jointLocateInfo, &handInfo.Locations));
-                    
                     auto& inputSource = InputSources[idx];
-                    inputSource.JointsTrackedThisFrame = handInfo.Locations.isActive;
-                        
-                    // Set up the handJoints vector, skipping the palm joint as webXR doesn't support it
-                    uint32_t JointCountWithoutPalm = handInfo.Locations.jointCount - handInfo.UNUSED_HAND_JOINT_OFFSET;
-
-                    // xrLocateHandJointsEXT will always return the full joint set (or an error), so jointCount should never change
-                    // We have to wait until here to initialize the vector though, as we don't "know" the number of joints until an input report comes in
-                    if (inputSource.HandJoints.size() != JointCountWithoutPalm)
+                    XrPath interactionProfilePath;
+                    XrCheck(xrStringToPath(m_impl->sessionImpl.HmdImpl.Context.Instance(), inputSource.interactionProfileName.data(), &interactionProfilePath));
+                    switch (interactionProfilePath)
                     {
-                        inputSource.HandJoints = std::vector<JointSpace>(JointCountWithoutPalm);
-                    }
+                        case 31:// "/interaction_profiles/microsoft/motion_controller"
+                        {
+                            // Get gamepad data 
+                            const auto& controllerInfo = sessionImpl.ControllerInfo;
+                            auto& gamepadObject = inputSource.GamepadObject;
+
+                            // Update gamepad data
+                            if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
+                                (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
+                                (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
+                            {
+                                // map the openxr values to populate other states of a button and axes that webxr expects
+                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value == 1);
+                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value > 0);
+                                gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+                                gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+                                gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = -(gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS]);
+                                gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed);
+                                gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = -(gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS]);
+                                gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed);
+                                gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Touched = (gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] != 0 || gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] != 0);
+
+                                // Only signal that gamepad data is available if the actions were available
+                                inputSource.GamepadTrackedThisFrame = true;
+                            }
+
+                            break;
+                        }
+                        case 104:// "/interaction_profiles/microsoft/hand_interaction"
+                        {
+                            // Get hand interaction data
+                            if (sessionImpl.HmdImpl.Context.Extensions()->HandInteractionSupported)
+                            {
+                                const auto& controllerInfo = sessionImpl.ControllerInfo;
+                                auto& gamepadObject = inputSource.GamepadObject;
+
+                                // Get interaction data
+                                if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
+                                    (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)))
+                                {
+                                    gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                                    gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                                    gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+                                    gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+
+                                    inputSource.HandTrackedThisFrame = true;
+                                }
+                            }
+
+                            // Get hand joint data
+                            if (sessionImpl.HandData.HandTrackersInitialized)
+                            {
+
+                                XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
+                                jointLocateInfo.baseSpace = sceneSpace;
+                                jointLocateInfo.time = displayTime;
+
+                                auto handInfo = sessionImpl.HandData.HandsInfo[idx];
+                                XrCheck(sessionImpl.HmdImpl.Context.Extensions()->xrLocateHandJointsEXT(handInfo.HandTracker, &jointLocateInfo, &handInfo.Locations));
                     
-                    // Set the joints to tracked, and populate the fields. Otherwise, set joints to untracked
-                    if (inputSource.JointsTrackedThisFrame)
-                    {
-                        constexpr XrSpaceLocationFlags RequiredFlags =
-                            XR_SPACE_LOCATION_POSITION_VALID_BIT |
-                            XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
-                            XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
-                            XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+                                inputSource.JointsTrackedThisFrame = handInfo.Locations.isActive;
+                        
+                                // Set up the handJoints vector, skipping the palm joint as webXR doesn't support it
+                                uint32_t JointCountWithoutPalm = handInfo.Locations.jointCount - handInfo.UNUSED_HAND_JOINT_OFFSET;
 
-                        for (uint32_t i = 0; i < JointCountWithoutPalm; i++)
-                        {
-                            auto joint = handInfo.JointLocations[i + handInfo.UNUSED_HAND_JOINT_OFFSET];
+                                // xrLocateHandJointsEXT will always return the full joint set (or an error), so jointCount should never change
+                                // We have to wait until here to initialize the vector though, as we don't "know" the number of joints until an input report comes in
+                                if (inputSource.HandJoints.size() != JointCountWithoutPalm)
+                                {
+                                    inputSource.HandJoints = std::vector<JointSpace>(JointCountWithoutPalm);
+                                }
+                    
+                                // Set the joints to tracked, and populate the fields. Otherwise, set joints to untracked
+                                if (inputSource.JointsTrackedThisFrame)
+                                {
+                                    constexpr XrSpaceLocationFlags RequiredFlags =
+                                        XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                                        XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+                                        XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
+                                        XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
 
-                            inputSource.HandJoints[i].PoseRadius = joint.radius;
-                            inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
-                            m_impl->UpdatePoseData(inputSource.HandJoints[i].Pose, joint.pose);
+                                    for (uint32_t i = 0; i < JointCountWithoutPalm; i++)
+                                    {
+                                        auto joint = handInfo.JointLocations[i + handInfo.UNUSED_HAND_JOINT_OFFSET];
+
+                                        inputSource.HandJoints[i].PoseRadius = joint.radius;
+                                        inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
+                                        m_impl->UpdatePoseData(inputSource.HandJoints[i].Pose, joint.pose);
+                                    }
+                                }
+                                else
+                                {
+                                    for (auto& joint : inputSource.HandJoints)
+                                    {
+                                        joint.PoseTracked = false;
+                                    }
+                                }
+                            }
+
+                            break;
                         }
-                    }
-                    else
-                    {
-                        for (auto& joint : inputSource.HandJoints)
-                        {
-                            joint.PoseTracked = false;
-                        }
+                        default:
+                        break;
                     }
                 }
             }

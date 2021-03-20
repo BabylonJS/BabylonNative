@@ -157,6 +157,11 @@ namespace
             handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
 
             jsInputSource.Set("hand", handJointCollection);
+
+            auto profiles = Napi::Array::New(env, 1);
+            profiles.Set(uint32_t{0}, Napi::String::New(env, "generic-hand-select-grasp"));
+            profiles.Set(uint32_t{1}, Napi::String::New(env, "generic-hand-select"));
+            jsInputSource.Set("profiles", profiles);
         }
     }
 
@@ -199,12 +204,13 @@ namespace
 
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
-        SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
         profiles.Set(uint32_t{0}, string);
         jsInputSource.Set("profiles", profiles);
+
+        SetXRInputSourceData(jsInputSource, inputSource);
 
         return Napi::Persistent(jsInputSource);
     }
@@ -2326,6 +2332,9 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
+            static constexpr auto JS_EVENT_NAME_SELECT = "select";
+            static constexpr auto JS_EVENT_NAME_SELECT_START = "selectstart";
+            static constexpr auto JS_EVENT_NAME_SELECT_END = "selectend";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2437,6 +2446,7 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+            std::set<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2491,6 +2501,8 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
 
                 for (auto& inputSource : frame.InputSources)
                 {
@@ -2530,11 +2542,37 @@ namespace Babylon
                             SetXRGamepadObjectData(inputSourceVal, gamepadObject, inputSource);
                         }
                     }
+
+                    if (inputSource.GamepadTrackedThisFrame || inputSource.HandTrackedThisFrame)
+                    {
+                        bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
+                        if (isSelected && (m_activeSelects.find(inputSource.ID) == m_activeSelects.end()))
+                        {
+                            selectStarts.insert(inputSource.ID);
+                        }
+                        else if (!isSelected && (m_activeSelects.find(inputSource.ID) != m_activeSelects.end()))
+                        {
+                            selectEnds.insert(inputSource.ID);
+                        }
+                    }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
                 {
                     if (current.find(id) == current.end())
                     {
+                        // Process select for lost sources before we send the source lost event
+                        if (m_activeSelects.find(id) != m_activeSelects.end())
+                        {
+                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                            {
+                                if (name == JS_EVENT_NAME_SELECT_END)
+                                {
+                                    callback.Call({ref.Value()});
+                                }
+                            }
+
+                            m_activeSelects.erase(id);
+                        }
                         // Do not update space association since said spaces no longer exist.
                         removed.insert(id);
                     }
@@ -2581,6 +2619,9 @@ namespace Babylon
                         m_idToInputSource.erase(id);
                     }
                 }
+
+                // Process active selects after firing off any new source added events
+                UpdateInputSelectValue(selectStarts, selectEnds);
             }
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
@@ -2607,6 +2648,48 @@ namespace Babylon
                 {
                     bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
                     m_xr->SetPlaneDetectionEnabled(planeDetectionEnabled);
+                }
+            }
+
+            void UpdateInputSelectValue(std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts, std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds)
+            {
+                for (const auto& id : selectStarts)
+                {
+                    auto inputSourceFound = m_idToInputSource.find(id);
+                    if (inputSourceFound != m_idToInputSource.end())
+                    {
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_SELECT_START)
+                            {
+                                callback.Call({inputSourceFound->second.Value()});
+                            }
+                        }
+
+                        m_activeSelects.insert(id);
+                    }
+                }
+
+                for (const auto& id : selectEnds)
+                {
+                    auto inputSourceFound = m_idToInputSource.find(id);
+                    if (inputSourceFound != m_idToInputSource.end())
+                    {
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_SELECT_END)
+                            {
+                                callback.Call({inputSourceFound->second.Value()});
+                            }
+
+                            if (name == JS_EVENT_NAME_SELECT)
+                            {
+                                callback.Call({inputSourceFound->second.Value()});
+                            }
+                        }
+
+                        m_activeSelects.erase(id);
+                    }
                 }
             }
 
