@@ -330,6 +330,11 @@ namespace xr
             XrAction ControllerGetAimPoseAction{};
             std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerAimPoseSpaces{};
 
+            static constexpr char* DEFAULT_GET_SELECT_CLICK_ACTION_NAME{ "default_get_select_action" };
+            static constexpr char* DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME{ "Default Select" };
+            static constexpr char* DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX{ "/input/select/click" };
+            XrAction DefaultGetSelectValueAction{};
+
             static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME{ "controller_get_trigger_action" };
             static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME{ "Controller Trigger" };
             static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX{ "/input/trigger/value" };
@@ -806,6 +811,16 @@ namespace xr
 
             // Create controller get trigger value action and suggested bindings=
             CreateControllerActionAndBinding(
+                XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_NAME,
+                ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME,
+                ActionResources.DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX,
+                &ActionResources.DefaultGetSelectValueAction,
+                defaultBindings,
+                instance);
+
+            // Create controller get trigger value action and suggested bindings=
+            CreateControllerActionAndBinding(
                 XR_ACTION_TYPE_FLOAT_INPUT, 
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME,
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
@@ -924,8 +939,6 @@ namespace xr
             attachInfo.countActionSets = 1;
             attachInfo.actionSets = &ActionResources.ActionSet;
             XrCheck(xrAttachSessionActionSets(session, &attachInfo));
-
-           // XrCheck(xr)
         }
 
         void PopulateSwapchain(XrSession session,
@@ -1605,7 +1618,7 @@ namespace xr
                     XrCheck(xrStringToPath(m_impl->sessionImpl.HmdImpl.Context.Instance(), inputSource.interactionProfileName.data(), &interactionProfilePath));
                     switch (interactionProfilePath)
                     {
-                        case 31:// "/interaction_profiles/microsoft/motion_controller"
+                        case 31:// MICROSOFT_XR_INTERACTION_PROFILE
                         {
                             // Get gamepad data 
                             const auto& controllerInfo = sessionImpl.ControllerInfo;
@@ -1637,7 +1650,7 @@ namespace xr
 
                             break;
                         }
-                        case 104:// "/interaction_profiles/microsoft/hand_interaction"
+                        case 104:// MICROSOFT_HAND_INTERACTION_PROFILE
                         {
                             // Get hand interaction data
                             if (sessionImpl.HmdImpl.Context.Extensions()->HandInteractionSupported)
@@ -1710,7 +1723,18 @@ namespace xr
 
                             break;
                         }
-                        default:
+                        default:// DEFAULT_XR_INTERACTION_PROFILE
+                        {
+                            const auto& controllerInfo = sessionImpl.ControllerInfo;
+                            auto& gamepadObject = inputSource.GamepadObject;
+
+                            // Get interaction data for select
+                            if ((m_impl->TryUpdateControllerBooleanAction(actionResources.DefaultGetSelectValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)))
+                            {
+                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
+                            }
+                        }
                         break;
                     }
                 }

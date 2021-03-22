@@ -2335,6 +2335,9 @@ namespace Babylon
             static constexpr auto JS_EVENT_NAME_SELECT = "select";
             static constexpr auto JS_EVENT_NAME_SELECT_START = "selectstart";
             static constexpr auto JS_EVENT_NAME_SELECT_END = "selectend";
+            static constexpr auto JS_EVENT_NAME_SQUEEZE = "squeeze";
+            static constexpr auto JS_EVENT_NAME_SQUEEZE_START = "squeezestart";
+            static constexpr auto JS_EVENT_NAME_SQUEEZE_END = "squeezeend";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2447,6 +2450,7 @@ namespace Babylon
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
             std::set<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
+            std::set<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2503,6 +2507,8 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
 
                 for (auto& inputSource : frame.InputSources)
                 {
@@ -2519,7 +2525,7 @@ namespace Babylon
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
 
-                        //Now that input Source is created, create a gamepad object if enabled for the input source
+                        // Now that input Source is created, create a gamepad object if enabled for the input source
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
                         if (inputSource.GamepadTrackedThisFrame)
                         {
@@ -2535,7 +2541,7 @@ namespace Babylon
                         auto inputSourceVal = inputSourceFound->second.Value();
                         SetXRInputSourceData(inputSourceVal, inputSource);
 
-                        //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
+                        // inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
                         if (inputSourceVal.Has("gamepad"))
                         {
                             auto gamepadObject = inputSourceVal.Get("gamepad").As<Napi::Object>();
@@ -2543,35 +2549,58 @@ namespace Babylon
                         }
                     }
 
-                    if (inputSource.GamepadTrackedThisFrame || inputSource.HandTrackedThisFrame)
+                    // Handle gestures. Sources that do not support a gesture will always return false
+                    bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
+                    bool isSqueezed = inputSource.GamepadObject.Buttons[1].Pressed;
+                    if (isSelected && (m_activeSelects.find(inputSource.ID) == m_activeSelects.end()))
                     {
-                        bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
-                        if (isSelected && (m_activeSelects.find(inputSource.ID) == m_activeSelects.end()))
-                        {
-                            selectStarts.insert(inputSource.ID);
-                        }
-                        else if (!isSelected && (m_activeSelects.find(inputSource.ID) != m_activeSelects.end()))
-                        {
-                            selectEnds.insert(inputSource.ID);
-                        }
+                        selectStarts.insert(inputSource.ID);
+                    }
+                    else if (!isSelected && (m_activeSelects.find(inputSource.ID) != m_activeSelects.end()))
+                    {
+                        selectEnds.insert(inputSource.ID);
+                    }
+
+                    if (isSqueezed && (m_activeSqueezes.find(inputSource.ID) == m_activeSqueezes.end()))
+                    {
+                        squeezeStarts.insert(inputSource.ID);
+                    }
+                    else if (!isSqueezed && (m_activeSqueezes.find(inputSource.ID) != m_activeSqueezes.end()))
+                    {
+                        squeezeEnds.insert(inputSource.ID);
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
                 {
                     if (current.find(id) == current.end())
                     {
-                        // Process select for lost sources before we send the source lost event
+                        // Process select and squeeze for lost sources before we send the source lost event
+                        auto inputSourceVal = ref.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
                         if (m_activeSelects.find(id) != m_activeSelects.end())
                         {
                             for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                             {
                                 if (name == JS_EVENT_NAME_SELECT_END)
                                 {
-                                    callback.Call({ref.Value()});
+                                    callback.Call({inputSourceEvent});
                                 }
                             }
 
                             m_activeSelects.erase(id);
+                        }
+
+                        if (m_activeSqueezes.find(id) != m_activeSqueezes.end())
+                        {
+                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                            {
+                                if (name == JS_EVENT_NAME_SQUEEZE_END)
+                                {
+                                    callback.Call({inputSourceEvent});
+                                }
+                            }
+
+                            m_activeSqueezes.erase(id);
                         }
                         // Do not update space association since said spaces no longer exist.
                         removed.insert(id);
@@ -2621,7 +2650,7 @@ namespace Babylon
                 }
 
                 // Process active selects after firing off any new source added events
-                UpdateInputSelectValue(selectStarts, selectEnds, env);
+                UpdateInputSourceEventValues(selectStarts, selectEnds, squeezeStarts, squeezeEnds, env);
             }
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
@@ -2660,7 +2689,12 @@ namespace Babylon
                 return inputSourceEvent;
             }
 
-            void UpdateInputSelectValue(std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts, std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds, Napi::Env env)
+            void UpdateInputSourceEventValues(
+                std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts,
+                std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds,
+                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts,
+                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds,
+                Napi::Env env)
             {
                 for (const auto& id : selectStarts)
                 {
@@ -2679,6 +2713,26 @@ namespace Babylon
                         }
 
                         m_activeSelects.insert(id);
+                    }
+                }
+
+                for (const auto& id : squeezeStarts)
+                {
+                    auto inputSourceFound = m_idToInputSource.find(id);
+                    if (inputSourceFound != m_idToInputSource.end())
+                    {
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_SQUEEZE_START)
+                            {
+                                callback.Call({inputSourceEvent});
+                            }
+                        }
+
+                        m_activeSqueezes.insert(id);
                     }
                 }
 
@@ -2704,6 +2758,31 @@ namespace Babylon
                         }
 
                         m_activeSelects.erase(id);
+                    }
+                }
+
+                for (const auto& id : squeezeEnds)
+                {
+                    auto inputSourceFound = m_idToInputSource.find(id);
+                    if (inputSourceFound != m_idToInputSource.end())
+                    {
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_SQUEEZE_END)
+                            {
+                                callback.Call({inputSourceEvent});
+                            }
+
+                            if (name == JS_EVENT_NAME_SQUEEZE)
+                            {
+                                callback.Call({inputSourceEvent});
+                            }
+                        }
+
+                        m_activeSqueezes.erase(id);
                     }
                 }
             }
