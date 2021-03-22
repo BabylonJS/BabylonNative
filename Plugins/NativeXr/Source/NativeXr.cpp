@@ -2621,7 +2621,7 @@ namespace Babylon
                 }
 
                 // Process active selects after firing off any new source added events
-                UpdateInputSelectValue(selectStarts, selectEnds);
+                UpdateInputSelectValue(selectStarts, selectEnds, env);
             }
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
@@ -2651,18 +2651,30 @@ namespace Babylon
                 }
             }
 
-            void UpdateInputSelectValue(std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts, std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds)
+            Napi::Object GenerateXRInputSourceEvent(Napi::Object& inputSource, Napi::Env env)
+            {
+                auto inputSourceEvent = Napi::Object::New(env);
+                inputSourceEvent.Set("frame", m_jsXRFrame.Value());
+                inputSourceEvent.Set("inputSource", inputSource);
+
+                return inputSourceEvent;
+            }
+
+            void UpdateInputSelectValue(std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts, std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds, Napi::Env env)
             {
                 for (const auto& id : selectStarts)
                 {
                     auto inputSourceFound = m_idToInputSource.find(id);
                     if (inputSourceFound != m_idToInputSource.end())
                     {
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+
                         for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                         {
                             if (name == JS_EVENT_NAME_SELECT_START)
                             {
-                                callback.Call({inputSourceFound->second.Value()});
+                                callback.Call({inputSourceEvent});
                             }
                         }
 
@@ -2675,16 +2687,19 @@ namespace Babylon
                     auto inputSourceFound = m_idToInputSource.find(id);
                     if (inputSourceFound != m_idToInputSource.end())
                     {
+                        auto inputSourceVal = inputSourceFound->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+
                         for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                         {
                             if (name == JS_EVENT_NAME_SELECT_END)
                             {
-                                callback.Call({inputSourceFound->second.Value()});
+                                callback.Call({inputSourceEvent});
                             }
 
                             if (name == JS_EVENT_NAME_SELECT)
                             {
-                                callback.Call({inputSourceFound->second.Value()});
+                                callback.Call({inputSourceEvent});
                             }
                         }
 
