@@ -56,9 +56,9 @@ namespace Babylon
         };
 
         std::unique_ptr<Module> Module::s_module;
-    }
 
-    static unsigned short s_inspectorPort = 0;
+        unsigned short s_inspectorPort = 0;
+    }
 
     void AppRuntime::RunEnvironmentTier(const char* executablePath)
     {
