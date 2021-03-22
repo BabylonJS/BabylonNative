@@ -6,7 +6,7 @@ constexpr float MILLIMETERS_TO_INCHES = 0.03937;
 
 namespace Babylon
 {
-    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
         pd.nwh = config.windowPtr;
@@ -15,7 +15,7 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
-    float Graphics::Impl::UpdateDevicePixelRatio()
+    float GraphicsImpl::UpdateDevicePixelRatio()
     {
         // TODO: We should persist a Display object instead of opening a new display.
         // See https://github.com/BabylonJS/BabylonNative/issues/625

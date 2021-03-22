@@ -3,11 +3,12 @@
 #include "../GraphicsImpl.h"
 
 #include <AppKit/Appkit.h>
+#include <MetalKit/MetalKit.h>
 
 namespace Babylon
 {
 
-    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
         pd.nwh = config.windowPtr;
@@ -16,10 +17,10 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
-    float Graphics::Impl::UpdateDevicePixelRatio()
+    float GraphicsImpl::UpdateDevicePixelRatio()
     {
         std::scoped_lock lock{m_state.Mutex};
-        MTKView* view = (MTKView*)GetNativeWindow();
+        MTKView* view = (MTKView*)GetNativeWindow<WindowType>();
         m_state.Resolution.DevicePixelRatio = view.window.screen.backingScaleFactor;
         return m_state.Resolution.DevicePixelRatio;
     }

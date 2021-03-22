@@ -4,6 +4,7 @@
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
+#import <Babylon/GraphicsPlatform.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>

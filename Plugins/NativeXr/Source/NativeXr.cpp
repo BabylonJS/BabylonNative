@@ -385,12 +385,12 @@ namespace Babylon
 
             struct SessionState final
             {
-                explicit SessionState(Graphics::Impl& graphicsImpl)
+                explicit SessionState(GraphicsImpl& graphicsImpl)
                     : GraphicsImpl{graphicsImpl}
                 {
                 }
 
-                Graphics::Impl& GraphicsImpl;
+                GraphicsImpl& GraphicsImpl;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::map<void*, FrameBuffer*> TextureToFrameBufferMap{};
@@ -454,7 +454,7 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
-            Graphics::Impl& graphicsImpl{Graphics::Impl::GetFromJavaScript(m_env)};
+            GraphicsImpl& graphicsImpl{GraphicsImpl::GetFromJavaScript(m_env)};
 
             // Don't try to start a session while it is still ending.
             m_beginTask.emplace(m_endTask.then(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),

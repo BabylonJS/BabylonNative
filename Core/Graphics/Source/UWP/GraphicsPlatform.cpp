@@ -9,7 +9,7 @@ using namespace Windows::Graphics::Display;
 
 namespace Babylon
 {
-    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = config.windowTypePtr;
         pd.nwh = config.windowPtr;
@@ -18,7 +18,7 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
-    float Graphics::Impl::UpdateDevicePixelRatio()
+    float GraphicsImpl::UpdateDevicePixelRatio()
     {
         // In UWP, DisplayInformation is only accessible from the UI thread. Calling this method from any other thread will cause a crash.
         // See https://docs.microsoft.com/en-us/uwp/api/windows.graphics.display.displayinformation.getforcurrentview?view=winrt-19041#Windows_Graphics_Display_DisplayInformation_GetForCurrentView

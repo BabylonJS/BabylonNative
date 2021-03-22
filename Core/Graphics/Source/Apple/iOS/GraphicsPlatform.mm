@@ -6,7 +6,7 @@
 
 namespace Babylon
 {
-    void Graphics::Impl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
         pd.nwh = config.windowPtr;
@@ -15,10 +15,10 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
-    float Graphics::Impl::UpdateDevicePixelRatio()
+    float GraphicsImpl::UpdateDevicePixelRatio()
     {
         std::scoped_lock lock{m_state.Mutex};
-        MTKView* view = (MTKView*)GetNativeWindow();
+        MTKView* view = (MTKView*)GetNativeWindow<WindowType>();
         m_state.Resolution.DevicePixelRatio = view.contentScaleFactor;
         return m_state.Resolution.DevicePixelRatio;
     }

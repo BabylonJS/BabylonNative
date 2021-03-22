@@ -34,7 +34,7 @@ namespace Babylon::Plugins::Internal
         NativeCapture(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<NativeCapture>{info}
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-            , m_graphicsImpl(Graphics::Impl::GetFromJavaScript(info.Env()))
+            , m_graphicsImpl(GraphicsImpl::GetFromJavaScript(info.Env()))
             , m_ticket{std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); }))}
             , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
         {
@@ -111,7 +111,7 @@ namespace Babylon::Plugins::Internal
         }
 
         JsRuntime& m_runtime;
-        Graphics::Impl& m_graphicsImpl;
+        GraphicsImpl& m_graphicsImpl;
         std::vector<Napi::FunctionReference> m_callbacks{};
         std::unique_ptr<TicketT> m_ticket{};
         Napi::ObjectReference m_jsData{};

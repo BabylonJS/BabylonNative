@@ -1,9 +1,10 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-#include <Babylon/GraphicsPlatform.h>
 
 #include <memory>
+
+struct GraphicsConfiguration;
 
 namespace Babylon
 {
@@ -14,9 +15,9 @@ namespace Babylon
 
         ~Graphics();
 
-        static std::unique_ptr<Graphics> CreateGraphics(GraphicsConfiguration config);
+        static std::unique_ptr<Graphics> CreateGraphics(const GraphicsConfiguration& config);
 
-        void UpdateWindow(GraphicsConfiguration config);
+        void UpdateWindow(const GraphicsConfiguration& config);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);

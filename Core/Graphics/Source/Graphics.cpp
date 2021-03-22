@@ -1,22 +1,25 @@
 #include <Babylon/Graphics.h>
+#include <Babylon/GraphicsPlatform.h>
 #include "GraphicsImpl.h"
 #include <Babylon/Graphics.h>
 
 namespace Babylon
 {
+    class Graphics::Impl : public GraphicsImpl { };
+    
     Graphics::Graphics()
-        : m_impl{std::make_unique<Impl>()}
+        : m_impl{std::make_unique<Graphics::Impl>()}
     {
     }
 
     Graphics::~Graphics() = default;
 
-    void Graphics::UpdateWindow(GraphicsConfiguration config)
+    void Graphics::UpdateWindow(const GraphicsConfiguration& config)
     {
         m_impl->SetNativeWindow(config);
     }
 
-    std::unique_ptr<Graphics> Graphics::CreateGraphics(GraphicsConfiguration config)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const GraphicsConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow(config);
