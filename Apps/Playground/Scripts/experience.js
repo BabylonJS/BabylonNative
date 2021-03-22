@@ -1,3 +1,5 @@
+/// <reference path="../../BabylonScripts/babylon.module.d.ts" />
+
 var wireframe = false;
 var turntable = false;
 var logfps = true;

@@ -2,6 +2,7 @@ set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.glTF2FileLoader.js"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylon.max.js.map"
+    "../BabylonScripts/babylon.module.d.ts"
     "../BabylonScripts/babylonjs.materials.js"
     "../BabylonScripts/babylon.gui.js"
     "../BabylonScripts/ammo.js"
