@@ -212,6 +212,25 @@ namespace Babylon
         return m_frameBufferManager->DefaultFrameBuffer();
     }
 
+    void Graphics::Impl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
+    {
+        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        TextureInfo textureInfo{width, height, hasMips, numLayers, format};
+        m_textureHandleToInfo.emplace(handle.idx, textureInfo);
+    }
+
+    void Graphics::Impl::RemoveTexture(bgfx::TextureHandle handle)
+    {
+        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        m_textureHandleToInfo.erase(handle.idx);
+    }
+
+    Graphics::Impl::TextureInfo Graphics::Impl::GetTextureInfo(bgfx::TextureHandle handle)
+    {
+        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        return m_textureHandleToInfo[handle.idx];
+    }
+
     void Graphics::Impl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
         assert(m_renderThreadAffinity.check());

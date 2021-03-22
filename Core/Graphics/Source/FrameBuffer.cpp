@@ -25,6 +25,11 @@ namespace Babylon
         }
     }
 
+    bgfx::FrameBufferHandle FrameBuffer::Handle() const
+    {
+        return m_handle;
+    }
+
     uint16_t FrameBuffer::Width() const
     {
         return (m_width == 0 ? bgfx::getStats()->width : m_width);
@@ -33,11 +38,6 @@ namespace Babylon
     uint16_t FrameBuffer::Height() const
     {
         return (m_height == 0 ? bgfx::getStats()->height : m_height);
-    }
-
-    bgfx::FrameBufferHandle FrameBuffer::Handle() const
-    {
-        return m_handle;
     }
 
     bool FrameBuffer::DefaultBackBuffer() const

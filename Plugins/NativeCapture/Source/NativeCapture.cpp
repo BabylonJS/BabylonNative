@@ -9,6 +9,138 @@
 
 #include <vector>
 
+namespace
+{
+//    gsl::final_action<std::function<void()>> StartDefaultFrameBufferCapture(std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)> callback)
+//    {
+//        using TicketT = arcana::ticketed_collection<std::function<void(const Babylon::BgfxCallback::CaptureData&)>>::ticket;
+////        auto ticket{std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([](auto& data) { }));};
+//
+//        return gsl::finally<std::function<void()>>([]{
+//
+//        });
+//    }
+
+//    gsl::final_action<std::function<void()>> StartOffScreenFrameBufferCapture(std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)> callback)
+//    {
+//
+//    }
+
+    class FrameProvider
+    {
+    public:
+        virtual void Stop() = 0;
+        //virtual ~FrameProvider() = 0;
+        //static FrameProvider Create(....)
+        
+    private:
+//            class DefaultBufferFrameProvider : FrameProvider
+//            {
+//
+//            };
+//            class DefaultBufferFrameProvider : public FrameProvider
+//            {
+//            public:
+//                DefaultBufferFrameProvider(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
+//                {
+//
+//                }
+//
+//                ~DefaultBufferFrameProvider()
+//                {
+//
+//                }
+//
+//                void Stop()
+//                {
+//
+//                }
+//            };
+//
+//            class OffScreenBufferFrameProvider : public FrameProvider
+//            {
+//            public:
+//                OffScreenBufferFrameProvider(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
+//                {
+//
+//                }
+//
+//                ~OffScreenBufferFrameProvider()
+//                {
+//
+//                }
+//
+//                void Stop()
+//                {
+//
+//                }
+//            };
+    };
+
+    using FrameCallback = std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)>;
+
+    class DefaultBufferFrameProvider : FrameProvider, std::enable_shared_from_this<DefaultBufferFrameProvider>
+    {
+    public:
+        DefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+//            : m_graphicsImpl{graphicsImpl}
+        {
+            m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}, callback{std::move(callback)}](auto& data) {
+                callback(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), data.DataSize});
+            }));
+        }
+
+//        ~DefaultBufferFrameProvider()
+//        {
+//
+//        }
+
+        void Stop()
+        {
+            m_ticket.reset();
+        }
+        
+    private:
+//        void CaptureDataReceived(const Babylon::BgfxCallback::CaptureData& data)
+//        {
+//
+//        }
+
+    private:
+        //Babylon::Graphics::Impl& m_graphicsImpl;
+        std::unique_ptr<Babylon::Graphics::Impl::CaptureCallbackTicketT> m_ticket{};
+    };
+
+//    class OffScreenBufferFrameProvider : FrameProvider, std::enable_shared_from_this<OffScreenBufferFrameProvider>
+//    {
+//    public:
+//        OffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+//        {
+//            auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
+//            auto textureHandle = bgfx::getTexture(frameBuffer.Handle());
+//            m_textureData = new TextureData();
+//            m_textureData->Handle = textureHandle;
+//            m_textureData->Width = frameBuffer.Width();
+//            m_textureData->Height = frameBuffer.Height();
+//            m_textureData->Format = bgfx::TextureFormat::BGRA8;
+//            m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4;
+//
+//            m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+//
+//            m_textureBuffer.resize(m_textureData->StorageSize);
+//            ReadTextureAsync();
+//        }
+//        
+//    private:
+//        std::vector<uint8_t> m_textureBuffer{};
+//    };
+
+//    std::shared_ptr<FrameProvider> CreateDefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+//    {
+//        return std::shared_ptr<FrameProvider>{new DefaultBufferFrameProvider(graphicsImpl, callback)};
+//    }
+}
+
 namespace Babylon::Plugins::Internal
 {
     class NativeCapture : public Napi::ObjectWrap<NativeCapture>
@@ -51,11 +183,13 @@ namespace Babylon::Plugins::Internal
             {
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
                 auto textureHandle = bgfx::getTexture(frameBuffer.Handle());
+                auto textureInfo = m_graphicsImpl.GetTextureInfo(textureHandle);
                 m_textureData = new TextureData();
                 m_textureData->Handle = textureHandle;
                 m_textureData->Width = frameBuffer.Width();
                 m_textureData->Height = frameBuffer.Height();
-                m_textureData->Format = bgfx::TextureFormat::BGRA8;
+                //m_textureData->Format = bgfx::TextureFormat::BGRA8;
+                m_textureData->Format = textureInfo.Format;
                 m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4;
 
                 m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
