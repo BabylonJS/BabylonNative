@@ -112,25 +112,19 @@ namespace
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
         graphics->StartRenderingCurrentFrame();
 
-        auto usingV8Inspector = false;
 #ifdef V8_ENGINE
-        usingV8Inspector = Babylon::AppRuntimeV8::EnableInspector(5642);
+        Babylon::AppRuntimeV8::EnableInspector(5642);
 #endif
 
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-        runtime->Dispatch([width, height, hWnd, usingV8Inspector](Napi::Env env) {
+        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
             graphics->AddToJavaScript(env);
             
-            // If we've initialized the inspector server, console messages 
-            // will be sent to the DevTools console.
-            if (!usingV8Inspector)
-            {
-                Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                    OutputDebugStringA(message);
-                });
-            }
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                OutputDebugStringA(message);
+            }, true);
 
             Babylon::Polyfills::Window::Initialize(env);
 

@@ -62,8 +62,11 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::Console
 {
-    void Initialize(Napi::Env env, CallbackT callback)
+    void Initialize(Napi::Env env, CallbackT callback, bool overrideEngine)
     {
-        Internal::Console::CreateInstance(env, std::move(callback));
+        if (overrideEngine || env.Global().Get(Babylon::Polyfills::Internal::Console::JS_INSTANCE_NAME).IsUndefined())
+        {
+            Internal::Console::CreateInstance(env, std::move(callback));
+        }
     }
 }
