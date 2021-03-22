@@ -55,7 +55,7 @@ namespace Babylon::Plugins::Internal
                 m_textureData->Handle = textureHandle;
                 m_textureData->Width = frameBuffer.Width();
                 m_textureData->Height = frameBuffer.Height();
-                m_textureData->Format = bgfx::TextureFormat::RGBA8;
+                m_textureData->Format = bgfx::TextureFormat::BGRA8;
                 m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4;
 
                 m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
