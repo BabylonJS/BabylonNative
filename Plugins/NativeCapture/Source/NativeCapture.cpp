@@ -111,41 +111,6 @@ namespace
             return OffScreenBufferFrameProvider::Create(graphicsImpl, frameBufferHandle, std::move(callback));
         }
     }
-
-//    FrameProviderTicket BeginFrameCapture(Babylon::JsRuntime& runtime, Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
-//    {
-//        auto cancellationToken{std::make_shared<arcana::cancellation_source>()};
-//
-//        FrameCallback wrapper{[&runtime, cancellationToken, callback{std::move(callback)}](uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data){
-//            std::vector<uint8_t> bytes{};
-//            bytes.resize(data.size());
-//            std::memcpy(bytes.data(), data.data(), data.size());
-//            runtime.Dispatch([cancellationToken{std::move(cancellationToken)}, callback{std::move(callback)}, width, height, format, yFlip, bytes{std::move(bytes)}](Napi::Env) mutable {
-//                if (!cancellationToken->cancelled())
-//                {
-//                    callback(width, height, format, yFlip, bytes);
-//                }
-//            });
-//        }};
-//
-//        std::optional<FrameProviderTicket> ticket{};
-//        if (!bgfx::isValid(frameBufferHandle))
-//        {
-//            ticket.emplace(DefaultBufferFrameProvider::Create(graphicsImpl, std::move(wrapper)));
-//        }
-//        else
-//        {
-//            ticket.emplace(OffScreenBufferFrameProvider::Create(graphicsImpl, frameBufferHandle, std::move(wrapper)));
-//        }
-//
-//        return gsl::finally<FrameProviderCleanup>([]{
-//           // cancellationToken->cancel();
-//        });
-//
-////        return gsl::finally<FrameProviderCleanup>([ticket{std::move(ticket)}, cancellationToken]{
-////            cancellationToken->cancel();
-////        });
-//    }
 }
 
 namespace Babylon::Plugins::Internal
