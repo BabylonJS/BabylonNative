@@ -82,7 +82,11 @@ namespace
             arcana::task<void, std::exception_ptr> ReadTextureAsync()
             {
                 return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}]{
+                    // bgfx does not allow readback of render textures, so the frame buffer render texture needs to be blitted to a texture with readback enabled.
                     bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
+
+                    // Reading the texture is an async operation, but everything that needs to be done prior to future write operations on that texture is completed synchronously,
+                    // so we kick off the read for the next frame prior to the read for the current frame completes.
                     return arcana::when_all(thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef]{
                         thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
                     }),
@@ -102,6 +106,7 @@ namespace
             arcana::cancellation_source m_cancellationToken{};
         };
 
+        // An invalid frame buffer handle indicates the on screen / default frame buffer, otherwise we are dealing with an off screen frame buffer.
         if (!bgfx::isValid(frameBufferHandle))
         {
             return DefaultBufferFrameProvider::Create(graphicsImpl, std::move(callback));
@@ -151,6 +156,7 @@ namespace Babylon::Plugins::Internal
 
             bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
 
+            // For an off screen frame buffer, the frame buffer must be passed into the constructor. Otherwise, we capture the on screen / default frame buffer.
             if (info.Length() > 0 && info[0].IsExternal())
             {
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
