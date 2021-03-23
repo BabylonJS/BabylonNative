@@ -41,25 +41,6 @@ namespace xr
             std::vector<System::Session::Frame::Mesh::Identifier>& RemovedMeshes;
         };
 
-        struct Mesh : SceneMesh
-        {
-            XrSceneMeshKeyMSFT key;
-            XrSceneObjectKeyMSFT parentObjectKey;
-        };
-
-        struct Plane : ScenePlane
-        {
-            XrScenePlaneKeyMSFT key;
-            XrSceneObjectKeyMSFT parentObjectKey;
-        };
-
-        struct SceneObject : public xr::System::Session::Frame::SceneObject
-        {
-            std::map<XrSceneMeshKeyMSFT, Mesh> Meshes;
-            std::map<XrScenePlaneKeyMSFT, Plane> Planes;
-            XrPosef Pose;
-        };
-
         SceneUnderstanding();
         ~SceneUnderstanding();
         void Initialize(const InitOptions& options) const;

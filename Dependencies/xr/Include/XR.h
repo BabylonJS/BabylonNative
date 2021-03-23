@@ -154,6 +154,8 @@ namespace xr
         Floor,
         Ceiling,
         Platform,
+        Inferred,
+        World,
         Undefined
     };
 
@@ -164,7 +166,9 @@ namespace xr
         {xr::SceneObjectType::Ceiling, "ceiling" },
         {xr::SceneObjectType::Floor, "floor" },
         {xr::SceneObjectType::Platform, "platform" },
-        {xr::SceneObjectType::Wall, "wall" }
+        {xr::SceneObjectType::Wall, "wall" },
+        {xr::SceneObjectType::Inferred, "inferred" },
+        {xr::SceneObjectType::World, "world" }
     };
 
     class System
