@@ -15,12 +15,13 @@ namespace
     using FrameProviderCleanup = std::function<void()>;
     using FrameProviderTicket = gsl::final_action<FrameProviderCleanup>;
 
-    class DefaultBufferFrameProvider : std::enable_shared_from_this<DefaultBufferFrameProvider>
+    class DefaultBufferFrameProvider : public std::enable_shared_from_this<DefaultBufferFrameProvider>
     {
     public:
         static FrameProviderTicket Create(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
         {
             std::shared_ptr<DefaultBufferFrameProvider> frameProvider{new DefaultBufferFrameProvider(graphicsImpl, std::move(callback))};
+            frameProvider->StartCapture();
             return gsl::finally<FrameProviderCleanup>([frameProvider{std::move(frameProvider)}]() mutable {
                 frameProvider->m_ticket.reset();
             });
@@ -28,15 +29,22 @@ namespace
 
     private:
         DefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+            : m_graphicsImpl{graphicsImpl}
+            , m_frameCallback{std::move(callback)}
         {
-            m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}, callback{std::move(callback)}](auto& data) {
-                // TODO: Store this in the base class, and have a base class function that is responsible for allocating the temp buffer and dispatching to the JS thread before calling the callback
-                callback(data.Width, data.Height, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
+        }
+
+        void StartCapture()
+        {
+            m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(m_graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}](auto& data) {
+                thisRef->m_frameCallback(data.Width, data.Height, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
             }));
         }
 
     private:
+        Babylon::Graphics::Impl& m_graphicsImpl;
         std::unique_ptr<Babylon::Graphics::Impl::CaptureCallbackTicketT> m_ticket{};
+        FrameCallback m_frameCallback{};
     };
 
     class OffScreenBufferFrameProvider : public std::enable_shared_from_this<OffScreenBufferFrameProvider>
@@ -103,6 +111,41 @@ namespace
             return OffScreenBufferFrameProvider::Create(graphicsImpl, frameBufferHandle, std::move(callback));
         }
     }
+
+//    FrameProviderTicket BeginFrameCapture(Babylon::JsRuntime& runtime, Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+//    {
+//        auto cancellationToken{std::make_shared<arcana::cancellation_source>()};
+//
+//        FrameCallback wrapper{[&runtime, cancellationToken, callback{std::move(callback)}](uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data){
+//            std::vector<uint8_t> bytes{};
+//            bytes.resize(data.size());
+//            std::memcpy(bytes.data(), data.data(), data.size());
+//            runtime.Dispatch([cancellationToken{std::move(cancellationToken)}, callback{std::move(callback)}, width, height, format, yFlip, bytes{std::move(bytes)}](Napi::Env) mutable {
+//                if (!cancellationToken->cancelled())
+//                {
+//                    callback(width, height, format, yFlip, bytes);
+//                }
+//            });
+//        }};
+//
+//        std::optional<FrameProviderTicket> ticket{};
+//        if (!bgfx::isValid(frameBufferHandle))
+//        {
+//            ticket.emplace(DefaultBufferFrameProvider::Create(graphicsImpl, std::move(wrapper)));
+//        }
+//        else
+//        {
+//            ticket.emplace(OffScreenBufferFrameProvider::Create(graphicsImpl, frameBufferHandle, std::move(wrapper)));
+//        }
+//
+//        return gsl::finally<FrameProviderCleanup>([]{
+//           // cancellationToken->cancel();
+//        });
+//
+////        return gsl::finally<FrameProviderCleanup>([ticket{std::move(ticket)}, cancellationToken]{
+////            cancellationToken->cancel();
+////        });
+//    }
 }
 
 namespace Babylon::Plugins::Internal
