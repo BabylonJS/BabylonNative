@@ -20,7 +20,9 @@ namespace Babylon::Polyfills::Internal
         void Warn(const Napi::CallbackInfo& info);
         void Error(const Napi::CallbackInfo& info);
         void InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel) const;
+        void InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info);
 
+        std::unique_ptr<Napi::FunctionReference> m_engineConsole;
         Babylon::Polyfills::Console::CallbackT m_callback{};
     };
 }

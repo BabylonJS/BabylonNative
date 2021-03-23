@@ -124,7 +124,7 @@ namespace
             
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
-            }, true);
+            });
 
             Babylon::Polyfills::Window::Initialize(env);
 
