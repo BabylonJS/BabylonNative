@@ -30,7 +30,9 @@ namespace
     {
     public:
         virtual void Stop() = 0;
-        //virtual ~FrameProvider() = 0;
+        virtual ~FrameProvider()
+        {
+        }
         //static FrameProvider Create(....)
         
     private:
@@ -79,14 +81,14 @@ namespace
 
     using FrameCallback = std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)>;
 
-    class DefaultBufferFrameProvider : FrameProvider, std::enable_shared_from_this<DefaultBufferFrameProvider>
+    class DefaultBufferFrameProvider : public FrameProvider, std::enable_shared_from_this<DefaultBufferFrameProvider>
     {
     public:
         DefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
 //            : m_graphicsImpl{graphicsImpl}
         {
             m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}, callback{std::move(callback)}](auto& data) {
-                callback(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), data.DataSize});
+                callback(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
             }));
         }
 
@@ -95,7 +97,7 @@ namespace
 //
 //        }
 
-        void Stop()
+        void Stop() override
         {
             m_ticket.reset();
         }
@@ -111,34 +113,63 @@ namespace
         std::unique_ptr<Babylon::Graphics::Impl::CaptureCallbackTicketT> m_ticket{};
     };
 
-//    class OffScreenBufferFrameProvider : FrameProvider, std::enable_shared_from_this<OffScreenBufferFrameProvider>
-//    {
-//    public:
-//        OffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
-//        {
-//            auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
-//            auto textureHandle = bgfx::getTexture(frameBuffer.Handle());
-//            m_textureData = new TextureData();
-//            m_textureData->Handle = textureHandle;
-//            m_textureData->Width = frameBuffer.Width();
-//            m_textureData->Height = frameBuffer.Height();
-//            m_textureData->Format = bgfx::TextureFormat::BGRA8;
-//            m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4;
-//
-//            m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
-//
-//            m_textureBuffer.resize(m_textureData->StorageSize);
-//            ReadTextureAsync();
-//        }
-//        
-//    private:
-//        std::vector<uint8_t> m_textureBuffer{};
-//    };
+    class OffScreenBufferFrameProvider : public FrameProvider, std::enable_shared_from_this<OffScreenBufferFrameProvider>
+    {
+    public:
+        OffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+            : m_graphicsImpl{graphicsImpl}
+            , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
+            , m_textureInfo{graphicsImpl.GetTextureInfo(m_frameBufferTextureHandle)}
+            , m_blitTextureHandle{bgfx::createTexture2D(m_textureInfo.Width, m_textureInfo.Height, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)}
+        {
+            bgfx::TextureInfo textureInfo{};
+            bgfx::calcTextureSize(textureInfo, m_textureInfo.Width, m_textureInfo.Height, 1, false, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format);
+            m_textureBuffer.resize(textureInfo.storageSize);
 
-//    std::shared_ptr<FrameProvider> CreateDefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
-//    {
-//        return std::shared_ptr<FrameProvider>{new DefaultBufferFrameProvider(graphicsImpl, callback)};
-//    }
+            ReadTextureAsync(std::move(callback));
+        }
+
+        ~OffScreenBufferFrameProvider()
+        {
+            bgfx::destroy(m_blitTextureHandle);
+        }
+
+        void Stop() override
+        {
+            m_cancellationToken.cancel();
+        }
+
+    private:
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(FrameCallback callback)
+        {
+            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}, callback{std::move(callback)}]{
+                bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
+                // todo: arcana::when_all
+                thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef, callback]{
+                    callback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, 0 /*todo*/, thisRef->m_textureInfo.Format, true /*todo*/, thisRef->m_textureBuffer);
+                });
+                return thisRef->ReadTextureAsync(callback);
+            });
+        }
+
+    private:
+        Babylon::Graphics::Impl& m_graphicsImpl;
+        bgfx::TextureHandle m_frameBufferTextureHandle{bgfx::kInvalidHandle};
+        Babylon::Graphics::Impl::TextureInfo m_textureInfo{};
+        bgfx::TextureHandle m_blitTextureHandle{bgfx::kInvalidHandle};
+        std::vector<uint8_t> m_textureBuffer{};
+        arcana::cancellation_source m_cancellationToken{};
+    };
+
+    std::shared_ptr<FrameProvider> CreateDefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+    {
+        return std::shared_ptr<FrameProvider>{std::make_shared<DefaultBufferFrameProvider>(graphicsImpl, callback)};
+    }
+
+    std::shared_ptr<FrameProvider> CreateOffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+    {
+        return std::shared_ptr<FrameProvider>{std::make_shared<OffScreenBufferFrameProvider>(graphicsImpl, frameBufferHandle, callback)};
+    }
 }
 
 namespace Babylon::Plugins::Internal
@@ -231,7 +262,7 @@ namespace Babylon::Plugins::Internal
 
         void CaptureDataReceived(const BgfxCallback::CaptureData& data)
         {
-            CaptureDataReceived(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), data.DataSize});
+            CaptureDataReceived(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
         }
 
         void CaptureDataReceived(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
