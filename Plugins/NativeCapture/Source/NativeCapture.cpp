@@ -11,7 +11,7 @@
 
 namespace
 {
-    using FrameCallback = std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)>;
+    using FrameCallback = std::function<void(uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)>;
     using FrameProviderCleanup = std::function<void()>;
     using FrameProviderTicket = gsl::final_action<FrameProviderCleanup>;
 
@@ -31,7 +31,7 @@ namespace
         {
             m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}, callback{std::move(callback)}](auto& data) {
                 // TODO: Store this in the base class, and have a base class function that is responsible for allocating the temp buffer and dispatching to the JS thread before calling the callback
-                callback(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
+                callback(data.Width, data.Height, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
             }));
         }
 
@@ -75,7 +75,7 @@ namespace
                 bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
                 // todo: arcana::when_all
                 thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef]{
-                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, 0 /*todo*/, thisRef->m_textureInfo.Format, true /*todo*/, thisRef->m_textureBuffer);
+                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, true /*todo*/, thisRef->m_textureBuffer);
                 });
                 return thisRef->ReadTextureAsync();
             });
@@ -136,13 +136,13 @@ namespace Babylon::Plugins::Internal
             Napi::Object jsData = m_jsData.Value();
             jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));
 
-            FrameCallback frameCallback{[this](uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data){
-                CaptureDataReceived(width, height, pitch, format, yFlip, data);
+            FrameCallback frameCallback{[this](uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data){
+                CaptureDataReceived(width, height, format, yFlip, data);
             }};
 
             bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
 
-            if (info[0].IsExternal())
+            if (info.Length > 0 && info[0].IsExternal())
             {
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
                 frameBufferHandle = frameBuffer.Handle();
@@ -168,19 +168,21 @@ namespace Babylon::Plugins::Internal
             m_callbacks.push_back(Napi::Persistent(listener));
         }
 
-        void CaptureDataReceived(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
+        void CaptureDataReceived(uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
         {
             std::vector<uint8_t> bytes{};
             bytes.resize(data.size());
             std::memcpy(bytes.data(), data.data(), data.size());
-            m_runtime.Dispatch([this, width, height, pitch, format, yFlip, bytes{std::move(bytes)}](Napi::Env env) mutable {
+            m_runtime.Dispatch([this, width, height, format, yFlip, bytes{std::move(bytes)}](Napi::Env env) mutable {
                 Napi::Object jsData = m_jsData.Value();
                 jsData.Set("width", static_cast<double>(width));
                 jsData.Set("height", static_cast<double>(height));
-                jsData.Set("pitch", static_cast<double>(pitch));
                 constexpr auto FORMAT_MEMBER_NAME = "format";
                 switch (format)
                 {
+                    case bgfx::TextureFormat::RGBA8:
+                        jsData.Set(FORMAT_MEMBER_NAME, "RGBA8");
+                        break;
                     case bgfx::TextureFormat::BGRA8:
                         jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
                         break;
