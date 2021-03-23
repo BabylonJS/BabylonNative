@@ -9,7 +9,7 @@ using namespace Windows::Graphics::Display;
 
 namespace Babylon
 {
-    void GraphicsImpl::ConfigureBgfxPlatformData(GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = config.windowTypePtr;
         pd.nwh = config.windowPtr;
