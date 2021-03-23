@@ -37,13 +37,11 @@ namespace Babylon
         }
 
         bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
-        bgfx::TextureFormat::Enum Format{};
         bool OwnsHandle{true};
         uint32_t Width{0};
         uint32_t Height{0};
         uint32_t Flags{0};
         uint8_t AnisotropicLevel{0};
-        uint32_t StorageSize{0};
     };
 
     struct UniformInfo final

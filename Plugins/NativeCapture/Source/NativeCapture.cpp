@@ -3,7 +3,6 @@
 #include <arcana/containers/ticketed_collection.h>
 
 #include <Babylon/JsRuntime.h>
-#include <NativeEngine.h>
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
