@@ -11,72 +11,14 @@
 
 namespace
 {
-//    gsl::final_action<std::function<void()>> StartDefaultFrameBufferCapture(std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)> callback)
-//    {
-//        using TicketT = arcana::ticketed_collection<std::function<void(const Babylon::BgfxCallback::CaptureData&)>>::ticket;
-////        auto ticket{std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([](auto& data) { }));};
-//
-//        return gsl::finally<std::function<void()>>([]{
-//
-//        });
-//    }
-
-//    gsl::final_action<std::function<void()>> StartOffScreenFrameBufferCapture(std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)> callback)
-//    {
-//
-//    }
-
     class FrameProvider
     {
     public:
+        // TODO: Maybe pass a cancellation token to the constructor and remove stop?
         virtual void Stop() = 0;
         virtual ~FrameProvider()
         {
         }
-        //static FrameProvider Create(....)
-        
-    private:
-//            class DefaultBufferFrameProvider : FrameProvider
-//            {
-//
-//            };
-//            class DefaultBufferFrameProvider : public FrameProvider
-//            {
-//            public:
-//                DefaultBufferFrameProvider(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
-//                {
-//
-//                }
-//
-//                ~DefaultBufferFrameProvider()
-//                {
-//
-//                }
-//
-//                void Stop()
-//                {
-//
-//                }
-//            };
-//
-//            class OffScreenBufferFrameProvider : public FrameProvider
-//            {
-//            public:
-//                OffScreenBufferFrameProvider(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
-//                {
-//
-//                }
-//
-//                ~OffScreenBufferFrameProvider()
-//                {
-//
-//                }
-//
-//                void Stop()
-//                {
-//
-//                }
-//            };
     };
 
     using FrameCallback = std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)>;
@@ -85,31 +27,19 @@ namespace
     {
     public:
         DefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
-//            : m_graphicsImpl{graphicsImpl}
         {
             m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}, callback{std::move(callback)}](auto& data) {
+                // TODO: Store this in the base class, and have a base class function that is responsible for allocating the temp buffer and dispatching to the JS thread before calling the callback
                 callback(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
             }));
         }
-
-//        ~DefaultBufferFrameProvider()
-//        {
-//
-//        }
 
         void Stop() override
         {
             m_ticket.reset();
         }
-        
-    private:
-//        void CaptureDataReceived(const Babylon::BgfxCallback::CaptureData& data)
-//        {
-//
-//        }
 
     private:
-        //Babylon::Graphics::Impl& m_graphicsImpl;
         std::unique_ptr<Babylon::Graphics::Impl::CaptureCallbackTicketT> m_ticket{};
     };
 
@@ -176,8 +106,6 @@ namespace Babylon::Plugins::Internal
 {
     class NativeCapture : public Napi::ObjectWrap<NativeCapture>
     {
-        using TicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
-
     public:
         static constexpr auto JS_CLASS_NAME = "NativeCapture";
 
@@ -199,43 +127,33 @@ namespace Babylon::Plugins::Internal
         NativeCapture(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<NativeCapture>{info}
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-            , m_graphicsImpl(Graphics::Impl::GetFromJavaScript(info.Env()))
             , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
-            , m_cancellationToken{std::make_shared<arcana::cancellation_source>()}
         {
+            auto& graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())};
+
             Napi::Object jsData = m_jsData.Value();
             jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));
 
+            FrameCallback frameCallback{[this](uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data){
+                CaptureDataReceived(width, height, pitch, format, yFlip, data);
+            }};
+
             if (info.Length() == 0)
             {
-                m_ticket = std::make_unique<TicketT>(m_graphicsImpl.AddCaptureCallback([this](auto& data) { CaptureDataReceived(data); }));
+                m_frameProvider = CreateDefaultBufferFrameProvider(graphicsImpl, std::move(frameCallback));
             }
             else
             {
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
-                auto textureHandle = bgfx::getTexture(frameBuffer.Handle());
-                auto textureInfo = m_graphicsImpl.GetTextureInfo(textureHandle);
-                m_textureData = new TextureData();
-                m_textureData->Handle = textureHandle;
-                m_textureData->Width = frameBuffer.Width();
-                m_textureData->Height = frameBuffer.Height();
-                //m_textureData->Format = bgfx::TextureFormat::BGRA8;
-                m_textureData->Format = textureInfo.Format;
-                m_textureData->StorageSize = frameBuffer.Width() * frameBuffer.Height() * 4;
-
-                m_blitTexture = bgfx::createTexture2D(m_textureData->Width, m_textureData->Height, false, 1, m_textureData->Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
-
-//                m_textureData = info[0].As<Napi::External<TextureData>>().Data();
-                m_textureBuffer.resize(m_textureData->StorageSize);
-                ReadTextureAsync();
+                m_frameProvider = CreateOffScreenBufferFrameProvider(graphicsImpl, frameBuffer.Handle(), std::move(frameCallback));
             }
         }
 
         ~NativeCapture()
         {
-            if (!m_cancellationToken->cancelled())
+            if (m_frameProvider != nullptr)
             {
-                // If m_cancellationToken is not cancelled, this object is being garbage collected without
+                // If m_frameProvider is still active, this object is being garbage collected without
                 // having been disposed, so it must dispose itself.
                 Dispose();
             }
@@ -246,23 +164,6 @@ namespace Babylon::Plugins::Internal
         {
             auto listener = info[0].As<Napi::Function>();
             m_callbacks.push_back(Napi::Persistent(listener));
-        }
-
-        arcana::task<void, std::exception_ptr> ReadTextureAsync()
-        {
-            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), *m_cancellationToken, [this, cancellation{m_cancellationToken}]{
-                bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, m_blitTexture, 0, 0, m_textureData->Handle);
-                m_graphicsImpl.ReadTextureAsync(m_blitTexture, m_textureBuffer).then(arcana::inline_scheduler, *m_cancellationToken, [this]{
-                    CaptureDataReceived(m_textureData->Width, m_textureData->Height, m_textureData->StorageSize / m_textureData->Height, m_textureData->Format, true, m_textureBuffer);
-                    //return ReadTextureAsync();
-                });
-                return ReadTextureAsync();
-            });
-        }
-
-        void CaptureDataReceived(const BgfxCallback::CaptureData& data)
-        {
-            CaptureDataReceived(data.Width, data.Height, data.Pitch, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
         }
 
         void CaptureDataReceived(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)
@@ -305,11 +206,9 @@ namespace Babylon::Plugins::Internal
 
         void Dispose()
         {
+            m_frameProvider->Stop();
+            m_frameProvider.reset();
             m_callbacks.clear();
-            m_ticket.reset();
-            //m_textureBuffer.clear();
-            //m_textureBuffer.shrink_to_fit();
-            m_cancellationToken->cancel();
         }
 
         void Dispose(const Napi::CallbackInfo&)
@@ -318,14 +217,9 @@ namespace Babylon::Plugins::Internal
         }
 
         JsRuntime& m_runtime;
-        Graphics::Impl& m_graphicsImpl;
         std::vector<Napi::FunctionReference> m_callbacks{};
-        std::unique_ptr<TicketT> m_ticket{};
         Napi::ObjectReference m_jsData{};
-        TextureData* m_textureData{};
-        std::vector<uint8_t> m_textureBuffer{};
-        std::shared_ptr<arcana::cancellation_source> m_cancellationToken{};
-        bgfx::TextureHandle m_blitTexture{};
+        std::shared_ptr<FrameProvider> m_frameProvider{};
     };
 }
 
