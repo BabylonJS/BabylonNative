@@ -11,19 +11,19 @@
 
 namespace
 {
-    class FrameProvider
-    {
-    public:
-        // TODO: Maybe pass a cancellation token to the constructor and remove stop?
-        virtual void Stop() = 0;
-        virtual ~FrameProvider()
-        {
-        }
-    };
+//    class FrameProvider
+//    {
+//    public:
+//        // TODO: Maybe pass a cancellation token to the constructor and remove stop?
+//        virtual void Stop() = 0;
+//        virtual ~FrameProvider()
+//        {
+//        }
+//    };
 
     using FrameCallback = std::function<void(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data)>;
 
-    class DefaultBufferFrameProvider : public FrameProvider, std::enable_shared_from_this<DefaultBufferFrameProvider>
+    class DefaultBufferFrameProvider : std::enable_shared_from_this<DefaultBufferFrameProvider>
     {
     public:
         DefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
@@ -34,7 +34,7 @@ namespace
             }));
         }
 
-        void Stop() override
+        void Stop()
         {
             m_ticket.reset();
         }
@@ -43,10 +43,10 @@ namespace
         std::unique_ptr<Babylon::Graphics::Impl::CaptureCallbackTicketT> m_ticket{};
     };
 
-    class OffScreenBufferFrameProvider : public FrameProvider, std::enable_shared_from_this<OffScreenBufferFrameProvider>
+    class OffScreenBufferFrameProvider : public std::enable_shared_from_this<OffScreenBufferFrameProvider>
     {
     public:
-        OffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+        OffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle /*, FrameCallback callback*/)
             : m_graphicsImpl{graphicsImpl}
             , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
             , m_textureInfo{graphicsImpl.GetTextureInfo(m_frameBufferTextureHandle)}
@@ -56,7 +56,7 @@ namespace
             bgfx::calcTextureSize(textureInfo, m_textureInfo.Width, m_textureInfo.Height, 1, false, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format);
             m_textureBuffer.resize(textureInfo.storageSize);
 
-            ReadTextureAsync(std::move(callback));
+            //ReadTextureAsync(std::move(callback));
         }
 
         ~OffScreenBufferFrameProvider()
@@ -64,22 +64,32 @@ namespace
             bgfx::destroy(m_blitTextureHandle);
         }
 
-        void Stop() override
+        void Stop()
         {
             m_cancellationToken.cancel();
         }
 
-    private:
+//    private:
         arcana::task<void, std::exception_ptr> ReadTextureAsync(FrameCallback callback)
         {
-            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}, callback{std::move(callback)}]{
+            auto thisRef{shared_from_this()};
+            auto func = [thisRef{std::move(thisRef)}, callback{std::move(callback)}]{
                 bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
                 // todo: arcana::when_all
                 thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef, callback]{
                     callback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, 0 /*todo*/, thisRef->m_textureInfo.Format, true /*todo*/, thisRef->m_textureBuffer);
                 });
                 return thisRef->ReadTextureAsync(callback);
-            });
+            };
+            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, std::move(func));
+//            return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}, callback{std::move(callback)}]{
+//                bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
+//                // todo: arcana::when_all
+//                thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef, callback]{
+//                    callback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, 0 /*todo*/, thisRef->m_textureInfo.Format, true /*todo*/, thisRef->m_textureBuffer);
+//                });
+//                return thisRef->ReadTextureAsync(callback);
+//            });
         }
 
     private:
@@ -91,15 +101,59 @@ namespace
         arcana::cancellation_source m_cancellationToken{};
     };
 
-    std::shared_ptr<FrameProvider> CreateDefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+//    std::shared_ptr<FrameProvider> CreateDefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+//    {
+//        return std::shared_ptr<FrameProvider>{std::make_shared<DefaultBufferFrameProvider>(graphicsImpl, callback)};
+//    }
+//
+//    std::shared_ptr<FrameProvider> CreateOffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+//    {
+//        return std::shared_ptr<FrameProvider>{std::make_shared<OffScreenBufferFrameProvider>(graphicsImpl, frameBufferHandle, callback)};
+//    }
+
+    using FrameProviderCleanup = std::function<void()>;
+    using FrameProviderTicket = gsl::final_action<FrameProviderCleanup>;
+
+    FrameProviderTicket BeginFrameCapture(Babylon::Graphics::Impl& graphicsImpl, std::optional<bgfx::FrameBufferHandle> frameBufferHandle, FrameCallback callback)
     {
-        return std::shared_ptr<FrameProvider>{std::make_shared<DefaultBufferFrameProvider>(graphicsImpl, callback)};
+        if (!frameBufferHandle.has_value())
+        {
+            auto frameProvider{std::make_shared<DefaultBufferFrameProvider>(graphicsImpl, callback)};
+            return gsl::finally<FrameProviderCleanup>([frameProvider{std::move(frameProvider)}]() mutable {
+                frameProvider->Stop();
+                frameProvider.reset();
+            });
+        }
+        else
+        {
+            auto frameProvider{std::make_shared<OffScreenBufferFrameProvider>(graphicsImpl, frameBufferHandle.value()/*, callback*/)};
+            auto task = frameProvider->ReadTextureAsync(std::move(callback));
+            return gsl::finally<FrameProviderCleanup>([frameProvider{std::move(frameProvider)}]() mutable {
+                frameProvider->Stop();
+                frameProvider.reset();
+            });
+        }
     }
 
-    std::shared_ptr<FrameProvider> CreateOffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
-    {
-        return std::shared_ptr<FrameProvider>{std::make_shared<OffScreenBufferFrameProvider>(graphicsImpl, frameBufferHandle, callback)};
-    }
+//    void CaptureFramesUntilCanceled(Babylon::Graphics::Impl& graphicsImpl, std::optional<bgfx::FrameBufferHandle> frameBufferHandle, FrameCallback callback, std::shared_ptr<arcana::cancellation> cancellationToken)
+//    {
+//        if (!frameBufferHandle.has_value())
+//        {
+//            auto frameProvider{std::make_shared<DefaultBufferFrameProvider>(graphicsImpl, callback)};
+//            std::optional<arcana::cancellation::ticket> ticket{};
+//            ticket.emplace(cancellationToken->add_listener([frameProvider{std::move(frameProvider)}, ticket{std::move(ticket)}]{
+//                frameProvider->Stop();
+//            }));
+//        }
+//        else
+//        {
+//            auto frameProvider{std::make_shared<OffScreenBufferFrameProvider>(graphicsImpl, frameBufferHandle, callback)};
+//            std::optional<arcana::cancellation::ticket> ticket{};
+//            ticket.emplace(cancellationToken->add_listener([frameProvider{std::move(frameProvider)}, ticket{std::move(ticket)}]{
+//                frameProvider->Stop();
+//            }));
+//        }
+//    }
 }
 
 namespace Babylon::Plugins::Internal
@@ -140,18 +194,21 @@ namespace Babylon::Plugins::Internal
 
             if (info.Length() == 0)
             {
-                m_frameProvider = CreateDefaultBufferFrameProvider(graphicsImpl, std::move(frameCallback));
+                //m_frameProvider = CreateDefaultBufferFrameProvider(graphicsImpl, std::move(frameCallback));
+                m_frameProviderTicket.emplace(BeginFrameCapture(graphicsImpl, std::nullopt, std::move(frameCallback)));
             }
             else
             {
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
-                m_frameProvider = CreateOffScreenBufferFrameProvider(graphicsImpl, frameBuffer.Handle(), std::move(frameCallback));
+                //m_frameProvider = CreateOffScreenBufferFrameProvider(graphicsImpl, frameBuffer.Handle(), std::move(frameCallback));
+                m_frameProviderTicket.emplace(BeginFrameCapture(graphicsImpl, frameBuffer.Handle(), std::move(frameCallback)));
             }
         }
 
         ~NativeCapture()
         {
-            if (m_frameProvider != nullptr)
+            //if (m_frameProvider != nullptr)
+            if (m_frameProviderTicket.has_value())
             {
                 // If m_frameProvider is still active, this object is being garbage collected without
                 // having been disposed, so it must dispose itself.
@@ -206,8 +263,9 @@ namespace Babylon::Plugins::Internal
 
         void Dispose()
         {
-            m_frameProvider->Stop();
-            m_frameProvider.reset();
+//            m_frameProvider->Stop();
+//            m_frameProvider.reset();
+            m_frameProviderTicket.reset();
             m_callbacks.clear();
         }
 
@@ -219,7 +277,8 @@ namespace Babylon::Plugins::Internal
         JsRuntime& m_runtime;
         std::vector<Napi::FunctionReference> m_callbacks{};
         Napi::ObjectReference m_jsData{};
-        std::shared_ptr<FrameProvider> m_frameProvider{};
+        //std::shared_ptr<FrameProvider> m_frameProvider{};
+        std::optional<FrameProviderTicket> m_frameProviderTicket{};
     };
 }
 
