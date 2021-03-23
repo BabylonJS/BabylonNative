@@ -109,4 +109,3 @@ target_compile_definitions(GraphicsInternal
 if (APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
 endif()
-
