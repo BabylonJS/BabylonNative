@@ -73,11 +73,12 @@ namespace
         {
             return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}]{
                 bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
-                // todo: arcana::when_all
-                thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef]{
-                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, true /*todo*/, thisRef->m_textureBuffer);
+                return arcana::when_all(thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef]{
+                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
+                }),
+                thisRef->ReadTextureAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [](const std::tuple<arcana::void_placeholder, arcana::void_placeholder>&){
+                    // Nothing to do, just converting to task<void, std::exception_ptr>
                 });
-                return thisRef->ReadTextureAsync();
             });
         }
 
@@ -142,7 +143,7 @@ namespace Babylon::Plugins::Internal
 
             bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
 
-            if (info.Length > 0 && info[0].IsExternal())
+            if (info.Length() > 0 && info[0].IsExternal())
             {
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
                 frameBufferHandle = frameBuffer.Handle();
