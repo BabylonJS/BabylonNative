@@ -141,7 +141,7 @@ extern "C"
                 g_graphics->UpdateSize(width, height);
             });
         }
-
+    }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_setCurrentActivity(JNIEnv* env, jclass clazz, jobject currentActivity)
