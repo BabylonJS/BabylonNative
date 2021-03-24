@@ -259,9 +259,11 @@ namespace xr
                 {
                     using Identifier = int32_t;
                     const static Identifier INVALID_ID = -1;
-
-                    Identifier ID{ INVALID_ID };
+                    Identifier ID{ NEXT_ID++ };
                     SceneObjectType Type{ SceneObjectType::Undefined };
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
                 };
 
                 struct Plane
@@ -295,8 +297,6 @@ namespace xr
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
-                std::vector<Plane>& Planes;
-                std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
 
                 std::vector<SceneObject::Identifier>UpdatedSceneObjects;

@@ -80,62 +80,65 @@ public:
 
     void Initialize(const InitOptions& options)
     {
-        m_updateInterval = static_cast<XrTime>(NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds);
+        if (options.Extensions.SceneUnderstandingSupported)
+        {
+            m_updateInterval = static_cast<XrTime>(NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds);
 
-        m_sceneBounds.boxBounds.clear();
-        m_sceneBounds.sphereBounds.clear();
-        m_sceneBounds.frustumBounds.clear();
-        switch (options.DetectionBoundary.Type)
-        {
-        case DetectionBoundaryType::Box:
-        {
-            const auto& boxDimensions = std::get<xr::Vector3f>(options.DetectionBoundary.Data);
-            m_sceneBounds.boxBounds.resize(1);
-            m_sceneBounds.boxBounds[0].pose = XrPosef{ XrQuaternionf{0.f, 0.f, 0.f, 1.f}, XrVector3f{0.f, 0.f, 0.f} };
-            m_sceneBounds.boxBounds[0].extents = XrVector3f{ boxDimensions.X, boxDimensions.Y, boxDimensions.Z };
-            break;
-        }
-        case DetectionBoundaryType::Sphere:
-        {
-            const float radius = std::get<float>(options.DetectionBoundary.Data);
-            m_sceneBounds.sphereBounds.resize(1);
-            m_sceneBounds.sphereBounds[0].center = XrVector3f{ 0.f, 0.f, 0.f };
-            m_sceneBounds.sphereBounds[0].radius = radius;
-            break;
-        }
-        case DetectionBoundaryType::Frustum:
-        {
-            const auto& frustumData = std::get<xr::Frustum>(options.DetectionBoundary.Data);
-            m_sceneBounds.frustumBounds.resize(1);
-            m_sceneBounds.frustumBounds[0].farDistance = frustumData.FarDistance;
-            m_sceneBounds.frustumBounds[0].pose = XrPosef
+            m_sceneBounds.boxBounds.clear();
+            m_sceneBounds.sphereBounds.clear();
+            m_sceneBounds.frustumBounds.clear();
+            switch (options.DetectionBoundary.Type)
             {
-                XrQuaternionf
-                {
-                    frustumData.Pose.Orientation.X,
-                    frustumData.Pose.Orientation.Y,
-                    frustumData.Pose.Orientation.Z,
-                    frustumData.Pose.Orientation.W,
-                },
-                XrVector3f
-                {
-                    frustumData.Pose.Position.X,
-                    frustumData.Pose.Position.Y,
-                    frustumData.Pose.Position.Z
-                }
-            };
-            m_sceneBounds.frustumBounds[0].fov = XrFovf
+            case DetectionBoundaryType::Box:
             {
-                frustumData.FOV.AngleLeft,
-                frustumData.FOV.AngleRight,
-                frustumData.FOV.AngleUp,
-                frustumData.FOV.AngleDown
-            };
-            break;
-        }
-        }
+                const auto& boxDimensions = std::get<xr::Vector3f>(options.DetectionBoundary.Data);
+                m_sceneBounds.boxBounds.resize(1);
+                m_sceneBounds.boxBounds[0].pose = XrPosef{ XrQuaternionf{0.f, 0.f, 0.f, 1.f}, XrVector3f{0.f, 0.f, 0.f} };
+                m_sceneBounds.boxBounds[0].extents = XrVector3f{ boxDimensions.X, boxDimensions.Y, boxDimensions.Z };
+                break;
+            }
+            case DetectionBoundaryType::Sphere:
+            {
+                const float radius = std::get<float>(options.DetectionBoundary.Data);
+                m_sceneBounds.sphereBounds.resize(1);
+                m_sceneBounds.sphereBounds[0].center = XrVector3f{ 0.f, 0.f, 0.f };
+                m_sceneBounds.sphereBounds[0].radius = radius;
+                break;
+            }
+            case DetectionBoundaryType::Frustum:
+            {
+                const auto& frustumData = std::get<xr::Frustum>(options.DetectionBoundary.Data);
+                m_sceneBounds.frustumBounds.resize(1);
+                m_sceneBounds.frustumBounds[0].farDistance = frustumData.FarDistance;
+                m_sceneBounds.frustumBounds[0].pose = XrPosef
+                {
+                    XrQuaternionf
+                    {
+                        frustumData.Pose.Orientation.X,
+                        frustumData.Pose.Orientation.Y,
+                        frustumData.Pose.Orientation.Z,
+                        frustumData.Pose.Orientation.W,
+                    },
+                    XrVector3f
+                    {
+                        frustumData.Pose.Position.X,
+                        frustumData.Pose.Position.Y,
+                        frustumData.Pose.Position.Z
+                    }
+                };
+                m_sceneBounds.frustumBounds[0].fov = XrFovf
+                {
+                    frustumData.FOV.AngleLeft,
+                    frustumData.FOV.AngleRight,
+                    frustumData.FOV.AngleUp,
+                    frustumData.FOV.AngleDown
+                };
+                break;
+            }
+            }
 
-        Enable(options);
+            Enable(options);
+        }
     }
 
     void UpdateFrame(UpdateFrameArgs& args)
@@ -222,6 +225,11 @@ private:
 
     void Enable(const InitOptions& options)
     {
+        if (!options.Extensions.SceneUnderstandingSupported)
+        {
+            return;
+        }
+
         if (m_sceneObserver)
         {
             return;
@@ -261,6 +269,7 @@ private:
         for (const auto& sceneObject : objects)
         {
             observedObjectIds.insert(sceneObject.id);
+
             if (m_objectIds.find(sceneObject.id) == m_objectIds.end())
             {
                 auto object = std::make_unique<SceneObject>();
@@ -298,6 +307,8 @@ private:
         std::unordered_set<xr::su::SceneMesh::Id> observedMeshIds{};
         for (const auto& sceneMesh : meshes)
         {
+            observedMeshIds.insert(sceneMesh.id);
+
             if (m_meshIds.find(sceneMesh.id) == m_meshIds.end())
             {
                 auto mesh = std::make_unique<Mesh>();
@@ -357,7 +368,7 @@ private:
                 mesh->Positions[n].Z = position.z;
             }
 
-            assert(sizeof(Mesh::ID) == sizeof(uint32_t));
+            assert(sizeof(Mesh::IndexType) == sizeof(uint32_t));
             mesh->Indices.resize(meshBuffers.indexBuffer.size());
             memcpy(mesh->Indices.data(), meshBuffers.indexBuffer.data(), meshBuffers.indexBuffer.size() * sizeof(uint32_t));
 
@@ -372,6 +383,8 @@ private:
         std::unordered_set<xr::su::ScenePlane::Id> observedPlaneIds{};
         for (const auto& scenePlane : planes)
         {
+            observedPlaneIds.insert(scenePlane.id);
+
             if (m_planeIds.find(scenePlane.id) == m_planeIds.end())
             {
                 auto plane = std::make_unique<Plane>();
@@ -420,6 +433,9 @@ private:
             plane->Center = XrPoseToBabylonPose(location.pose);
             plane->PolygonFormat = xr::PolygonFormat::XYZ;
 
+            // TODO figure out what to do with alignment
+            // TODO update babylonjs object kinds
+
             // Note: Without a normal its unclear how to define the front/back of the plane
             // This is currently an arbitrary winding order due to this lack of information
             constexpr uint8_t VALUES_IN_POINT = 3;
@@ -457,13 +473,6 @@ private:
         }
         m_removedObjects.clear();
 
-        args.Meshes.clear();
-        for (const auto& [meshId, mesh] : m_meshes)
-        {
-            args.Meshes.push_back(std::move(*mesh));
-        }
-        m_meshes.clear();
-
         args.UpdatedMeshes.clear();
         for (const auto& meshId : m_updatedMeshes)
         {
@@ -477,13 +486,6 @@ private:
             args.RemovedMeshes.push_back(meshId);
         }
         m_removedMeshes.clear();
-
-        args.Planes.clear();
-        for (const auto& [planeId, plane] : m_planes)
-        {
-            args.Planes.push_back(std::move(*plane));
-        }
-        m_planes.clear();
 
         args.UpdatedPlanes.clear();
         for (const auto& planeId : m_updatedPlanes)

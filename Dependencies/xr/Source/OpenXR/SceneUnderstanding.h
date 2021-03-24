@@ -33,10 +33,8 @@ namespace xr
             const XrTime DisplayTime;
             std::vector<System::Session::Frame::SceneObject::Identifier>& UpdatedSceneObjects;
             std::vector<System::Session::Frame::SceneObject::Identifier>& RemovedSceneObjects;
-            std::vector<System::Session::Frame::Plane>& Planes;
             std::vector<System::Session::Frame::Plane::Identifier>& UpdatedPlanes;
             std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
-            std::vector<System::Session::Frame::Mesh>& Meshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& UpdatedMeshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& RemovedMeshes;
         };
