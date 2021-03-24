@@ -1212,6 +1212,7 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        m_graphicsImpl.RemoveTexture(texture->Handle);
         delete texture;
     }
 

@@ -705,7 +705,7 @@ namespace xr {
                     [texture retain];
 
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
-                    ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
+                    ActiveFrameViews[0].ColorTextureFormat = TextureFormat::BGRA8_SRGB;
                     ActiveFrameViews[0].ColorTextureSize = {width, height};
                 }
 
