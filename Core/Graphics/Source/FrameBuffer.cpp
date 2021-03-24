@@ -25,6 +25,11 @@ namespace Babylon
         }
     }
 
+    bgfx::FrameBufferHandle FrameBuffer::Handle() const
+    {
+        return m_handle;
+    }
+
     uint16_t FrameBuffer::Width() const
     {
         return (m_width == 0 ? bgfx::getStats()->width : m_width);
