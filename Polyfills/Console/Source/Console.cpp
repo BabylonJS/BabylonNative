@@ -10,7 +10,7 @@ namespace
         auto args = std::vector<napi_value>();
         for (unsigned int index = 0; index < info.Length(); index++)
             args.push_back(info[index]);
-        return std::move(args);
+        return args;
     }
 }
 
