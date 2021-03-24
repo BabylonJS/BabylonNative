@@ -51,7 +51,6 @@ namespace Babylon
     {
         std::unique_ptr<Graphics> graphics{ new Graphics() };
         graphics->UpdateContext(nativeContext);
-        graphics->UpdateSize(256, 256);//width, height);
         return graphics;
     }
 

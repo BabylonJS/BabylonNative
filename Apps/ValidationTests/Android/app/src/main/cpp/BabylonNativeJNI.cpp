@@ -42,8 +42,8 @@ extern "C"
         }
 
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_runtime.reset();
+        g_graphics.reset();
     }
 
     JNIEXPORT void JNICALL
