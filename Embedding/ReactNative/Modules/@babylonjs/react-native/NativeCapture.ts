@@ -1,8 +1,9 @@
+import { Camera } from '@babylonjs/core';
+
 export type CapturedFrame = {
   width: number;
   height: number;
-  pitch: number;
-  format: "BGRA8" | undefined;
+  format: "RGBA8" | "BGRA8" | undefined;
   yFlip: boolean;
   data: ArrayBuffer;
 };
@@ -10,7 +11,7 @@ export type CapturedFrame = {
 export type CaptureCallback = (capture: CapturedFrame) => void;
 
 declare class NativeCapture {
-  public constructor();
+  public constructor(frameBuffer?: unknown | undefined);
   public addCallback(onCaptureCallback: CaptureCallback): void;
   public dispose(): void;
 };
@@ -18,9 +19,9 @@ declare class NativeCapture {
 export class CaptureSession {
     private readonly nativeCapture: NativeCapture;
 
-    public constructor(onCaptureCallback: CaptureCallback) {
+    public constructor(camera: Camera | undefined, onCaptureCallback: CaptureCallback) {
         console.warn(`CaptureSession is experimental and likely to change significantly.`);
-        this.nativeCapture = new NativeCapture();
+        this.nativeCapture = new NativeCapture(camera?.outputRenderTarget?.getInternalTexture()?._framebuffer);
         this.nativeCapture.addCallback(onCaptureCallback);
     }
 
