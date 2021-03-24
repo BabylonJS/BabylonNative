@@ -264,95 +264,96 @@ private:
 
     void UpdateSceneObjects()
     {
-        const auto objects = m_scene->GetObjects();
-        std::unordered_set<xr::su::SceneObject::Id> observedObjectIds{};
-        for (const auto& sceneObject : objects)
+        const auto xrObjects = m_scene->GetObjects();
+        std::unordered_set<xr::su::SceneObject::Id> observedXRObjectIds{};
+        for (const auto& xrObject : xrObjects)
         {
-            observedObjectIds.insert(sceneObject.id);
+            observedXRObjectIds.insert(xrObject.id);
 
-            if (m_objectIds.find(sceneObject.id) == m_objectIds.end())
+            if (m_objectIds.find(xrObject.id) == m_objectIds.end())
             {
                 auto object = std::make_unique<SceneObject>();
                 const auto objectId = object->ID;
-                m_objectIds[sceneObject.id] = objectId;
+                m_objectIds[xrObject.id] = objectId;
                 m_objects[objectId] = std::move(object);
             }
 
-            const auto objectId = m_objectIds.at(sceneObject.id);
+            const auto objectId = m_objectIds.at(xrObject.id);
             m_updatedObjects.push_back(objectId);
             auto& object = m_objects.at(objectId);
-            object->Type = c_objectTypeMap.at(sceneObject.kind);
+            object->Type = c_objectTypeMap.at(xrObject.kind);
         }
 
-        std::unordered_set<xr::su::SceneObject::Id> objectIdsToRemove{};
-        for (const auto& [objectId, sceneObjectId] : m_objectIds)
+        std::unordered_set<xr::su::SceneObject::Id> xrObjectIdsToRemove{};
+        for (const auto& [xrObjectId, objectId] : m_objectIds)
         {
-            if (observedObjectIds.find(objectId) == observedObjectIds.end())
+            if (observedXRObjectIds.find(xrObjectId) == observedXRObjectIds.end())
             {
-                objectIdsToRemove.insert(objectId);
+                xrObjectIdsToRemove.insert(xrObjectId);
             }
         }
 
-        for (const auto& objectId : objectIdsToRemove)
+        for (const auto& xrObjectId : xrObjectIdsToRemove)
         {
-            const auto sceneObjectID = m_objectIds.at(objectId);
-            m_objectIds.erase(objectId);
-            m_objects.erase(sceneObjectID);
+            const auto objectId = m_objectIds.at(xrObjectId);
+            m_objectIds.erase(xrObjectId);
+            m_objects.erase(objectId);
         }
     }
 
     void UpdateMeshes(UpdateFrameArgs& args)
     {
-        const auto meshes = m_scene->GetMeshes();
-        std::unordered_set<xr::su::SceneMesh::Id> observedMeshIds{};
-        for (const auto& sceneMesh : meshes)
+        const auto xrMeshes = m_scene->GetMeshes();
+        std::unordered_set<xr::su::SceneMesh::Id> observedXRMeshIds{};
+        for (const auto& xrMesh : xrMeshes)
         {
-            observedMeshIds.insert(sceneMesh.id);
+            observedXRMeshIds.insert(xrMesh.id);
 
-            if (m_meshIds.find(sceneMesh.id) == m_meshIds.end())
+            if (m_meshIds.find(xrMesh.id) == m_meshIds.end())
             {
                 auto mesh = std::make_unique<Mesh>();
                 const auto meshId = mesh->ID;
-                m_meshIds[sceneMesh.id] = meshId;
+                m_meshIds[xrMesh.id] = meshId;
                 m_meshes[meshId] = std::move(mesh);
             }
 
-            const auto meshId = m_meshIds.at(sceneMesh.id);
+            const auto meshId = m_meshIds.at(xrMesh.id);
             m_updatedMeshes.push_back(meshId);
             auto& mesh = m_meshes.at(meshId);
-            mesh->ParentSceneObjectID = m_objectIds.at(sceneMesh.parentObjectId);
-            mesh->MeshBufferId = sceneMesh.meshBufferId;
+            mesh->ParentSceneObjectID = m_objectIds.at(xrMesh.parentObjectId);
+            mesh->MeshBufferId = xrMesh.meshBufferId;
         }
 
-        std::unordered_set<xr::su::SceneMesh::Id> meshIdsToRemove{};
-        for (const auto& [meshId, sceneMeshId] : m_meshIds)
+        std::unordered_set<xr::su::SceneMesh::Id> xrMeshIdsToRemove{};
+        for (const auto& [xrMeshId, meshId] : m_meshIds)
         {
-            if (observedMeshIds.find(meshId) == observedMeshIds.end())
+            if (observedXRMeshIds.find(xrMeshId) == observedXRMeshIds.end())
             {
-                meshIdsToRemove.insert(meshId);
+                xrMeshIdsToRemove.insert(xrMeshId);
             }
         }
 
-        for (const auto& meshId : meshIdsToRemove)
+        for (const auto& xrMeshId : xrMeshIdsToRemove)
         {
-            const auto sceneMeshId = m_meshIds.at(meshId);
-            m_meshIds.erase(meshId);
-            m_meshes.erase(sceneMeshId);
+            const auto meshId = m_meshIds.at(xrMeshId);
+            m_meshIds.erase(xrMeshId);
+            m_meshes.erase(meshId);
         }
 
-        std::vector<XrUuidMSFT> meshIds{};
-        for (const auto& mesh : meshes)
+        std::vector<XrUuidMSFT> xrMeshIds{};
+        for (const auto& xrMesh : xrMeshes)
         {
-            meshIds.push_back(static_cast<XrUuidMSFT>(mesh.id));
+            xrMeshIds.push_back(static_cast<XrUuidMSFT>(xrMesh.id));
         }
-        std::vector<XrSceneComponentLocationMSFT> meshLocations{};
-        xr::su::LocateObjects(m_scene->Handle(), args.Extensions, args.SceneSpace, args.DisplayTime, meshIds, meshLocations);
-        for (size_t i = 0; i < meshLocations.size() && i < meshIds.size(); i++)
+
+        std::vector<XrSceneComponentLocationMSFT> xrMeshLocations{};
+        xr::su::LocateObjects(m_scene->Handle(), args.Extensions, args.SceneSpace, args.DisplayTime, xrMeshIds, xrMeshLocations);
+        for (size_t i = 0; i < xrMeshLocations.size() && i < xrMeshIds.size(); i++)
         {
-            const auto& id = static_cast<xr::su::SceneMesh::Id>(meshIds.at(i));
-            const auto& sceneMeshId = m_meshIds.at(id);
-            auto& mesh = m_meshes.at(sceneMeshId);
-            const auto& location = meshLocations.at(i);
+            const auto& xrMeshId = static_cast<xr::su::SceneMesh::Id>(xrMeshIds.at(i));
+            const auto& meshId = m_meshIds.at(xrMeshId);
+            auto& mesh = m_meshes.at(meshId);
+            const auto& location = xrMeshLocations.at(i);
 
             // TODO: in preview 3 of the OpenXR scene understanding extension, plane's will also have associated meshes
             xr::SceneMeshBuffers meshBuffers;
@@ -372,69 +373,65 @@ private:
             mesh->Indices.resize(meshBuffers.indexBuffer.size());
             memcpy(mesh->Indices.data(), meshBuffers.indexBuffer.data(), meshBuffers.indexBuffer.size() * sizeof(uint32_t));
 
-            // TODO: decide whether we want to calculate normals
             mesh->HasNormals = false;
         }
     }
 
     void UpdatePlanes(UpdateFrameArgs& args)
     {
-        const auto planes = m_scene->GetPlanes();
-        std::unordered_set<xr::su::ScenePlane::Id> observedPlaneIds{};
-        for (const auto& scenePlane : planes)
+        const auto xrPlanes = m_scene->GetPlanes();
+        std::unordered_set<xr::su::ScenePlane::Id> observedXRPlaneIds{};
+        for (const auto& xrPlane : xrPlanes)
         {
-            observedPlaneIds.insert(scenePlane.id);
+            observedXRPlaneIds.insert(xrPlane.id);
 
-            if (m_planeIds.find(scenePlane.id) == m_planeIds.end())
+            if (m_planeIds.find(xrPlane.id) == m_planeIds.end())
             {
                 auto plane = std::make_unique<Plane>();
                 const auto planeId = plane->ID;
-                m_planeIds[scenePlane.id] = planeId;
+                m_planeIds[xrPlane.id] = planeId;
                 m_planes[planeId] = std::move(plane);
             }
 
-            const auto planeId = m_planeIds.at(scenePlane.id);
+            const auto planeId = m_planeIds.at(xrPlane.id);
             m_updatedPlanes.push_back(planeId);
             auto& plane = m_planes.at(planeId);
-            plane->ParentSceneObjectID = m_objectIds.at(scenePlane.parentObjectId);
-            plane->Size = scenePlane.size;
+            plane->ParentSceneObjectID = m_objectIds.at(xrPlane.parentObjectId);
+            plane->Size = xrPlane.size;
         }
 
-        std::unordered_set<xr::su::ScenePlane::Id> planeIdsToRemove{};
-        for (const auto& [planeId, scenePlaneId] : m_planeIds)
+        std::unordered_set<xr::su::ScenePlane::Id> xrPlaneIdsToRemove{};
+        for (const auto& [xrPlaneId, planeId] : m_planeIds)
         {
-            if (observedPlaneIds.find(planeId) == observedPlaneIds.end())
+            if (observedXRPlaneIds.find(xrPlaneId) == observedXRPlaneIds.end())
             {
-                planeIdsToRemove.insert(planeId);
+                xrPlaneIdsToRemove.insert(xrPlaneId);
             }
         }
 
-        for (const auto& planeId : planeIdsToRemove)
+        for (const auto& xrPlaneId : xrPlaneIdsToRemove)
         {
-            const auto scenePlaneId = m_planeIds.at(planeId);
-            m_planeIds.erase(planeId);
-            m_planes.erase(scenePlaneId);
+            const auto planeId = m_planeIds.at(xrPlaneId);
+            m_planeIds.erase(xrPlaneId);
+            m_planes.erase(planeId);
         }
 
-        std::vector<XrUuidMSFT> planeIds{};
-        for (const auto& plane : planes)
+        std::vector<XrUuidMSFT> xrPlaneIds{};
+        for (const auto& xrPlane : xrPlanes)
         {
-            planeIds.push_back(static_cast<XrUuidMSFT>(plane.id));
+            xrPlaneIds.push_back(static_cast<XrUuidMSFT>(xrPlane.id));
         }
 
-        std::vector<XrSceneComponentLocationMSFT> planeLocations{};
-        xr::su::LocateObjects(m_scene->Handle(), args.Extensions, args.SceneSpace, args.DisplayTime, planeIds, planeLocations);
-        for (size_t n = 0; n < planeLocations.size() && n < planeIds.size(); n++)
+        std::vector<XrSceneComponentLocationMSFT> xrPlaneLocations{};
+        xr::su::LocateObjects(m_scene->Handle(), args.Extensions, args.SceneSpace, args.DisplayTime, xrPlaneIds, xrPlaneLocations);
+        for (size_t n = 0; n < xrPlaneLocations.size() && n < xrPlaneIds.size(); n++)
         {
-            const auto& id = static_cast<xr::su::ScenePlane::Id>(planeIds.at(n));
+            const auto& id = static_cast<xr::su::ScenePlane::Id>(xrPlaneIds.at(n));
             const auto& planeObjectID = m_planeIds.at(id);
             auto& plane = m_planes.at(planeObjectID);
-            const auto& location = planeLocations.at(n);
+            const auto& location = xrPlaneLocations.at(n);
             plane->Center = XrPoseToBabylonPose(location.pose);
             plane->PolygonFormat = xr::PolygonFormat::XYZ;
-
-            // TODO figure out what to do with alignment
-            // TODO update babylonjs object kinds
 
             // Note: Without a normal its unclear how to define the front/back of the plane
             // This is currently an arbitrary winding order due to this lack of information
