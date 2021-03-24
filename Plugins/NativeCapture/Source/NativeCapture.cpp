@@ -80,18 +80,24 @@ namespace
 
             arcana::task<void, std::exception_ptr> ReadTextureAsync()
             {
-                return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}]{
+                return arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}] {
                     // bgfx does not allow readback of render textures, so the frame buffer render texture needs to be blitted to a texture with readback enabled.
-                    bgfx::blit(bgfx::getCaps()->limits.maxViews - 1, thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
+                    bgfx::blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
 
                     // Reading the texture is an async operation, but everything that needs to be done prior to future write operations on that texture is completed synchronously,
                     // so we kick off the read for the next frame prior to the read for the current frame completes.
-                    return arcana::when_all(thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer).then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef]{
-                        thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
-                    }),
-                    thisRef->ReadTextureAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [](const std::tuple<arcana::void_placeholder, arcana::void_placeholder>&){
-                        // Nothing to do, just converting to task<void, std::exception_ptr>
-                    });
+
+                    arcana::task<void, std::exception_ptr> readCurrentFrameTask{thisRef->m_graphicsImpl.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer)
+                        .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
+                            thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
+                        })};
+
+                    arcana::task<void, std::exception_ptr> readNextFrameTask{thisRef->ReadTextureAsync()};
+
+                    return arcana::when_all(readCurrentFrameTask, readNextFrameTask)
+                        .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const std::tuple<arcana::void_placeholder, arcana::void_placeholder>&) {
+                            // Nothing to do, just converting to task<void, std::exception_ptr>
+                        });
                 });
             }
 
