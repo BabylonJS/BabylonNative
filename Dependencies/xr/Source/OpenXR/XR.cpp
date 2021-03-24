@@ -809,7 +809,7 @@ namespace xr
                 }
             }
 
-            // Create controller get trigger value action and suggested bindings=
+            // Create default action and suggested bindings for select
             CreateControllerActionAndBinding(
                 XR_ACTION_TYPE_BOOLEAN_INPUT, 
                 ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_NAME,
@@ -819,7 +819,7 @@ namespace xr
                 defaultBindings,
                 instance);
 
-            // Create controller get trigger value action and suggested bindings=
+            // Create controller get trigger value action and suggested bindings
             CreateControllerActionAndBinding(
                 XR_ACTION_TYPE_FLOAT_INPUT, 
                 ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME,

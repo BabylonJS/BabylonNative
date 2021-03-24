@@ -8,6 +8,7 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
+#include <algorithm>
 #include <set>
 #include <memory>
 #include <napi/napi.h>
@@ -158,7 +159,7 @@ namespace
 
             jsInputSource.Set("hand", handJointCollection);
 
-            auto profiles = Napi::Array::New(env, 1);
+            auto profiles = Napi::Array::New(env, 2);
             profiles.Set(uint32_t{0}, Napi::String::New(env, "generic-hand-select-grasp"));
             profiles.Set(uint32_t{1}, Napi::String::New(env, "generic-hand-select"));
             jsInputSource.Set("profiles", profiles);
@@ -2449,8 +2450,8 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
-            std::set<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
-            std::set<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
+            std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
+            std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2505,10 +2506,11 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
-                std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
-                std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
-                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
-                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
+
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
 
                 for (auto& inputSource : frame.InputSources)
                 {
@@ -2550,24 +2552,27 @@ namespace Babylon
                     }
 
                     // Handle gestures. Sources that do not support a gesture will always return false
-                    bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
-                    bool isSqueezed = inputSource.GamepadObject.Buttons[1].Pressed;
-                    if (isSelected && (m_activeSelects.find(inputSource.ID) == m_activeSelects.end()))
+                    const bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
+                    const bool isSqueezed = inputSource.GamepadObject.Buttons[1].Pressed;
+                    const bool wasSelected = std::find(m_activeSelects.begin(), m_activeSelects.end(), inputSource.ID) != m_activeSelects.end();
+                    const bool wasSqueezed = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), inputSource.ID) != m_activeSqueezes.end();
+                    
+                    if (isSelected && !wasSelected)
                     {
-                        selectStarts.insert(inputSource.ID);
+                        selectStarts.push_back(inputSource.ID);
                     }
-                    else if (!isSelected && (m_activeSelects.find(inputSource.ID) != m_activeSelects.end()))
+                    else if (!isSelected && wasSelected)
                     {
-                        selectEnds.insert(inputSource.ID);
+                        selectEnds.push_back(inputSource.ID);
                     }
 
-                    if (isSqueezed && (m_activeSqueezes.find(inputSource.ID) == m_activeSqueezes.end()))
+                    if (isSqueezed && !wasSqueezed)
                     {
-                        squeezeStarts.insert(inputSource.ID);
+                        squeezeStarts.push_back(inputSource.ID);
                     }
-                    else if (!isSqueezed && (m_activeSqueezes.find(inputSource.ID) != m_activeSqueezes.end()))
+                    else if (!isSqueezed && wasSqueezed)
                     {
-                        squeezeEnds.insert(inputSource.ID);
+                        squeezeEnds.push_back(inputSource.ID);
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
@@ -2577,30 +2582,19 @@ namespace Babylon
                         // Process select and squeeze for lost sources before we send the source lost event
                         auto inputSourceVal = ref.Value();
                         Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
-                        if (m_activeSelects.find(id) != m_activeSelects.end())
-                        {
-                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                            {
-                                if (name == JS_EVENT_NAME_SELECT_END)
-                                {
-                                    callback.Call({inputSourceEvent});
-                                }
-                            }
+                        const auto& activeSelectIter = std::find(m_activeSelects.begin(), m_activeSelects.end(), id);
+                        const auto& activeSqueezeIter = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), id);
 
-                            m_activeSelects.erase(id);
+                        if (activeSelectIter != m_activeSelects.end())
+                        {
+                            FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_END);
+                            m_activeSelects.erase(activeSelectIter);
                         }
 
-                        if (m_activeSqueezes.find(id) != m_activeSqueezes.end())
+                        if (activeSqueezeIter != m_activeSqueezes.end())
                         {
-                            for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                            {
-                                if (name == JS_EVENT_NAME_SQUEEZE_END)
-                                {
-                                    callback.Call({inputSourceEvent});
-                                }
-                            }
-
-                            m_activeSqueezes.erase(id);
+                            FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_END);
+                            m_activeSqueezes.erase(activeSqueezeIter);
                         }
                         // Do not update space association since said spaces no longer exist.
                         removed.insert(id);
@@ -2689,100 +2683,79 @@ namespace Babylon
                 return inputSourceEvent;
             }
 
+            void FireInputSourceEvent(Napi::Object& inputSourceEvent, std::string eventName)
+            {
+                for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                {
+                    if (name == eventName)
+                    {
+                        callback.Call({inputSourceEvent});
+                    }
+                }
+            }
+
             void UpdateInputSourceEventValues(
-                std::set<xr::System::Session::Frame::InputSource::Identifier> selectStarts,
-                std::set<xr::System::Session::Frame::InputSource::Identifier> selectEnds,
-                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts,
-                std::set<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectStarts,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectEnds,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeStarts,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeEnds,
                 Napi::Env env)
             {
                 for (const auto& id : selectStarts)
                 {
-                    auto inputSourceFound = m_idToInputSource.find(id);
-                    if (inputSourceFound != m_idToInputSource.end())
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
                     {
-                        auto inputSourceVal = inputSourceFound->second.Value();
+                        auto inputSourceVal = inputSourceIter->second.Value();
                         Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_START);
 
-                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                        {
-                            if (name == JS_EVENT_NAME_SELECT_START)
-                            {
-                                callback.Call({inputSourceEvent});
-                            }
-                        }
-
-                        m_activeSelects.insert(id);
+                        m_activeSelects.push_back(id);
                     }
                 }
 
                 for (const auto& id : squeezeStarts)
                 {
-                    auto inputSourceFound = m_idToInputSource.find(id);
-                    if (inputSourceFound != m_idToInputSource.end())
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
                     {
-                        auto inputSourceVal = inputSourceFound->second.Value();
+                        auto inputSourceVal = inputSourceIter->second.Value();
                         Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_START);
 
-                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                        {
-                            if (name == JS_EVENT_NAME_SQUEEZE_START)
-                            {
-                                callback.Call({inputSourceEvent});
-                            }
-                        }
-
-                        m_activeSqueezes.insert(id);
+                        m_activeSqueezes.push_back(id);
                     }
                 }
 
                 for (const auto& id : selectEnds)
                 {
-                    auto inputSourceFound = m_idToInputSource.find(id);
-                    if (inputSourceFound != m_idToInputSource.end())
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
                     {
-                        auto inputSourceVal = inputSourceFound->second.Value();
+                        auto inputSourceVal = inputSourceIter->second.Value();
                         Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
 
-                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                        {
-                            if (name == JS_EVENT_NAME_SELECT_END)
-                            {
-                                callback.Call({inputSourceEvent});
-                            }
+                        // WebXR API dictates the select event fires before the select end
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_END);
 
-                            if (name == JS_EVENT_NAME_SELECT)
-                            {
-                                callback.Call({inputSourceEvent});
-                            }
-                        }
-
-                        m_activeSelects.erase(id);
+                        m_activeSelects.erase(std::find(m_activeSelects.begin(), m_activeSelects.end(), id));
                     }
                 }
 
                 for (const auto& id : squeezeEnds)
                 {
-                    auto inputSourceFound = m_idToInputSource.find(id);
-                    if (inputSourceFound != m_idToInputSource.end())
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
                     {
-                        auto inputSourceVal = inputSourceFound->second.Value();
+                        auto inputSourceVal = inputSourceIter->second.Value();
                         Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
 
-                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                        {
-                            if (name == JS_EVENT_NAME_SQUEEZE_END)
-                            {
-                                callback.Call({inputSourceEvent});
-                            }
+                        // WebXR API dictates the squeeze event fires before the squeeze end
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_END);
 
-                            if (name == JS_EVENT_NAME_SQUEEZE)
-                            {
-                                callback.Call({inputSourceEvent});
-                            }
-                        }
-
-                        m_activeSqueezes.erase(id);
+                        m_activeSqueezes.erase(std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), id));
                     }
                 }
             }
