@@ -18,6 +18,8 @@ public class Wrapper {
 
     public static native void surfaceChanged(int width, int height, Surface surface);
 
+    public static native void surfaceResize(int width, int height);
+
     public static native void setCurrentActivity(Activity currentActivity);
 
     public static native void activityOnPause();

@@ -46,9 +46,9 @@ extern "C"
 
         g_nativeXr.reset();
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
+        g_graphics.reset();
 
         g_isXrActive = false;
     }
@@ -76,7 +76,7 @@ extern "C"
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
-            g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
+            g_runtime->Dispatch([javaVM](Napi::Env env)
             {
                 g_graphics->AddToJavaScript(env);
 
@@ -131,6 +131,17 @@ extern "C"
             });
         }
     }
+
+    JNIEXPORT void JNICALL
+    Java_BabylonNative_Wrapper_surfaceResize(JNIEnv* env, jclass clazz, jint width, jint height)
+    {
+        if (g_runtime)
+        {
+            g_runtime->Dispatch([width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
+                g_graphics->UpdateSize(width, height);
+            });
+        }
+
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_setCurrentActivity(JNIEnv* env, jclass clazz, jobject currentActivity)

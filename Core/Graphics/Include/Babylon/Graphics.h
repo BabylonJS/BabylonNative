@@ -17,7 +17,13 @@ namespace Babylon
         static std::unique_ptr<Graphics> CreateGraphics(Ts...);
 
         template<typename... Ts>
+        static std::unique_ptr<Graphics> CreateGraphicsFromContext(Ts...);
+
+        template<typename... Ts>
         void UpdateWindow(Ts...);
+
+        template<typename... Ts>
+        void UpdateContext(Ts...);
 
         void UpdateSize(size_t width, size_t height);
 

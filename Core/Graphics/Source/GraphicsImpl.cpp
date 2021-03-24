@@ -43,6 +43,12 @@ namespace Babylon
         return m_state.Bgfx.InitState.platformData.nwh;
     }
 
+    void* Graphics::Impl::GetNativeContext()
+    {
+        std::scoped_lock lock{ m_state.Mutex };
+        return m_state.Bgfx.InitState.platformData.context;
+    }
+
     void Graphics::Impl::SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr)
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -52,6 +58,19 @@ namespace Babylon
         pd.ndt = windowTypePtr;
         pd.nwh = nativeWindowPtr;
         pd.context = nullptr;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
+    }
+
+    void Graphics::Impl::SetNativeContext(void* nativeContext)
+    {
+        std::scoped_lock lock{ m_state.Mutex };
+        m_state.Bgfx.Dirty = true;
+
+        auto& pd = m_state.Bgfx.InitState.platformData;
+        pd.ndt = nullptr;
+        pd.nwh = nullptr;
+        pd.context = nativeContext;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
     }

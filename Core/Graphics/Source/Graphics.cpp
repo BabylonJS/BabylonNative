@@ -23,6 +23,12 @@ namespace Babylon
     }
 
     template<>
+    void Graphics::UpdateContext<void*>(void* context)
+    {
+        m_impl->SetNativeContext(context);
+    }
+
+    template<>
     std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
@@ -37,6 +43,15 @@ namespace Babylon
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
         graphics->UpdateSize(width, height);
+        return graphics;
+    }
+
+    template<>
+    std::unique_ptr<Graphics> Graphics::CreateGraphicsFromContext<void*>(void* nativeContext)
+    {
+        std::unique_ptr<Graphics> graphics{ new Graphics() };
+        graphics->UpdateContext(nativeContext);
+        graphics->UpdateSize(256, 256);//width, height);
         return graphics;
     }
 
