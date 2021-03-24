@@ -1209,8 +1209,6 @@ namespace xr {
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
-        , Planes{ sessionImpl.Planes }
-        , Meshes{ sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
