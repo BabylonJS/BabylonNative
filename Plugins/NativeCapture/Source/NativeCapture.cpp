@@ -54,6 +54,7 @@ namespace
             static FrameProviderTicket Create(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
             {
                 std::shared_ptr<OffScreenBufferFrameProvider> frameProvider{new OffScreenBufferFrameProvider(graphicsImpl, frameBufferHandle, std::move(callback))};
+                // Note: ReadTextureAsync is "asynchronously recursive" (it calls itself to read the next frame).
                 frameProvider->ReadTextureAsync();
                 return gsl::finally<FrameProviderCleanup>([frameProvider{std::move(frameProvider)}]() mutable {
                     frameProvider->m_cancellationToken.cancel();
@@ -95,7 +96,7 @@ namespace
                     arcana::task<void, std::exception_ptr> readNextFrameTask{thisRef->ReadTextureAsync()};
 
                     return arcana::when_all(readCurrentFrameTask, readNextFrameTask)
-                        .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const std::tuple<arcana::void_placeholder, arcana::void_placeholder>&) {
+                        .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const auto&) {
                             // Nothing to do, just converting to task<void, std::exception_ptr>
                         });
                 });
@@ -162,8 +163,16 @@ namespace Babylon::Plugins::Internal
             bgfx::FrameBufferHandle frameBufferHandle{bgfx::kInvalidHandle};
 
             // For an off screen frame buffer, the frame buffer must be passed into the constructor. Otherwise, we capture the on screen / default frame buffer.
-            if (info.Length() > 0 && info[0].IsExternal())
+            if (info.Length() > 1)
             {
+                throw Napi::Error::New(info.Env(), "Too many arguments passed to NativeCapture constructor.");
+            }
+            else if (info.Length() > 0 && !info[0].IsNull() && !info[0].IsUndefined())
+            {
+                if (!info[0].IsExternal())
+                {
+                    throw Napi::Error::New(info.Env(), "Argument passed to NativeCapture constructor must be a Napi::External containing a native FrameBuffer.");
+                }
                 auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
                 frameBufferHandle = frameBuffer.Handle();
             }
