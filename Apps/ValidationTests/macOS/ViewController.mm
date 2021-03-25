@@ -70,8 +70,6 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
-    
-    void* windowPtr = (__bridge void*)engineView;
 
     GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
     graphicsConfig.windowPtr = engineView;
@@ -82,7 +80,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 
-    runtime->Dispatch([windowPtr](Napi::Env env)
+    runtime->Dispatch([engineView](Napi::Env env)
     {
         graphics->AddToJavaScript(env);
 
@@ -92,7 +90,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
-        Babylon::TestUtils::CreateInstance(env, windowPtr);
+        Babylon::TestUtils::CreateInstance(env, engineView);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
