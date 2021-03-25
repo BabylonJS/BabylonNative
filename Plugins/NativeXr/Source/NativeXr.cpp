@@ -396,7 +396,6 @@ namespace Babylon
                 std::map<void*, FrameBuffer*> TextureToFrameBufferMap{};
                 std::map<FrameBuffer*, Napi::ObjectReference> FrameBufferToJsTextureMap{};
                 std::vector<void*> ActiveTextures{};
-                xr::System System{};
                 std::shared_ptr<xr::System::Session> Session{};
                 std::unique_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
@@ -406,6 +405,7 @@ namespace Babylon
             };
 
             std::unique_ptr<SessionState> m_sessionState{};
+            xr::System m_system{};
 
             void BeginFrame();
             void BeginUpdate();
@@ -463,15 +463,15 @@ namespace Babylon
 
                     m_sessionState = std::make_unique<SessionState>(graphicsImpl);
 
-                    if (!m_sessionState->System.IsInitialized())
+                    if (!m_system.IsInitialized())
                     {
-                        while (!m_sessionState->System.TryInitialize())
+                        while (!m_system.TryInitialize())
                         {
                             // do nothing
                         }
                     }
 
-                    return xr::System::Session::CreateAsync(m_sessionState->System, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
                         .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
