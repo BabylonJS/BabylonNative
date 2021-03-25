@@ -30,7 +30,7 @@ bool g_isXrActive{};
 {
 }
 
-- (void)init:(void*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
+- (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
     inputBuffer.reset();
     runtime.reset();
@@ -38,10 +38,9 @@ bool g_isXrActive{};
 
     float width = inWidth;
     float height = inHeight;
-    void* windowPtr = view;
     
     GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-    graphicsConfig.windowPtr = (__bridge WindowType)windowPtr;
+    graphicsConfig.windowPtr = view;
     graphicsConfig.width = static_cast<size_t>(width);
     graphicsConfig.height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);

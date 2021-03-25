@@ -27,17 +27,16 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 {
 }
 
-- (void)init:(void*)view width:(int)inWidth height:(int)inHeight
+- (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight
 {
     runtime.reset();
     graphics.reset();
 
     float width = inWidth;
     float height = inHeight;
-    void* windowPtr = view;
     
     GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-    graphicsConfig.windowPtr = (__bridge WindowType)windowPtr;
+    graphicsConfig.windowPtr = view;
     graphicsConfig.width = static_cast<size_t>(width);
     graphicsConfig.height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
