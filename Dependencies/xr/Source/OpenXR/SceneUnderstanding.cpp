@@ -177,32 +177,17 @@ public:
 
     System::Session::Frame::SceneObject& GetSceneObjectByID(const System::Session::Frame::SceneObject::Identifier id)
     {
-        if (m_objects.find(id) == m_objects.end())
-        {
-            throw std::exception(/*invalid id provided*/);
-        }
-
-        return *m_objects.at(id);
+        return m_objects.at(id);
     }
 
     System::Session::Frame::Plane& GetPlaneByID(const System::Session::Frame::Plane::Identifier id)
     {
-        if (m_planes.find(id) == m_planes.end())
-        {
-            throw std::exception(/*invalid id provided*/);
-        }
-
-        return *m_planes.at(id);
+        return m_planes.at(id);
     }
 
     System::Session::Frame::Mesh& GetMeshByID(const System::Session::Frame::Mesh::Identifier id)
     {
-        if (m_meshes.find(id) == m_meshes.end())
-        {
-            throw std::exception(/*invalid id provided*/);
-        }
-
-        return *m_meshes.at(id);
+        return m_meshes.at(id);
     }
 
 private:
@@ -272,16 +257,16 @@ private:
 
             if (m_objectIds.find(xrObject.id) == m_objectIds.end())
             {
-                auto object = std::make_unique<SceneObject>();
-                const auto objectId = object->ID;
+                SceneObject object;
+                const auto objectId = object.ID;
+                m_objects.emplace(objectId, object);
                 m_objectIds[xrObject.id] = objectId;
-                m_objects[objectId] = std::move(object);
             }
 
             const auto objectId = m_objectIds.at(xrObject.id);
             m_updatedObjects.push_back(objectId);
             auto& object = m_objects.at(objectId);
-            object->Type = c_objectTypeMap.at(xrObject.kind);
+            object.Type = c_objectTypeMap.at(xrObject.kind);
         }
 
         std::unordered_set<xr::su::SceneObject::Id> xrObjectIdsToRemove{};
@@ -311,17 +296,17 @@ private:
 
             if (m_meshIds.find(xrMesh.id) == m_meshIds.end())
             {
-                auto mesh = std::make_unique<Mesh>();
-                const auto meshId = mesh->ID;
+                Mesh mesh;
+                const auto meshId = mesh.ID;
+                m_meshes.emplace(meshId, mesh);
                 m_meshIds[xrMesh.id] = meshId;
-                m_meshes[meshId] = std::move(mesh);
             }
 
             const auto meshId = m_meshIds.at(xrMesh.id);
             m_updatedMeshes.push_back(meshId);
             auto& mesh = m_meshes.at(meshId);
-            mesh->ParentSceneObjectID = m_objectIds.at(xrMesh.parentObjectId);
-            mesh->MeshBufferId = xrMesh.meshBufferId;
+            mesh.ParentSceneObjectID = m_objectIds.at(xrMesh.parentObjectId);
+            mesh.MeshBufferId = xrMesh.meshBufferId;
         }
 
         std::unordered_set<xr::su::SceneMesh::Id> xrMeshIdsToRemove{};
@@ -357,23 +342,23 @@ private:
 
             // TODO: in preview 3 of the OpenXR scene understanding extension, plane's will also have associated meshes
             xr::SceneMeshBuffers meshBuffers;
-            xr::ReadMeshBuffers(m_scene->Handle(), args.Extensions, mesh->MeshBufferId, meshBuffers);
+            xr::ReadMeshBuffers(m_scene->Handle(), args.Extensions, mesh.MeshBufferId, meshBuffers);
 
-            assert(sizeof(XrVector3f) == sizeof(xr::Vector3f));
-            mesh->Positions.resize(meshBuffers.vertexBuffer.size());
+            static_assert(sizeof(XrVector3f) == sizeof(xr::Vector3f));
+            mesh.Positions.resize(meshBuffers.vertexBuffer.size());
             for (size_t n = 0; n < meshBuffers.vertexBuffer.size(); n++)
             {
                 const auto position = TransformPoint(meshBuffers.vertexBuffer.at(n), location.pose);
-                mesh->Positions[n].X = position.x;
-                mesh->Positions[n].Y = position.y;
-                mesh->Positions[n].Z = position.z;
+                mesh.Positions[n].X = position.x;
+                mesh.Positions[n].Y = position.y;
+                mesh.Positions[n].Z = position.z;
             }
 
-            assert(sizeof(Mesh::IndexType) == sizeof(uint32_t));
-            mesh->Indices.resize(meshBuffers.indexBuffer.size());
-            memcpy(mesh->Indices.data(), meshBuffers.indexBuffer.data(), meshBuffers.indexBuffer.size() * sizeof(uint32_t));
+            static_assert(sizeof(Mesh::IndexType) == sizeof(uint32_t));
+            mesh.Indices.resize(meshBuffers.indexBuffer.size());
+            memcpy(mesh.Indices.data(), meshBuffers.indexBuffer.data(), meshBuffers.indexBuffer.size() * sizeof(uint32_t));
 
-            mesh->HasNormals = false;
+            mesh.HasNormals = false;
         }
     }
 
@@ -387,17 +372,17 @@ private:
 
             if (m_planeIds.find(xrPlane.id) == m_planeIds.end())
             {
-                auto plane = std::make_unique<Plane>();
-                const auto planeId = plane->ID;
+                Plane plane;
+                const auto planeId = plane.ID;
+                m_planes.emplace(planeId, plane);
                 m_planeIds[xrPlane.id] = planeId;
-                m_planes[planeId] = std::move(plane);
             }
 
             const auto planeId = m_planeIds.at(xrPlane.id);
             m_updatedPlanes.push_back(planeId);
             auto& plane = m_planes.at(planeId);
-            plane->ParentSceneObjectID = m_objectIds.at(xrPlane.parentObjectId);
-            plane->Size = xrPlane.size;
+            plane.ParentSceneObjectID = m_objectIds.at(xrPlane.parentObjectId);
+            plane.Size = xrPlane.size;
         }
 
         std::unordered_set<xr::su::ScenePlane::Id> xrPlaneIdsToRemove{};
@@ -430,73 +415,49 @@ private:
             const auto& planeObjectID = m_planeIds.at(id);
             auto& plane = m_planes.at(planeObjectID);
             const auto& location = xrPlaneLocations.at(n);
-            plane->Center = XrPoseToBabylonPose(location.pose);
-            plane->PolygonFormat = xr::PolygonFormat::XYZ;
+            plane.Center = XrPoseToBabylonPose(location.pose);
+            plane.PolygonFormat = xr::PolygonFormat::XYZ;
 
             // Note: Without a normal its unclear how to define the front/back of the plane
             // This is currently an arbitrary winding order due to this lack of information
             constexpr uint8_t VALUES_IN_POINT = 3;
             constexpr uint8_t VALUES_IN_XYZ_QUAD = 12;
-            plane->Polygon.resize(VALUES_IN_XYZ_QUAD);
-            plane->Polygon[0] = -1.f * plane->Size.width / 2.f;
-            plane->Polygon[1] = -1.f * plane->Size.height / 2.f;
-            plane->Polygon[2] = 0;
-            plane->Polygon[3] = 1.f * plane->Size.width / 2.f;
-            plane->Polygon[4] = -1.f * plane->Size.height / 2.f;
-            plane->Polygon[5] = 0;
-            plane->Polygon[6] = 1.f * plane->Size.width / 2.f;
-            plane->Polygon[7] = 1.f * plane->Size.height / 2.f;
-            plane->Polygon[8] = 0;
-            plane->Polygon[9] = -1.f * plane->Size.width / 2.f;
-            plane->Polygon[10] = 1.f * plane->Size.height / 2.f;
-            plane->Polygon[11] = 0;
-            plane->PolygonSize = plane->Polygon.size() / VALUES_IN_POINT;
+            plane.Polygon.resize(VALUES_IN_XYZ_QUAD);
+            plane.Polygon[0] = -1.f * plane.Size.width / 2.f;
+            plane.Polygon[1] = -1.f * plane.Size.height / 2.f;
+            plane.Polygon[2] = 0;
+            plane.Polygon[3] = 1.f * plane.Size.width / 2.f;
+            plane.Polygon[4] = -1.f * plane.Size.height / 2.f;
+            plane.Polygon[5] = 0;
+            plane.Polygon[6] = 1.f * plane.Size.width / 2.f;
+            plane.Polygon[7] = 1.f * plane.Size.height / 2.f;
+            plane.Polygon[8] = 0;
+            plane.Polygon[9] = -1.f * plane.Size.width / 2.f;
+            plane.Polygon[10] = 1.f * plane.Size.height / 2.f;
+            plane.Polygon[11] = 0;
+            plane.PolygonSize = plane.Polygon.size() / VALUES_IN_POINT;
         }
     }
 
     void PopulateUpdateFrameArgs(UpdateFrameArgs& args)
     {
         args.UpdatedSceneObjects.clear();
-        for (const auto& objectId : m_updatedObjects)
-        {
-            args.UpdatedSceneObjects.push_back(objectId);
-        }
-        m_updatedObjects.clear();
+        m_updatedObjects.swap(args.UpdatedSceneObjects);
 
         args.RemovedSceneObjects.clear();
-        for (const auto& objectId : m_removedObjects)
-        {
-            args.RemovedSceneObjects.push_back(objectId);
-        }
-        m_removedObjects.clear();
+        m_removedObjects.swap(args.RemovedSceneObjects);
 
         args.UpdatedMeshes.clear();
-        for (const auto& meshId : m_updatedMeshes)
-        {
-            args.UpdatedMeshes.push_back(meshId);
-        }
-        m_updatedMeshes.clear();
+        m_updatedMeshes.swap(args.UpdatedMeshes);
 
         args.RemovedMeshes.clear();
-        for (const auto& meshId : m_removedMeshes)
-        {
-            args.RemovedMeshes.push_back(meshId);
-        }
-        m_removedMeshes.clear();
+        m_removedMeshes.swap(args.RemovedMeshes);
 
         args.UpdatedPlanes.clear();
-        for (const auto& planeId : m_updatedPlanes)
-        {
-            args.UpdatedPlanes.push_back(planeId);
-        }
-        m_updatedPlanes.clear();
+        m_updatedPlanes.swap(args.UpdatedPlanes);
 
         args.RemovedPlanes.clear();
-        for (const auto& planeId : m_removedPlanes)
-        {
-            args.RemovedPlanes.push_back(planeId);
-        }
-        m_removedPlanes.clear();
+        m_removedPlanes.swap(args.RemovedPlanes);
     }
 
     std::unique_ptr<xr::su::SceneObserver> m_sceneObserver;
@@ -507,11 +468,11 @@ private:
     XrTime m_lastUpdateTime{ 0 };
 
     std::unordered_map<xr::su::SceneObject::Id, SceneObject::Identifier> m_objectIds{};
-    std::unordered_map<SceneObject::Identifier, std::unique_ptr<SceneObject>> m_objects{};
+    std::unordered_map<SceneObject::Identifier, SceneObject> m_objects{};
     std::unordered_map<xr::su::SceneMesh::Id, Mesh::Identifier> m_meshIds{};
-    std::unordered_map<Mesh::Identifier, std::unique_ptr<Mesh>> m_meshes{};
+    std::unordered_map<Mesh::Identifier, Mesh> m_meshes{};
     std::unordered_map<xr::su::ScenePlane::Id, Plane::Identifier> m_planeIds{};
-    std::unordered_map<Plane::Identifier, std::unique_ptr<Plane>> m_planes{};
+    std::unordered_map<Plane::Identifier, Plane> m_planes{};
     std::vector<SceneObject::Identifier> m_updatedObjects{};
     std::vector<SceneObject::Identifier> m_removedObjects{};
     std::vector<Mesh::Identifier> m_updatedMeshes{};
