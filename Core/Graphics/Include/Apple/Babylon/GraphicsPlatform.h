@@ -6,8 +6,7 @@ using WindowType = MTKView*;
 
 struct GraphicsConfiguration
 {
-    WindowType windowPtr;
-    void* windowTypePtr;
+    MTKView* windowPtr;
     size_t width;
     size_t height;
 };

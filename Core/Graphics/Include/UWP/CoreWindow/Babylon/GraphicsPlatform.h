@@ -9,7 +9,6 @@ using WindowType = winrt::Windows::UI::Core::ICoreWindow*;
 struct GraphicsConfiguration
 {
     WindowType windowPtr;
-    void* windowTypePtr;
     size_t width;
     size_t height;
 };

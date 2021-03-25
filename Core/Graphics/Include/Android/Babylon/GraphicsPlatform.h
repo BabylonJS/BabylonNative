@@ -3,11 +3,9 @@
 #include <android/native_window.h>
 
 using WindowType = ANativeWindow*;
-
 struct GraphicsConfiguration
 {
-    WindowType windowPtr;
-    void* windowTypePtr;
+    ANativeWindow* windowPtr;
     size_t width;
     size_t height;
 };

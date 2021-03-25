@@ -1,12 +1,11 @@
 #pragma once
 
 #include <Windows.h>
-
 using WindowType = HWND;
 
 struct GraphicsConfiguration
 {
-    WindowType windowPtr;
+    HWND windowPtr;
     size_t width;
     size_t height;
 };

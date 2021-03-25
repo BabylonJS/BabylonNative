@@ -11,7 +11,7 @@ namespace Babylon
 {
     void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
-        pd.ndt = config.windowTypePtr;
+        pd.ndt = nullptr;
         pd.nwh = config.windowPtr;
         pd.context = nullptr;
         pd.backBuffer = nullptr;

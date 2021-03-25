@@ -6,8 +6,7 @@ using WindowType = void*;
 
 struct GraphicsConfiguration
 {
-    WindowType windowPtr;
-    void* windowTypePtr;
+    void* windowPtr;
     size_t width;
     size_t height;
 };

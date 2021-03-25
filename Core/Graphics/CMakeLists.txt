@@ -19,12 +19,12 @@ if (WINDOWS_STORE)
         set(SOURCES
             ${SOURCES}
             "Include/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Babylon/GraphicsPlatform.h"
-            "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.cpp")
+            "Source/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/GraphicsPlatform.cpp")
     else()
         set(SOURCES
             ${SOURCES}
             "Include/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Babylon/GraphicsPlatform.h"
-            "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.cpp")
+            "Source/${BABYLON_NATIVE_PLATFORM}/CoreWindow/GraphicsPlatform.cpp")
     endif()
 elseif(APPLE)
     if(IOS)

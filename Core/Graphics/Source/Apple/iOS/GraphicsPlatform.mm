@@ -18,7 +18,7 @@ namespace Babylon
     float GraphicsImpl::UpdateDevicePixelRatio()
     {
         std::scoped_lock lock{m_state.Mutex};
-        MTKView* view = (MTKView*)GetNativeWindow<WindowType>();
+        MTKView* view = GetNativeWindow<WindowType>();
         m_state.Resolution.DevicePixelRatio = view.contentScaleFactor;
         return m_state.Resolution.DevicePixelRatio;
     }

@@ -7,7 +7,6 @@ using WindowType = winrt::Windows::UI::Xaml::Controls::ISwapChainPanel*;
 struct GraphicsConfiguration
 {
     WindowType windowPtr;
-    void* windowTypePtr;
     size_t width;
     size_t height;
 };
