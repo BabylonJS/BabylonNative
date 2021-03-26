@@ -242,7 +242,7 @@ namespace xr
                     bool JointsTrackedThisFrame{};
                     bool GamepadTrackedThisFrame{};
                     bool HandTrackedThisFrame{};
-                    std::string interactionProfileName{""};
+                    std::string InteractionProfileName{""};
                     GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
