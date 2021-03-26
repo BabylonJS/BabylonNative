@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <map>
+#include <unordered_map>
 
 namespace Babylon
 {
@@ -54,6 +55,16 @@ namespace Babylon
             arcana::manual_dispatcher<128> m_dispatcher;
         };
 
+        struct TextureInfo final
+        {
+        public:
+            uint16_t Width{};
+            uint16_t Height{};
+            bool HasMips{};
+            uint16_t NumLayers{};
+            bgfx::TextureFormat::Enum Format{};
+        };
+
         Impl();
         ~Impl();
 
@@ -79,9 +90,15 @@ namespace Babylon
         void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
         FrameBuffer& DefaultFrameBuffer();
 
+        void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
+        void RemoveTexture(bgfx::TextureHandle handle);
+        TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
+
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
 
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
@@ -141,5 +158,10 @@ namespace Babylon
 
         std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
         std::mutex m_threadIdToEncoderMutex{};
+
+        std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
+
+        std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
+        std::mutex m_textureHandleToInfoMutex{};
     };
 }
