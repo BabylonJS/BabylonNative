@@ -11,8 +11,7 @@ set(SOURCES
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
     "Source/SafeTimespanGuarantor.cpp"
-    "Source/SafeTimespanGuarantor.h"
-    )
+    "Source/SafeTimespanGuarantor.h")
 
 if (WINDOWS_STORE)
     if (BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
