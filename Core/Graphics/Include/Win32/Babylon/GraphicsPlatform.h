@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Windows.h>
+#include <Babylon/Graphics.h>
+
 using WindowType = HWND;
 
 struct Babylon::Graphics::Configuration

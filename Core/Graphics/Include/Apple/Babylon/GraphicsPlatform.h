@@ -1,15 +1,13 @@
  #pragma once
 
+#include <Babylon/Graphics.h>
 #include <MetalKit/MetalKit.h>
 
 using WindowType = MTKView*;
 
-namespace Babylon::Graphics
+struct Babylon::Graphics::Configuration
 {
-    struct Configuration
-    {
-        WindowType WindowPtr;
-        size_t Width;
-        size_t Height;
-    };
-}
+    WindowType WindowPtr;
+    size_t Width;
+    size_t Height;
+};

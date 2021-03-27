@@ -133,7 +133,7 @@ extern "C"
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
                 Babylon::Graphics::Configuration graphicsConfig{};
                 graphicsConfig.WindowPtr = window;
-                graphicsConfig.width = width;
+                graphicsConfig.Width = width;
                 graphicsConfig.Height = height;
                 g_graphics->UpdateWindow(graphicsConfig);
                 g_graphics->UpdateSize(width, height);
