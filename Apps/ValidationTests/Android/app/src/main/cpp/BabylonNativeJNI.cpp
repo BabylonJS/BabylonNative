@@ -64,10 +64,10 @@ extern "C"
             int32_t width  = 600;//ANativeWindow_getWidth(window);
             int32_t height = 400;//ANativeWindow_getHeight(window);
 
-            GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-            graphicsConfig.windowPtr = window;
-            graphicsConfig.width = static_cast<size_t>(width);
-            graphicsConfig.height = static_cast<size_t>(height);
+            Graphics::Configuration graphicsConfig{};
+            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Width = static_cast<size_t>(width);
+            graphicsConfig.Height = static_cast<size_t>(height);
 
             g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
             g_graphics->StartRenderingCurrentFrame();
@@ -123,15 +123,12 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-            GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-            graphicsConfig.windowPtr = window;
-            graphicsConfig.width = static_cast<size_t>(width);
-            graphicsConfig.height = static_cast<size_t>(height);
-
-            g_runtime->Dispatch([graphicsConfig](auto env) {
-                g_graphics->UpdateWindow(graphicsConfig);
-                g_graphics->UpdateSize(graphicsConfig.width, graphicsConfig.height);
-            });
+            Babylon::Graphics::Configuration graphicsConfig{};
+            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Width = static_cast<size_t>(width);
+            graphicsConfig.Height = static_cast<size_t>(height);
+            g_graphics->UpdateWindow(graphicsConfig);
+            g_graphics->UpdateSize(graphicsConfig.Width, graphicsConfig.Height);
         }
     }
 

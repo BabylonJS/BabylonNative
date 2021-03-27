@@ -1,11 +1,13 @@
  #pragma once
 
+#include <Babylon/Graphics.h>
 #include <android/native_window.h>
 
 using WindowType = ANativeWindow*;
-struct GraphicsConfiguration
+
+struct Babylon::Graphics::Configuration
 {
-    ANativeWindow* windowPtr;
-    size_t width;
-    size_t height;
+    WindowType WindowPtr;
+    size_t Width;
+    size_t Height;
 };

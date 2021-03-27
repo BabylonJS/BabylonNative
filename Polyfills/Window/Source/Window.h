@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-#include <Babylon/Graphics.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -22,7 +21,7 @@ namespace Babylon::Polyfills::Internal
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);
         static Napi::Value GetDevicePixelRatio(const Napi::CallbackInfo& info);
-        
+
         void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
     };
 }

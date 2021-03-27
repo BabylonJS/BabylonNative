@@ -34,11 +34,11 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
     float width = inWidth;
     float height = inHeight;
-    
-    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-    graphicsConfig.windowPtr = view;
-    graphicsConfig.width = static_cast<size_t>(width);
-    graphicsConfig.height = static_cast<size_t>(height);
+
+    Babylon::Graphics::Configuration graphicsConfig{};
+    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Width = static_cast<size_t>(width);
+    graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
 
@@ -48,13 +48,13 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        
+
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
-        
+
         Babylon::TestUtils::CreateInstance(env, nullptr);
     });
 

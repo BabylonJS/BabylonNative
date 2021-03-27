@@ -4,9 +4,12 @@
 
 using WindowType = MTKView*;
 
-struct GraphicsConfiguration
+namespace Babylon::Graphics
 {
-    MTKView* windowPtr;
-    size_t width;
-    size_t height;
-};
+    struct Configuration
+    {
+        WindowType WindowPtr;
+        size_t Width;
+        size_t Height;
+    };
+}

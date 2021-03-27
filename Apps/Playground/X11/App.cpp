@@ -64,10 +64,10 @@ namespace
         Uninitialize();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-        GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-        graphicsConfig.windowPtr = (void*)(uintptr_t)window;
-        graphicsConfig.width = static_cast<size_t>(width);
-        graphicsConfig.height = static_cast<size_t>(height);
+        Babylon::Graphics::Configuration graphicsConfig{};
+        graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.Width = static_cast<size_t>(width);
+        graphicsConfig.Height = static_cast<size_t>(height);
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->StartRenderingCurrentFrame();

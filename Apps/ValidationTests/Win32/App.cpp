@@ -97,12 +97,12 @@ namespace
 
     void Initialize(HWND hWnd)
     {
-        auto configuration = GraphicsConfiguration();
-        configuration.windowPtr = hWnd;
-        configuration.width = static_cast<size_t>(TEST_WIDTH);
-        configuration.height = static_cast<size_t>(TEST_HEIGHT);
+        Babylon::Graphics::Configuration graphicsConfig{};
+        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
+        graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
 
-        graphics = Babylon::Graphics::CreateGraphics(configuration);
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
 

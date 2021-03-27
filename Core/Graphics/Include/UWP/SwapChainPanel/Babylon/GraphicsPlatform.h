@@ -1,12 +1,13 @@
 #pragma once
 
 #include <winrt/Windows.UI.Xaml.Controls.h>
+#include <Babylon/Graphics.h>
 
 using WindowType = winrt::Windows::UI::Xaml::Controls::ISwapChainPanel*;
 
-struct GraphicsConfiguration
+struct Babylon::Graphics::Configuration
 {
-    WindowType windowPtr;
-    size_t width;
-    size_t height;
+    WindowType WindowPtr;
+    size_t Width;
+    size_t Height;
 };

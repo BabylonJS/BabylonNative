@@ -1,12 +1,13 @@
  #pragma once
 
+#include <Babylon/Graphics.h>
 #include <X11/Xlib.h>
 
 using WindowType = void*;
 
-struct GraphicsConfiguration
+struct Babylon::Graphics::Configuration
 {
-    void* windowPtr;
-    size_t width;
-    size_t height;
+    WindowType WindowPtr;
+    size_t Width;
+    size_t Height;
 };

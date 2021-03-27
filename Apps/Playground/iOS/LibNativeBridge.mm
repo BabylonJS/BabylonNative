@@ -38,11 +38,11 @@ bool g_isXrActive{};
 
     float width = inWidth;
     float height = inHeight;
-    
-    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-    graphicsConfig.windowPtr = view;
-    graphicsConfig.width = static_cast<size_t>(width);
-    graphicsConfig.height = static_cast<size_t>(height);
+
+    Babylon::Graphics::Configuration graphicsConfig{};
+    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Width = static_cast<size_t>(width);
+    graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();

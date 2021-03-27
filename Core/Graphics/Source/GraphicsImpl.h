@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Babylon/Graphics.h>
 #include <Babylon/JsRuntime.h>
 #include "BgfxCallback.h"
 #include "FrameBufferManager.h"
@@ -17,10 +18,10 @@
 #include <memory>
 #include <map>
 
-struct GraphicsConfiguration;
-
 namespace Babylon
 {
+    struct Graphics::Configuration;
+
     class GraphicsImpl
     {
     public:
@@ -60,7 +61,7 @@ namespace Babylon
         virtual ~GraphicsImpl();
         template<typename WindowT>
         WindowT GetNativeWindow();
-        void SetNativeWindow(const GraphicsConfiguration& config);
+        void SetNativeWindow(const Graphics::Configuration& config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -96,7 +97,7 @@ namespace Babylon
     private:
         friend class UpdateToken;
 
-        void ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& platformData);
+        void ConfigureBgfxPlatformData(const Graphics::Configuration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         float UpdateDevicePixelRatio();

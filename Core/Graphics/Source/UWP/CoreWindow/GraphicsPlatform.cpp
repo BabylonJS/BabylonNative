@@ -1,6 +1,6 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/GraphicsPlatform.h>
-#include "../GraphicsImpl.h"
+#include <GraphicsImpl.h>
 
 #include <winrt/Windows.Graphics.Display.h>
 
@@ -9,10 +9,10 @@ using namespace Windows::Graphics::Display;
 
 namespace Babylon
 {
-    void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(const Graphics::Configuration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
-        pd.nwh = config.windowPtr;
+        pd.nwh = config.WindowPtr;
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;

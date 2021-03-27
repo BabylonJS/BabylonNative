@@ -3,9 +3,9 @@
 #include <Windows.h>
 using WindowType = HWND;
 
-struct GraphicsConfiguration
+struct Babylon::Graphics::Configuration
 {
-    HWND windowPtr;
-    size_t width;
-    size_t height;
+    WindowType WindowPtr;
+    size_t Width;
+    size_t Height;
 };

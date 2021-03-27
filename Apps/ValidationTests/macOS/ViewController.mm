@@ -71,10 +71,10 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    GraphicsConfiguration graphicsConfig = GraphicsConfiguration();
-    graphicsConfig.windowPtr = engineView;
-    graphicsConfig.width = static_cast<size_t>(600);
-    graphicsConfig.height = static_cast<size_t>(400);
+    Babylon::Graphics::Configuration graphicsConfig{};
+    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Width = static_cast<size_t>(600);
+    graphicsConfig.Height = static_cast<size_t>(400);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
 
@@ -103,7 +103,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
 - (void)viewDidAppear {
     [super viewDidAppear];
-    
+
     [self initialize];
 }
 

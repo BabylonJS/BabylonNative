@@ -4,20 +4,19 @@
 
 #include <memory>
 
-struct GraphicsConfiguration;
-
 namespace Babylon
 {
     class Graphics
     {
     public:
         class Impl;
+        struct Configuration;
 
         ~Graphics();
 
-        static std::unique_ptr<Graphics> CreateGraphics(const GraphicsConfiguration& config);
+        static std::unique_ptr<Graphics> CreateGraphics(const Configuration& config);
 
-        void UpdateWindow(const GraphicsConfiguration& config);
+        void UpdateWindow(const Graphics::Configuration& config);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -40,8 +39,6 @@ namespace Babylon
 
         Graphics(const Graphics&) = delete;
         Graphics(Graphics&&) = delete;
-
-        void UpdateWindowInternal(GraphicsConfiguration config);
 
         float UpdateDevicePixelRatio();
 

@@ -6,24 +6,24 @@
 namespace Babylon
 {
     class Graphics::Impl : public GraphicsImpl { };
-    
+
     Graphics::Graphics()
-        : m_impl{std::make_unique<Graphics::Impl>()}
+        : m_impl{std::make_unique<Impl>()}
     {
     }
 
     Graphics::~Graphics() = default;
 
-    void Graphics::UpdateWindow(const GraphicsConfiguration& config)
+    void Graphics::UpdateWindow(const Graphics::Configuration& config)
     {
         m_impl->SetNativeWindow(config);
     }
 
-    std::unique_ptr<Graphics> Graphics::CreateGraphics(const GraphicsConfiguration& config)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const Graphics::Configuration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow(config);
-        graphics->UpdateSize(config.width, config.height);
+        graphics->UpdateSize(config.Width, config.Height);
         return graphics;
     }
 

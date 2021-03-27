@@ -3,7 +3,6 @@
 #include <iterator>
 #include "Window.h"
 
-#include <Babylon/Graphics.h>
 #include <GraphicsImpl.h>
 
 namespace Babylon::Polyfills::Internal
@@ -62,7 +61,7 @@ namespace Babylon::Polyfills::Internal
             Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
             defineProperty.Call(object, {global, Napi::String::New(env, JS_DEVICE_PIXEL_RATIO_NAME), descriptor});
         }
-        
+
     }
 
     Window& Window::GetFromJavaScript(Napi::Env env)
@@ -120,7 +119,7 @@ namespace Babylon::Polyfills::Internal
         });
     }
 
-    Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info) 
+    Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info)
     {
         auto env{info.Env()};
         return Napi::Value::From(env, GraphicsImpl::GetFromJavaScript(env).GetDevicePixelRatio());
