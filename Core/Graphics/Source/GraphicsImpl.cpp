@@ -209,6 +209,25 @@ namespace Babylon
         return m_frameBufferManager->DefaultFrameBuffer();
     }
 
+    void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
+    {
+        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        TextureInfo textureInfo{width, height, hasMips, numLayers, format};
+        m_textureHandleToInfo.emplace(handle.idx, textureInfo);
+    }
+
+    void GraphicsImpl::RemoveTexture(bgfx::TextureHandle handle)
+    {
+        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        m_textureHandleToInfo.erase(handle.idx);
+    }
+
+    GraphicsImpl::TextureInfo GraphicsImpl::GetTextureInfo(bgfx::TextureHandle handle)
+    {
+        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        return m_textureHandleToInfo[handle.idx];
+    }
+
     void GraphicsImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
         assert(m_renderThreadAffinity.check());
@@ -218,6 +237,13 @@ namespace Babylon
     void GraphicsImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
     {
         m_screenShotCallbacks.push(std::move(callback));
+    }
+
+    arcana::task<void, std::exception_ptr> GraphicsImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data)
+    {
+        arcana::task_completion_source<void, std::exception_ptr> completionSource{};
+        m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data()), completionSource);
+        return completionSource.as_task();
     }
 
     float GraphicsImpl::GetHardwareScalingLevel()
@@ -266,7 +292,7 @@ namespace Babylon
             bgfx::discard(BGFX_DISCARD_ALL);
 
             auto& res = m_state.Bgfx.InitState.resolution;
-            bgfx::reset(res.width, res.height, BGFX_RESET_FLAGS);
+            bgfx::reset(res.width, res.height, res.reset);
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
             m_state.Bgfx.Dirty = false;
@@ -314,7 +340,15 @@ namespace Babylon
         RequestScreenShots();
 
         // Advance frame and render!
-        bgfx::frame();
+        uint32_t frameNumber{bgfx::frame()};
+
+        // Process read texture requests.
+        assert(m_readTextureRequests.empty() || m_readTextureRequests.front().first >= frameNumber);
+        while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first == frameNumber)
+        {
+            m_readTextureRequests.front().second.complete();
+            m_readTextureRequests.pop();
+        }
 
         // Reset the frame buffers.
         m_frameBufferManager->Reset();
