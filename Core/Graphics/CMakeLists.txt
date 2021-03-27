@@ -72,8 +72,6 @@ elseif(ANDROID)
     target_link_to_dependencies(Graphics
         PRIVATE android
         PRIVATE AndroidExtensions)
-elseif(UNIX AND NOT APPLE)
-    # link to linux libraries
 endif()
 
 target_link_to_dependencies(Graphics
