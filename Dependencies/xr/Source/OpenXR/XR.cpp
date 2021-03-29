@@ -1114,24 +1114,24 @@ namespace xr
                     ActionResources.ActiveInputSources.clear();
                     ActionResources.ActiveInputSources.resize(ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size());
 
-                    for (auto iter = ActionResources.ActiveInputSources.begin(); iter != ActionResources.ActiveInputSources.end(); ++iter)
+                    for (size_t idx = 0; idx < ActionResources.ActiveInputSources.size(); ++idx)
                     {
                         XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
                         const auto& instance = HmdImpl.Context.Instance();
+                        auto& inputSource = ActionResources.ActiveInputSources[idx];
 
-                        const size_t idx = iter - ActionResources.ActiveInputSources.begin(); 
                         XrCheck(xrGetCurrentInteractionProfile(HmdImpl.Context.Session(), ActionResources.ControllerSubactionPaths[idx], &state));
 
                         if (state.interactionProfile == XR_NULL_PATH)
                         {
-                            (*iter).InteractionProfileName = "";
+                            inputSource.InteractionProfileName = "";
                             continue;
                         }
 
                         uint32_t count;
                         XrCheck(xrPathToString(instance, state.interactionProfile, 0, &count, nullptr));
-                        (*iter).InteractionProfileName.resize(count);
-                        XrCheck(xrPathToString(instance, state.interactionProfile, count, &count, (*iter).InteractionProfileName.data()));
+                        inputSource.InteractionProfileName.resize(count);
+                        XrCheck(xrPathToString(instance, state.interactionProfile, count, &count, inputSource.InteractionProfileName.data()));
                     }
 
                     break;
@@ -1580,13 +1580,15 @@ namespace xr
             for (size_t idx = 0; idx < InputSources.size(); ++idx)
             {
                 auto& inputSource = InputSources[idx];
+
+                // Reset the tracked flags
                 inputSource.TrackedThisFrame = false;
                 inputSource.GamepadTrackedThisFrame = false;
                 inputSource.HandTrackedThisFrame = false;
                 inputSource.JointsTrackedThisFrame = false;
 
-                // Get interaction data based on input profile. It is safe to hold off on sending
-                // input reports until we get an interaction profile changed event
+                // Get interaction data based on input profile. It is safe to hold off on populating input
+                // source data until we get an interaction profile changed event (and know what the source is)
                 if (!inputSource.InteractionProfileName.empty())
                 {
                     // Get grip space
