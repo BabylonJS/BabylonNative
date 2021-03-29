@@ -385,9 +385,6 @@ namespace xr
             static constexpr char* MICROSOFT_HAND_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/hand_interaction" };
 
             std::vector<Frame::InputSource> ActiveInputSources{};
-            std::vector<Frame::SceneObject> SceneObjects{};
-            std::vector<Frame::Plane> Planes{};
-            std::vector<Frame::Mesh> Meshes{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
@@ -1299,8 +1296,6 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
-        , Planes { sessionImpl.ActionResources.Planes }
-        , Meshes { sessionImpl.ActionResources.Meshes }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedSceneObjects{}
         , RemovedSceneObjects{}
@@ -1505,10 +1500,8 @@ namespace xr
                 displayTime,
                 UpdatedSceneObjects,
                 RemovedSceneObjects,
-                Planes,
                 UpdatedPlanes,
                 RemovedPlanes,
-                Meshes,
                 UpdatedMeshes,
                 RemovedMeshes
             };
