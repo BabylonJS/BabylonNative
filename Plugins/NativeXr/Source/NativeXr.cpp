@@ -491,6 +491,8 @@ namespace Babylon
             m_sessionState->FrameBufferToJsTextureMap.clear();
             m_sessionState->TextureToFrameBufferMap.clear();
             m_sessionState->ActiveTextures.clear();
+            m_sessionState->ScheduleFrameCallbacks.clear();
+            m_sessionState->CreateRenderTexture.Reset();
 
             // Don't try to end the session while it is still starting.
             m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
@@ -610,9 +612,11 @@ namespace Babylon
                     // And size is used for determining viewport when rendering to texture.
                     auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
                     auto colorTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
+                    m_sessionState->GraphicsImpl.AddTexture(colorTexture, static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat);
 
                     auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
                     auto depthTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
+                    m_sessionState->GraphicsImpl.AddTexture(depthTexture, static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat);
 
                     arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
