@@ -6,6 +6,9 @@
 // Includes from @babylonjs/react-native-windows
 #include <winrt/BabylonReactNative.h>
 
+// Includes from @react-native-community/slider
+#include <winrt/SliderWindows.h>
+
 // Includes from react-native-permissions
 #include <winrt/RNPermissions.h>
 
@@ -16,6 +19,8 @@ void RegisterAutolinkedNativeModulePackages(winrt::Windows::Foundation::Collecti
 { 
     // IReactPackageProviders from @babylonjs/react-native-windows
     packageProviders.Append(winrt::BabylonReactNative::ReactPackageProvider());
+    // IReactPackageProviders from @react-native-community/slider
+    packageProviders.Append(winrt::SliderWindows::ReactPackageProvider());
     // IReactPackageProviders from react-native-permissions
     packageProviders.Append(winrt::RNPermissions::ReactPackageProvider());
 }

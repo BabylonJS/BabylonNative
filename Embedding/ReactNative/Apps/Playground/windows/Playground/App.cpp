@@ -53,9 +53,6 @@ App::App() noexcept
 
     PackageProviders().Append(make<ReactPackageProvider>()); // Includes all modules in this project
 
-    // TODO: we should use autolinking once possible
-    PackageProviders().Append(winrt::SliderWindows::ReactPackageProvider());
-
     InitializeComponent();
 }
 
