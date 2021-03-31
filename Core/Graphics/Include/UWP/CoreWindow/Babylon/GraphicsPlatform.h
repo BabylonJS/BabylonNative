@@ -7,7 +7,7 @@
 
 using WindowType = winrt::Windows::UI::Core::ICoreWindow*;
 
-struct Babylon::Graphics::Configuration
+struct Babylon::GraphicsConfiguration
 {
     WindowType WindowPtr;
     size_t Width;

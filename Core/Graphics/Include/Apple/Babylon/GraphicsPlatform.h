@@ -5,7 +5,7 @@
 
 using WindowType = MTKView*;
 
-struct Babylon::Graphics::Configuration
+struct Babylon::GraphicsConfiguration
 {
     WindowType WindowPtr;
     size_t Width;

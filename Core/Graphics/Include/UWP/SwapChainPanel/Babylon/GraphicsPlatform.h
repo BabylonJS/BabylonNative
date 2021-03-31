@@ -5,7 +5,7 @@
 
 using WindowType = winrt::Windows::UI::Xaml::Controls::ISwapChainPanel*;
 
-struct Babylon::Graphics::Configuration
+struct Babylon::GraphicsConfiguration
 {
     WindowType WindowPtr;
     size_t Width;

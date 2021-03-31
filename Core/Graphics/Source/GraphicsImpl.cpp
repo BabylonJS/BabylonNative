@@ -45,7 +45,7 @@ namespace Babylon
         return static_cast<WindowType>(m_state.Bgfx.InitState.platformData.nwh);
     }
 
-    void GraphicsImpl::SetNativeWindow(const Graphics::Configuration& config)
+    void GraphicsImpl::SetNativeWindow(const GraphicsConfiguration& config)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;

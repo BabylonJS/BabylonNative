@@ -20,7 +20,6 @@
 
 namespace Babylon
 {
-    struct Graphics::Configuration;
 
     class GraphicsImpl
     {
@@ -71,7 +70,7 @@ namespace Babylon
         virtual ~GraphicsImpl();
         template<typename WindowT>
         WindowT GetNativeWindow();
-        void SetNativeWindow(const Graphics::Configuration& config);
+        void SetNativeWindow(const GraphicsConfiguration& config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -113,7 +112,7 @@ namespace Babylon
     private:
         friend class UpdateToken;
 
-        void ConfigureBgfxPlatformData(const Graphics::Configuration& config, bgfx::PlatformData& platformData);
+        void ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         float UpdateDevicePixelRatio();
