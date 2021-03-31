@@ -67,7 +67,7 @@ extern "C"
             g_graphics->StartRenderingCurrentFrame();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
-            g_runtime->Dispatch([](Napi::Env env)
+            g_runtime->Dispatch([window](Napi::Env env)
             {
                 g_graphics->AddToJavaScript(env);
 
