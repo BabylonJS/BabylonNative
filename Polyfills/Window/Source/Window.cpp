@@ -1,7 +1,9 @@
-#include "Window.h"
 #include <basen.hpp>
 #include <chrono>
 #include <iterator>
+#include "Window.h"
+
+#include <GraphicsImpl.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -12,6 +14,7 @@ namespace Babylon::Polyfills::Internal
         constexpr auto JS_A_TO_B_NAME = "atob";
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
+        constexpr auto JS_DEVICE_PIXEL_RATIO_NAME = "devicePixelRatio";
     }
 
     void Window::Initialize(Napi::Env env)
@@ -48,6 +51,17 @@ namespace Babylon::Polyfills::Internal
         {
             global.Set(JS_REMOVE_EVENT_LISTENER_NAME, Napi::Function::New(env, &Window::RemoveEventListener, JS_REMOVE_EVENT_LISTENER_NAME));
         }
+
+        if (global.Get(JS_DEVICE_PIXEL_RATIO_NAME).IsUndefined()){
+            // Create an accessor to add to the window object to define window.devicePixelRatio
+            Napi::Object descriptor{Napi::Object::New(env)};
+            descriptor.Set("enumerable", Napi::Value::From(env, true));
+            descriptor.Set("get", Napi::Function::New(env, &Window::GetDevicePixelRatio, JS_DEVICE_PIXEL_RATIO_NAME, &jsWindow));
+            Napi::Object object{global.Get("Object").As<Napi::Object>()};
+            Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
+            defineProperty.Call(object, {global, Napi::String::New(env, JS_DEVICE_PIXEL_RATIO_NAME), descriptor});
+        }
+
     }
 
     Window& Window::GetFromJavaScript(Napi::Env env)
@@ -103,6 +117,12 @@ namespace Babylon::Polyfills::Internal
                 RecursiveWaitOrCall(std::move(function), whenToRun);
             }
         });
+    }
+
+    Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info)
+    {
+        auto env{info.Env()};
+        return Napi::Value::From(env, GraphicsImpl::GetFromJavaScript(env).GetDevicePixelRatio());
     }
 }
 
