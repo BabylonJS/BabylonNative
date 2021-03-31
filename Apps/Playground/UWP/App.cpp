@@ -267,7 +267,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_runtime = std::make_unique<Babylon::AppRuntime>();
     m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
-    m_runtime->Dispatch([this, windowPtr, width, height](Napi::Env env) {
+    m_runtime->Dispatch([this](Napi::Env env) {
         m_graphics->AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {

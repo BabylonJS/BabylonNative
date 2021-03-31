@@ -42,8 +42,8 @@ extern "C"
         }
 
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_runtime.reset();
+        g_graphics.reset();
     }
 
     JNIEXPORT void JNICALL
@@ -67,7 +67,7 @@ extern "C"
             g_graphics->StartRenderingCurrentFrame();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
-            g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
+            g_runtime->Dispatch([](Napi::Env env)
             {
                 g_graphics->AddToJavaScript(env);
 
