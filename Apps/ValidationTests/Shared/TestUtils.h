@@ -9,7 +9,7 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
-#if _MSC_VER 
+#if _MSC_VER
 #pragma warning( disable : 4324 ) // 'bx::DirectoryReader': structure was padded due to alignment specifier
 #endif
 
@@ -100,10 +100,10 @@ namespace Babylon
                 UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
                                                message:(errorCode == 0)?@"Success!":@"Errors: Check logs!"
                                                preferredStyle:UIAlertControllerStyleAlert];
-                 
+
                 UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
                    handler:^(UIAlertAction * ) {}];
-                 
+
                 [alert addAction:defaultAction];
                 UIViewController *rootController = [[[[UIApplication sharedApplication]delegate] window] rootViewController];
                 [rootController presentViewController:alert animated:YES completion:nil];
@@ -232,7 +232,7 @@ namespace Babylon
             return Napi::Value::From(info.Env(), path);
         }
 
-        
+
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef ANDROID

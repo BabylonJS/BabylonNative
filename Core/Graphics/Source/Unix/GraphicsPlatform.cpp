@@ -9,7 +9,7 @@ namespace Babylon
     void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
-        pd.nwh = config.WindowPtr;
+        pd.nwh = (void*)config.WindowPtr;
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
@@ -27,7 +27,8 @@ namespace Babylon
         auto pixelWidth = DisplayWidth(display, screen);
 
         std::scoped_lock lock{m_state.Mutex};
-        if (width > 0){
+        if (width > 0)
+        {
             auto dpi = pixelWidth/(width * MILLIMETERS_TO_INCHES);
 
             // X11 does not enforce a default dpi.

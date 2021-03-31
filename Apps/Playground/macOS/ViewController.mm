@@ -75,7 +75,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     CGFloat screenScale = mainScreen.backingScaleFactor;
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
-    Babylon::Graphics::Configuration graphicsConfig{};
+    Babylon::GraphicsConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = engineView;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;

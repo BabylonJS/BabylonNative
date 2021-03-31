@@ -71,7 +71,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    Babylon::Graphics::Configuration graphicsConfig{};
+    Babylon::GraphicsConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = engineView;
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);

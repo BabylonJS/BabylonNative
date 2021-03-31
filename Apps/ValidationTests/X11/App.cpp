@@ -56,13 +56,13 @@ namespace
         graphics.reset();
     }
 
-    void InitBabylon(int32_t window)
+    void InitBabylon(Window window)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         Uninitialize();
 
-        Babylon::Graphics::Configuration graphicsConfig{};
+        Babylon::GraphicsConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
