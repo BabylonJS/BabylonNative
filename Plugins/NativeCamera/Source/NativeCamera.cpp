@@ -57,7 +57,7 @@ namespace Babylon::Plugins::Internal
                     });
                 
                 return promise;
-                }));
+            }));
             navigator.Set("mediaDevices", mediaDevices);
         }
 
@@ -76,11 +76,11 @@ namespace Babylon::Plugins::Internal
         {
             auto constraints = info[0].As<Napi::Object>();
             uint32_t maxWidth{256}, maxHeight{256};
-            std::string facingMode;
+            std::string facingMode{};
 
-            auto maxWidthValue = constraints.Get("maxWidth");
-            auto maxHeightValue = constraints.Get("maxHeight");
-            auto facingModeValue = constraints.Get("facingMode");
+            auto maxWidthValue{constraints.Get("maxWidth")};
+            auto maxHeightValue{constraints.Get("maxHeight")};
+            auto facingModeValue{constraints.Get("facingMode")};
             if (maxWidthValue.IsNumber())
             {
                 maxWidth = maxWidthValue.As<Napi::Number>().Uint32Value();

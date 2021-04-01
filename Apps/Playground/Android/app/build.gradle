@@ -18,7 +18,7 @@ if (project.hasProperty("JSEngine")) {
     }
 }
 
-def platformVersion = 24
+def platformVersion = 21
 def arcore_libpath = "${buildDir}/arcore-native"
 
 configurations { natives }

@@ -18,6 +18,7 @@
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/OpenGLHelpers.h>
+#include <AndroidExtensions/Permissions.h>
 #include <android/native_window.h>
 #include <android/log.h>
 #include <arcore_c_api.h>
@@ -38,9 +39,6 @@ using namespace android::OpenGLHelpers;
 
 namespace xr
 {
-    // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
-    const int PERMISSION_REQUEST_ID{ 8435 };
-
     struct System::Impl
     {
         Impl(const std::string& /*applicationName*/)
@@ -142,48 +140,6 @@ namespace xr
                 // Kick off the install request, and set the task for our caller to wait on.
                 CheckARCoreInstallStatus(true);
                 task = installTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [resumeTicket = std::move(resumeTicket)](){
-                    return;
-                });
-            }
-
-            return task;
-        }
-
-        arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
-        {
-            auto task{ arcana::task_from_result<std::exception_ptr>() };
-
-            // Check if permissions are already granted.
-            if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA()))
-            {
-                // Register for the permission callback request.
-                arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
-                auto permissionTicket
-                {
-                    AddRequestPermissionsResultCallback(
-                    [permissionTcs](int32_t requestCode, const std::vector<std::string>& /*permissionList*/, const std::vector<int32_t>& results) mutable
-                    {
-                        // Check if this is our permission request ID.
-                        if (requestCode == PERMISSION_REQUEST_ID)
-                        {
-                            // If the permission is found and granted complete the task.
-                            if (results[0] == 0 /* PackageManager.PERMISSION_GRANTED */)
-                            {
-                                permissionTcs.complete();
-                                return;
-                            }
-
-                            // Permission was denied.  Complete the task with an error.
-                            std::ostringstream message;
-                            message << "Camera permission not acquired successfully";
-                            permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{message.str()})));
-                        }
-                    })
-                };
-
-                // Kick off the permission check request, and set the task for our caller to wait on.
-                GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(), PERMISSION_REQUEST_ID);
-                task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket{ std::move(permissionTicket) }](){
                     return;
                 });
             }
@@ -1185,7 +1141,7 @@ namespace xr
         return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), []()
         {
             // Next check for camera permissions, and request if not already granted.
-            return CheckCameraPermissionAsync();
+            return android::Permissions::CheckCameraPermissionAsync();
         }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, windowProvider{ std::move(windowProvider) }]()
         {
             // Finally if the previous two tasks succeed, start the AR session.

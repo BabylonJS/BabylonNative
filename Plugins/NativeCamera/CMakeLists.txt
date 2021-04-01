@@ -19,9 +19,12 @@ if (APPLE OR ANDROID OR (WIN32 AND NOT WINDOWS_STORE))
     target_include_directories(NativeCamera PRIVATE "Include/Babylon/Plugins")
 
     if(ANDROID)
-        set(EXTENSIONS AndroidExtensions
+        set(EXTENSIONS AndroidExtensions)
+if(ANDROID_PLATFORM GREATER_EQUAL 24)
+        set(EXTENSIONS ${EXTENSIONS}
             camera2ndk
             mediandk)
+endif()
     elseif(APPLE)
         set(EXTENSIONS "-framework CoreMedia -framework AVFoundation")
     endif()

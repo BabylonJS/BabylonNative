@@ -444,7 +444,7 @@ namespace android::graphics
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
     }
 
-    void SurfaceTexture::updateTexture() const
+    void SurfaceTexture::updateTexImage() const
     {
         if (m_object) {
             m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "updateTexImage", "()V"));

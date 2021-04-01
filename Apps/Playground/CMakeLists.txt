@@ -23,7 +23,7 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr NativeCamera)
+        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
         set(SOURCES
             ${SOURCES}
             "iOS/AppDelegate.swift"
@@ -34,7 +34,6 @@ if(APPLE)
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(RESOURCE_FILES ${STORYBOARD})
-        set(ADDITIONAL_LIBRARIES PRIVATE NativeCamera)
         set(SOURCES
             ${SOURCES}
             "macOS/main.m"
@@ -43,7 +42,9 @@ if(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
     endif()
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
+        PRIVATE ${JSCORE_LIBRARY}
+        PRIVATE NativeCamera)
     set(JSSCRIPT
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/ammo.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/recast.js"

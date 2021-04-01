@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstddef>
 #include <android/asset_manager.h>
+#include <android/native_window.h>
 
 // --------------------
 // Forward Declarations
@@ -56,8 +57,6 @@ namespace android::net
 {
     class Uri;
 }
-
-struct ANativeWindow;
 
 // ------------
 // Declarations
@@ -289,7 +288,7 @@ namespace android::graphics
         SurfaceTexture();
 
         void initWithTexture(int texture);
-        void updateTexture() const;
+        void updateTexImage() const;
     };
 }
 

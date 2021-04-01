@@ -15,14 +15,15 @@
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/OpenGLHelpers.h>
+#include <AndroidExtensions/Permissions.h>
 #include <android/log.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <GraphicsImpl.h>
 #include <arcana/threading/task_schedulers.h>
+#include <arcana/macros.h>
 #include <memory>
 
 using namespace android;
@@ -30,8 +31,6 @@ using namespace android::global;
 
 namespace Babylon::Plugins::Internal
 {
-    const int PERMISSION_REQUEST_ID{ 8436 };
-
     struct CameraInterfaceAndroid : public CameraInterface {
         CameraInterfaceAndroid(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera);
 
@@ -63,38 +62,41 @@ namespace Babylon::Plugins::Internal
 
         std::string getCamId(bool frontCamera);
 
-        Graphics::Impl &m_graphicsImpl;
+        GraphicsImpl &m_graphicsImpl;
         JsRuntimeScheduler m_runtimeScheduler;
 
-        uint32_t width;
-        uint32_t height;
-        ACameraManager *cameraManager{};
-        ACameraDevice *cameraDevice{};
-        ACameraOutputTarget *textureTarget{};
-        ACaptureRequest *request{};
-        ANativeWindow *textureWindow{};
-        ACameraCaptureSession *textureSession{};
-        ACaptureSessionOutput *textureOutput{};
-        ACaptureSessionOutput *output{};
-        ACaptureSessionOutputContainer *outputs{};
+        uint32_t width{};
+        uint32_t height{};
+
+#if __ANDROID_API__ >= 24
+        ACameraManager* cameraManager{};
+        ACameraDevice* cameraDevice{};
+        ACameraOutputTarget* textureTarget{};
+        ACaptureRequest* request{};
+        ANativeWindow* textureWindow{};
+        ACameraCaptureSession* textureSession{};
+        ACaptureSessionOutput* textureOutput{};
+        ACaptureSessionOutput* output{};
+        ACaptureSessionOutputContainer* outputs{};
+        android::graphics::SurfaceTexture surfaceTexture;
+        android::view::Surface surface;
+#endif
         GLuint cameraOESTextureId{};
         GLuint cameraRGBATextureId{};
         GLuint cameraShaderProgramId{};
         GLuint frameBufferId{};
 
-        android::graphics::SurfaceTexture surfaceTexture;
-        android::view::Surface surface;
-
         EGLContext context{};
         EGLDisplay display{};
     };
 
+#if __ANDROID_API__ >= 24
     std::string CameraInterfaceAndroid::getCamId(bool frontCamera)
     {
         ACameraIdList *cameraIds = nullptr;
         ACameraManager_getCameraIdList(cameraManager, &cameraIds);
 
-        std::string cameraId;
+        std::string cameraId{};
 
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
@@ -183,45 +185,7 @@ namespace Babylon::Plugins::Internal
         .onCaptureBufferLost = nullptr,
     };
 
-    arcana::task<void, std::exception_ptr> CheckCameraPermissionAsync()
-    {
-        auto task{ arcana::task_from_result<std::exception_ptr>() };
-
-        // Check if permissions are already granted.
-        if (!GetAppContext().checkSelfPermission(ManifestPermission::CAMERA()))
-        {
-            // Register for the permission callback request.
-            arcana::task_completion_source<void, std::exception_ptr> permissionTcs;
-            auto permissionTicket
-            {
-                AddRequestPermissionsResultCallback(
-                [permissionTcs](int32_t requestCode, const std::vector<std::string>& /*permissionList*/, const std::vector<int32_t>& results) mutable
-                {
-                    // Check if this is our permission request ID.
-                    if (requestCode == PERMISSION_REQUEST_ID)
-                    {
-                        // If the permission is found and granted complete the task.
-                        if (results[0] == 0 /* PackageManager.PERMISSION_GRANTED */)
-                        {
-                            permissionTcs.complete();
-                            return;
-                        }
-
-                        // Permission was denied.  Complete the task with an error.
-                        permissionTcs.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{"Camera permission not acquired successfully"})));
-                    }
-                })
-            };
-
-            // Kick off the permission check request, and set the task for our caller to wait on.
-            GetCurrentActivity().requestPermissions(ManifestPermission::CAMERA(), PERMISSION_REQUEST_ID);
-            task = permissionTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(), [ticket{ std::move(permissionTicket) }](){
-                return;
-            });
-        }
-
-        return task;
-    }
+#endif
 
     static GLuint GenerateOESTexture()
     {
@@ -235,12 +199,12 @@ namespace Babylon::Plugins::Internal
     }
     
     CameraInterfaceAndroid::CameraInterfaceAndroid(Napi::Env env, uint32_t width, uint32_t height, bool frontCamera)
-        : m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
+        : m_graphicsImpl{GraphicsImpl::GetFromJavaScript(env)}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
         , width{width}
         , height{height}
     {
-        CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, frontCamera]()
+        android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, frontCamera]()
         {
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -297,6 +261,7 @@ namespace Babylon::Plugins::Internal
 
             cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
+#if __ANDROID_API__ >= 24
             // Create the surface and surface texture that will receive the camera preview
             surfaceTexture.initWithTexture(cameraOESTextureId);
             surface.initWithSurfaceTexture(surfaceTexture);
@@ -326,7 +291,12 @@ namespace Babylon::Plugins::Internal
 
             // Start capturing continuously
             ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
+#else
 
+            UNUSED(frontCamera);
+#pragma message("Warning: Android Platform level < 24. No HW Camera support. Only camera texture override is available.")
+
+#endif
             if (eglMakeCurrent(display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
@@ -336,6 +306,7 @@ namespace Babylon::Plugins::Internal
 
     CameraInterfaceAndroid::~CameraInterfaceAndroid()
     {
+#if __ANDROID_API__ >= 24
         // Stop recording to SurfaceTexture and do some cleanup
         ACameraCaptureSession_stopRepeating(textureSession);
         ACameraCaptureSession_close(textureSession);
@@ -348,7 +319,7 @@ namespace Babylon::Plugins::Internal
         // Capture request for SurfaceTexture
         ANativeWindow_release(textureWindow);
         ACaptureRequest_free(request);
-
+#endif
         if (context)
         {
             eglDestroyContext(display, context);
@@ -367,8 +338,9 @@ namespace Babylon::Plugins::Internal
             }
         }
 
+#if __ANDROID_API__ >= 24
         surfaceTexture.updateTexture();
-
+#endif
         glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId);
         glViewport(0, 0, width, height);
         glUseProgram(cameraShaderProgramId);

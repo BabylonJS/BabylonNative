@@ -19,13 +19,13 @@ namespace Babylon::Plugins::Internal
     struct CameraInterfaceApple : public CameraInterface
     {
         CameraInterfaceApple(Napi::Env env)
-        : m_graphicsImpl{Graphics::Impl::GetFromJavaScript(env)}
+        : m_graphicsImpl{GraphicsImpl::GetFromJavaScript(env)}
         {
         }
         virtual ~CameraInterfaceApple();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
 
-        Graphics::Impl& m_graphicsImpl;
+        GraphicsImpl& m_graphicsImpl;
 
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
