@@ -1,4 +1,4 @@
-set(SOURCES 
+set(SOURCES
     "Include/Babylon/Plugins/NativeCapture.h"
     "Source/NativeCapture.cpp")
 

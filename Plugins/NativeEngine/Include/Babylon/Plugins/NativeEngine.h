@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Babylon/Graphics.h>
-
 #include <napi/env.h>
 
 namespace Babylon::Plugins::NativeEngine

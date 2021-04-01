@@ -11,6 +11,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
+#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -104,7 +105,12 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        Babylon::GraphicsConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Width = width;
+        graphicsConfig.Height = height;
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
