@@ -9,6 +9,9 @@
 #include <optional>
 #include <arcana/threading/task.h>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 namespace xr
 {
     namespace
@@ -1685,7 +1688,6 @@ namespace xr
                         // Get hand joint data
                         if (sessionImpl.HandData.HandTrackersInitialized)
                         {
-
                             XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
                             jointLocateInfo.baseSpace = sceneSpace;
                             jointLocateInfo.time = displayTime;
@@ -1720,6 +1722,40 @@ namespace xr
 
                                     inputSource.HandJoints[i].PoseRadius = joint.radius;
                                     inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
+
+                                    // Rotate the orientation 90 degrees clockwise about the Y axis to convert from OpenXR to WebXR orientation
+                                    {
+                                        XrQuaternionf newRotation{};
+                                        XrQuaternionf rotationDelta{};
+
+                                        rotationDelta.w = -float(sin(M_PI/4));
+                                        rotationDelta.x = 0;
+                                        rotationDelta.y = -rotationDelta.w;
+                                        rotationDelta.z = 0;
+
+                                        rotationDelta.w = joint.pose.orientation.w * rotationDelta.w -
+                                                          joint.pose.orientation.x * rotationDelta.x -
+                                                          joint.pose.orientation.y * rotationDelta.y -
+                                                          joint.pose.orientation.z * rotationDelta.z;
+
+                                        rotationDelta.x = joint.pose.orientation.w * rotationDelta.x +
+                                                          joint.pose.orientation.x * rotationDelta.w +
+                                                          joint.pose.orientation.y * rotationDelta.z -
+                                                          joint.pose.orientation.z * rotationDelta.y;
+
+                                        rotationDelta.y = joint.pose.orientation.w * rotationDelta.y -
+                                                          joint.pose.orientation.x * rotationDelta.z +
+                                                          joint.pose.orientation.y * rotationDelta.w +
+                                                          joint.pose.orientation.z * rotationDelta.x;
+
+                                        rotationDelta.z = joint.pose.orientation.w * rotationDelta.z +
+                                                          joint.pose.orientation.x * rotationDelta.y -
+                                                          joint.pose.orientation.y * rotationDelta.x +
+                                                          joint.pose.orientation.z * rotationDelta.w;
+
+                                        joint.pose.orientation = newRotation;
+                                    }
+
                                     m_impl->UpdatePoseData(inputSource.HandJoints[i].Pose, joint.pose);
                                 }
                             }
