@@ -17,3 +17,7 @@ target_link_to_dependencies(NativeXr
 
 set_property(TARGET NativeXr PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+if(WINDOWS_STORE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()

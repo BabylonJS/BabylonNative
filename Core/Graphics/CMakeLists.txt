@@ -1,6 +1,6 @@
 set(SOURCES
-    "Include/Babylon/Graphics.h"
-    "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.h"
+    "Include/Shared/Babylon/Graphics.h"
+    "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/FrameBuffer.cpp"
@@ -13,12 +13,66 @@ set(SOURCES
     "Source/SafeTimespanGuarantor.cpp"
     "Source/SafeTimespanGuarantor.h")
 
+if (WINDOWS_STORE)
+    if (BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/Babylon/GraphicsPlatform.h"
+            "Source/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel/GraphicsPlatform.cpp")
+    else()
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/CoreWindow/Babylon/GraphicsPlatform.h"
+            "Source/${BABYLON_NATIVE_PLATFORM}/CoreWindow/GraphicsPlatform.cpp")
+    endif()
+elseif(APPLE)
+    if(IOS)
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
+            "Source/${BABYLON_NATIVE_PLATFORM}/iOS/GraphicsPlatform.mm")
+    else()
+        set(SOURCES
+            ${SOURCES}
+            "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
+            "Source/${BABYLON_NATIVE_PLATFORM}/macOS/GraphicsPlatform.mm")
+    endif()
+else()
+    set(SOURCES
+        ${SOURCES}
+        "Include/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatform.h"
+        "Source/${BABYLON_NATIVE_PLATFORM}/GraphicsPlatform.cpp")
+endif()
+
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
-    PUBLIC "Include"
-    PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
+            PUBLIC "Include/Shared"
+            PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
+
+if(WINDOWS_STORE)
+    if(BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
+        target_include_directories(Graphics
+            PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}/SwapChainPanel")
+    else()
+        target_include_directories(Graphics
+            PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}/CoreWindow")
+    endif()
+else()
+    target_include_directories(Graphics
+            PUBLIC "Include/${BABYLON_NATIVE_PLATFORM}")
+endif()
+
+
+if(WIN32 AND NOT WINDOWS_STORE)
+    target_link_to_dependencies(Graphics
+        PRIVATE "shlwapi.lib")
+elseif(ANDROID)
+    target_link_to_dependencies(Graphics
+        PRIVATE android
+        PRIVATE AndroidExtensions)
+endif()
 
 target_link_to_dependencies(Graphics
     PUBLIC JsRuntime
@@ -44,3 +98,11 @@ target_link_to_dependencies(GraphicsInternal
     INTERFACE bgfx
     INTERFACE bimg
     INTERFACE bx)
+
+target_compile_definitions(GraphicsInternal
+    INTERFACE NOMINMAX)
+
+# compile as objc++
+if (APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
+endif()
