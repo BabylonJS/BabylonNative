@@ -393,8 +393,8 @@ jobs:
     inputs:
         workingDirectory: 'Apps/Playground/Android'
         gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m --no-daemon'
-        options: '-PJSEngine=v8android'
+        gradleOptions: '-Xmx1536m'
+        options: '-PJSEngine=v8android --no-daemon'
         publishJUnitResults: false
         tasks: 'assembleRelease'
     displayName: 'Build Playground AndroidV8'
@@ -431,7 +431,7 @@ jobs:
         workingDirectory: 'Apps/Playground/Android'
         gradleWrapperFile: 'Apps/Playground/Android/gradlew'
         gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=jsc'
+        options: '-PJSEngine=jsc --no-daemon'
         publishJUnitResults: false
         tasks: 'assembleRelease'
     displayName: 'Build Playground AndroidJSC'
@@ -439,7 +439,7 @@ jobs:
     inputs:
         workingDirectory: 'Apps/ValidationTests/Android'
         gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
-        gradleOptions: '-Xmx1536m --no-daemon'
+        gradleOptions: '-Xmx1536m'
         options: '-PJSEngine=jsc'
         publishJUnitResults: false
         tasks: 'assembleRelease'
