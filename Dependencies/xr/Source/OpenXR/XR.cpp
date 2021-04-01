@@ -1733,25 +1733,25 @@ namespace xr
                                         rotationDelta.y = -rotationDelta.w;
                                         rotationDelta.z = 0;
 
-                                        rotationDelta.w = joint.pose.orientation.w * rotationDelta.w -
-                                                          joint.pose.orientation.x * rotationDelta.x -
-                                                          joint.pose.orientation.y * rotationDelta.y -
-                                                          joint.pose.orientation.z * rotationDelta.z;
+                                        newRotation.w = joint.pose.orientation.w * rotationDelta.w -
+                                                        joint.pose.orientation.x * rotationDelta.x -
+                                                        joint.pose.orientation.y * rotationDelta.y -
+                                                        joint.pose.orientation.z * rotationDelta.z;
 
-                                        rotationDelta.x = joint.pose.orientation.w * rotationDelta.x +
-                                                          joint.pose.orientation.x * rotationDelta.w +
-                                                          joint.pose.orientation.y * rotationDelta.z -
-                                                          joint.pose.orientation.z * rotationDelta.y;
+                                        newRotation.x = joint.pose.orientation.w * rotationDelta.x +
+                                                        joint.pose.orientation.x * rotationDelta.w +
+                                                        joint.pose.orientation.y * rotationDelta.z -
+                                                        joint.pose.orientation.z * rotationDelta.y;
 
-                                        rotationDelta.y = joint.pose.orientation.w * rotationDelta.y -
-                                                          joint.pose.orientation.x * rotationDelta.z +
-                                                          joint.pose.orientation.y * rotationDelta.w +
-                                                          joint.pose.orientation.z * rotationDelta.x;
+                                        newRotation.y = joint.pose.orientation.w * rotationDelta.y -
+                                                        joint.pose.orientation.x * rotationDelta.z +
+                                                        joint.pose.orientation.y * rotationDelta.w +
+                                                        joint.pose.orientation.z * rotationDelta.x;
 
-                                        rotationDelta.z = joint.pose.orientation.w * rotationDelta.z +
-                                                          joint.pose.orientation.x * rotationDelta.y -
-                                                          joint.pose.orientation.y * rotationDelta.x +
-                                                          joint.pose.orientation.z * rotationDelta.w;
+                                        newRotation.z = joint.pose.orientation.w * rotationDelta.z +
+                                                        joint.pose.orientation.x * rotationDelta.y -
+                                                        joint.pose.orientation.y * rotationDelta.x +
+                                                        joint.pose.orientation.z * rotationDelta.w;
 
                                         joint.pose.orientation = newRotation;
                                     }
