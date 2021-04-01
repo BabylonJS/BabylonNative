@@ -11,6 +11,7 @@
 #include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
+#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
@@ -62,8 +63,13 @@ extern "C"
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = 600;//ANativeWindow_getWidth(window);
             int32_t height = 400;//ANativeWindow_getHeight(window);
-            
-            g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+
+            Babylon::GraphicsConfiguration graphicsConfig{};
+            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Width = static_cast<size_t>(width);
+            graphicsConfig.Height = static_cast<size_t>(height);
+
+            g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
             g_graphics->StartRenderingCurrentFrame();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
@@ -116,10 +122,13 @@ extern "C"
         if (g_runtime)
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-            g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-                g_graphics->UpdateWindow<void*>(window);
-                g_graphics->UpdateSize(width, height);
-            });
+
+            Babylon::GraphicsConfiguration graphicsConfig{};
+            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Width = static_cast<size_t>(width);
+            graphicsConfig.Height = static_cast<size_t>(height);
+            g_graphics->UpdateWindow(graphicsConfig);
+            g_graphics->UpdateSize(graphicsConfig.Width, graphicsConfig.Height);
         }
     }
 

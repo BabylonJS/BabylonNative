@@ -28,9 +28,8 @@ class ViewController: UIViewController {
             let width = 600
             let height = 400
             
-            let mainView: UnsafeMutableRawPointer = Unmanaged.passUnretained(mtkView).toOpaque()
             
-            appDelegate!._bridge!.init(mainView, width:Int32(width), height:Int32(height))
+            appDelegate!._bridge!.init(mtkView, width:Int32(width), height:Int32(height))
         }
     }
 
