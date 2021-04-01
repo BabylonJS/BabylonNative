@@ -318,6 +318,10 @@ namespace android::content
         return m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
     }
 
+    res::Resources Context::getResources() {
+        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getResources", "()Landroid/content/res/Resources;"))};
+    }
+
     bool Context::checkSelfPermission(jstring systemPermissionName)
     {
         // Get the package manager, and get the value that represents a successful permission grant.
@@ -341,6 +345,26 @@ namespace android::content::res
     AssetManager::operator AAssetManager*() const
     {
         return AAssetManager_fromJava(m_env, m_object);
+    }
+
+    Configuration::Configuration(jobject object)
+        : Object(object)
+    {
+    }
+
+    int Configuration::getDensityDpi()
+    {
+        return m_env->GetIntField(m_object, m_env->GetFieldID(m_class, "densityDpi", "I"));
+    }
+
+    Resources::Resources(jobject object)
+        : Object(object)
+    {
+    }
+
+    Configuration Resources::getConfiguration()
+    {
+        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getConfiguration", "()Landroid/content/res/Configuration;"))};
     }
 }
 

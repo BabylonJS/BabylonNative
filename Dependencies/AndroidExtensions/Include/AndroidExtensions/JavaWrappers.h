@@ -48,6 +48,8 @@ namespace android::content
 namespace android::content::res
 {
     class AssetManager;
+    class Resources;
+    class Configuration;
 }
 
 namespace android::net
@@ -238,6 +240,8 @@ namespace android::content
 
         res::AssetManager getAssets() const;
 
+        res::Resources getResources();
+
         template<typename ServiceT>
         ServiceT getSystemService()
         {
@@ -258,6 +262,22 @@ namespace android::content::res
         AssetManager(jobject object);
 
         operator AAssetManager*() const;
+    };
+
+    class Resources : public java::lang::Object
+    {
+    public:
+        Resources(jobject object);
+
+        Configuration getConfiguration();
+    };
+
+    class Configuration : public java::lang::Object
+    {
+    public:
+        Configuration(jobject object);
+
+        int getDensityDpi();
     };
 }
 

@@ -15,6 +15,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
+#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Polyfills/Console.h>
@@ -96,7 +97,12 @@ namespace
 
     void Initialize(HWND hWnd)
     {
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
+        Babylon::GraphicsConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
+        graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
 
