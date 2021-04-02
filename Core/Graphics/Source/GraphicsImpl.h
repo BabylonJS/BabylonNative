@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
 #include "FrameBufferManager.h"
 #include "SafeTimespanGuarantor.h"
@@ -20,6 +19,7 @@
 
 namespace Babylon
 {
+    struct GraphicsConfiguration;
 
     class GraphicsImpl
     {
