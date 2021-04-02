@@ -10,6 +10,8 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
 
+#include <napi/env.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
