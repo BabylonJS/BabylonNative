@@ -1,9 +1,10 @@
-#include <basen.hpp>
-#include <chrono>
-#include <iterator>
 #include "Window.h"
 
 #include <GraphicsImpl.h>
+
+#include <basen.hpp>
+#include <chrono>
+#include <iterator>
 
 namespace Babylon::Polyfills::Internal
 {

@@ -1,8 +1,7 @@
-#include <Windows.h>
-
-#include <Babylon/Graphics.h>
 #include <Babylon/GraphicsPlatform.h>
-#include "../GraphicsImpl.h"
+#include <GraphicsImpl.h>
+
+#include <Windows.h>
 
 namespace Babylon
 {
