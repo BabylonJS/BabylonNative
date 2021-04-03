@@ -380,6 +380,15 @@ jobs:
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
+      version=3.19
+      build=7
+      wget https://cmake.org/files/v$version/cmake-$version.$build-linux-x86_64.sh
+      sudo mkdir /opt/cmake/cmake-$version.$build-linux-x86_64
+      sudo sh cmake-$version.$build-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$version.$build-linux-x86_64
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+    displayName: 'Install cmake'
+  - script: |
       sudo apt-get update
       sudo apt-get install ninja-build
     displayName: 'Install packages'
