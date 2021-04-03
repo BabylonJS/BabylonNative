@@ -376,16 +376,22 @@ jobs:
     
   steps:
   - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
       version=3.19.7
       wget https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-Linux-x86_64.sh
       sudo mkdir -p /opt/cmake/cmake-$version-linux-x86_64
       sudo sh cmake-$version-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$version-linux-x86_64 --skip-license
       sudo rm /usr/local/bin/cmake
       sudo ln -s /opt/cmake/cmake-$version-linux-x86_64/cmake /usr/local/bin/cmake
+      echo Checking PATH...
+      echo $PATH
+      echo Checking which cmake...
+      which cmake
+      echo Checking CMake version...
+      cmake --version
     displayName: 'Install cmake'
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
       sudo apt-get install ninja-build
