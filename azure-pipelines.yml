@@ -8,12 +8,12 @@ jobs:
 - job: macOS
   pool:
     vmImage: 'macOS-10.14'
-    
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-    
+
   - script: |
       cmake --version
     displayName: 'CMake version'
@@ -21,13 +21,13 @@ jobs:
   - script: |
       sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
     displayName: 'Select XCode 11.3.1'
-    
+
   - script: |
       mkdir buildmacOS
       cd buildmacOS
       cmake .. -GXcode
     displayName: 'Generate macOS solution'
-      
+
   - task: Xcode@5
     inputs:
       xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
@@ -49,12 +49,12 @@ jobs:
 - job: iOS
   pool:
     vmImage: 'macOS-10.14'
-    
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-      
+
   - script: |
       cmake --version
     displayName: 'CMake version'
@@ -77,7 +77,7 @@ jobs:
       useXcpretty: false
       configuration: RelWithDebInfo
     displayName: 'Build Playground iOS'
-    
+
   - task: Xcode@5
     inputs:
       xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
@@ -86,7 +86,7 @@ jobs:
       useXcpretty: false
       configuration: RelWithDebInfo
     displayName: 'Build ValidationTests iOS'
-    
+
 - job: win32_x64
   timeoutInMinutes: 30
   pool:
@@ -156,7 +156,7 @@ jobs:
     condition: failed()
 
 - job: win32_x86
-  timeoutInMinutes: 30 
+  timeoutInMinutes: 30
   pool:
     vmImage: 'windows-latest'
 
@@ -223,21 +223,21 @@ jobs:
     displayName: 'Publish Tests Win32_x86 Dumps'
     condition: failed()
 
-- job: uwp_x64    
+- job: uwp_x64
   pool:
-    vmImage: 'windows-latest'  
-    
+    vmImage: 'windows-latest'
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-    
+
   - script: |
       mkdir buildUWP_x64
       cd buildUWP_x64
       cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
     displayName: 'Generate UWP_x64 solution'
-  
+
   - task: VSBuild@1
     inputs:
       solution: 'buildUWP_x64/BabylonNative.sln'
@@ -246,21 +246,21 @@ jobs:
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x64'
 
-- job: uwp_arm64    
+- job: uwp_arm64
   pool:
-    vmImage: 'windows-latest'  
-    
+    vmImage: 'windows-latest'
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-    
+
   - script: |
       mkdir buildUWP_arm64
       cd buildUWP_arm64
       cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A arm64
     displayName: 'Generate UWP_arm64 solution'
-  
+
   - task: VSBuild@1
     inputs:
       solution: 'buildUWP_arm64/BabylonNative.sln'
@@ -271,7 +271,7 @@ jobs:
 
 - job: uwp_x86
   pool:
-    vmImage: 'windows-latest'  
+    vmImage: 'windows-latest'
 
   steps:
   - script: |
@@ -350,7 +350,7 @@ jobs:
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -373,8 +373,9 @@ jobs:
 - job: Android_V8_Linux
   pool:
     vmImage: 'ubuntu-latest'
-    
+
   steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
   - script: |
       version=3.19.6
       wget https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-Linux-x86_64.sh
@@ -396,7 +397,7 @@ jobs:
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -419,8 +420,9 @@ jobs:
 - job: Android_JSC_Linux
   pool:
     vmImage: 'ubuntu-latest'
-    
+
   steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
   - script: |
       version=3.19.6
       wget https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-Linux-x86_64.sh
@@ -441,7 +443,7 @@ jobs:
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
