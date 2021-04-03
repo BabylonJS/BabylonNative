@@ -381,7 +381,7 @@ jobs:
   - script: |
       version=3.19.7
       wget https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-Linux-x86_64.sh
-      sudo mkdir /opt/cmake/cmake-$version-linux-x86_64
+      sudo mkdir -p /opt/cmake/cmake-$version-linux-x86_64
       sudo sh cmake-$version-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$version-linux-x86_64 --skip-license
       sudo rm /usr/local/bin/cmake
       sudo ln -s /opt/cmake/cmake-$version-linux-x86_64/cmake /usr/local/bin/cmake
