@@ -431,6 +431,7 @@ jobs:
       sudo rm /usr/local/bin/cmake
       sudo ln -s /opt/cmake/cmake-$version-linux-x86_64/bin/cmake /usr/local/bin/cmake
       cmake --version
+    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
