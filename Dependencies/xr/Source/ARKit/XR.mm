@@ -1274,6 +1274,18 @@ namespace xr {
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR && ARWorldTrackingConfiguration.isSupported);
     }
 
+    uintptr_t System::GetNativeXrContext()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::GetNativeXrContextType()
+    {
+        // TODO
+        return "";
+    }
+
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
         auto session = std::make_shared<System::Session>(system, graphicsDevice, std::move(windowProvider));
         return session->m_impl->WhenReady().then(arcana::inline_scheduler, arcana::cancellation::none(), [session] {
@@ -1328,17 +1340,5 @@ namespace xr {
     {
         // TODO
         return false;
-    }
-
-    uintptr_t System::Session::GetNativeXrContext()
-    {
-        // TODO
-        return 0;
-    }
-
-    std::string System::Session::GetNativeXrContextType()
-    {
-        // TODO
-        return "";
     }
 }
