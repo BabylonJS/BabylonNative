@@ -192,7 +192,7 @@
         NativeXr.lib;
         nvtt.lib;
         OGLCompilerd.lib;
-        openxr_loader.lib;
+        openxr_loaderd.lib;
         OSDependentd.lib;
         pvrtc.lib;
         spirv-cross-core.lib;
@@ -327,5 +327,10 @@
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.210122.3\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', $(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.210122.3\build\native\Microsoft.Windows.CppWinRT.props'))" />
     <Error Condition="!Exists('$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.210122.3\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.210122.3\build\native\Microsoft.Windows.CppWinRT.targets'))" />
+  </Target>
+  <Target Name="BuildBabylonNativeStaticLibs" BeforeTargets="PrepareForBuild"
+          Condition="'$(BabylonNativeBuildDir)' != ''">
+    <Message Text="Building BabylonNative static libs for $(Platform) $(Configuration)"/>
+    <Exec Command="$(ProjectDir)\..\scripts\Build.bat -Platform $(Platform) -Configuration $(Configuration)"/>
   </Target>
 </Project>
