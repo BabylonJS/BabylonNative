@@ -134,7 +134,5 @@ add_subdirectory(UrlLib)
 set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 
 # --------------------------- v8 inspector ---------------------------
-if (V8_INCLUDE_INSPECTOR)
-    add_subdirectory(v8inspector)
-    set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
-endif()
+add_subdirectory(v8inspector)
+set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)

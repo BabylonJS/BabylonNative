@@ -10,15 +10,12 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
-#if __has_include(<Babylon/AppRuntimeV8.h>)
-#include <Babylon/AppRuntimeV8.h>
-#define V8_ENGINE
-#endif
 
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -112,10 +109,6 @@ namespace
         graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
         graphics->StartRenderingCurrentFrame();
 
-#ifdef V8_ENGINE
-        Babylon::AppRuntimeV8::EnableInspector(5642);
-#endif
-
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -135,6 +128,8 @@ namespace
             Babylon::Plugins::NativeCapture::Initialize(env);
 
             Babylon::Plugins::NativeXr::Initialize(env);
+
+            Babylon::Plugins::ChromeDevTools::Initialize(env);
 
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });

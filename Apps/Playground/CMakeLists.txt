@@ -113,6 +113,7 @@ target_include_directories(Playground PRIVATE "Source" ".")
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
     PRIVATE NativeCapture
+    PRIVATE ChromeDevTools
     PRIVATE NativeEngine
     PRIVATE Console
     PRIVATE Window

@@ -70,8 +70,6 @@ if(NOT TARGET javascript_engine)
             # https://stackoverflow.com/q/62921373
             target_compile_definitions(javascript_engine INTERFACE V8_COMPRESS_POINTERS)
         endif()
-
-        set(V8_INCLUDE_INSPECTOR ON CACHE BOOL "Include the v8 inspector static library.")
     elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
         target_link_to_dependencies(javascript_engine INTERFACE "chakrart.lib")
     elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore" AND UNIX AND NOT ANDROID AND NOT APPLE)

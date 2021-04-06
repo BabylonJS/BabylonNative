@@ -39,11 +39,10 @@ namespace Babylon
             v8::Platform& platform,
             v8::Isolate* isolate,
             v8::Local<v8::Context> context,
-            const char* context_name,
-            unsigned short port);
+            const char* context_name);
         ~AgentImpl();
 
-        void Start();
+        void Start(const unsigned short port, const std::string& appName);
         void Stop();
 
         void waitForDebugger();
@@ -285,11 +284,9 @@ namespace Babylon
         v8::Platform& platform,
         v8::Isolate* isolate,
         v8::Local<v8::Context> context,
-        const char* context_name,
-        unsigned short port)
+        const char* context_name)
         : platform_(platform)
         , isolate_(isolate)
-        , port_(port)
         , wait_(false)
         , shutting_down_(false)
         , state_(State::kNew)
@@ -365,8 +362,11 @@ namespace Babylon
                                       .ToLocalChecked());
     }
 
-    void AgentImpl::Start()
+    void AgentImpl::Start(const unsigned short port, const std::string& appName)
     {
+        this->port_ = port;
+        this->script_name_ = appName;
+
         auto self(shared_from_this());
         std::thread([this, self]() {
             auto delegate = std::make_unique<InspectorAgentDelegate>(*this, "", script_name_, wait_);
@@ -415,6 +415,7 @@ namespace Babylon
         {
             server_->Stop();
             inspector_.reset();
+            server_.reset();
         }
     }
 
@@ -425,7 +426,7 @@ namespace Babylon
 
     bool AgentImpl::IsStarted()
     {
-        return true;
+        return !!server_;
     }
 
     void AgentImpl::WaitForDisconnect()
@@ -645,9 +646,8 @@ namespace Babylon
         v8::Platform& platform,
         v8::Isolate* isolate,
         v8::Local<v8::Context> context,
-        const char* context_name,
-        unsigned short port)
-        : impl(std::make_shared<AgentImpl>(platform, isolate, context, context_name, port))
+        const char* context_name)
+        : impl(std::make_shared<AgentImpl>(platform, isolate, context, context_name))
     {
     }
 
@@ -665,9 +665,9 @@ namespace Babylon
         impl->Stop();
     }
 
-    void V8InspectorAgent::start()
+    void V8InspectorAgent::start(const unsigned short port, const std::string& appName)
     {
-        impl->Start();
+        impl->Start(port, appName);
     }
 
     bool V8InspectorAgent::IsStarted()

@@ -21,13 +21,12 @@ namespace Babylon
             v8::Platform& platform,
             v8::Isolate* isolate,
             v8::Local<v8::Context> context,
-            const char* context_name,
-            unsigned short port);
+            const char* context_name);
         ~V8InspectorAgent();
 
         void waitForDebugger();
 
-        void start();
+        void start(const unsigned short port, const std::string& appName);
         void stop();
 
         bool IsStarted();
