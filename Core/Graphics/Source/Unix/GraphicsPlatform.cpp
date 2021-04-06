@@ -1,15 +1,14 @@
-#include <Babylon/Graphics.h>
 #include <Babylon/GraphicsPlatform.h>
-#include "../GraphicsImpl.h"
+#include <GraphicsImpl.h>
 
-constexpr float MILLIMETERS_TO_INCHES = 0.03937;
+constexpr float MILLIMETERS_TO_INCHES{0.03937f};
 
 namespace Babylon
 {
     void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
-        pd.nwh = (void*)config.WindowPtr;
+        pd.nwh = static_cast<void*>(config.WindowPtr);
         pd.context = nullptr;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
@@ -34,7 +33,7 @@ namespace Babylon
             // X11 does not enforce a default dpi.
             // Use 96 dpi as our baseline DPI to match the behavior of Windows, and the default behavior of Linux Desktop Environments such as Gnome and KDE.
             // See: https://scanline.ca/dpi/
-            m_state.Resolution.DevicePixelRatio = dpi/96.0f;
+            m_state.Resolution.DevicePixelRatio = dpi / 96.0f;
         }
 
         return m_state.Resolution.DevicePixelRatio;
