@@ -46,9 +46,9 @@ extern "C"
 
         g_nativeXr.reset();
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
+        g_graphics.reset();
 
         g_isXrActive = false;
     }
@@ -80,7 +80,7 @@ extern "C"
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
-            g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
+            g_runtime->Dispatch([](Napi::Env env)
             {
                 g_graphics->AddToJavaScript(env);
 
