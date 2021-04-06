@@ -1915,7 +1915,7 @@ namespace xr
 
     System::Session::~Session() {}
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* /*texturePointer*/)> /*deletedTextureCallback*/)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> /*deletedTextureCallback*/)
     {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
     }

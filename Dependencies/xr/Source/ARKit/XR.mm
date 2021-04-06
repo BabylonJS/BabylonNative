@@ -665,7 +665,7 @@ namespace xr {
             return tcs.as_task();
         }
 
-        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback) {
+        std::unique_ptr<System::Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void*)> deletedTextureCallback) {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
