@@ -8,7 +8,7 @@ namespace Babylon
 
     void Initialize(facebook::jsi::Runtime& jsiRuntime, Dispatcher jsDispatcher);
     void Deinitialize();
-    void UpdateView(void* windowPtr, size_t width, size_t height, void* windowTypePtr = nullptr);
+    void UpdateView(void* windowPtr, size_t width, size_t height);
     void RenderView();
     void ResetView();
     void SetMouseButtonState(uint32_t buttonId, bool isDown, uint32_t x, uint32_t y);

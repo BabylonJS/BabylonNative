@@ -61,15 +61,20 @@ namespace Babylon
             Napi::Detach(m_env);
         }
 
-        void UpdateView(void* windowPtr, void* windowTypePtr, size_t width, size_t height)
+        void UpdateView(void* windowPtr, size_t width, size_t height)
         {
+            GraphicsConfiguration graphicsConfig{};
+            graphicsConfig.WindowPtr = reinterpret_cast<WindowType>(windowPtr);
+            graphicsConfig.Width = width;
+            graphicsConfig.Height = height;
+
             if (!g_graphics)
             {
-                g_graphics = Graphics::CreateGraphics(windowPtr, windowTypePtr, width, height);
+                g_graphics = Graphics::CreateGraphics(graphicsConfig);
             }
             else
             {
-                g_graphics->UpdateWindow(windowPtr, windowTypePtr);
+                g_graphics->UpdateWindow(graphicsConfig);
                 g_graphics->UpdateSize(width, height);
             }
 
@@ -222,11 +227,11 @@ namespace Babylon
         g_nativeModule.reset();
     }
 
-    void UpdateView(void* windowPtr, size_t width, size_t height, void* windowTypePtr)
+    void UpdateView(void* windowPtr, size_t width, size_t height)
     {
         if (auto nativeModule{ g_nativeModule.lock() })
         {
-            nativeModule->UpdateView(windowPtr, windowTypePtr, width, height);
+            nativeModule->UpdateView(windowPtr, width, height);
         }
         else
         {
