@@ -9,8 +9,8 @@
 
 #include <Shared/TestUtils.h>
 
-#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Polyfills/Console.h>

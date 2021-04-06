@@ -21,6 +21,7 @@ typedef struct IXrContextOpenXR
     virtual XrInstance OPENXR_CONTEXT_INTERFACE_API Instance() const = 0;
     virtual XrSystemId OPENXR_CONTEXT_INTERFACE_API SystemId() const = 0;
     virtual XrTime OPENXR_CONTEXT_INTERFACE_API DisplayTime() const = 0;
+    virtual bool OPENXR_CONTEXT_INTERFACE_API TryEnableExtension(const char* name) const = 0;
     virtual bool OPENXR_CONTEXT_INTERFACE_API IsExtensionEnabled(const char* name) const = 0;
     virtual XrSession OPENXR_CONTEXT_INTERFACE_API Session() const = 0;
     virtual XrSessionState OPENXR_CONTEXT_INTERFACE_API State() const = 0;

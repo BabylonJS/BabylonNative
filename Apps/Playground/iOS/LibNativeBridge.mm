@@ -2,7 +2,6 @@
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
-#import <Babylon/GraphicsPlatform.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeXr.h>
