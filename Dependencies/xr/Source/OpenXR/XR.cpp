@@ -87,7 +87,12 @@ namespace xr
     {
         return ContextImpl->DisplayTime;
     }
-    
+
+    bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::TryEnableExtension(const char* name) const
+    {
+        return ContextImpl->Extensions->TryEnableExtension(name);
+    }
+
     bool OPENXR_CONTEXT_INTERFACE_API XrSessionContext::IsExtensionEnabled(const char* name) const
     {
         return ContextImpl->Extensions->IsExtensionSupported(name);
@@ -619,16 +624,6 @@ namespace xr
         void DeleteAnchor(Anchor& anchor)
         {
             openXRAnchors.erase(anchor.NativeAnchor);
-        }
-
-        uintptr_t GetNativeXrContext()
-        {
-            return XrRegistry::GetNativeXrContext();
-        }
-
-        std::string GetNativeXrContextType()
-        {
-            return XrRegistry::GetNativeXrContextType();
         }
 
     private:
@@ -1899,6 +1894,16 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_VR);
     }
 
+    uintptr_t System::GetNativeXrContext()
+    {
+        return XrRegistry::GetNativeXrContext();
+    }
+
+    std::string System::GetNativeXrContextType()
+    {
+        return XrRegistry::GetNativeXrContextType();
+    }
+
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
     {
         return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, windowProvider));
@@ -2028,15 +2033,5 @@ namespace xr
         su.Initialize(initOptions);
 
         return true;
-    }
-
-    uintptr_t System::Session::GetNativeXrContext()
-    {
-        return m_impl->GetNativeXrContext();
-    }
-
-    std::string System::Session::GetNativeXrContextType()
-    {
-        return m_impl->GetNativeXrContextType();
     }
 }

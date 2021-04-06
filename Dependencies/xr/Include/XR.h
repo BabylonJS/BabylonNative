@@ -343,9 +343,6 @@ namespace xr
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
 
-            uintptr_t GetNativeXrContext();
-            std::string GetNativeXrContextType();
-
         private:
             std::unique_ptr<Impl> m_impl{};
         };
@@ -356,6 +353,9 @@ namespace xr
         bool IsInitialized() const;
         bool TryInitialize();
         static arcana::task<bool, std::exception_ptr> IsSessionSupportedAsync(SessionType);
+
+        uintptr_t GetNativeXrContext();
+        std::string GetNativeXrContextType();
 
     private:
         struct Impl;
