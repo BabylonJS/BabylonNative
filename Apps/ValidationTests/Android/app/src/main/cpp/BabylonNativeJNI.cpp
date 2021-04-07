@@ -11,7 +11,6 @@
 #include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
-#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
@@ -43,8 +42,8 @@ extern "C"
         }
 
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_runtime.reset();
+        g_graphics.reset();
     }
 
     JNIEXPORT void JNICALL
@@ -73,7 +72,7 @@ extern "C"
             g_graphics->StartRenderingCurrentFrame();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
-            g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
+            g_runtime->Dispatch([window](Napi::Env env)
             {
                 g_graphics->AddToJavaScript(env);
 

@@ -49,6 +49,7 @@ warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
             PUBLIC "Include/Shared"
+            PRIVATE "Source"
             PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
 
 if(WINDOWS_STORE)

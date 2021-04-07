@@ -1135,6 +1135,18 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(false);
     }
 
+    uintptr_t System::GetNativeXrContext()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::GetNativeXrContextType()
+    {
+        // TODO
+        return "";
+    }
+
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
     {
         // First perform the ARCore installation check, request install if not yet installed.
@@ -1201,17 +1213,5 @@ namespace xr
     {
         // TODO
         return false;
-    }
-
-    uintptr_t System::Session::GetNativeXrContext()
-    {
-        // TODO
-        return 0;
-    }
-
-    std::string System::Session::GetNativeXrContextType()
-    {
-        // TODO
-        return "";
     }
 }

@@ -373,12 +373,12 @@ namespace Babylon
 
             uintptr_t GetNativeXrContext()
             {
-                return m_sessionState->Session->GetNativeXrContext();
+                return m_system.GetNativeXrContext();
             }
 
             std::string GetNativeXrContextType()
             {
-                return m_sessionState->Session->GetNativeXrContextType();
+                return m_system.GetNativeXrContextType();
             }
 
         private:
@@ -403,7 +403,6 @@ namespace Babylon
                 std::map<void*, FrameBuffer*> TextureToFrameBufferMap{};
                 std::map<FrameBuffer*, Napi::ObjectReference> FrameBufferToJsTextureMap{};
                 std::vector<void*> ActiveTextures{};
-                xr::System System{};
                 std::shared_ptr<xr::System::Session> Session{};
                 std::unique_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
@@ -413,6 +412,7 @@ namespace Babylon
             };
 
             std::unique_ptr<SessionState> m_sessionState{};
+            xr::System m_system{};
 
             void BeginFrame();
             void BeginUpdate();
@@ -470,15 +470,15 @@ namespace Babylon
 
                     m_sessionState = std::make_unique<SessionState>(graphicsImpl);
 
-                    if (!m_sessionState->System.IsInitialized())
+                    if (!m_system.IsInitialized())
                     {
-                        while (!m_sessionState->System.TryInitialize())
+                        while (!m_system.TryInitialize())
                         {
                             // do nothing
                         }
                     }
 
-                    return xr::System::Session::CreateAsync(m_sessionState->System, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
                         .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
@@ -2350,8 +2350,6 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
-                        InstanceAccessor("nativeXrContext", &XRSession::GetNativeXrContext, nullptr),
-                        InstanceAccessor("nativeXrContextType", &XRSession::GetNativeXrContextType, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
@@ -2840,28 +2838,6 @@ namespace Babylon
                 const auto result = m_xr->TrySetPreferredMeshDetectorOptions(options);
                 return Napi::Value::From(info.Env(), result);
             }
-
-            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
-            {
-                const auto nativeExtension = m_xr->GetNativeXrContext();
-                if (nativeExtension)
-                {
-                    return Napi::Number::From(info.Env(), nativeExtension);
-                }
-
-                return info.Env().Undefined();
-            }
-
-            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
-            {
-                const auto nativeExtensionType = m_xr->GetNativeXrContextType();
-                if (!nativeExtensionType.empty())
-                {
-                    return Napi::String::From(info.Env(), nativeExtensionType);
-                }
-
-                return info.Env().Undefined();
-            }
         };
 
         class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget>
@@ -2984,6 +2960,8 @@ namespace Babylon
                         InstanceMethod("requestSession", &XR::RequestSession),
                         InstanceMethod("getWebXRRenderTarget", &XR::GetWebXRRenderTarget),
                         InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
+                        InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
+                        InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
                     });
 
@@ -3058,6 +3036,28 @@ namespace Babylon
             Napi::Value GetNativeRenderTargetProvider(const Napi::CallbackInfo& info)
             {
                 return NativeRenderTargetProvider::New(info);
+            }
+
+            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
+            {
+                const auto nativeExtension = m_xr->GetNativeXrContext();
+                if (nativeExtension)
+                {
+                    return Napi::Number::From(info.Env(), nativeExtension);
+                }
+
+                return info.Env().Undefined();
+            }
+
+            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
+            {
+                const auto nativeExtensionType = m_xr->GetNativeXrContextType();
+                if (!nativeExtensionType.empty())
+                {
+                    return Napi::String::From(info.Env(), nativeExtensionType);
+                }
+
+                return info.Env().Undefined();
             }
         };
     }
