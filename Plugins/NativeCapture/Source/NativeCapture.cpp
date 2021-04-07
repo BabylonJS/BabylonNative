@@ -1,11 +1,10 @@
 #include "NativeCapture.h"
 
-#include <arcana/containers/ticketed_collection.h>
-
 #include <Babylon/JsRuntime.h>
-#include <Babylon/Graphics.h>
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
+
+#include <arcana/containers/ticketed_collection.h>
 
 #include <vector>
 

@@ -11,7 +11,6 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
-#include <Babylon/GraphicsPlatform.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -116,7 +115,7 @@ namespace
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
+        runtime->Dispatch([](Napi::Env env) {
             graphics->AddToJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {

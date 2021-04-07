@@ -1,18 +1,17 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
+#include <Babylon/GraphicsPlatform.h>
 
 #include <memory>
 
 namespace Babylon
 {
-    struct GraphicsConfiguration;
-
     class Graphics
     {
-    public:
         class Impl;
 
+    public:
         ~Graphics();
 
         static std::unique_ptr<Graphics> CreateGraphics(const GraphicsConfiguration& config);

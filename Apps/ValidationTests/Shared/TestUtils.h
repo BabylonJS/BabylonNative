@@ -18,7 +18,7 @@
 #include <functional>
 #include <sstream>
 #include <Babylon/JsRuntime.h>
-#include <Babylon/GraphicsPlatform.h>
+#include <Babylon/Graphics.h>
 #include <atomic>
 
 namespace
