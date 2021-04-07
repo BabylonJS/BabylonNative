@@ -5,11 +5,11 @@ At present, the Babylon Native repository predominantly relies on an
 responsibility for making sure the PR process remains effective and 
 efficient overwhelmingly in the hands of those submitting and performing 
 the code reviews. Consequently, this repo does not currently have strong 
-established practices for how pull requests, but we do have a number of 
+established practices for pull requests, but we do have a number of 
 conventions which we typically try to follow when performing and receiving 
 code reviews. This document describes these conventions; it is formatted as 
-a series of  definitions for various actions and intended usages in a 
-typical Babylon  Native PR.
+a series of definitions for various actions and intended usages in a 
+typical Babylon Native PR.
 
 ## All PRs Require At Least One Approval to be Checked In
 
