@@ -106,7 +106,7 @@ extern "C"
                 g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
                 g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
-                Babylon::Plugins::Camera::Initialize(env, false);
+                Babylon::Plugins::Camera::Initialize(env, true);
                 Babylon::Polyfills::Window::Initialize(env);
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
