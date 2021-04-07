@@ -1,8 +1,11 @@
 #include "NativeVideo.h"
+#include "NativeCameraImpl.h"
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins
 {
-    void NativeVideo::Initialize(Napi::Env& env)
+    static constexpr auto JS_CLASS_NAME = "NativeVideo";
+
+    void NativeVideo::Initialize(Napi::Env& env, std::shared_ptr<Plugins::Camera::Impl> nativeCameraImpl)
     {
         Napi::Function func = DefineClass(
             env,
@@ -22,6 +25,8 @@ namespace Babylon::Plugins::Internal
             });
 
         env.Global().Set(JS_CLASS_NAME, func);
+
+        NativeCameraImpl = nativeCameraImpl;
     }
 
     Napi::Object NativeVideo::New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera)
@@ -83,11 +88,7 @@ namespace Babylon::Plugins::Internal
 
     void NativeVideo::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
-        if (!m_cameraInterface)
-        {
-            m_cameraInterface = CameraInterface::CreateInterface(Env(), m_width, m_height, m_frontCamera);
-        }
-        m_cameraInterface->UpdateCameraTexture(textureHandle);
+        NativeCameraImpl->UpdateCameraTexture(textureHandle);
     }
 
     void NativeVideo::AddEventListener(const Napi::CallbackInfo& info)
@@ -144,6 +145,7 @@ namespace Babylon::Plugins::Internal
         if (!m_IsPlaying)
         {
             m_IsPlaying = true;
+            NativeCameraImpl->Open(m_width, m_height, m_frontCamera);
             RaiseEvent("playing");
         }
     }
@@ -151,6 +153,6 @@ namespace Babylon::Plugins::Internal
     void NativeVideo::Pause(const Napi::CallbackInfo& /*info*/)
     {
         m_IsPlaying = false;
-        m_cameraInterface.reset();
+        NativeCameraImpl->Close();
     }
 }

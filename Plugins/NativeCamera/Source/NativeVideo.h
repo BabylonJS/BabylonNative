@@ -1,20 +1,18 @@
 #include <napi/napi.h>
-#include "NativeCamera.h"
-
+#include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins
 {
     class NativeVideo : public Napi::ObjectWrap<NativeVideo>
     {
-        static constexpr auto JS_CLASS_NAME = "NativeVideo";
 
     public:
-        static void Initialize(Napi::Env& env);
+        static void Initialize(Napi::Env& env, std::shared_ptr<Plugins::Camera::Impl> nativeCameraImpl);
         static Napi::Object New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera);
         NativeVideo(const Napi::CallbackInfo& info);
         ~NativeVideo() = default;
@@ -44,6 +42,6 @@ namespace Babylon::Plugins::Internal
 
         bool m_IsPlaying{};
 
-        std::unique_ptr<Babylon::Plugins::Internal::CameraInterface> m_cameraInterface{};
+        static inline std::shared_ptr<Plugins::Camera::Impl> NativeCameraImpl{};
     };
 }

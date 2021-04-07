@@ -14,15 +14,15 @@
 
 @class CameraTextureDelegate;
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins
 {
-    struct CameraInterfaceApple : public CameraInterface
+    struct CameraInterface::Impl
     {
-        CameraInterfaceApple(Napi::Env env)
+        Impl(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
         : m_graphicsImpl{GraphicsImpl::GetFromJavaScript(env)}
         {
         }
-        virtual ~CameraInterfaceApple();
+        virtual ~Impl();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle) override;
 
         GraphicsImpl& m_graphicsImpl;
@@ -77,7 +77,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::Internal
 {
-    std::unique_ptr<CameraInterface> CameraInterface::CreateInterface(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    CameraInterface::Impl(Napi::Env env, uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         CameraInterfaceApple* cameraInterfaceApple = new CameraInterfaceApple(env);
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
@@ -152,7 +152,7 @@ namespace Babylon::Plugins::Internal
         });
     }
 
-    CameraInterfaceApple::~CameraInterfaceApple()
+    CameraInterface::Impl::~Impl()
     {
         [avCaptureSession stopRunning];
         [avCaptureSession release];

@@ -1,39 +1,37 @@
 set(SOURCES 
     "Include/Babylon/Plugins/NativeCamera.h"
     "Source/NativeCamera.cpp"
-    "Source/NativeCamera.h"
     "Source/NativeVideo.cpp"
     "Source/NativeVideo.h")
 
 if(APPLE)
-    set(SOURCES ${SOURCES} "Source/NativeCamera${BABYLON_NATIVE_PLATFORM}.mm")
+    set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/NativeCameraImpl.mm")
 else()
-    set(SOURCES ${SOURCES} "Source/NativeCamera${BABYLON_NATIVE_PLATFORM}.cpp")
+    set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/NativeCameraImpl.cpp")
 endif()
 
-if (APPLE OR ANDROID OR (WIN32 AND NOT WINDOWS_STORE))
-    add_library(NativeCamera ${SOURCES})
-    warnings_as_errors(NativeCamera)
+set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/NativeCameraImpl.h")
 
-    target_include_directories(NativeCamera INTERFACE "Include")
-    target_include_directories(NativeCamera PRIVATE "Include/Babylon/Plugins")
+add_library(NativeCamera ${SOURCES})
+warnings_as_errors(NativeCamera)
 
-    if(ANDROID)
-        set(EXTENSIONS AndroidExtensions)
-if(ANDROID_PLATFORM GREATER_EQUAL 24)
-        set(EXTENSIONS ${EXTENSIONS}
-            camera2ndk
-            mediandk)
-endif()
-    elseif(APPLE)
-        set(EXTENSIONS "-framework CoreMedia -framework AVFoundation")
+target_include_directories(NativeCamera INTERFACE "Include")
+target_include_directories(NativeCamera PRIVATE "Include/Babylon/Plugins"
+    PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
+
+if(ANDROID)
+    set(EXTENSIONS AndroidExtensions)
+    if(ANDROID_NATIVE_API_LEVEL GREATER_EQUAL 24)
+        set(EXTENSIONS ${EXTENSIONS} camera2ndk)
     endif()
-
-    target_link_to_dependencies(NativeCamera
-        PUBLIC JsRuntime
-        PRIVATE GraphicsInternal
-        PRIVATE ${EXTENSIONS})
-
-    set_property(TARGET NativeCamera PROPERTY FOLDER Plugins)
-    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+elseif(APPLE)
+    set(EXTENSIONS "-framework CoreMedia -framework AVFoundation")
 endif()
+
+target_link_to_dependencies(NativeCamera
+    PUBLIC JsRuntime
+    PRIVATE GraphicsInternal
+    PRIVATE ${EXTENSIONS})
+
+set_property(TARGET NativeCamera PROPERTY FOLDER Plugins)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

@@ -390,20 +390,10 @@ namespace android::view
         return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getDefaultDisplay", "()Landroid/view/Display;"))};
     }
 
-    Surface::Surface()
+    Surface::Surface(android::graphics::SurfaceTexture& surfaceTexture)
         : Object("android/view/Surface")
     {
-    }
-
-    void Surface::initWithSurfaceTexture(android::graphics::SurfaceTexture surfaceTexture)
-    {
-        jobject surfaceTextureObject = surfaceTexture;
-        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), surfaceTextureObject);
-    }
-
-    ANativeWindow* Surface::getNativeWindow()
-    {
-        return ANativeWindow_fromSurface(m_env, m_object);
+        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), (jobject)surfaceTexture);
     }
 }
 
@@ -439,7 +429,7 @@ namespace android::graphics
     {
     }
 
-    void SurfaceTexture::initWithTexture(int texture)
+    void SurfaceTexture::InitWithTexture(int texture)
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
     }

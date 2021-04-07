@@ -286,8 +286,7 @@ namespace android::graphics
     {
     public:
         SurfaceTexture();
-
-        void initWithTexture(int texture);
+        void InitWithTexture(int texture);
         void updateTexImage() const;
     };
 }
@@ -314,10 +313,7 @@ namespace android::view
     class Surface : public java::lang::Object
     {
     public:
-        Surface();
-
-        void initWithSurfaceTexture(android::graphics::SurfaceTexture surfaceTexture);
-        ANativeWindow* getNativeWindow();
+        Surface(android::graphics::SurfaceTexture& surfaceTexture);
     };
 }
 
