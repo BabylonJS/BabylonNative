@@ -464,7 +464,7 @@ namespace xr
             isInitialized = true;
         }
 
-        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void* texturePointer)> deletedTextureAsyncCallback)
+        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback)
         {
             if (!isInitialized)
             {
@@ -1080,7 +1080,7 @@ namespace xr
             }
         }
 
-        void DestroyDisplayResources(std::function<arcana::task<void, std::exception_ptr>(void* texturePointer)> deletedTextureAsyncCallback = [](void*){ return arcana::task_from_result<std::exception_ptr>(); })
+        void DestroyDisplayResources(std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback = [](void*){ return arcana::task_from_result<std::exception_ptr>(); })
         {
             if (ActiveFrameViews[0].ColorTexturePointer != nullptr && ActiveFrameViews[0].DepthTexturePointer != nullptr) {
                 auto colorTextureId{ static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)) };
@@ -1345,7 +1345,7 @@ namespace xr
     {
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void* texturePointer)> deletedTextureAsyncCallback)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback)
     {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureAsyncCallback);
     }
