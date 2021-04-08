@@ -343,10 +343,8 @@ jobs:
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
-      brew install ninja
-      cmake --version
       brew uninstall cmake
-      brew install cmake@3.19.3
+      brew install ninja http://homebrew.bintray.com/bottles/cmake-3.19.7.mojave.bottle.tar.gz
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
