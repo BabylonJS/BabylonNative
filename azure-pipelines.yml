@@ -314,6 +314,7 @@ jobs:
   - script: |
       brew uninstall cmake
       brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+      cmake --version
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
@@ -354,6 +355,7 @@ jobs:
   - script: |
       brew uninstall cmake
       brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+      cmake --version
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
