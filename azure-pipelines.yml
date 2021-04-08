@@ -4,6 +4,10 @@ trigger:
 pr:
 - master
 
+variables:
+- name: CMAKE_VERSION
+  value: 3.19.6 
+  
 jobs:
 - job: macOS
   pool:
@@ -304,7 +308,8 @@ jobs:
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
-      brew install ninja
+      brew uninstall cmake
+      brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
@@ -344,7 +349,7 @@ jobs:
     displayName: 'Checkout dependencies'
   - script: |
       brew uninstall cmake
-      brew install ninja http://homebrew.bintray.com/bottles/cmake-3.19.7.mojave.bottle.tar.gz
+      brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
@@ -376,22 +381,13 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      version=3.19.6
-      wget https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$version-linux-x86_64
-      sudo sh cmake-$version-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$version-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$version-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
-      sudo apt-get install ninja-build
+      sudo apt-get --purge remove cmake
+      sudo apt-get install ninja-build cmake=$(CMAKE_VERSION)-1ubuntu1
     displayName: 'Install packages'
   - script: |
       cd Apps/Playground/Android
@@ -423,22 +419,13 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      version=3.19.6
-      wget https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$version-linux-x86_64
-      sudo sh cmake-$version-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$version-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$version-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
-      sudo apt-get install ninja-build
+      sudo apt-get --purge remove cmake
+      sudo apt-get install ninja-build cmake=$(CMAKE_VERSION)-1ubuntu1
     displayName: 'Install packages'
   - script: |
       cd Apps/Playground/Android
