@@ -374,6 +374,11 @@ namespace Babylon
                 return m_sessionState->Session->GetNativeXrContextType();
             }
 
+            bool TryGetNativeAnchor(xr::Anchor anchor, void* nativeAnchor)
+            {
+                return false;
+            }
+
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
@@ -2706,6 +2711,25 @@ namespace Babylon
                 if (!nativeExtensionType.empty())
                 {
                     return Napi::String::From(info.Env(), nativeExtensionType);
+                }
+
+                return info.Env().Undefined();
+            }
+
+            Napi::Value GetNativeAnchor(const Napi::CallbackInfo& info)
+            {
+                if (info.Length() != 1 ||
+                    !info[0].IsObject())
+                {
+                    throw std::exception(/*invalid arguments*/);
+                }
+
+                auto xrAnchor{ XRAnchor::Unwrap(info[0].ToObject()) };
+                auto anchor{ xrAnchor->GetNativeAnchor() };
+                void* nativeAnchor;
+                if (m_xr->TryGetNativeAnchor(anchor, nativeAnchor))
+                {
+                    return Napi::Number::From(info.Env(), nativeAnchor);
                 }
 
                 return info.Env().Undefined();
