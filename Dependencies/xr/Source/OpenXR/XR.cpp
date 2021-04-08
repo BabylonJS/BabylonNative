@@ -587,7 +587,7 @@ namespace xr
             anchorSpaceCreateInfo.poseInAnchorSpace = xr::math::Pose::Identity();
             CHECK_XRCMD(apiExtensions.xrCreateSpatialAnchorSpaceMSFT(session, &anchorSpaceCreateInfo, anchorSpace->Space.Put()));
 
-            const auto nativeAnchorPtr = reinterpret_cast<NativeAnchorPtr>(anchorSpace.get());
+            const auto nativeAnchorPtr = reinterpret_cast<NativeAnchorPtr>(anchorSpace->Anchor.Get());
             openXRAnchors[nativeAnchorPtr] = anchorSpace;
             return { pose, nativeAnchorPtr };
         }

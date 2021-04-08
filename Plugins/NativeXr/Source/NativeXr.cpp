@@ -381,11 +381,6 @@ namespace Babylon
                 return m_system.GetNativeXrContextType();
             }
 
-            bool TryGetNativeAnchor(xr::Anchor anchor, void* nativeAnchor)
-            {
-                return false;
-            }
-
         private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
@@ -3075,10 +3070,9 @@ namespace Babylon
 
                 auto xrAnchor{ XRAnchor::Unwrap(info[0].ToObject()) };
                 auto anchor{ xrAnchor->GetNativeAnchor() };
-                void* nativeAnchor;
-                if (m_xr->TryGetNativeAnchor(anchor, nativeAnchor))
+                if (anchor.NativeAnchor != nullptr)
                 {
-                    return Napi::Number::From(info.Env(), nativeAnchor);
+                    return Napi::Number::From(info.Env(), reinterpret_cast<uintptr_t>(anchor.NativeAnchor));
                 }
 
                 return info.Env().Undefined();
