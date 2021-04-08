@@ -4,30 +4,36 @@ trigger:
 pr:
 - master
 
+variables:
+- name: CMAKE_VERSION
+  value: 3.19.6
+  
 jobs:
 - job: macOS
   pool:
     vmImage: 'macOS-10.14'
-    
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-    
+
   - script: |
+      brew uninstall cmake
+      brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
       cmake --version
     displayName: 'CMake version'
 
   - script: |
       sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
     displayName: 'Select XCode 11.3.1'
-    
+
   - script: |
       mkdir buildmacOS
       cd buildmacOS
       cmake .. -GXcode
     displayName: 'Generate macOS solution'
-      
+
   - task: Xcode@5
     inputs:
       xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
@@ -49,13 +55,15 @@ jobs:
 - job: iOS
   pool:
     vmImage: 'macOS-10.14'
-    
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-      
+
   - script: |
+      brew uninstall cmake
+      brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
       cmake --version
     displayName: 'CMake version'
 
@@ -77,7 +85,7 @@ jobs:
       useXcpretty: false
       configuration: RelWithDebInfo
     displayName: 'Build Playground iOS'
-    
+
   - task: Xcode@5
     inputs:
       xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
@@ -86,7 +94,7 @@ jobs:
       useXcpretty: false
       configuration: RelWithDebInfo
     displayName: 'Build ValidationTests iOS'
-    
+
 - job: win32_x64
   timeoutInMinutes: 30
   pool:
@@ -156,7 +164,7 @@ jobs:
     condition: failed()
 
 - job: win32_x86
-  timeoutInMinutes: 30 
+  timeoutInMinutes: 30
   pool:
     vmImage: 'windows-latest'
 
@@ -223,21 +231,21 @@ jobs:
     displayName: 'Publish Tests Win32_x86 Dumps'
     condition: failed()
 
-- job: uwp_x64    
+- job: uwp_x64
   pool:
-    vmImage: 'windows-latest'  
-    
+    vmImage: 'windows-latest'
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-    
+
   - script: |
       mkdir buildUWP_x64
       cd buildUWP_x64
       cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
     displayName: 'Generate UWP_x64 solution'
-  
+
   - task: VSBuild@1
     inputs:
       solution: 'buildUWP_x64/BabylonNative.sln'
@@ -246,21 +254,21 @@ jobs:
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x64'
 
-- job: uwp_arm64    
+- job: uwp_arm64
   pool:
-    vmImage: 'windows-latest'  
-    
+    vmImage: 'windows-latest'
+
   steps:
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
-    
+
   - script: |
       mkdir buildUWP_arm64
       cd buildUWP_arm64
       cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A arm64
     displayName: 'Generate UWP_arm64 solution'
-  
+
   - task: VSBuild@1
     inputs:
       solution: 'buildUWP_arm64/BabylonNative.sln'
@@ -271,7 +279,7 @@ jobs:
 
 - job: uwp_x86
   pool:
-    vmImage: 'windows-latest'  
+    vmImage: 'windows-latest'
 
   steps:
   - script: |
@@ -292,7 +300,6 @@ jobs:
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x86'
 
-
 - job: Android_V8_Mac
   pool:
     vmImage: 'macOS-10.14'
@@ -305,7 +312,9 @@ jobs:
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
-      brew install ninja
+      brew uninstall cmake
+      brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+      cmake --version
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
@@ -344,14 +353,16 @@ jobs:
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
   - script: |
-      brew install ninja
+      brew uninstall cmake
+      brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+      cmake --version
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -374,8 +385,17 @@ jobs:
 - job: Android_V8_Linux
   pool:
     vmImage: 'ubuntu-latest'
-    
+
   steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+      cmake --version
+    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
@@ -388,7 +408,7 @@ jobs:
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -411,8 +431,17 @@ jobs:
 - job: Android_JSC_Linux
   pool:
     vmImage: 'ubuntu-latest'
-    
+
   steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+      cmake --version
+    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
@@ -425,7 +454,7 @@ jobs:
       npm install
       cd ../../ValidationTests/Android
       npm install
-    displayName: 'Install JS engine NPMs'    
+    displayName: 'Install JS engine NPMs'
   - task: Gradle@2
     inputs:
         workingDirectory: 'Apps/Playground/Android'
@@ -455,6 +484,15 @@ jobs:
     CXX: clang++-8
 
   steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+      cmake --version
+    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'
@@ -479,6 +517,15 @@ jobs:
     CXX: g++-9
 
   steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+      cmake --version
+    displayName: 'Install cmake'
   - script: |
       git submodule update --init --recursive
     displayName: 'Checkout dependencies'

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
 #include "FrameBufferManager.h"
 #include "SafeTimespanGuarantor.h"
@@ -11,15 +10,20 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
 
+#include <napi/env.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
 #include <memory>
 #include <map>
+#include <unordered_map>
 
 namespace Babylon
 {
-    class Graphics::Impl
+    struct GraphicsConfiguration;
+
+    class GraphicsImpl
     {
     public:
         class UpdateToken final
@@ -31,11 +35,11 @@ namespace Babylon
             bgfx::Encoder* GetEncoder();
 
         private:
-            friend class Graphics::Impl;
+            friend class GraphicsImpl;
 
-            UpdateToken(Graphics::Impl&);
+            UpdateToken(GraphicsImpl&);
 
-            Impl& m_graphicsImpl;
+            GraphicsImpl& m_graphicsImpl;
             SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
         };
 
@@ -49,20 +53,30 @@ namespace Babylon
             }
 
         private:
-            friend Impl;
+            friend GraphicsImpl;
 
             arcana::manual_dispatcher<128> m_dispatcher;
         };
 
-        Impl();
-        ~Impl();
+        struct TextureInfo final
+        {
+        public:
+            uint16_t Width{};
+            uint16_t Height{};
+            bool HasMips{};
+            uint16_t NumLayers{};
+            bgfx::TextureFormat::Enum Format{};
+        };
 
-        void* GetNativeWindow();
-        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
+        GraphicsImpl();
+        virtual ~GraphicsImpl();
+        template<typename WindowT>
+        WindowT GetNativeWindow();
+        void SetNativeWindow(const GraphicsConfiguration& config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
-        static Impl& GetFromJavaScript(Napi::Env);
+        static GraphicsImpl& GetFromJavaScript(Napi::Env);
 
         RenderScheduler& BeforeRenderScheduler();
         RenderScheduler& AfterRenderScheduler();
@@ -79,12 +93,20 @@ namespace Babylon
         void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
         FrameBuffer& DefaultFrameBuffer();
 
+        void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
+        void RemoveTexture(bgfx::TextureHandle handle);
+        TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
+
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
+
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
+
+        float GetDevicePixelRatio();
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
@@ -92,8 +114,10 @@ namespace Babylon
     private:
         friend class UpdateToken;
 
+        void ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
+        float UpdateDevicePixelRatio();
         void DiscardIfDirty();
         void RequestScreenShots();
         void Frame();
@@ -122,6 +146,7 @@ namespace Babylon
                 size_t Width{};
                 size_t Height{};
                 float HardwareScalingLevel{1.0f};
+                float DevicePixelRatio{1.0f};
             } Resolution{};
         } m_state;
 
@@ -141,5 +166,10 @@ namespace Babylon
 
         std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
         std::mutex m_threadIdToEncoderMutex{};
+
+        std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
+
+        std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
+        std::mutex m_textureHandleToInfoMutex{};
     };
 }

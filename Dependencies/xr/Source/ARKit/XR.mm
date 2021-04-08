@@ -705,7 +705,7 @@ namespace xr {
                     [texture retain];
 
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
-                    ActiveFrameViews[0].ColorTextureFormat = TextureFormat::RGBA8_SRGB;
+                    ActiveFrameViews[0].ColorTextureFormat = TextureFormat::BGRA8_SRGB;
                     ActiveFrameViews[0].ColorTextureSize = {width, height};
                 }
 
@@ -1211,8 +1211,6 @@ namespace xr {
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
-        , Planes{ sessionImpl.Planes }
-        , Meshes{ sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedPlanes{}
         , RemovedPlanes{}
@@ -1276,6 +1274,18 @@ namespace xr {
         return arcana::task_from_result<std::exception_ptr>(sessionType == SessionType::IMMERSIVE_AR && ARWorldTrackingConfiguration.isSupported);
     }
 
+    uintptr_t System::GetNativeXrContext()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::GetNativeXrContextType()
+    {
+        // TODO
+        return "";
+    }
+
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
         auto session = std::make_shared<System::Session>(system, graphicsDevice, std::move(windowProvider));
         return session->m_impl->WhenReady().then(arcana::inline_scheduler, arcana::cancellation::none(), [session] {
@@ -1330,17 +1340,5 @@ namespace xr {
     {
         // TODO
         return false;
-    }
-
-    uintptr_t System::Session::GetNativeXrContext()
-    {
-        // TODO
-        return 0;
-    }
-
-    std::string System::Session::GetNativeXrContextType()
-    {
-        // TODO
-        return "";
     }
 }

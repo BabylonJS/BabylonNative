@@ -330,7 +330,6 @@ namespace xr
 
     struct System::Session::Impl
     {
-        using EGLContextPtr = std::unique_ptr<std::remove_pointer_t<EGLContext>, std::function<void(EGLContext)>>;
         using EGLSurfacePtr = std::unique_ptr<std::remove_pointer_t<EGLSurface>, std::function<void(EGLSurface)>>;
 
         const System::Impl& SystemImpl;
@@ -347,7 +346,7 @@ namespace xr
         Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
             , windowProvider{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<ANativeWindow*>(windowProvider()); } }
-            , parentContext{reinterpret_cast<EGLContext>(graphicsContext) }
+            , context{reinterpret_cast<EGLContext>(graphicsContext) }
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
         {
@@ -402,20 +401,6 @@ namespace xr
                 {
                     throw std::runtime_error{"Failed to choose EGL config."};
                 }
-
-                eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-
-                EGLint contextAttributes[]
-                {
-                    EGL_CONTEXT_MAJOR_VERSION_KHR, 3,
-                    EGL_CONTEXT_MINOR_VERSION_KHR, 0,
-
-                    EGL_NONE
-                };
-
-                context = EGLContextPtr(eglCreateContext(display, config, parentContext, contextAttributes), [display{display}](EGLContext context) {
-                    eglDestroyContext(display, context);
-                });
             }
 
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
@@ -657,7 +642,7 @@ namespace xr
             ArFrame_getTimestamp(session, frame, &frameTimestamp);
             if (frameTimestamp && surface.get())
             {
-                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface.get(), surface.get(), context.get()) };
+                auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface.get(), surface.get(), context) };
 
                 auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
                 auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
@@ -1058,8 +1043,7 @@ namespace xr
         EGLDisplay display{};
         EGLConfig config{};
         EGLint format{};
-        EGLContext parentContext{};
-        EGLContextPtr context;
+        EGLContext context{};
         EGLSurfacePtr surface;
 
         GLuint cameraShaderProgramId{};
@@ -1208,8 +1192,6 @@ namespace xr
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
-        , Planes{ sessionImpl.Planes }
-        , Meshes { sessionImpl.Meshes }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
         , UpdatedSceneObjects{}
         , RemovedSceneObjects{}
@@ -1333,6 +1315,18 @@ namespace xr
         return arcana::task_from_result<std::exception_ptr>(false);
     }
 
+    uintptr_t System::GetNativeXrContext()
+    {
+        // TODO
+        return 0;
+    }
+
+    std::string System::GetNativeXrContextType()
+    {
+        // TODO
+        return "";
+    }
+
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
     {
         // First perform the ARCore installation check, request install if not yet installed.
@@ -1399,17 +1393,5 @@ namespace xr
     {
         // TODO
         return false;
-    }
-
-    uintptr_t System::Session::GetNativeXrContext()
-    {
-        // TODO
-        return 0;
-    }
-
-    std::string System::Session::GetNativeXrContextType()
-    {
-        // TODO
-        return "";
     }
 }

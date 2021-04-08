@@ -104,13 +104,18 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        Babylon::GraphicsConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Width = width;
+        graphicsConfig.Height = height;
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
+        runtime->Dispatch([](Napi::Env env) {
             graphics->AddToJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {

@@ -54,8 +54,8 @@ namespace
         inputBuffer.reset();
         graphics.reset();
     }
-    
-    void InitBabylon(int32_t window, int width, int height, int argc, const char* const* argv)
+
+    void InitBabylon(Window window, int width, int height, int argc, const char* const* argv)
     {
         std::vector<std::string> scripts(argv + 1, argv + argc);
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
@@ -63,9 +63,14 @@ namespace
         Uninitialize();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        Babylon::GraphicsConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.Width = static_cast<size_t>(width);
+        graphicsConfig.Height = static_cast<size_t>(height);
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->StartRenderingCurrentFrame();
-        
+
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
