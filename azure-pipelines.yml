@@ -445,7 +445,7 @@ jobs:
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
-      sudo apt-get install ninja-build cmake=$(CMAKE_VERSION)-1ubuntu1
+      sudo apt-get install ninja-build
     displayName: 'Install packages'
   - script: |
       cd Apps/Playground/Android
@@ -529,7 +529,6 @@ jobs:
     displayName: 'Checkout dependencies'
   - script: |
       sudo apt-get update
-      sudo apt-get --purge remove cmake
       sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev gcc-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
     displayName: 'Install packages'
   - script: |
