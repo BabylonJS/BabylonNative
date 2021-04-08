@@ -464,7 +464,7 @@ namespace xr
             isInitialized = true;
         }
 
-        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
+        std::unique_ptr<Session::Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback)
         {
             if (!isInitialized)
             {
@@ -525,7 +525,7 @@ namespace xr
             // Check whether the dimensions have changed
             if ((ActiveFrameViews[0].ColorTextureSize.Width != width || ActiveFrameViews[0].ColorTextureSize.Height != height) && width && height)
             {
-                DestroyDisplayResources(deletedTextureCallback);
+                DestroyDisplayResources(deletedTextureAsyncCallback);
 
                 int rotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() };
 
@@ -1080,19 +1080,15 @@ namespace xr
             }
         }
 
-        void DestroyDisplayResources(std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){})
+        void DestroyDisplayResources(std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback = [](void*){ return arcana::task_from_result<std::exception_ptr>(); })
         {
-            if (ActiveFrameViews[0].ColorTexturePointer)
-            {
+            if (ActiveFrameViews[0].ColorTexturePointer != nullptr && ActiveFrameViews[0].DepthTexturePointer != nullptr) {
                 auto colorTextureId{ static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)) };
-                glDeleteTextures(1, &colorTextureId);
-                deletedTextureCallback(ActiveFrameViews[0].ColorTexturePointer);
-            }
-
-            if (ActiveFrameViews[0].DepthTexturePointer)
-            {
                 auto depthTextureId{ static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)) };
-                glDeleteTextures(1, &depthTextureId);
+                deletedTextureAsyncCallback(ActiveFrameViews[0].ColorTexturePointer).then(arcana::inline_scheduler, arcana::cancellation::none(), [colorTextureId, depthTextureId]() {
+                    glDeleteTextures(1, &colorTextureId);
+                    glDeleteTextures(1, &depthTextureId);
+                });
             }
 
             ActiveFrameViews[0] = {};
@@ -1349,9 +1345,9 @@ namespace xr
     {
     }
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback)
     {
-        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureCallback);
+        return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession, deletedTextureAsyncCallback);
     }
 
     void System::Session::RequestEndSession()
