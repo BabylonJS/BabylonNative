@@ -6,7 +6,7 @@ pr:
 
 variables:
 - name: CMAKE_VERSION
-  value: 3.19.6 
+  value: 3.16.2
   
 jobs:
 - job: macOS
@@ -387,7 +387,7 @@ jobs:
   - script: |
       sudo apt-get update
       sudo apt-get --purge remove cmake
-      sudo apt-get install ninja-build cmake=$(CMAKE_VERSION)-1ubuntu1
+      sudo apt-get install ninja-build
     displayName: 'Install packages'
   - script: |
       cd Apps/Playground/Android
