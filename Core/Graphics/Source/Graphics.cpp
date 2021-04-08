@@ -17,11 +17,23 @@ namespace Babylon
         m_impl->SetNativeWindow(config);
     }
 
+    void Graphics::UpdateContext(ContextType context)
+    {
+        m_impl->SetNativeContext(context);
+    }
+
     std::unique_ptr<Graphics> Graphics::CreateGraphics(const GraphicsConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow(config);
         graphics->UpdateSize(config.Width, config.Height);
+        return graphics;
+    }
+
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(ContextType context)
+    {
+        std::unique_ptr<Graphics> graphics{ new Graphics() };
+        graphics->UpdateContext(context);
         return graphics;
     }
 

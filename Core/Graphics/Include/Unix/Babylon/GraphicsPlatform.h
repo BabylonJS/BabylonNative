@@ -5,6 +5,7 @@
 namespace Babylon
 {
     using WindowType = void*;
+    using ContextType = GLXContext;
 
     struct GraphicsConfiguration
     {

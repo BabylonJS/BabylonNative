@@ -5,6 +5,7 @@
 namespace Babylon
 {
     using WindowType = MTKView*;
+    using ContextType = id<MTLDevice>;
 
     struct GraphicsConfiguration
     {

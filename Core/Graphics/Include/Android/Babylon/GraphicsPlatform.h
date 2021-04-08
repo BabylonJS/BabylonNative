@@ -5,6 +5,7 @@
 namespace Babylon
 {
     using WindowType = ANativeWindow*;
+    using ContextType = EGLContext;
 
     struct GraphicsConfiguration
     {

@@ -53,6 +53,14 @@ namespace Babylon
         UpdateDevicePixelRatio();
     }
 
+    void GraphicsImpl::SetNativeContext(ContextType context)
+    {
+        std::scoped_lock lock{ m_state.Mutex };
+        m_state.Bgfx.Dirty = true;
+        ConfigureBgfxPlatformData(context, m_state.Bgfx.InitState.platformData);
+        UpdateDevicePixelRatio();
+    }
+
     void GraphicsImpl::Resize(size_t width, size_t height)
     {
         std::scoped_lock lock{m_state.Mutex};

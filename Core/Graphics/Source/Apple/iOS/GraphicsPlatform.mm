@@ -14,6 +14,15 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
+    void GraphicsImpl::ConfigureBgfxPlatformData(ContextType context, bgfx::PlatformData& pd)
+    {
+        pd.ndt = nullptr;
+        pd.nwh = nullptr;
+        pd.context = context;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
+    }
+
     float GraphicsImpl::UpdateDevicePixelRatio()
     {
         std::scoped_lock lock{m_state.Mutex};

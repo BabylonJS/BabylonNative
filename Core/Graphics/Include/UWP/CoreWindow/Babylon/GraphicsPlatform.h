@@ -7,6 +7,7 @@
 namespace Babylon
 {
     using WindowType = winrt::Windows::UI::Core::ICoreWindow*;
+    using ContextType = ID3D11DeviceContext*;
 
     struct GraphicsConfiguration
     {

@@ -17,6 +17,15 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
+    void GraphicsImpl::ConfigureBgfxPlatformData(ContextType context, bgfx::PlatformData& pd)
+    {
+        pd.ndt = nullptr;
+        pd.nwh = nullptr;
+        pd.context = context;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
+    }
+
     float GraphicsImpl::UpdateDevicePixelRatio()
     {
         // In UWP, DisplayInformation is only accessible from the UI thread. Calling this method from any other thread will cause a crash.

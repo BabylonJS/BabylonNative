@@ -5,6 +5,7 @@
 namespace Babylon
 {
     using WindowType = winrt::Windows::UI::Xaml::Controls::ISwapChainPanel*;
+    using ContextType = ID3D11DeviceContext*;
 
     struct GraphicsConfiguration
     {
