@@ -2962,6 +2962,7 @@ namespace Babylon
                         InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
                         InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
                         InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
+                        InstanceMethod("getNativeAnchor", &XR::GetNativeAnchor),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
                     });
 
