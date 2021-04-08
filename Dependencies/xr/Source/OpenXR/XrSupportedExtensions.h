@@ -11,7 +11,13 @@ namespace xr
             : Names{}
         {
             uint32_t extensionCount{};
-            XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
+            XrResult result{ xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr) };
+            if (result != XR_SUCCESS)
+            {
+                // Avoid failing if device doesn't support OpenXR
+                return;
+            }
+
             m_extensionProperties.resize(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
             XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, m_extensionProperties.data()));
 
