@@ -344,6 +344,9 @@ jobs:
     displayName: 'Checkout dependencies'
   - script: |
       brew install ninja
+      cmake --version
+      brew uninstall cmake
+      brew install cmake@3.19.3
     displayName: 'Install Ninja'
   - script: |
       cd Apps/Playground/Android
