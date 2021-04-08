@@ -92,7 +92,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Plugins::NativeCamera::Initialize(env);
+        Babylon::Plugins::Camera::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
