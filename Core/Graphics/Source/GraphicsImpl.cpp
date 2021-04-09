@@ -57,8 +57,8 @@ namespace Babylon
     {
         std::scoped_lock lock{ m_state.Mutex };
         m_state.Bgfx.Dirty = true;
+        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
-        UpdateDevicePixelRatio();
     }
 
     void GraphicsImpl::Resize(size_t width, size_t height)

@@ -18,6 +18,6 @@ namespace Babylon
     struct ContextConfiguration
     {
         ContextType Context;
-        float DefaultPixelRatio{1.f};
+        float DevicePixelRatio{1.f};
     };
 }
