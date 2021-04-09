@@ -577,7 +577,7 @@ namespace Babylon
             bool shouldEndSession{};
             bool shouldRestartSession{};
             m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-                m_runtimeScheduler([this, texturePointer]() {
+                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
                     auto itTextureToFrameBuffer{m_sessionState->TextureToFrameBufferMap.find(texturePointer)};
                     if (itTextureToFrameBuffer != m_sessionState->TextureToFrameBufferMap.end())
                     {
