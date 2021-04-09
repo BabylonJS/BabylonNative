@@ -32,6 +32,8 @@
 #include <gtx/quaternion.hpp>
 #include <arcana/threading/task_schedulers.h>
 
+#include "Include/IXrContextARCore.h"
+
 using namespace android;
 using namespace android::global;
 
@@ -40,8 +42,31 @@ namespace xr
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID{ 8435 };
 
+    struct XrContextARCore : public IXrContextARCore {
+        bool Initialized{false};
+        ArSession* Session{nullptr};
+        ArFrame* Frame{nullptr};
+
+        bool IsInitialized() const override
+        {
+            return Initialized;
+        }
+
+        ArSession* XrSession() const override
+        {
+            return Session;
+        }
+
+        ArFrame* XrFrame() const override
+        {
+            return Frame;
+        }
+    };
+
     struct System::Impl
     {
+        XrContextARCore XrContext{};
+
         Impl(const std::string& /*applicationName*/)
         {
         }
@@ -51,8 +76,7 @@ namespace xr
             return true;
         }
 
-        bool TryInitialize()
-        {
+        bool TryInitialize() {
             return true;
         }
     };
@@ -345,8 +369,11 @@ namespace xr
 
         Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
+            , isInitialized{systemImpl.XrContext.Initialized}
             , windowProvider{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<ANativeWindow*>(windowProvider()); } }
             , context{reinterpret_cast<EGLContext>(graphicsContext) }
+            , session{systemImpl.XrContext.Session}
+            , frame{systemImpl.XrContext.Frame}
             , pauseTicket{AddPauseCallback([this]() { this->PauseSession(); }) }
             , resumeTicket{AddResumeCallback([this]() { this->ResumeSession(); }) }
         {
@@ -1029,7 +1056,7 @@ namespace xr
         }
 
     private:
-        bool isInitialized{false};
+        bool& isInitialized;
         bool sessionEnded{false};
         std::vector<ArTrackable*> frameTrackables{};
         std::vector<ArAnchor*> arCoreAnchors{};
@@ -1051,8 +1078,8 @@ namespace xr
         GLuint cameraTextureId{};
         GLuint clearFrameBufferId{};
 
-        ArSession* session{};
-        ArFrame* frame{};
+        ArSession*& session;
+        ArFrame*& frame;
         ArPose* cameraPose{};
         ArPose* tempPose{};
         ArHitResultList* hitResultList{};
@@ -1317,14 +1344,12 @@ namespace xr
 
     uintptr_t System::GetNativeXrContext()
     {
-        // TODO
-        return 0;
+        return reinterpret_cast<uintptr_t>(&m_impl->XrContext);
     }
 
     std::string System::GetNativeXrContextType()
     {
-        // TODO
-        return "";
+        return "ARCore";
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
