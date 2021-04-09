@@ -300,6 +300,31 @@ jobs:
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
     displayName: 'Build UWP_x86'
 
+- job: uwp_napi_jsi_x64
+  pool:
+    vmImage: 'windows-latest'
+
+  steps:
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+
+  - script: |
+      cd Validation/napi-jsi
+      npm install
+      mkdir build_uwp_napi_jsi_x64
+      cd build_uwp_napi_jsi_x64
+      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
+    displayName: 'Generate UWP_x64 solution'
+
+  - task: VSBuild@1
+    inputs:
+      solution: 'build_uwp_napi_jsi_x64/napi-jsi.sln'
+      maximumCpuCount: true
+      configuration: 'RelWithDebInfo'
+      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
+    displayName: 'Build UWP_x64'
+
 - job: Android_V8_Mac
   pool:
     vmImage: 'macOS-10.14'
