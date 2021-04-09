@@ -15,4 +15,10 @@ namespace Babylon
         size_t Width;
         size_t Height;
     };
+
+    struct ContextConfiguration
+    {
+        ContextType Context;
+        float DefaultPixelRatio{1.f};
+    };
 }

@@ -18,11 +18,11 @@ namespace Babylon
         pd.backBufferDS = nullptr;
     }
 
-    void GraphicsImpl::ConfigureBgfxPlatformData(ContextType context, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
         pd.nwh = nullptr;
-        pd.context = context;
+        pd.context = config.Context;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
     }

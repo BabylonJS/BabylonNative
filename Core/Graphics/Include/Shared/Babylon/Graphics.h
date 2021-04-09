@@ -15,10 +15,10 @@ namespace Babylon
         ~Graphics();
 
         static std::unique_ptr<Graphics> CreateGraphics(const GraphicsConfiguration& config);
-        static std::unique_ptr<Graphics> CreateGraphics(ContextType context);
+        static std::unique_ptr<Graphics> CreateGraphics(const ContextConfiguration& config);
 
         void UpdateWindow(const GraphicsConfiguration& config);
-        void UpdateContext(ContextType context);
+        void UpdateContext(const ContextConfiguration& config);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);

@@ -17,9 +17,9 @@ namespace Babylon
         m_impl->SetNativeWindow(config);
     }
 
-    void Graphics::UpdateContext(ContextType context)
+    void Graphics::UpdateContext(const ContextConfiguration& config)
     {
-        m_impl->SetNativeContext(context);
+        m_impl->SetNativeContext(config);
     }
 
     std::unique_ptr<Graphics> Graphics::CreateGraphics(const GraphicsConfiguration& config)
@@ -30,10 +30,10 @@ namespace Babylon
         return graphics;
     }
 
-    std::unique_ptr<Graphics> Graphics::CreateGraphics(ContextType context)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const ContextConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{ new Graphics() };
-        graphics->UpdateContext(context);
+        graphics->UpdateContext(config);
         return graphics;
     }
 

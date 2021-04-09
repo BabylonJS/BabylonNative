@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <d3d11.h>
 
 namespace Babylon
 {
@@ -12,5 +13,11 @@ namespace Babylon
         WindowType WindowPtr;
         size_t Width;
         size_t Height;
+    };
+
+    struct ContextConfiguration
+    {
+        ContextType Context;
+        float DefaultPixelRatio{1.f};
     };
 }
