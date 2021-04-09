@@ -1,6 +1,7 @@
  #pragma once
 
 #include <android/native_window.h>
+#include <EGL/egl.h>
 
 namespace Babylon
 {

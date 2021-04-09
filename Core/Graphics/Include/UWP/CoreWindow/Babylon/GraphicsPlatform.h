@@ -3,6 +3,7 @@
 #include <windows.ui.core.h>
 #include <winrt/windows.ui.core.h>
 #include <winrt/Windows.ApplicationModel.h>
+#include <d3d11.h>
 
 namespace Babylon
 {

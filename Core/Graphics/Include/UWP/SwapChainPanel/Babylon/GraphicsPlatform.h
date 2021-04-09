@@ -1,6 +1,7 @@
 #pragma once
 
 #include <winrt/Windows.UI.Xaml.Controls.h>
+#include <d3d11.h>
 
 namespace Babylon
 {
