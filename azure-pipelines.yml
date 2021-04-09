@@ -319,7 +319,7 @@ jobs:
 
   - task: VSBuild@1
     inputs:
-      solution: 'build_uwp_napi_jsi_x64/napi-jsi.sln'
+      solution: 'Validation/napi-jsi/build_uwp_napi_jsi_x64/napi-jsi.sln'
       maximumCpuCount: true
       configuration: 'RelWithDebInfo'
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
