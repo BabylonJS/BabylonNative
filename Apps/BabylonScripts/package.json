@@ -1,0 +1,10 @@
+{
+  "name": "BabylonScripts",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "babylonjs": "preview",
+    "babylonjs-gui": "preview",
+    "babylonjs-materials": "preview"
+  }
+}
