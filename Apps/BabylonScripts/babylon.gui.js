@@ -1127,9 +1127,9 @@ var AdvancedDynamicTexture = /** @class */ (function (_super) {
         this.invalidateRect(0, 0, textureSize.width - 1, textureSize.height - 1);
     };
     /** @hidden */
-    AdvancedDynamicTexture.prototype._getGlobalViewport = function (scene) {
-        var engine = scene.getEngine();
-        return this._fullscreenViewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
+    AdvancedDynamicTexture.prototype._getGlobalViewport = function () {
+        var size = this.getSize();
+        return this._fullscreenViewport.toGlobal(size.width, size.height);
     };
     /**
     * Get screen coordinates for a vector3
@@ -1142,7 +1142,7 @@ var AdvancedDynamicTexture = /** @class */ (function (_super) {
         if (!scene) {
             return babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector2"].Zero();
         }
-        var globalViewport = this._getGlobalViewport(scene);
+        var globalViewport = this._getGlobalViewport();
         var projectedPosition = babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector3"].Project(position, worldMatrix, scene.getTransformMatrix(), globalViewport);
         projectedPosition.scaleInPlace(this.renderScale);
         return new babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector2"](projectedPosition.x, projectedPosition.y);
@@ -1158,7 +1158,7 @@ var AdvancedDynamicTexture = /** @class */ (function (_super) {
         if (!scene) {
             return babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector3"].Zero();
         }
-        var globalViewport = this._getGlobalViewport(scene);
+        var globalViewport = this._getGlobalViewport();
         var projectedPosition = babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector3"].Project(position, worldMatrix, scene.getTransformMatrix(), globalViewport);
         projectedPosition.scaleInPlace(this.renderScale);
         return new babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector3"](projectedPosition.x, projectedPosition.y, projectedPosition.z);
@@ -1174,7 +1174,7 @@ var AdvancedDynamicTexture = /** @class */ (function (_super) {
             if (!scene) {
                 return;
             }
-            var globalViewport = this._getGlobalViewport(scene);
+            var globalViewport = this._getGlobalViewport();
             var _loop_1 = function (control) {
                 if (!control.isVisible) {
                     return "continue";
@@ -3479,6 +3479,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
 /**
  * Root class for 2D containers
  * @see https://doc.babylonjs.com/how_to/gui#containers
@@ -3502,6 +3505,10 @@ var Container = /** @class */ (function (_super) {
         _this._adaptWidthToChildren = false;
         /** @hidden */
         _this._adaptHeightToChildren = false;
+        /** @hidden */
+        _this._renderToIntermediateTexture = false;
+        /** @hidden */
+        _this._intermediateTexture = null;
         /**
          * Gets or sets a boolean indicating that layout cycle errors should be displayed on the console
          */
@@ -3512,6 +3519,21 @@ var Container = /** @class */ (function (_super) {
         _this.maxLayoutCycle = 3;
         return _this;
     }
+    Object.defineProperty(Container.prototype, "renderToIntermediateTexture", {
+        /** Gets or sets boolean indicating if children should be rendered to an intermediate texture rather than directly to host, useful for alpha blending */
+        get: function () {
+            return this._renderToIntermediateTexture;
+        },
+        set: function (value) {
+            if (this._renderToIntermediateTexture === value) {
+                return;
+            }
+            this._renderToIntermediateTexture = value;
+            this._markAsDirty();
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Container.prototype, "adaptHeightToChildren", {
         /** Gets or sets a boolean indicating if the container should try to adapt to its children height */
         get: function () {
@@ -3738,6 +3760,19 @@ var Container = /** @class */ (function (_super) {
         if (this._isDirty || !this._cachedParentMeasure.isEqualsTo(parentMeasure)) {
             _super.prototype._processMeasures.call(this, parentMeasure, context);
             this._evaluateClippingState(parentMeasure);
+            if (this._renderToIntermediateTexture) {
+                if (this._intermediateTexture && this._host.getScene() != this._intermediateTexture.getScene()) {
+                    this._intermediateTexture.dispose();
+                    this._intermediateTexture = null;
+                }
+                if (!this._intermediateTexture) {
+                    this._intermediateTexture = new babylonjs_Misc_logger__WEBPACK_IMPORTED_MODULE_1__["DynamicTexture"]('', { width: this._currentMeasure.width, height: this._currentMeasure.height }, this._host.getScene(), false, babylonjs_Misc_logger__WEBPACK_IMPORTED_MODULE_1__["Texture"].NEAREST_SAMPLINGMODE, babylonjs_Misc_logger__WEBPACK_IMPORTED_MODULE_1__["Constants"].TEXTUREFORMAT_RGBA, false);
+                    this._intermediateTexture.hasAlpha = true;
+                }
+                else {
+                    this._intermediateTexture.scaleTo(this._currentMeasure.width, this._currentMeasure.height);
+                }
+            }
         }
     };
     /** @hidden */
@@ -3804,9 +3839,21 @@ var Container = /** @class */ (function (_super) {
     };
     /** @hidden */
     Container.prototype._draw = function (context, invalidatedRectangle) {
-        this._localDraw(context);
+        var renderToIntermediateTextureThisDraw = this._renderToIntermediateTexture && this._intermediateTexture;
+        var contextToDrawTo = renderToIntermediateTextureThisDraw ? this._intermediateTexture.getContext() : context;
+        if (renderToIntermediateTextureThisDraw) {
+            contextToDrawTo.save();
+            contextToDrawTo.translate(-this._currentMeasure.left, -this._currentMeasure.top);
+            if (invalidatedRectangle) {
+                contextToDrawTo.clearRect(invalidatedRectangle.left, invalidatedRectangle.top, invalidatedRectangle.width, invalidatedRectangle.height);
+            }
+            else {
+                contextToDrawTo.clearRect(this._currentMeasure.left, this._currentMeasure.top, this._currentMeasure.width, this._currentMeasure.height);
+            }
+        }
+        this._localDraw(contextToDrawTo);
         if (this.clipChildren) {
-            this._clipForChildren(context);
+            this._clipForChildren(contextToDrawTo);
         }
         for (var _i = 0, _a = this._children; _i < _a.length; _i++) {
             var child = _a[_i];
@@ -3816,7 +3863,14 @@ var Container = /** @class */ (function (_super) {
                     continue;
                 }
             }
-            child._render(context, invalidatedRectangle);
+            child._render(contextToDrawTo, invalidatedRectangle);
+        }
+        if (renderToIntermediateTextureThisDraw) {
+            contextToDrawTo.restore();
+            context.save();
+            context.globalAlpha = this.alpha;
+            context.drawImage(contextToDrawTo.canvas, this._currentMeasure.left, this._currentMeasure.top);
+            context.restore();
         }
     };
     Container.prototype.getDescendantsToRef = function (results, directDescendantsOnly, predicate) {
@@ -3881,10 +3935,12 @@ var Container = /** @class */ (function (_super) {
     };
     /** Releases associated resources */
     Container.prototype.dispose = function () {
+        var _a;
         _super.prototype.dispose.call(this);
         for (var index = this.children.length - 1; index >= 0; index--) {
             this.children[index].dispose();
         }
+        (_a = this._intermediateTexture) === null || _a === void 0 ? void 0 : _a.dispose();
     };
     /** @hidden */
     Container.prototype._parseFromContent = function (serializedObject, host) {
@@ -3898,6 +3954,9 @@ var Container = /** @class */ (function (_super) {
             this.addControl(_control__WEBPACK_IMPORTED_MODULE_2__["Control"].Parse(childData, host));
         }
     };
+    Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__decorate"])([
+        Object(babylonjs_Misc_logger__WEBPACK_IMPORTED_MODULE_1__["serialize"])()
+    ], Container.prototype, "renderToIntermediateTexture", null);
     Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__decorate"])([
         Object(babylonjs_Misc_logger__WEBPACK_IMPORTED_MODULE_1__["serialize"])()
     ], Container.prototype, "maxLayoutCycle", void 0);
@@ -4010,6 +4069,7 @@ var Control = /** @class */ (function () {
         this._isMatrixDirty = true;
         this._isVisible = true;
         this._isHighlighted = false;
+        this._highlightLineWidth = 2;
         this._fontSet = false;
         this._dummyVector2 = babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector2"].Zero();
         this._downCount = 0;
@@ -4225,6 +4285,23 @@ var Control = /** @class */ (function () {
             }
             this._alphaSet = true;
             this._alpha = value;
+            this._markAsDirty();
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Control.prototype, "highlightLineWidth", {
+        /**
+         * Gets or sets a number indicating size of stroke we want to highlight the control with (mostly for debugging purpose)
+         */
+        get: function () {
+            return this._highlightLineWidth;
+        },
+        set: function (value) {
+            if (this._highlightLineWidth === value) {
+                return;
+            }
+            this._highlightLineWidth = value;
             this._markAsDirty();
         },
         enumerable: false,
@@ -5053,7 +5130,7 @@ var Control = /** @class */ (function () {
         }
         this.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         this.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        var globalViewport = this._host._getGlobalViewport(scene);
+        var globalViewport = this._host._getGlobalViewport();
         var projectedPosition = babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Vector3"].Project(position, babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Matrix"].Identity(), scene.getTransformMatrix(), globalViewport);
         this._moveToProjectedPosition(projectedPosition);
         if (projectedPosition.z < 0 || projectedPosition.z > 1) {
@@ -5284,7 +5361,7 @@ var Control = /** @class */ (function () {
         }
         context.save();
         context.strokeStyle = "#4affff";
-        context.lineWidth = 2;
+        context.lineWidth = this._highlightLineWidth;
         this._renderHighlightSpecific(context);
         context.restore();
     };
@@ -5311,7 +5388,7 @@ var Control = /** @class */ (function () {
             context.globalAlpha *= this._alpha;
         }
         else if (this._alphaSet) {
-            context.globalAlpha = this.parent ? this.parent.alpha * this._alpha : this._alpha;
+            context.globalAlpha = (this.parent && !this.parent.renderToIntermediateTexture) ? this.parent.alpha * this._alpha : this._alpha;
         }
     };
     /** @hidden */
@@ -9372,7 +9449,7 @@ var Line = /** @class */ (function (_super) {
             babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["Tools"].Error("Cannot move a control to a vector3 if the control is not at root level");
             return;
         }
-        var globalViewport = this._host._getGlobalViewport(scene);
+        var globalViewport = this._host._getGlobalViewport();
         var projectedPosition = babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["Vector3"].Project(position, babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["Matrix"].Identity(), scene.getTransformMatrix(), globalViewport);
         this._moveToProjectedPosition(projectedPosition, end);
         if (projectedPosition.z < 0 || projectedPosition.z > 1) {
@@ -12015,8 +12092,7 @@ var BaseSlider = /** @class */ (function (_super) {
         else {
             value = this._minimum + ((x - this._currentMeasure.left) / this._currentMeasure.width) * (this._maximum - this._minimum);
         }
-        var mult = (1 / this._step) | 0;
-        this.value = this._step ? ((value * mult) | 0) / mult : value;
+        this.value = this._step ? ((value / this._step) | 0) * this._step : value;
     };
     BaseSlider.prototype._onPointerDown = function (target, coordinates, pointerId, buttonIndex, pi) {
         if (!_super.prototype._onPointerDown.call(this, target, coordinates, pointerId, buttonIndex, pi)) {
@@ -16402,7 +16478,7 @@ var Control3D = /** @class */ (function () {
             if (!this.node) {
                 return;
             }
-            this._injectGUI3DMetadata(this.node).control = this; // Store the control on the metadata field in order to get it when picking
+            this._injectGUI3DReservedDataStore(this.node).control = this; // Store the control on the reservedDataStore field in order to get it when picking
             var mesh = this.mesh;
             if (mesh) {
                 mesh.isPickable = true;
@@ -16410,11 +16486,11 @@ var Control3D = /** @class */ (function () {
             }
         }
     };
-    Control3D.prototype._injectGUI3DMetadata = function (node) {
+    Control3D.prototype._injectGUI3DReservedDataStore = function (node) {
         var _a, _b;
-        node.metadata = (_a = node.metadata) !== null && _a !== void 0 ? _a : {};
-        node.metadata.GUI3D = (_b = node.metadata.GUI3D) !== null && _b !== void 0 ? _b : {};
-        return node.metadata.GUI3D;
+        node.reservedDataStore = (_a = node.reservedDataStore) !== null && _a !== void 0 ? _a : {};
+        node.reservedDataStore.GUI3D = (_b = node.reservedDataStore.GUI3D) !== null && _b !== void 0 ? _b : {};
+        return node.reservedDataStore.GUI3D;
     };
     /**
      * Node creation.
@@ -17161,7 +17237,7 @@ var MeshButton3D = /** @class */ (function (_super) {
     MeshButton3D.prototype._createNode = function (scene) {
         var _this = this;
         this._currentMesh.getChildMeshes().forEach(function (mesh) {
-            _this._injectGUI3DMetadata(mesh).control = _this;
+            _this._injectGUI3DReservedDataStore(mesh).control = _this;
         });
         return this._currentMesh;
     };
@@ -17660,7 +17736,7 @@ var TouchButton3D = /** @class */ (function (_super) {
                 collisionMesh.setParent(this.mesh);
             }
             this._collisionMesh = collisionMesh;
-            this._injectGUI3DMetadata(this._collisionMesh).control = this;
+            this._injectGUI3DReservedDataStore(this._collisionMesh).control = this;
             this.collidableFrontDirection = collisionMesh.forward;
             this._collidableInitialized = true;
         },
@@ -18337,7 +18413,7 @@ var TouchMeshButton3D = /** @class */ (function (_super) {
     TouchMeshButton3D.prototype._createNode = function (scene) {
         var _this = this;
         this._currentMesh.getChildMeshes().forEach(function (mesh) {
-            _this._injectGUI3DMetadata(mesh).control = _this;
+            _this._injectGUI3DReservedDataStore(mesh).control = _this;
         });
         return this._currentMesh;
     };
@@ -18712,7 +18788,7 @@ var GUI3DManager = /** @class */ (function () {
         this._utilityLayer.pickUtilitySceneFirst = false;
         this._utilityLayer.mainSceneTrackerPredicate = function (mesh) {
             var _a, _b, _c;
-            return mesh && ((_c = (_b = (_a = mesh.metadata) === null || _a === void 0 ? void 0 : _a.GUI3D) === null || _b === void 0 ? void 0 : _b.control) === null || _c === void 0 ? void 0 : _c._node);
+            return mesh && ((_c = (_b = (_a = mesh.reservedDataStore) === null || _a === void 0 ? void 0 : _a.GUI3D) === null || _b === void 0 ? void 0 : _b.control) === null || _c === void 0 ? void 0 : _c._node);
         };
         // Root
         this._rootContainer = new _controls_container3D__WEBPACK_IMPORTED_MODULE_1__["Container3D"]("RootContainer");
@@ -18776,7 +18852,7 @@ var GUI3DManager = /** @class */ (function () {
         if (pickingInfo.pickedPoint) {
             this.onPickedPointChangedObservable.notifyObservers(pickingInfo.pickedPoint);
         }
-        var control = ((_b = (_a = pickingInfo.pickedMesh.metadata) === null || _a === void 0 ? void 0 : _a.GUI3D) === null || _b === void 0 ? void 0 : _b.control);
+        var control = ((_b = (_a = pickingInfo.pickedMesh.reservedDataStore) === null || _a === void 0 ? void 0 : _a.GUI3D) === null || _b === void 0 ? void 0 : _b.control);
         if (!!control && !control._processObservables(pi.type, pickingInfo.pickedPoint, pointerId, buttonIndex)) {
             if (pi.type === babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_0__["PointerEventTypes"].POINTERMOVE) {
                 if (this._lastControlOver[pointerId]) {
