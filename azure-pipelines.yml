@@ -31,7 +31,7 @@ jobs:
       sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-macos-universal/CMake.app/contents/bin/cmake /usr/local/bin/cmake
       cmake --version
       wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
-      unzip ninja-mac.zip
+      unzip -o ninja-mac.zip
       sudo cp -v ninja /usr/local/bin
     displayName: 'CMake version'
     condition: contains('${{ parameters.vmImage }}', 'macOS')
@@ -86,7 +86,7 @@ jobs:
       sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-macos-universal/CMake.app/contents/bin/cmake /usr/local/bin/cmake
       cmake --version
       wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
-      unzip ninja-mac.zip
+      unzip -o ninja-mac.zip
       sudo cp -v ninja /usr/local/bin
     displayName: 'CMake version'
 
