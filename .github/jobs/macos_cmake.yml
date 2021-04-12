@@ -1,3 +1,6 @@
+parameters:
+  vmImage: ''
+
 steps:
   - script: |
       brew uninstall cmake
