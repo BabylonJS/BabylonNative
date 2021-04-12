@@ -1,0 +1,13 @@
+parameters:
+- name: name
+  default: ''
+- name: vmImage
+  default: ''
+- name: JSEngine
+  default: ''
+  
+jobs:
+- job: ${{ parameters.name }}
+  timeoutInMinutes: 30
+  pool:
+    vmImage: ${{ parameters.vmImage }}

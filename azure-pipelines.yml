@@ -9,57 +9,56 @@ variables:
   value: 3.19.6
   
 jobs:
-- job: Ubuntu_GCC9_JSC
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'ubuntu-latest'
 
-  variables:
-    CC: gcc-10
-    CXX: g++-10
+# APPLE
+- template: .github/jobs/macos.yml
+  parameters:
+    name: MacOS
+    vmImage: 'macOS-10.14'
+    xCodeVersion: 11.3.1
 
-  steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
-      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev gcc-10 libc++-10-dev libc++abi-10-dev lld-10 ninja-build
-    displayName: 'Install packages'
-  - script: |
-      mkdir build
-      cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
-      ninja
-    displayName: 'Build X11'
+- template: .github/jobs/ios.yml
+  parameters:
+    name: iOS
+    vmImage: 'macOS-10.14'
+    xCodeVersion: 11.3.1
 
-  #- script: |
-  #    export DISPLAY=:99
-  #    Xvfb :99 -screen 0 1600x900x24 &
-  #    sleep 3
-  #    cd build/Apps/ValidationTests
-  #    mkdir Errors
-  #    mkdir Results
-  #    ./ValidationTests
-  #  displayName: 'Test on CI'
-  #- task: PublishBuildArtifacts@1
-  #  inputs:
-  #    artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
-  #    pathtoPublish: 'build/Apps/ValidationTests/Results'
-  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
-  #  condition: succeeded()
-  #- task: PublishBuildArtifacts@1
-  #  inputs:
-  #    artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
-  #    pathtoPublish: 'build/Apps/ValidationTests/Errors'
-  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
-  #  condition: failed()
+# WIN32
+- template: .github/jobs/win32.yml
+  parameters:
+    name: Win32_x86
+    vmImage: 'windows-latest'
+    platform: win32
+
+- template: .github/jobs/win32.yml
+  parameters:
+    name: Win32_x64
+    vmImage: 'windows-latest'
+    platform: x64
+
+- template: .github/jobs/win32.yml
+  parameters:
+    name: Win32_arm64
+    vmImage: 'windows-latest'
+    platform: arm64
+
+# UWP
+- template: .github/jobs/uwp.yml
+  parameters:
+    name: UWP_x86
+    vmImage: 'windows-latest'
+    platform: win32
+
+- template: .github/jobs/uwp.yml
+  parameters:
+    name: UWP_x64
+    vmImage: 'windows-latest'
+    platform: x64
+
+- template: .github/jobs/uwp.yml
+  parameters:
+    name: UWP_arm64
+    vmImage: 'windows-latest'
+    platform: arm64
+
+

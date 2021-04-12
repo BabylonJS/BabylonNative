@@ -1,0 +1,65 @@
+parameters:
+- name: name
+  default: ''
+- name: vmImage
+  default: ''
+- name: CC
+  default: ''
+- name: CXX
+  default: ''
+  
+jobs:
+- job: ${{ parameters.name }}
+  timeoutInMinutes: 30
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    CC: ${{ parameters.CC }}
+    CXX: ${{ parameters.CXX }}
+
+  steps:
+  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+      cmake --version
+    displayName: 'Install cmake'
+  - script: |
+      git submodule update --init --recursive
+    displayName: 'Checkout dependencies'
+  - script: |
+      sudo apt-get update
+      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev gcc-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
+    displayName: 'Install packages'
+  - script: |
+      mkdir build
+      cd build
+      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
+      ninja
+    displayName: 'Build X11'
+    
+  #- script: |
+  #    export DISPLAY=:99
+  #    Xvfb :99 -screen 0 1600x900x24 &
+  #    sleep 3
+  #    cd build/Apps/ValidationTests
+  #    mkdir Errors
+  #    mkdir Results
+  #    ./ValidationTests
+  #  displayName: 'Test on CI'
+  #- task: PublishBuildArtifacts@1
+  #  inputs:
+  #    artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
+  #    pathtoPublish: 'build/Apps/ValidationTests/Results'
+  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
+  #  condition: succeeded()
+  #- task: PublishBuildArtifacts@1
+  #  inputs:
+  #    artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
+  #    pathtoPublish: 'build/Apps/ValidationTests/Errors'
+  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
+  #  condition: failed()
