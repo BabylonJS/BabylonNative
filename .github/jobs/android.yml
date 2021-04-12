@@ -19,7 +19,7 @@ jobs:
         brew uninstall cmake
         brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).${{ parameters.macOSCodename }}.bottle.tar.gz
         cmake --version
-      condition: contains(${{ parameters.vmImage }}, 'macOS')
+      condition: contains('${{ parameters.vmImage }}', 'macOS')
       displayName: 'Install Prerequisites'
       
     - script: |
@@ -31,7 +31,7 @@ jobs:
         cmake --version
         sudo apt-get update
         sudo apt-get install ninja-build
-      condition: contains(${{ parameters.vmImage }}, 'ubuntu')
+      condition: contains('${{ parameters.vmImage }}', 'ubuntu')
       displayName: 'Install Prerequisites'
 
     - script: |
