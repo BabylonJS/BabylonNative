@@ -6,7 +6,7 @@ pr:
 
 variables:
 - name: CMAKE_VERSION
-  value: 3.19.6
+  value: 3.19.8
 
 jobs:
 - job: macOS
@@ -20,9 +20,18 @@ jobs:
 
   - script: |
       brew uninstall cmake
-      brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/82aedb2d9511296657daa381871ccce1e0ec9e83/Formula/cmake.rb
+      brew install ninja
+      brew install wget
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.tar.gz
+      https://github.com/Kitware/CMake/releases/download/v3.19.8/cmake-3.19.8-macos-universal.tar.gz
+      sudo rm -rf /opt/cmake
+      sudo mkdir -p /opt/cmake
+      sudo tar xvzf cmake-$(CMAKE_VERSION)-macos-universal.tar.gz -C /opt/cmake
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-macos-universal/CMake.app/contents/bin/cmake /usr/local/bin/cmake
       cmake --version
     displayName: 'CMake version'
+    condition: contains('${{ parameters.vmImage }}', 'macOS')
 
   - script: |
       sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
