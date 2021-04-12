@@ -13,23 +13,23 @@ jobs:
     - script: |
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
-  
+
     - script: |
         brew uninstall cmake
         brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
         cmake --version
       displayName: 'CMake version'
-  
+
     - script: |
         sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
       displayName: 'Select XCode ${{ parameters.xCodeVersion }}'
-  
+
     - script: |
         mkdir buildiOS
         cd buildiOS
         cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
       displayName: 'Generate iOS solution'
-      
+
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'

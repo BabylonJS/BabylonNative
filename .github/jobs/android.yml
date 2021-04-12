@@ -8,3 +8,55 @@ jobs:
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
+      
+    steps:
+    - script: |
+        git submodule update --init --recursive
+      displayName: 'Checkout dependencies'
+
+    # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+    ${{ if contains(parameters.vmImage, 'macOS') }}:
+      - script: |
+          brew uninstall cmake
+          brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+          cmake --version
+        displayName: 'Install Prerequisites'
+        
+     ${{ if contains(parameters.vmImage, 'ubuntu') }}:
+      - script: |
+          wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+          sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+          sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+          sudo rm /usr/local/bin/cmake
+          sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+          cmake --version
+          sudo apt-get update
+          sudo apt-get install ninja-build
+        displayName: 'Install Prerequisites'
+
+    - script: |
+        cd Apps/Playground/Android
+        npm install
+        cd ../../ValidationTests/Android
+        npm install
+      displayName: 'Install JS engine NPMs'
+
+    - task: Gradle@2
+      inputs:
+          workingDirectory: 'Apps/Playground/Android'
+          gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+          gradleOptions: '-Xmx1536m'
+          options: '-PJSEngine=${{ parameters.JSEngine }}'
+          publishJUnitResults: false
+          tasks: 'assembleRelease'
+      displayName: 'Build Playground ${{ parameters.JSEngine }}'
+
+    - task: Gradle@2
+      inputs:
+          workingDirectory: 'Apps/ValidationTests/Android'
+          gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+          gradleOptions: '-Xmx1536m'
+          options: '-PJSEngine=${{ parameters.JSEngine }}'
+          publishJUnitResults: false
+          tasks: 'assembleRelease'
+      displayName: 'Build ValidationTests ${{ parameters.JSEngine }}'

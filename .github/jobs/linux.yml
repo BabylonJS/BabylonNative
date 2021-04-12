@@ -15,6 +15,10 @@ jobs:
       CXX: ${{ parameters.CXX }}
   
     steps:
+    - script: |
+        git submodule update --init --recursive
+      displayName: 'Checkout dependencies'
+
     # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
     - script: |
         wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
@@ -24,13 +28,12 @@ jobs:
         sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
         cmake --version
       displayName: 'Install cmake'
-    - script: |
-        git submodule update --init --recursive
-      displayName: 'Checkout dependencies'
+
     - script: |
         sudo apt-get update
-        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-9-dev libc++abi-9-dev lld-9 ninja-build
+        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-9-dev libc++abi-9-dev ninja-build
       displayName: 'Install packages'
+
     - script: |
         mkdir build
         cd build
