@@ -7,26 +7,26 @@ parameters:
   default: ''
   
 jobs:
-- job: ${{ parameters.name }}
-  timeoutInMinutes: 30
-  pool:
-    vmImage: ${{ parameters.vmImage }}
-    
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildUWP_${{ parameters.platform }}
-      cd buildUWP_${{ parameters.platform }}
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A ${{ parameters.platform }}
-    displayName: 'Generate UWP_${{ parameters.platform }} solution'
-
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_${{ parameters.platform }}/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_${{ parameters.platform }}'
+  - job: ${{ parameters.name }}
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+      
+    steps:
+    - script: |
+        git submodule update --init --recursive
+      displayName: 'Checkout dependencies'
+  
+    - script: |
+        mkdir buildUWP_${{ parameters.platform }}
+        cd buildUWP_${{ parameters.platform }}
+        cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A ${{ parameters.platform }}
+      displayName: 'Generate UWP_${{ parameters.platform }} solution'
+  
+    - task: VSBuild@1
+      inputs:
+        solution: 'buildUWP_${{ parameters.platform }}/BabylonNative.sln'
+        maximumCpuCount: true
+        configuration: 'RelWithDebInfo'
+        msbuildArgs: '/p:AppxPackageSigningEnabled=false'
+      displayName: 'Build UWP_${{ parameters.platform }}'
