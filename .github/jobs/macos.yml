@@ -15,7 +15,7 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    - template: .github/jobs/macos_cmake.yml
+    - template: macos_cmake.yml
 
     - script: |
         sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer

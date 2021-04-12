@@ -16,7 +16,7 @@ jobs:
       displayName: 'Checkout dependencies'
 
     # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-    - template: .github/jobs/macos_cmake.yml
+    - template: macos_cmake.yml
       condition: contains('${{ parameters.vmImage }}', 'macOS')
       displayName: 'Install Prerequisites'
       
