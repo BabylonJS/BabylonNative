@@ -1,10 +1,7 @@
 parameters:
-- name: name
-  default: ''
-- name: vmImage
-  default: ''
--name: xCodeVersion
-  default: ''
+  name: ''
+  vmImage: ''
+  xCodeVersion: ''
   
 jobs:
   - job: ${{ parameters.name }}
