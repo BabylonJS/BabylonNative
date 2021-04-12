@@ -1,10 +1,10 @@
 #include "NativeCapture.h"
 
-#include <arcana/containers/ticketed_collection.h>
-
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
+
+#include <arcana/containers/ticketed_collection.h>
 
 #include <vector>
 
@@ -14,12 +14,12 @@ namespace
     using FrameProviderCleanup = std::function<void()>;
     using FrameProviderTicket = gsl::final_action<FrameProviderCleanup>;
 
-    FrameProviderTicket BeginFrameCapture(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+    FrameProviderTicket BeginFrameCapture(Babylon::GraphicsImpl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
     {
         class DefaultBufferFrameProvider final : public std::enable_shared_from_this<DefaultBufferFrameProvider>
         {
         public:
-            static FrameProviderTicket Create(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+            static FrameProviderTicket Create(Babylon::GraphicsImpl& graphicsImpl, FrameCallback callback)
             {
                 std::shared_ptr<DefaultBufferFrameProvider> frameProvider{new DefaultBufferFrameProvider(graphicsImpl, std::move(callback))};
                 frameProvider->StartCapture();
@@ -29,7 +29,7 @@ namespace
             }
 
         private:
-            DefaultBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, FrameCallback callback)
+            DefaultBufferFrameProvider(Babylon::GraphicsImpl& graphicsImpl, FrameCallback callback)
                 : m_graphicsImpl{graphicsImpl}
                 , m_frameCallback{std::move(callback)}
             {
@@ -37,21 +37,21 @@ namespace
 
             void StartCapture()
             {
-                m_ticket = std::make_unique<Babylon::Graphics::Impl::CaptureCallbackTicketT>(m_graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}](auto& data) {
+                m_ticket = std::make_unique<Babylon::GraphicsImpl::CaptureCallbackTicketT>(m_graphicsImpl.AddCaptureCallback([thisRef{shared_from_this()}](auto& data) {
                     thisRef->m_frameCallback(data.Width, data.Height, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
                 }));
             }
 
         private:
-            Babylon::Graphics::Impl& m_graphicsImpl;
-            std::unique_ptr<Babylon::Graphics::Impl::CaptureCallbackTicketT> m_ticket{};
+            Babylon::GraphicsImpl& m_graphicsImpl;
+            std::unique_ptr<Babylon::GraphicsImpl::CaptureCallbackTicketT> m_ticket{};
             FrameCallback m_frameCallback{};
         };
 
         class OffScreenBufferFrameProvider final : public std::enable_shared_from_this<OffScreenBufferFrameProvider>
         {
         public:
-            static FrameProviderTicket Create(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+            static FrameProviderTicket Create(Babylon::GraphicsImpl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
             {
                 std::shared_ptr<OffScreenBufferFrameProvider> frameProvider{new OffScreenBufferFrameProvider(graphicsImpl, frameBufferHandle, std::move(callback))};
                 // Note: ReadTextureAsync is "asynchronously recursive" (it calls itself to read the next frame).
@@ -67,7 +67,7 @@ namespace
             }
 
         private:
-            OffScreenBufferFrameProvider(Babylon::Graphics::Impl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
+            OffScreenBufferFrameProvider(Babylon::GraphicsImpl& graphicsImpl, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
                 : m_graphicsImpl{graphicsImpl}
                 , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
                 , m_frameCallback{std::move(callback)}
@@ -103,10 +103,10 @@ namespace
             }
 
         private:
-            Babylon::Graphics::Impl& m_graphicsImpl;
+            Babylon::GraphicsImpl& m_graphicsImpl;
             bgfx::TextureHandle m_frameBufferTextureHandle{bgfx::kInvalidHandle};
             FrameCallback m_frameCallback{};
-            Babylon::Graphics::Impl::TextureInfo m_textureInfo{};
+            Babylon::GraphicsImpl::TextureInfo m_textureInfo{};
             bgfx::TextureHandle m_blitTextureHandle{bgfx::kInvalidHandle};
             std::vector<uint8_t> m_textureBuffer{};
             arcana::cancellation_source m_cancellationToken{};
@@ -151,7 +151,7 @@ namespace Babylon::Plugins::Internal
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
             , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
         {
-            auto& graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())};
+            auto& graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())};
 
             Napi::Object jsData = m_jsData.Value();
             jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));

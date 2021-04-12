@@ -1,5 +1,6 @@
 #include "App.h"
 
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
@@ -10,7 +11,7 @@
 #include <pplawait.h>
 #include <winrt/Windows.ApplicationModel.h>
 
-#include <windows.ui.core.h>
+#include <winrt/windows.ui.core.h>
 
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Core;
@@ -259,15 +260,19 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    auto* windowPtr = reinterpret_cast<ABI::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
+    auto* windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
-    m_graphics = Babylon::Graphics::CreateGraphics<void*>(windowPtr, width, height);
+    Babylon::GraphicsConfiguration graphicsConfig{};
+    graphicsConfig.WindowPtr = windowPtr;
+    graphicsConfig.Width = width;
+    graphicsConfig.Height = height;
+    m_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     m_graphics->StartRenderingCurrentFrame();
 
     m_runtime = std::make_unique<Babylon::AppRuntime>();
     m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
-    m_runtime->Dispatch([this, windowPtr, width, height](Napi::Env env) {
+    m_runtime->Dispatch([this](Napi::Env env) {
         m_graphics->AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {

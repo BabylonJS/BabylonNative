@@ -26,16 +26,19 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 {
 }
 
-- (void)init:(void*)view width:(int)inWidth height:(int)inHeight
+- (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight
 {
     runtime.reset();
     graphics.reset();
 
     float width = inWidth;
     float height = inHeight;
-    void* windowPtr = view;
-    
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+
+    Babylon::GraphicsConfiguration graphicsConfig{};
+    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Width = static_cast<size_t>(width);
+    graphicsConfig.Height = static_cast<size_t>(height);
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
 
     runtime = std::make_unique<Babylon::AppRuntime>();
@@ -44,13 +47,13 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        
+
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
-        
+
         Babylon::TestUtils::CreateInstance(env, nullptr);
     });
 

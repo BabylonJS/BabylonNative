@@ -154,6 +154,8 @@ namespace xr
         Floor,
         Ceiling,
         Platform,
+        Inferred,
+        World,
         Undefined
     };
 
@@ -164,7 +166,9 @@ namespace xr
         {xr::SceneObjectType::Ceiling, "ceiling" },
         {xr::SceneObjectType::Floor, "floor" },
         {xr::SceneObjectType::Platform, "platform" },
-        {xr::SceneObjectType::Wall, "wall" }
+        {xr::SceneObjectType::Wall, "wall" },
+        {xr::SceneObjectType::Inferred, "inferred" },
+        {xr::SceneObjectType::World, "world" }
     };
 
     class System
@@ -241,6 +245,8 @@ namespace xr
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
                     bool GamepadTrackedThisFrame{};
+                    bool HandTrackedThisFrame{};
+                    std::string InteractionProfileName{""};
                     GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
@@ -255,9 +261,11 @@ namespace xr
                 {
                     using Identifier = int32_t;
                     const static Identifier INVALID_ID = -1;
-
-                    Identifier ID{ INVALID_ID };
+                    Identifier ID{ NEXT_ID++ };
                     SceneObjectType Type{ SceneObjectType::Undefined };
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
                 };
 
                 struct Plane
@@ -291,8 +299,6 @@ namespace xr
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
-                std::vector<Plane>& Planes;
-                std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
 
                 std::vector<SceneObject::Identifier>UpdatedSceneObjects;
@@ -327,7 +333,7 @@ namespace xr
             // Move to private when changing to unique_ptr.
             Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider);
 
-            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){});
+            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback = [](void*){ return arcana::task_from_result<std::exception_ptr>(); });
             void RequestEndSession();
             void SetDepthsNearFar(float depthNear, float depthFar);
             void SetPlaneDetectionEnabled(bool enabled) const;
@@ -336,9 +342,6 @@ namespace xr
             bool TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions& options);
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
-
-            uintptr_t GetNativeXrContext();
-            std::string GetNativeXrContextType();
 
         private:
             std::unique_ptr<Impl> m_impl{};
@@ -350,6 +353,9 @@ namespace xr
         bool IsInitialized() const;
         bool TryInitialize();
         static arcana::task<bool, std::exception_ptr> IsSessionSupportedAsync(SessionType);
+
+        uintptr_t GetNativeXrContext();
+        std::string GetNativeXrContextType();
 
     private:
         struct Impl;

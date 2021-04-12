@@ -3,6 +3,8 @@
 
 namespace Babylon
 {
+    class Graphics::Impl : public GraphicsImpl { };
+
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
@@ -10,33 +12,16 @@ namespace Babylon
 
     Graphics::~Graphics() = default;
 
-    template<>
-    void Graphics::UpdateWindow<void*>(void* windowPtr)
+    void Graphics::UpdateWindow(const GraphicsConfiguration& config)
     {
-        m_impl->SetNativeWindow(windowPtr, nullptr);
+        m_impl->SetNativeWindow(config);
     }
 
-    template<>
-    void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
-    {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr);
-    }
-
-    template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const GraphicsConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*>(nativeWindowPtr);
-        graphics->UpdateSize(width, height);
-        return graphics;
-    }
-
-    template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
-    {
-        std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
-        graphics->UpdateSize(width, height);
+        graphics->UpdateWindow(config);
+        graphics->UpdateSize(config.Width, config.Height);
         return graphics;
     }
 
@@ -83,5 +68,10 @@ namespace Babylon
     float Graphics::GetHardwareScalingLevel()
     {
         return m_impl->GetHardwareScalingLevel();
+    }
+
+    float Graphics::GetDevicePixelRatio() const
+    {
+        return m_impl->GetDevicePixelRatio();
     }
 }

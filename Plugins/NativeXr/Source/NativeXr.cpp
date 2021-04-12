@@ -8,6 +8,7 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
+#include <algorithm>
 #include <set>
 #include <memory>
 #include <napi/napi.h>
@@ -157,6 +158,11 @@ namespace
             handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
 
             jsInputSource.Set("hand", handJointCollection);
+
+            auto profiles = Napi::Array::New(env, 2);
+            profiles.Set(uint32_t{0}, Napi::String::New(env, "generic-hand-select-grasp"));
+            profiles.Set(uint32_t{1}, Napi::String::New(env, "generic-hand-select"));
+            jsInputSource.Set("profiles", profiles);
         }
     }
 
@@ -199,12 +205,13 @@ namespace
 
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
-        SetXRInputSourceData(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
         profiles.Set(uint32_t{0}, string);
         jsInputSource.Set("profiles", profiles);
+
+        SetXRInputSourceData(jsInputSource, inputSource);
 
         return Napi::Persistent(jsInputSource);
     }
@@ -366,12 +373,12 @@ namespace Babylon
 
             uintptr_t GetNativeXrContext()
             {
-                return m_sessionState->Session->GetNativeXrContext();
+                return m_system.GetNativeXrContext();
             }
 
             std::string GetNativeXrContextType()
             {
-                return m_sessionState->Session->GetNativeXrContextType();
+                return m_system.GetNativeXrContextType();
             }
 
         private:
@@ -385,18 +392,17 @@ namespace Babylon
 
             struct SessionState final
             {
-                explicit SessionState(Graphics::Impl& graphicsImpl)
+                explicit SessionState(GraphicsImpl& graphicsImpl)
                     : GraphicsImpl{graphicsImpl}
                 {
                 }
 
-                Graphics::Impl& GraphicsImpl;
+                GraphicsImpl& GraphicsImpl;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::map<void*, FrameBuffer*> TextureToFrameBufferMap{};
                 std::map<FrameBuffer*, Napi::ObjectReference> FrameBufferToJsTextureMap{};
                 std::vector<void*> ActiveTextures{};
-                xr::System System{};
                 std::shared_ptr<xr::System::Session> Session{};
                 std::unique_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
@@ -406,6 +412,7 @@ namespace Babylon
             };
 
             std::unique_ptr<SessionState> m_sessionState{};
+            xr::System m_system{};
 
             void BeginFrame();
             void BeginUpdate();
@@ -454,7 +461,7 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
-            Graphics::Impl& graphicsImpl{Graphics::Impl::GetFromJavaScript(m_env)};
+            GraphicsImpl& graphicsImpl{GraphicsImpl::GetFromJavaScript(m_env)};
 
             // Don't try to start a session while it is still ending.
             m_beginTask.emplace(m_endTask.then(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
@@ -463,15 +470,15 @@ namespace Babylon
 
                     m_sessionState = std::make_unique<SessionState>(graphicsImpl);
 
-                    if (!m_sessionState->System.IsInitialized())
+                    if (!m_system.IsInitialized())
                     {
-                        while (!m_sessionState->System.TryInitialize())
+                        while (!m_system.TryInitialize())
                         {
                             // do nothing
                         }
                     }
 
-                    return xr::System::Session::CreateAsync(m_sessionState->System, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
                         .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
@@ -570,7 +577,7 @@ namespace Babylon
             bool shouldEndSession{};
             bool shouldRestartSession{};
             m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-                m_runtimeScheduler([this, texturePointer]() {
+                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
                     auto itTextureToFrameBuffer{m_sessionState->TextureToFrameBufferMap.find(texturePointer)};
                     if (itTextureToFrameBuffer != m_sessionState->TextureToFrameBufferMap.end())
                     {
@@ -2328,6 +2335,12 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
+            static constexpr auto JS_EVENT_NAME_SELECT = "select";
+            static constexpr auto JS_EVENT_NAME_SELECT_START = "selectstart";
+            static constexpr auto JS_EVENT_NAME_SELECT_END = "selectend";
+            static constexpr auto JS_EVENT_NAME_SQUEEZE = "squeeze";
+            static constexpr auto JS_EVENT_NAME_SQUEEZE_START = "squeezestart";
+            static constexpr auto JS_EVENT_NAME_SQUEEZE_END = "squeezeend";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2337,8 +2350,6 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
-                        InstanceAccessor("nativeXrContext", &XRSession::GetNativeXrContext, nullptr),
-                        InstanceAccessor("nativeXrContextType", &XRSession::GetNativeXrContextType, nullptr),
                         InstanceMethod("addEventListener", &XRSession::AddEventListener),
                         InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
                         InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
@@ -2439,6 +2450,8 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+            std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
+            std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2494,6 +2507,11 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
 
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
+
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2509,7 +2527,7 @@ namespace Babylon
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
 
-                        //Now that input Source is created, create a gamepad object if enabled for the input source
+                        // Now that input Source is created, create a gamepad object if enabled for the input source
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
                         if (inputSource.GamepadTrackedThisFrame)
                         {
@@ -2525,18 +2543,59 @@ namespace Babylon
                         auto inputSourceVal = inputSourceFound->second.Value();
                         SetXRInputSourceData(inputSourceVal, inputSource);
 
-                        //inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
+                        // inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
                         if (inputSourceVal.Has("gamepad"))
                         {
                             auto gamepadObject = inputSourceVal.Get("gamepad").As<Napi::Object>();
                             SetXRGamepadObjectData(inputSourceVal, gamepadObject, inputSource);
                         }
                     }
+
+                    // Handle gestures. Sources that do not support a gesture will always return false
+                    const bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
+                    const bool isSqueezed = inputSource.GamepadObject.Buttons[1].Pressed;
+                    const bool wasSelected = std::find(m_activeSelects.begin(), m_activeSelects.end(), inputSource.ID) != m_activeSelects.end();
+                    const bool wasSqueezed = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), inputSource.ID) != m_activeSqueezes.end();
+                    
+                    if (isSelected && !wasSelected)
+                    {
+                        selectStarts.push_back(inputSource.ID);
+                    }
+                    else if (!isSelected && wasSelected)
+                    {
+                        selectEnds.push_back(inputSource.ID);
+                    }
+
+                    if (isSqueezed && !wasSqueezed)
+                    {
+                        squeezeStarts.push_back(inputSource.ID);
+                    }
+                    else if (!isSqueezed && wasSqueezed)
+                    {
+                        squeezeEnds.push_back(inputSource.ID);
+                    }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
                 {
                     if (current.find(id) == current.end())
                     {
+                        // Process select and squeeze for lost sources before we send the source lost event
+                        auto inputSourceVal = ref.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+                        const auto& activeSelectIter = std::find(m_activeSelects.begin(), m_activeSelects.end(), id);
+                        const auto& activeSqueezeIter = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), id);
+
+                        if (activeSelectIter != m_activeSelects.end())
+                        {
+                            FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_END);
+                            m_activeSelects.erase(activeSelectIter);
+                        }
+
+                        if (activeSqueezeIter != m_activeSqueezes.end())
+                        {
+                            FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_END);
+                            m_activeSqueezes.erase(activeSqueezeIter);
+                        }
                         // Do not update space association since said spaces no longer exist.
                         removed.insert(id);
                     }
@@ -2583,6 +2642,9 @@ namespace Babylon
                         m_idToInputSource.erase(id);
                     }
                 }
+
+                // Process active selects after firing off any new source added events
+                UpdateInputSourceEventValues(selectStarts, selectEnds, squeezeStarts, squeezeEnds, env);
             }
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
@@ -2609,6 +2671,92 @@ namespace Babylon
                 {
                     bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
                     m_xr->SetPlaneDetectionEnabled(planeDetectionEnabled);
+                }
+            }
+
+            Napi::Object GenerateXRInputSourceEvent(Napi::Object& inputSource, Napi::Env env)
+            {
+                auto inputSourceEvent = Napi::Object::New(env);
+                inputSourceEvent.Set("frame", m_jsXRFrame.Value());
+                inputSourceEvent.Set("inputSource", inputSource);
+
+                return inputSourceEvent;
+            }
+
+            void FireInputSourceEvent(Napi::Object& inputSourceEvent, std::string eventName)
+            {
+                for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                {
+                    if (name == eventName)
+                    {
+                        callback.Call({inputSourceEvent});
+                    }
+                }
+            }
+
+            void UpdateInputSourceEventValues(
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectStarts,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectEnds,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeStarts,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeEnds,
+                Napi::Env env)
+            {
+                for (const auto& id : selectStarts)
+                {
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
+                    {
+                        auto inputSourceVal = inputSourceIter->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_START);
+
+                        m_activeSelects.push_back(id);
+                    }
+                }
+
+                for (const auto& id : squeezeStarts)
+                {
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
+                    {
+                        auto inputSourceVal = inputSourceIter->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_START);
+
+                        m_activeSqueezes.push_back(id);
+                    }
+                }
+
+                for (const auto& id : selectEnds)
+                {
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
+                    {
+                        auto inputSourceVal = inputSourceIter->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+
+                        // WebXR API dictates the select event fires before the select end
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_END);
+
+                        m_activeSelects.erase(std::find(m_activeSelects.begin(), m_activeSelects.end(), id));
+                    }
+                }
+
+                for (const auto& id : squeezeEnds)
+                {
+                    auto inputSourceIter = m_idToInputSource.find(id);
+                    if (inputSourceIter != m_idToInputSource.end())
+                    {
+                        auto inputSourceVal = inputSourceIter->second.Value();
+                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
+
+                        // WebXR API dictates the squeeze event fires before the squeeze end
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE);
+                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_END);
+
+                        m_activeSqueezes.erase(std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), id));
+                    }
                 }
             }
 
@@ -2689,28 +2837,6 @@ namespace Babylon
                 const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
                 const auto result = m_xr->TrySetPreferredMeshDetectorOptions(options);
                 return Napi::Value::From(info.Env(), result);
-            }
-
-            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
-            {
-                const auto nativeExtension = m_xr->GetNativeXrContext();
-                if (nativeExtension)
-                {
-                    return Napi::Number::From(info.Env(), nativeExtension);
-                }
-
-                return info.Env().Undefined();
-            }
-
-            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
-            {
-                const auto nativeExtensionType = m_xr->GetNativeXrContextType();
-                if (!nativeExtensionType.empty())
-                {
-                    return Napi::String::From(info.Env(), nativeExtensionType);
-                }
-
-                return info.Env().Undefined();
             }
         };
 
@@ -2834,6 +2960,8 @@ namespace Babylon
                         InstanceMethod("requestSession", &XR::RequestSession),
                         InstanceMethod("getWebXRRenderTarget", &XR::GetWebXRRenderTarget),
                         InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
+                        InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
+                        InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
                     });
 
@@ -2908,6 +3036,28 @@ namespace Babylon
             Napi::Value GetNativeRenderTargetProvider(const Napi::CallbackInfo& info)
             {
                 return NativeRenderTargetProvider::New(info);
+            }
+
+            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
+            {
+                const auto nativeExtension = m_xr->GetNativeXrContext();
+                if (nativeExtension)
+                {
+                    return Napi::Number::From(info.Env(), nativeExtension);
+                }
+
+                return info.Env().Undefined();
+            }
+
+            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
+            {
+                const auto nativeExtensionType = m_xr->GetNativeXrContextType();
+                if (!nativeExtensionType.empty())
+                {
+                    return Napi::String::From(info.Env(), nativeExtensionType);
+                }
+
+                return info.Env().Undefined();
             }
         };
     }

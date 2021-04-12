@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
 #include "FrameBufferManager.h"
 #include "SafeTimespanGuarantor.h"
@@ -11,6 +10,8 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
 
+#include <napi/env.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
@@ -20,7 +21,9 @@
 
 namespace Babylon
 {
-    class Graphics::Impl
+    struct GraphicsConfiguration;
+
+    class GraphicsImpl
     {
     public:
         class UpdateToken final
@@ -32,11 +35,11 @@ namespace Babylon
             bgfx::Encoder* GetEncoder();
 
         private:
-            friend class Graphics::Impl;
+            friend class GraphicsImpl;
 
-            UpdateToken(Graphics::Impl&);
+            UpdateToken(GraphicsImpl&);
 
-            Impl& m_graphicsImpl;
+            GraphicsImpl& m_graphicsImpl;
             SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
         };
 
@@ -50,7 +53,7 @@ namespace Babylon
             }
 
         private:
-            friend Impl;
+            friend GraphicsImpl;
 
             arcana::manual_dispatcher<128> m_dispatcher;
         };
@@ -65,15 +68,15 @@ namespace Babylon
             bgfx::TextureFormat::Enum Format{};
         };
 
-        Impl();
-        ~Impl();
-
-        void* GetNativeWindow();
-        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
+        GraphicsImpl();
+        virtual ~GraphicsImpl();
+        template<typename WindowT>
+        WindowT GetNativeWindow();
+        void SetNativeWindow(const GraphicsConfiguration& config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
-        static Impl& GetFromJavaScript(Napi::Env);
+        static GraphicsImpl& GetFromJavaScript(Napi::Env);
 
         RenderScheduler& BeforeRenderScheduler();
         RenderScheduler& AfterRenderScheduler();
@@ -103,14 +106,18 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        float GetDevicePixelRatio();
+
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
     private:
         friend class UpdateToken;
 
+        void ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
+        float UpdateDevicePixelRatio();
         void DiscardIfDirty();
         void RequestScreenShots();
         void Frame();
@@ -139,6 +146,7 @@ namespace Babylon
                 size_t Width{};
                 size_t Height{};
                 float HardwareScalingLevel{1.0f};
+                float DevicePixelRatio{1.0f};
             } Resolution{};
         } m_state;
 
