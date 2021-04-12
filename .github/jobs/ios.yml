@@ -15,13 +15,7 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    - script: |
-        brew uninstall cmake
-        wget https://github.com/Kitware/CMake/releases/download/v3.20.1/cmake-$(CMAKE_VERSION)-macos-universal.dmg
-        sudo hdiutil attach cmake-$(CMAKE_VERSION)-macos-universal.dmg
-        sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
-        cmake --version
-      displayName: 'CMake version'
+    - template: .github/jobs/macos_cmake.yml
 
     - script: |
         sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer

@@ -15,11 +15,7 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    - script: |
-        brew uninstall cmake
-        brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).${{ parameters.macOSCodename }}.bottle.tar.gz
-        cmake --version
-      displayName: 'CMake version'
+    - template: .github/jobs/macos_cmake.yml
 
     - script: |
         sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
