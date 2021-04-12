@@ -2,6 +2,7 @@ parameters:
   name: ''
   vmImage: ''
   xCodeVersion: ''
+  macOSCodename: ''
   
 jobs:
   - job: ${{ parameters.name }}
@@ -16,7 +17,9 @@ jobs:
 
     - script: |
         brew uninstall cmake
-        brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).${{ parameters.macOSCodename }}.bottle.tar.gz
+        wget https://github.com/Kitware/CMake/releases/download/v3.20.1/cmake-$(CMAKE_VERSION)-macos-universal.dmg
+        sudo hdiutil attach cmake-$(CMAKE_VERSION)-macos-universal.dmg
+        sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
         cmake --version
       displayName: 'CMake version'
 

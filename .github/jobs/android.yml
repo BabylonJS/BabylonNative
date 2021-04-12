@@ -2,6 +2,7 @@ parameters:
   name: ''
   vmImage: ''
   JSEngine: ''
+  macOSCodename: ''
   
 jobs:
   - job: ${{ parameters.name }}
