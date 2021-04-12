@@ -61,4 +61,3 @@ jobs:
     vmImage: 'windows-latest'
     platform: arm64
 
-

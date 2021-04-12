@@ -3,6 +3,8 @@ parameters:
   default: ''
 - name: vmImage
   default: ''
+-name: xCodeVersion
+  default: ''
   
 jobs:
 - job: ${{ parameters.name }}
@@ -22,8 +24,8 @@ jobs:
     displayName: 'CMake version'
 
   - script: |
-      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
-    displayName: 'Select XCode 11.3.1'
+      sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
+    displayName: 'Select XCode ${{ parameters.xCodeVersion }}'
 
   - script: |
       mkdir buildmacOS
