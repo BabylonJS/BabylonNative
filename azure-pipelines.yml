@@ -20,7 +20,7 @@ jobs:
 
   - script: |
       brew uninstall cmake
-      brew install https://cdn.jsdelivr.net/gh/Homebrew/homebrew-core@82aedb2d9511296657daa381871ccce1e0ec9e83/Formula/cmake.rb
+      brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/82aedb2d9511296657daa381871ccce1e0ec9e83/Formula/cmake.rb
       cmake --version
     displayName: 'CMake version'
 
