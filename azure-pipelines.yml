@@ -312,11 +312,11 @@ jobs:
   - task: Npm@1
     inputs:
       command: 'install'
-      workingDir: Validation/napi-jsi
+      workingDir: Apps/napi-jsi
     displayName: 'Install NPM Packages'
 
   - script: |
-      cd Validation/napi-jsi
+      cd Apps/napi-jsi
       mkdir build
       cd build
       cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
@@ -324,7 +324,7 @@ jobs:
 
   - task: VSBuild@1
     inputs:
-      solution: 'Validation/napi-jsi/build/napi-jsi.sln'
+      solution: 'Apps/napi-jsi/build/napi-jsi.sln'
       maximumCpuCount: true
       configuration: 'RelWithDebInfo'
       msbuildArgs: '/p:AppxPackageSigningEnabled=false'
