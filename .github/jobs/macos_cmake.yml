@@ -5,10 +5,11 @@ steps:
   - script: |
       brew uninstall cmake
       brew install ninja
-      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.dmg
-      sudo hdiutil attach cmake-$(CMAKE_VERSION)-macos-universal.dmg
-      sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
-      sudo hdiutil detach /Volumes/cmake-$(CMAKE_VERSION)-macos-universal
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.tar.gz
+      sudo mkdir -p /opt/cmake
+      sudo tar xvzf cmake-$(CMAKE_VERSION)-macos-universal.tar.gz -C /opt/cmake
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-macos-universal/CMake.app/contents/MacOS/CMake /usr/local/bin/cmake
       cmake --version
     displayName: 'CMake version'
     condition: contains('${{ parameters.vmImage }}', 'macOS')
