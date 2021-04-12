@@ -1,10 +1,7 @@
 parameters:
-- name: name
-  default: ''
-- name: vmImage
-  default: ''
-- name: JSEngine
-  default: ''
+  name: ''
+  vmImage: ''
+  JSEngine: ''
   
 jobs:
   - job: ${{ parameters.name }}

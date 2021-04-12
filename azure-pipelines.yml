@@ -21,3 +21,22 @@ jobs:
       name: iOS
       vmImage: 'macOS-10.14'
       xCodeVersion: 11.3.1
+
+# WIN32
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x86
+      vmImage: 'windows-latest'
+      platform: win32
+  
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64
+      vmImage: 'windows-latest'
+      platform: x64
+  
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_arm64
+      vmImage: 'windows-latest'
+      platform: arm64

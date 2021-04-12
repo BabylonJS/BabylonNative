@@ -1,10 +1,7 @@
 parameters:
-- name: name
-  default: ''
-- name: vmImage
-  default: ''
-- name: platform
-  default: ''
+  name: ''
+  vmImage: ''
+  platform: ''
   
 jobs:
   - job: ${{ parameters.name }}
