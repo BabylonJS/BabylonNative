@@ -1,12 +1,9 @@
-parameters:
-  
-jobs:
-  - job: CMake
-    - script: |
-        brew uninstall cmake
-        brew install ninja
-        wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.dmg
-        sudo hdiutil attach cmake-$(CMAKE_VERSION)-macos-universal.dmg
-        sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
-        cmake --version
-      displayName: 'CMake version'
+steps:
+  - script: |
+      brew uninstall cmake
+      brew install ninja
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.dmg
+      sudo hdiutil attach cmake-$(CMAKE_VERSION)-macos-universal.dmg
+      sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
+      cmake --version
+    displayName: 'CMake version'
