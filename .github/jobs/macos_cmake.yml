@@ -8,6 +8,7 @@ steps:
       wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.dmg
       sudo hdiutil attach cmake-$(CMAKE_VERSION)-macos-universal.dmg
       sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
+      sudo hdiutil detach /Volumes/cmake-$(CMAKE_VERSION)-macos-universal
       cmake --version
     displayName: 'CMake version'
     condition: contains('${{ parameters.vmImage }}', 'macOS')
