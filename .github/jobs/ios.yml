@@ -17,7 +17,7 @@ jobs:
 
     - template: macos_cmake.yml
       parameters:
-      vmImage: ${{ parameters.vmImage }}
+        vmImage: ${{ parameters.vmImage }}
 
     - script: |
         sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
