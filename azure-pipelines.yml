@@ -7,7 +7,7 @@ pr:
 variables:
 - name: CMAKE_VERSION
   value: 3.19.6
-  
+
 jobs:
 - job: macOS
   pool:
@@ -20,7 +20,7 @@ jobs:
 
   - script: |
       brew uninstall cmake
-      brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+      brew install https://cdn.jsdelivr.net/gh/Homebrew/homebrew-core@82aedb2d9511296657daa381871ccce1e0ec9e83/Formula/cmake.rb
       cmake --version
     displayName: 'CMake version'
 
