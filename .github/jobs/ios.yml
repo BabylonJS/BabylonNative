@@ -4,7 +4,7 @@ parameters:
   xCodeVersion: ''
   
 jobs:
-  - job: ${{ parameters.name }}_${{ parameters.vmImage }}
+  - job: ${{ parameters.name }}
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
