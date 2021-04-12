@@ -6,6 +6,7 @@ steps:
       wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.tar.gz
       sudo mkdir -p /opt/cmake
       sudo tar xvzf cmake-$(CMAKE_VERSION)-macos-universal.tar.gz -C /opt/cmake
+      sudo rm /usr/local/bin/cmake
       sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-macos-universal/CMake.app/contents/bin/cmake /usr/local/bin/cmake
       wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
       unzip ninja-mac.zip
