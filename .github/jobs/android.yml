@@ -17,9 +17,7 @@ jobs:
 
     # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
     - template: macos_cmake.yml
-      condition: contains('${{ parameters.vmImage }}', 'macOS')
-      displayName: 'Install Prerequisites'
-      
+
     - script: |
         wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
         sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64

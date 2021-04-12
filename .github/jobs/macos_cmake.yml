@@ -7,3 +7,4 @@ steps:
       sudo installer -package /Volumes/cmake-$(CMAKE_VERSION)-macos-universal/cmake-$(CMAKE_VERSION)-macos-universal.pkg -target /
       cmake --version
     displayName: 'CMake version'
+    condition: contains('${{ parameters.vmImage }}', 'macOS')
