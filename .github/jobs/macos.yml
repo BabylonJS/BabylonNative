@@ -16,7 +16,7 @@ jobs:
 
     - script: |
         brew uninstall cmake
-        brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+        brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).${{ parameters.macOSCodename }}.bottle.tar.gz
         cmake --version
       displayName: 'CMake version'
 

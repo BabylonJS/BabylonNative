@@ -17,7 +17,7 @@ jobs:
     # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
     - script: |
         brew uninstall cmake
-        brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
+        brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).${{ parameters.macOSCodename }}.bottle.tar.gz
         cmake --version
       condition: contains(${{ parameters.vmImage }}, 'macOS')
       displayName: 'Install Prerequisites'
