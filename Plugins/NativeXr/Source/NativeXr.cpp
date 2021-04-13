@@ -3066,11 +3066,11 @@ namespace Babylon
                 if (info.Length() != 1 ||
                     !info[0].IsObject())
                 {
-                    throw std::exception(/*invalid arguments*/);
+                    throw std::runtime_error{"A single object argument is required."};
                 }
 
-                auto xrAnchor{ XRAnchor::Unwrap(info[0].ToObject()) };
-                auto anchor{ xrAnchor->GetNativeAnchor() };
+                const auto xrAnchor{ XRAnchor::Unwrap(info[0].ToObject()) };
+                const auto anchor{ xrAnchor->GetNativeAnchor() };
                 if (anchor.NativeAnchor != nullptr)
                 {
                     return Napi::Number::From(info.Env(), reinterpret_cast<uintptr_t>(anchor.NativeAnchor));
