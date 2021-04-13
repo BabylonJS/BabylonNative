@@ -8,9 +8,7 @@
 #include <bx/bx.h>
 #include <bx/math.h>
 
-#include <algorithm>
 #include <set>
-#include <memory>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
 
@@ -33,7 +31,7 @@ namespace
                 return bgfx::TextureFormat::D24S8;
 
             default:
-                throw std::runtime_error{"Unsupported texture format"};
+                throw std::exception{/* Unsupported texture format */};
         }
     }
 
@@ -45,6 +43,36 @@ namespace
         0.f, 0.f, 0.f, 1.f
     };
     // clang-format on
+
+    std::array<float, 16> CreateProjectionMatrix(const xr::System::Session::Frame::View& view)
+    {
+        const float n{view.DepthNearZ};
+        const float f{view.DepthFarZ};
+
+        const float r{std::tanf(view.FieldOfView.AngleRight) * n};
+        const float l{std::tanf(view.FieldOfView.AngleLeft) * n};
+        const float t{std::tanf(view.FieldOfView.AngleUp) * n};
+        const float b{std::tanf(view.FieldOfView.AngleDown) * n};
+
+        // Angles for FieldOfView respect the viewport ratio
+        // but tangent is not a linear function and ratio of values(l,r,b,t) computed
+        // in CreateProjectionMatrix do not respect that ratio
+        // so, here, a ratio after tangent is computed
+        // and a second derivative ratio computed to compensate
+        // the aspect ratio delta after tangent calls
+        const float aspectRatio = static_cast<float>(view.ColorTextureSize.Width) / static_cast<float>(view.ColorTextureSize.Height);
+        const float deltax = (r - l);
+        const float deltay = (t - b);
+        const float afterTangentAspectRatio = deltax / deltay;
+        const float compensationRatio = afterTangentAspectRatio / aspectRatio;
+        const float tc{std::tanf(view.FieldOfView.AngleUp * compensationRatio) * n};
+        const float bc{std::tanf(view.FieldOfView.AngleDown * compensationRatio) * n};
+
+        std::array<float, 16> bxResult{};
+        bx::mtxProj(bxResult.data(), tc, bc, l, r, n, f, false, bx::Handness::Right);
+
+        return bxResult;
+    }
 
     std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space, bool viewSpace = true)
     {
@@ -99,99 +127,11 @@ namespace
         }
     }
 
-    constexpr std::array<const char*, 25> HAND_JOINT_NAMES
-    {
-        "wrist",
-
-        "thumb-metacarpal",
-        "thumb-phalanx-proximal",
-        "thumb-phalanx-distal",
-        "thumb-tip",
-
-        "index-finger-metacarpal",
-        "index-finger-phalanx-proximal",
-        "index-finger-phalanx-intermediate",
-        "index-finger-phalanx-distal",
-        "index-finger-tip",
-
-        "middle-finger-metacarpal",
-        "middle-finger-phalanx-proximal",
-        "middle-finger-phalanx-intermediate",
-        "middle-finger-phalanx-distal",
-        "middle-finger-tip",
-
-        "ring-finger-metacarpal",
-        "ring-finger-phalanx-proximal",
-        "ring-finger-phalanx-intermediate",
-        "ring-finger-phalanx-distal",
-        "ring-finger-tip",
-
-        "pinky-finger-metacarpal",
-        "pinky-finger-phalanx-proximal",
-        "pinky-finger-phalanx-intermediate",
-        "pinky-finger-phalanx-distal",
-        "pinky-finger-tip"
-    };
-
-    void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+    void SetXRInputSourceSpaces(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
         jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
-
-        // Don't set hands up unless hand data is supported/available
-        if (inputSource.JointsTrackedThisFrame)
-        {
-            auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
-
-            for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
-            {
-                auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
-                handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
-            }
-
-            auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
-                return handJointCollection.Get(info[0].As<Napi::String>());
-            };
-
-            handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
-            handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
-
-            jsInputSource.Set("hand", handJointCollection);
-
-            auto profiles = Napi::Array::New(env, 2);
-            profiles.Set(uint32_t{0}, Napi::String::New(env, "generic-hand-select-grasp"));
-            profiles.Set(uint32_t{1}, Napi::String::New(env, "generic-hand-select"));
-            jsInputSource.Set("profiles", profiles);
-        }
-    }
-
-    void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)
-    {
-        auto env = jsInputSource.Env();
-        //Set Gamepad Object
-        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
-        for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
-        {
-            auto gamepadButton = Napi::Object::New(env);
-            auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Pressed);
-            auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Touched);
-            auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.Buttons[i].Value);
-            gamepadButton.Set("pressed", napiGamepadPressed);
-            gamepadButton.Set("touched", napiGamepadTouched);
-            gamepadButton.Set("value", napiGamepadValue);
-            gamepadButtons.Set(static_cast<int>(i), gamepadButton);
-        }
-        jsGamepadObject.Set("buttons", gamepadButtons);
-
-        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.Axes.size());
-        for (size_t i = 0; i < inputSource.GamepadObject.Axes.size(); i++)
-        {
-            auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.Axes[i]);
-            gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);
-        }
-        jsGamepadObject.Set("axes", gamepadAxes);
-        jsInputSource.Set("gamepad", jsGamepadObject);
     }
 
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
@@ -202,478 +142,253 @@ namespace
         constexpr const char* TARGET_RAY_MODE{"tracked-pointer"};
 
         auto jsInputSource = Napi::Object::New(env);
-
         jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
         jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
+        SetXRInputSourceSpaces(jsInputSource, inputSource);
 
         auto profiles = Napi::Array::New(env, 1);
         Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
         profiles.Set(uint32_t{0}, string);
         jsInputSource.Set("profiles", profiles);
 
-        SetXRInputSourceData(jsInputSource, inputSource);
-
         return Napi::Persistent(jsInputSource);
-    }
-
-    void PopulateDetectionBoundary(const Napi::Object& object, xr::DetectionBoundary& detectionBoundary)
-    {
-        if (object.Has("type"))
-        {
-            const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap
-            {
-                {"box", xr::DetectionBoundaryType::Box},
-                {"frustum", xr::DetectionBoundaryType::Frustum},
-                {"sphere", xr::DetectionBoundaryType::Sphere}
-            };
-            detectionBoundary.Type = detectionBoundaryTypeMap.at(object.Get("type").As<Napi::String>());
-        }
-
-        switch (detectionBoundary.Type)
-        {
-            case xr::DetectionBoundaryType::Box:
-                if (object.Has("extent"))
-                {
-                    const auto& vector = object.Get("extent").As<Napi::Object>();
-                    xr::Vector3f boxDimensions{};
-                    boxDimensions.X = vector.Get("x").As<Napi::Number>();
-                    boxDimensions.Y = vector.Get("y").As<Napi::Number>();
-                    boxDimensions.Z = vector.Get("z").As<Napi::Number>();
-                    detectionBoundary.Data = boxDimensions;
-                }
-                break;
-            case xr::DetectionBoundaryType::Frustum:
-                if (object.Has("frustum"))
-                {
-                    const auto& frustum = object.Get("frustum").As<Napi::Object>();
-                    xr::Frustum frustumData{};
-                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
-
-                    const auto& vector = frustum.Get("position").As<Napi::Object>();
-                    frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
-                    frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
-                    frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
-
-                    const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
-                    frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
-                    frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
-                    frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
-                    frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
-
-                    const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
-                    frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
-                    frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
-                    frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
-                    frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
-
-                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
-
-                    detectionBoundary.Data = frustumData;
-                }
-                break;
-            case xr::DetectionBoundaryType::Sphere:
-                if (object.Has("radius"))
-                {
-                    detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
-                }
-                break;
-        }
-    }
-
-    xr::GeometryDetectorOptions CreateDetectorOptions(const Napi::Object& object)
-    {
-        xr::GeometryDetectorOptions options{};
-        if (object.Has("updateInterval"))
-        {
-            options.UpdateInterval = object.Get("updateInterval").As<Napi::Number>();
-        }
-
-        if (object.Has("detectionBoundary"))
-        {
-            const auto& detectionBoundary = object.Get("detectionBoundary").As<Napi::Object>();
-            PopulateDetectionBoundary(detectionBoundary, options.DetectionBoundary);
-        }
-
-        return options;
-    }
-
-    void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
-    {
-        auto env = jsInputSource.Env();
-        auto jsGamepadObject = Napi::Object::New(env);
-        SetXRGamepadObjectData(jsInputSource, jsGamepadObject, inputSource);
     }
 }
 
 // NativeXr implementation proper.
 namespace Babylon
 {
-    namespace Plugins
+    class NativeXr
     {
-        class NativeXr::Impl final : public std::enable_shared_from_this<NativeXr::Impl>
+    public:
+        NativeXr();
+        ~NativeXr();
+
+        arcana::cancellation_source& GetCancellationSource();
+        arcana::task<void, std::exception_ptr> BeginSession(Napi::Env env);
+        void EndSession(); // TODO: Make this asynchronous.
+
+        auto ActiveFrameBuffers() const
         {
-        public:
-            explicit Impl(Napi::Env);
+            return gsl::make_span(m_activeFrameBuffers);
+        }
 
-            void UpdateWindow(void* windowPtr);
-            void SetSessionStateChangedCallback(std::function<void(bool)> callback);
+        void SetEngine(Napi::Object& jsEngine)
+        {
+            // This implementation must be switched to simply unwrapping the JavaScript object as soon as NativeEngine
+            // is transitioned away from a singleton pattern. Part of that change will remove the GetEngine method, as
+            // documented in https://github.com/BabylonJS/BabylonNative/issues/62
+            auto nativeEngine = jsEngine.Get("_native").As<Napi::Object>();
+            auto getEngine = nativeEngine.Get("getEngine").As<Napi::Function>();
+            m_engineImpl = getEngine.Call(nativeEngine, {}).As<Napi::External<NativeEngine>>().Data();
+        }
 
-            arcana::task<void, std::exception_ptr> BeginSessionAsync();
-            arcana::task<void, std::exception_ptr> EndSessionAsync();
-
-            void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
-
-            void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
-            {
-                m_sessionState->CreateRenderTexture = Napi::Persistent(createFunction);
-                m_sessionState->DestroyRenderTexture = Napi::Persistent(destroyFunction);
-            }
-
-            Napi::Value GetRenderTargetForViewIndex(int viewIndex) const
-            {
-                auto itTextureToFrameBuffer{m_sessionState->TextureToFrameBufferMap.find(m_sessionState->ActiveTextures[viewIndex])};
-                if (itTextureToFrameBuffer == m_sessionState->TextureToFrameBufferMap.end())
+        void DoFrame(std::function<void(const xr::System::Session::Frame&)> callback)
+        {
+            Dispatch([this, callback = std::move(callback)]() {
+                // Early out if there's no session available.
+                if (m_session == nullptr)
                 {
-                    return m_env.Null();
+                    return;
                 }
 
-                auto itFrameBufferToJsTexture{m_sessionState->FrameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
-                return itFrameBufferToJsTexture->second.Value();
-            }
-
-            void SetDepthsNarFar(float depthNear, float depthFar)
-            {
-                m_sessionState->Session->SetDepthsNearFar(depthNear, depthFar);
-            }
-
-            void SetPlaneDetectionEnabled(bool enabled)
-            {
-                m_sessionState->Session->SetPlaneDetectionEnabled(enabled);
-            }
-
-            bool TrySetFeaturePointCloudEnabled(bool enabled)
-            {
-                return m_sessionState->Session->TrySetFeaturePointCloudEnabled(enabled);
-            }
-
-            bool TrySetPreferredPlaneDetectorOptions(const xr::GeometryDetectorOptions& options)
-            {
-                return m_sessionState->Session->TrySetPreferredPlaneDetectorOptions(options);
-            }
-
-            bool TrySetMeshDetectorEnabled(const bool enabled)
-            {
-                return m_sessionState->Session->TrySetMeshDetectorEnabled(enabled);
-            }
-
-            bool TrySetPreferredMeshDetectorOptions(const xr::GeometryDetectorOptions& options)
-            {
-                return m_sessionState->Session->TrySetPreferredMeshDetectorOptions(options);
-            }
-
-            uintptr_t GetNativeXrContext()
-            {
-                return m_system.GetNativeXrContext();
-            }
-
-            std::string GetNativeXrContextType()
-            {
-                return m_system.GetNativeXrContextType();
-            }
-
-        private:
-            Napi::Env m_env;
-            JsRuntimeScheduler m_runtimeScheduler;
-            std::mutex m_sessionStateChangedCallbackMutex{};
-            std::function<void(bool)> m_sessionStateChangedCallback{};
-            void* m_windowPtr{};
-            std::optional<arcana::task<void, std::exception_ptr>> m_beginTask{};
-            arcana::task<void, std::exception_ptr> m_endTask{arcana::task_from_result<std::exception_ptr>()};
-
-            struct SessionState final
-            {
-                explicit SessionState(GraphicsImpl& graphicsImpl)
-                    : GraphicsImpl{graphicsImpl}
-                {
-                }
-
-                GraphicsImpl& GraphicsImpl;
-                Napi::FunctionReference CreateRenderTexture{};
-                Napi::FunctionReference DestroyRenderTexture{};
-                std::map<void*, FrameBuffer*> TextureToFrameBufferMap{};
-                std::map<FrameBuffer*, Napi::ObjectReference> FrameBufferToJsTextureMap{};
-                std::vector<void*> ActiveTextures{};
-                std::shared_ptr<xr::System::Session> Session{};
-                std::unique_ptr<xr::System::Session::Frame> Frame{};
-                arcana::cancellation_source CancellationSource{};
-                bool FrameScheduled{false};
-                std::vector<std::function<void(const xr::System::Session::Frame&)>> ScheduleFrameCallbacks{};
-                arcana::task<void, std::exception_ptr> FrameTask{arcana::task_from_result<std::exception_ptr>()};
-            };
-
-            std::unique_ptr<SessionState> m_sessionState{};
-            xr::System m_system{};
-
-            void BeginFrame();
-            void BeginUpdate();
-            void EndUpdate();
-            void EndFrame();
-
-            void NotifySessionStateChanged(bool isSessionActive);
-        };
-
-        NativeXr::Impl::Impl(Napi::Env env)
-            : m_env{env}
-            , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(env)}
-        {
-        }
-
-        void NativeXr::Impl::UpdateWindow(void* windowPtr)
-        {
-            m_windowPtr = windowPtr;
-        }
-
-        void NativeXr::Impl::SetSessionStateChangedCallback(std::function<void(bool)> callback)
-        {
-            {
-                std::lock_guard<std::mutex> lock{m_sessionStateChangedCallbackMutex};
-                m_sessionStateChangedCallback = std::move(callback);
-            }
-            NotifySessionStateChanged(m_sessionState != nullptr);
-        }
-
-        void NativeXr::Impl::NotifySessionStateChanged(bool isSessionActive)
-        {
-            std::unique_lock<std::mutex> lock{m_sessionStateChangedCallbackMutex};
-            auto sessionStateChangedCallback{m_sessionStateChangedCallback};
-            lock.unlock();
-
-            if (sessionStateChangedCallback)
-            {
-                sessionStateChangedCallback(isSessionActive);
-            }
-        }
-
-        arcana::task<void, std::exception_ptr> NativeXr::Impl::BeginSessionAsync()
-        {
-            if (m_beginTask)
-            {
-                return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
-            }
-
-            GraphicsImpl& graphicsImpl{GraphicsImpl::GetFromJavaScript(m_env)};
-
-            // Don't try to start a session while it is still ending.
-            m_beginTask.emplace(m_endTask.then(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
-                [this, thisRef{shared_from_this()}, &graphicsImpl]() {
-                    assert(m_sessionState == nullptr);
-
-                    m_sessionState = std::make_unique<SessionState>(graphicsImpl);
-
-                    if (!m_system.IsInitialized())
-                    {
-                        while (!m_system.TryInitialize())
-                        {
-                            // do nothing
-                        }
-                    }
-
-                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
-                        .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
-                            m_sessionState->Session = std::move(session);
-                            NotifySessionStateChanged(true);
-                        });
-                }));
-
-            return m_beginTask.value();
-        }
-
-        arcana::task<void, std::exception_ptr> NativeXr::Impl::EndSessionAsync()
-        {
-            assert(m_beginTask);
-            assert(m_sessionState != nullptr);
-
-            m_sessionState->CancellationSource.cancel();
-
-            m_sessionState->FrameBufferToJsTextureMap.clear();
-            m_sessionState->TextureToFrameBufferMap.clear();
-            m_sessionState->ActiveTextures.clear();
-            m_sessionState->ScheduleFrameCallbacks.clear();
-            m_sessionState->CreateRenderTexture.Reset();
-
-            // Don't try to end the session while it is still starting.
-            m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
-                // Also don't try to end the session while a frame is in progress.
-                return m_sessionState->FrameTask;
-            }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
-                assert(m_sessionState != nullptr);
-                assert(m_sessionState->Session != nullptr);
-                assert(m_sessionState->Frame == nullptr);
-
-                m_sessionState->Session->RequestEndSession();
-
-                bool shouldEndSession{};
-                bool shouldRestartSession{};
-                do
-                {
-                    // Block and burn frames until XR successfully shuts down.
-                    m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
-                    m_sessionState->Frame.reset();
-                } while (!shouldEndSession);
-
-                m_sessionState.reset();
-                m_beginTask.reset();
-                NotifySessionStateChanged(false);
-            });
-
-            return m_endTask;
-        }
-
-        void NativeXr::Impl::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
-        {
-            if (m_sessionState->FrameScheduled)
-            {
-                return;
-            }
-
-            m_sessionState->FrameScheduled = true;
-
-            // REVIEW: This should technically be before the check for m_frameScheduled, but for some
-            // reason requestAnimationFrame is being called twice when starting XR.
-            m_sessionState->ScheduleFrameCallbacks.emplace_back(callback);
-
-            m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsImpl.BeforeRenderScheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
-
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->GraphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
-                    m_sessionState->FrameScheduled = false;
-
-                    BeginUpdate();
-
-                    auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
-                    for (auto& callback : callbacks)
-                    {
-                        callback(*m_sessionState->Frame);
-                    }
-
-                    EndUpdate();
-                }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
-                    if (!m_sessionState->CancellationSource.cancelled() && result.has_error())
-                    {
-                        Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
-                    }
-                }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
-                    EndFrame();
-                });
+                callback(*m_frame);
+                m_engineImpl->EndFrame();
+                EndFrame();
             });
         }
 
-        void NativeXr::Impl::BeginFrame()
+        void Dispatch(std::function<void()>&& callable)
         {
-            assert(m_sessionState != nullptr);
-            assert(m_sessionState->Session != nullptr);
-            assert(m_sessionState->Frame == nullptr);
-
-            bool shouldEndSession{};
-            bool shouldRestartSession{};
-            m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
-                    auto itTextureToFrameBuffer{m_sessionState->TextureToFrameBufferMap.find(texturePointer)};
-                    if (itTextureToFrameBuffer != m_sessionState->TextureToFrameBufferMap.end())
-                    {
-                        auto itFrameBufferToJsTexture{m_sessionState->FrameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
-                        if (itFrameBufferToJsTexture != m_sessionState->FrameBufferToJsTextureMap.end())
-                        {
-                            m_sessionState->DestroyRenderTexture.Call({itFrameBufferToJsTexture->second.Value()});
-                            m_sessionState->FrameBufferToJsTextureMap.erase(itFrameBufferToJsTexture);
-                        }
-
-                        m_sessionState->TextureToFrameBufferMap.erase(itTextureToFrameBuffer);
-                    }
-                });
-            });
-
-            // Ending a session outside of calls to EndSessionAsync() is currently not supported.
-            assert(!shouldEndSession);
-            assert(m_sessionState->Frame != nullptr);
+            m_engineImpl->Dispatch(callable);
         }
 
-        void NativeXr::Impl::BeginUpdate()
+        xr::Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
         {
-            m_sessionState->ActiveTextures.reserve(m_sessionState->Frame->Views.size());
-            for (const auto& view : m_sessionState->Frame->Views)
+            return m_session->GetWidthAndHeightForViewIndex(viewIndex);
+        }
+
+        void SetDepthsNarFar(float depthNear, float depthFar)
+        {
+            m_session->SetDepthsNearFar(depthNear, depthFar);
+        }
+        
+        void SetPlaneDetectionEnabled(bool enabled)
+        {
+            m_session->SetPlaneDetectionEnabled(enabled);
+        }
+
+    private:
+        std::map<uintptr_t, std::unique_ptr<FrameBufferData>> m_texturesToFrameBuffers{};
+        xr::System m_system{};
+        std::shared_ptr<xr::System::Session> m_session{};
+        std::unique_ptr<xr::System::Session::Frame> m_frame{};
+        ClearState m_clearState{};
+        std::vector<FrameBufferData*> m_activeFrameBuffers{};
+        NativeEngine* m_engineImpl{};
+        arcana::cancellation_source m_cancellationSource{};
+
+        void BeginFrame();
+        void EndFrame();
+    };
+
+    NativeXr::NativeXr()
+    {
+    }
+
+    NativeXr::~NativeXr()
+    {
+        m_cancellationSource.cancel();
+
+        if (m_session != nullptr)
+        {
+            if (m_frame != nullptr)
             {
-                m_sessionState->ActiveTextures.push_back(view.ColorTexturePointer);
-
-                auto it{m_sessionState->TextureToFrameBufferMap.find(view.ColorTexturePointer)};
-                if (it == m_sessionState->TextureToFrameBufferMap.end() || it->second->Width() != view.ColorTextureSize.Width || it->second->Height() != view.ColorTextureSize.Height)
-                {
-                    // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
-                    assert(view.ColorTextureSize.Width != 0);
-                    assert(view.ColorTextureSize.Height != 0);
-                    assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
-                    assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
-
-                    // Create textures with the desired size. It will be freed and replaced with overrideInternal call
-                    // This is mandatory as overrideInternal do not update texture size.
-                    // And size is used for determining viewport when rendering to texture.
-                    auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                    auto colorTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
-                    m_sessionState->GraphicsImpl.AddTexture(colorTexture, static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat);
-
-                    auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
-                    auto depthTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
-                    m_sessionState->GraphicsImpl.AddTexture(depthTexture, static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat);
-
-                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
-                        bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
-                        bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &view]() {
-                        std::array<bgfx::Attachment, 2> attachments{};
-                        attachments[0].init(colorTexture);
-                        attachments[1].init(depthTexture);
-                        auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
-
-                        auto& frameBuffer{m_sessionState->GraphicsImpl.AddFrameBuffer(frameBufferHandle,
-                            static_cast<uint16_t>(view.ColorTextureSize.Width),
-                            static_cast<uint16_t>(view.ColorTextureSize.Height),
-                            true)};
-
-                        // WebXR, at least in its current implementation, specifies an implicit default clear to black.
-                        // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                        frameBuffer.Clear(m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
-
-                        m_sessionState->TextureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
-
-                        auto jsWidth{Napi::Value::From(m_env, view.ColorTextureSize.Width)};
-                        auto jsHeight{Napi::Value::From(m_env, view.ColorTextureSize.Height)};
-                        auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
-                        m_sessionState->FrameBufferToJsTextureMap[&frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-                    }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
-                        if (result.has_error())
-                        {
-                            Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-                        }
-                    });
-                }
+                EndFrame();
             }
-        }
 
-        void NativeXr::Impl::EndUpdate()
-        {
-            m_sessionState->ActiveTextures.clear();
-        }
-
-        void NativeXr::Impl::EndFrame()
-        {
-            assert(m_sessionState != nullptr);
-            assert(m_sessionState->Session != nullptr);
-            assert(m_sessionState->Frame != nullptr);
-
-            m_sessionState->Frame.reset();
+            EndSession();
         }
     }
 
+    arcana::task<void, std::exception_ptr> NativeXr::BeginSession(Napi::Env env)
+    {
+        assert(m_session == nullptr);
+        assert(m_frame == nullptr);
+
+        if (!m_system.IsInitialized())
+        {
+            while (!m_system.TryInitialize())
+            {
+                // do nothing
+            }
+        }
+
+        return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, Plugins::Internal::NativeWindow::GetFromJavaScript(env).GetWindowPtr()).then(arcana::inline_scheduler, m_cancellationSource, [this](std::shared_ptr<xr::System::Session> session) {
+            m_session = std::move(session);
+        });
+    }
+
+    // TODO: Make this asynchronous.
+    void NativeXr::EndSession()
+    {
+        assert(m_session != nullptr);
+        assert(m_frame == nullptr);
+
+        m_session->RequestEndSession();
+
+        bool shouldEndSession{};
+        bool shouldRestartSession{};
+        do
+        {
+            // Block and burn frames until XR successfully shuts down.
+            m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession);
+            m_frame.reset();
+        } while (!shouldEndSession);
+        // Clear frameBufferData and destroy bgfx FrameBuffers
+        m_texturesToFrameBuffers.clear();
+        m_session.reset();
+    }
+
+    void NativeXr::BeginFrame()
+    {
+        assert(m_engineImpl != nullptr);
+        assert(m_session != nullptr);
+        assert(m_frame == nullptr);
+
+        bool shouldEndSession{};
+        bool shouldRestartSession{};
+        m_frame = m_session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
+            auto texPtr = reinterpret_cast<uintptr_t>(texturePointer);
+            auto it = m_texturesToFrameBuffers.find(texPtr);
+            if (it != m_texturesToFrameBuffers.end())
+            {
+                if (&m_engineImpl->GetFrameBufferManager().GetBound() == it->second.get())
+                {
+                    // bind back buffer because currently bound FrameBuffer will be destroyed
+                    m_engineImpl->GetFrameBufferManager().Unbind(it->second.get());
+                }
+                m_texturesToFrameBuffers.erase(it);
+            }
+        });
+
+        // Ending a session outside of calls to EndSession() is currently not supported.
+        assert(!shouldEndSession);
+        assert(m_frame != nullptr);
+
+        m_activeFrameBuffers.reserve(m_frame->Views.size());
+        for (const auto& view : m_frame->Views)
+        {
+            auto colorTexPtr = reinterpret_cast<uintptr_t>(view.ColorTexturePointer);
+
+            auto it = m_texturesToFrameBuffers.find(colorTexPtr);
+            if (it == m_texturesToFrameBuffers.end() || it->second.get()->Width != view.ColorTextureSize.Width || it->second.get()->Height != view.ColorTextureSize.Height)
+            {
+                // if a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering
+                assert(view.ColorTextureSize.Width);
+                assert(view.ColorTextureSize.Height);
+                assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
+                assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
+
+                // Create textures with the desired size. It will be freed and replaced with overrideInternal call
+                // This is mandatory as overrideInternal do not update texture size.
+                // And size is used for determining viewport when rendering to texture.
+                auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
+                auto colorTex = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
+
+                auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
+                auto depthTex = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
+
+                // Force BGFX to create the texture now, which is necessary in order to use overrideInternal.
+                bgfx::frame();
+
+                bgfx::overrideInternal(colorTex, colorTexPtr);
+                bgfx::overrideInternal(depthTex, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
+
+                std::array<bgfx::Attachment, 2> attachments{};
+                attachments[0].init(colorTex);
+                attachments[1].init(depthTex);
+                auto frameBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+
+                Babylon::FrameBufferData* fbPtr = m_engineImpl->GetFrameBufferManager().CreateNew(
+                    frameBuffer,
+                    m_clearState,
+                    static_cast<uint16_t>(view.ColorTextureSize.Width),
+                    static_cast<uint16_t>(view.ColorTextureSize.Height));
+
+                // WebXR, at least in its current implementation, specifies an implicit default clear to black.
+                // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
+                fbPtr->ViewClearState.UpdateColor(0.f, 0.f, 0.f, 0.f);
+                m_texturesToFrameBuffers[colorTexPtr] = std::unique_ptr<FrameBufferData>{fbPtr};
+
+                m_activeFrameBuffers.push_back(fbPtr);
+            }
+            else
+            {
+                m_activeFrameBuffers.push_back(it->second.get());
+            }
+        }
+    }
+
+    void NativeXr::EndFrame()
+    {
+        assert(m_session != nullptr);
+        assert(m_frame != nullptr);
+
+        m_activeFrameBuffers.clear();
+
+        m_frame.reset();
+    }
+
+    arcana::cancellation_source& NativeXr::GetCancellationSource()
+    {
+        return m_cancellationSource;
+    }
+}
+
+namespace Babylon
+{
     namespace
     {
         class XRFrame;
@@ -694,16 +409,9 @@ namespace Babylon
             static constexpr auto UNBOUNDED{"unbounded"};
         };
 
-        struct XRHitTestTrackableType
-        {
-            static constexpr auto POINT{"point"};
-            static constexpr auto PLANE{"plane"};
-            static constexpr auto MESH{"mesh"};
-        };
-
         struct XREye
         {
-            static constexpr auto NONE{"none"};
+            // static constexpr auto NONE{"none"};
             static constexpr auto LEFT{"left"};
             static constexpr auto RIGHT{"right"};
 
@@ -715,10 +423,8 @@ namespace Babylon
                         return LEFT;
                     case 1:
                         return RIGHT;
-                    case 2:
-                        return NONE;
                     default:
-                        throw std::runtime_error{"Unsupported index"};
+                        throw std::exception{/* Unsupported idx */};
                 }
             }
 
@@ -732,13 +438,9 @@ namespace Babylon
                 {
                     return 1;
                 }
-                else if (eye == NONE)
-                {
-                    return 2;
-                }
                 else
                 {
-                    throw std::runtime_error{"Unsupported eye"};
+                    throw std::exception{/* Unsupported eye */};
                 }
             }
         };
@@ -924,7 +626,6 @@ namespace Babylon
                         InstanceAccessor("eye", &XRView::GetEye, nullptr),
                         InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
                         InstanceAccessor("transform", &XRView::GetTransform, nullptr),
-                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -941,11 +642,10 @@ namespace Babylon
                 , m_eye{XREye::IndexToEye(m_eyeIdx)}
                 , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
                 , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info))}
-                , m_isFirstPersonObserver{false}
             {
             }
 
-            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space, bool isFirstPersonObserver)
+            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space)
             {
                 if (eyeIdx != m_eyeIdx)
                 {
@@ -956,8 +656,6 @@ namespace Babylon
                 std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
                 XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
-
-                m_isFirstPersonObserver = isFirstPersonObserver;
             }
 
         private:
@@ -965,7 +663,6 @@ namespace Babylon
             gsl::czstring<> m_eye{};
             Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
             Napi::ObjectReference m_rigidTransform{};
-            bool m_isFirstPersonObserver{};
 
             Napi::Value GetEye(const Napi::CallbackInfo& info)
             {
@@ -980,11 +677,6 @@ namespace Babylon
             Napi::Value GetTransform(const Napi::CallbackInfo&)
             {
                 return m_rigidTransform.Value();
-            }
-
-            Napi::Value IsFirstPersonObserver(const Napi::CallbackInfo& info)
-            {
-                return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
             }
         };
 
@@ -1003,7 +695,6 @@ namespace Babylon
                     {
                         InstanceAccessor("transform", &XRViewerPose::GetTransform, nullptr),
                         InstanceAccessor("views", &XRViewerPose::GetViews, nullptr),
-                        InstanceAccessor("emulatedPosition", &XRViewerPose::GetEmulatedPosition, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1019,22 +710,17 @@ namespace Babylon
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
-                , m_isEmulatedPosition{true}
             {
             }
 
-            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame& frame)
+            void Update(const Napi::CallbackInfo& info, const xr::System::Session::Frame::Space& space, gsl::span<const xr::System::Session::Frame::View> views)
             {
-                // Update the transform, for now assume that the pose of the first view if it exists represents the viewer transform.
-                // This is correct for devices with a single view, but is likely incorrect for devices with multiple views (eg. VR/AR headsets with binocular views).
-                if (frame.Views.size() > 0)
-                {
-                    m_transform.Update(frame.Views[0].Space, true);
-                }
+                // Update the transform.
+                m_transform.Update(space, true);
 
                 // Update the views array if necessary.
                 const auto oldSize = static_cast<uint32_t>(m_views.size());
-                const auto newSize = static_cast<uint32_t>(frame.Views.size());
+                const auto newSize = static_cast<uint32_t>(views.size());
                 if (oldSize != newSize)
                 {
                     auto newViews = Napi::Array::New(m_jsViews.Env(), newSize);
@@ -1058,15 +744,11 @@ namespace Babylon
                 }
 
                 // Update the individual views.
-                for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame.Views.size()); ++idx)
+                for (uint32_t idx = 0; idx < static_cast<uint32_t>(views.size()); ++idx)
                 {
-                    const auto& view = frame.Views[idx];
-                    m_views[idx]->Update(idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver);
+                    const auto& view = views[idx];
+                    m_views[idx]->Update(idx, CreateProjectionMatrix(view), view.Space);
                 }
-
-                // Check the frame to see if it has valid tracking, if it does not then the position should
-                // be flagged as being emulated.
-                m_isEmulatedPosition = !frame.IsTracking;
             }
 
         private:
@@ -1075,7 +757,6 @@ namespace Babylon
 
             XRRigidTransform& m_transform;
             std::vector<XRView*> m_views{};
-            bool m_isEmulatedPosition;
 
             Napi::Value GetTransform(const Napi::CallbackInfo& /*info*/)
             {
@@ -1085,11 +766,6 @@ namespace Babylon
             Napi::Value GetViews(const Napi::CallbackInfo& /*info*/)
             {
                 return m_jsViews.Value();
-            }
-
-            Napi::Value GetEmulatedPosition(const Napi::CallbackInfo& info)
-            {
-                return Napi::Boolean::New(info.Env(), m_isEmulatedPosition);
             }
         };
 
@@ -1361,6 +1037,7 @@ namespace Babylon
             XRAnchor(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRAnchor>{info}
             {
+                m_frame = nullptr;
             }
 
             xr::Anchor& GetNativeAnchor()
@@ -1371,6 +1048,11 @@ namespace Babylon
             void SetAnchor(xr::Anchor& nativeAnchor)
             {
                 m_nativeAnchor = nativeAnchor;
+            }
+
+            void SetFrame(XRFrame* frame)
+            {
+                m_frame = frame;
             }
 
         private:
@@ -1384,14 +1066,14 @@ namespace Babylon
                 return std::move(napiSpace);
             }
 
-            // Marks the anchor as no longer valid, and should be deleted on the next pass.
-            void Delete(const Napi::CallbackInfo&)
-            {
-                m_nativeAnchor.IsValid = false;
-            }
+            // Forward declaration of delete, as this relies on the XRFrame implementation.
+            void Delete(const Napi::CallbackInfo& info);
 
             // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
             xr::Anchor m_nativeAnchor{};
+
+            // Our native anchor.
+            XRFrame* m_frame{};
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
@@ -1440,33 +1122,6 @@ namespace Babylon
                     m_offsetRay = Napi::Persistent(options.Get("offsetRay").As<Napi::Object>());
                     hasOffsetRay = true;
                 }
-
-                if (options.Has("entityTypes"))
-                {
-                    const auto entityTypeArray = options.Get("entityTypes").As<Napi::Array>();
-                    for (uint32_t i = 0; i < entityTypeArray.Length(); i++)
-                    {
-                        const auto entityType = entityTypeArray.Get(i).As<Napi::String>().Utf8Value();
-                        if (entityType == XRHitTestTrackableType::POINT)
-                        {
-                            m_entityTypes |= xr::HitTestTrackableType::POINT;
-                        }
-                        else if (entityType == XRHitTestTrackableType::PLANE)
-                        {
-                            m_entityTypes |= xr::HitTestTrackableType::PLANE;
-                        }
-                        else if (entityType == XRHitTestTrackableType::MESH)
-                        {
-                            m_entityTypes |= xr::HitTestTrackableType::MESH;
-                        }
-                    }
-                }
-
-                // Default to MESH if unspecified.
-                if (m_entityTypes == xr::HitTestTrackableType::NONE)
-                {
-                    m_entityTypes = xr::HitTestTrackableType::MESH;
-                }
             }
 
             XRRay* OffsetRay()
@@ -1477,11 +1132,6 @@ namespace Babylon
             XRReferenceSpace* Space()
             {
                 return hasSpace ? XRReferenceSpace::Unwrap(m_space.Value()) : nullptr;
-            }
-
-            xr::HitTestTrackableType GetEntityTypes()
-            {
-                return m_entityTypes;
             }
 
         private:
@@ -1495,8 +1145,6 @@ namespace Babylon
 
             bool hasOffsetRay = false;
             Napi::ObjectReference m_offsetRay;
-
-            xr::HitTestTrackableType m_entityTypes{xr::HitTestTrackableType::NONE};
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
@@ -1576,7 +1224,6 @@ namespace Babylon
                         InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
                         InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1654,8 +1301,6 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
-
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
 
@@ -1664,242 +1309,6 @@ namespace Babylon
 
             // Pointer to the XRFrame object.
             XRFrame* m_frame{};
-        };
-
-        class XRMesh : public Napi::ObjectWrap<XRMesh>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRMesh";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                        InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
-                        InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
-                        InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
-                        InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
-                        InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
-                    });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::Env& env)
-            {
-                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRMesh(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XRMesh>{info}
-            {
-            }
-
-            ~XRMesh()
-            {
-                m_jsPositions.Reset();
-                m_jsIndices.Reset();
-                m_jsNormals.Reset();
-            }
-
-            void SetLastUpdatedTime(uint32_t timestamp)
-            {
-                m_lastUpdatedTimestamp = timestamp;
-            }
-
-            void SetNativeMeshId(xr::System::Session::Frame::Mesh::Identifier meshID)
-            {
-                m_nativeMeshID = meshID;
-            }
-
-            void SetXRFrame(XRFrame* frame)
-            {
-                m_frame = frame;
-            }
-
-        private:
-            xr::System::Session::Frame::Mesh& GetMesh();
-
-            Napi::Value GetMeshSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-
-                // TODO: update to not use identity pose as needed
-                rigidTransform->Update(xr::Pose{});
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return std::move(napiSpace);
-            }
-
-            Napi::Value GetPositions(const Napi::CallbackInfo& info)
-            {
-                // NOTE: WebXR reports positions as right-handed coordinates
-                const auto& mesh = GetMesh();
-                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
-                bool updateValues = false;
-                if (!m_jsPositions ||
-                    m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
-                {
-                    m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
-                    m_jsPositions.Reset();
-                    m_jsPositions = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsPositions));
-                    updateValues = true;
-                }
-                else if (m_lastPositionsUpdatedTimestamp != m_lastUpdatedTimestamp)
-                {
-                    m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
-                    updateValues = true;
-                }
-
-                if (updateValues)
-                {
-                    for (size_t n = 0; n < mesh.Positions.size(); n++)
-                    {
-                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Positions.at(n).X;
-                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Positions.at(n).Y;
-                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Positions.at(n).Z;
-                    }
-                }
-
-                return m_jsPositions.Value();
-            }
-
-            Napi::Value GetIndices(const Napi::CallbackInfo& info)
-            {
-                // NOTE: WebXR reports indices in a counterclockwise winding order
-                assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
-                const auto& mesh = GetMesh();
-                if (!m_jsIndices ||
-                    m_numJsIndices != mesh.Indices.size())
-                {
-                    m_numJsIndices = mesh.Indices.size();
-                    m_jsIndices.Reset();
-                    m_jsIndices = Napi::Persistent(Napi::Uint32Array::New(info.Env(), m_numJsIndices));
-                    memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
-                    m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-                else if (m_lastIndicesUpdatedTimestamp != m_lastUpdatedTimestamp)
-                {
-                    memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
-                    m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-
-                return m_jsIndices.Value();
-            }
-
-            Napi::Value GetNormals(const Napi::CallbackInfo& info)
-            {
-                // NOTE: WebXR reports normals as right-handed vectors
-                const auto& mesh = GetMesh();
-                if (!mesh.HasNormals)
-                {
-                    return info.Env().Undefined();
-                }
-
-                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
-                if (!m_jsNormals ||
-                    m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
-                {
-                    m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
-                    m_jsNormals.Reset();
-                    m_jsNormals = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsNormals));
-                    for (size_t n = 0; n < mesh.Normals.size(); n++)
-                    {
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
-                    }
-                    m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-                else if (m_lastNormalsUpdatedTimestamp != m_lastUpdatedTimestamp)
-                {
-                    for (size_t n = 0; n < mesh.Normals.size(); n++)
-                    {
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
-                    }
-                    m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-
-                return m_jsNormals.Value();
-            }
-
-            Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
-            }
-
-            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
-
-            // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
-            uint32_t m_lastUpdatedTimestamp{0};
-            uint32_t m_lastPositionsUpdatedTimestamp{0};
-            uint32_t m_lastIndicesUpdatedTimestamp{0};
-            uint32_t m_lastNormalsUpdatedTimestamp{0};
-
-            size_t m_numJsPositions{0};
-            Napi::Reference<Napi::Float32Array> m_jsPositions{};
-            size_t m_numJsIndices{0};
-            Napi::Reference<Napi::Uint32Array> m_jsIndices{};
-            size_t m_numJsNormals{0};
-            Napi::Reference<Napi::Float32Array> m_jsNormals{};
-
-            // The underlying native mesh.
-            xr::System::Session::Frame::Mesh::Identifier m_nativeMeshID{};
-
-            // Pointer to the XRFrame object.
-            XRFrame* m_frame{};
-        };
-
-        class XRHand : public Napi::ObjectWrap<XRHand>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRHand";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                std::vector<XRHand::PropertyDescriptor> initList{};
-                initList.reserve(HAND_JOINT_NAMES.size() + 1);
-
-                for (size_t idx = 0; idx < HAND_JOINT_NAMES.size(); idx++)
-                {
-                    initList.push_back(StaticValue(HAND_JOINT_NAMES[idx], Napi::Value::From(env, idx)));
-                }
-
-                initList.push_back(StaticAccessor("size", &XRHand::GetSize, nullptr));
-
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    initList);
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRHand(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XRHand>{info}
-            {
-            }
-
-        private:
-            static Napi::Value GetSize(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
-            }
         };
 
         class XRFrame : public Napi::ObjectWrap<XRFrame>
@@ -1919,10 +1328,8 @@ namespace Babylon
                         InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
-                        InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
-                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1940,10 +1347,8 @@ namespace Babylon
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
                 m_jsPose.Set("transform", m_jsTransform.Value());
-                m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
             void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
@@ -1955,14 +1360,8 @@ namespace Babylon
                 // Update anchor positions.
                 UpdateAnchors();
 
-                // Update scene objects.
-                UpdateSceneObjects(env);
-
                 // Update planes.
                 UpdatePlanes(env, timestamp);
-
-                // Update meshes.
-                UpdateMeshes(env, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -1973,36 +1372,27 @@ namespace Babylon
                 // Create the XRAnchor object, and initialize its members.
                 auto napiAnchor = Napi::Persistent(XRAnchor::New(info));
                 auto* xrAnchor = XRAnchor::Unwrap(napiAnchor.Value());
+                xrAnchor->SetFrame(this);
                 xrAnchor->SetAnchor(nativeAnchor);
 
                 // Add the anchor to the list of tracked anchors.
-                m_trackedAnchors.emplace_back(std::move(napiAnchor));
+                m_trackedAnchors.push_back(std::move(napiAnchor));
 
                 // Resolve the promise with the newly created anchor.
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(m_trackedAnchors.back().Value());
+                deferred.Resolve(napiAnchor.Value());
                 return deferred.Promise();
+            }
+
+            // Deletes the allocated anchor, and marks it as no longer valid.
+            void DeleteNativeAnchor(xr::Anchor& nativeAnchor)
+            {
+                m_frame->DeleteAnchor(nativeAnchor);
             }
 
             xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
             {
                 return m_frame->GetPlaneByID(planeID);
-            }
-
-            xr::System::Session::Frame::Mesh& GetMeshFromID(xr::System::Session::Frame::Mesh::Identifier meshID)
-            {
-                return m_frame->GetMeshByID(meshID);
-            }
-
-            Napi::Value GetJSSceneObjectFromID(const Napi::CallbackInfo& info, const xr::System::Session::Frame::SceneObject::Identifier objectID)
-            {
-                if (objectID == xr::System::Session::Frame::SceneObject::INVALID_ID)
-                {
-                    return info.Env().Undefined();
-                }
-
-                assert(m_sceneObjects.count(objectID) > 0);
-                return m_sceneObjects.at(objectID).Value();
             }
 
         private:
@@ -2011,38 +1401,20 @@ namespace Babylon
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
-            std::unordered_map<xr::System::Session::Frame::Mesh::Identifier, Napi::ObjectReference> m_trackedMeshes{};
-            Napi::ObjectReference m_meshSet{};
-            std::unordered_map<xr::System::Session::Frame::SceneObject::Identifier, Napi::ObjectReference> m_sceneObjects{};
 
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
-            Napi::ObjectReference m_jsJointPose{};
-
-            bool m_hasBegunTracking{false};
 
             Napi::Value GetViewerPose(const Napi::CallbackInfo& info)
             {
-                // To match the WebXR implementation we should return undefined here until we have gotten
-                // initial tracking. After that point we can just continue returning the position
-                // as it will be marked as estimated if tracking is lost.
-                if (!m_hasBegunTracking && !m_frame->IsTracking)
-                {
-                    return info.Env().Undefined();
-                }
-                else
-                {
-                    // We've received initial tracking, update the flag
-                    m_hasBegunTracking = true;
-                }
-
                 // TODO: Support reference spaces.
                 // auto& space = *XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
 
                 // Updating the reference space is currently not supported. Until it is, we assume the
                 // reference space is unmoving at identity (which is usually true).
-                m_xrViewerPose.Update(info, *m_frame);
+
+                m_xrViewerPose.Update(info, {{{0, 0, 0}, {0, 0, 0, 1}}}, m_frame->Views);
 
                 return m_jsXRViewerPose.Value();
             }
@@ -2066,24 +1438,6 @@ namespace Babylon
                 }
             }
 
-            Napi::Value GetJointPose(const Napi::CallbackInfo& info)
-            {
-                assert(info[0].IsExternal());
-
-                const auto& jointSpace = *info[0].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
-
-                if (jointSpace.PoseTracked)
-                {
-                    m_transform.Update(jointSpace, false);
-                    m_jsJointPose.Set("radius", jointSpace.PoseRadius);
-                    return m_jsJointPose.Value();
-                }
-                else
-                {
-                    return info.Env().Undefined();
-                }
-            }
-
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
             {
                 XRHitTestSource* hitTestSource = XRHitTestSource::Unwrap(info[0].As<Napi::Object>());
@@ -2100,7 +1454,7 @@ namespace Babylon
 
                 // Get the native results
                 std::vector<xr::HitResult> nativeHitResults{};
-                m_frame->GetHitTestResults(nativeHitResults, nativeRay, hitTestSource->GetEntityTypes());
+                m_frame->GetHitTestResults(nativeHitResults, nativeRay);
 
                 // Translate those results into a napi array.
                 auto results = Napi::Array::New(info.Env(), nativeHitResults.size());
@@ -2147,17 +1501,12 @@ namespace Babylon
                     XRAnchor* xrAnchor = XRAnchor::Unwrap((*anchorIter).Value());
                     xr::Anchor& nativeAnchor = xrAnchor->GetNativeAnchor();
 
-                    // Update the anchor if it has not been marked for deletion.
-                    if (nativeAnchor.IsValid)
-                    {
-                        m_frame->UpdateAnchor(nativeAnchor);
-                    }
+                    // Update the anchor, and validate it is still a valid anchor if not the remove from the collection.
+                    m_frame->UpdateAnchor(nativeAnchor);
 
-                    // If the anchor has been marked for deletion, delete the anchor from the session
-                    // and remove it from the list of tracked anchors.
                     if (!nativeAnchor.IsValid)
                     {
-                        m_frame->DeleteAnchor(nativeAnchor);
+                        DeleteNativeAnchor(nativeAnchor);
                         anchorIter = m_trackedAnchors.erase(anchorIter);
                     }
                     else
@@ -2183,56 +1532,20 @@ namespace Babylon
 
                 // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
-
-                if (m_meshSet)
-                {
-                    worldInformationObj.Set("detectedMeshes", m_meshSet.Value());
-                }
-
                 return std::move(worldInformationObj);
-            }
-
-            Napi::Value GetFeaturePointCloud(const Napi::CallbackInfo& info)
-            {
-                // Get feature points from native.
-                std::vector<xr::FeaturePoint>& pointCloud = m_frame->FeaturePointCloud;
-                auto featurePointArray = Napi::Array::New(info.Env(), pointCloud.size() * 5);
-                for (size_t i = 0; i < pointCloud.size(); i++)
-                {
-                    int pointIndex = (int)i * 5;
-                    auto& featurePoint = pointCloud[i];
-                    featurePointArray.Set(pointIndex, Napi::Value::From(info.Env(), featurePoint.X));
-                    featurePointArray.Set(pointIndex + 1, Napi::Value::From(info.Env(), featurePoint.Y));
-                    featurePointArray.Set(pointIndex + 2, Napi::Value::From(info.Env(), featurePoint.Z));
-                    featurePointArray.Set(pointIndex + 3, Napi::Value::From(info.Env(), featurePoint.ConfidenceValue));
-                    featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
-                }
-
-                return std::move(featurePointArray);
-            }
-
-            void UpdateSceneObjects(const Napi::Env& env)
-            {
-                for (const auto& sceneObjectID : m_frame->UpdatedSceneObjects)
-                {
-                    if (m_sceneObjects.count(sceneObjectID) == 0)
-                    {
-                        m_sceneObjects[sceneObjectID] = Napi::Persistent(Napi::Object::New(env));
-                    }
-
-                    const auto& sceneObject = m_frame->GetSceneObjectByID(sceneObjectID);
-                    m_sceneObjects.at(sceneObjectID).Value().Set("type", xr::SceneObjectTypeNames.at(sceneObject.Type));
-                }
-
-                for (const auto& removedObjectID : m_frame->RemovedSceneObjects)
-                {
-                    m_sceneObjects.erase(removedObjectID);
-                }
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
-                // First loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
+                // First loop over deleted planes and remove them from our JS mapping.
+                for (auto planeID : m_frame->RemovedPlanes)
+                {
+                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
+                    assert(trackedPlaneIterator != m_trackedPlanes.end());
+                    m_trackedPlanes.erase(trackedPlaneIterator);
+                }
+
+                // Next loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
                 for (auto planeID : m_frame->UpdatedPlanes)
                 {
                     XRPlane* xrPlane{};
@@ -2254,50 +1567,6 @@ namespace Babylon
 
                     xrPlane->SetLastUpdatedTime(timestamp);
                 }
-
-                // Next go over removed planes and remove them from our mapping.
-                for (auto planeID : m_frame->RemovedPlanes)
-                {
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
-                    assert(trackedPlaneIterator != m_trackedPlanes.end());
-                    m_trackedPlanes.erase(trackedPlaneIterator);
-                }
-            }
-
-            void UpdateMeshes(const Napi::Env& env, uint32_t timestamp)
-            {
-                for (auto meshID : m_frame->UpdatedMeshes)
-                {
-                    XRMesh* xrMesh{};
-                    auto trackedMeshIterator = m_trackedMeshes.find(meshID);
-
-                    if (trackedMeshIterator == m_trackedMeshes.end())
-                    {
-                        auto napiMesh = Napi::Persistent(XRMesh::New(env));
-                        xrMesh = XRMesh::Unwrap(napiMesh.Value());
-                        xrMesh->SetNativeMeshId(meshID);
-                        xrMesh->SetXRFrame(this);
-                        m_trackedMeshes.insert({meshID, std::move(napiMesh)});
-                    }
-                    else
-                    {
-                        xrMesh = XRMesh::Unwrap(trackedMeshIterator->second.Value());
-                    }
-
-                    xrMesh->SetLastUpdatedTime(timestamp);
-                }
-
-                for (auto meshID : m_frame->RemovedMeshes)
-                {
-                    m_trackedMeshes.erase(meshID);
-                }
-
-                // Create a new mesh set every frame, detected meshes are assumed immutable
-                m_meshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
-                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
-                {
-                    m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), {meshNapiValue.Value()});
-                }
             }
         };
 
@@ -2307,26 +1576,15 @@ namespace Babylon
             return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
         }
 
+        // Deallocates the native anchor, and marks the XRAnchor as no longer tracked.
+        void XRAnchor::Delete(const Napi::CallbackInfo&)
+        {
+            m_frame->DeleteNativeAnchor(m_nativeAnchor);
+        }
+
         xr::System::Session::Frame::Plane& XRPlane::GetPlane()
         {
             return m_frame->GetPlaneFromID(m_nativePlaneID);
-        }
-
-        Napi::Value XRPlane::GetParentSceneObject(const Napi::CallbackInfo& info)
-        {
-            const auto& plane = GetPlane();
-            return m_frame->GetJSSceneObjectFromID(info, plane.ParentSceneObjectID);
-        }
-
-        xr::System::Session::Frame::Mesh& XRMesh::GetMesh()
-        {
-            return m_frame->GetMeshFromID(m_nativeMeshID);
-        }
-
-        Napi::Value XRMesh::GetParentSceneObject(const Napi::CallbackInfo& info)
-        {
-            const auto& mesh = GetMesh();
-            return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
@@ -2335,16 +1593,12 @@ namespace Babylon
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
-            static constexpr auto JS_EVENT_NAME_SELECT = "select";
-            static constexpr auto JS_EVENT_NAME_SELECT_START = "selectstart";
-            static constexpr auto JS_EVENT_NAME_SELECT_END = "selectend";
-            static constexpr auto JS_EVENT_NAME_SQUEEZE = "squeeze";
-            static constexpr auto JS_EVENT_NAME_SQUEEZE_START = "squeezestart";
-            static constexpr auto JS_EVENT_NAME_SQUEEZE_END = "squeezeend";
 
         public:
             static void Initialize(Napi::Env env)
             {
+                Napi::HandleScope scope{env};
+
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
@@ -2358,28 +1612,30 @@ namespace Babylon
                         InstanceMethod("end", &XRSession::End),
                         InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
                         InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
-                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled),
-                        InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
-                        InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
-                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info, std::shared_ptr<Plugins::NativeXr::Impl> nativeXr)
+            static Napi::Promise CreateAsync(const Napi::CallbackInfo& info)
             {
-                auto jsSession{Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}))};
-                auto& session{*XRSession::Unwrap(jsSession.Value())};
-                session.m_xr = std::move(nativeXr);
+                auto jsSession = Napi::Persistent(info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]}));
+                auto& session = *XRSession::Unwrap(jsSession.Value());
 
-                auto deferred{Napi::Promise::Deferred::New(info.Env())};
-                session.m_xr->BeginSessionAsync()
-                    .then(session.m_runtimeScheduler, arcana::cancellation::none(),
-                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                session.m_xr.BeginSession(info.Env())
+                    .then(session.m_runtimeScheduler, session.m_xr.GetCancellationSource(),
+                        [deferred, jsSession = std::move(jsSession), env = info.Env()](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
-                                deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                                try
+                                {
+                                    std::rethrow_exception(result.error());
+                                }
+                                catch (const std::exception& e)
+                                {
+                                    deferred.Reject(Napi::Error::New(env, e.what()).Value());
+                                }
                             }
                             else
                             {
@@ -2392,14 +1648,19 @@ namespace Babylon
 
             XRSession(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRSession>{info}
-                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
                 , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
                     info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
+            }
+
+            void SetEngine(Napi::Object jsEngine)
+            {
+                m_xr.SetEngine(jsEngine);
             }
 
             void InitializeXrLayer(Napi::Object layer)
@@ -2429,29 +1690,27 @@ namespace Babylon
                 layer.Set("framebufferHeight", Napi::Value::From(env, HEIGHT));
             }
 
-            Napi::Value GetRenderTargetForEye(const std::string& eye) const
+            FrameBufferData* GetFrameBufferForEye(const std::string& eye) const
             {
-                return m_xr->GetRenderTargetForViewIndex(XREye::EyeToIndex(eye));
+                return m_xr.ActiveFrameBuffers()[XREye::EyeToIndex(eye)];
             }
 
-            void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
+            xr::Size GetWidthAndHeightForViewIndex(size_t viewIndex) const
             {
-                return m_xr->SetRenderTextureFunctions(createFunction, destroyFunction);
+                return m_xr.GetWidthAndHeightForViewIndex(viewIndex);
             }
 
         private:
-            JsRuntimeScheduler m_runtimeScheduler;
-            std::shared_ptr<Plugins::NativeXr::Impl> m_xr;
+            NativeXr m_xr{};
             Napi::ObjectReference m_jsXRFrame{};
             XRFrame& m_xrFrame;
+            JsRuntimeScheduler m_runtimeScheduler;
             uint32_t m_timestamp{0};
 
             std::vector<std::pair<std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
-            std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
-            std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -2469,14 +1728,13 @@ namespace Babylon
             {
                 auto name = info[0].As<Napi::String>().Utf8Value();
                 auto callback = info[1].As<Napi::Function>();
-                m_eventNamesAndCallbacks.erase(
-                    std::remove_if(
-                        m_eventNamesAndCallbacks.begin(),
-                        m_eventNamesAndCallbacks.end(),
-                        [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener) {
-                            return listener.first == name && listener.second.Value() == callback;
-                        }),
-                    m_eventNamesAndCallbacks.end());
+                m_eventNamesAndCallbacks.erase(std::remove_if(
+                    m_eventNamesAndCallbacks.begin(),
+                    m_eventNamesAndCallbacks.end(),
+                    [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener)
+                {
+                    return listener.first == name && listener.second.Value() == callback;
+                }), m_eventNamesAndCallbacks.end());
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
@@ -2493,7 +1751,7 @@ namespace Babylon
 
                 float depthNear = renderState.Get("depthNear").As<Napi::Number>().FloatValue();
                 float depthFar = renderState.Get("depthFar").As<Napi::Number>().FloatValue();
-                m_xr->SetDepthsNarFar(depthNear, depthFar);
+                m_xr.SetDepthsNarFar(depthNear, depthFar);
 
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
@@ -2506,12 +1764,6 @@ namespace Babylon
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
                 std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
-
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
-
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2521,81 +1773,25 @@ namespace Babylon
 
                     current.insert(inputSource.ID);
 
-                    auto inputSourceFound = m_idToInputSource.find(inputSource.ID);
-                    if (inputSourceFound == m_idToInputSource.end())
+                    auto found = m_idToInputSource.find(inputSource.ID);
+                    if (found == m_idToInputSource.end())
                     {
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
-
-                        // Now that input Source is created, create a gamepad object if enabled for the input source
-                        inputSourceFound = m_idToInputSource.find(inputSource.ID);
-                        if (inputSource.GamepadTrackedThisFrame)
-                        {
-                            auto inputSourceVal = inputSourceFound->second.Value();
-                            CreateXRGamepadObject(inputSourceVal, inputSource);
-                        }
 
                         added.insert(inputSource.ID);
                     }
                     else
                     {
                         // Ensure the correct spaces are associated with the existing input source.
-                        auto inputSourceVal = inputSourceFound->second.Value();
-                        SetXRInputSourceData(inputSourceVal, inputSource);
-
-                        // inputSource already exists, find the corresponding gamepad object if enabled and set to correct values
-                        if (inputSourceVal.Has("gamepad"))
-                        {
-                            auto gamepadObject = inputSourceVal.Get("gamepad").As<Napi::Object>();
-                            SetXRGamepadObjectData(inputSourceVal, gamepadObject, inputSource);
-                        }
-                    }
-
-                    // Handle gestures. Sources that do not support a gesture will always return false
-                    const bool isSelected = inputSource.GamepadObject.Buttons[0].Pressed;
-                    const bool isSqueezed = inputSource.GamepadObject.Buttons[1].Pressed;
-                    const bool wasSelected = std::find(m_activeSelects.begin(), m_activeSelects.end(), inputSource.ID) != m_activeSelects.end();
-                    const bool wasSqueezed = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), inputSource.ID) != m_activeSqueezes.end();
-                    
-                    if (isSelected && !wasSelected)
-                    {
-                        selectStarts.push_back(inputSource.ID);
-                    }
-                    else if (!isSelected && wasSelected)
-                    {
-                        selectEnds.push_back(inputSource.ID);
-                    }
-
-                    if (isSqueezed && !wasSqueezed)
-                    {
-                        squeezeStarts.push_back(inputSource.ID);
-                    }
-                    else if (!isSqueezed && wasSqueezed)
-                    {
-                        squeezeEnds.push_back(inputSource.ID);
+                        auto val = found->second.Value();
+                        SetXRInputSourceSpaces(val, inputSource);
                     }
                 }
                 for (const auto& [id, ref] : m_idToInputSource)
                 {
                     if (current.find(id) == current.end())
                     {
-                        // Process select and squeeze for lost sources before we send the source lost event
-                        auto inputSourceVal = ref.Value();
-                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
-                        const auto& activeSelectIter = std::find(m_activeSelects.begin(), m_activeSelects.end(), id);
-                        const auto& activeSqueezeIter = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), id);
-
-                        if (activeSelectIter != m_activeSelects.end())
-                        {
-                            FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_END);
-                            m_activeSelects.erase(activeSelectIter);
-                        }
-
-                        if (activeSqueezeIter != m_activeSqueezes.end())
-                        {
-                            FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_END);
-                            m_activeSqueezes.erase(activeSqueezeIter);
-                        }
                         // Do not update space association since said spaces no longer exist.
                         removed.insert(id);
                     }
@@ -2642,21 +1838,15 @@ namespace Babylon
                         m_idToInputSource.erase(id);
                     }
                 }
-
-                // Process active selects after firing off any new source added events
-                UpdateInputSourceEventValues(selectStarts, selectEnds, squeezeStarts, squeezeEnds, env);
             }
 
             Napi::Value RequestAnimationFrame(const Napi::CallbackInfo& info)
             {
-                Napi::Function callback{info[0].As<Napi::Function>()};
+                m_xr.DoFrame([this, func = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())), env = info.Env()](const auto& frame) {
+                    ProcessInputSources(frame, env);
 
-                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](const auto& frame) {
-                    ProcessInputSources(frame, Env());
-
-                    m_xrFrame.Update(Env(), frame, m_timestamp);
-
-                    callbackPtr->Value().Call({Napi::Value::From(Env(), m_timestamp), m_jsXRFrame.Value()});
+                    m_xrFrame.Update(env, frame, m_timestamp);
+                    func->Call({Napi::Value::From(env, m_timestamp), m_jsXRFrame.Value()});
                 });
 
                 // The return value should be a request ID to allow for requesting cancellation, this is unused in Babylon.js currently.
@@ -2670,126 +1860,26 @@ namespace Babylon
                 if (optionsObj.Has("planeDetectionState"))
                 {
                     bool planeDetectionEnabled = optionsObj.Get("planeDetectionState").As<Napi::Object>().Get("enabled").ToBoolean();
-                    m_xr->SetPlaneDetectionEnabled(planeDetectionEnabled);
+                    m_xr.SetPlaneDetectionEnabled(planeDetectionEnabled);
                 }
-            }
-
-            Napi::Object GenerateXRInputSourceEvent(Napi::Object& inputSource, Napi::Env env)
-            {
-                auto inputSourceEvent = Napi::Object::New(env);
-                inputSourceEvent.Set("frame", m_jsXRFrame.Value());
-                inputSourceEvent.Set("inputSource", inputSource);
-
-                return inputSourceEvent;
-            }
-
-            void FireInputSourceEvent(Napi::Object& inputSourceEvent, std::string eventName)
-            {
-                for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                {
-                    if (name == eventName)
-                    {
-                        callback.Call({inputSourceEvent});
-                    }
-                }
-            }
-
-            void UpdateInputSourceEventValues(
-                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectStarts,
-                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectEnds,
-                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeStarts,
-                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeEnds,
-                Napi::Env env)
-            {
-                for (const auto& id : selectStarts)
-                {
-                    auto inputSourceIter = m_idToInputSource.find(id);
-                    if (inputSourceIter != m_idToInputSource.end())
-                    {
-                        auto inputSourceVal = inputSourceIter->second.Value();
-                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
-                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_START);
-
-                        m_activeSelects.push_back(id);
-                    }
-                }
-
-                for (const auto& id : squeezeStarts)
-                {
-                    auto inputSourceIter = m_idToInputSource.find(id);
-                    if (inputSourceIter != m_idToInputSource.end())
-                    {
-                        auto inputSourceVal = inputSourceIter->second.Value();
-                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
-                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_START);
-
-                        m_activeSqueezes.push_back(id);
-                    }
-                }
-
-                for (const auto& id : selectEnds)
-                {
-                    auto inputSourceIter = m_idToInputSource.find(id);
-                    if (inputSourceIter != m_idToInputSource.end())
-                    {
-                        auto inputSourceVal = inputSourceIter->second.Value();
-                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
-
-                        // WebXR API dictates the select event fires before the select end
-                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT);
-                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SELECT_END);
-
-                        m_activeSelects.erase(std::find(m_activeSelects.begin(), m_activeSelects.end(), id));
-                    }
-                }
-
-                for (const auto& id : squeezeEnds)
-                {
-                    auto inputSourceIter = m_idToInputSource.find(id);
-                    if (inputSourceIter != m_idToInputSource.end())
-                    {
-                        auto inputSourceVal = inputSourceIter->second.Value();
-                        Napi::Object inputSourceEvent = GenerateXRInputSourceEvent(inputSourceVal, env);
-
-                        // WebXR API dictates the squeeze event fires before the squeeze end
-                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE);
-                        FireInputSourceEvent(inputSourceEvent, JS_EVENT_NAME_SQUEEZE_END);
-
-                        m_activeSqueezes.erase(std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), id));
-                    }
-                }
-            }
-
-            Napi::Value TrySetFeaturePointCloudEnabled(const Napi::CallbackInfo& info)
-            {
-                bool featurePointCloudEnabled = info[0].ToBoolean();
-                bool enabled = m_xr->TrySetFeaturePointCloudEnabled(featurePointCloudEnabled);
-
-                return Napi::Value::From(info.Env(), enabled);
             }
 
             Napi::Value End(const Napi::CallbackInfo& info)
             {
-                auto deferred{Napi::Promise::Deferred::New(info.Env())};
-                m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
-                    [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
-                        if (result.has_error())
+                m_xr.Dispatch([this]() {
+                    m_xr.EndSession();
+
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                    {
+                        if (name == JS_EVENT_NAME_END)
                         {
-                            deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
-                            return;
+                            callback.Call({});
                         }
+                    }
+                });
 
-                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                        {
-                            if (name == JS_EVENT_NAME_END)
-                            {
-                                callback.Call({});
-                            }
-                        }
-
-                        deferred.Resolve(Env().Undefined());
-                    });
-
+                auto deferred = Napi::Promise::Deferred::New(info.Env());
+                deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
 
@@ -2798,45 +1888,6 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(XRHitTestSource::New(info));
                 return deferred.Promise();
-            }
-
-            Napi::Value TrySetPreferredPlaneDetectorOptions(const Napi::CallbackInfo& info)
-            {
-                if (info.Length() != 1 ||
-                    !info[0].IsObject())
-                {
-                    throw std::exception(/*invalid arguments*/);
-                }
-
-                const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
-                const auto result = m_xr->TrySetPreferredPlaneDetectorOptions(options);
-                return Napi::Value::From(info.Env(), result);
-            }
-
-            Napi::Value TrySetMeshDetectorEnabled(const Napi::CallbackInfo& info)
-            {
-                if (info.Length() != 1 ||
-                    !info[0].IsBoolean())
-                {
-                    throw std::exception(/*invalid arguments*/);
-                }
-
-                const auto enabled = info[0].As<Napi::Boolean>();
-                const auto result = m_xr->TrySetMeshDetectorEnabled(enabled);
-                return Napi::Value::From(info.Env(), result);
-            }
-
-            Napi::Value TrySetPreferredMeshDetectorOptions(const Napi::CallbackInfo& info)
-            {
-                if (info.Length() != 1 ||
-                    !info[0].IsObject())
-                {
-                    throw std::exception(/*invalid arguments*/);
-                }
-
-                const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
-                const auto result = m_xr->TrySetPreferredMeshDetectorOptions(options);
-                return Napi::Value::From(info.Env(), result);
             }
         };
 
@@ -2854,7 +1905,6 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
-                        InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -2878,6 +1928,7 @@ namespace Babylon
             Napi::Value InitializeXRLayerAsync(const Napi::CallbackInfo& info)
             {
                 auto& session = *XRSession::Unwrap(info[0].As<Napi::Object>());
+                session.SetEngine(m_jsEngineReference.Value());
 
                 auto xrLayer = XRWebGLLayer::New(info);
                 session.InitializeXrLayer(xrLayer);
@@ -2886,11 +1937,6 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
-            }
-
-            Napi::Value Dispose(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Undefined();
             }
         };
 
@@ -2915,7 +1961,7 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0], info[1], info[2]});
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0], info[1]});
             }
 
             NativeRenderTargetProvider(const Napi::CallbackInfo& info)
@@ -2923,19 +1969,29 @@ namespace Babylon
                 , m_jsSession{Napi::Persistent(info[0].As<Napi::Object>())}
                 , m_session{*XRSession::Unwrap(m_jsSession.Value())}
             {
-                auto createRenderTexture{info[1].As<Napi::Function>()};
-                auto destroyRenderTexture{info[2].As<Napi::Function>()};
-                m_session.SetRenderTextureFunctions(createRenderTexture, destroyRenderTexture);
+                auto createRenderTextureCallback = info[1].As<Napi::Function>();
+
+                for (size_t idx = 0; idx < m_jsRenderTargetTextures.size(); ++idx)
+                {
+                    auto size = m_session.GetWidthAndHeightForViewIndex(idx);
+                    auto jsWidth = Napi::Value::From(info.Env(), size.Width);
+                    auto jsHeight = Napi::Value::From(info.Env(), size.Height);
+                    m_jsRenderTargetTextures[idx] = Napi::Persistent(createRenderTextureCallback.Call({jsWidth, jsHeight}).As<Napi::Object>());
+                }
             }
 
         private:
             Napi::ObjectReference m_jsSession{};
+            std::array<Napi::ObjectReference, 2> m_jsRenderTargetTextures;
             XRSession& m_session;
 
             Napi::Value GetRenderTargetForEye(const Napi::CallbackInfo& info)
             {
                 const std::string eye{info[0].As<Napi::String>().Utf8Value()};
-                return m_session.GetRenderTargetForEye(eye);
+
+                auto renderTargetTexture = m_jsRenderTargetTextures[XREye::EyeToIndex(eye)].Value();
+                renderTargetTexture.Get("_texture").As<Napi::Object>().Set("_framebuffer", Napi::External<FrameBufferData>::New(info.Env(), m_session.GetFrameBufferForEye(eye)));
+                return std::move(renderTargetTexture);
             }
         };
 
@@ -2948,7 +2004,7 @@ namespace Babylon
             static constexpr auto JS_NATIVE_NAME = "native";
 
         public:
-            static void Initialize(Napi::Env env, std::shared_ptr<Plugins::NativeXr::Impl> nativeXr)
+            static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
 
@@ -2960,8 +2016,6 @@ namespace Babylon
                         InstanceMethod("requestSession", &XR::RequestSession),
                         InstanceMethod("getWebXRRenderTarget", &XR::GetWebXRRenderTarget),
                         InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
-                        InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
-                        InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
                     });
 
@@ -2978,7 +2032,6 @@ namespace Babylon
                 }
 
                 auto xr = func.New({});
-                XR::Unwrap(xr)->m_xr = std::move(nativeXr);
                 navigator.Set(JS_XR_NAME, xr);
             }
 
@@ -2990,7 +2043,6 @@ namespace Babylon
 
         private:
             JsRuntimeScheduler m_runtimeScheduler;
-            std::shared_ptr<Plugins::NativeXr::Impl> m_xr{};
 
             Napi::Value IsSessionSupported(const Napi::CallbackInfo& info)
             {
@@ -3025,7 +2077,7 @@ namespace Babylon
 
             Napi::Value RequestSession(const Napi::CallbackInfo& info)
             {
-                return XRSession::CreateAsync(info, m_xr);
+                return XRSession::CreateAsync(info);
             }
 
             Napi::Value GetWebXRRenderTarget(const Napi::CallbackInfo& info)
@@ -3037,46 +2089,13 @@ namespace Babylon
             {
                 return NativeRenderTargetProvider::New(info);
             }
-
-            Napi::Value GetNativeXrContext(const Napi::CallbackInfo& info)
-            {
-                const auto nativeExtension = m_xr->GetNativeXrContext();
-                if (nativeExtension)
-                {
-                    return Napi::Number::From(info.Env(), nativeExtension);
-                }
-
-                return info.Env().Undefined();
-            }
-
-            Napi::Value GetNativeXrContextType(const Napi::CallbackInfo& info)
-            {
-                const auto nativeExtensionType = m_xr->GetNativeXrContextType();
-                if (!nativeExtensionType.empty())
-                {
-                    return Napi::String::From(info.Env(), nativeExtensionType);
-                }
-
-                return info.Env().Undefined();
-            }
         };
     }
 
-    namespace Plugins
+    namespace Plugins::NativeXr
     {
-        NativeXr::NativeXr(std::shared_ptr<Impl> impl)
-            : m_impl{std::move(impl)}
+        void Initialize(Napi::Env env)
         {
-        }
-
-        NativeXr::~NativeXr()
-        {
-        }
-
-        NativeXr NativeXr::Initialize(Napi::Env env)
-        {
-            auto impl{std::make_shared<Impl>(env)};
-
             PointerEvent::Initialize(env);
 
             XRWebGLLayer::Initialize(env);
@@ -3086,9 +2105,7 @@ namespace Babylon
             XRPose::Initialize(env);
             XRReferenceSpace::Initialize(env);
             XRFrame::Initialize(env);
-            XRHand::Initialize(env);
             XRPlane::Initialize(env);
-            XRMesh::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
@@ -3096,19 +2113,7 @@ namespace Babylon
             XRSession::Initialize(env);
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
-            XR::Initialize(env, impl);
-
-            return {impl};
-        }
-
-        void NativeXr::UpdateWindow(void* windowPtr)
-        {
-            m_impl->UpdateWindow(windowPtr);
-        }
-
-        void NativeXr::SetSessionStateChangedCallback(std::function<void(bool)> callback)
-        {
-            m_impl->SetSessionStateChangedCallback(std::move(callback));
+            XR::Initialize(env);
         }
     }
 }
