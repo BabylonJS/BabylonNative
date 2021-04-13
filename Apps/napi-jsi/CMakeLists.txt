@@ -4,12 +4,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(napi-jsi)
 
-# Shared component source will be built in this UWP flavor
-# We can support other flavors if the need arises, but a UWP build should get us the first wave of napi-jsi build coverage
-set(BABYLON_NATIVE_PLATFORM "UWP")
-set(CMAKE_SYSTEM_NAME "WindowsStore")
-set(CMAKE_SYSTEM_VERSION "10.0")
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

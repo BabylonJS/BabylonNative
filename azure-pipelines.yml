@@ -319,7 +319,7 @@ jobs:
       cd Apps/napi-jsi
       mkdir build
       cd build
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
+      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DBABYLON_NATIVE_PLATFORM=UWP -A x64
     displayName: 'Generate napi-jsi solution'
 
   - task: VSBuild@1
