@@ -22,17 +22,17 @@ jobs:
       vmImage: 'macOS-10.14'
       xCodeVersion: 11.3.1
 
-#  - template: .github/jobs/macos.yml
-#    parameters:
-#      name: MacOS_Xcode12
-#      vmImage: 'macOS-10.15'
-#      xCodeVersion: 12.4
-#
-#  - template: .github/jobs/ios.yml
-#    parameters:
-#      name: iOS_Xcode12
-#      vmImage: 'macOS-10.15'
-#      xCodeVersion: 12.4
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode12
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
+
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode12
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
 
 # WIN32
   - template: .github/jobs/win32.yml
