@@ -15,7 +15,7 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    - template: macos_cmake.yml
+    - template: cmake.yml
       parameters:
         vmImage: ${{ parameters.vmImage }}
 

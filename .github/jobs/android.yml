@@ -15,22 +15,9 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-    - template: macos_cmake.yml
+    - template: cmake.yml
       parameters:
         vmImage: ${{ parameters.vmImage }}
-      
-    - script: |
-        wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
-        sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
-        sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
-        sudo rm /usr/local/bin/cmake
-        sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
-        cmake --version
-        sudo apt-get update
-        sudo apt-get install ninja-build
-      condition: contains('${{ parameters.vmImage }}', 'ubuntu')
-      displayName: 'Install Prerequisites'
 
     - script: |
         cd Apps/Playground/Android
