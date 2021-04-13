@@ -2962,6 +2962,7 @@ namespace Babylon
                         InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
                         InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
                         InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
+                        InstanceMethod("getNativeAnchor", &XR::GetNativeAnchor),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
                     });
 
@@ -3055,6 +3056,24 @@ namespace Babylon
                 if (!nativeExtensionType.empty())
                 {
                     return Napi::String::From(info.Env(), nativeExtensionType);
+                }
+
+                return info.Env().Undefined();
+            }
+
+            Napi::Value GetNativeAnchor(const Napi::CallbackInfo& info)
+            {
+                if (info.Length() != 1 ||
+                    !info[0].IsObject())
+                {
+                    throw std::runtime_error{"A single object argument is required."};
+                }
+
+                const auto xrAnchor{ XRAnchor::Unwrap(info[0].ToObject()) };
+                const auto anchor{ xrAnchor->GetNativeAnchor() };
+                if (anchor.NativeAnchor != nullptr)
+                {
+                    return Napi::Number::From(info.Env(), reinterpret_cast<uintptr_t>(anchor.NativeAnchor));
                 }
 
                 return info.Env().Undefined();
