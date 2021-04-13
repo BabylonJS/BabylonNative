@@ -10,7 +10,6 @@
 #include <Shared/InputManager.h>
 
 #include <Babylon/AppRuntime.h>
-
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
@@ -119,7 +118,7 @@ namespace
 
         runtime->Dispatch([](Napi::Env env) {
             graphics->AddToJavaScript(env);
-            
+
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
             });
