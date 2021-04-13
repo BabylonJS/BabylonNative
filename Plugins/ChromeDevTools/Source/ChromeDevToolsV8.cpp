@@ -26,25 +26,28 @@ namespace Babylon::Plugins::Internal
         void StartInspector(const Napi::CallbackInfo &info)
         {
             if (info.Length() == 0)
-                throw Napi::Error::New(info.Env(), "You must at least specify a port to start the DevTools inspector.");
-
-            if (m_inspector->IsStarted())
             {
-                StopInspector();
+                throw Napi::Error::New(info.Env(), "You must at least specify a port to start the DevTools inspector.");
             }
 
             const auto port = static_cast<unsigned short>(info[0].As<Napi::Number>().Int32Value());
 
             std::string appName;
             if (info.Length() > 1 && info[1].IsString())
+            {
                 appName = info[1].As<Napi::String>().Utf8Value();
+            }
+
+            if (m_inspector->IsStarted())
+            {
+                StopInspector();
+            }
             
             m_inspector->start(port, appName);
         }
 
-        void StopInspector(const Napi::CallbackInfo& info)
+        void StopInspector(const Napi::CallbackInfo&)
         {
-            (void)info;
             StopInspector();
         }
 
@@ -52,14 +55,8 @@ namespace Babylon::Plugins::Internal
         {
             m_inspector->stop();
         }
-
-        ~ChromeDevToolsV8()
-        {
-            if (m_inspector != nullptr)
-                StopInspector();
-        }
     protected:
-        std::unique_ptr<Babylon::V8InspectorAgent> m_inspector = nullptr;
+        std::unique_ptr<Babylon::V8InspectorAgent> m_inspector{};
     };
 
     class ChromeDevTools::Impl : public ChromeDevToolsV8

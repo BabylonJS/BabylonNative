@@ -33,7 +33,9 @@ namespace Babylon::Polyfills::Internal
         Console::Unwrap(console)->m_callback = std::move(callback);
         const auto existingConsole = env.Global().Get(JS_INSTANCE_NAME);
         if (!existingConsole.IsUndefined())
+        {
             Console::Unwrap(console)->m_engineConsole = std::make_unique<Napi::FunctionReference>(Napi::Persistent(existingConsole.As<Napi::Function>()));
+        }
         env.Global().Set(JS_INSTANCE_NAME, console);
     }
 

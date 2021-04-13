@@ -41,7 +41,7 @@ namespace Babylon
                 }
             }
 
-            void AddPlatformToJavascript(Napi::Env env)
+            void AddPlatformToJavaScript(Napi::Env env)
             {
                 JsRuntime::NativeObject::GetFromJavaScript(env)
                     .Set("_V8Platform", Napi::External<v8::Platform>::New(env, m_platform.get()));
@@ -54,8 +54,6 @@ namespace Babylon
         };
 
         std::unique_ptr<Module> Module::s_module;
-
-        unsigned short s_inspectorPort = 0;
     }
 
     void AppRuntime::RunEnvironmentTier(const char* executablePath)
@@ -75,7 +73,7 @@ namespace Babylon
 
             Napi::Env env = Napi::Attach(context);
             Dispatch([](Napi::Env env) {
-                Module::Instance().AddPlatformToJavascript(env);
+                Module::Instance().AddPlatformToJavaScript(env);
             });
             Run(env);
             Napi::Detach(env);

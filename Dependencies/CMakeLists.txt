@@ -1,6 +1,3 @@
-# cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
-cmake_minimum_required(VERSION 3.18)
-
 # -------------------------------- CMakeExtensions --------------------------------
 add_subdirectory(CMakeExtensions)
 
@@ -133,6 +130,7 @@ endif()
 add_subdirectory(UrlLib)
 set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 
-# --------------------------- v8 inspector ---------------------------
+# --------------------------- v8inspector ---------------------------
+# Dependencies: none
 add_subdirectory(v8inspector)
 set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)

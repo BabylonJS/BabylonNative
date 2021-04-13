@@ -7,11 +7,6 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         "Source/WorkQueue.cpp"
         "Source/WorkQueue.h")
 
-    set(ENGINE_APP_RUNTIME_HEADER "Source/${NAPI_JAVASCRIPT_ENGINE}/Babylon/AppRuntime${NAPI_JAVASCRIPT_ENGINE}.h")
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${ENGINE_APP_RUNTIME_HEADER}")
-        set(SOURCES ${SOURCES} ${ENGINE_APP_RUNTIME_HEADER})
-    endif()
-
     if(APPLE)
         set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.mm")
     else()
@@ -24,12 +19,6 @@ if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     target_include_directories(AppRuntime
         PRIVATE "Include/Babylon"
         INTERFACE "Include")
-
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${ENGINE_APP_RUNTIME_HEADER}")
-        target_include_directories(AppRuntime 
-            PRIVATE "Source/${NAPI_JAVASCRIPT_ENGINE}/Babylon"
-            INTERFACE "Source/${NAPI_JAVASCRIPT_ENGINE}")
-    endif()
 
     if(UNIX AND NOT APPLE AND NOT ANDROID)
         target_include_directories(AppRuntime INTERFACE "/usr/include/webkitgtk-4.0/")

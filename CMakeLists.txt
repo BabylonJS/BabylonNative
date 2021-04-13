@@ -1,4 +1,3 @@
-# cmake 3.15.3+ because of a c++ regression when swift is enabled
 # cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
