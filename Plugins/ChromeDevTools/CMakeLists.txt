@@ -1,5 +1,7 @@
 set(SOURCES 
-    "Include/Babylon/Plugins/ChromeDevTools.h")
+    "Include/Babylon/Plugins/ChromeDevTools.h"
+    "Source/ChromeDevToolsImpl.h"
+    "Source/ChromeDevTools.cpp")
 
 set(CHROME_DEVTOOLS_SUPPORTED_ENGINES "V8")
 

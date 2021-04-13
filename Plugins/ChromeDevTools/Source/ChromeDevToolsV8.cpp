@@ -1,35 +1,16 @@
-#include "ChromeDevTools.h"
+#include "ChromeDevToolsImpl.h"
 
 #include <V8InspectorAgent.h>
 #include <Babylon/JsRuntime.h>
 
 namespace Babylon::Plugins::Internal
 {
-    class ChromeDevTools : public Napi::ObjectWrap<ChromeDevTools>
+    class ChromeDevToolsV8
     {
     public:
-        static constexpr auto JS_INSTANCE_NAME = "chromeDevTools";
-
-        static void Initialize(Napi::Env env)
+        ChromeDevToolsV8(const Napi::Env& env)
         {
-            Napi::HandleScope scope{env};
-
-            Napi::Function func = ChromeDevTools::DefineClass(
-                env,
-                JS_INSTANCE_NAME,
-                {
-                    ChromeDevTools::InstanceMethod("areSupported", &ChromeDevTools::AreSupported),
-                    ChromeDevTools::InstanceMethod("startInspector", &ChromeDevTools::StartInspector),
-                    ChromeDevTools::InstanceMethod("stopInspector", &ChromeDevTools::StopInspector),
-                });
-            auto singleton = func.New({});
-            JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_INSTANCE_NAME, singleton);
-        }
-
-        ChromeDevTools(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<ChromeDevTools>{info}
-        {
-            JsRuntime::GetFromJavaScript(info.Env()).Dispatch([this](Napi::Env env) {
+            JsRuntime::GetFromJavaScript(env).Dispatch([this](Napi::Env env) {
                 auto& v8Platform = *JsRuntime::NativeObject::GetFromJavaScript(env).Get("_V8Platform").As<Napi::External<v8::Platform>>().Data();
                 auto v8Isolate = v8::Isolate::GetCurrent();
                 auto v8Context = v8Isolate->GetCurrentContext();
@@ -37,7 +18,7 @@ namespace Babylon::Plugins::Internal
             });
         }
 
-        Napi::Value AreSupported(const Napi::CallbackInfo& info)
+        Napi::Value SupportsInspector(const Napi::CallbackInfo& info)
         {
             return Napi::Boolean::From(info.Env(), true);
         }
@@ -72,21 +53,42 @@ namespace Babylon::Plugins::Internal
             m_inspector->stop();
         }
 
-        ~ChromeDevTools()
+        ~ChromeDevToolsV8()
         {
             if (m_inspector != nullptr)
                 StopInspector();
         }
-
-    private:
+    protected:
         std::unique_ptr<Babylon::V8InspectorAgent> m_inspector = nullptr;
     };
-}
 
-namespace Babylon::Plugins::ChromeDevTools
-{
-    void Initialize(Napi::Env env)
+    class ChromeDevTools::Impl : public ChromeDevToolsV8
     {
-        Babylon::Plugins::Internal::ChromeDevTools::Initialize(env);
+        public:
+            Impl(const Napi::Env& env) 
+                : ChromeDevToolsV8(env)
+            {
+            }
+    };
+
+    ChromeDevTools::ChromeDevTools(const Napi::CallbackInfo& info)
+        : Napi::ObjectWrap<ChromeDevTools>{info}
+        , m_impl{std::make_unique<ChromeDevTools::Impl>(info.Env())}
+    {
+    }
+    
+    Napi::Value ChromeDevTools::SupportsInspector(const Napi::CallbackInfo& info)
+    {
+        return m_impl->SupportsInspector(info);
+    }
+
+    void ChromeDevTools::StartInspector(const Napi::CallbackInfo& info)
+    {
+        m_impl->StartInspector(info);
+    }
+
+    void ChromeDevTools::StopInspector(const Napi::CallbackInfo& info)
+    {
+        m_impl->StopInspector(info);
     }
 }
