@@ -305,9 +305,9 @@ jobs:
     vmImage: 'windows-latest'
 
   steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
+    checkout: self
+    clean: true
+    submodules: true
 
   - task: Npm@1
     inputs:
