@@ -305,7 +305,7 @@ jobs:
     vmImage: 'windows-latest'
 
   steps:
-    checkout: self
+  - checkout: self
     clean: true
     submodules: true
 
