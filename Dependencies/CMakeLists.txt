@@ -132,5 +132,8 @@ set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 
 # --------------------------- v8inspector ---------------------------
 # Dependencies: none
-add_subdirectory(v8inspector)
-set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
+# Currently only supported on Win32 x86/x64
+if (WIN32 AND NOT (WINDOWS_STORE OR CMAKE_GENERATOR_PLATFORM_UPPER MATCHES "ARM.*"))
+    add_subdirectory(v8inspector)
+    set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
+endif()
