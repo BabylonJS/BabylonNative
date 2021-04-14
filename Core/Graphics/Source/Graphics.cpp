@@ -12,17 +12,17 @@ namespace Babylon
 
     Graphics::~Graphics() = default;
 
-    void Graphics::UpdateWindow(const GraphicsConfiguration& config)
+    void Graphics::UpdateWindow(const WindowConfiguration& config)
     {
-        m_impl->SetNativeWindow(config);
+        m_impl->UpdateWindow(config);
     }
 
     void Graphics::UpdateContext(const ContextConfiguration& config)
     {
-        m_impl->SetNativeContext(config);
+        m_impl->UpdateContext(config);
     }
 
-    std::unique_ptr<Graphics> Graphics::CreateGraphics(const GraphicsConfiguration& config)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const WindowConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateWindow(config);
@@ -32,7 +32,7 @@ namespace Babylon
 
     std::unique_ptr<Graphics> Graphics::CreateGraphics(const ContextConfiguration& config)
     {
-        std::unique_ptr<Graphics> graphics{ new Graphics() };
+        std::unique_ptr<Graphics> graphics{new Graphics()};
         graphics->UpdateContext(config);
         return graphics;
     }

@@ -8,7 +8,7 @@ namespace Babylon
     using WindowType = ANativeWindow*;
     using ContextType = EGLContext;
 
-    struct GraphicsConfiguration
+    struct WindowConfiguration
     {
         WindowType WindowPtr;
         size_t Width;

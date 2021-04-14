@@ -8,7 +8,7 @@ using namespace Windows::Graphics::Display;
 
 namespace Babylon
 {
-    void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
     {
         // Use windowTypePtr == 2 for xaml swap chain panels
         pd.ndt = reinterpret_cast<void*>(2);

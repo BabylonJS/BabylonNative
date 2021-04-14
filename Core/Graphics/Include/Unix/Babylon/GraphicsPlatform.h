@@ -8,7 +8,7 @@ namespace Babylon
     using WindowType = void*;
     using ContextType = GLXContext;
 
-    struct GraphicsConfiguration
+    struct WindowConfiguration
     {
         WindowType WindowPtr;
         size_t Width;

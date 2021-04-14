@@ -7,7 +7,7 @@ namespace Babylon
     using WindowType = MTKView*;
     using ContextType = id<MTLDevice>;
 
-    struct GraphicsConfiguration
+    struct WindowConfiguration
     {
         WindowType WindowPtr;
         size_t Width;

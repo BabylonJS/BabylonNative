@@ -14,11 +14,10 @@ namespace Babylon
     public:
         ~Graphics();
 
-        static std::unique_ptr<Graphics> CreateGraphics(const GraphicsConfiguration& config);
+        static std::unique_ptr<Graphics> CreateGraphics(const WindowConfiguration& config);
         static std::unique_ptr<Graphics> CreateGraphics(const ContextConfiguration& config);
 
-        void UpdateWindow(const GraphicsConfiguration& config);
-        void UpdateContext(const ContextConfiguration& config);
+        void UpdateWindow(const WindowConfiguration& config);
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -41,6 +40,8 @@ namespace Babylon
 
         Graphics(const Graphics&) = delete;
         Graphics(Graphics&&) = delete;
+
+        void UpdateContext(const ContextConfiguration& config);
 
         float UpdateDevicePixelRatio();
 
