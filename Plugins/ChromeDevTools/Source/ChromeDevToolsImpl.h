@@ -5,6 +5,7 @@ namespace Babylon::Plugins::Internal
     class ChromeDevTools : public Napi::ObjectWrap<ChromeDevTools>
     {
         class Impl;
+
     public:
         static void Initialize(Napi::Env env);
         ChromeDevTools(const Napi::CallbackInfo& info);
@@ -12,6 +13,8 @@ namespace Babylon::Plugins::Internal
         Napi::Value SupportsInspector(const Napi::CallbackInfo& info);
         void StartInspector(const Napi::CallbackInfo &info);
         void StopInspector(const Napi::CallbackInfo& info);
+
+    private:
         std::unique_ptr<Impl> m_impl;
     };
 }
