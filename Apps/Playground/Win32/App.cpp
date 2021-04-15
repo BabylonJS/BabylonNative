@@ -14,6 +14,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Polyfills/Console.h>
@@ -136,6 +137,8 @@ namespace
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
+
+            Babylon::Plugins::ChromeDevTools::Initialize(env);
 
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
