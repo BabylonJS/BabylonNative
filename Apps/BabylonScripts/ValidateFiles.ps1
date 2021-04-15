@@ -3,7 +3,7 @@ Write-Host "Installing npm packages for comparison..."
 npm install
 Pop-Location
 
-$files = "babylon.max.js", "babylon.gui.js", "babylonjs.materials.js"
+$files = "babylon.max.js", "babylon.max.js.map", "babylon.module.d.ts", "babylon.gui.js", "babylonjs.materials.js"
 $succeeded = $true
 foreach ($file in $files)
 {

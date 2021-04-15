@@ -2,7 +2,7 @@ Push-Location $PSScriptRoot
 Write-Host "Installing npm packages..."
 npm install
 
-$files = "babylon.max.js", "babylon.gui.js", "babylonjs.materials.js"
+$files = "babylon.max.js", "babylon.max.js.map", "babylon.module.d.ts", "babylon.gui.js", "babylonjs.materials.js"
 foreach ($file in $files)
 {
     $localFile = "$PSScriptRoot\$file"
