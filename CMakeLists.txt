@@ -1,5 +1,5 @@
 # cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18...3.19.8)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(BabylonNative)

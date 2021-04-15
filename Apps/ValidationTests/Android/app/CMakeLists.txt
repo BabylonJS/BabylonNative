@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13.2)
+cmake_minimum_required(VERSION 3.13.2...3.19.8)
 # set targetPlatform, will be passed in from gradle when this sample is completed
 # openGL Supportability
 # platform         status
