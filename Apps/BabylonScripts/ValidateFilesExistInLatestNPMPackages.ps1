@@ -1,6 +1,7 @@
 Push-Location $PSScriptRoot
 Write-Host "Installing npm packages for comparison..."
 npm install
+Pop-Location
 
 $files = "babylon.max.js", "babylon.gui.js", "babylonjs.materials.js"
 $succeeded = $true
@@ -18,8 +19,6 @@ foreach ($file in $files)
         Write-Host "$file matched the file in the most recent npm preview package ($fileInPackage)" -ForegroundColor Green  
     }
 }
-
-Pop-Location
 
 if (!$succeeded)
 {

@@ -8,6 +8,7 @@ pr:
     - Apps\BabylonScripts\babylon.max.js
     - Apps\BabylonScripts\babylon.gui.js
     - Apps\BabylonScripts\babylonjs.materials.js
+    - Apps\BabylonScripts\babylonjs.package.json
 
 jobs:
 - job: BabylonScripts
