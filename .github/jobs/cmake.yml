@@ -1,0 +1,32 @@
+parameters:
+  vmImage: ''
+
+# Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
+# On Mac, Bintray end of service makes the use of Homebrew to be difficult. 
+# Using direct download instead to not be dependant on a 3rd party service.
+
+steps:
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-macos-universal.tar.gz
+      sudo mkdir -p /opt/cmake
+      sudo tar xvzf cmake-$(CMAKE_VERSION)-macos-universal.tar.gz -C /opt/cmake
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-macos-universal/CMake.app/contents/bin/cmake /usr/local/bin/cmake
+      wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
+      unzip ninja-mac.zip
+      sudo cp -v ninja /usr/local/bin
+      cmake --version
+    displayName: 'CMake version'
+    condition: contains('${{ parameters.vmImage }}', 'macOS')
+
+  - script: |
+      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
+      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
+      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
+      sudo rm /usr/local/bin/cmake
+      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
+      sudo apt-get update
+      sudo apt-get install ninja-build
+      cmake --version
+    condition: contains('${{ parameters.vmImage }}', 'ubuntu')
+    displayName: 'CMake version'

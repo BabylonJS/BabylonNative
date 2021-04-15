@@ -1,0 +1,47 @@
+parameters:
+  name: ''
+  vmImage: ''
+  JSEngine: ''
+  macOSCodename: ''
+  
+jobs:
+  - job: ${{ parameters.name }}
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+      
+    steps:
+    - script: |
+        git submodule update --init --recursive
+      displayName: 'Checkout dependencies'
+
+    - template: cmake.yml
+      parameters:
+        vmImage: ${{ parameters.vmImage }}
+
+    - script: |
+        cd Apps/Playground/Android
+        npm install
+        cd ../../ValidationTests/Android
+        npm install
+      displayName: 'Install JS engine NPMs'
+
+    - task: Gradle@2
+      inputs:
+          workingDirectory: 'Apps/Playground/Android'
+          gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+          gradleOptions: '-Xmx1536m'
+          options: '-PJSEngine=${{ parameters.JSEngine }}'
+          publishJUnitResults: false
+          tasks: 'assembleRelease'
+      displayName: 'Build Playground ${{ parameters.JSEngine }}'
+
+    - task: Gradle@2
+      inputs:
+          workingDirectory: 'Apps/ValidationTests/Android'
+          gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
+          gradleOptions: '-Xmx1536m'
+          options: '-PJSEngine=${{ parameters.JSEngine }}'
+          publishJUnitResults: false
+          tasks: 'assembleRelease'
+      displayName: 'Build ValidationTests ${{ parameters.JSEngine }}'
