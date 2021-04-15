@@ -115,7 +115,7 @@ jobs:
       JSEngine: v8android
 
 # napi-jsi
-  - template: .github/jobs/napijsi.yml
+  - template: .github/jobs/uwp_napijsi.yml
     parameters:
       name: UWP_napi_jsi_x64
       vmImage: 'windows-latest'
