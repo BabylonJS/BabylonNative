@@ -36,7 +36,7 @@ function Restore-CMakeProject {
 
     Write-Host "Running cmake for $Platform dependencies" -ForegroundColor Cyan
 
-    $BuildDir = "$PSScriptRoot\..\..\submodules\BabylonNative\Build_uwp_$Platform"
+    $BuildDir = "$PSScriptRoot\..\..\Build\uwp_$Platform"
     if (!(Test-Path $BuildDir)) {
       mkdir $BuildDir
     }

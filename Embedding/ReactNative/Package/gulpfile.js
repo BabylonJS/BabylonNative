@@ -53,23 +53,23 @@ const initializeSubmodulesWindowsAgent = async () => {
 }
 
 const makeUWPProjectx86 = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86');
+  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_x86');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_x86');
 }
 
 const makeUWPProjectx64 = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64');
+  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_x64');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_x64');
 }
 
 const makeUWPProjectARM = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm');
+  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_arm');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_arm');
 }
 
 const makeUWPProjectARM64 = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm64 ./../../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64');
+  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_arm64');
+  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm64 ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_arm64');
 }
 
 const makeUWPProject = gulp.parallel(
@@ -252,49 +252,49 @@ const copyCommonFilesUWP = () => {
 }
 
 const copyx86DebugUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86/**/Debug/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_x86/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/x86/Debug'));
 }
 
 const copyx86ReleaseUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x86/**/Release/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_x86/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/x86/Release'));
 }
 
 const copyx64DebugUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64/**/Debug/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_x64/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/x64/Debug'));
 }
 
 const copyx64ReleaseUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_x64/**/Release/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_x64/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/x64/Release'));
 }
 
 const copyARMDebugUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm/**/Debug/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_arm/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/arm/Debug'));
 }
 
 const copyARMReleaseUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm/**/Release/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_arm/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/arm/Release'));
 }
 
 const copyARM64DebugUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64/**/Debug/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_arm64/**/Debug/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/arm64/Debug'));
 }
 
 const copyARM64ReleaseUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Build_uwp_arm64/**/Release/**/*.{lib,pri}')
+  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_arm64/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('Assembled-Windows/windows/libs/arm64/Release'));
 }

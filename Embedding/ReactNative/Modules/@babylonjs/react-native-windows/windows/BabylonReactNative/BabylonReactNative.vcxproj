@@ -29,11 +29,11 @@
   </PropertyGroup>
   <PropertyGroup Label="BabylonReactNativeProps">
     <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native')">$(ProjectDir)\..\..\..\react-native</BabylonReactNativeDir>
-    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\submodules\BabylonNative</BabylonNativeDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_x64\</BabylonNativeBuildDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_x86\</BabylonNativeBuildDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_arm\</BabylonNativeBuildDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\Build_uwp_arm64\</BabylonNativeBuildDir>
+    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\Build</BabylonNativeDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_x64\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_x86\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_arm\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_arm64\</BabylonNativeBuildDir>
     <BabylonNativeLibsDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' == ''">..\libs\x64\</BabylonNativeLibsDir>
     <BabylonNativeLibsDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' == ''">..\libs\x86\</BabylonNativeLibsDir>
     <BabylonNativeLibsDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' == ''">..\libs\arm\</BabylonNativeLibsDir>
