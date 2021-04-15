@@ -1,4 +1,3 @@
-# BabylonScripts specific trigger
 parameters:
   name: ''
   vmImage: ''
