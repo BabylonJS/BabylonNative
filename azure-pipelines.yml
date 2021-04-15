@@ -113,3 +113,9 @@ jobs:
       name: Android_MacOS_V8
       vmImage: 'macOS-10.14'
       JSEngine: v8android
+
+#Babylon.js Scripts
+  - template: .github/jobs/scripts.yml
+    parameters:
+      name: BabylonJS_Scripts_Validation
+      vmImage: 'windows-latest'
