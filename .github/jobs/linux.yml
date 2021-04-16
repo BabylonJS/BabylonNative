@@ -49,7 +49,6 @@ jobs:
         artifactName: '${{ parameters.name }} Rendered Pictures'
         pathtoPublish: 'build/Apps/ValidationTests/Results'
       displayName: 'Publish Tests ${{ parameters.name }} Results'
-      condition: succeeded()
     - task: PublishBuildArtifacts@1
       inputs:
         artifactName: '${{ parameters.name }} Error Pictures'
