@@ -114,6 +114,13 @@ jobs:
       vmImage: 'macOS-10.14'
       JSEngine: v8android
 
+# napi-jsi
+  - template: .github/jobs/uwp_napijsi.yml
+    parameters:
+      name: UWP_napi_jsi_x64
+      vmImage: 'windows-latest'
+      platform: x64
+
 # Babylon.js Scripts
   - template: .github/jobs/scripts.yml
     parameters:
