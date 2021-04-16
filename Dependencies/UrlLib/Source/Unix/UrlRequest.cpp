@@ -174,7 +174,15 @@ namespace UrlLib
             if (curl)
             {
                 data.clear();
-                curl_easy_setopt(curl, CURLOPT_URL, m_url.data());
+                
+                // Curl character replacement pathes whole URL, doing manually for now
+                std::string url = m_url;
+                while(url.find(" ") != std::string::npos)
+                {
+                    url.replace(url.find(" "), 1, "%20");
+                }
+
+                curl_easy_setopt(curl, CURLOPT_URL, url.data());
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
                 curl_write_callback callback = [](char* buffer, size_t /*size*/, size_t nitems, void* userData) {
