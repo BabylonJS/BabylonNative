@@ -77,7 +77,6 @@ namespace Babylon
         void Exit(const Napi::CallbackInfo& info)
         {
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
-            doExit = true;
             errorCode = exitCode;
 #if ANDROID
 #else
