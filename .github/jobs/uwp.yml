@@ -29,5 +29,5 @@ jobs:
         msbuildArgs: '/p:AppxPackageSigningEnabled=false'
       displayName: 'Build UWP_${{ parameters.platform }}'
 
-    - template: uwp_validation.yml
-      condition: ${{ parameters.validationTests }}
+    - ${{ if eq(parameters.validationTests, true) }}:
+      - template: uwp_validation.yml
