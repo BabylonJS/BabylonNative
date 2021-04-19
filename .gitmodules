@@ -25,3 +25,9 @@
 [submodule "Dependencies/xr/Dependencies/OpenXR-MixedReality"]
 	path = Dependencies/xr/Dependencies/OpenXR-MixedReality
 	url = https://github.com/microsoft/OpenXR-MixedReality.git
+[submodule "Dependencies/asio"]
+	path = Dependencies/v8inspector/Dependencies/asio
+	url = https://github.com/chriskohlhoff/asio.git
+[submodule "Dependencies/llhttp"]
+	path = Dependencies/v8inspector/Dependencies/llhttp
+	url = https://github.com/nodejs/llhttp
