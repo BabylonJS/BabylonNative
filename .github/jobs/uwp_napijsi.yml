@@ -35,5 +35,5 @@ jobs:
         platform: ${{ parameters.platform }}
       displayName: 'Build UWP ${{ parameters.platform }} napi-jsi'
 
-    - template: uwp_validation.yml
-      condition: ${{ parameters.validationTests }}
+    - ${{ if eq(parameters.validationTests, true) }}:
+      - template: uwp_validation.yml
