@@ -177,6 +177,7 @@ namespace xr
         static constexpr float DEFAULT_DEPTH_NEAR_Z{ 0.5f };
         static constexpr float DEFAULT_DEPTH_FAR_Z{ 1000.f };
         static constexpr uint32_t DEFAULT_CONTROLLER_BUTTONS{ 4 };
+        static constexpr uint32_t SPECIAL_CONTROLLER_BUTTONS{ 1 };
         static constexpr uint32_t DEFAULT_CONTROLLER_AXES{ 4 };
 
         class Session
@@ -209,7 +210,10 @@ namespace xr
                     };
 
                     std::array<float, DEFAULT_CONTROLLER_AXES> Axes;
-                    std::array<Button, DEFAULT_CONTROLLER_BUTTONS> Buttons;
+                    std::array<Button, DEFAULT_CONTROLLER_BUTTONS + SPECIAL_CONTROLLER_BUTTONS> Buttons;
+
+                    size_t AxesUsed{ DEFAULT_CONTROLLER_AXES };
+                    size_t ButtonsUsed{ DEFAULT_CONTROLLER_BUTTONS + SPECIAL_CONTROLLER_BUTTONS };
                 };
 
                 struct View

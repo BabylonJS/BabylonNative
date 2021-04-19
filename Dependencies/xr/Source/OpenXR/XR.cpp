@@ -402,6 +402,7 @@ namespace xr
             static constexpr uint32_t SQUEEZE_BUTTON = 1;
             static constexpr uint32_t TRACKPAD_BUTTON = 2;
             static constexpr uint32_t THUMBSTICK_BUTTON = 3;
+            static constexpr uint32_t SPECIAL_BUTTON_1 = 4;
 
             static constexpr uint32_t TRACKPAD_X_AXIS = 0;
             static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
@@ -1632,6 +1633,8 @@ namespace xr
                         const auto& controllerInfo = sessionImpl.ControllerInfo;
                         auto& gamepadObject = inputSource.GamepadObject;
 
+                        gamepadObject.ButtonsUsed = DEFAULT_CONTROLLER_BUTTONS;
+
                         // Update gamepad data
                         if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
                             (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
@@ -1664,14 +1667,16 @@ namespace xr
                             const auto& controllerInfo = sessionImpl.ControllerInfo;
                             auto& gamepadObject = inputSource.GamepadObject;
 
+                            gamepadObject.AxesUsed = 0;
+
                             // Get interaction data
                             if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
-                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)))
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Pressed)))
                             {
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                                gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-                                gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
+                                gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Value = (gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Pressed);
+                                gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Touched = (gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Pressed);
 
                                 inputSource.HandTrackedThisFrame = true;
                             }
