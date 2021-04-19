@@ -2,6 +2,7 @@ parameters:
   name: ''
   vmImage: ''
   platform: ''
+  validationTests: False
   
 jobs:
   - job: ${{ parameters.name }}
@@ -29,9 +30,10 @@ jobs:
       displayName: 'Build UWP_${{ parameters.platform }}'
 
     - script: |
-        cd buildUWP_${{ parameters.platform }}\Apps\Playground
+        cd buildUWP_${{ parameters.platform }}\Apps\ValidationTests
         mkdir Results
         mkdir Errors
         cd RelWithDebInfo
-        Playground
+        ValidationTests
+      condition: ${{ parameters.validationTests }}
       displayName: 'Validation Tests'

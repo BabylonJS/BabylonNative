@@ -15,4 +15,26 @@ jobs:
       name: UWP_x86
       vmImage: 'windows-latest'
       platform: win32
+      validationTests: True
+  
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_x64
+      vmImage: 'windows-latest'
+      platform: x64
+      validationTests: True
+  
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64
+      vmImage: 'windows-latest'
+      platform: arm64
+      validationTests: False
 
+# napi-jsi
+  - template: .github/jobs/uwp_napijsi.yml
+    parameters:
+      name: UWP_napi_jsi_x64
+      vmImage: 'windows-latest'
+      platform: x64
+      validationTests: True
