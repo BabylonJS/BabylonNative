@@ -1,4 +1,4 @@
-if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR ANDROID)
+if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR ANDROID)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
@@ -12,7 +12,29 @@ set(SCRIPTS
     "Scripts/validation_native.js"
     "Scripts/config.json")
 
-if(WIN32)
+if(WINDOWS_STORE)
+    set(APPX_FILES "UWP/Package.appxmanifest" "UWP/TemporaryKey.pfx")
+    set_property(SOURCE ${APPX_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set(APPX_ASSETS
+        "UWP/Assets/LockScreenLogo.scale-200.png"
+        "UWP/Assets/SplashScreen.scale-200.png"
+        "UWP/Assets/Square44x44Logo.scale-200.png"
+        "UWP/Assets/Square44x44Logo.targetsize-24_altform-unplated.png"
+        "UWP/Assets/Square150x150Logo.scale-200.png"
+        "UWP/Assets/StoreLogo.png"
+        "UWP/Assets/Wide310x150Logo.scale-200.png")
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
+    set(SOURCES
+        ${SOURCES}
+        ${APPX_FILES}
+        ${APPX_ASSETS}
+        "UWP/App.cpp"
+        "UWP/App.h")
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
+    set(WIN32_EXECUTABLE TRUE)
+    add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+elseif(WIN32)
     set(SOURCES
         "Shared/TestUtils.h"
         "Win32/App.cpp"
@@ -78,6 +100,12 @@ if (UNIX AND NOT APPLE AND NOT ANDROID)
         PRIVATE stdc++fs)
 endif()
 
+if(WINDOWS_STORE)
+    target_compile_options(ValidationTests PRIVATE /ZW)
+    target_compile_options(ValidationTests PRIVATE /await)
+endif()
+
+
 target_link_to_dependencies(ValidationTests
     PRIVATE bgfx
     PRIVATE bimg
@@ -125,18 +153,24 @@ if(APPLE)
     endif()
 endif()
 
-foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
-    get_filename_component(SCRIPT_NAME "${script}" NAME)
-    # Copy scripts to the parent of the executable location since CMake can't use generator
-    # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
-    add_custom_command(
-        OUTPUT "Scripts/${SCRIPT_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
-        COMMENT "Copying ${SCRIPT_NAME}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
-endforeach()
+if(WINDOWS_STORE)
+    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+else()
+    foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
+        get_filename_component(SCRIPT_NAME "${script}" NAME)
+        # Copy scripts to the parent of the executable location since CMake can't use generator
+        # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
+        add_custom_command(
+            OUTPUT "Scripts/${SCRIPT_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
+            COMMENT "Copying ${SCRIPT_NAME}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
+    endforeach()
+endif()
 
 set_property(TARGET ValidationTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../BabylonScripts PREFIX Scripts FILES ${BABYLONSCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ValidationTests)
