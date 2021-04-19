@@ -37,3 +37,5 @@ jobs:
 
     - ${{ if eq(parameters.validationTests, true) }}:
       - template: uwp_validation.yml
+        parameters:
+          platform: ${{ parameters.platform }}
