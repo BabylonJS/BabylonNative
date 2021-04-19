@@ -27,3 +27,11 @@ jobs:
         configuration: 'RelWithDebInfo'
         msbuildArgs: '/p:AppxPackageSigningEnabled=false'
       displayName: 'Build UWP_${{ parameters.platform }}'
+
+    - script: |
+        cd buildUWP_${{ parameters.platform }}\Apps\Playground
+        mkdir Results
+        mkdir Errors
+        cd RelWithDebInfo
+        Playground
+      displayName: 'Validation Tests'
