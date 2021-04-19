@@ -31,4 +31,3 @@ jobs:
 #      vmImage: 'ubuntu-latest'
 #      CC: gcc-10
 #      CXX: g++-10
-
