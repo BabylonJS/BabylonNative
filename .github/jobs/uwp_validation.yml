@@ -1,3 +1,6 @@
+parameters:
+  platform: ''
+  
 steps:
   - script: |
       cd buildUWP_${{ parameters.platform }}\Apps\ValidationTests
