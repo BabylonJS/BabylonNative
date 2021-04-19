@@ -588,7 +588,7 @@ namespace xr
             anchorSpaceCreateInfo.poseInAnchorSpace = xr::math::Pose::Identity();
             CHECK_XRCMD(apiExtensions.xrCreateSpatialAnchorSpaceMSFT(session, &anchorSpaceCreateInfo, anchorSpace->Space.Put()));
 
-            const auto nativeAnchorPtr = reinterpret_cast<NativeAnchorPtr>(anchorSpace.get());
+            const auto nativeAnchorPtr = reinterpret_cast<NativeAnchorPtr>(anchorSpace->Anchor.Get());
             openXRAnchors[nativeAnchorPtr] = anchorSpace;
             return { pose, nativeAnchorPtr };
         }
@@ -1920,7 +1920,7 @@ namespace xr
 
     System::Session::~Session() {}
 
-    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* /*texturePointer*/)> /*deletedTextureCallback*/)
+    std::unique_ptr<System::Session::Frame> System::Session::GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> /*deletedTextureAsyncCallback*/)
     {
         return m_impl->GetNextFrame(shouldEndSession, shouldRestartSession);
     }
