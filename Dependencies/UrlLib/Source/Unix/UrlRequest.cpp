@@ -175,7 +175,7 @@ namespace UrlLib
             {
                 data.clear();
                 
-                char* url(curl, m_url.c_str(), 0);
+                char* url = curl_easy_escape(curl, m_url.c_str(), 0);
                 std::string urlEscaped = url;
                 curl_free(url);
 
