@@ -34,3 +34,6 @@ jobs:
         msbuildArgs: '/p:AppxPackageSigningEnabled=false'
         platform: ${{ parameters.platform }}
       displayName: 'Build UWP ${{ parameters.platform }} napi-jsi'
+
+    - template: uwp_validation.yml
+      condition: ${{ parameters.validationTests }}

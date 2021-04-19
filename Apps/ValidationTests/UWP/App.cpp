@@ -239,8 +239,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeXr::Initialize(env);
-
-        Babylon::TestUtils::CreateInstance(env, windowPtr);
     });
 
     Babylon::ScriptLoader loader{*m_runtime};

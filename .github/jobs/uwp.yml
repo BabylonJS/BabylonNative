@@ -29,11 +29,5 @@ jobs:
         msbuildArgs: '/p:AppxPackageSigningEnabled=false'
       displayName: 'Build UWP_${{ parameters.platform }}'
 
-    - script: |
-        cd buildUWP_${{ parameters.platform }}\Apps\ValidationTests
-        mkdir Results
-        mkdir Errors
-        cd RelWithDebInfo
-        ValidationTests
+    - template: uwp_validation.yml
       condition: ${{ parameters.validationTests }}
-      displayName: 'Validation Tests'

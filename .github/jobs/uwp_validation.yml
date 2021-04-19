@@ -1,0 +1,23 @@
+parameters:
+
+steps:
+  - script: |
+      cd buildUWP_${{ parameters.platform }}\Apps\ValidationTests
+      mkdir Results
+      mkdir Errors
+      cd RelWithDebInfo
+    displayName: 'Validation Tests'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'UWP_${{ parameters.platform }} Rendered Pictures'
+      pathtoPublish: 'buildUWP_${{ parameters.platform }}/Apps/ValidationTests/Results'
+    displayName: 'Publish Tests UWP_${{ parameters.platform }} Results'
+    condition: succeeded()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: 'UWP_${{ parameters.platform }} Error Pictures'
+      pathtoPublish: 'buildUWP_${{ parameters.platform }}/Apps/ValidationTests/Errors'
+    displayName: 'Publish Tests UWP_${{ parameters.platform }} Errors'
+    condition: failed()
