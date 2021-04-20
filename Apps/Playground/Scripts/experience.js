@@ -1,4 +1,7 @@
 /// <reference path="../../BabylonScripts/babylon.module.d.ts" />
+/// <reference path="../../BabylonScripts/babylonjs.loaders.module.d.ts" />
+/// <reference path="../../BabylonScripts/babylonjs.materials.module.d.ts" />
+/// <reference path="../../BabylonScripts/babylon.gui.module.d.ts" />
 
 var wireframe = false;
 var turntable = false;
