@@ -28,6 +28,21 @@ namespace
 #endif
     std::atomic<bool> doExit{};
     int errorCode{};
+
+#if defined(__cplusplus_winrt)
+    std::string WStringToString(const wchar_t* w, size_t size)
+    {
+        auto length{ ::WideCharToMultiByte(CP_UTF8, 0, w,static_cast<int>(size), nullptr, 0, nullptr, nullptr) };
+
+        std::string ret{};
+        if (length)
+        {
+            ret.resize(length);
+            ::WideCharToMultiByte(CP_UTF8, 0, w, static_cast<int>(size), &ret[0], length, nullptr, nullptr);
+        }
+        return ret;
+    }
+#endif
 }
 
 // can't externalize variable with ObjC++. Using a function instead.
@@ -238,19 +253,6 @@ namespace Babylon
 #endif
 #endif
             return Napi::Value::From(info.Env(), path);
-        }
-
-        std::string WStringToString(const wchar_t* w, size_t size)
-        {
-            auto length{::WideCharToMultiByte(CP_UTF8, 0, w,static_cast<int>(size), nullptr, 0, nullptr, nullptr)};
-
-            std::string ret{};
-            if (length)
-            {
-                ret.resize(length);
-                ::WideCharToMultiByte(CP_UTF8, 0, w, static_cast<int>(size), &ret[0], length, nullptr, nullptr);
-            }
-            return ret;
         }
 
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
