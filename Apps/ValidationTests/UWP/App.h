@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Shared/TestUtils.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 

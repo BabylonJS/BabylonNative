@@ -60,9 +60,6 @@ void App::Initialize(CoreApplicationView^ applicationView)
 // Called when the CoreWindow object is created (or re-created).
 void App::SetWindow(CoreWindow^ window)
 {
-    window->SizeChanged +=
-        ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>(this, &App::OnWindowSizeChanged);
-
     window->VisibilityChanged +=
         ref new TypedEventHandler<CoreWindow^, VisibilityChangedEventArgs^>(this, &App::OnVisibilityChanged);
 
@@ -73,12 +70,6 @@ void App::SetWindow(CoreWindow^ window)
 
     currentDisplayInformation->DpiChanged +=
         ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDpiChanged);
-
-    currentDisplayInformation->OrientationChanged +=
-        ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnOrientationChanged);
-
-    DisplayInformation::DisplayContentsInvalidated +=
-        ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
 }
 
 // Initializes scene resources, or loads a previously saved app state.
@@ -165,15 +156,6 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
     }
 }
 
-// Window event handlers.
-
-void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs^ args)
-{
-    size_t width = static_cast<size_t>(args->Size.Width * m_displayScale);
-    size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
-    m_graphics->UpdateSize(width, height);
-}
-
 void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
 {
     m_windowVisible = args->Visible;
@@ -192,18 +174,6 @@ void App::OnDpiChanged(DisplayInformation^ /*sender*/, Object^ /*args*/)
     DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     // resize event happens after. No need to force resize here.
-}
-
-void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)
-{
-    // TODO: Implement.
-    //m_deviceResources->SetCurrentOrientation(sender->CurrentOrientation);
-}
-
-void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
-{
-    // TODO: Implement.
-    //m_deviceResources->ValidateDevice();
 }
 
 void App::RestartRuntime(Windows::Foundation::Rect bounds)
@@ -239,6 +209,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeXr::Initialize(env);
+
+        Babylon::TestUtils::CreateInstance(env, windowPtr);
     });
 
     Babylon::ScriptLoader loader{*m_runtime};
@@ -250,4 +222,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/babylon.gui.js");
     loader.LoadScript("app:///Scripts/validation_native.js");
+
+    m_graphics->UpdateSize(600, 400);
 }

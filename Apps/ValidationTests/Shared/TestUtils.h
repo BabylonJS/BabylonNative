@@ -23,7 +23,7 @@
 
 namespace
 {
-#if !defined(__APPLE__) && !defined(ANDROID)
+#if !defined(__APPLE__) && !defined(ANDROID) && !defined(__cplusplus_winrt)
     std::filesystem::path GetModulePath();
 #endif
     std::atomic<bool> doExit{};
@@ -79,7 +79,10 @@ namespace Babylon
             const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
             doExit = true;
             errorCode = exitCode;
-#if ANDROID
+#if defined(__cplusplus_winrt)
+            // ceguille: I didn't find a better way to do it for UWP
+            exit(errorCode);
+#elif ANDROID
 #else
 #ifdef WIN32
             PostMessageW(_nativeWindowPtr, WM_DESTROY, 0, 0);
@@ -121,7 +124,9 @@ namespace Babylon
 
         void UpdateSize(const Napi::CallbackInfo& info)
         {
-#ifdef WIN32
+#if defined(__cplusplus_winrt)
+            (void)info;
+#elif WIN32
             const int32_t width = info[0].As<Napi::Number>().Int32Value();
             const int32_t height = info[1].As<Napi::Number>().Int32Value();
 
@@ -138,7 +143,8 @@ namespace Babylon
         void SetTitle(const Napi::CallbackInfo& info)
         {
             const auto title = info[0].As<Napi::String>().Utf8Value();
-#ifdef WIN32
+#if defined(__cplusplus_winrt)
+#elif WIN32
             SetWindowTextA(_nativeWindowPtr, title.c_str());
 #elif ANDROID
             (void)info;
@@ -216,7 +222,9 @@ namespace Babylon
 
         Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
         {
-#ifdef ANDROID
+#if defined(__cplusplus_winrt)
+            auto path = "app:///Scripts/";
+#elif ANDROID
             auto path = "app://";
 #else
 #ifdef __APPLE__
@@ -232,10 +240,27 @@ namespace Babylon
             return Napi::Value::From(info.Env(), path);
         }
 
+        std::string WStringToString(const wchar_t* w, size_t size)
+        {
+            auto length{::WideCharToMultiByte(CP_UTF8, 0, w,static_cast<int>(size), nullptr, 0, nullptr, nullptr)};
+
+            std::string ret{};
+            if (length)
+            {
+                ret.resize(length);
+                ::WideCharToMultiByte(CP_UTF8, 0, w, static_cast<int>(size), &ret[0], length, nullptr, nullptr);
+            }
+            return ret;
+        }
 
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
-#ifdef ANDROID
+#if defined(__cplusplus_winrt)
+            using namespace Windows::Storage;
+            StorageFolder^ localFolder = ApplicationData::Current->LocalFolder;
+            std::wstring wpath = localFolder->Path->Data();
+            std::string path{WStringToString(wpath.data(), wpath.size())};
+#elif ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
 #else
 #ifdef __APPLE__
