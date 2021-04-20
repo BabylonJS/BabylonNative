@@ -179,8 +179,8 @@ namespace
     {
         auto env = jsInputSource.Env();
         //Set Gamepad Object
-        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.ButtonsUsed);
-        for (size_t i = 0; i < inputSource.GamepadObject.ButtonsUsed; i++)
+        auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
         {
             auto gamepadButton = Napi::Object::New(env);
             auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Pressed);
@@ -193,8 +193,8 @@ namespace
         }
         jsGamepadObject.Set("buttons", gamepadButtons);
 
-        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.AxesUsed);
-        for (size_t i = 0; i < inputSource.GamepadObject.AxesUsed; i++)
+        auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.Axes.size());
+        for (size_t i = 0; i < inputSource.GamepadObject.Axes.size(); i++)
         {
             auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.Axes[i]);
             gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);

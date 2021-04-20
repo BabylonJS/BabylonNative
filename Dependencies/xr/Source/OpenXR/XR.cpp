@@ -398,11 +398,14 @@ namespace xr
 
         struct
         {
+            // default buttons on a device
             static constexpr uint32_t TRIGGER_BUTTON = 0;
             static constexpr uint32_t SQUEEZE_BUTTON = 1;
             static constexpr uint32_t TRACKPAD_BUTTON = 2;
             static constexpr uint32_t THUMBSTICK_BUTTON = 3;
-            static constexpr uint32_t SPECIAL_BUTTON_1 = 4;
+
+            // optional, hardware-specific buttons
+            static constexpr uint32_t CUSTOM_HARDWARE_BUTTON = 4;
 
             static constexpr uint32_t TRACKPAD_X_AXIS = 0;
             static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
@@ -1633,6 +1636,9 @@ namespace xr
                         const auto& controllerInfo = sessionImpl.ControllerInfo;
                         auto& gamepadObject = inputSource.GamepadObject;
 
+                        gamepadObject.Axes.resize(DEFAULT_CONTROLLER_AXES_COUNT);
+                        gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT);
+
                         // Update gamepad data
                         if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
                             (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
@@ -1665,17 +1671,18 @@ namespace xr
                             const auto& controllerInfo = sessionImpl.ControllerInfo;
                             auto& gamepadObject = inputSource.GamepadObject;
 
-                            gamepadObject.AxesUsed = 0;
-                            gamepadObject.ButtonsUsed = DEFAULT_CONTROLLER_BUTTONS + SPECIAL_CONTROLLER_BUTTONS;
+                            // Hands use a controller-specific 5th button, but have no axes
+                            gamepadObject.Axes.resize(0);
+                            gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT + 1);
 
                             // Get interaction data
                             if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
-                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Pressed)))
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed)))
                             {
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                                gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Value = (gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Pressed);
-                                gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Touched = (gamepadObject.Buttons[controllerInfo.SPECIAL_BUTTON_1].Pressed);
+                                gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed);
+                                gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed);
 
                                 inputSource.HandTrackedThisFrame = true;
                             }
@@ -1735,6 +1742,10 @@ namespace xr
                     {
                         const auto& controllerInfo = sessionImpl.ControllerInfo;
                         auto& gamepadObject = inputSource.GamepadObject;
+
+                        // Set up the default number of axes/buttons, despite not populating them
+                        gamepadObject.Axes.resize(DEFAULT_CONTROLLER_AXES_COUNT);
+                        gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT);
 
                         // Get interaction data for select
                         if ((m_impl->TryUpdateControllerBooleanAction(actionResources.DefaultGetSelectValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)))
