@@ -169,6 +169,7 @@ namespace
             }
             else
             {
+                // If hand joints aren't available on a hand input, send a null hand object
                 jsInputSource.Set("hand", env.Null());
             }
         }
@@ -2535,7 +2536,7 @@ namespace Babylon
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
 
-                        // Now that input Source is created, create a gamepad object if enabled for the input source
+                        // Now that input Source is created, create a gamepad object if enabled for the input source. Hand data also uses the gamepad component.
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
                         if (inputSource.GamepadTrackedThisFrame || inputSource.HandTrackedThisFrame)
                         {

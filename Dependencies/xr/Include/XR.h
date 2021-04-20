@@ -213,7 +213,7 @@ namespace xr
                     std::array<Button, DEFAULT_CONTROLLER_BUTTONS + SPECIAL_CONTROLLER_BUTTONS> Buttons;
 
                     size_t AxesUsed{ DEFAULT_CONTROLLER_AXES };
-                    size_t ButtonsUsed{ DEFAULT_CONTROLLER_BUTTONS + SPECIAL_CONTROLLER_BUTTONS };
+                    size_t ButtonsUsed{ DEFAULT_CONTROLLER_BUTTONS };
                 };
 
                 struct View

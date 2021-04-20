@@ -1633,8 +1633,6 @@ namespace xr
                         const auto& controllerInfo = sessionImpl.ControllerInfo;
                         auto& gamepadObject = inputSource.GamepadObject;
 
-                        gamepadObject.ButtonsUsed = DEFAULT_CONTROLLER_BUTTONS;
-
                         // Update gamepad data
                         if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
                             (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
@@ -1668,6 +1666,7 @@ namespace xr
                             auto& gamepadObject = inputSource.GamepadObject;
 
                             gamepadObject.AxesUsed = 0;
+                            gamepadObject.ButtonsUsed = DEFAULT_CONTROLLER_BUTTONS + SPECIAL_CONTROLLER_BUTTONS;
 
                             // Get interaction data
                             if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
