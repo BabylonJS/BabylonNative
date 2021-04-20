@@ -28,8 +28,3 @@ jobs:
         configuration: 'RelWithDebInfo'
         msbuildArgs: '/p:AppxPackageSigningEnabled=false'
       displayName: 'Build UWP_${{ parameters.platform }}'
-
-    - ${{ if eq(parameters.validationTests, true) }}:
-      - template: uwp_validation.yml
-        parameters:
-          platform: ${{ parameters.platform }}
