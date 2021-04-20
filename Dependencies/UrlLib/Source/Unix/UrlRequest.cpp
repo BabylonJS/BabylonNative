@@ -174,12 +174,58 @@ namespace UrlLib
             if (curl)
             {
                 data.clear();
-                
-                char* url = curl_easy_escape(curl, m_url.c_str(), 0);
-                std::string urlEscaped = url;
-                curl_free(url);
 
-                curl_easy_setopt(curl, CURLOPT_URL, urlEscaped.c_str());
+                CURLUcode rc;
+                CURLU *url = curl_url();
+                rc = curl_url_set(url, CURLUPART_URL, m_url.c_str(), 0);
+                if (rc != CURLUE_OK)
+                {
+                    throw std::runtime_error("CURL: Unable to build URL.");
+                }
+
+                char *scheme;
+                rc = curl_url_get(url, CURLUPART_SCHEME, &scheme, 0);
+                if (rc != CURLUE_OK)
+                {
+                    throw std::runtime_error("CURL: Unable to get URL scheme.");
+                }
+
+                if (strcmp(scheme, "file"))
+                {
+                    char *path;
+                    rc = curl_url_get(url, CURLUPART_PATH, &path, 0);
+                    if (rc != CURLUE_OK)
+                    {
+                        throw std::runtime_error("CURL: Unable to get URL path.");
+                    }
+
+                    char* pathEscaped = curl_easy_escape(curl, path, 0);
+                    rc = curl_url_set(url, CURLUPART_PATH, pathEscaped, 0);
+                    if (rc != CURLUE_OK)
+                    {
+                        throw std::runtime_error("CURL: Unable to set URL path.");
+                    }
+                    curl_free(pathEscaped);
+                    curl_free(path);
+
+                    char *urlEscaped;
+                    rc = curl_url_get(url, CURLUPART_URL, &urlEscaped, 0);
+                    if (rc != CURLUE_OK)
+                    {
+                        throw std::runtime_error("CURL: Unable to get URL string.");
+                    }
+
+                    curl_easy_setopt(curl, CURLOPT_URL, urlEscaped);
+                    curl_free(urlEscaped);
+                }
+                else
+                {
+                    curl_easy_setopt(curl, CURLOPT_URL, m_url.c_str());
+                }
+
+                curl_free(scheme);
+                curl_url_cleanup(url);
+
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
                 curl_write_callback callback = [](char* buffer, size_t /*size*/, size_t nitems, void* userData) {
