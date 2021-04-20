@@ -43,7 +43,7 @@ jobs:
         mkdir Errors
         mkdir Results
         ./ValidationTests
-      ignoreLASTEXITCODE: true
+      continueOnError: true
       displayName: 'Validation Tests'
 
     - task: PublishBuildArtifacts@1
