@@ -31,11 +31,11 @@ namespace Babylon::Plugins::Internal
 
     void ChromeDevTools::StartInspector(const unsigned short, const std::string&)
     {
-        throw std::exception("This method is currently unsupported on this JavaScript engine.");
+        throw std::runtime_error{"This method is currently unsupported on this JavaScript engine."};
     }
 
     void ChromeDevTools::StopInspector()
     {
-        throw std::exception("This method is currently unsupported on this JavaScript engine.");
+        throw std::runtime_error{"This method is currently unsupported on this JavaScript engine."};
     }
 }
