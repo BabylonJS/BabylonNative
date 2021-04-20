@@ -44,6 +44,8 @@ jobs:
         mkdir Results
         ./ValidationTests
       displayName: 'Validation Tests'
+      ignoreLASTEXITCODE: true
+
     - task: PublishBuildArtifacts@1
       inputs:
         artifactName: '${{ parameters.name }} Rendered Pictures'
