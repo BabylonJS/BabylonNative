@@ -1,40 +1,34 @@
-#include "ChromeDevToolsImpl.h"
+#include "ChromeDevTools.h"
 
 #include <Babylon/JsRuntime.h>
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins
 {
     class ChromeDevTools::Impl
     {
     };
 
-    std::unique_ptr<ChromeDevTools> ChromeDevTools::s_instance = nullptr;
-
-    void ChromeDevTools::Initialize(Napi::Env env)
+    ChromeDevTools ChromeDevTools::Initialize(Napi::Env)
     {
-        s_instance = std::make_unique<ChromeDevTools>(env);
+        return {nullptr};
     }
 
-    ChromeDevTools* ChromeDevTools::GetInstance()
-    {
-        return s_instance.get();
-    }
-
-    ChromeDevTools::ChromeDevTools(Napi::Env)
+    ChromeDevTools::ChromeDevTools(std::shared_ptr<ChromeDevTools::Impl> impl)
+        : m_impl{std::move(impl)}
     {
     }
 
-    bool ChromeDevTools::SupportsInspector()
+    bool ChromeDevTools::SupportsInspector() const
     {
         return false;
     }
 
-    void ChromeDevTools::StartInspector(const unsigned short, const std::string&)
+    void ChromeDevTools::StartInspector(const unsigned short, const std::string&) const
     {
         throw std::runtime_error{"This method is currently unsupported on this JavaScript engine."};
     }
 
-    void ChromeDevTools::StopInspector()
+    void ChromeDevTools::StopInspector() const
     {
         throw std::runtime_error{"This method is currently unsupported on this JavaScript engine."};
     }
