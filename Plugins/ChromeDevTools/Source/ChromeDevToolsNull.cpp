@@ -8,23 +8,34 @@ namespace Babylon::Plugins::Internal
     {
     };
 
-    ChromeDevTools::ChromeDevTools(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<ChromeDevTools>{info}
+    std::unique_ptr<ChromeDevTools> ChromeDevTools::s_instance = nullptr;
+
+    void ChromeDevTools::Initialize(Napi::Env env)
+    {
+        s_instance = std::make_unique<ChromeDevTools>(env);
+    }
+
+    ChromeDevTools* ChromeDevTools::GetInstance()
+    {
+        return s_instance.get();
+    }
+
+    ChromeDevTools::ChromeDevTools(Napi::Env)
     {
     }
 
-    Napi::Value ChromeDevTools::SupportsInspector(const Napi::CallbackInfo& info)
+    bool ChromeDevTools::SupportsInspector()
     {
-        return Napi::Boolean::From(info.Env(), false);
+        return false;
     }
 
-    void ChromeDevTools::StartInspector(const Napi::CallbackInfo& info)
+    void ChromeDevTools::StartInspector(const unsigned short, const std::string&)
     {
-        throw Napi::Error::New(info.Env(), "This method is currently unsupported on this JavaScript engine.");
+        throw std::exception("This method is currently unsupported on this JavaScript engine.");
     }
 
-    void ChromeDevTools::StopInspector(const Napi::CallbackInfo& info)
+    void ChromeDevTools::StopInspector()
     {
-        throw Napi::Error::New(info.Env(), "This method is currently unsupported on this JavaScript engine.");
+        throw std::exception("This method is currently unsupported on this JavaScript engine.");
     }
 }

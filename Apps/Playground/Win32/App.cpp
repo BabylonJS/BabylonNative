@@ -135,6 +135,11 @@ namespace
 
             Babylon::Plugins::ChromeDevTools::Initialize(env);
 
+            if (Babylon::Plugins::ChromeDevTools::SupportsInspector())
+            {
+                Babylon::Plugins::ChromeDevTools::StartInspector(5643, "BabylonNative Playground");
+            }
+
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
 
