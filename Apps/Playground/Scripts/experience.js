@@ -56,10 +56,6 @@ function CreateInputHandling(scene) {
     });
 }
 
-if (chromeDevTools.supportsInspector()) {
-    chromeDevTools.startInspector(5643, "experience.js");
-}
-
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
