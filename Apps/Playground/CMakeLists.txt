@@ -1,10 +1,12 @@
 set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.glTF2FileLoader.js"
+    "../BabylonScripts/babylon.glTF2FileLoader.js.map"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylon.max.js.map"
-    "../BabylonScripts/babylon.module.d.ts"
     "../BabylonScripts/babylonjs.materials.js"
+    "../BabylonScripts/babylonjs.materials.js.map"
     "../BabylonScripts/babylon.gui.js"
+    "../BabylonScripts/babylon.gui.js.map"
     "../BabylonScripts/ammo.js"
     "../BabylonScripts/meshwriter.min.js"
     "../BabylonScripts/recast.js")
