@@ -19,6 +19,14 @@ namespace Babylon::Plugins
                 });
             }
 
+            ~Impl()
+            {
+                if (m_inspector != nullptr)
+                {
+                    m_inspector->stop();
+                }
+            }
+
             bool SupportsInspector()
             {
                 return true;
@@ -41,12 +49,6 @@ namespace Babylon::Plugins
                 JsRuntime::GetFromJavaScript(m_env).Dispatch([this](Napi::Env) {
                     m_inspector->stop();
                 });
-            }
-
-            ~Impl()
-            {
-                if (m_inspector != nullptr)
-                    m_inspector->stop();
             }
 
         private:
