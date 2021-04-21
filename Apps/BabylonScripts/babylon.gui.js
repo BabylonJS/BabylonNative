@@ -5862,7 +5862,7 @@ var Control = /** @class */ (function () {
         if (Control._FontHeightSizes[font]) {
             return Control._FontHeightSizes[font];
         }
-        var text = document.createElement("span");
+        /*var text = document.createElement("span");
         text.innerHTML = "Hg";
         text.setAttribute('style', "font: " + font + " !important");
         var block = document.createElement("div");
@@ -5885,6 +5885,9 @@ var Control = /** @class */ (function () {
         finally {
             document.body.removeChild(div);
         }
+        */
+        var fontAscent = 0;
+        var fontHeight = 0;
         var result = { ascent: fontAscent, height: fontHeight, descent: fontHeight - fontAscent };
         Control._FontHeightSizes[font] = result;
         return result;

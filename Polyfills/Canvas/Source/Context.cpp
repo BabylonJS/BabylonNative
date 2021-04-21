@@ -268,11 +268,11 @@ namespace Babylon::Polyfills::Internal
 
     void Context::FillRect(const Napi::CallbackInfo& info)
     {
-        /*auto left = info[0].As<Napi::Number>().FloatValue();
+        auto left = info[0].As<Napi::Number>().FloatValue();
         auto top = info[1].As<Napi::Number>().FloatValue();
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
-        SetDirty();
+
         //nvgRect(m_nvg, left, top, width, height);
 
         NVGpaint paint = nvgLinearGradient(m_nvg, 0, 5, 0, 10, nvgRGBA(0, 160, 192, 255), nvgRGBA(0, 160, 192, 255));
@@ -280,7 +280,8 @@ namespace Babylon::Polyfills::Internal
         nvgRect(m_nvg, left, top, width, height);
 
         nvgFillPaint(m_nvg, paint);
-        nvgFill(m_nvg);*/
+        nvgFill(m_nvg);
+        SetDirty();
     }
 
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
@@ -290,8 +291,9 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        //const auto color = StringToColor(value.As<Napi::String>().Utf8Value());
-        //nvgFillColor(m_nvg, color);
+        const auto color = StringToColor(value.As<Napi::String>().Utf8Value());
+        nvgFillColor(m_nvg, color);
+        SetDirty();
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
@@ -301,8 +303,9 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        //auto color = StringToColor(value.As<Napi::String>().Utf8Value());
-        //nvgStrokeColor(m_nvg, color);
+        auto color = StringToColor(value.As<Napi::String>().Utf8Value());
+        nvgStrokeColor(m_nvg, color);
+        SetDirty();
     }
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo& )
@@ -313,23 +316,27 @@ namespace Babylon::Polyfills::Internal
     void Context::SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         const auto width = value.As<Napi::Number>().FloatValue();
-        //SetDirty();
-        //nvgStrokeWidth(m_nvg, width);
+
+        nvgStrokeWidth(m_nvg, width);
+        SetDirty();
     }
 
     void Context::Fill(const Napi::CallbackInfo&)
     {
-        //nvgFill(m_nvg);
+        nvgFill(m_nvg);
+        SetDirty();
     }
 
     void Context::Save(const Napi::CallbackInfo&)
     {
-        //nvgSave(m_nvg);
+        nvgSave(m_nvg);
+        SetDirty();
     }
 
     void Context::Restore(const Napi::CallbackInfo&)
     {
-        //nvgRestore(m_nvg);
+        nvgRestore(m_nvg);
+        SetDirty();
     }
 
     void Context::ClearRect(const Napi::CallbackInfo&)
@@ -340,31 +347,35 @@ namespace Babylon::Polyfills::Internal
     {
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
-        //nvgTranslate(m_nvg, x, y);
+        nvgTranslate(m_nvg, x, y);
+        SetDirty();
     }
 
     void Context::Rotate(const Napi::CallbackInfo& info)
     {
         const auto angle = info[0].As<Napi::Number>().FloatValue();
-        //nvgRotate(m_nvg, nvgDegToRad(angle));
+        nvgRotate(m_nvg, nvgDegToRad(angle));
+        SetDirty();
     }
 
     void Context::Scale(const Napi::CallbackInfo& info)
     {
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
-        //nvgScale(m_nvg, x, y);
+        nvgScale(m_nvg, x, y);
+        SetDirty();
     }
 
     void Context::BeginPath(const Napi::CallbackInfo&)
     {
-        //nvgBeginPath(m_nvg);
+        nvgBeginPath(m_nvg);
+        SetDirty();
     }
 
     void Context::ClosePath(const Napi::CallbackInfo&)
     {
-        //SetDirty();
-        //nvgClosePath(m_nvg);
+        nvgClosePath(m_nvg);
+        SetDirty();
     }
 
     void Context::Rect(const Napi::CallbackInfo& info)
@@ -373,8 +384,9 @@ namespace Babylon::Polyfills::Internal
         const auto top = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
-        //SetDirty();
-        //nvgRect(m_nvg, left, top, width, height);
+
+        nvgRect(m_nvg, left, top, width, height);
+        SetDirty();
     }
 
     void Context::Clip(const Napi::CallbackInfo&)
@@ -387,8 +399,9 @@ namespace Babylon::Polyfills::Internal
         const auto top = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
-        //SetDirty();
-        //nvgRect(m_nvg, left, top, width, height);
+
+        nvgRect(m_nvg, left, top, width, height);
+        SetDirty();
     }
 
     void Context::Stroke(const Napi::CallbackInfo&)
@@ -399,16 +412,18 @@ namespace Babylon::Polyfills::Internal
     {
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
-        //SetDirty();
-        //nvgMoveTo(m_nvg, x, y);
+
+        nvgMoveTo(m_nvg, x, y);
+        SetDirty();
     }
 
     void Context::LineTo(const Napi::CallbackInfo& info)
     {
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
-        //SetDirty();
-        //nvgLineTo(m_nvg, x, y);
+
+        nvgLineTo(m_nvg, x, y);
+        SetDirty();
     }
 
     void Context::QuadraticCurveTo(const Napi::CallbackInfo& info)
@@ -417,8 +432,9 @@ namespace Babylon::Polyfills::Internal
         const auto cy = info[1].As<Napi::Number>().FloatValue();
         const auto x = info[2].As<Napi::Number>().FloatValue();
         const auto y = info[3].As<Napi::Number>().FloatValue();
-        //SetDirty();
-        //nvgBezierTo(m_nvg, cx, cy, cx, cy, x, y);
+        
+        nvgBezierTo(m_nvg, cx, cy, cx, cy, x, y);
+        SetDirty();
     }
 
     Napi::Value Context::MeasureText(const Napi::CallbackInfo& info)
@@ -435,8 +451,8 @@ namespace Babylon::Polyfills::Internal
 
         if (!m_fonts.empty())
         {
-            
             nvgFontFaceId(m_nvg, m_fonts.begin()->second);
+            nvgText(m_nvg, x, y, text.c_str(), nullptr);
             nvgText(m_nvg, x, y, text.c_str(), nullptr);
             SetDirty();
         }
@@ -483,7 +499,6 @@ namespace Babylon::Polyfills::Internal
                 frameBuffer.SetViewPort(encoder, 0, 0, m_canvas->GetWidth(), m_canvas->GetHeight());
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
 
-                //bgfx::discard();
                 nvgEndFrame(m_nvg);
                 BeginFrame();
                 m_dirty = false;

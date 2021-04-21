@@ -45,6 +45,7 @@ namespace Babylon
         const uint16_t m_width;
         const uint16_t m_height;
         const bool m_defaultBackBuffer;
+    public:
         std::optional<bgfx::ViewId> m_viewId;
         ViewPort m_viewPort;
         std::optional<ViewPort> m_requestedViewPort;

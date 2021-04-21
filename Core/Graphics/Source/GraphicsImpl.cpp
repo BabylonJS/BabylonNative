@@ -318,7 +318,8 @@ namespace Babylon
 
         // Advance frame and render!
         bgfx::frame();
-
+        bgfx::touch(0);
+        bgfx::discard();
         // Reset the frame buffers.
         m_frameBufferManager->Reset();
     }
