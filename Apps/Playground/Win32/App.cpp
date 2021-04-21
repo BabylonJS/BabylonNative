@@ -14,6 +14,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -131,6 +132,8 @@ namespace
             Babylon::Plugins::NativeCapture::Initialize(env);
 
             Babylon::Plugins::NativeXr::Initialize(env);
+
+            Babylon::Plugins::ChromeDevTools::Initialize(env);
 
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
         });
