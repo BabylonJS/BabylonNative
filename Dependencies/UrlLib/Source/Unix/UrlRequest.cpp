@@ -175,44 +175,50 @@ namespace UrlLib
             {
                 data.clear();
 
+                // libCurl doesn't escape url strings automatically.
+                // Escaping whole URL string results in escaping scheme, host, ... everything
+                // Moreover, escaping shall not be done for local file path.
+                // So, escaping only path part of the URL for every URL but file scheme.
+
                 CURLUcode rc;
-                CURLU *url = curl_url();
+                CURLU* url = curl_url();
+                auto urlScopeGuard = gsl::finally([url] { curl_url_cleanup(url); });
                 rc = curl_url_set(url, CURLUPART_URL, m_url.c_str(), 0);
                 if (rc != CURLUE_OK)
                 {
-                    throw std::runtime_error("CURL: Unable to build URL.");
+                    throw std::runtime_error{"CURL: Unable to build URL."};
                 }
 
-                char *scheme;
+                char* scheme;
                 rc = curl_url_get(url, CURLUPART_SCHEME, &scheme, 0);
                 if (rc != CURLUE_OK)
                 {
-                    throw std::runtime_error("CURL: Unable to get URL scheme.");
+                    throw std::runtime_error{"CURL: Unable to get URL scheme."};
                 }
+                auto schemeScopeGuard = gsl::finally([scheme] { curl_free(scheme); });
 
                 if (strcmp(scheme, "file"))
                 {
-                    char *path;
+                    char* path;
                     rc = curl_url_get(url, CURLUPART_PATH, &path, 0);
                     if (rc != CURLUE_OK)
                     {
-                        throw std::runtime_error("CURL: Unable to get URL path.");
+                        throw std::runtime_error{"CURL: Unable to get URL path."};
                     }
-
+                    auto pathScopeGuard = gsl::finally([path] { curl_free(path); });
                     char* pathEscaped = curl_easy_escape(curl, path, 0);
+                    auto pathEscapedScopeGuard = gsl::finally([pathEscaped] { curl_free(pathEscaped); });
                     rc = curl_url_set(url, CURLUPART_PATH, pathEscaped, 0);
                     if (rc != CURLUE_OK)
                     {
-                        throw std::runtime_error("CURL: Unable to set URL path.");
+                        throw std::runtime_error{"CURL: Unable to set URL path."};
                     }
-                    curl_free(pathEscaped);
-                    curl_free(path);
 
-                    char *urlEscaped;
+                    char* urlEscaped;
                     rc = curl_url_get(url, CURLUPART_URL, &urlEscaped, 0);
                     if (rc != CURLUE_OK)
                     {
-                        throw std::runtime_error("CURL: Unable to get URL string.");
+                        throw std::runtime_error{"CURL: Unable to get URL string."};
                     }
 
                     curl_easy_setopt(curl, CURLOPT_URL, urlEscaped);
@@ -222,9 +228,6 @@ namespace UrlLib
                 {
                     curl_easy_setopt(curl, CURLOPT_URL, m_url.c_str());
                 }
-
-                curl_free(scheme);
-                curl_url_cleanup(url);
 
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
