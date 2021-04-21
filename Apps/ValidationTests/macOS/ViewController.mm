@@ -71,14 +71,16 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    void* windowPtr = (__bridge void*)engineView;
-
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(600), static_cast<size_t>(400));
+    Babylon::GraphicsConfiguration graphicsConfig{};
+    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Width = static_cast<size_t>(600);
+    graphicsConfig.Height = static_cast<size_t>(400);
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 
-    runtime->Dispatch([windowPtr](Napi::Env env)
+    runtime->Dispatch([engineView](Napi::Env env)
     {
         graphics->AddToJavaScript(env);
 
@@ -89,7 +91,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
-        Babylon::TestUtils::CreateInstance(env, windowPtr);
+        Babylon::TestUtils::CreateInstance(env, engineView);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -102,7 +104,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
 - (void)viewDidAppear {
     [super viewDidAppear];
-    
+
     [self initialize];
 }
 

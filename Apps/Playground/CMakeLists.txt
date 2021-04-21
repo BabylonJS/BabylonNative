@@ -1,6 +1,8 @@
 set(BABYLONSCRIPTS
     "../BabylonScripts/babylon.glTF2FileLoader.js"
     "../BabylonScripts/babylon.max.js"
+    "../BabylonScripts/babylon.max.js.map"
+    "../BabylonScripts/babylon.module.d.ts"
     "../BabylonScripts/babylonjs.materials.js"
     "../BabylonScripts/babylon.gui.js"
     "../BabylonScripts/ammo.js"
@@ -111,6 +113,7 @@ target_include_directories(Playground PRIVATE "Source" ".")
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
     PRIVATE NativeCapture
+    PRIVATE ChromeDevTools
     PRIVATE NativeEngine
     PRIVATE Console
     PRIVATE Window

@@ -208,7 +208,7 @@ namespace Babylon
 
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
-        Graphics::Impl::UpdateToken& GetUpdateToken();
+        GraphicsImpl::UpdateToken& GetUpdateToken();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -218,11 +218,11 @@ namespace Babylon
         arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;
-        Graphics::Impl& m_graphicsImpl;
+        GraphicsImpl& m_graphicsImpl;
 
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::optional<Graphics::Impl::UpdateToken> m_updateToken{};
+        std::optional<GraphicsImpl::UpdateToken> m_updateToken{};
 
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};

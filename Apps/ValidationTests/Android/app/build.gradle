@@ -36,6 +36,7 @@ android {
                 arguments '-DANDROID_STL=c++_static',
                         '-DENABLE_GLSLANG_BINARIES=OFF',
                         '-DSPIRV_CROSS_CLI=OFF',
+                        "-DENABLE_PCH=OFF",
                         "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                         "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
                         "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",

@@ -22,7 +22,7 @@ if(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
     add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(APPLE)

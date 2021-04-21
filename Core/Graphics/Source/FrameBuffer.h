@@ -18,6 +18,7 @@ namespace Babylon
         FrameBuffer(const FrameBuffer&) = delete;
         FrameBuffer(FrameBuffer&&) = delete;
 
+        bgfx::FrameBufferHandle Handle() const;
         uint16_t Width() const;
         uint16_t Height() const;
         bool DefaultBackBuffer() const;

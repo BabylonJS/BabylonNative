@@ -1,3 +1,5 @@
+/// <reference path="../../BabylonScripts/babylon.module.d.ts" />
+
 var wireframe = false;
 var turntable = false;
 var logfps = true;
@@ -72,6 +74,10 @@ document = {
     }
 }
 */
+
+if (chromeDevTools.supportsInspector()) {
+    chromeDevTools.startInspector(5643, "experience.js");
+}
 
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);

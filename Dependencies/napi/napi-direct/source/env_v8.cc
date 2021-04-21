@@ -11,6 +11,12 @@ namespace Napi
         return {new napi_env__(isolate)};
     }
 
+    template<>
+    v8::Local<v8::Context> GetContext(Env env)
+    {
+        return ((napi_env)env)->context();
+    }
+
     void Detach(Env env)
     {
         napi_env env_ptr{env};

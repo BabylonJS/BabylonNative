@@ -11,7 +11,13 @@ namespace xr
             : Names{}
         {
             uint32_t extensionCount{};
-            XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
+            XrResult result{ xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr) };
+            if (result != XR_SUCCESS)
+            {
+                // Avoid failing if device doesn't support OpenXR
+                return;
+            }
+
             m_extensionProperties.resize(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
             XrCheck(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, m_extensionProperties.data()));
 
@@ -33,7 +39,7 @@ namespace xr
             FirstPersonObserverSupported = TryEnableExtension(XR_MSFT_FIRST_PERSON_OBSERVER_EXTENSION_NAME);
             HandInteractionSupported = TryEnableExtension(XR_MSFT_HAND_INTERACTION_EXTENSION_NAME);
             HandTrackingSupported = TryEnableExtension(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
-            SceneUnderstandingSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_PREVIEW_EXTENSION_NAME);
+            SceneUnderstandingSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_PREVIEW2_EXTENSION_NAME);
             SceneUnderstandingSerializationSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_SERIALIZATION_PREVIEW_EXTENSION_NAME);
         }
 

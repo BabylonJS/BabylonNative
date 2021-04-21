@@ -10,6 +10,7 @@
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Polyfills/Console.h>
@@ -55,14 +56,19 @@ namespace
         runtime.reset();
         graphics.reset();
     }
-    
-    void InitBabylon(int32_t window)
+
+    void InitBabylon(Window window)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         Uninitialize();
 
-        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        Babylon::GraphicsConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.Width = static_cast<size_t>(width);
+        graphicsConfig.Height = static_cast<size_t>(height);
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
 
