@@ -54,7 +54,7 @@ namespace Babylon::Polyfills::Internal
         : ParentT{ info }
         , m_canvas{ info[0].As<Napi::External<NativeCanvas>>().Data() }
         , m_nvg{ nvgCreate(1) }
-        , m_graphicsImpl{ Graphics::Impl::GetFromJavaScript(info.Env()) }
+        , m_graphicsImpl{ Babylon::GraphicsImpl::GetFromJavaScript(info.Env()) }
         , m_cancellationSource{ std::make_shared<arcana::cancellation_source>() }
         , m_runtimeScheduler{ Babylon::JsRuntime::GetFromJavaScript(info.Env()) }
     {

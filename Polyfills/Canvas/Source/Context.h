@@ -60,7 +60,7 @@ namespace Babylon::Polyfills::Internal
 
         std::map<std::string, int> m_fonts;
 
-        Graphics::Impl& m_graphicsImpl;
+        Babylon::GraphicsImpl& m_graphicsImpl;
         bool m_dirty{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;

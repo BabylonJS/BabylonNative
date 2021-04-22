@@ -29,7 +29,7 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : ParentT{info}
-        , m_graphicsImpl{ Graphics::Impl::GetFromJavaScript(info.Env()) }
+        , m_graphicsImpl{ Babylon::GraphicsImpl::GetFromJavaScript(info.Env()) }
     {
     }
 

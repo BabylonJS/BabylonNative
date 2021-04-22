@@ -40,7 +40,7 @@ namespace Babylon::Polyfills::Internal
         uint32_t m_width{1};
         uint32_t m_height{1};
 
-        Graphics::Impl& m_graphicsImpl;
+        Babylon::GraphicsImpl& m_graphicsImpl;
 
         bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
         Babylon::FrameBuffer* m_frameBuffer{};
