@@ -50,7 +50,7 @@ if(APPLE)
     set(JSSCRIPT
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/ammo.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/recast.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.glTF2FileLoader.js"
+        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.loaders.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.max.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.materials.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.gui.js"
