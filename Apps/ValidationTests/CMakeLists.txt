@@ -3,7 +3,7 @@ if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR ANDROID)
 endif()
 
 set(BABYLONSCRIPTS 
-    "../BabylonScripts/babylon.glTF2FileLoader.js"
+    "../BabylonScripts/babylonjs.loaders.js"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylonjs.materials.js"
     "../BabylonScripts/babylon.gui.js")
