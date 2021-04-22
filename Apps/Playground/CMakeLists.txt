@@ -1,6 +1,6 @@
 set(BABYLONSCRIPTS
-    "../BabylonScripts/babylon.glTF2FileLoader.js"
-    "../BabylonScripts/babylon.glTF2FileLoader.js.map"
+    "../BabylonScripts/babylonjs.loaders.js"
+    "../BabylonScripts/babylonjs.loaders.js.map"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylon.max.js.map"
     "../BabylonScripts/babylonjs.materials.js"

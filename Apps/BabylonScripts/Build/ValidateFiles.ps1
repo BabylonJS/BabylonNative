@@ -3,11 +3,23 @@ Write-Host "Installing npm packages for comparison..."
 npm install
 Pop-Location
 
-$files = "babylon.max.js", "babylon.max.js.map", "babylon.module.d.ts", "babylon.gui.js", "babylonjs.materials.js"
+$files = "babylon.gui.js",
+    "babylon.gui.js.map",
+    "babylon.gui.module.d.ts",
+    "babylon.max.js",
+    "babylon.max.js.map",
+    "babylon.module.d.ts",
+    "babylonjs.loaders.js",
+    "babylonjs.loaders.js.map",
+    "babylonjs.loaders.module.d.ts",
+    "babylonjs.materials.js",
+    "babylonjs.materials.js.map",
+    "babylonjs.materials.module.d.ts";
+
 $succeeded = $true
 foreach ($file in $files)
 {
-    $localFile = "$PSScriptRoot\$file"
+    $localFile = "$PSScriptRoot\..\$file"
     $fileInPackage = Get-ChildItem "$PSScriptRoot\node_modules" -Filter $file -Recurse | % { $_.FullName }
     if (!($(Get-FileHash $localFile).hash -eq $(Get-FileHash $fileInPackage).hash))
     {
