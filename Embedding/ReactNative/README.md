@@ -204,3 +204,9 @@ For iOS the XCode project needs to be generated with `CMake` as described [above
 ## Security
 
 If you believe you have found a security vulnerability in this repository, please see [SECURITY.md](SECURITY.md).
+
+## Known Issues
+
+We have seen issues when using npm 7+ to install local symbolic linked npm packages. For this reason, we suggest using npm 6.13 for BabylonReactNative development. To install npm 6.13, run the following command:
+
+`npm install -g npm@6.13`
