@@ -14,6 +14,10 @@ namespace Babylon
     public:
         ~Graphics();
 
+        // Note: This API contract is subject to change in coming versions.
+        // Features and functionnalities will be added and
+        // method and structure might change.
+
         static std::unique_ptr<Graphics> CreateGraphics(const WindowConfiguration& config);
         static std::unique_ptr<Graphics> CreateGraphics(const ContextConfiguration& config);
 
