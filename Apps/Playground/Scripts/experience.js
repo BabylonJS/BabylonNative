@@ -1,4 +1,7 @@
 /// <reference path="../../BabylonScripts/babylon.module.d.ts" />
+/// <reference path="../../BabylonScripts/babylonjs.loaders.module.d.ts" />
+/// <reference path="../../BabylonScripts/babylonjs.materials.module.d.ts" />
+/// <reference path="../../BabylonScripts/babylon.gui.module.d.ts" />
 
 var wireframe = false;
 var turntable = false;
@@ -51,10 +54,6 @@ function CreateInputHandling(scene) {
         priorX = x;
         priorY = y;
     });
-}
-
-if (chromeDevTools.supportsInspector()) {
-    chromeDevTools.startInspector(5643, "experience.js");
 }
 
 var engine = new BABYLON.NativeEngine();

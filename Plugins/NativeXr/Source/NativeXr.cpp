@@ -140,29 +140,38 @@ namespace
         jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
 
         // Don't set hands up unless hand data is supported/available
-        if (inputSource.JointsTrackedThisFrame)
+        if (inputSource.HandTrackedThisFrame || inputSource.JointsTrackedThisFrame)
         {
-            auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
-
-            for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
-            {
-                auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
-                handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
-            }
-
-            auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
-                return handJointCollection.Get(info[0].As<Napi::String>());
-            };
-
-            handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
-            handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
-
-            jsInputSource.Set("hand", handJointCollection);
-
             auto profiles = Napi::Array::New(env, 2);
             profiles.Set(uint32_t{0}, Napi::String::New(env, "generic-hand-select-grasp"));
             profiles.Set(uint32_t{1}, Napi::String::New(env, "generic-hand-select"));
             jsInputSource.Set("profiles", profiles);
+
+            if (inputSource.JointsTrackedThisFrame)
+            {
+                auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
+
+                for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
+                {
+                    auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
+                    handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
+                }
+
+                auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return handJointCollection.Get(info[0].As<Napi::String>());
+                };
+
+                handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
+                handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
+
+                jsInputSource.Set("hand", handJointCollection);
+
+            }
+            else
+            {
+                // If hand joints aren't available on a hand input, send a null hand object
+                jsInputSource.Set("hand", env.Null());
+            }
         }
     }
 
@@ -2527,9 +2536,9 @@ namespace Babylon
                         // Create the new input source, which will have the correct spaces associated with it.
                         m_idToInputSource.insert({inputSource.ID, CreateXRInputSource(inputSource, env)});
 
-                        // Now that input Source is created, create a gamepad object if enabled for the input source
+                        // Now that input Source is created, create a gamepad object if enabled for the input source. Hand data also uses the gamepad component.
                         inputSourceFound = m_idToInputSource.find(inputSource.ID);
-                        if (inputSource.GamepadTrackedThisFrame)
+                        if (inputSource.GamepadTrackedThisFrame || inputSource.HandTrackedThisFrame)
                         {
                             auto inputSourceVal = inputSourceFound->second.Value();
                             CreateXRGamepadObject(inputSourceVal, inputSource);
