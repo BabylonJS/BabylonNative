@@ -345,7 +345,6 @@ private:
             auto& mesh = m_meshes.at(meshId);
             const auto& location = xrMeshLocations.at(i);
 
-            // TODO: in preview 3 of the OpenXR scene understanding extension, plane's will also have associated meshes
             std::vector<XrVector3f> vertexBuffer{};
             std::vector<uint32_t> indexBuffer{};
             xr::ReadMeshBuffers(m_scene->Handle(), args.Extensions, mesh.MeshBufferId, vertexBuffer, indexBuffer);
