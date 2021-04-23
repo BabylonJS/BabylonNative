@@ -29,6 +29,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 bool minimized{false};
 
 // Forward declarations of functions included in this code module:
@@ -87,6 +88,7 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
 
+        chromeDevTools.reset();
         inputBuffer.reset();
         runtime.reset();
         graphics.reset();
@@ -133,9 +135,13 @@ namespace
 
             Babylon::Plugins::NativeXr::Initialize(env);
 
-            Babylon::Plugins::ChromeDevTools::Initialize(env);
-
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+
+            chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
+            if (chromeDevTools->SupportsInspector())
+            {
+                chromeDevTools->StartInspector(5643, "BabylonNative Playground");
+            }
         });
 
         // Scripts are copied to the parent of the executable due to CMake issues.

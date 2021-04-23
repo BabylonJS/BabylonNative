@@ -1,91 +1,83 @@
-#include "ChromeDevToolsImpl.h"
+#include "ChromeDevTools.h"
 
 #include <V8InspectorAgent.h>
 #include <Babylon/JsRuntime.h>
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins
 {
-    class ChromeDevToolsV8
-    {
-    public:
-        ChromeDevToolsV8(const Napi::Env& env)
-        {
-            JsRuntime::GetFromJavaScript(env).Dispatch([this](Napi::Env env) {
-                auto& v8Platform = *JsRuntime::NativeObject::GetFromJavaScript(env).Get("_V8Platform").As<Napi::External<v8::Platform>>().Data();
-                auto v8Isolate = v8::Isolate::GetCurrent();
-                auto v8Context = v8Isolate->GetCurrentContext();
-                m_inspector = std::make_unique<Babylon::V8InspectorAgent>(v8Platform, v8Isolate, v8Context, "BabylonNative");
-            });
-        }
-
-        Napi::Value SupportsInspector(const Napi::CallbackInfo& info)
-        {
-            return Napi::Boolean::From(info.Env(), true);
-        }
-
-        void StartInspector(const Napi::CallbackInfo &info)
-        {
-            if (info.Length() == 0)
-            {
-                throw Napi::Error::New(info.Env(), "You must at least specify a port to start the DevTools inspector.");
-            }
-
-            const auto port = static_cast<unsigned short>(info[0].As<Napi::Number>().Int32Value());
-
-            std::string appName;
-            if (info.Length() > 1 && info[1].IsString())
-            {
-                appName = info[1].As<Napi::String>().Utf8Value();
-            }
-
-            if (m_inspector->IsStarted())
-            {
-                StopInspector();
-            }
-            
-            m_inspector->start(port, appName);
-        }
-
-        void StopInspector(const Napi::CallbackInfo&)
-        {
-            StopInspector();
-        }
-
-        void StopInspector()
-        {
-            m_inspector->stop();
-        }
-    protected:
-        std::unique_ptr<Babylon::V8InspectorAgent> m_inspector{};
-    };
-
-    class ChromeDevTools::Impl : public ChromeDevToolsV8
+    class ChromeDevTools::Impl final : public std::enable_shared_from_this<ChromeDevTools::Impl>
     {
         public:
-            Impl(const Napi::Env& env) 
-                : ChromeDevToolsV8(env)
+            explicit Impl(Napi::Env env) 
+                : m_env(env)
             {
+                JsRuntime::GetFromJavaScript(env).Dispatch([this](Napi::Env env) {
+                    auto& v8Platform = *JsRuntime::NativeObject::GetFromJavaScript(env).Get("_V8Platform").As<Napi::External<v8::Platform>>().Data();
+                    auto v8Isolate = v8::Isolate::GetCurrent();
+                    auto v8Context = v8Isolate->GetCurrentContext();
+                    m_inspector = std::make_unique<Babylon::V8InspectorAgent>(v8Platform, v8Isolate, v8Context, "BabylonNative");
+                });
             }
+
+            ~Impl()
+            {
+                if (m_inspector != nullptr)
+                {
+                    m_inspector->stop();
+                }
+            }
+
+            bool SupportsInspector()
+            {
+                return true;
+            }
+
+            void StartInspector(const unsigned short port, const std::string& appName)
+            {
+                JsRuntime::GetFromJavaScript(m_env).Dispatch([this, port, appName](Napi::Env) {
+                    if (m_inspector->IsStarted())
+                    {
+                        m_inspector->stop();
+                    }
+
+                    m_inspector->start(port, appName);
+                });
+            }
+
+            void StopInspector()
+            {
+                JsRuntime::GetFromJavaScript(m_env).Dispatch([this](Napi::Env) {
+                    m_inspector->stop();
+                });
+            }
+
+        private:
+            std::unique_ptr<Babylon::V8InspectorAgent> m_inspector{};
+            Napi::Env m_env;
     };
 
-    ChromeDevTools::ChromeDevTools(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<ChromeDevTools>{info}
-        , m_impl{std::make_unique<ChromeDevTools::Impl>(info.Env())}
+    ChromeDevTools ChromeDevTools::Initialize(Napi::Env env)
     {
-    }
-    
-    Napi::Value ChromeDevTools::SupportsInspector(const Napi::CallbackInfo& info)
-    {
-        return m_impl->SupportsInspector(info);
+        return {std::make_shared<ChromeDevTools::Impl>(env)};
     }
 
-    void ChromeDevTools::StartInspector(const Napi::CallbackInfo& info)
+    ChromeDevTools::ChromeDevTools(std::shared_ptr<ChromeDevTools::Impl> impl)
+        : m_impl{std::move(impl)}
     {
-        m_impl->StartInspector(info);
     }
 
-    void ChromeDevTools::StopInspector(const Napi::CallbackInfo& info)
+    bool ChromeDevTools::SupportsInspector() const
     {
-        m_impl->StopInspector(info);
+        return m_impl->SupportsInspector();
+    }
+
+    void ChromeDevTools::StartInspector(const unsigned short port, const std::string& appName) const
+    {
+        m_impl->StartInspector(port, appName);
+    }
+
+    void ChromeDevTools::StopInspector() const
+    {
+        m_impl->StopInspector();
     }
 }
