@@ -117,7 +117,7 @@ extern "C"
             g_scriptLoader->LoadScript("app:///Scripts/ammo.js");
             g_scriptLoader->LoadScript("app:///Scripts/recast.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+            g_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
         }

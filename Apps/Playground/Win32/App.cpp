@@ -153,7 +153,7 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/ammo.js");
         loader.LoadScript(scriptsRootUrl + "/recast.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
-        loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
+        loader.LoadScript(scriptsRootUrl + "/babylonjs.loaders.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
         loader.LoadScript(scriptsRootUrl + "/meshwriter.min.js");
