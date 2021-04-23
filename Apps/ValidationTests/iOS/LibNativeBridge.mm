@@ -39,6 +39,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    graphics->StartRenderingCurrentFrame();
     graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
 
     runtime = std::make_unique<Babylon::AppRuntime>();
@@ -73,6 +74,15 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     if (graphics)
     {
         graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+    }
+}
+
+- (void)render
+{
+    if (graphics)
+    {
+        graphics->FinishRenderingCurrentFrame();
+        graphics->StartRenderingCurrentFrame();
     }
 }
 
