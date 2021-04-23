@@ -215,7 +215,7 @@ namespace xr
             XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
             createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions->Names.size());
             createInfo.enabledExtensionNames = extensions->Names.data();
-            createInfo.applicationInfo = { "", 1, "OpenXR Sample", 1, XR_CURRENT_API_VERSION };
+            createInfo.applicationInfo = { "", 1, "BabylonNative", 1, XR_CURRENT_API_VERSION };
             strcpy_s(createInfo.applicationInfo.applicationName, ApplicationName.c_str());
             XrCheck(xrCreateInstance(&createInfo, instanceHandle.Put()));
 
