@@ -31,7 +31,7 @@ jobs:
           workingDirectory: 'Apps/Playground/Android'
           gradleWrapperFile: 'Apps/Playground/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }}'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PNoArm7'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build Playground ${{ parameters.JSEngine }}'
@@ -41,7 +41,7 @@ jobs:
           workingDirectory: 'Apps/ValidationTests/Android'
           gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }}'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PNoArm7'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build ValidationTests ${{ parameters.JSEngine }}'
