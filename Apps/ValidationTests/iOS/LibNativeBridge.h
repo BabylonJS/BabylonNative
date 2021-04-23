@@ -11,6 +11,6 @@
 
 - (void)init:(MTKView*)inView width:(int)inWidth height:(int)inHeight;
 - (void)resize:(int)inWidth height:(int)inHeight;
+- (void)render;
 
 @end
-
