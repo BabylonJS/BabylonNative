@@ -65,6 +65,11 @@ namespace Babylon::ShaderCompilerTraversers
                     RemoveAllTreeNodes(unary->getOperand());
                     unary->setOperand(replacement);
                 }
+                else if (auto* branch = parent->getAsSelectionNode())
+                {
+                    RemoveAllTreeNodes(branch->getCondition());
+                    branch->setCondition(replacement);
+                }
                 else
                 {
                     throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};

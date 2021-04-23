@@ -1,0 +1,60 @@
+parameters:
+  name: ''
+  vmImage: ''
+  CC: ''
+  CXX: ''
+  
+jobs:
+  - job: ${{ parameters.name }}
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+  
+    variables:
+      CC: ${{ parameters.CC }}
+      CXX: ${{ parameters.CXX }}
+  
+    steps:
+    - script: |
+        git submodule update --init --recursive
+      displayName: 'Checkout dependencies'
+
+    - template: cmake.yml
+      parameters:
+        vmImage: ${{ parameters.vmImage }}
+
+    - script: |
+        sudo apt-get update
+        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-9-dev libc++abi-9-dev
+      displayName: 'Install packages'
+
+    - script: |
+        mkdir build
+        cd build
+        cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
+        ninja
+      displayName: 'Build X11'
+    
+#    - script: |
+#        export DISPLAY=:99
+#        Xvfb :99 -screen 0 1600x900x24 &
+#        sleep 3
+#        cd build/Apps/ValidationTests
+#        mkdir Errors
+#        mkdir Results
+#        ./ValidationTests
+#      displayName: 'Validation Tests'
+
+#    - task: PublishBuildArtifacts@1
+#      inputs:
+#        artifactName: '${{ parameters.name }} Rendered Pictures'
+#        pathtoPublish: 'build/Apps/ValidationTests/Results'
+#      displayName: 'Publish Tests ${{ parameters.name }} Results'
+#      condition: always()
+#    - task: PublishBuildArtifacts@1
+#      inputs:
+#        artifactName: '${{ parameters.name }} Error Pictures'
+#        pathtoPublish: 'build/Apps/ValidationTests/Errors'
+#      displayName: 'Publish Tests ${{ parameters.name }} Errors'
+#      condition: failed()
+

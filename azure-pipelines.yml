@@ -9,555 +9,114 @@ variables:
   value: 3.19.6
   
 jobs:
-- job: macOS
-  pool:
-    vmImage: 'macOS-10.14'
+# Apple
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode11
+      vmImage: 'macOS-10.14'
+      xCodeVersion: 11.3.1
 
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode11
+      vmImage: 'macOS-10.14'
+      xCodeVersion: 11.3.1
 
-  - script: |
-      brew uninstall cmake
-      brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
-      cmake --version
-    displayName: 'CMake version'
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode12
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
 
-  - script: |
-      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
-    displayName: 'Select XCode 11.3.1'
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode12
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
 
-  - script: |
-      mkdir buildmacOS
-      cd buildmacOS
-      cmake .. -GXcode
-    displayName: 'Generate macOS solution'
+# WIN32
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x86
+      vmImage: 'windows-latest'
+      platform: win32
+  
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64
+      vmImage: 'windows-latest'
+      platform: x64
 
-  - task: Xcode@5
-    inputs:
-      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-      scheme: 'Playground'
-      sdk: 'macosx'
-      useXcpretty: false
-      configuration: RelWithDebInfo
-    displayName: 'Build Playground macOS'
+# UWP
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_x86
+      vmImage: 'windows-latest'
+      platform: win32
+  
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_x64
+      vmImage: 'windows-latest'
+      platform: x64
+  
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64
+      vmImage: 'windows-latest'
+      platform: arm64
 
-  - task: Xcode@5
-    inputs:
-      xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-      scheme: 'ValidationTests'
-      sdk: 'macosx'
-      useXcpretty: false
-      configuration: RelWithDebInfo
-    displayName: 'Build ValidationTests macOS'
+# Ubuntu/Linux
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_Clang8
+      vmImage: 'ubuntu-latest'
+      CC: clang-8
+      CXX: clang++-8
+  
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC9
+      vmImage: 'ubuntu-latest'
+      CC: gcc-9
+      CXX: g++-9
 
-- job: iOS
-  pool:
-    vmImage: 'macOS-10.14'
+# Enable this job once SPIRV-cross has been updated see issue https://github.com/BabylonJS/BabylonNative/issues/679
+#  - template: .github/jobs/linux.yml
+#    parameters:
+#      name: Ubuntu_GCC10
+#      vmImage: 'ubuntu-latest'
+#      CC: gcc-10
+#      CXX: g++-10
 
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
+# Android
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_Ubuntu_JSC
+      vmImage: 'ubuntu-latest'
+      JSEngine: jsc
+      
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_Ubuntu_V8
+      vmImage: 'ubuntu-latest'
+      JSEngine: v8android
+      
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_MacOS_JSC
+      vmImage: 'macOS-10.14'
+      JSEngine: jsc
+      
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_MacOS_V8
+      vmImage: 'macOS-10.14'
+      JSEngine: v8android
 
-  - script: |
-      brew uninstall cmake
-      brew install http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
-      cmake --version
-    displayName: 'CMake version'
-
-  - script: |
-      sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
-    displayName: 'Select XCode 11.3.1'
-
-  - script: |
-      mkdir buildiOS
-      cd buildiOS
-      cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
-    displayName: 'Generate iOS solution'
-
-  - task: Xcode@5
-    inputs:
-      xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-      scheme: 'Playground'
-      sdk: 'iphoneos'
-      useXcpretty: false
-      configuration: RelWithDebInfo
-    displayName: 'Build Playground iOS'
-
-  - task: Xcode@5
-    inputs:
-      xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-      scheme: 'ValidationTests'
-      sdk: 'iphoneos'
-      useXcpretty: false
-      configuration: RelWithDebInfo
-    displayName: 'Build ValidationTests iOS'
-
-- job: win32_x64
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'windows-latest'
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildWin32_x64
-      cd buildWin32_x64
-      cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
-    displayName: 'Generate Win32_x64 solution'
-
-  - task: MSBuild@1
-    inputs:
-      solution: 'buildWin32_x64/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-    displayName: 'Build WIN32_x64'
-
-  - script: |
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
-    displayName: 'Enable Crash Dumps'
-
-  - script: |
-      cd buildWin32_x64\Apps\ValidationTests
-      mkdir Results
-      mkdir Errors
-      cd RelWithDebInfo
-      ValidationTests
-    displayName: 'Validation Tests'
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x64 Rendered Pictures'
-      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Win32_x64 Results'
-    condition: succeeded()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x64 Error Pictures'
-      pathtoPublish: 'buildWin32_x64/Apps/ValidationTests/Errors'
-    displayName: 'Publish Tests Win32_x64 Errors'
-    condition: failed()
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'buildWin32_x64/Apps/ValidationTests/RelWithDebInfo'
-      contents: ValidationTests.*
-      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
-      cleanTargetFolder: false
-    displayName: 'Stage test app exe/pdb for publishing'
-    condition: failed()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x64 Crash Dumps'
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
-    displayName: 'Publish Tests Win32_x64 Dumps'
-    condition: failed()
-
-- job: win32_x86
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'windows-latest'
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildWin32_x86
-      cd buildWin32_x86
-      cmake .. -G "Visual Studio 16 2019" -A Win32 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
-    displayName: 'Generate Win32_x86 solution'
-
-  - task: MSBuild@1
-    inputs:
-      solution: 'buildWin32_x86/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-    displayName: 'Build WIN32_x86'
-
-  - script: |
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
-    displayName: 'Enable Crash Dumps'
-
-  - script: |
-      cd buildWin32_x86\Apps\ValidationTests
-      mkdir Results
-      mkdir Errors
-      cd RelWithDebInfo
-      ValidationTests
-    displayName: 'Validation Tests'
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x86 Rendered Pictures'
-      pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Results'
-    displayName: 'Publish Tests Win32_x86 Results'
-    condition: succeeded()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x86 Error Pictures'
-      pathtoPublish: 'buildWin32_x86/Apps/ValidationTests/Errors'
-    displayName: 'Publish Tests Win32_x86 Errors'
-    condition: failed()
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'buildWin32_x86/Apps/ValidationTests/RelWithDebInfo'
-      contents: ValidationTests.*
-      targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
-      cleanTargetFolder: false
-    displayName: 'Stage test app exe/pdb for publishing'
-    condition: failed()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: 'Win32_x86 Crash Dumps'
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
-    displayName: 'Publish Tests Win32_x86 Dumps'
-    condition: failed()
-
-- job: uwp_x64
-  pool:
-    vmImage: 'windows-latest'
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildUWP_x64
-      cd buildUWP_x64
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64
-    displayName: 'Generate UWP_x64 solution'
-
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_x64/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_x64'
-
-- job: uwp_arm64
-  pool:
-    vmImage: 'windows-latest'
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildUWP_arm64
-      cd buildUWP_arm64
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A arm64
-    displayName: 'Generate UWP_arm64 solution'
-
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_arm64/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_arm64'
-
-- job: uwp_x86
-  pool:
-    vmImage: 'windows-latest'
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-
-  - script: |
-      mkdir buildUWP_x86
-      cd buildUWP_x86
-      cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -G "Visual Studio 16 2019" -A Win32
-    displayName: 'Generate UWP_x86 solution'
-
-  - task: VSBuild@1
-    inputs:
-      solution: 'buildUWP_x86/BabylonNative.sln'
-      maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
-      msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-    displayName: 'Build UWP_x86'
-
-- job: Android_V8_Mac
-  pool:
-    vmImage: 'macOS-10.14'
-
-  variables:
-    HOMEBREW_NO_INSTALL_CLEANUP: 1
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      brew uninstall cmake
-      brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
-      cmake --version
-    displayName: 'Install Ninja'
-  - script: |
-      cd Apps/Playground/Android
-      npm install
-      cd ../../ValidationTests/Android
-      npm install
-    displayName: 'Install JS engine NPMs'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=v8android'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build Playground AndroidV8'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/ValidationTests/Android'
-        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=v8android'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build ValidationTests AndroidV8'
-
-- job: Android_JSC_Mac
-  pool:
-    vmImage: 'macOS-10.14'
-
-  variables:
-    HOMEBREW_NO_INSTALL_CLEANUP: 1
-
-  steps:
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      brew uninstall cmake
-      brew install ninja http://homebrew.bintray.com/bottles/cmake-$(CMAKE_VERSION).mojave.bottle.tar.gz
-      cmake --version
-    displayName: 'Install Ninja'
-  - script: |
-      cd Apps/Playground/Android
-      npm install
-      cd ../../ValidationTests/Android
-      npm install
-    displayName: 'Install JS engine NPMs'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=jsc'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build Playground AndroidJSC'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/ValidationTests/Android'
-        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=jsc'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build ValidationTests AndroidJSC'
-
-- job: Android_V8_Linux
-  pool:
-    vmImage: 'ubuntu-latest'
-
-  steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
-      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      sudo apt-get update
-      sudo apt-get install ninja-build
-    displayName: 'Install packages'
-  - script: |
-      cd Apps/Playground/Android
-      npm install
-      cd ../../ValidationTests/Android
-      npm install
-    displayName: 'Install JS engine NPMs'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=v8android'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build Playground AndroidV8'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/ValidationTests/Android'
-        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=v8android'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build ValidationTests AndroidV8'
-
-- job: Android_JSC_Linux
-  pool:
-    vmImage: 'ubuntu-latest'
-
-  steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
-      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      sudo apt-get update
-      sudo apt-get install ninja-build
-    displayName: 'Install packages'
-  - script: |
-      cd Apps/Playground/Android
-      npm install
-      cd ../../ValidationTests/Android
-      npm install
-    displayName: 'Install JS engine NPMs'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/Playground/Android'
-        gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=jsc'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build Playground AndroidJSC'
-  - task: Gradle@2
-    inputs:
-        workingDirectory: 'Apps/ValidationTests/Android'
-        gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
-        gradleOptions: '-Xmx1536m'
-        options: '-PJSEngine=jsc'
-        publishJUnitResults: false
-        tasks: 'assembleRelease'
-    displayName: 'Build ValidationTests AndroidJSC'
-
-- job: Ubuntu_Clang8_JSC
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'ubuntu-latest'
-
-  variables:
-    CC: clang-8
-    CXX: clang++-8
-
-  steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
-      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
-    displayName: 'Install packages'
-  - script: |
-      mkdir build
-      cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo
-      ninja
-    displayName: 'Build X11'
-
-- job: Ubuntu_GCC9_JSC
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'ubuntu-latest'
-
-  variables:
-    CC: gcc-9
-    CXX: g++-9
-
-  steps:
-  # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-  - script: |
-      wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
-      sudo mkdir -p /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64
-      sudo sh cmake-$(CMAKE_VERSION)-Linux-x86_64.sh --prefix=/opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64 --skip-license
-      sudo rm /usr/local/bin/cmake
-      sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
-      cmake --version
-    displayName: 'Install cmake'
-  - script: |
-      git submodule update --init --recursive
-    displayName: 'Checkout dependencies'
-  - script: |
-      sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev gcc-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
-    displayName: 'Install packages'
-  - script: |
-      mkdir build
-      cd build
-      cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
-      ninja
-    displayName: 'Build X11'
-
-  #- script: |
-  #    export DISPLAY=:99
-  #    Xvfb :99 -screen 0 1600x900x24 &
-  #    sleep 3
-  #    cd build/Apps/ValidationTests
-  #    mkdir Errors
-  #    mkdir Results
-  #    ./ValidationTests
-  #  displayName: 'Test on CI'
-  #- task: PublishBuildArtifacts@1
-  #  inputs:
-  #    artifactName: 'Ubuntu_GCC9_JSC Rendered Pictures'
-  #    pathtoPublish: 'build/Apps/ValidationTests/Results'
-  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Results'
-  #  condition: succeeded()
-  #- task: PublishBuildArtifacts@1
-  #  inputs:
-  #    artifactName: 'Ubuntu_GCC9_JSC Error Pictures'
-  #    pathtoPublish: 'build/Apps/ValidationTests/Errors'
-  #  displayName: 'Publish Tests Ubuntu_GCC9_JSC Errors'
-  #  condition: failed()
+# napi-jsi
+  - template: .github/jobs/uwp_napijsi.yml
+    parameters:
+      name: UWP_napi_jsi_x64
+      vmImage: 'windows-latest'
+      platform: x64

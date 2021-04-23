@@ -1,7 +1,7 @@
 #include "AppRuntime.h"
 
 #ifndef __clang__
-#pragma warning(disable : 4100 4267)
+#pragma warning(disable : 4100 4267 4127)
 #endif
 #include <v8.h>
 #include <libplatform/libplatform.h>
@@ -28,12 +28,23 @@ namespace Babylon
                 v8::V8::ShutdownPlatform();
             }
 
+            static Module& Instance()
+            {
+                return *s_module;
+            }
+
             static void Initialize(const char* executablePath)
             {
                 if (s_module == nullptr)
                 {
                     s_module = std::make_unique<Module>(executablePath);
                 }
+            }
+
+            void AddPlatformToJavaScript(Napi::Env env)
+            {
+                JsRuntime::NativeObject::GetFromJavaScript(env)
+                    .Set("_V8Platform", Napi::External<v8::Platform>::New(env, m_platform.get()));
             }
 
         private:
@@ -61,6 +72,9 @@ namespace Babylon
             v8::Context::Scope context_scope{context};
 
             Napi::Env env = Napi::Attach(context);
+            Dispatch([](Napi::Env env) {
+                Module::Instance().AddPlatformToJavaScript(env);
+            });
             Run(env);
             Napi::Detach(env);
         }
