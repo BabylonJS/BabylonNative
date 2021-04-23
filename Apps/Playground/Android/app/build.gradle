@@ -44,7 +44,7 @@ android {
             }
         }
         ndk {
-            if (project.hasProperty("NoArm7")) {
+            if (project.hasProperty("ARM64Only")) {
                 abiFilters "arm64-v8a"
             } else {
                 abiFilters "arm64-v8a", "armeabi-v7a", "x86"
