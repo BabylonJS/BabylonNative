@@ -195,7 +195,6 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
                 case ClientMessage:
                     if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
                     {
-                        Uninitialize();
                         doExit = true;
                     }
                     break;
@@ -208,6 +207,7 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
             }
         }
     }
+    Uninitialize();
     XDestroyIC(ic);
     XCloseIM(im);
 
