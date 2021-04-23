@@ -5,11 +5,18 @@
 namespace Babylon
 {
     using WindowType = MTKView*;
+    using ContextType = id<MTLDevice>;
 
-    struct GraphicsConfiguration
+    struct WindowConfiguration
     {
         WindowType WindowPtr;
         size_t Width;
         size_t Height;
+    };
+
+    struct ContextConfiguration
+    {
+        ContextType Context;
+        float DevicePixelRatio{1.f};
     };
 }
