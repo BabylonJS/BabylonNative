@@ -26,48 +26,50 @@ endif()
 
 target_include_directories(napi PUBLIC "include")
 
+# Install v8 SDK from NuGet
+function (install_v8_nuget V8_VERSION ARCH VS_PLAT_TOOLSET)
+    set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
+    set(NUGET_EXE "${NUGET_PATH}/nuget.exe")
+    if(NOT EXISTS ${NUGET_EXE})
+        file(DOWNLOAD "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" ${NUGET_EXE})
+    endif()
+    file(COPY "packages.config" DESTINATION ${NUGET_PATH})
+    execute_process(COMMAND ${NUGET_EXE} install WORKING_DIRECTORY ${NUGET_PATH})
+    add_library(v8_libbase SHARED IMPORTED)
+    set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libbase.dll.lib")
+    add_library(v8_libplatform SHARED IMPORTED)
+    set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libplatform.dll.lib")
+    add_library(v8 SHARED IMPORTED)
+    set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8.dll.lib")
+    target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
+    target_include_directories(v8 INTERFACE "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/include")
+
+    set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/icudtl.dat"
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/icui18n.dll"
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/icuuc.dll"
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8.dll"
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libbase.dll"
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libplatform.dll"
+        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/zlib.dll"
+        CACHE STRING "N-API runtime output artifacts")
+endfunction()
+
 if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
     add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")
-    if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND NOT ANDROID)
-        if(${CMAKE_CXX_COMPILER} MATCHES "x86/cl.exe$")
-            set(ARCH "x86")
-        elseif(${CMAKE_CXX_COMPILER} MATCHES "x64/cl.exe$")
-            set(ARCH "x64")
-        elseif(${CMAKE_CXX_COMPILER} MATCHES "arm/cl.exe$")
-            set(ARCH "ARM")
-        else()
-            message(FATAL_ERROR "Unrecognized compiler: ${CMAKE_CXX_COMPILER}")
-        endif()
-
-        set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
-        set(NUGET_EXE "${NUGET_PATH}/nuget.exe")
-        if(NOT EXISTS ${NUGET_EXE})
-            file(DOWNLOAD "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" ${NUGET_EXE})
-        endif()
-        file(COPY "packages.config" DESTINATION ${NUGET_PATH})
-        execute_process(COMMAND ${NUGET_EXE} install WORKING_DIRECTORY ${NUGET_PATH})
-        add_library(v8_libbase SHARED IMPORTED)
-        set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-v141-${ARCH}.7.4.288.26/lib/Release/v8_libbase.dll.lib")
-        add_library(v8_libplatform SHARED IMPORTED)
-        set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-v141-${ARCH}.7.4.288.26/lib/Release/v8_libplatform.dll.lib")
-        add_library(v8 SHARED IMPORTED)
-        set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-v141-${ARCH}.7.4.288.26/lib/Release/v8.dll.lib")
-        target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
-        target_include_directories(v8 INTERFACE "${NUGET_PATH}/v8-v141-${ARCH}.7.4.288.26/include")
-
-        set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/icudtl.dat"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/icui18n.dll"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/icuuc.dll"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/natives_blob.bin"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/snapshot_blob.bin"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8.dll"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8_libbase.dll"
-            "${NUGET_PATH}/v8.redist-v141-${ARCH}.7.4.288.26/lib/Release/v8_libplatform.dll"
-            CACHE STRING "N-API runtime output artifacts")
-        
+    if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND WIN32)
+        set_win32_arch()        
+        set(V8_VERSION "8.4.371.15")
+        install_v8_nuget(${V8_VERSION} ${WIN32_ARCH} ${CMAKE_VS_PLATFORM_TOOLSET})
         target_link_to_dependencies(javascript_engine INTERFACE v8)
+
+        if (WIN32_ARCH STREQUAL "x64")
+            # Enable V8 Pointer Compression
+            # https://v8.dev/blog/pointer-compression
+            # https://stackoverflow.com/q/62921373
+            target_compile_definitions(javascript_engine INTERFACE V8_COMPRESS_POINTERS)
+        endif()
     elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
         target_link_to_dependencies(javascript_engine INTERFACE "chakrart.lib")
     elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore" AND UNIX AND NOT ANDROID AND NOT APPLE)
