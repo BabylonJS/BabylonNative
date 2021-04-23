@@ -34,7 +34,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     float width = inWidth;
     float height = inHeight;
 
-    Babylon::GraphicsConfiguration graphicsConfig{};
+    Babylon::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
