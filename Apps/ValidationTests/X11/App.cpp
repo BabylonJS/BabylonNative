@@ -62,7 +62,7 @@ namespace
 
         Uninitialize();
 
-        Babylon::GraphicsConfiguration graphicsConfig{};
+        Babylon::WindowConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
@@ -195,7 +195,6 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
                 case ClientMessage:
                     if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
                     {
-                        Uninitialize();
                         doExit = true;
                     }
                     break;
@@ -208,6 +207,7 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
             }
         }
     }
+    Uninitialize();
     XDestroyIC(ic);
     XCloseIM(im);
 
