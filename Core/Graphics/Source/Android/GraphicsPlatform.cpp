@@ -6,11 +6,20 @@
 
 namespace Babylon
 {
-    void GraphicsImpl::ConfigureBgfxPlatformData(const GraphicsConfiguration& config, bgfx::PlatformData& pd)
+    void GraphicsImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.ndt = nullptr;
         pd.nwh = config.WindowPtr;
         pd.context = nullptr;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
+    }
+
+    void GraphicsImpl::ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& pd)
+    {
+        pd.ndt = nullptr;
+        pd.nwh = nullptr;
+        pd.context = config.Context;
         pd.backBuffer = nullptr;
         pd.backBufferDS = nullptr;
     }
