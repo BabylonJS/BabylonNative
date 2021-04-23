@@ -81,13 +81,12 @@ jobs:
       CC: gcc-9
       CXX: g++-9
 
-# Enable this job once SPIRV-cross has been updated see issue https://github.com/BabylonJS/BabylonNative/issues/679
-#  - template: .github/jobs/linux.yml
-#    parameters:
-#      name: Ubuntu_GCC10
-#      vmImage: 'ubuntu-latest'
-#      CC: gcc-10
-#      CXX: g++-10
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC10
+      vmImage: 'ubuntu-latest'
+      CC: gcc-10
+      CXX: g++-10
 
 # Android
   - template: .github/jobs/android.yml
