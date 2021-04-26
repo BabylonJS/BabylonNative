@@ -186,7 +186,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto* windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
-    Babylon::GraphicsConfiguration graphicsConfig{};
+    Babylon::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = windowPtr;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
