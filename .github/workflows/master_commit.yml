@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        repo: ['chrisfromwork/BabylonReactNative']
+        repo: ['BabylonJS/BabylonReactNative']
     steps:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v1
