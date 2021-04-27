@@ -52,6 +52,26 @@ const initializeSubmodulesWindowsAgent = async () => {
   exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive "./../Modules/@babylonjs/react-native/submodules/BabylonNative');
 }
 
+const initializeSubmodulesMostRecentBabylonNative = async () => {
+  exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git fetch origin master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git checkout origin/master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git submodule update --init --recursive *', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+}
+
+const initializeSubmodulesMostRecentBabylonNativeWindowsAgent = async () => {
+  exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git fetch origin master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git checkout origin/master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git add ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git commit -m "update to master"');
+  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive "./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+}
+
 const makeUWPProjectx86 = async () => {
   shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_x86');
   exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_x86');
@@ -498,5 +518,8 @@ exports.buildUWPPublish = buildUWPPublish;
 exports.copyUWPFiles = copyUWPFiles;
 exports.packUWP = packUWP;
 exports.packUWPNoBuild = packUWPNoBuild;
+
+exports.initializeSubmodulesMostRecentBabylonNative = initializeSubmodulesMostRecentBabylonNative;
+exports.initializeSubmodulesMostRecentBabylonNativeWindowsAgent = initializeSubmodulesMostRecentBabylonNativeWindowsAgent;
 
 exports.default = build;
