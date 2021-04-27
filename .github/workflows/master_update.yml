@@ -1,4 +1,4 @@
-name: Dispatch master branch update
+name: Dispatch master branch update ${{ github.sha }}
 
 on:
   workflow_dispatch:
