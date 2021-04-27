@@ -19,3 +19,4 @@ jobs:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: ${{ matrix.repo }}
           event-type: babylonnative-master-update
+          client-payload: '{ "commit": "${{GITHUB_SHA}}" }'
