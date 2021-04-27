@@ -53,23 +53,39 @@ const initializeSubmodulesWindowsAgent = async () => {
 }
 
 const initializeSubmodulesMostRecentBabylonNative = async () => {
-  exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git fetch origin master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git checkout origin/master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git submodule update --init --recursive *', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-}
+  let shaFound = false;
+  const shaOptionIndex = process.argv.indexOf('--sha');
+  if (shaOptionIndex >= 0)
+  {
+    const shaIndex = shaOptionIndex + 1;
+    if (process.argv.length > shaIndex)
+    {
+      shaFound = true;
+      const sha = process.argv[shaIndex];
+      console.log("Using provided commit: " + sha);
+      exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+      exec('git fetch origin ' + sha, './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+      exec('git checkout ' + sha, './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+    }
+  }
 
-const initializeSubmodulesMostRecentBabylonNativeWindowsAgent = async () => {
-  exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git fetch origin master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git checkout origin/master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git add ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git commit -m "update to master"');
-  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive "./../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  exec('git rev-parse HEAD', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  if (!shaFound)
+  {
+    exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
+    exec('git fetch origin master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+    exec('git checkout origin/master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  }
+
+  if (process.argv.indexOf('--windows') >= 0)
+  {
+    exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive *', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  }
+  else
+  {
+    exec('git submodule update --init --recursive *', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+  }
+
+  exec('git status');
 }
 
 const makeUWPProjectx86 = async () => {
@@ -520,6 +536,5 @@ exports.packUWP = packUWP;
 exports.packUWPNoBuild = packUWPNoBuild;
 
 exports.initializeSubmodulesMostRecentBabylonNative = initializeSubmodulesMostRecentBabylonNative;
-exports.initializeSubmodulesMostRecentBabylonNativeWindowsAgent = initializeSubmodulesMostRecentBabylonNativeWindowsAgent;
 
 exports.default = build;
