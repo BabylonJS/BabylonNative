@@ -186,6 +186,19 @@ cd <directory of your React Native app>
 npm install <root directory of your BabylonReactNative clone>/Package/Assembled/babylonjs-react-native-0.0.1.tgz
 ```
 
+If you wish to test the locally-built NPM packages with the apps in the `PackageTest` directory, before running `npm install` be sure to run:
+
+```
+cd Apps\PackageTest\<package test app version>
+
+npm uninstall @babylon/react-native
+
+# If you're also updating the react-native-windows package:
+npm uninstall @bablyon/react-native-windows
+```
+
+This will allow the local package dependencies to update without the package-lock.json file worrying about new content without a new version number. You can then run the above command to install the locally-built NPM modules located in `Package/Assembled`.
+
 ### **Debugging in Context**
 
 If you want to consume `@babylonjs/react-native` as source in your React Native app (for debugging or for iterating on the code when making a contribution), you can install the package source directory as an npm package.
