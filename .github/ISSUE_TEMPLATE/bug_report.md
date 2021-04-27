@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-**For questions, please use the [forum](https://forum.babylonjs.com)**
+**For questions, please use the [forum](https://forum.babylonjs.com)**.
 
 **Describe the bug**
 A clear and concise description of what the bug is.
