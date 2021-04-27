@@ -7,8 +7,8 @@ on:
       - master
 
 jobs:
-  name: Dispatch ${{ github.sha }}
   dispatch:
+    name: Dispatch ${{ github.sha }}
     runs-on: windows-latest
     strategy:
       matrix:
