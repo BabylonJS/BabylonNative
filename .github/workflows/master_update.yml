@@ -1,0 +1,20 @@
+name: Dispatch master branch update
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  dispatch:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        repo: ['BabylonJS/BabylonReactNative']
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: ${{ matrix.repo }}
+          event-type: babylonnative-master-update
