@@ -118,11 +118,11 @@ repositories {
     mavenLocal()
     maven {
         // Android JSC is installed from npm
-        url "$rootDir/node_modules/jsc-android/dist"
+        url "$rootDir/../../node_modules/jsc-android/dist"
     }
     maven {
         // Android V8 is installed from npm
-        url "$rootDir/node_modules/v8-android/dist"
+        url "$rootDir/../../node_modules/v8-android/dist"
     }
     google()
     jcenter()
@@ -175,13 +175,13 @@ tasks.whenTaskAdded { task ->
 task copyFilesJSHeaders {
     copy
     {
-        from "${rootDir}/node_modules/jsc-android/dist/include"
+        from "${rootDir}/../../node_modules/jsc-android/dist/include"
         include "*"
         into "${jsEngineBaseDir}/include/JavaScriptCore"
     }
     copy
     {
-        from "${rootDir}/node_modules/v8-android/dist/include"
+        from "${rootDir}/../../node_modules/v8-android/dist/include"
         include "**/*"
         into "${jsEngineIncDir}"
     }

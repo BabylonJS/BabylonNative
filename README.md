@@ -318,7 +318,7 @@ First download the latest release of Ninja, extract the binary, and add it to yo
 Next install the Javascript engine dependencies. This is done by the Node.js npm package system.
 
 ```
-cd Apps\Playground\Android
+cd Apps
 npm install
 ```
 
