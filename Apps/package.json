@@ -1,0 +1,11 @@
+{
+  "name": "BabylonNative",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "babylonjs": "5.0.0-alpha.17",
+    "babylonjs-gui": "5.0.0-alpha.17",
+    "babylonjs-materials": "5.0.0-alpha.17",
+    "babylonjs-loaders": "5.0.0-alpha.17"
+  }
+}

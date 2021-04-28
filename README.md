@@ -74,7 +74,7 @@ principles.
 
 ### **All Development Platforms, Common First Steps**
 
-**Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/)
+**Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/), [node.js](https://nodejs.org/en/)
 
 Step 1 for all development environments and targets is to clone the repo. Use a 
 git-enabled terminal to follow the steps below.
@@ -89,6 +89,13 @@ also necessary to set up the submodules.
 ```
 cd BabylonNative
 git submodule update --init --recursive
+```
+
+Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
+
+```
+cd Apps
+npm install
 ```
 
 Babylon Native's build system is based on CMake, which customarily uses a separate
