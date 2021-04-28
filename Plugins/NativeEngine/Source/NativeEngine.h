@@ -227,7 +227,7 @@ namespace Babylon
         bool m_requestAnimationFrameCallbacksScheduled{};
 
         bx::DefaultAllocator m_allocator{};
-        uint64_t m_engineState{BGFX_STATE_DEFAULT};
+        uint64_t m_engineState{BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA};
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);
