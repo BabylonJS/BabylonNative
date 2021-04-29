@@ -19,12 +19,7 @@ jobs:
         mkdir Apps\node_modules\babylonjs &&
         mkdir Apps\node_modules\babylonjs-gui &&
         mkdir Apps\node_modules\babylonjs-loaders &&
-        mkdir Apps\node_modules\babylonjs-materials &&
-        mkdir buildWin32_x64 && 
-        cd buildWin32_x64 &&
-        cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+        mkdir Apps\node_modules\babylonjs-materials
     - name: Download babylon.max.js
       run: curl.exe -o Apps/node_modules/babylonjs/babylon.max.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
     - name: Download babylonjs.materials.js
@@ -33,6 +28,12 @@ jobs:
       run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylon.loaders.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylon.loaders.js
     - name: Download babylon.gui.js
       run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
+    - name: Make Solution
+      run: mkdir buildWin32_x64 && 
+        cd buildWin32_x64 &&
+        cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
     - name: Make validation directories 
