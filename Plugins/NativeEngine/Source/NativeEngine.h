@@ -227,7 +227,10 @@ namespace Babylon
         bool m_requestAnimationFrameCallbacksScheduled{};
 
         bx::DefaultAllocator m_allocator{};
-        uint64_t m_engineState{BGFX_STATE_DEFAULT};
+        // Default webgl context has RGBA and depth write enabled but Depth test and face culling disabled.
+        // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/cullFace
+        // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthFunc
+        uint64_t m_engineState{BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_MSAA};
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);
