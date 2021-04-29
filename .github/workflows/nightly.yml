@@ -29,7 +29,7 @@ jobs:
     - name: Download babylon.gui.js
       run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
     - name: View Apps\node_modules content
-      run: dir /s Apps\node_modules
+      run: Get-ChildItem -Path .\Apps\node_modules -Recurse
     - name: Make Solution
       run: mkdir buildWin32_x64 && 
         cd buildWin32_x64 &&
