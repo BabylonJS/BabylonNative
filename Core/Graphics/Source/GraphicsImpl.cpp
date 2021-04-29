@@ -45,12 +45,20 @@ namespace Babylon
         return static_cast<WindowType>(m_state.Bgfx.InitState.platformData.nwh);
     }
 
-    void GraphicsImpl::SetNativeWindow(const GraphicsConfiguration& config)
+    void GraphicsImpl::UpdateWindow(const WindowConfiguration& config)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
         UpdateDevicePixelRatio();
+    }
+
+    void GraphicsImpl::UpdateContext(const ContextConfiguration& config)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
+        ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
     }
 
     void GraphicsImpl::Resize(size_t width, size_t height)

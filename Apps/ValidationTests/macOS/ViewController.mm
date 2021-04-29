@@ -71,7 +71,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    Babylon::GraphicsConfiguration graphicsConfig{};
+    Babylon::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = engineView;
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
@@ -96,7 +96,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
     Babylon::ScriptLoader loader{ *runtime };
     loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylon.glTF2FileLoader.js");
+    loader.LoadScript("app:///babylonjs.loaders.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
     loader.LoadScript("app:///validation_native.js");

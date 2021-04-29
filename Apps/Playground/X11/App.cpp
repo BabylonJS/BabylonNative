@@ -64,7 +64,7 @@ namespace
         Uninitialize();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-        Babylon::GraphicsConfiguration graphicsConfig{};
+        Babylon::WindowConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
@@ -99,7 +99,7 @@ namespace
         loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.loaders.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
 

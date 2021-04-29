@@ -1,10 +1,12 @@
 set(BABYLONSCRIPTS
-    "../BabylonScripts/babylon.glTF2FileLoader.js"
+    "../BabylonScripts/babylonjs.loaders.js"
+    "../BabylonScripts/babylonjs.loaders.js.map"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylon.max.js.map"
-    "../BabylonScripts/babylon.module.d.ts"
     "../BabylonScripts/babylonjs.materials.js"
+    "../BabylonScripts/babylonjs.materials.js.map"
     "../BabylonScripts/babylon.gui.js"
+    "../BabylonScripts/babylon.gui.js.map"
     "../BabylonScripts/ammo.js"
     "../BabylonScripts/meshwriter.min.js"
     "../BabylonScripts/recast.js")
@@ -48,7 +50,7 @@ if(APPLE)
     set(JSSCRIPT
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/ammo.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/recast.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.glTF2FileLoader.js"
+        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.loaders.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.max.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.materials.js"
         "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.gui.js"

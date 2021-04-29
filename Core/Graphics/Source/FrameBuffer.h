@@ -38,7 +38,7 @@ namespace Babylon
             bool Equals(const ViewPort& other) const;
         };
 
-        void NewView(bgfx::Encoder* encoder, const ViewPort& viewPort);
+        template<bool doTouch> void NewView(bgfx::Encoder* encoder, const ViewPort& viewPort);
         void Reset();
 
         FrameBufferManager& m_manager;
