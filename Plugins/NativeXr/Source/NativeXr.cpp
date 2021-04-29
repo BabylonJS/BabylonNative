@@ -482,7 +482,7 @@ namespace Babylon
                     if (!m_system.IsInitialized() &&
                         !m_system.TryInitialize())
                     {
-                        return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"Failed to initialize xr system."})); 
+                        throw std::runtime_error{"Failed to initialize xr system."};
                     }
 
                     return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
