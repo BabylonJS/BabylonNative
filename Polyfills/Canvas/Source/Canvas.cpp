@@ -8,6 +8,8 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
+
     void NativeCanvas::CreateInstance(Napi::Env env)
     {
         Napi::HandleScope scope{env};

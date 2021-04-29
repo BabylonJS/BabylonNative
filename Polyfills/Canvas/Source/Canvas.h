@@ -8,8 +8,6 @@ namespace Babylon::Polyfills::Internal
     class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>
     {
     public:
-        static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
-
         using ParentT = Napi::ObjectWrap<NativeCanvas>;
 
         static void CreateInstance(Napi::Env env);
