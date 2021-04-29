@@ -25,7 +25,7 @@ jobs:
     - name: Download babylonjs.materials.js
       run: curl.exe -o Apps/node_modules/babylonjs-materials/babylonjs.materials.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/materialsLibrary/babylonjs.materials.js
     - name: Download babylon.loaders.js
-      run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylon.loaders.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylon.loaders.js
+      run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylonjs.loaders.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylonjs.loaders.js
     - name: Download babylon.gui.js
       run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
     - name: View Apps\node_modules content
