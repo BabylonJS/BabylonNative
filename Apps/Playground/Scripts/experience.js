@@ -55,28 +55,6 @@ function CreateInputHandling(scene) {
         priorY = y;
     });
 }
-/*
-document = {
-    createElement: function (type) {
-        if (type === "canvas") {
-            return new OffscreenCanvas();
-        }
-        else if (type === "span") {
-            return { style: {}, appendChild: function () { }, getBoundingClientRect: function () { return { top: 0 }; } };
-        }
-        else if (type === "div") {
-            return {
-                style: {}, appendChild: function () { }, getBoundingClientRect: function () { return { top: 0 }; }
-            };
-        }
-        return {};
-    },
-    removeEventListener: function () { },
-    body: {
-        appendChild: function () { }, removeChild: function () { }
-    }
-}
-*/
 
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
@@ -140,7 +118,7 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
 
             
             textureGround.clear();
-            textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
+            textureGround.drawText("BabylonNative", 0, 246, font, "White", null, true, true);
             /*
 
             var manager = new BABYLON.GUI.GUI3DManager(scene);
@@ -263,9 +241,6 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
     }
 
     engine.runRenderLoop(function () {
-        if (textureGround) {
-            textureGround.drawText("BabylonNative", 0, 50, font, "White", null, true, true);
-        }
         scene.render();
     });
 

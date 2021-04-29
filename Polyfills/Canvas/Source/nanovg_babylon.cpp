@@ -605,7 +605,7 @@ namespace
 				gl->encoder->setVertexBuffer(0, &gl->tvb);
 				gl->encoder->setTexture(0, gl->s_tex, gl->th);
 				fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
-				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 			}
 		}
 
@@ -629,7 +629,7 @@ namespace
 					);
 				gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
 				gl->encoder->setTexture(0, gl->s_tex, gl->th);
-				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 			}
 		}
 
@@ -644,7 +644,7 @@ namespace
 				| BGFX_STENCIL_OP_FAIL_Z_ZERO
 				| BGFX_STENCIL_OP_PASS_Z_ZERO
 				);
-		gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+		gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 	}
 
 	static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -661,7 +661,7 @@ namespace
 			gl->encoder->setVertexBuffer(0, &gl->tvb);
 			gl->encoder->setTexture(0, gl->s_tex, gl->th);
 			fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
-			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 		}
 
 		if (gl->edgeAntiAlias)
@@ -674,7 +674,7 @@ namespace
 					);
 				gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
 				gl->encoder->setTexture(0, gl->s_tex, gl->th);
-				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 			}
 		}
 	}
@@ -694,7 +694,7 @@ namespace
 				);
 			gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
 			gl->encoder->setTexture(0, gl->s_tex, gl->th);
-			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 		}
 	}
 
@@ -707,7 +707,7 @@ namespace
 			gl->encoder->setState(gl->state);
 			gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
 			gl->encoder->setTexture(0, gl->s_tex, gl->th);
-			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_NONE);
+			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 		}
 	}
 
@@ -753,13 +753,13 @@ namespace
 	static void nvgRenderFlush(void* _userPtr)
 	{
 		struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
-		gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
+		//gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
 		if (!gl->prog.idx)
 		{
 			bgfx::RendererType::Enum type = bgfx::getRendererType();
 			gl->prog = bgfx::createProgram(
-				bgfx::createEmbeddedShader(s_embeddedShaders, type, "vs_nanovg")
-				, bgfx::createEmbeddedShader(s_embeddedShaders, type, "fs_nanovg")
+				bgfx::createEmbeddedShader(s_embeddedShaders, type, "vs_nanovg_fill")
+				, bgfx::createEmbeddedShader(s_embeddedShaders, type, "fs_nanovg_fill")
 				, true
 			);
 		}

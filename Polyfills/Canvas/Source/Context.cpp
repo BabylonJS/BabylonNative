@@ -453,7 +453,6 @@ namespace Babylon::Polyfills::Internal
         {
             nvgFontFaceId(m_nvg, m_fonts.begin()->second);
             nvgText(m_nvg, x, y, text.c_str(), nullptr);
-            nvgText(m_nvg, x, y, text.c_str(), nullptr);
             SetDirty();
         }
     }
@@ -472,10 +471,8 @@ namespace Babylon::Polyfills::Internal
         const auto width = m_canvas->GetWidth();
         const auto height = m_canvas->GetHeight();
 
-        //bgfx::discard();
-        
         nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-
+        /* Keeping code here to do a Y flip on rendering if needed
         const bgfx::Caps* caps = bgfx::getCaps();
         bool flipY = bgfx::getCaps()->originBottomLeft;
         if (!flipY)
@@ -483,6 +480,7 @@ namespace Babylon::Polyfills::Internal
             nvgScale(m_nvg, 1.f, -1.f);
             nvgTranslate(m_nvg, 0.f, -float(height));
         }
+        */
     }
 
     void Context::EndFrame()
@@ -491,14 +489,11 @@ namespace Babylon::Polyfills::Internal
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
-
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
-                frameBuffer.Clear(encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
-                frameBuffer.SetViewPort(encoder, 0, 0, m_canvas->GetWidth(), m_canvas->GetHeight());
+                frameBuffer.SetViewPort(encoder, 0.f, 0.f, 1.f, 1.f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
-
                 nvgEndFrame(m_nvg);
                 BeginFrame();
                 m_dirty = false;
