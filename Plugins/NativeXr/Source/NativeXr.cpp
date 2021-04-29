@@ -470,12 +470,10 @@ namespace Babylon
 
                     m_sessionState = std::make_unique<SessionState>(graphicsImpl);
 
-                    if (!m_system.IsInitialized())
+                    if (!m_system.IsInitialized() &&
+                        !m_system.TryInitialize())
                     {
-                        while (!m_system.TryInitialize())
-                        {
-                            // do nothing
-                        }
+                        return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"Failed to initialize xr system."})); 
                     }
 
                     return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
