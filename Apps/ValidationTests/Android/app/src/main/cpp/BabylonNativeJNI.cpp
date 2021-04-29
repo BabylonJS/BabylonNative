@@ -63,7 +63,7 @@ extern "C"
             int32_t width  = 600;//ANativeWindow_getWidth(window);
             int32_t height = 400;//ANativeWindow_getHeight(window);
 
-            Babylon::GraphicsConfiguration graphicsConfig{};
+            Babylon::WindowConfiguration graphicsConfig{};
             graphicsConfig.WindowPtr = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
@@ -108,7 +108,7 @@ extern "C"
             g_scriptLoader->LoadScript("app:///Scripts/ammo.js");
             g_scriptLoader->LoadScript("app:///Scripts/recast.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+            g_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
             g_scriptLoader->LoadScript("app:///Scripts/validation_native.js");
@@ -122,7 +122,7 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-            Babylon::GraphicsConfiguration graphicsConfig{};
+            Babylon::WindowConfiguration graphicsConfig{};
             graphicsConfig.WindowPtr = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);

@@ -3,7 +3,7 @@ if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR ANDROID)
 endif()
 
 set(BABYLONSCRIPTS 
-    "../BabylonScripts/babylon.glTF2FileLoader.js"
+    "../BabylonScripts/babylonjs.loaders.js"
     "../BabylonScripts/babylon.max.js"
     "../BabylonScripts/babylonjs.materials.js"
     "../BabylonScripts/babylon.gui.js")
@@ -22,7 +22,7 @@ if(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
     add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(APPLE)

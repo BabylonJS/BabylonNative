@@ -38,7 +38,7 @@ bool g_isXrActive{};
     float width = inWidth;
     float height = inHeight;
 
-    Babylon::GraphicsConfiguration graphicsConfig{};
+    Babylon::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
@@ -70,7 +70,7 @@ bool g_isXrActive{};
     loader.LoadScript("app:///ammo.js");
     loader.LoadScript("app:///recast.js");
     loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylon.glTF2FileLoader.js");
+    loader.LoadScript("app:///babylonjs.loaders.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
     loader.LoadScript("app:///experience.js");
