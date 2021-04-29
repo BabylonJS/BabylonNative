@@ -139,7 +139,7 @@ namespace Babylon::Polyfills::Internal
         return Napi::External<TextureData>::New(info.Env(), data);
     }
 
-    void NativeCanvas::Dispose(const Napi::CallbackInfo& info)
+    void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
     {
     }
 }
