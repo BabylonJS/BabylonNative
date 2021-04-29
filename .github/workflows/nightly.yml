@@ -14,13 +14,13 @@ jobs:
       uses: actions/checkout@master
       with:
         submodules: 'recursive'
-    - task: Npm@1
-      inputs:
-        command: 'install'
-        workingDir: 'Apps'
-      displayName: 'Install Babylon.js NPM packages'
     - name: Make Solution
-      run: mkdir buildWin32_x64 && 
+      run: mkdir Apps\node_modules &&
+        mkdir Apps\node_modules\babylonjs &&
+        mkdir Apps\node_modules\babylonjs-gui &&
+        mkdir Apps\node_modules\babylonjs-loaders &&
+        mkdir Apps\node_modules\babylonjs-materials &&
+        mkdir buildWin32_x64 && 
         cd buildWin32_x64 &&
         cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
     - name: Add msbuild to PATH
