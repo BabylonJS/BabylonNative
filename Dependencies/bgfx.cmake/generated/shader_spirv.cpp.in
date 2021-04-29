@@ -1,1 +1,0 @@
-#include "@BGFX_DIR@/src/shader_spirv.cpp"
