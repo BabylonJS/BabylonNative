@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@master
       with:
         submodules: 'recursive'
-    - name: Make Solution
+    - name: Create Apps\node_modules directories
       run: mkdir Apps\node_modules &&
         mkdir Apps\node_modules\babylonjs &&
         mkdir Apps\node_modules\babylonjs-gui &&
@@ -28,6 +28,8 @@ jobs:
       run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylon.loaders.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylon.loaders.js
     - name: Download babylon.gui.js
       run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
+    - name: View Apps\node_modules content
+      run: dir /s Apps\node_modules
     - name: Make Solution
       run: mkdir buildWin32_x64 && 
         cd buildWin32_x64 &&
