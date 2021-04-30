@@ -32,6 +32,7 @@ UWP, macOS, iOS, Android.
 - Network requests (including accessing local files using the `file://` protocol) 
 made throught the Babylon.js APIs.
 - Extending JavaScript functionality using N-API and native plugins.
+- Debugging JavaScript with V8 on the following platforms: Win32.
 
 The following major features are partially implemented but not yet supported. Note 
 that this list is not exhaustive.
@@ -42,7 +43,6 @@ that this list is not exhaustive.
 The following major features are not yet supported or implemented, even as previews, 
 but are expected to be supported in the future. Note that this list is not exhaustive.
 
-- Debugging JavaScript with V8.
 - User input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
