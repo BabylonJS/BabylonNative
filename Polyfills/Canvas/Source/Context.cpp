@@ -472,7 +472,7 @@ namespace Babylon::Polyfills::Internal
         const auto height = m_canvas->GetHeight();
 
         nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-        /* Keeping code here to do a Y flip on rendering if needed
+
         const bgfx::Caps* caps = bgfx::getCaps();
         bool flipY = bgfx::getCaps()->originBottomLeft;
         if (!flipY)
@@ -480,7 +480,6 @@ namespace Babylon::Polyfills::Internal
             nvgScale(m_nvg, 1.f, -1.f);
             nvgTranslate(m_nvg, 0.f, -float(height));
         }
-        */
     }
 
     void Context::EndFrame()

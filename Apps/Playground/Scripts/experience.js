@@ -101,7 +101,7 @@ CreateBoxAsync().then(function () {
     var font = "bold 44px monospace";
 BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
             _native.NativeCanvas.loadTTF("droidsans", data);
-            
+            /*
             var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
             ground.rotation.x = Math.PI * 0.5;
             ground.position.z = 2;
@@ -119,7 +119,7 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
             
             textureGround.clear();
             textureGround.drawText("BabylonNative", 0, 246, font, "White", null, true, true);
-            /*
+            */
 
             var manager = new BABYLON.GUI.GUI3DManager(scene);
 
@@ -163,14 +163,14 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
                     mesh.scaling.scaleInPlace(1.0);
                     pushButtonCore = newMeshes[0];
                     const newPushButton = pushButtonCore.clone("pushButton");
-                    makePushButton(newPushButton, new Color3(0.25, 0, 0));
+                    makePushButton(newPushButton, new BABYLON.Color3(0.25, 0, 0));
                     pushButtonCore.setEnabled(false);
                 });
 
                 function makePushButton(mesh, hoverColor) {
                     var cylinder = mesh.getChildMeshes(false, (node) => { return node.name.indexOf("Cylinder") !== -1 })[0];
-                    cylinder.material.albedoColor = new Color3(0.5, 0.19, 0);
-                    var pushButton = new BABYLON.GUI.TouchMeshButton3D(mesh, "pushButton");
+                    cylinder.material.albedoColor = new BABYLON.Color3(0.5, 0.19, 0);
+                    var pushButton = new BABYLON.GUI.TouchMeshButton3D(mesh, {collisionMesh:cylinder}, "pushButton");
                     pushButton.pointerEnterAnimation = () => {
                         cylinder.material.albedoColor = hoverColor;
                     };
@@ -191,7 +191,7 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
             }
 
             addPushButton(scene, manager);
-            */
+            
         }, undefined, undefined, true);
         
 

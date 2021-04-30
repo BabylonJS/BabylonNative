@@ -1059,7 +1059,11 @@ namespace
 			return;
 		}
 
-		bgfx::destroy(gl->prog);
+		// gl->prog.idx can be 0 is a context is destroyed without a call to flush
+		if (gl->prog.idx)
+		{
+			bgfx::destroy(gl->prog);
+		}
 		bgfx::destroy(gl->texMissing);
 
 		bgfx::destroy(gl->u_scissorMat);

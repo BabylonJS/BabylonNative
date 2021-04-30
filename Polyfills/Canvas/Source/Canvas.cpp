@@ -37,10 +37,6 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::~NativeCanvas()
     {
-        if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
-        {
-            bgfx::destroy(m_frameBufferHandle);
-        }
     }
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
@@ -69,9 +65,6 @@ namespace Babylon::Polyfills::Internal
         {
             m_width = width;
             m_dirty = true;
-            /*arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
-                UpdateRenderTarget();
-                });*/
         }
     }
 
@@ -87,9 +80,6 @@ namespace Babylon::Polyfills::Internal
         {
             m_height = height;
             m_dirty = true;
-            /*arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this] {
-                UpdateRenderTarget();
-                });*/
         }
     }
 
@@ -104,9 +94,6 @@ namespace Babylon::Polyfills::Internal
             }
             m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
             m_frameBuffer = &m_graphicsImpl.AddFrameBuffer(m_frameBufferHandle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
-            // destroyed frame buffer will have commited resources (and available resources back)
-            // during frame rendering. Calling bgfx::frame here to get frame buffer handle
-            //bgfx::frame();
             assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
             m_dirty = false;
         }

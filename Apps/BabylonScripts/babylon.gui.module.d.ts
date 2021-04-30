@@ -727,6 +727,7 @@ declare module "babylonjs-gui/2D/controls/control" {
     import { Measure } from "babylonjs-gui/2D/measure";
     import { Style } from "babylonjs-gui/2D/style";
     import { Matrix2D, Vector2WithInfo } from "babylonjs-gui/2D/math2D";
+    import { ICanvasRenderingContext } from 'babylonjs/Engines/ICanvas';
     /**
      * Root class used for all 2D controls
      * @see https://doc.babylonjs.com/how_to/gui#controls
@@ -1282,35 +1283,35 @@ declare module "babylonjs-gui/2D/controls/control" {
         /** @hidden */
         _link(host: AdvancedDynamicTexture): void;
         /** @hidden */
-        protected _transform(context?: CanvasRenderingContext2D): void;
+        protected _transform(context?: ICanvasRenderingContext): void;
         /** @hidden */
-        _renderHighlight(context: CanvasRenderingContext2D): void;
+        _renderHighlight(context: ICanvasRenderingContext): void;
         /** @hidden */
-        _renderHighlightSpecific(context: CanvasRenderingContext2D): void;
+        _renderHighlightSpecific(context: ICanvasRenderingContext): void;
         /** @hidden */
-        protected _applyStates(context: CanvasRenderingContext2D): void;
+        protected _applyStates(context: ICanvasRenderingContext): void;
         /** @hidden */
-        _layout(parentMeasure: Measure, context: CanvasRenderingContext2D): boolean;
+        _layout(parentMeasure: Measure, context: ICanvasRenderingContext): boolean;
         /** @hidden */
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         protected _evaluateClippingState(parentMeasure: Measure): void;
         /** @hidden */
         _measure(): void;
         /** @hidden */
-        protected _computeAlignment(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _computeAlignment(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /** @hidden */
-        protected _preMeasure(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _preMeasure(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /** @hidden */
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /** @hidden */
-        protected _clipForChildren(context: CanvasRenderingContext2D): void;
+        protected _clipForChildren(context: ICanvasRenderingContext): void;
         private static _ClipMeasure;
         private _tmpMeasureA;
         private _clip;
         /** @hidden */
-        _render(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): boolean;
+        _render(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): boolean;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
         /**
          * Tests if a given coordinates belong to the current control
          * @param x defines x coordinate to test
@@ -1395,7 +1396,7 @@ declare module "babylonjs-gui/2D/controls/control" {
             controlFirst: boolean;
         }) => any;
         /** @hidden */
-        protected static drawEllipse(x: number, y: number, width: number, height: number, context: CanvasRenderingContext2D): void;
+        protected static drawEllipse(x: number, y: number, width: number, height: number, context: ICanvasRenderingContext): void;
     }
 }
 declare module "babylonjs-gui/2D/controls/container" {
@@ -1404,6 +1405,7 @@ declare module "babylonjs-gui/2D/controls/container" {
     import { Measure } from "babylonjs-gui/2D/measure";
     import { AdvancedDynamicTexture } from "babylonjs-gui/2D/advancedDynamicTexture";
     import { PointerInfoBase } from 'babylonjs/Events/pointerEvents';
+    import { ICanvasRenderingContext } from 'babylonjs/Engines/ICanvas';
     import { DynamicTexture } from "babylonjs/Materials/Textures/dynamicTexture";
     /**
      * Root class for 2D containers
@@ -1499,23 +1501,23 @@ declare module "babylonjs-gui/2D/controls/container" {
         /** @hidden */
         _markAllAsDirty(): void;
         /** @hidden */
-        protected _localDraw(context: CanvasRenderingContext2D): void;
+        protected _localDraw(context: ICanvasRenderingContext): void;
         /** @hidden */
         _link(host: AdvancedDynamicTexture): void;
         /** @hidden */
         protected _beforeLayout(): void;
         /** @hidden */
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /** @hidden */
-        _layout(parentMeasure: Measure, context: CanvasRenderingContext2D): boolean;
+        _layout(parentMeasure: Measure, context: ICanvasRenderingContext): boolean;
         protected _postMeasure(): void;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Measure): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Measure): void;
         getDescendantsToRef(results: Control[], directDescendantsOnly?: boolean, predicate?: (control: Control) => boolean): void;
         /** @hidden */
         _processPicking(x: number, y: number, pi: PointerInfoBase, type: number, pointerId: number, buttonIndex: number, deltaX?: number, deltaY?: number): boolean;
         /** @hidden */
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /**
         * Serializes the current control
         * @param serializationObject defined the JSON serialized object
@@ -1530,6 +1532,7 @@ declare module "babylonjs-gui/2D/controls/container" {
 declare module "babylonjs-gui/2D/controls/rectangle" {
     import { Container } from "babylonjs-gui/2D/controls/container";
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /** Class used to create rectangle container */
     export class Rectangle extends Container {
         name?: string | undefined;
@@ -1547,10 +1550,10 @@ declare module "babylonjs-gui/2D/controls/rectangle" {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        protected _localDraw(context: CanvasRenderingContext2D): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _localDraw(context: ICanvasRenderingContext): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         private _drawRoundedRect;
-        protected _clipForChildren(context: CanvasRenderingContext2D): void;
+        protected _clipForChildren(context: ICanvasRenderingContext): void;
     }
 }
 declare module "babylonjs-gui/2D/controls/textBlock" {
@@ -1558,6 +1561,7 @@ declare module "babylonjs-gui/2D/controls/textBlock" {
     import { Measure } from "babylonjs-gui/2D/measure";
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { Nullable } from "babylonjs/types";
+    import { ICanvasRenderingContext } from 'babylonjs/Engines/ICanvas';
     /**
      * Enum that determines the text-wrapping mode to use.
      */
@@ -1701,16 +1705,16 @@ declare module "babylonjs-gui/2D/controls/textBlock" {
          */
         name?: string | undefined, text?: string);
         protected _getTypeName(): string;
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         private _drawText;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
-        protected _applyStates(context: CanvasRenderingContext2D): void;
-        protected _breakLines(refWidth: number, context: CanvasRenderingContext2D): object[];
-        protected _parseLine(line: string | undefined, context: CanvasRenderingContext2D): object;
-        protected _parseLineEllipsis(line: string | undefined, width: number, context: CanvasRenderingContext2D): object;
-        protected _parseLineWordWrap(line: string | undefined, width: number, context: CanvasRenderingContext2D): object[];
-        protected _renderLines(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
+        protected _applyStates(context: ICanvasRenderingContext): void;
+        protected _breakLines(refWidth: number, context: ICanvasRenderingContext): object[];
+        protected _parseLine(line: string | undefined, context: ICanvasRenderingContext): object;
+        protected _parseLineEllipsis(line: string | undefined, width: number, context: ICanvasRenderingContext): object;
+        protected _parseLineWordWrap(line: string | undefined, width: number, context: ICanvasRenderingContext): object[];
+        protected _renderLines(context: ICanvasRenderingContext): void;
         /**
          * Given a width constraint applied on the text block, find the expected height
          * @returns expected height
@@ -1724,6 +1728,7 @@ declare module "babylonjs-gui/2D/controls/image" {
     import { Observable } from "babylonjs/Misc/observable";
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create 2D images
      */
@@ -1899,10 +1904,10 @@ declare module "babylonjs-gui/2D/controls/image" {
         protected _getTypeName(): string;
         /** Force the control to synchronize with its content */
         synchronizeSizeWithContent(): void;
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         private _prepareWorkingCanvasForOpaqueDetection;
         private _drawImage;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext): void;
         private _renderNinePatch;
         dispose(): void;
         /** STRETCH_NONE */
@@ -2012,6 +2017,7 @@ declare module "babylonjs-gui/2D/controls/stackPanel" {
     import { Container } from "babylonjs-gui/2D/controls/container";
     import { Measure } from "babylonjs-gui/2D/measure";
     import { AdvancedDynamicTexture } from "babylonjs-gui/2D/advancedDynamicTexture";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create a 2D stack panel container
      */
@@ -2047,8 +2053,8 @@ declare module "babylonjs-gui/2D/controls/stackPanel" {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         /** @hidden */
-        protected _preMeasure(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _preMeasure(parentMeasure: Measure, context: ICanvasRenderingContext): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         protected _postMeasure(): void;
         /**
          * Serializes the current control
@@ -2067,6 +2073,7 @@ declare module "babylonjs-gui/2D/controls/checkbox" {
     import { Nullable } from 'babylonjs/types';
     import { Measure } from "babylonjs-gui/2D/measure";
     import { PointerInfoBase } from 'babylonjs/Events/pointerEvents';
+    import { ICanvasRenderingContext } from 'babylonjs/Engines/ICanvas';
     /**
      * Class used to represent a 2D checkbox
      */
@@ -2099,7 +2106,7 @@ declare module "babylonjs-gui/2D/controls/checkbox" {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
         /** @hidden */
         _onPointerDown(target: Control, coordinates: Vector2, pointerId: number, buttonIndex: number, pi: PointerInfoBase): boolean;
         /**
@@ -2235,6 +2242,7 @@ declare module "babylonjs-gui/2D/controls/inputText" {
     import { Measure } from "babylonjs-gui/2D/measure";
     import { TextWrapper } from "babylonjs-gui/2D/controls/textWrapper";
     import { IKeyboardEvent } from 'babylonjs/Events/deviceInputEvents';
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create input text control
      */
@@ -2397,7 +2405,7 @@ declare module "babylonjs-gui/2D/controls/inputText" {
         private _onCutText;
         /** @hidden */
         private _onPasteText;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
         _onPointerDown(target: Control, coordinates: Vector2, pointerId: number, buttonIndex: number, pi: PointerInfoBase): boolean;
         _onPointerMove(target: Control, coordinates: Vector2, pointerId: number, pi: PointerInfoBase): void;
         _onPointerUp(target: Control, coordinates: Vector2, pointerId: number, buttonIndex: number, notifyClick: boolean): void;
@@ -2411,6 +2419,7 @@ declare module "babylonjs-gui/2D/controls/grid" {
     import { ValueAndUnit } from "babylonjs-gui/2D/valueAndUnit";
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create a 2D grid container
      */
@@ -2524,9 +2533,9 @@ declare module "babylonjs-gui/2D/controls/grid" {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         protected _getGridDefinitions(definitionCallback: (lefts: number[], tops: number[], widths: number[], heights: number[]) => void): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         _flagDescendantsAsMatrixDirty(): void;
-        _renderHighlightSpecific(context: CanvasRenderingContext2D): void;
+        _renderHighlightSpecific(context: ICanvasRenderingContext): void;
         /** Releases associated resources */
         dispose(): void;
     }
@@ -2539,6 +2548,7 @@ declare module "babylonjs-gui/2D/controls/colorpicker" {
     import { AdvancedDynamicTexture } from "babylonjs-gui/2D/advancedDynamicTexture";
     import { Color3 } from 'babylonjs/Maths/math.color';
     import { PointerInfoBase } from 'babylonjs/Events/pointerEvents';
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /** Class used to create color pickers */
     export class ColorPicker extends Control {
         name?: string | undefined;
@@ -2585,13 +2595,13 @@ declare module "babylonjs-gui/2D/controls/colorpicker" {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         /** @hidden */
-        protected _preMeasure(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _preMeasure(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         private _updateSquareProps;
         private _drawGradientSquare;
         private _drawCircle;
         private _createColorWheelCanvas;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext): void;
         private _pointerIsDown;
         private _updateValueFromPointer;
         private _isPointOnSquare;
@@ -2625,6 +2635,7 @@ declare module "babylonjs-gui/2D/controls/colorpicker" {
 declare module "babylonjs-gui/2D/controls/ellipse" {
     import { Container } from "babylonjs-gui/2D/controls/container";
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /** Class used to create 2D ellipse containers */
     export class Ellipse extends Container {
         name?: string | undefined;
@@ -2638,9 +2649,9 @@ declare module "babylonjs-gui/2D/controls/ellipse" {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        protected _localDraw(context: CanvasRenderingContext2D): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
-        protected _clipForChildren(context: CanvasRenderingContext2D): void;
+        protected _localDraw(context: ICanvasRenderingContext): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
+        protected _clipForChildren(context: ICanvasRenderingContext): void;
     }
 }
 declare module "babylonjs-gui/2D/controls/focusableButton" {
@@ -2711,6 +2722,7 @@ declare module "babylonjs-gui/2D/controls/line" {
     import { Scene } from "babylonjs/scene";
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /** Class used to render 2D lines */
     export class Line extends Control {
         name?: string | undefined;
@@ -2755,9 +2767,9 @@ declare module "babylonjs-gui/2D/controls/line" {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext): void;
         _measure(): void;
-        protected _computeAlignment(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _computeAlignment(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /**
          * Move one end of the line given 3D cartesian coordinates.
          * @param position Targeted world position
@@ -2828,6 +2840,7 @@ declare module "babylonjs-gui/2D/controls/multiLine" {
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { MultiLinePoint } from "babylonjs-gui/2D/multiLinePoint";
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create multi line control
      */
@@ -2893,10 +2906,10 @@ declare module "babylonjs-gui/2D/controls/multiLine" {
         set horizontalAlignment(value: number);
         set verticalAlignment(value: number);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         _measure(): void;
-        protected _computeAlignment(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _computeAlignment(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         dispose(): void;
     }
 }
@@ -2906,6 +2919,7 @@ declare module "babylonjs-gui/2D/controls/radioButton" {
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { StackPanel } from "babylonjs-gui/2D/controls/stackPanel";
     import { PointerInfoBase } from 'babylonjs/Events/pointerEvents';
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create radio button controls
      */
@@ -2937,7 +2951,7 @@ declare module "babylonjs-gui/2D/controls/radioButton" {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext): void;
         _onPointerDown(target: Control, coordinates: Vector2, pointerId: number, buttonIndex: number, pi: PointerInfoBase): boolean;
         /**
          * Utility function to easily create a radio button with a header
@@ -3034,6 +3048,7 @@ declare module "babylonjs-gui/2D/controls/sliders/slider" {
     import { BaseSlider } from "babylonjs-gui/2D/controls/sliders/baseSlider";
     import { Nullable } from 'babylonjs/types';
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create slider controls
      */
@@ -3065,7 +3080,7 @@ declare module "babylonjs-gui/2D/controls/sliders/slider" {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
     }
 }
 declare module "babylonjs-gui/2D/controls/selector" {
@@ -3282,6 +3297,7 @@ declare module "babylonjs-gui/2D/controls/selector" {
 declare module "babylonjs-gui/2D/controls/scrollViewers/scrollViewerWindow" {
     import { Measure } from "babylonjs-gui/2D/measure";
     import { Container } from "babylonjs-gui/2D/controls/container";
+    import { ICanvasRenderingContext } from 'babylonjs/Engines/ICanvas';
     /**
      * Class used to hold a the container for ScrollViewer
      * @hidden
@@ -3315,13 +3331,13 @@ declare module "babylonjs-gui/2D/controls/scrollViewers/scrollViewerWindow" {
         constructor(name?: string);
         protected _getTypeName(): string;
         /** @hidden */
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         /** @hidden */
-        _layout(parentMeasure: Measure, context: CanvasRenderingContext2D): boolean;
+        _layout(parentMeasure: Measure, context: ICanvasRenderingContext): boolean;
         private _scrollChildren;
         private _scrollChildrenWithBuckets;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Measure): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Measure): void;
         protected _postMeasure(): void;
     }
 }
@@ -3330,6 +3346,7 @@ declare module "babylonjs-gui/2D/controls/sliders/scrollBar" {
     import { BaseSlider } from "babylonjs-gui/2D/controls/sliders/baseSlider";
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { PointerInfoBase } from 'babylonjs/Events/pointerEvents';
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create slider controls
      */
@@ -3351,7 +3368,7 @@ declare module "babylonjs-gui/2D/controls/sliders/scrollBar" {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         protected _getThumbThickness(): number;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext): void;
         private _first;
         private _originX;
         private _originY;
@@ -3366,6 +3383,7 @@ declare module "babylonjs-gui/2D/controls/sliders/imageScrollBar" {
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { Image } from "babylonjs-gui/2D/controls/image";
     import { PointerInfoBase } from 'babylonjs/Events/pointerEvents';
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create slider controls
      */
@@ -3413,7 +3431,7 @@ declare module "babylonjs-gui/2D/controls/sliders/imageScrollBar" {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         protected _getThumbThickness(): number;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: ICanvasRenderingContext): void;
         private _first;
         private _originX;
         private _originY;
@@ -3432,6 +3450,7 @@ declare module "babylonjs-gui/2D/controls/scrollViewers/scrollViewer" {
     import { AdvancedDynamicTexture } from "babylonjs-gui/2D/advancedDynamicTexture";
     import { ScrollBar } from "babylonjs-gui/2D/controls/sliders/scrollBar";
     import { ImageScrollBar } from "babylonjs-gui/2D/controls/sliders/imageScrollBar";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to hold a viewer window and sliders in a grid
     */
@@ -3532,7 +3551,7 @@ declare module "babylonjs-gui/2D/controls/scrollViewers/scrollViewer" {
         resetWindow(): void;
         protected _getTypeName(): string;
         private _buildClientSizes;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: ICanvasRenderingContext): void;
         protected _postMeasure(): void;
         /**
          * Gets or sets the mouse wheel precision
@@ -3593,7 +3612,7 @@ declare module "babylonjs-gui/2D/controls/scrollViewers/scrollViewer" {
         private _addBar;
         /** @hidden */
         private _attachWheel;
-        _renderHighlightSpecific(context: CanvasRenderingContext2D): void;
+        _renderHighlightSpecific(context: ICanvasRenderingContext): void;
         /** Releases associated resources */
         dispose(): void;
     }
@@ -3699,6 +3718,7 @@ declare module "babylonjs-gui/2D/controls/displayGrid" {
     import { Control } from "babylonjs-gui/2D/controls/control";
     import { Nullable } from 'babylonjs/types';
     import { Measure } from "babylonjs-gui/2D/measure";
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /** Class used to render a grid  */
     export class DisplayGrid extends Control {
         name?: string | undefined;
@@ -3747,7 +3767,7 @@ declare module "babylonjs-gui/2D/controls/displayGrid" {
          * @param name defines the control name
          */
         constructor(name?: string | undefined);
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
         protected _getTypeName(): string;
     }
 }
@@ -3756,6 +3776,7 @@ declare module "babylonjs-gui/2D/controls/sliders/imageBasedSlider" {
     import { Measure } from "babylonjs-gui/2D/measure";
     import { Image } from "babylonjs-gui/2D/controls/image";
     import { Nullable } from 'babylonjs/types';
+    import { ICanvasRenderingContext } from "babylonjs/Engines/ICanvas";
     /**
      * Class used to create slider controls based on images
      */
@@ -3788,7 +3809,7 @@ declare module "babylonjs-gui/2D/controls/sliders/imageBasedSlider" {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Nullable<Measure>): void;
+        _draw(context: ICanvasRenderingContext, invalidatedRectangle?: Nullable<Measure>): void;
     }
 }
 declare module "babylonjs-gui/2D/controls/statics" {
@@ -4744,6 +4765,70 @@ declare module "babylonjs-gui/3D/controls/scatterPanel" {
         protected _finalProcessing(): void;
     }
 }
+declare module "babylonjs-gui/3D/controls/slider3D" {
+    import { Nullable } from "babylonjs/types";
+    import { Observable } from "babylonjs/Misc/observable";
+    import { TransformNode } from "babylonjs/Meshes/transformNode";
+    import { Scene } from "babylonjs/scene";
+    import { Control3D } from "babylonjs-gui/3D/controls/control3D";
+    import { StandardMaterial } from "babylonjs/Materials/standardMaterial";
+    import { AbstractMesh } from "babylonjs/Meshes/abstractMesh";
+    /**
+     * Class used to create a slider in 3D
+     */
+    export class Slider3D extends Control3D {
+        private _sliderBarMaterial;
+        private _sliderThumbMaterial;
+        private _sliderThumb;
+        private _sliderBar;
+        private _minimum;
+        private _maximum;
+        private _value;
+        private _step;
+        /** Observable raised when the sldier value changes */
+        onValueChangedObservable: Observable<number>;
+        /**
+         * Creates a new slider
+         * @param name defines the control name
+         */
+        constructor(name?: string);
+        /**
+         * Gets the mesh used to render this control
+         */
+        get mesh(): Nullable<AbstractMesh>;
+        /** Gets or sets minimum value */
+        get minimum(): number;
+        set minimum(value: number);
+        /** Gets or sets maximum value */
+        get maximum(): number;
+        set maximum(value: number);
+        /** Gets or sets step value */
+        get step(): number;
+        set step(value: number);
+        /** Gets or sets current value */
+        get value(): number;
+        set value(value: number);
+        protected get start(): number;
+        protected get end(): number;
+        /**
+         * Gets the slider bar material used by this control
+         */
+        get sliderBarMaterial(): StandardMaterial;
+        /**
+         * Gets the slider thumb material used by this control
+         */
+        get sliderThumbMaterial(): StandardMaterial;
+        protected _createNode(scene: Scene): TransformNode;
+        protected _affectMaterial(mesh: AbstractMesh): void;
+        private _createBehavior;
+        private _convertToPosition;
+        private _convertToValue;
+        /**
+         * Releases all associated resources
+         */
+        dispose(): void;
+    }
+}
 declare module "babylonjs-gui/3D/controls/spherePanel" {
     import { Vector3 } from "babylonjs/Maths/math.vector";
     import { float } from "babylonjs/types";
@@ -5159,6 +5244,7 @@ declare module "babylonjs-gui/3D/controls/index" {
     export * from "babylonjs-gui/3D/controls/meshButton3D";
     export * from "babylonjs-gui/3D/controls/planePanel";
     export * from "babylonjs-gui/3D/controls/scatterPanel";
+    export * from "babylonjs-gui/3D/controls/slider3D";
     export * from "babylonjs-gui/3D/controls/spherePanel";
     export * from "babylonjs-gui/3D/controls/stackPanel3D";
     export * from "babylonjs-gui/3D/controls/touchButton3D";
@@ -6441,35 +6527,35 @@ declare module BABYLON.GUI {
         /** @hidden */
         _link(host: AdvancedDynamicTexture): void;
         /** @hidden */
-        protected _transform(context?: CanvasRenderingContext2D): void;
+        protected _transform(context?: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        _renderHighlight(context: CanvasRenderingContext2D): void;
+        _renderHighlight(context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        _renderHighlightSpecific(context: CanvasRenderingContext2D): void;
+        _renderHighlightSpecific(context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        protected _applyStates(context: CanvasRenderingContext2D): void;
+        protected _applyStates(context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        _layout(parentMeasure: Measure, context: CanvasRenderingContext2D): boolean;
+        _layout(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): boolean;
         /** @hidden */
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         protected _evaluateClippingState(parentMeasure: Measure): void;
         /** @hidden */
         _measure(): void;
         /** @hidden */
-        protected _computeAlignment(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _computeAlignment(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        protected _preMeasure(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _preMeasure(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        protected _clipForChildren(context: CanvasRenderingContext2D): void;
+        protected _clipForChildren(context: BABYLON.ICanvasRenderingContext): void;
         private static _ClipMeasure;
         private _tmpMeasureA;
         private _clip;
         /** @hidden */
-        _render(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): boolean;
+        _render(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): boolean;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
         /**
          * Tests if a given coordinates belong to the current control
          * @param x defines x coordinate to test
@@ -6554,7 +6640,7 @@ declare module BABYLON.GUI {
             controlFirst: boolean;
         }) => any;
         /** @hidden */
-        protected static drawEllipse(x: number, y: number, width: number, height: number, context: CanvasRenderingContext2D): void;
+        protected static drawEllipse(x: number, y: number, width: number, height: number, context: BABYLON.ICanvasRenderingContext): void;
     }
 }
 declare module BABYLON.GUI {
@@ -6652,23 +6738,23 @@ declare module BABYLON.GUI {
         /** @hidden */
         _markAllAsDirty(): void;
         /** @hidden */
-        protected _localDraw(context: CanvasRenderingContext2D): void;
+        protected _localDraw(context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
         _link(host: AdvancedDynamicTexture): void;
         /** @hidden */
         protected _beforeLayout(): void;
         /** @hidden */
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        _layout(parentMeasure: Measure, context: CanvasRenderingContext2D): boolean;
+        _layout(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): boolean;
         protected _postMeasure(): void;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Measure): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: Measure): void;
         getDescendantsToRef(results: Control[], directDescendantsOnly?: boolean, predicate?: (control: Control) => boolean): void;
         /** @hidden */
         _processPicking(x: number, y: number, pi: BABYLON.PointerInfoBase, type: number, pointerId: number, buttonIndex: number, deltaX?: number, deltaY?: number): boolean;
         /** @hidden */
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /**
         * Serializes the current control
         * @param serializationObject defined the JSON serialized object
@@ -6698,10 +6784,10 @@ declare module BABYLON.GUI {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        protected _localDraw(context: CanvasRenderingContext2D): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _localDraw(context: BABYLON.ICanvasRenderingContext): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         private _drawRoundedRect;
-        protected _clipForChildren(context: CanvasRenderingContext2D): void;
+        protected _clipForChildren(context: BABYLON.ICanvasRenderingContext): void;
     }
 }
 declare module BABYLON.GUI {
@@ -6848,16 +6934,16 @@ declare module BABYLON.GUI {
          */
         name?: string | undefined, text?: string);
         protected _getTypeName(): string;
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         private _drawText;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
-        protected _applyStates(context: CanvasRenderingContext2D): void;
-        protected _breakLines(refWidth: number, context: CanvasRenderingContext2D): object[];
-        protected _parseLine(line: string | undefined, context: CanvasRenderingContext2D): object;
-        protected _parseLineEllipsis(line: string | undefined, width: number, context: CanvasRenderingContext2D): object;
-        protected _parseLineWordWrap(line: string | undefined, width: number, context: CanvasRenderingContext2D): object[];
-        protected _renderLines(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        protected _applyStates(context: BABYLON.ICanvasRenderingContext): void;
+        protected _breakLines(refWidth: number, context: BABYLON.ICanvasRenderingContext): object[];
+        protected _parseLine(line: string | undefined, context: BABYLON.ICanvasRenderingContext): object;
+        protected _parseLineEllipsis(line: string | undefined, width: number, context: BABYLON.ICanvasRenderingContext): object;
+        protected _parseLineWordWrap(line: string | undefined, width: number, context: BABYLON.ICanvasRenderingContext): object[];
+        protected _renderLines(context: BABYLON.ICanvasRenderingContext): void;
         /**
          * Given a width constraint applied on the text block, find the expected height
          * @returns expected height
@@ -7042,10 +7128,10 @@ declare module BABYLON.GUI {
         protected _getTypeName(): string;
         /** Force the control to synchronize with its content */
         synchronizeSizeWithContent(): void;
-        protected _processMeasures(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _processMeasures(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         private _prepareWorkingCanvasForOpaqueDetection;
         private _drawImage;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext): void;
         private _renderNinePatch;
         dispose(): void;
         /** STRETCH_NONE */
@@ -7180,8 +7266,8 @@ declare module BABYLON.GUI {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         /** @hidden */
-        protected _preMeasure(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _preMeasure(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         protected _postMeasure(): void;
         /**
          * Serializes the current control
@@ -7225,7 +7311,7 @@ declare module BABYLON.GUI {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
         /** @hidden */
         _onPointerDown(target: Control, coordinates: BABYLON.Vector2, pointerId: number, buttonIndex: number, pi: BABYLON.PointerInfoBase): boolean;
         /**
@@ -7509,7 +7595,7 @@ declare module BABYLON.GUI {
         private _onCutText;
         /** @hidden */
         private _onPasteText;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
         _onPointerDown(target: Control, coordinates: BABYLON.Vector2, pointerId: number, buttonIndex: number, pi: BABYLON.PointerInfoBase): boolean;
         _onPointerMove(target: Control, coordinates: BABYLON.Vector2, pointerId: number, pi: BABYLON.PointerInfoBase): void;
         _onPointerUp(target: Control, coordinates: BABYLON.Vector2, pointerId: number, buttonIndex: number, notifyClick: boolean): void;
@@ -7631,9 +7717,9 @@ declare module BABYLON.GUI {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         protected _getGridDefinitions(definitionCallback: (lefts: number[], tops: number[], widths: number[], heights: number[]) => void): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         _flagDescendantsAsMatrixDirty(): void;
-        _renderHighlightSpecific(context: CanvasRenderingContext2D): void;
+        _renderHighlightSpecific(context: BABYLON.ICanvasRenderingContext): void;
         /** Releases associated resources */
         dispose(): void;
     }
@@ -7685,13 +7771,13 @@ declare module BABYLON.GUI {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         /** @hidden */
-        protected _preMeasure(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _preMeasure(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         private _updateSquareProps;
         private _drawGradientSquare;
         private _drawCircle;
         private _createColorWheelCanvas;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext): void;
         private _pointerIsDown;
         private _updateValueFromPointer;
         private _isPointOnSquare;
@@ -7736,9 +7822,9 @@ declare module BABYLON.GUI {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        protected _localDraw(context: CanvasRenderingContext2D): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
-        protected _clipForChildren(context: CanvasRenderingContext2D): void;
+        protected _localDraw(context: BABYLON.ICanvasRenderingContext): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
+        protected _clipForChildren(context: BABYLON.ICanvasRenderingContext): void;
     }
 }
 declare module BABYLON.GUI {
@@ -7839,9 +7925,9 @@ declare module BABYLON.GUI {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext): void;
         _measure(): void;
-        protected _computeAlignment(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _computeAlignment(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /**
          * Move one end of the line given 3D cartesian coordinates.
          * @param position Targeted world position
@@ -7967,10 +8053,10 @@ declare module BABYLON.GUI {
         set horizontalAlignment(value: number);
         set verticalAlignment(value: number);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         _measure(): void;
-        protected _computeAlignment(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _computeAlignment(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         dispose(): void;
     }
 }
@@ -8006,7 +8092,7 @@ declare module BABYLON.GUI {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext): void;
         _onPointerDown(target: Control, coordinates: BABYLON.Vector2, pointerId: number, buttonIndex: number, pi: BABYLON.PointerInfoBase): boolean;
         /**
          * Utility function to easily create a radio button with a header
@@ -8126,7 +8212,7 @@ declare module BABYLON.GUI {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
     }
 }
 declare module BABYLON.GUI {
@@ -8372,13 +8458,13 @@ declare module BABYLON.GUI {
         constructor(name?: string);
         protected _getTypeName(): string;
         /** @hidden */
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         /** @hidden */
-        _layout(parentMeasure: Measure, context: CanvasRenderingContext2D): boolean;
+        _layout(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): boolean;
         private _scrollChildren;
         private _scrollChildrenWithBuckets;
         /** @hidden */
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: Measure): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: Measure): void;
         protected _postMeasure(): void;
     }
 }
@@ -8404,7 +8490,7 @@ declare module BABYLON.GUI {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         protected _getThumbThickness(): number;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext): void;
         private _first;
         private _originX;
         private _originY;
@@ -8461,7 +8547,7 @@ declare module BABYLON.GUI {
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
         protected _getThumbThickness(): number;
-        _draw(context: CanvasRenderingContext2D): void;
+        _draw(context: BABYLON.ICanvasRenderingContext): void;
         private _first;
         private _originX;
         private _originY;
@@ -8571,7 +8657,7 @@ declare module BABYLON.GUI {
         resetWindow(): void;
         protected _getTypeName(): string;
         private _buildClientSizes;
-        protected _additionalProcessing(parentMeasure: Measure, context: CanvasRenderingContext2D): void;
+        protected _additionalProcessing(parentMeasure: Measure, context: BABYLON.ICanvasRenderingContext): void;
         protected _postMeasure(): void;
         /**
          * Gets or sets the mouse wheel precision
@@ -8632,7 +8718,7 @@ declare module BABYLON.GUI {
         private _addBar;
         /** @hidden */
         private _attachWheel;
-        _renderHighlightSpecific(context: CanvasRenderingContext2D): void;
+        _renderHighlightSpecific(context: BABYLON.ICanvasRenderingContext): void;
         /** Releases associated resources */
         dispose(): void;
     }
@@ -8775,7 +8861,7 @@ declare module BABYLON.GUI {
          * @param name defines the control name
          */
         constructor(name?: string | undefined);
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
         protected _getTypeName(): string;
     }
 }
@@ -8812,7 +8898,7 @@ declare module BABYLON.GUI {
          */
         constructor(name?: string | undefined);
         protected _getTypeName(): string;
-        _draw(context: CanvasRenderingContext2D, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
+        _draw(context: BABYLON.ICanvasRenderingContext, invalidatedRectangle?: BABYLON.Nullable<Measure>): void;
     }
 }
 declare module BABYLON.GUI {
@@ -9641,6 +9727,63 @@ declare module BABYLON.GUI {
         protected _mapGridNode(control: Control3D, nodePosition: BABYLON.Vector3): void;
         private _scatterMapping;
         protected _finalProcessing(): void;
+    }
+}
+declare module BABYLON.GUI {
+    /**
+     * Class used to create a slider in 3D
+     */
+    export class Slider3D extends Control3D {
+        private _sliderBarMaterial;
+        private _sliderThumbMaterial;
+        private _sliderThumb;
+        private _sliderBar;
+        private _minimum;
+        private _maximum;
+        private _value;
+        private _step;
+        /** BABYLON.Observable raised when the sldier value changes */
+        onValueChangedObservable: BABYLON.Observable<number>;
+        /**
+         * Creates a new slider
+         * @param name defines the control name
+         */
+        constructor(name?: string);
+        /**
+         * Gets the mesh used to render this control
+         */
+        get mesh(): BABYLON.Nullable<BABYLON.AbstractMesh>;
+        /** Gets or sets minimum value */
+        get minimum(): number;
+        set minimum(value: number);
+        /** Gets or sets maximum value */
+        get maximum(): number;
+        set maximum(value: number);
+        /** Gets or sets step value */
+        get step(): number;
+        set step(value: number);
+        /** Gets or sets current value */
+        get value(): number;
+        set value(value: number);
+        protected get start(): number;
+        protected get end(): number;
+        /**
+         * Gets the slider bar material used by this control
+         */
+        get sliderBarMaterial(): BABYLON.StandardMaterial;
+        /**
+         * Gets the slider thumb material used by this control
+         */
+        get sliderThumbMaterial(): BABYLON.StandardMaterial;
+        protected _createNode(scene: BABYLON.Scene): BABYLON.TransformNode;
+        protected _affectMaterial(mesh: BABYLON.AbstractMesh): void;
+        private _createBehavior;
+        private _convertToPosition;
+        private _convertToValue;
+        /**
+         * Releases all associated resources
+         */
+        dispose(): void;
     }
 }
 declare module BABYLON.GUI {
