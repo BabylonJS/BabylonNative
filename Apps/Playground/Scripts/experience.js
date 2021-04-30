@@ -14,7 +14,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
-var cameraTexture = true;
+var cameraTexture = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
