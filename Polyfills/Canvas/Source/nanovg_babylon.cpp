@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include "nanovg.h"
+//#include "nanovg.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
@@ -35,7 +35,7 @@
 
 #include "GraphicsImpl.h"
 
-BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244); // warning C4244: '=' : conversion from '' to '', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
 #include "vs_nanovg_fill.bin.h"
 #include "fs_nanovg_fill.bin.h"
@@ -553,7 +553,7 @@ namespace
 		gl->th = handle;
 	}
 
-	static void nvgRenderViewport(void* _userPtr, float width, float height, float devicePixelRatio)
+	static void nvgRenderViewport(void* _userPtr, float width, float height, float /*devicePixelRatio*/)
 	{
 		struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
 		gl->view[0] = width;
