@@ -2256,7 +2256,7 @@ var ColorPicker = /** @class */ (function (_super) {
         if (!engine) {
             throw new Error("Invalid engine. Unable to create a canvas.");
         }
-        var canvas = engine.createCanvas(radius * 2, radius * 2);
+        var canvas = engine.CreateCanvas(radius * 2, radius * 2);
         var context = canvas.getContext("2d");
         var image = context.getImageData(0, 0, radius * 2, radius * 2);
         var data = image.data;
@@ -7383,7 +7383,7 @@ var Image = /** @class */ (function (_super) {
         if (!engine) {
             throw new Error("Invalid engine. Unable to create a canvas.");
         }
-        var canvas = engine.createCanvas(height, width);
+        var canvas = engine.CreateCanvas(height, width);
         var context = canvas.getContext("2d");
         context.translate(canvas.width / 2, canvas.height / 2);
         context.rotate((n * Math.PI) / 2);
@@ -7452,7 +7452,7 @@ var Image = /** @class */ (function (_super) {
             if (!engine) {
                 throw new Error("Invalid engine. Unable to create a canvas.");
             }
-            this._workingCanvas = engine.createCanvas(width, height);
+            this._workingCanvas = engine.CreateCanvas(width, height);
         }
         var canvas = this._workingCanvas;
         var context = canvas.getContext("2d");
@@ -7775,7 +7775,7 @@ var Image = /** @class */ (function (_super) {
             if (!engine) {
                 throw new Error("Invalid engine. Unable to create a canvas.");
             }
-            this._workingCanvas = engine.createCanvas(width, height);
+            this._workingCanvas = engine.CreateCanvas(width, height);
         }
         var canvas = this._workingCanvas;
         var context = canvas.getContext("2d");
@@ -13855,7 +13855,7 @@ var TextBlock = /** @class */ (function (_super) {
     TextBlock.prototype.computeExpectedHeight = function () {
         var _a;
         if (this.text && this.widthInPixels) {
-            var context_1 = (_a = babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Engine"].LastCreatedEngine) === null || _a === void 0 ? void 0 : _a.createCanvas(0, 0).getContext("2d");
+            var context_1 = (_a = babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_1__["Engine"].LastCreatedEngine) === null || _a === void 0 ? void 0 : _a.CreateCanvas(0, 0).getContext("2d");
             if (context_1) {
                 this._applyStates(context_1);
                 if (!this._fontOffset) {
