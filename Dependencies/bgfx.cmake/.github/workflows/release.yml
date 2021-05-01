@@ -1,0 +1,54 @@
+# https://github.com/openblack/bgfx.cmake/blob/master/.github/workflows/release.yml
+
+name: Release
+
+on:
+  push:
+      branches: [ master ]
+    pull_request:
+      branches: [ master ]
+
+jobs:
+  job:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+
+    env:
+      # Indicates the CMake build directory where project files and binaries are being produced.
+      CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
+      CMAKE_INSTALL_DIR: ${{ github.workspace }}/install/
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive  
+      - name: Install Linux dependencies
+        run: |
+          sudo apt install -y libgl1-mesa-dev
+        if: matrix.os == 'ubuntu-latest'
+
+      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
+      - uses: lukka/get-cmake@latest
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # Run CMake to generate project files
+      - name: Generate project files
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -DCMAKE_INSTALL_PREFIX="${{ env.CMAKE_INSTALL_DIR }}" -DCMAKE_DEBUG_POSTFIX=d -DBGFX_BUILD_EXAMPLES=OFF -DBGFX_BUILD_TOOLS=ON -DBGFX_INSTALL=ON
+      # Build the install targets
+      - name: Build
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target install --config Debug
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target install --config Release
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}
+          path: ${{ github.workspace }}/install/
