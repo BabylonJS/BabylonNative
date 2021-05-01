@@ -268,7 +268,12 @@ if( BGFX_BUILD_EXAMPLES )
 #		37-gpudrivenrendering
 		38-bloom
 		39-assao
-#		40-svt
+		40-svt
+#		41-tess
+		42-bunnylod
+		43-denoise
+		44-sss
+		45-bokeh
 	)
 
 	foreach( EXAMPLE ${BGFX_EXAMPLES} )
