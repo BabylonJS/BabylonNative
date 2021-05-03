@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 #include <math.h>
-//#include "nanovg.h"
+#include "nanovg.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
