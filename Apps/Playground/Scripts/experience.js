@@ -14,10 +14,11 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
+var slate = true;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
+    BABYLON.Mesh.CreateBox("box1", 0.2);
 }
 
 function CreateSpheresAsync() {
@@ -82,6 +83,18 @@ CreateBoxAsync().then(function () {
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
+
+
+        var manager = new BABYLON.GUI.GUI3DManager(scene);
+
+    // Let's add a slate
+        var slate = new BABYLON.GUI.HolographicSlate("down");
+        manager.addControl(slate);
+        slate.mesh.setPivotPoint(new BABYLON.Vector3(2.5, -1.5, 0));
+        slate.scaling.scaleInPlace(0.1, 0.1, 0.1);
+
+        var followBehavior = new BABYLON.FollowBehavior();
+        followBehavior.attach(slate.mesh);
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });

@@ -97,9 +97,9 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ ({
 
 /***/ "../../node_modules/tslib/tslib.es6.js":
-/*!***********************************************************!*\
-  !*** C:/Repos/Babylon.js/node_modules/tslib/tslib.es6.js ***!
-  \***********************************************************/
+/*!****************************************************!*\
+  !*** E:/babylonjs/node_modules/tslib/tslib.es6.js ***!
+  \****************************************************/
 /*! exports provided: __extends, __assign, __rest, __decorate, __param, __metadata, __awaiter, __generator, __createBinding, __exportStar, __values, __read, __spread, __spreadArrays, __spreadArray, __await, __asyncGenerator, __asyncDelegator, __asyncValues, __makeTemplateObject, __importStar, __importDefault, __classPrivateFieldGet, __classPrivateFieldSet */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3777,6 +3777,7 @@ var Container = /** @class */ (function (_super) {
     };
     /** @hidden */
     Container.prototype._layout = function (parentMeasure, context) {
+        var _a, _b;
         if (!this.isDirty && (!this.isVisible || this.notRenderable)) {
             return false;
         }
@@ -3794,8 +3795,8 @@ var Container = /** @class */ (function (_super) {
             this._rebuildLayout = false;
             this._processMeasures(parentMeasure, context);
             if (!this._isClipped) {
-                for (var _i = 0, _a = this._children; _i < _a.length; _i++) {
-                    var child = _a[_i];
+                for (var _i = 0, _c = this._children; _i < _c.length; _i++) {
+                    var child = _c[_i];
                     child._tempParentMeasure.copyFrom(this._measureForChildren);
                     if (child._layout(this._measureForChildren, context)) {
                         if (this.adaptWidthToChildren && child._width.isPixel) {
@@ -3809,6 +3810,7 @@ var Container = /** @class */ (function (_super) {
                 if (this.adaptWidthToChildren && computedWidth >= 0) {
                     computedWidth += this.paddingLeftInPixels + this.paddingRightInPixels;
                     if (this.width !== computedWidth + "px") {
+                        (_a = this.parent) === null || _a === void 0 ? void 0 : _a._markAsDirty();
                         this.width = computedWidth + "px";
                         this._rebuildLayout = true;
                     }
@@ -3816,6 +3818,7 @@ var Container = /** @class */ (function (_super) {
                 if (this.adaptHeightToChildren && computedHeight >= 0) {
                     computedHeight += this.paddingTopInPixels + this.paddingBottomInPixels;
                     if (this.height !== computedHeight + "px") {
+                        (_b = this.parent) === null || _b === void 0 ? void 0 : _b._markAsDirty();
                         this.height = computedHeight + "px";
                         this._rebuildLayout = true;
                     }
@@ -15868,7 +15871,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tslib */ "../../node_modules/tslib/tslib.es6.js");
 /* harmony import */ var babylonjs_Meshes_transformNode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! babylonjs/Meshes/transformNode */ "babylonjs/Misc/observable");
 /* harmony import */ var babylonjs_Meshes_transformNode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(babylonjs_Meshes_transformNode__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _control3D__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./control3D */ "./3D/controls/control3D.ts");
+/* harmony import */ var _contentDisplay3D__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./contentDisplay3D */ "./3D/controls/contentDisplay3D.ts");
 
 
 
@@ -15892,7 +15895,7 @@ var AbstractButton3D = /** @class */ (function (_super) {
         return new babylonjs_Meshes_transformNode__WEBPACK_IMPORTED_MODULE_1__["TransformNode"]("button" + this.name);
     };
     return AbstractButton3D;
-}(_control3D__WEBPACK_IMPORTED_MODULE_2__["Control3D"]));
+}(_contentDisplay3D__WEBPACK_IMPORTED_MODULE_2__["ContentDisplay3D"]));
 
 
 
@@ -15912,9 +15915,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! babylonjs/Maths/math.vector */ "babylonjs/Misc/observable");
 /* harmony import */ var babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _abstractButton3D__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./abstractButton3D */ "./3D/controls/abstractButton3D.ts");
-/* harmony import */ var _2D_advancedDynamicTexture__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../2D/advancedDynamicTexture */ "./2D/advancedDynamicTexture.ts");
-
-
 
 
 
@@ -15932,8 +15932,6 @@ var Button3D = /** @class */ (function (_super) {
      */
     function Button3D(name) {
         var _this = _super.call(this, name) || this;
-        _this._contentResolution = 512;
-        _this._contentScaleRatio = 2;
         // Default animations
         _this.pointerEnterAnimation = function () {
             if (!_this.mesh) {
@@ -15958,80 +15956,8 @@ var Button3D = /** @class */ (function (_super) {
         };
         return _this;
     }
-    Object.defineProperty(Button3D.prototype, "contentResolution", {
-        /**
-         * Gets or sets the texture resolution used to render content (512 by default)
-         */
-        get: function () {
-            return this._contentResolution;
-        },
-        set: function (value) {
-            if (this._contentResolution === value) {
-                return;
-            }
-            this._contentResolution = value;
-            this._resetContent();
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Button3D.prototype, "contentScaleRatio", {
-        /**
-         * Gets or sets the texture scale ratio used to render content (2 by default)
-         */
-        get: function () {
-            return this._contentScaleRatio;
-        },
-        set: function (value) {
-            if (this._contentScaleRatio === value) {
-                return;
-            }
-            this._contentScaleRatio = value;
-            this._resetContent();
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Button3D.prototype._disposeFacadeTexture = function () {
-        if (this._facadeTexture) {
-            this._facadeTexture.dispose();
-            this._facadeTexture = null;
-        }
-    };
-    Button3D.prototype._resetContent = function () {
-        this._disposeFacadeTexture();
-        this.content = this._content;
-    };
-    Object.defineProperty(Button3D.prototype, "content", {
-        /**
-         * Gets or sets the GUI 2D content used to display the button's facade
-         */
-        get: function () {
-            return this._content;
-        },
-        set: function (value) {
-            this._content = value;
-            if (!this._host || !this._host.utilityLayer) {
-                return;
-            }
-            if (!this._facadeTexture) {
-                this._facadeTexture = new _2D_advancedDynamicTexture__WEBPACK_IMPORTED_MODULE_3__["AdvancedDynamicTexture"]("Facade", this._contentResolution, this._contentResolution, this._host.utilityLayer.utilityLayerScene, true, babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["Texture"].TRILINEAR_SAMPLINGMODE);
-                this._facadeTexture.rootContainer.scaleX = this._contentScaleRatio;
-                this._facadeTexture.rootContainer.scaleY = this._contentScaleRatio;
-                this._facadeTexture.premulAlpha = true;
-            }
-            else {
-                this._facadeTexture.rootContainer.clearControls();
-            }
-            this._facadeTexture.addControl(value);
-            this._applyFacade(this._facadeTexture);
-        },
-        enumerable: false,
-        configurable: true
-    });
     /**
      * Apply the facade texture (created from the content property).
-     * This function can be overloaded by child classes
      * @param facadeTexture defines the AdvancedDynamicTexture to use
      */
     Button3D.prototype._applyFacade = function (facadeTexture) {
@@ -16051,7 +15977,7 @@ var Button3D = /** @class */ (function (_super) {
             width: 1.0,
             height: 1.0,
             depth: 0.08,
-            faceUV: faceUV
+            faceUV: faceUV,
         }, scene);
         return mesh;
     };
@@ -16237,6 +16163,103 @@ var Container3D = /** @class */ (function (_super) {
 
 /***/ }),
 
+/***/ "./3D/controls/contentDisplay3D.ts":
+/*!*****************************************!*\
+  !*** ./3D/controls/contentDisplay3D.ts ***!
+  \*****************************************/
+/*! exports provided: ContentDisplay3D */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ContentDisplay3D", function() { return ContentDisplay3D; });
+/* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tslib */ "../../node_modules/tslib/tslib.es6.js");
+/* harmony import */ var _2D_advancedDynamicTexture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../2D/advancedDynamicTexture */ "./2D/advancedDynamicTexture.ts");
+/* harmony import */ var _control3D__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./control3D */ "./3D/controls/control3D.ts");
+/* harmony import */ var babylonjs_Materials_Textures_texture__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! babylonjs/Materials/Textures/texture */ "babylonjs/Misc/observable");
+/* harmony import */ var babylonjs_Materials_Textures_texture__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(babylonjs_Materials_Textures_texture__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+/**
+ * The base class for controls that display content
+ */
+var ContentDisplay3D = /** @class */ (function (_super) {
+    Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__extends"])(ContentDisplay3D, _super);
+    function ContentDisplay3D() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._contentResolution = 512;
+        _this._contentScaleRatio = 2;
+        return _this;
+    }
+    Object.defineProperty(ContentDisplay3D.prototype, "content", {
+        /**
+         * Gets or sets the GUI 2D content used to display the button's facade
+         */
+        get: function () {
+            return this._content;
+        },
+        set: function (value) {
+            this._content = value;
+            if (!this._host || !this._host.utilityLayer) {
+                return;
+            }
+            if (!this._facadeTexture) {
+                this._facadeTexture = new _2D_advancedDynamicTexture__WEBPACK_IMPORTED_MODULE_1__["AdvancedDynamicTexture"]("Facade", this._contentResolution, this._contentResolution, this._host.utilityLayer.utilityLayerScene, true, babylonjs_Materials_Textures_texture__WEBPACK_IMPORTED_MODULE_3__["Texture"].TRILINEAR_SAMPLINGMODE);
+                this._facadeTexture.rootContainer.scaleX = this._contentScaleRatio;
+                this._facadeTexture.rootContainer.scaleY = this._contentScaleRatio;
+                this._facadeTexture.premulAlpha = true;
+            }
+            else {
+                this._facadeTexture.rootContainer.clearControls();
+            }
+            this._facadeTexture.addControl(value);
+            this._applyFacade(this._facadeTexture);
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(ContentDisplay3D.prototype, "contentResolution", {
+        /**
+         * Gets or sets the texture resolution used to render content (512 by default)
+         */
+        get: function () {
+            return this._contentResolution;
+        },
+        set: function (value) {
+            if (this._contentResolution === value) {
+                return;
+            }
+            this._contentResolution = value;
+            this._resetContent();
+        },
+        enumerable: false,
+        configurable: true
+    });
+    ContentDisplay3D.prototype._disposeFacadeTexture = function () {
+        if (this._facadeTexture) {
+            this._facadeTexture.dispose();
+            this._facadeTexture = null;
+        }
+    };
+    ContentDisplay3D.prototype._resetContent = function () {
+        this._disposeFacadeTexture();
+        this.content = this._content;
+    };
+    /**
+     * Apply the facade texture (created from the content property).
+     * This function can be overloaded by child classes
+     * @param facadeTexture defines the AdvancedDynamicTexture to use
+     */
+    ContentDisplay3D.prototype._applyFacade = function (facadeTexture) { };
+    return ContentDisplay3D;
+}(_control3D__WEBPACK_IMPORTED_MODULE_2__["Control3D"]));
+
+
+
+/***/ }),
+
 /***/ "./3D/controls/control3D.ts":
 /*!**********************************!*\
   !*** ./3D/controls/control3D.ts ***!
@@ -16272,8 +16295,8 @@ var Control3D = /** @class */ (function () {
         this._downPointerIds = {}; // Store number of pointer downs per ID, from near and far interactions
         this._isVisible = true;
         /**
-        * An event triggered when the pointer move over the control
-        */
+         * An event triggered when the pointer move over the control
+         */
         this.onPointerMoveObservable = new babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_0__["Observable"]();
         /**
          * An event triggered when the pointer move out of the control
@@ -16516,7 +16539,8 @@ var Control3D = /** @class */ (function () {
     };
     /** @hidden */
     Control3D.prototype._onPointerEnter = function (target) {
-        if (this._enterCount === -1) { // -1 is for touch input, we are now sure we are with a mouse or pencil
+        if (this._enterCount === -1) {
+            // -1 is for touch input, we are now sure we are with a mouse or pencil
             this._enterCount = 0;
         }
         this._enterCount++;
@@ -16775,6 +16799,16 @@ __webpack_require__.r(__webpack_exports__);
 var HolographicButton = /** @class */ (function (_super) {
     Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__extends"])(HolographicButton, _super);
     /**
+     * Shows/hides the back plate of the button
+     */
+    // public get showBackPlate(): boolean {
+    //     return this._backPlate.isVisible;
+    // }
+    // public set showBackPlate(value: boolean) {
+    //     this._backPlate.isVisible = value;
+    //     this._backPlate.isPickable = true;
+    // }
+    /**
      * Creates a new button
      * @param name defines the control name
      */
@@ -16997,12 +17031,12 @@ var HolographicButton = /** @class */ (function (_super) {
         this._backPlate = babylonjs_Materials_standardMaterial__WEBPACK_IMPORTED_MODULE_2__["BoxBuilder"].CreateBox(this.name + "BackMesh", {
             width: 1.0,
             height: 1.0,
-            depth: 0.08
+            depth: 0.08,
         }, scene);
         this._frontPlate = babylonjs_Materials_standardMaterial__WEBPACK_IMPORTED_MODULE_2__["BoxBuilder"].CreateBox(this.name + "FrontMesh", {
             width: 1.0,
             height: 1.0,
-            depth: 0.08
+            depth: 0.08,
         }, scene);
         this._frontPlate.parent = this._backPlate;
         this._frontPlate.position.z = -0.08;
@@ -17094,11 +17128,224 @@ var HolographicButton = /** @class */ (function (_super) {
 
 /***/ }),
 
+/***/ "./3D/controls/holographicSlate.ts":
+/*!*****************************************!*\
+  !*** ./3D/controls/holographicSlate.ts ***!
+  \*****************************************/
+/*! exports provided: HolographicSlate */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "HolographicSlate", function() { return HolographicSlate; });
+/* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tslib */ "../../node_modules/tslib/tslib.es6.js");
+/* harmony import */ var babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! babylonjs/Maths/math.color */ "babylonjs/Misc/observable");
+/* harmony import */ var babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _materials_fluent_fluentMaterial__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../materials/fluent/fluentMaterial */ "./3D/materials/fluent/fluentMaterial.ts");
+/* harmony import */ var _touchHolographicButton__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./touchHolographicButton */ "./3D/controls/touchHolographicButton.ts");
+/* harmony import */ var _contentDisplay3D__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./contentDisplay3D */ "./3D/controls/contentDisplay3D.ts");
+/* harmony import */ var _2D_controls_image__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../2D/controls/image */ "./2D/controls/image.ts");
+
+
+
+
+
+
+
+
+
+/**
+ * Class used to create a holographic slate
+ */
+var HolographicSlate = /** @class */ (function (_super) {
+    Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__extends"])(HolographicSlate, _super);
+    /**
+     * Creates a new slate
+     * @param name defines the control name
+     */
+    function HolographicSlate(name) {
+        var _this = _super.call(this, name) || this;
+        /**
+         * Dimensions of the slate
+         */
+        _this.dimensions = new babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["Vector3"](5, 3, 0.04);
+        /**
+         * Dimensions of the backplate
+         */
+        _this.backplateDimensions = new babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["Vector3"](5, 0.3, 0.04);
+        /**
+         * Margin between backplate and contentplate
+         */
+        _this.backPlateMargin = 0.05;
+        /**
+         * Origin in local coordinates (top left corner)
+         */
+        _this.origin = new babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["Vector3"](0, 0, 0);
+        _this._contentScaleRatio = 1;
+        _this._followButton = new _touchHolographicButton__WEBPACK_IMPORTED_MODULE_3__["TouchHolographicButton"]("followButton" + _this.name);
+        _this._closeButton = new _touchHolographicButton__WEBPACK_IMPORTED_MODULE_3__["TouchHolographicButton"]("closeButton" + _this.name);
+        return _this;
+    }
+    Object.defineProperty(HolographicSlate.prototype, "renderingGroupId", {
+        get: function () {
+            return this._backPlate.renderingGroupId;
+        },
+        /**
+         * Rendering ground id of all the mesh in the button
+         */
+        set: function (id) {
+            this._backPlate.renderingGroupId = id;
+            this._contentPlate.renderingGroupId = id;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(HolographicSlate.prototype, "imageUrl", {
+        /**
+         * Gets or sets the image url for the button
+         */
+        get: function () {
+            return this._imageUrl;
+        },
+        set: function (value) {
+            if (this._imageUrl === value) {
+                return;
+            }
+            this._imageUrl = value;
+            this._rebuildContent();
+        },
+        enumerable: false,
+        configurable: true
+    });
+    /**
+     * Apply the facade texture (created from the content property).
+     * This function can be overloaded by child classes
+     * @param facadeTexture defines the AdvancedDynamicTexture to use
+     */
+    HolographicSlate.prototype._applyFacade = function (facadeTexture) {
+        this._contentMaterial.albedoTexture = facadeTexture;
+    };
+    HolographicSlate.prototype._rebuildContent = function () {
+        this._disposeFacadeTexture();
+        // HACK: Temporary fix for BabylonNative while we wait for the polyfill.
+        if (!!document.createElement) {
+            if (this._imageUrl) {
+                var image = new _2D_controls_image__WEBPACK_IMPORTED_MODULE_5__["Image"]();
+                image.source = this._imageUrl;
+                if (this._contentPlate) {
+                    this.content = image;
+                }
+            }
+        }
+    };
+    HolographicSlate.prototype._addControl = function (control) {
+        control._host = this._host;
+        if (this._host.utilityLayer) {
+            control._prepareNode(this._host.utilityLayer.utilityLayerScene);
+        }
+    };
+    HolographicSlate.prototype._getTypeName = function () {
+        return "HolographicSlate";
+    };
+    /**
+     * @hidden
+     */
+    HolographicSlate.prototype._positionElements = function () {
+        var followButtonMesh = this._followButton.mesh;
+        var closeButtonMesh = this._closeButton.mesh;
+        var backPlate = this._backPlate;
+        var contentPlate = this._contentPlate;
+        if (followButtonMesh && closeButtonMesh && backPlate) {
+            // World size of a button with 1 scaling
+            var buttonBaseSize = 1;
+            // Buttons take full backPlate on Y axis
+            var backPlateYScale = this.backplateDimensions.y / buttonBaseSize;
+            closeButtonMesh.scaling.copyFromFloats(backPlateYScale, backPlateYScale, backPlateYScale);
+            followButtonMesh.scaling.copyFromFloats(backPlateYScale, backPlateYScale, backPlateYScale);
+            closeButtonMesh.position
+                .copyFromFloats(this.backplateDimensions.x - backPlateYScale / 2, -this.backplateDimensions.y / 2, -this.backplateDimensions.z / 2)
+                .addInPlace(this.origin);
+            followButtonMesh.position
+                .copyFromFloats(this.backplateDimensions.x - (3 * backPlateYScale) / 2, -this.backplateDimensions.y / 2, -this.backplateDimensions.z / 2)
+                .addInPlace(this.origin);
+            var contentPlateHeight = this.dimensions.y - this.backplateDimensions.y - this.backPlateMargin;
+            backPlate.scaling.copyFrom(this.backplateDimensions);
+            contentPlate.scaling.copyFromFloats(this.dimensions.x, contentPlateHeight, this.dimensions.z);
+            backPlate.position.copyFromFloats(this.backplateDimensions.x / 2, -(this.backplateDimensions.y / 2), 0).addInPlace(this.origin);
+            contentPlate.position.copyFromFloats(this.dimensions.x / 2, -(this.backplateDimensions.y + this.backPlateMargin + contentPlateHeight / 2), 0).addInPlace(this.origin);
+        }
+    };
+    // Mesh association
+    HolographicSlate.prototype._createNode = function (scene) {
+        var node = new babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["Mesh"]("slate" + this.name);
+        this._backPlate = babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["BoxBuilder"].CreateBox("backPlate" + this.name, { size: 1 }, scene);
+        this._contentPlate = babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["BoxBuilder"].CreateBox("backPlate" + this.name, { size: 1 }, scene);
+        this._backPlate.parent = node;
+        this._contentPlate.parent = node;
+        this._addControl(this._followButton);
+        this._addControl(this._closeButton);
+        var followButtonMesh = this._followButton.mesh;
+        var closeButtonMesh = this._closeButton.mesh;
+        followButtonMesh.parent = node;
+        closeButtonMesh.parent = node;
+        this._positionElements();
+        this._followButton.imageUrl = "./textures/IconFollowMe.png";
+        this._closeButton.imageUrl = "./textures/IconClose.png";
+        this._followButton.backMaterial.alpha = 0;
+        this._closeButton.backMaterial.alpha = 0;
+        node.isVisible = false;
+        return node;
+    };
+    HolographicSlate.prototype._affectMaterial = function (mesh) {
+        var _this = this;
+        // TODO share materials
+        this._backPlateMaterial = new _materials_fluent_fluentMaterial__WEBPACK_IMPORTED_MODULE_2__["FluentMaterial"](this.name + "plateMaterial", mesh.getScene());
+        this._backPlateMaterial.albedoColor = new babylonjs_Maths_math_color__WEBPACK_IMPORTED_MODULE_1__["Color3"](0.08, 0.15, 0.55);
+        this._backPlateMaterial.renderBorders = true;
+        this._backPlateMaterial.renderHoverLight = true;
+        this._pickedPointObserver = this._host.onPickedPointChangedObservable.add(function (pickedPoint) {
+            if (pickedPoint) {
+                _this._backPlateMaterial.hoverPosition = pickedPoint;
+                _this._backPlateMaterial.hoverColor.a = 1.0;
+            }
+            else {
+                _this._backPlateMaterial.hoverColor.a = 0;
+            }
+        });
+        this._contentMaterial = new _materials_fluent_fluentMaterial__WEBPACK_IMPORTED_MODULE_2__["FluentMaterial"](this.name + "contentMaterial", mesh.getScene());
+        this._contentMaterial.renderBorders = true;
+        this._backPlate.material = this._backPlateMaterial;
+        this._contentPlate.material = this._contentMaterial;
+        this._rebuildContent();
+    };
+    /**
+     * Releases all associated resources
+     */
+    HolographicSlate.prototype.dispose = function () {
+        _super.prototype.dispose.call(this);
+        this._backPlateMaterial.dispose();
+        this._contentMaterial.dispose();
+        this._backPlate.dispose();
+        this._contentPlate.dispose();
+        this._followButton.dispose();
+        this._closeButton.dispose();
+        if (this._pickedPointObserver) {
+            this._host.onPickedPointChangedObservable.remove(this._pickedPointObserver);
+            this._pickedPointObserver = null;
+        }
+    };
+    return HolographicSlate;
+}(_contentDisplay3D__WEBPACK_IMPORTED_MODULE_4__["ContentDisplay3D"]));
+
+
+
+/***/ }),
+
 /***/ "./3D/controls/index.ts":
 /*!******************************!*\
   !*** ./3D/controls/index.ts ***!
   \******************************/
-/*! exports provided: AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel */
+/*! exports provided: AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, HolographicSlate, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -17121,37 +17368,41 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _holographicButton__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./holographicButton */ "./3D/controls/holographicButton.ts");
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicButton", function() { return _holographicButton__WEBPACK_IMPORTED_MODULE_5__["HolographicButton"]; });
 
-/* harmony import */ var _meshButton3D__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./meshButton3D */ "./3D/controls/meshButton3D.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshButton3D", function() { return _meshButton3D__WEBPACK_IMPORTED_MODULE_6__["MeshButton3D"]; });
+/* harmony import */ var _holographicSlate__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./holographicSlate */ "./3D/controls/holographicSlate.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicSlate", function() { return _holographicSlate__WEBPACK_IMPORTED_MODULE_6__["HolographicSlate"]; });
 
-/* harmony import */ var _planePanel__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./planePanel */ "./3D/controls/planePanel.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "PlanePanel", function() { return _planePanel__WEBPACK_IMPORTED_MODULE_7__["PlanePanel"]; });
+/* harmony import */ var _meshButton3D__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./meshButton3D */ "./3D/controls/meshButton3D.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshButton3D", function() { return _meshButton3D__WEBPACK_IMPORTED_MODULE_7__["MeshButton3D"]; });
 
-/* harmony import */ var _scatterPanel__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./scatterPanel */ "./3D/controls/scatterPanel.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "ScatterPanel", function() { return _scatterPanel__WEBPACK_IMPORTED_MODULE_8__["ScatterPanel"]; });
+/* harmony import */ var _planePanel__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./planePanel */ "./3D/controls/planePanel.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "PlanePanel", function() { return _planePanel__WEBPACK_IMPORTED_MODULE_8__["PlanePanel"]; });
 
-/* harmony import */ var _spherePanel__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./spherePanel */ "./3D/controls/spherePanel.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "SpherePanel", function() { return _spherePanel__WEBPACK_IMPORTED_MODULE_9__["SpherePanel"]; });
+/* harmony import */ var _scatterPanel__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./scatterPanel */ "./3D/controls/scatterPanel.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "ScatterPanel", function() { return _scatterPanel__WEBPACK_IMPORTED_MODULE_9__["ScatterPanel"]; });
 
-/* harmony import */ var _stackPanel3D__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./stackPanel3D */ "./3D/controls/stackPanel3D.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "StackPanel3D", function() { return _stackPanel3D__WEBPACK_IMPORTED_MODULE_10__["StackPanel3D"]; });
+/* harmony import */ var _spherePanel__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./spherePanel */ "./3D/controls/spherePanel.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "SpherePanel", function() { return _spherePanel__WEBPACK_IMPORTED_MODULE_10__["SpherePanel"]; });
 
-/* harmony import */ var _touchButton3D__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./touchButton3D */ "./3D/controls/touchButton3D.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "ButtonState", function() { return _touchButton3D__WEBPACK_IMPORTED_MODULE_11__["ButtonState"]; });
+/* harmony import */ var _stackPanel3D__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./stackPanel3D */ "./3D/controls/stackPanel3D.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "StackPanel3D", function() { return _stackPanel3D__WEBPACK_IMPORTED_MODULE_11__["StackPanel3D"]; });
 
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchButton3D", function() { return _touchButton3D__WEBPACK_IMPORTED_MODULE_11__["TouchButton3D"]; });
+/* harmony import */ var _touchButton3D__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./touchButton3D */ "./3D/controls/touchButton3D.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "ButtonState", function() { return _touchButton3D__WEBPACK_IMPORTED_MODULE_12__["ButtonState"]; });
 
-/* harmony import */ var _touchMeshButton3D__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./touchMeshButton3D */ "./3D/controls/touchMeshButton3D.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchMeshButton3D", function() { return _touchMeshButton3D__WEBPACK_IMPORTED_MODULE_12__["TouchMeshButton3D"]; });
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchButton3D", function() { return _touchButton3D__WEBPACK_IMPORTED_MODULE_12__["TouchButton3D"]; });
 
-/* harmony import */ var _touchHolographicButton__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./touchHolographicButton */ "./3D/controls/touchHolographicButton.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchHolographicButton", function() { return _touchHolographicButton__WEBPACK_IMPORTED_MODULE_13__["TouchHolographicButton"]; });
+/* harmony import */ var _touchMeshButton3D__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./touchMeshButton3D */ "./3D/controls/touchMeshButton3D.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchMeshButton3D", function() { return _touchMeshButton3D__WEBPACK_IMPORTED_MODULE_13__["TouchMeshButton3D"]; });
 
-/* harmony import */ var _touchToggleButton3D__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./touchToggleButton3D */ "./3D/controls/touchToggleButton3D.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchToggleButton3D", function() { return _touchToggleButton3D__WEBPACK_IMPORTED_MODULE_14__["TouchToggleButton3D"]; });
+/* harmony import */ var _touchHolographicButton__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./touchHolographicButton */ "./3D/controls/touchHolographicButton.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchHolographicButton", function() { return _touchHolographicButton__WEBPACK_IMPORTED_MODULE_14__["TouchHolographicButton"]; });
 
-/* harmony import */ var _volumeBasedPanel__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./volumeBasedPanel */ "./3D/controls/volumeBasedPanel.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "VolumeBasedPanel", function() { return _volumeBasedPanel__WEBPACK_IMPORTED_MODULE_15__["VolumeBasedPanel"]; });
+/* harmony import */ var _touchToggleButton3D__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./touchToggleButton3D */ "./3D/controls/touchToggleButton3D.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "TouchToggleButton3D", function() { return _touchToggleButton3D__WEBPACK_IMPORTED_MODULE_15__["TouchToggleButton3D"]; });
+
+/* harmony import */ var _volumeBasedPanel__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./volumeBasedPanel */ "./3D/controls/volumeBasedPanel.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "VolumeBasedPanel", function() { return _volumeBasedPanel__WEBPACK_IMPORTED_MODULE_16__["VolumeBasedPanel"]; });
+
 
 
 
@@ -18197,27 +18448,27 @@ var TouchHolographicButton = /** @class */ (function (_super) {
     };
     TouchHolographicButton.prototype._rebuildContent = function () {
         this._disposeFacadeTexture();
-        var panel = new _2D_controls_stackPanel__WEBPACK_IMPORTED_MODULE_3__["StackPanel"]();
-        panel.isVertical = true;
-        if (this._imageUrl) {
-            var image = new _2D_controls_image__WEBPACK_IMPORTED_MODULE_4__["Image"]();
-            image.source = this._imageUrl;
-            image.paddingTop = "40px";
-            image.height = "180px";
-            image.width = "100px";
-            image.paddingBottom = "40px";
-            panel.addControl(image);
-        }
-        if (this._text) {
-            var text = new _2D_controls_textBlock__WEBPACK_IMPORTED_MODULE_5__["TextBlock"]();
-            text.text = this._text;
-            text.color = "white";
-            text.height = "30px";
-            text.fontSize = 24;
-            panel.addControl(text);
-        }
         // HACK: Temporary fix for BabylonNative while we wait for the polyfill.
         if (!!document.createElement) {
+            var panel = new _2D_controls_stackPanel__WEBPACK_IMPORTED_MODULE_3__["StackPanel"]();
+            panel.isVertical = true;
+            if (this._imageUrl) {
+                var image = new _2D_controls_image__WEBPACK_IMPORTED_MODULE_4__["Image"]();
+                image.source = this._imageUrl;
+                image.paddingTop = "40px";
+                image.height = "180px";
+                image.width = "100px";
+                image.paddingBottom = "40px";
+                panel.addControl(image);
+            }
+            if (this._text) {
+                var text = new _2D_controls_textBlock__WEBPACK_IMPORTED_MODULE_5__["TextBlock"]();
+                text.text = this._text;
+                text.color = "white";
+                text.height = "30px";
+                text.fontSize = 24;
+                panel.addControl(text);
+            }
             this.content = panel;
         }
     };
@@ -18231,10 +18482,9 @@ var TouchHolographicButton = /** @class */ (function (_super) {
             depth: 1.0,
         }, scene);
         collisionMesh.isPickable = true;
-        collisionMesh.isVisible = false;
+        collisionMesh.visibility = 0;
         collisionMesh.scaling = new babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["Vector3"](0.032, 0.032, 0.016);
-        babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["SceneLoader"].ImportMeshAsync(undefined, TouchHolographicButton.MODEL_BASE_URL, TouchHolographicButton.MODEL_FILENAME, scene)
-            .then(function (result) {
+        babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["SceneLoader"].ImportMeshAsync(undefined, TouchHolographicButton.MODEL_BASE_URL, TouchHolographicButton.MODEL_FILENAME, scene).then(function (result) {
             var importedFrontPlate = result.meshes[1];
             importedFrontPlate.name = _this.name + "_frontPlate";
             importedFrontPlate.isPickable = false;
@@ -18248,7 +18498,7 @@ var TouchHolographicButton = /** @class */ (function (_super) {
         this._backPlate = babylonjs_Maths_math_vector__WEBPACK_IMPORTED_MODULE_1__["BoxBuilder"].CreateBox(this.name + "BackMesh", {
             width: 1.0,
             height: 1.0,
-            depth: backPlateDepth
+            depth: backPlateDepth,
         }, scene);
         this._backPlate.parent = collisionMesh;
         this._backPlate.position.z = 0.5 - backPlateDepth / 2;
@@ -18328,11 +18578,11 @@ var TouchHolographicButton = /** @class */ (function (_super) {
     /**
      * Base Url for the button model.
      */
-    TouchHolographicButton.MODEL_BASE_URL = 'https://assets.babylonjs.com/meshes/MRTK/';
+    TouchHolographicButton.MODEL_BASE_URL = "https://assets.babylonjs.com/meshes/MRTK/";
     /**
      * File name for the button model.
      */
-    TouchHolographicButton.MODEL_FILENAME = 'mrtk-fluent-button.glb';
+    TouchHolographicButton.MODEL_FILENAME = "mrtk-fluent-button.glb";
     return TouchHolographicButton;
 }(_touchButton3D__WEBPACK_IMPORTED_MODULE_7__["TouchButton3D"]));
 
@@ -18695,6 +18945,243 @@ var VolumeBasedPanel = /** @class */ (function (_super) {
 
 /***/ }),
 
+/***/ "./3D/gizmos/boundingBoxGizmo2D.ts":
+/*!*****************************************!*\
+  !*** ./3D/gizmos/boundingBoxGizmo2D.ts ***!
+  \*****************************************/
+/*! exports provided: BoundingBoxGizmo2D */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BoundingBoxGizmo2D", function() { return BoundingBoxGizmo2D; });
+/* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tslib */ "../../node_modules/tslib/tslib.es6.js");
+/* harmony import */ var babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! babylonjs/Behaviors/Meshes/pointerDragBehavior */ "babylonjs/Misc/observable");
+/* harmony import */ var babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__);
+
+
+
+
+
+
+
+/**
+ * Gizmo to resize 2D slates
+ */
+var BoundingBoxGizmo2D = /** @class */ (function (_super) {
+    Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__extends"])(BoundingBoxGizmo2D, _super);
+    function BoundingBoxGizmo2D(utilityLayer) {
+        var _this = _super.call(this, utilityLayer) || this;
+        _this._boundingDimensions = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"](0, 0, 0);
+        _this._dragPlaneNormal = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"](0, 0, 1);
+        /**
+         * Relative bounding box pivot used when scaling the attached node. When null object with scale from the opposite corner. 0.5,0.5,0.5 for center and 0.5,0,0.5 for bottom (Default: null)
+         */
+        _this.scalePivot = null;
+        _this._tmpQuaternion = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Quaternion"]();
+        _this._tmpVector = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"](0, 0, 0);
+        // Ordered bl, br, tr, tl
+        _this._corners = [];
+        // private _sides: TransformNode[] = [];
+        /**
+         * Value we use to offset handles from mesh
+         */
+        _this._margin = 0.1;
+        _this._attachedSlate = null;
+        _this._createNode();
+        _this.updateScale = false;
+        return _this;
+    }
+    Object.defineProperty(BoundingBoxGizmo2D.prototype, "attachedSlate", {
+        get: function () {
+            return this._attachedSlate;
+        },
+        /**
+         * The slate attached to this gizmo
+         */
+        set: function (control) {
+            this._attachedSlate = control;
+            if (control) {
+                this.attachedMesh = control.mesh;
+            }
+            else {
+                this.attachedMesh = null;
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
+    BoundingBoxGizmo2D.prototype._createNode = function () {
+        var _this = this;
+        this._cornersParent = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["TransformNode"]("cornersParent", this.gizmoLayer.utilityLayerScene);
+        this._cornersParent.rotationQuaternion = babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Quaternion"].Identity();
+        var moveFns = [
+            function (originStart, dimensionsStart, offset) { return _this._moveBLCorner(originStart, dimensionsStart, offset); },
+            function (originStart, dimensionsStart, offset) { return _this._moveBRCorner(originStart, dimensionsStart, offset); },
+            function (originStart, dimensionsStart, offset) { return _this._moveTRCorner(originStart, dimensionsStart, offset); },
+            function (originStart, dimensionsStart, offset) { return _this._moveTLCorner(originStart, dimensionsStart, offset); },
+        ];
+        for (var i = 0; i < 4; i++) {
+            var node = this._createAngleMesh();
+            this._corners.push(node);
+            node.rotation.z = (Math.PI / 2) * i;
+            node.scaling.copyFromFloats(0.1, 0.1, 0.1);
+            node.parent = this._cornersParent;
+            this._assignDragBehavior(node, moveFns[i]);
+        }
+        this._corners[0].position.copyFromFloats(-1, -1, 0);
+        this._corners[1].position.copyFromFloats(1, -1, 0);
+        this._corners[2].position.copyFromFloats(1, 1, 0);
+        this._corners[3].position.copyFromFloats(-1, 1, 0);
+        this._cornersParent.parent = this._rootMesh;
+    };
+    // Move functions
+    BoundingBoxGizmo2D.prototype._moveTLCorner = function (originStart, dimensionsStart, offset) {
+        if (!this._attachedSlate) {
+            return;
+        }
+        this._attachedSlate.origin.copyFrom(originStart).addInPlace(offset);
+        offset.y *= -1;
+        this._attachedSlate.dimensions.copyFrom(dimensionsStart).subtractInPlace(offset);
+        this._attachedSlate.backplateDimensions.x = this._attachedSlate.dimensions.x;
+    };
+    BoundingBoxGizmo2D.prototype._moveBLCorner = function (originStart, dimensionsStart, offset) {
+        if (!this._attachedSlate) {
+            return;
+        }
+        this._attachedSlate.origin.x = originStart.x + offset.x;
+        this._attachedSlate.dimensions.copyFrom(dimensionsStart).subtractInPlace(offset);
+        this._attachedSlate.backplateDimensions.x = this._attachedSlate.dimensions.x;
+    };
+    BoundingBoxGizmo2D.prototype._moveBRCorner = function (originStart, dimensionsStart, offset) {
+        if (!this._attachedSlate) {
+            return;
+        }
+        offset.y *= -1;
+        this._attachedSlate.dimensions.copyFrom(dimensionsStart).addInPlace(offset);
+        this._attachedSlate.backplateDimensions.x = dimensionsStart.x + offset.x;
+    };
+    BoundingBoxGizmo2D.prototype._moveTRCorner = function (originStart, dimensionsStart, offset) {
+        if (!this._attachedSlate) {
+            return;
+        }
+        this._attachedSlate.origin.y = originStart.y + offset.y;
+        this._attachedSlate.dimensions.copyFrom(dimensionsStart).addInPlace(offset);
+        this._attachedSlate.backplateDimensions.x = dimensionsStart.x + offset.x;
+    };
+    BoundingBoxGizmo2D.prototype._assignDragBehavior = function (node, moveFn) {
+        var _this = this;
+        // Drag behavior
+        var _dragBehavior = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["PointerDragBehavior"]({
+            dragPlaneNormal: this._dragPlaneNormal,
+        });
+        _dragBehavior.moveAttached = false;
+        _dragBehavior.updateDragPlane = false;
+        node.addBehavior(_dragBehavior);
+        var dimensionsStart = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"]();
+        var originStart = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"]();
+        var dragOrigin = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"]();
+        _dragBehavior.onDragStartObservable.add(function (event) {
+            if (_this.attachedSlate && _this.attachedNode) {
+                dimensionsStart.copyFrom(_this.attachedSlate.dimensions);
+                originStart.copyFrom(_this.attachedSlate.origin);
+                dragOrigin.copyFrom(event.dragPlanePoint);
+            }
+        });
+        _dragBehavior.onDragObservable.add(function (event) {
+            if (_this.attachedSlate && _this.attachedNode) {
+                _this._tmpVector.copyFrom(event.dragPlanePoint);
+                _this._tmpVector.subtractInPlace(dragOrigin);
+                babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Vector3"].TransformCoordinatesToRef(_this._tmpVector, _this.attachedNode.computeWorldMatrix(true).getRotationMatrix().transpose(), _this._tmpVector);
+                moveFn(originStart, dimensionsStart, _this._tmpVector);
+                _this.attachedSlate._positionElements();
+                _this.updateBoundingBox();
+            }
+        });
+    };
+    BoundingBoxGizmo2D.prototype._createAngleMesh = function () {
+        // Draw 2 boxes making a bottom left corner
+        var horizontalBox = babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["BoxBuilder"].CreateBox("angleHor", { width: 3, height: 1, depth: 0.1 }, this.gizmoLayer.utilityLayerScene);
+        var verticalBox = babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["BoxBuilder"].CreateBox("angleVert", { width: 1, height: 3, depth: 0.1 }, this.gizmoLayer.utilityLayerScene);
+        var angleNode = new babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["TransformNode"]("angle", this.gizmoLayer.utilityLayerScene);
+        horizontalBox.parent = angleNode;
+        verticalBox.parent = angleNode;
+        horizontalBox.position.x = 1;
+        verticalBox.position.y = 1;
+        return angleNode;
+    };
+    BoundingBoxGizmo2D.prototype._attachedNodeChanged = function (value) {
+        if (value) {
+            this.updateBoundingBox();
+        }
+    };
+    /**
+     * Updates the bounding box information for the Gizmo
+     */
+    BoundingBoxGizmo2D.prototype.updateBoundingBox = function () {
+        if (this.attachedMesh) {
+            babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["PivotTools"]._RemoveAndStorePivotPoint(this.attachedMesh);
+            // Store original parent
+            var originalParent = this.attachedMesh.parent;
+            this.attachedMesh.setParent(null);
+            this._update();
+            // Rotate based on axis
+            if (!this.attachedMesh.rotationQuaternion) {
+                this.attachedMesh.rotationQuaternion = babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Quaternion"].RotationYawPitchRoll(this.attachedMesh.rotation.y, this.attachedMesh.rotation.x, this.attachedMesh.rotation.z);
+            }
+            // Store original position and reset mesh to origin before computing the bounding box
+            this._tmpQuaternion.copyFrom(this.attachedMesh.rotationQuaternion);
+            this._tmpVector.copyFrom(this.attachedMesh.position);
+            this.attachedMesh.rotationQuaternion.set(0, 0, 0, 1);
+            this.attachedMesh.position.set(0, 0, 0);
+            // Update bounding dimensions/positions
+            var boundingMinMax = this.attachedMesh.getHierarchyBoundingVectors();
+            boundingMinMax.max.subtractToRef(boundingMinMax.min, this._boundingDimensions);
+            // Update gizmo to match bounding box scaling and rotation
+            // The position set here is the offset from the origin for the boundingbox when the attached mesh is at the origin
+            // The position of the gizmo is then set to the attachedMesh in gizmo._update
+            boundingMinMax.min.x -= this._margin;
+            boundingMinMax.min.y -= this._margin;
+            boundingMinMax.max.x += this._margin;
+            boundingMinMax.max.y += this._margin;
+            this._corners[0].position.copyFromFloats(boundingMinMax.min.x, boundingMinMax.min.y, 0);
+            this._corners[1].position.copyFromFloats(boundingMinMax.max.x, boundingMinMax.min.y, 0);
+            this._corners[2].position.copyFromFloats(boundingMinMax.max.x, boundingMinMax.max.y, 0);
+            this._corners[3].position.copyFromFloats(boundingMinMax.min.x, boundingMinMax.max.y, 0);
+            // Restore position/rotation values
+            this.attachedMesh.rotationQuaternion.copyFrom(this._tmpQuaternion);
+            this.attachedMesh.position.copyFrom(this._tmpVector);
+            // Restore original parent
+            this.attachedMesh.setParent(originalParent);
+        }
+        if (this.attachedMesh) {
+            babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["PivotTools"]._RestorePivotPoint(this.attachedMesh);
+        }
+    };
+    return BoundingBoxGizmo2D;
+}(babylonjs_Behaviors_Meshes_pointerDragBehavior__WEBPACK_IMPORTED_MODULE_1__["Gizmo"]));
+
+
+
+/***/ }),
+
+/***/ "./3D/gizmos/index.ts":
+/*!****************************!*\
+  !*** ./3D/gizmos/index.ts ***!
+  \****************************/
+/*! exports provided: BoundingBoxGizmo2D */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _boundingBoxGizmo2D__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./boundingBoxGizmo2D */ "./3D/gizmos/boundingBoxGizmo2D.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "BoundingBoxGizmo2D", function() { return _boundingBoxGizmo2D__WEBPACK_IMPORTED_MODULE_0__["BoundingBoxGizmo2D"]; });
+
+
+
+
+/***/ }),
+
 /***/ "./3D/gui3DManager.ts":
 /*!****************************!*\
   !*** ./3D/gui3DManager.ts ***!
@@ -18841,7 +19328,7 @@ var GUI3DManager = /** @class */ (function () {
         if (!this._utilityLayer || !this._utilityLayer.shouldRender || !this._utilityLayer.utilityLayerScene.activeCamera) {
             return false;
         }
-        var pointerEvent = (pi.event);
+        var pointerEvent = pi.event;
         var pointerId = pointerEvent.pointerId || 0;
         var buttonIndex = pointerEvent.button;
         var pickingInfo = pi.pickInfo;
@@ -18852,7 +19339,7 @@ var GUI3DManager = /** @class */ (function () {
         if (pickingInfo.pickedPoint) {
             this.onPickedPointChangedObservable.notifyObservers(pickingInfo.pickedPoint);
         }
-        var control = ((_b = (_a = pickingInfo.pickedMesh.reservedDataStore) === null || _a === void 0 ? void 0 : _a.GUI3D) === null || _b === void 0 ? void 0 : _b.control);
+        var control = (_b = (_a = pickingInfo.pickedMesh.reservedDataStore) === null || _a === void 0 ? void 0 : _a.GUI3D) === null || _b === void 0 ? void 0 : _b.control;
         if (!!control && !control._processObservables(pi.type, pickingInfo.pickedPoint, pointerId, buttonIndex)) {
             if (pi.type === babylonjs_Misc_observable__WEBPACK_IMPORTED_MODULE_0__["PointerEventTypes"].POINTERMOVE) {
                 if (this._lastControlOver[pointerId]) {
@@ -18898,7 +19385,7 @@ var GUI3DManager = /** @class */ (function () {
     GUI3DManager.prototype.addControl = function (control) {
         this._rootContainer.addControl(control);
         var utilityLayerScene = this._utilityLayer ? this._utilityLayer.utilityLayerScene : null;
-        if (utilityLayerScene && (control instanceof _controls_touchButton3D__WEBPACK_IMPORTED_MODULE_2__["TouchButton3D"])) {
+        if (utilityLayerScene && control instanceof _controls_touchButton3D__WEBPACK_IMPORTED_MODULE_2__["TouchButton3D"]) {
             if (this._touchableButtons.size == 0) {
                 utilityLayerScene.registerBeforeRender(this._processTouchControls);
             }
@@ -18914,7 +19401,7 @@ var GUI3DManager = /** @class */ (function () {
     GUI3DManager.prototype.removeControl = function (control) {
         this._rootContainer.removeControl(control);
         var utilityLayerScene = this._utilityLayer ? this._utilityLayer.utilityLayerScene : null;
-        if (utilityLayerScene && (control instanceof _controls_touchButton3D__WEBPACK_IMPORTED_MODULE_2__["TouchButton3D"])) {
+        if (utilityLayerScene && control instanceof _controls_touchButton3D__WEBPACK_IMPORTED_MODULE_2__["TouchButton3D"]) {
             this._touchableButtons.delete(control);
             if (this._touchableButtons.size == 0) {
                 utilityLayerScene.unregisterBeforeRender(this._processTouchControls);
@@ -18978,7 +19465,7 @@ var GUI3DManager = /** @class */ (function () {
 /*!*********************!*\
   !*** ./3D/index.ts ***!
   \*********************/
-/*! exports provided: AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel, FluentMaterialDefines, FluentMaterial, FluentButtonMaterial, GUI3DManager, Vector3WithInfo */
+/*! exports provided: AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, HolographicSlate, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel, FluentMaterialDefines, FluentMaterial, FluentButtonMaterial, BoundingBoxGizmo2D, GUI3DManager, Vector3WithInfo */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -18995,6 +19482,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "CylinderPanel", function() { return _controls__WEBPACK_IMPORTED_MODULE_0__["CylinderPanel"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicButton", function() { return _controls__WEBPACK_IMPORTED_MODULE_0__["HolographicButton"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicSlate", function() { return _controls__WEBPACK_IMPORTED_MODULE_0__["HolographicSlate"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshButton3D", function() { return _controls__WEBPACK_IMPORTED_MODULE_0__["MeshButton3D"]; });
 
@@ -19025,11 +19514,15 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FluentButtonMaterial", function() { return _materials__WEBPACK_IMPORTED_MODULE_1__["FluentButtonMaterial"]; });
 
-/* harmony import */ var _gui3DManager__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gui3DManager */ "./3D/gui3DManager.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "GUI3DManager", function() { return _gui3DManager__WEBPACK_IMPORTED_MODULE_2__["GUI3DManager"]; });
+/* harmony import */ var _gizmos__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gizmos */ "./3D/gizmos/index.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "BoundingBoxGizmo2D", function() { return _gizmos__WEBPACK_IMPORTED_MODULE_2__["BoundingBoxGizmo2D"]; });
 
-/* harmony import */ var _vector3WithInfo__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./vector3WithInfo */ "./3D/vector3WithInfo.ts");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Vector3WithInfo", function() { return _vector3WithInfo__WEBPACK_IMPORTED_MODULE_3__["Vector3WithInfo"]; });
+/* harmony import */ var _gui3DManager__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./gui3DManager */ "./3D/gui3DManager.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "GUI3DManager", function() { return _gui3DManager__WEBPACK_IMPORTED_MODULE_3__["GUI3DManager"]; });
+
+/* harmony import */ var _vector3WithInfo__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./vector3WithInfo */ "./3D/vector3WithInfo.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Vector3WithInfo", function() { return _vector3WithInfo__WEBPACK_IMPORTED_MODULE_4__["Vector3WithInfo"]; });
+
 
 
 
@@ -20084,7 +20577,7 @@ var Vector3WithInfo = /** @class */ (function (_super) {
 /*!******************!*\
   !*** ./index.ts ***!
   \******************/
-/*! exports provided: Button, Checkbox, ColorPicker, Container, Control, Ellipse, FocusableButton, Grid, Image, InputText, InputPassword, Line, MultiLine, RadioButton, StackPanel, SelectorGroup, CheckboxGroup, RadioGroup, SliderGroup, SelectionPanel, ScrollViewer, TextWrapping, TextBlock, TextWrapper, ToggleButton, KeyPropertySet, VirtualKeyboard, Rectangle, DisplayGrid, BaseSlider, Slider, ImageBasedSlider, ScrollBar, ImageScrollBar, name, AdvancedDynamicTexture, AdvancedDynamicTextureInstrumentation, Vector2WithInfo, Matrix2D, Measure, MultiLinePoint, Style, ValueAndUnit, XmlLoader, AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel, FluentMaterialDefines, FluentMaterial, FluentButtonMaterial, GUI3DManager, Vector3WithInfo */
+/*! exports provided: Button, Checkbox, ColorPicker, Container, Control, Ellipse, FocusableButton, Grid, Image, InputText, InputPassword, Line, MultiLine, RadioButton, StackPanel, SelectorGroup, CheckboxGroup, RadioGroup, SliderGroup, SelectionPanel, ScrollViewer, TextWrapping, TextBlock, TextWrapper, ToggleButton, KeyPropertySet, VirtualKeyboard, Rectangle, DisplayGrid, BaseSlider, Slider, ImageBasedSlider, ScrollBar, ImageScrollBar, name, AdvancedDynamicTexture, AdvancedDynamicTextureInstrumentation, Vector2WithInfo, Matrix2D, Measure, MultiLinePoint, Style, ValueAndUnit, XmlLoader, AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, HolographicSlate, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel, FluentMaterialDefines, FluentMaterial, FluentButtonMaterial, BoundingBoxGizmo2D, GUI3DManager, Vector3WithInfo */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -20191,6 +20684,8 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicButton", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["HolographicButton"]; });
 
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicSlate", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["HolographicSlate"]; });
+
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshButton3D", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["MeshButton3D"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "PlanePanel", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["PlanePanel"]; });
@@ -20219,6 +20714,8 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FluentButtonMaterial", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["FluentButtonMaterial"]; });
 
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "BoundingBoxGizmo2D", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["BoundingBoxGizmo2D"]; });
+
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "GUI3DManager", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["GUI3DManager"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Vector3WithInfo", function() { return _3D__WEBPACK_IMPORTED_MODULE_1__["Vector3WithInfo"]; });
@@ -20233,7 +20730,7 @@ __webpack_require__.r(__webpack_exports__);
 /*!**************************!*\
   !*** ./legacy/legacy.ts ***!
   \**************************/
-/*! exports provided: Button, Checkbox, ColorPicker, Container, Control, Ellipse, FocusableButton, Grid, Image, InputText, InputPassword, Line, MultiLine, RadioButton, StackPanel, SelectorGroup, CheckboxGroup, RadioGroup, SliderGroup, SelectionPanel, ScrollViewer, TextWrapping, TextBlock, TextWrapper, ToggleButton, KeyPropertySet, VirtualKeyboard, Rectangle, DisplayGrid, BaseSlider, Slider, ImageBasedSlider, ScrollBar, ImageScrollBar, name, AdvancedDynamicTexture, AdvancedDynamicTextureInstrumentation, Vector2WithInfo, Matrix2D, Measure, MultiLinePoint, Style, ValueAndUnit, XmlLoader, AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel, FluentMaterialDefines, FluentMaterial, FluentButtonMaterial, GUI3DManager, Vector3WithInfo */
+/*! exports provided: Button, Checkbox, ColorPicker, Container, Control, Ellipse, FocusableButton, Grid, Image, InputText, InputPassword, Line, MultiLine, RadioButton, StackPanel, SelectorGroup, CheckboxGroup, RadioGroup, SliderGroup, SelectionPanel, ScrollViewer, TextWrapping, TextBlock, TextWrapper, ToggleButton, KeyPropertySet, VirtualKeyboard, Rectangle, DisplayGrid, BaseSlider, Slider, ImageBasedSlider, ScrollBar, ImageScrollBar, name, AdvancedDynamicTexture, AdvancedDynamicTextureInstrumentation, Vector2WithInfo, Matrix2D, Measure, MultiLinePoint, Style, ValueAndUnit, XmlLoader, AbstractButton3D, Button3D, Container3D, Control3D, CylinderPanel, HolographicButton, HolographicSlate, MeshButton3D, PlanePanel, ScatterPanel, SpherePanel, StackPanel3D, ButtonState, TouchButton3D, TouchMeshButton3D, TouchHolographicButton, TouchToggleButton3D, VolumeBasedPanel, FluentMaterialDefines, FluentMaterial, FluentButtonMaterial, BoundingBoxGizmo2D, GUI3DManager, Vector3WithInfo */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -20339,6 +20836,8 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicButton", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["HolographicButton"]; });
 
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "HolographicSlate", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["HolographicSlate"]; });
+
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshButton3D", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["MeshButton3D"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "PlanePanel", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["PlanePanel"]; });
@@ -20366,6 +20865,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FluentMaterial", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["FluentMaterial"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FluentButtonMaterial", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["FluentButtonMaterial"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "BoundingBoxGizmo2D", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["BoundingBoxGizmo2D"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "GUI3DManager", function() { return _index__WEBPACK_IMPORTED_MODULE_0__["GUI3DManager"]; });
 
