@@ -64,16 +64,32 @@ class DOMException {
     }
 }
 
-if (Platform.OS == "windows") {
-    const originalEnterXRAsync: (...args: any[]) => Promise<any> = WebXRExperienceHelper.prototype.enterXRAsync;
-    WebXRExperienceHelper.prototype.enterXRAsync = async function (...args: any[]): Promise<any> {
+if (Platform.OS === "android" || Platform.OS === "ios") {
+    const originalEnterXRAsync: (...args: any[]) => Promise<WebXRSessionManager> = WebXRExperienceHelper.prototype.enterXRAsync;
+    WebXRExperienceHelper.prototype.enterXRAsync = async function (...args: any[]): Promise<WebXRSessionManager> {
+        // TODO: https://github.com/BabylonJS/BabylonNative/issues/649
+        // Android/iOS require manually clearing the default frame buffer to prevent garbage from being rendered for a few frames during the XR transition
+        const sessionManager = await originalEnterXRAsync.apply(this, args);
+        const scene = sessionManager.scene;
+        const beforeRenderObserver = scene.onBeforeRenderObservable.add(() => {
+            scene.getEngine().unBindFramebuffer(undefined!);
+            scene.getEngine().clear(scene.clearColor, true, false);
+        });
+        sessionManager.onXRSessionEnded.add(() => {
+            scene.onBeforeRenderObservable.remove(beforeRenderObserver);
+        });
+        return sessionManager;
+    };
+} else if (Platform.OS === "windows") {
+    const originalEnterXRAsync: (...args: any[]) => Promise<WebXRSessionManager> = WebXRExperienceHelper.prototype.enterXRAsync;
+    WebXRExperienceHelper.prototype.enterXRAsync = async function (...args: any[]): Promise<WebXRSessionManager> {
         // TODO: https://github.com/BabylonJS/BabylonNative/issues/577
         // Windows HMDs require different rendering behaviors than default xr rendering for mobile devices
         const sessionManager = await originalEnterXRAsync.apply(this, args);
         sessionManager.scene.clearColor = Color3.Black().toColor4();
         sessionManager.scene.autoClear = true;
         return sessionManager;
-    }
+    };
 }
 
 // Babylon Native includes a native atob polyfill, but it relies JSI to deal with the strings, and JSI has a bug where it assumes strings are null terminated, and a base 64 string can contain one of these.
