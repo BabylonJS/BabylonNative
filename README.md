@@ -43,6 +43,7 @@ that this list is not exhaustive.
 The following major features are not yet supported or implemented, even as previews, 
 but are expected to be supported in the future. Note that this list is not exhaustive.
 
+- Debugging JavaScript with V8 on the following platforms: Android, Apple, UWP, iOS, Linux.
 - User input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
