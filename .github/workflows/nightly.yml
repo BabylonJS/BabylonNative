@@ -14,28 +14,22 @@ jobs:
       uses: actions/checkout@master
       with:
         submodules: 'recursive'
-    - name: Create Apps\node_modules directories
-      run: mkdir Apps\node_modules &&
-        mkdir Apps\node_modules\babylonjs &&
-        mkdir Apps\node_modules\babylonjs-gui &&
-        mkdir Apps\node_modules\babylonjs-loaders &&
-        mkdir Apps\node_modules\babylonjs-materials
     - name: Download babylon.max.js
-      run: curl.exe -o Apps/node_modules/babylonjs/babylon.max.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
+      run: curl.exe -o Apps/node_modules/babylonjs/babylon.max.js --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js
     - name: Download babylon.max.js.map
-      run: curl.exe -o Apps/node_modules/babylonjs/babylon.max.js.map https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js.map
+      run: curl.exe -o Apps/node_modules/babylonjs/babylon.max.js.map --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/babylon.max.js.map
     - name: Download babylonjs.materials.js
-      run: curl.exe -o Apps/node_modules/babylonjs-materials/babylonjs.materials.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/materialsLibrary/babylonjs.materials.js
+      run: curl.exe -o Apps/node_modules/babylonjs-materials/babylonjs.materials.js --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/materialsLibrary/babylonjs.materials.js
     - name: Download babylonjs.materials.js.map
-      run: curl.exe -o Apps/node_modules/babylonjs-materials/babylonjs.materials.js.map https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/materialsLibrary/babylonjs.materials.js.map
+      run: curl.exe -o Apps/node_modules/babylonjs-materials/babylonjs.materials.js.map --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/materialsLibrary/babylonjs.materials.js.map
     - name: Download babylon.loaders.js
-      run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylonjs.loaders.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylonjs.loaders.js
+      run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylonjs.loaders.js --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylonjs.loaders.js
     - name: Download babylon.loaders.js.map
-      run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylonjs.loaders.js.map https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylonjs.loaders.js.map
+      run: curl.exe -o Apps/node_modules/babylonjs-loaders/babylonjs.loaders.js.map --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/loaders/babylonjs.loaders.js.map
     - name: Download babylon.gui.js
-      run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
+      run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js
     - name: Download babylon.gui.js.map
-      run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js.map https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js.map
+      run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js.map --create-dirs https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/dist/preview%20release/gui/babylon.gui.js.map
     - name: View Apps\node_modules content
       run: Get-ChildItem -Path .\Apps\node_modules -Recurse
     - name: Make Solution
