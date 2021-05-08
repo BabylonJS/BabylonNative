@@ -23,6 +23,7 @@ jobs:
             cc: clang
             cxx: clang++
           - os: macos-latest
+
     env:
       # Indicates the CMake build directory where project files and binaries are being produced.
       CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
@@ -30,7 +31,7 @@ jobs:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
 
-      steps:
+    steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive  
@@ -49,6 +50,7 @@ jobs:
       - name: Generate project files
         run: |
           cmake -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja -DCMAKE_BUILD_TYPE=Release
+
       # Build the whole project with Ninja (which is spawn by CMake).
       - name: Build
         run: |
