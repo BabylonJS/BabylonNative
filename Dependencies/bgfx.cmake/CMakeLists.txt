@@ -29,7 +29,6 @@ option( BGFX_BUILD_EXAMPLES   "Build bgfx examples."                          ON
 option( BGFX_INSTALL          "Create installation target."                   ON  )
 option( BGFX_INSTALL_EXAMPLES "Install examples and their runtimes."          OFF )
 option( BGFX_CUSTOM_TARGETS   "Include convenience custom targets."           ON  )
-option( BGFX_USE_OVR          "Build with OVR support."                       OFF )
 option( BGFX_AMALGAMATED      "Amalgamated bgfx build for faster compilation" OFF )
 option( BX_AMALGAMATED        "Amalgamated bx build for faster compilation"   OFF )
 option( BGFX_CONFIG_DEBUG     "Enables debug configuration on all builds"     OFF )
@@ -59,10 +58,6 @@ if( NOT BGFX_DIR )
 	set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" CACHE STRING "Location of bgfx." )
 elseif( NOT IS_ABSOLUTE "${BGFX_DIR}")
 	get_filename_component(BGFX_DIR "${BGFX_DIR}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-endif()
-
-if( BGFX_USE_OVR )
-	include( cmake/ovr.cmake )
 endif()
 
 include( cmake/shared.cmake )
