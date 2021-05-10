@@ -119,9 +119,3 @@ jobs:
       name: UWP_napi_jsi_x64
       vmImage: 'windows-latest'
       platform: x64
-
-# Babylon.js Scripts
-  - template: .github/jobs/scripts.yml
-    parameters:
-      name: BabylonJS_Scripts_Validation
-      vmImage: 'windows-latest'
