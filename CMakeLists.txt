@@ -38,7 +38,7 @@ if(DEFINED EXTENSIONS_DIRS)
     endforeach()
 endif()
 
-if(NOT ${EXCLUDE_BABYLONNATIVE_APPS_DIRS})
+if(NOT DEFINED ${EXCLUDE_BABYLONNATIVE_APPS_DIRS})
     get_directory_property(hasParent PARENT_DIRECTORY)
     if(hasParent)
         add_subdirectory(Apps EXCLUDE_FROM_ALL)
