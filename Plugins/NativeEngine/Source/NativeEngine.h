@@ -204,6 +204,7 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
+        void SetStencil(const Napi::CallbackInfo& info);
 
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
@@ -228,6 +229,7 @@ namespace Babylon
 
         bx::DefaultAllocator m_allocator{};
         uint64_t m_engineState{BGFX_STATE_DEFAULT};
+        uint32_t m_stencilState{ BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_KEEP };
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);

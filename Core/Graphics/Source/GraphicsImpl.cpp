@@ -347,6 +347,14 @@ namespace Babylon
         // Request screen shots before bgfx::frame.
         RequestScreenShots();
 
+        // Handle order of views
+        const auto& viewOrder = m_frameBufferManager->GetTouchedViews();
+        if (!viewOrder.empty())
+        {
+            bgfx::setViewOrder(viewOrder[0], static_cast<uint16_t>(viewOrder.size()), viewOrder.data());
+            m_frameBufferManager->ClearTouchedViews();
+        }
+
         // Advance frame and render!
         uint32_t frameNumber{bgfx::frame()};
 

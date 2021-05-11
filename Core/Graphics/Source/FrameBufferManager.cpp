@@ -73,4 +73,12 @@ namespace Babylon
 
         m_default.Reset();
     }
+
+    void FrameBufferManager::AppendTouchedView(bgfx::ViewId viewId)
+    {
+        if (m_touchedViews.empty() || m_touchedViews.back() != viewId)
+        {
+            m_touchedViews.push_back(viewId);
+        }
+    }
 }

@@ -9,8 +9,7 @@
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "referenceImage": "point-light-shadows.png",
-            "renderCount": 2
+            "referenceImage": "point-light-shadows.png"
         },
         {
             "title": "Texture cache",
