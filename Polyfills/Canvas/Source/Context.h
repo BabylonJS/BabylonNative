@@ -23,7 +23,6 @@ namespace Babylon::Polyfills::Internal
         NVGcontext* GetNVGContext() const { return m_nvg; }
 
     private:
-
         void FillRect(const Napi::CallbackInfo&);
         Napi::Value MeasureText(const Napi::CallbackInfo&);
         void FillText(const Napi::CallbackInfo&);
@@ -42,6 +41,14 @@ namespace Babylon::Polyfills::Internal
         void Stroke(const Napi::CallbackInfo&);
         void MoveTo(const Napi::CallbackInfo&);
         void LineTo(const Napi::CallbackInfo&);
+        void PutImageData(const Napi::CallbackInfo&);
+        void Arc(const Napi::CallbackInfo&);
+        void DrawImage(const Napi::CallbackInfo&);
+        Napi::Value GetImageData(const Napi::CallbackInfo&);
+        void SetLineDash(const Napi::CallbackInfo&);
+        void StrokeText(const Napi::CallbackInfo&);
+        Napi::Value CreateLinearGradient(const Napi::CallbackInfo&);
+        void SetTransform(const Napi::CallbackInfo&);
         void QuadraticCurveTo(const Napi::CallbackInfo&);
         Napi::Value GetFillStyle(const Napi::CallbackInfo&);
         void SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -49,6 +56,23 @@ namespace Babylon::Polyfills::Internal
         void SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLineWidth(const Napi::CallbackInfo&);
         void SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetLineJoin(const Napi::CallbackInfo&);
+        void SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetMiterLimit(const Napi::CallbackInfo&);
+        void SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetFont(const Napi::CallbackInfo&);
+        void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetGlobalAlpha(const Napi::CallbackInfo&);
+        void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetShadowColor(const Napi::CallbackInfo&);
+        void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetShadowBlur(const Napi::CallbackInfo&);
+        void SetShadowBlur(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetShadowOffsetX(const Napi::CallbackInfo&);
+        void SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
+        void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetCanvas(const Napi::CallbackInfo&);
 
         void SetDirty();
         void BeginFrame();
@@ -58,7 +82,12 @@ namespace Babylon::Polyfills::Internal
         bgfx::ViewId m_viewId;
         NVGcontext* m_nvg;
 
+        std::string m_fillStyle{};
+        std::string m_strokeStyle{};
+        float m_lineWidth{ 0.f };
+
         std::map<std::string, int> m_fonts;
+        int m_currentFontId{ -1 };
 
         Babylon::GraphicsImpl& m_graphicsImpl;
         bool m_dirty{};

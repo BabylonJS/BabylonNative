@@ -16,6 +16,11 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    namespace
+    {
+        const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
+    }
+
     Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
     {
         Napi::HandleScope scope{ env };
@@ -24,28 +29,45 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
-                ParentT::InstanceMethod("fillRect", &Context::FillRect),
-                ParentT::InstanceMethod("measureText", &Context::MeasureText),
-                ParentT::InstanceMethod("fillText", &Context::FillText),
-                ParentT::InstanceMethod("fill", &Context::Fill),
-                ParentT::InstanceMethod("save", &Context::Save),
-                ParentT::InstanceMethod("restore", &Context::Restore),
-                ParentT::InstanceMethod("clearRect", &Context::ClearRect),
-                ParentT::InstanceMethod("translate", &Context::Translate),
-                ParentT::InstanceMethod("rotate", &Context::Rotate),
-                ParentT::InstanceMethod("scale", &Context::Scale),
-                ParentT::InstanceMethod("beginPath", &Context::BeginPath),
-                ParentT::InstanceMethod("closePath", &Context::ClosePath),
-                ParentT::InstanceMethod("rect", &Context::Rect),
-                ParentT::InstanceMethod("clip", &Context::Clip),
-                ParentT::InstanceMethod("strokeRect", &Context::StrokeRect),
-                ParentT::InstanceMethod("stroke", &Context::Stroke),
-                ParentT::InstanceMethod("moveTo", &Context::MoveTo),
-                ParentT::InstanceMethod("lineTo", &Context::LineTo),
-                ParentT::InstanceMethod("quadraticCurveTo", &Context::QuadraticCurveTo),
-                InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
+                InstanceMethod("clearRect", &Context::ClearRect),
+                InstanceMethod("save", &Context::Save),
+                InstanceMethod("restore", &Context::Restore),
+                InstanceMethod("fillRect", &Context::FillRect),
+                InstanceMethod("scale", &Context::Scale),
+                InstanceMethod("rotate", &Context::Rotate),
+                InstanceMethod("translate", &Context::Translate),
+                InstanceMethod("strokeRect", &Context::StrokeRect),
+                InstanceMethod("rect", &Context::Rect),
+                InstanceMethod("clip", &Context::Clip),
+                InstanceMethod("putImageData", &Context::PutImageData),
+                InstanceMethod("arc", &Context::Arc),
+                InstanceMethod("beginPath", &Context::BeginPath),
+                InstanceMethod("closePath", &Context::ClosePath),
+                InstanceMethod("moveTo", &Context::MoveTo),
+                InstanceMethod("lineTo", &Context::LineTo),
+                InstanceMethod("quadraticCurveTo", &Context::QuadraticCurveTo),
+                InstanceMethod("measureText", &Context::MeasureText),
+                InstanceMethod("stroke", &Context::Stroke),
+                InstanceMethod("fill", &Context::Fill),
+                InstanceMethod("drawImage", &Context::DrawImage),
+                InstanceMethod("getImageData", &Context::GetImageData),
+                InstanceMethod("setLineDash", &Context::SetLineDash),
+                InstanceMethod("fillText", &Context::FillText),
+                InstanceMethod("strokeText", &Context::StrokeText),
+                InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
+                InstanceMethod("setTransform", &Context::SetTransform),
+                InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
+                InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
+                InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
+                InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
+                InstanceAccessor("globalAlpha", &Context::GetGlobalAlpha, &Context::SetGlobalAlpha),
+                InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
+                InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
+                InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
+                InstanceAccessor("shadowOffsetY", &Context::GetShadowOffsetY, &Context::SetShadowOffsetY),
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
+                InstanceAccessor("canvas", &Context::GetCanvas, nullptr)
             });
         return func.New({ Napi::External<NativeCanvas>::New(env, canvas)});
     }
@@ -273,8 +295,6 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        //nvgRect(m_nvg, left, top, width, height);
-
         NVGpaint paint = nvgLinearGradient(m_nvg, 0, 5, 0, 10, nvgRGBA(0, 160, 192, 255), nvgRGBA(0, 160, 192, 255));
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, left, top, width, height);
@@ -286,38 +306,39 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), 0);
+        return Napi::Value::From(Env(), m_fillStyle);
     }
 
     void Context::SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        const auto color = StringToColor(value.As<Napi::String>().Utf8Value());
+        m_fillStyle = value.As<Napi::String>().Utf8Value();
+        const auto color = StringToColor(m_fillStyle);
         nvgFillColor(m_nvg, color);
         SetDirty();
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), 0);
+        return Napi::Value::From(Env(), m_strokeStyle);
     }
 
     void Context::SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto color = StringToColor(value.As<Napi::String>().Utf8Value());
+        m_strokeStyle = value.As<Napi::String>().Utf8Value();
+        auto color = StringToColor(m_strokeStyle);
         nvgStrokeColor(m_nvg, color);
         SetDirty();
     }
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo& )
     {
-        return Napi::Value::From(Env(), 0);
+        return Napi::Value::From(Env(), m_lineWidth);
     }
 
     void Context::SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        const auto width = value.As<Napi::Number>().FloatValue();
-
-        nvgStrokeWidth(m_nvg, width);
+        m_lineWidth = value.As<Napi::Number>().FloatValue();
+        nvgStrokeWidth(m_nvg, m_lineWidth);
         SetDirty();
     }
 
@@ -339,8 +360,18 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    void Context::ClearRect(const Napi::CallbackInfo&)
+    void Context::ClearRect(const Napi::CallbackInfo& info)
     {
+        const float x = info[0].As<Napi::Number>().FloatValue();
+        const float y = info[1].As<Napi::Number>().FloatValue();
+        const float width = info[2].As<Napi::Number>().FloatValue();
+        const float height = info[3].As<Napi::Number>().FloatValue();
+
+        nvgBeginPath(m_nvg);
+        nvgRect(m_nvg, x, y, width, height);
+        nvgFillColor(m_nvg, TRANSPARENT_BLACK);
+        nvgFill(m_nvg);
+        SetDirty();
     }
 
     void Context::Translate(const Napi::CallbackInfo& info)
@@ -389,8 +420,9 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    void Context::Clip(const Napi::CallbackInfo&)
+    void Context::Clip(const Napi::CallbackInfo& info)
     {
+        // throw std::runtime_error{ "not implemented" };
     }
 
     void Context::StrokeRect(const Napi::CallbackInfo& info)
@@ -406,6 +438,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Stroke(const Napi::CallbackInfo&)
     {
+        nvgStroke(m_nvg);
+        SetDirty();
     }
 
     void Context::MoveTo(const Napi::CallbackInfo& info)
@@ -432,7 +466,7 @@ namespace Babylon::Polyfills::Internal
         const auto cy = info[1].As<Napi::Number>().FloatValue();
         const auto x = info[2].As<Napi::Number>().FloatValue();
         const auto y = info[3].As<Napi::Number>().FloatValue();
-        
+
         nvgBezierTo(m_nvg, cx, cy, cx, cy, x, y);
         SetDirty();
     }
@@ -451,7 +485,15 @@ namespace Babylon::Polyfills::Internal
 
         if (!m_fonts.empty())
         {
-            nvgFontFaceId(m_nvg, m_fonts.begin()->second);
+            if (m_currentFontId >= 0)
+            {
+                nvgFontFaceId(m_nvg, m_currentFontId);
+            }
+            else
+            {
+                nvgFontFaceId(m_nvg, m_fonts.begin()->second);
+            }
+
             nvgText(m_nvg, x, y, text.c_str(), nullptr);
             SetDirty();
         }
@@ -501,5 +543,150 @@ namespace Babylon::Polyfills::Internal
                 }
             });
         });
+    }
+
+    void Context::PutImageData(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::Arc(const Napi::CallbackInfo& info)
+    {
+        const double x = info[0].As<Napi::Number>().DoubleValue();
+        const double y = info[1].As<Napi::Number>().DoubleValue();
+        const double radius = info[2].As<Napi::Number>().DoubleValue();
+        const double startAngle = info[3].As<Napi::Number>().DoubleValue();
+        const double endAngle = info[4].As<Napi::Number>().DoubleValue();
+        const NVGwinding winding = (info.Length() == 6 && info[5].As<Napi::Boolean>()) ? NVGwinding::NVG_CCW : NVGwinding::NVG_CW;
+        nvgArc(m_nvg, x, y, radius, startAngle, endAngle, winding);
+        SetDirty();
+    }
+
+    void Context::DrawImage(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetImageData(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetLineDash(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::StrokeText(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetTransform(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetLineJoin(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetFont(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetFont(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        if (!value.IsString())
+        {
+            throw std::runtime_error{ "invalid argument" };
+        }
+
+        const auto fontName = value.ToString();
+        if (m_fonts.find(fontName) == m_fonts.end())
+        {
+            // TODO: determine better way of signaling to user that the font specified was invalid
+            m_currentFontId = -1;
+            return;
+        }
+
+        m_currentFontId = m_fonts.at(fontName);
+    }
+
+    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetShadowColor(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetShadowBlur(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    void Context::SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        throw std::runtime_error{ "not implemented" };
+    }
+
+    Napi::Value Context::GetCanvas(const Napi::CallbackInfo&)
+    {
+        throw std::runtime_error{ "not implemented" };
     }
 }
