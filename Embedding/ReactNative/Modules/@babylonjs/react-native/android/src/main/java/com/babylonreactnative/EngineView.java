@@ -125,7 +125,7 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
             String encoded = "";
             if (copyResult == PixelCopy.SUCCESS) {
                 ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayStream);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayStream);
                 byte[] byteArray = byteArrayStream.toByteArray();
                 bitmap.recycle();
                 encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);

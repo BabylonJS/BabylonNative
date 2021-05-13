@@ -80,7 +80,7 @@
         // Grab the image from the graphics context, and convert into a base64 encoded JPG.
         UIImage* capturedImage = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();
-        NSData* jpgData = UIImageJPEGRepresentation(capturedImage, 1.0f);
+        NSData* jpgData = UIImageJPEGRepresentation(capturedImage, .8f);
         NSString* encodedData = [jpgData base64EncodedStringWithOptions:0];
         
         // Fire the onSnapshotDataReturned event if hooked up.
