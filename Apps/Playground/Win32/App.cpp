@@ -14,6 +14,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -28,6 +29,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 bool minimized{false};
 
 // Forward declarations of functions included in this code module:
@@ -86,6 +88,7 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
 
+        chromeDevTools.reset();
         inputBuffer.reset();
         runtime.reset();
         graphics.reset();
@@ -104,13 +107,18 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, width, height);
+        Babylon::WindowConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Width = width;
+        graphicsConfig.Height = height;
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
-        runtime->Dispatch([width, height, hWnd](Napi::Env env) {
+        runtime->Dispatch([](Napi::Env env) {
             graphics->AddToJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -128,6 +136,12 @@ namespace
             Babylon::Plugins::NativeXr::Initialize(env);
 
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+
+            chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
+            if (chromeDevTools->SupportsInspector())
+            {
+                chromeDevTools->StartInspector(5643, "BabylonNative Playground");
+            }
         });
 
         // Scripts are copied to the parent of the executable due to CMake issues.
@@ -139,7 +153,7 @@ namespace
         loader.LoadScript(scriptsRootUrl + "/ammo.js");
         loader.LoadScript(scriptsRootUrl + "/recast.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
-        loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
+        loader.LoadScript(scriptsRootUrl + "/babylonjs.loaders.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
         loader.LoadScript(scriptsRootUrl + "/meshwriter.min.js");

@@ -1,0 +1,54 @@
+parameters:
+  name: ''
+  vmImage: ''
+  xCodeVersion: ''
+  macOSCodename: ''
+  
+jobs:
+  - job: ${{ parameters.name }}
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+  
+    steps:
+    - script: |
+        git submodule update --init --recursive
+      displayName: 'Checkout dependencies'
+
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: 'Apps'
+      displayName: 'Install Babylon.js NPM packages'
+
+    - template: cmake.yml
+      parameters:
+        vmImage: ${{ parameters.vmImage }}
+
+    - script: |
+        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
+      displayName: 'Select XCode ${{ parameters.xCodeVersion }}'
+
+    - script: |
+        mkdir buildiOS
+        cd buildiOS
+        cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
+      displayName: 'Generate iOS solution'
+
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+        scheme: 'Playground'
+        sdk: 'iphoneos'
+        useXcpretty: false
+        configuration: RelWithDebInfo
+      displayName: 'Build Playground iOS'
+
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+        scheme: 'ValidationTests'
+        sdk: 'iphoneos'
+        useXcpretty: false
+        configuration: RelWithDebInfo
+      displayName: 'Build ValidationTests iOS'

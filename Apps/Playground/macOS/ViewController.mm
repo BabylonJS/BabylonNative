@@ -70,12 +70,15 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    void* windowPtr = (__bridge void*)engineView;
     NSScreen *mainScreen = [NSScreen mainScreen];
     CGFloat screenScale = mainScreen.backingScaleFactor;
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, width, height);
+    Babylon::WindowConfiguration graphicsConfig{};
+    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Width = width;
+    graphicsConfig.Height = height;
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
@@ -90,7 +93,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
-        
+
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
 
@@ -99,10 +102,10 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
     loader.LoadScript("app:///ammo.js");
     loader.LoadScript("app:///recast.js");
     loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylon.glTF2FileLoader.js");
+    loader.LoadScript("app:///babylonjs.loaders.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
-    
+
     if (scripts.empty())
     {
         loader.LoadScript("app:///experience.js");
@@ -120,7 +123,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
 - (void)viewDidAppear {
     [super viewDidAppear];
-    
+
     [self refreshBabylon];
 }
 

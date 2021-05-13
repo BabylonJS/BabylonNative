@@ -17,6 +17,7 @@ namespace xr
         XrInstance OPENXR_CONTEXT_INTERFACE_API Instance() const override;
         XrSystemId OPENXR_CONTEXT_INTERFACE_API SystemId() const override;
         XrTime OPENXR_CONTEXT_INTERFACE_API DisplayTime() const override;
+        bool OPENXR_CONTEXT_INTERFACE_API TryEnableExtension(const char* name) const override;
         bool OPENXR_CONTEXT_INTERFACE_API IsExtensionEnabled(const char* name) const override;
         XrSession OPENXR_CONTEXT_INTERFACE_API Session() const override;
         XrSessionState OPENXR_CONTEXT_INTERFACE_API State() const override;
@@ -36,5 +37,6 @@ namespace xr
         static const XrSessionContext& Context();
         static uintptr_t GetNativeXrContext();
         static std::string GetNativeXrContextType();
+        static void Reset();
     };
 }

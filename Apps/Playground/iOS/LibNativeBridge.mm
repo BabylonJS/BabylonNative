@@ -29,7 +29,7 @@ bool g_isXrActive{};
 {
 }
 
-- (void)init:(void*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
+- (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
     inputBuffer.reset();
     runtime.reset();
@@ -37,9 +37,12 @@ bool g_isXrActive{};
 
     float width = inWidth;
     float height = inHeight;
-    void* windowPtr = view;
-    
-    graphics = Babylon::Graphics::CreateGraphics(windowPtr, static_cast<size_t>(width), static_cast<size_t>(height));
+
+    Babylon::WindowConfiguration graphicsConfig{};
+    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Width = static_cast<size_t>(width);
+    graphicsConfig.Height = static_cast<size_t>(height);
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
@@ -67,7 +70,7 @@ bool g_isXrActive{};
     loader.LoadScript("app:///ammo.js");
     loader.LoadScript("app:///recast.js");
     loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylon.glTF2FileLoader.js");
+    loader.LoadScript("app:///babylonjs.loaders.js");
     loader.LoadScript("app:///babylonjs.materials.js");
     loader.LoadScript("app:///babylon.gui.js");
     loader.LoadScript("app:///experience.js");

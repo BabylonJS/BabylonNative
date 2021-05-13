@@ -3,10 +3,10 @@ if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR ANDROID)
 endif()
 
 set(BABYLONSCRIPTS 
-    "../BabylonScripts/babylon.glTF2FileLoader.js"
-    "../BabylonScripts/babylon.max.js"
-    "../BabylonScripts/babylonjs.materials.js"
-    "../BabylonScripts/babylon.gui.js")
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../node_modules/babylonjs-gui/babylon.gui.js")
 
 set(SCRIPTS
     "Scripts/validation_native.js"
@@ -22,7 +22,7 @@ if(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
     add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(APPLE)
@@ -137,6 +137,6 @@ foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
 endforeach()
 
 set_property(TARGET ValidationTests PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../BabylonScripts PREFIX Scripts FILES ${BABYLONSCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLONSCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

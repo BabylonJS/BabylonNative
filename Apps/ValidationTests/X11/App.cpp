@@ -10,6 +10,7 @@
 #include <Shared/TestUtils.h>
 
 #include <Babylon/AppRuntime.h>
+#include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Polyfills/Console.h>
@@ -54,14 +55,19 @@ namespace
         runtime.reset();
         graphics.reset();
     }
-    
-    void InitBabylon(int32_t window)
+
+    void InitBabylon(Window window)
     {
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         Uninitialize();
 
-        graphics = Babylon::Graphics::CreateGraphics((void*)(uintptr_t)window, static_cast<size_t>(width), static_cast<size_t>(height));
+        Babylon::WindowConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.Width = static_cast<size_t>(width);
+        graphicsConfig.Height = static_cast<size_t>(height);
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
 
@@ -78,7 +84,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            
+
             // Initialize NativeEngine plugin.
             graphics->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
@@ -87,7 +93,7 @@ namespace
         Babylon::ScriptLoader loader{*runtime};
         loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.glTF2FileLoader.js");
+        loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.loaders.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/validation_native.js");
@@ -189,7 +195,6 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
                 case ClientMessage:
                     if ( (Atom)event.xclient.data.l[0] == wmDeleteWindow)
                     {
-                        Uninitialize();
                         doExit = true;
                     }
                     break;
@@ -202,6 +207,7 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
             }
         }
     }
+    Uninitialize();
     XDestroyIC(ic);
     XCloseIM(im);
 

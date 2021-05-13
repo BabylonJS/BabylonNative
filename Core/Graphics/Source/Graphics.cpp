@@ -3,6 +3,8 @@
 
 namespace Babylon
 {
+    class Graphics::Impl : public GraphicsImpl { };
+
     Graphics::Graphics()
         : m_impl{std::make_unique<Impl>()}
     {
@@ -10,33 +12,28 @@ namespace Babylon
 
     Graphics::~Graphics() = default;
 
-    template<>
-    void Graphics::UpdateWindow<void*>(void* windowPtr)
+    void Graphics::UpdateWindow(const WindowConfiguration& config)
     {
-        m_impl->SetNativeWindow(windowPtr, nullptr);
+        m_impl->UpdateWindow(config);
     }
 
-    template<>
-    void Graphics::UpdateWindow<void*, void*>(void* windowPtr, void* windowTypePtr)
+    void Graphics::UpdateContext(const ContextConfiguration& config)
     {
-        m_impl->SetNativeWindow(windowPtr, windowTypePtr);
+        m_impl->UpdateContext(config);
     }
 
-    template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, size_t, size_t>(void* nativeWindowPtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const WindowConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*>(nativeWindowPtr);
-        graphics->UpdateSize(width, height);
+        graphics->UpdateWindow(config);
+        graphics->UpdateSize(config.Width, config.Height);
         return graphics;
     }
 
-    template<>
-    std::unique_ptr<Graphics> Graphics::CreateGraphics<void*, void*, size_t, size_t>(void* nativeWindowPtr, void* nativeWindowTypePtr, size_t width, size_t height)
+    std::unique_ptr<Graphics> Graphics::CreateGraphics(const ContextConfiguration& config)
     {
         std::unique_ptr<Graphics> graphics{new Graphics()};
-        graphics->UpdateWindow<void*, void*>(nativeWindowPtr, nativeWindowTypePtr);
-        graphics->UpdateSize(width, height);
+        graphics->UpdateContext(config);
         return graphics;
     }
 
@@ -83,5 +80,10 @@ namespace Babylon
     float Graphics::GetHardwareScalingLevel()
     {
         return m_impl->GetHardwareScalingLevel();
+    }
+
+    float Graphics::GetDevicePixelRatio() const
+    {
+        return m_impl->GetDevicePixelRatio();
     }
 }

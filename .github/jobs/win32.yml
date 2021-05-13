@@ -1,0 +1,79 @@
+parameters:
+  name: ''
+  vmImage: ''
+  platform: ''
+  
+jobs:
+  - job: ${{ parameters.name }}
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+      
+    steps:
+      - script: |
+          git submodule update --init --recursive
+        displayName: 'Checkout dependencies'
+    
+      - task: Npm@1
+        inputs:
+          command: 'install'
+          workingDir: 'Apps'
+        displayName: 'Install Babylon.js NPM packages'
+
+      - script: |
+          mkdir buildWin32_${{ parameters.platform }}
+          cd buildWin32_${{ parameters.platform }}
+          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
+        displayName: 'Generate Win32 ${{ parameters.platform }} solution'
+    
+      - task: MSBuild@1
+        inputs:
+          solution: 'buildWin32_${{ parameters.platform }}/BabylonNative.sln'
+          maximumCpuCount: true
+          configuration: 'RelWithDebInfo'
+        displayName: 'Build WIN32_${{ parameters.platform }}'
+    
+      - script: |
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+        displayName: 'Enable Crash Dumps'
+    
+      - script: |
+          cd buildWin32_${{ parameters.platform }}\Apps\ValidationTests
+          mkdir Results
+          mkdir Errors
+          cd RelWithDebInfo
+          ValidationTests
+        displayName: 'Validation Tests'
+    
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: 'Win32_${{ parameters.platform }} Rendered Pictures'
+          pathtoPublish: 'buildWin32_${{ parameters.platform }}/Apps/ValidationTests/Results'
+        displayName: 'Publish Tests Win32_${{ parameters.platform }} Results'
+        condition: succeeded()
+    
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: 'Win32_${{ parameters.platform }} Error Pictures'
+          pathtoPublish: 'buildWin32_${{ parameters.platform }}/Apps/ValidationTests/Errors'
+        displayName: 'Publish Tests Win32_${{ parameters.platform }} Errors'
+        condition: failed()
+    
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: 'buildWin32_${{ parameters.platform }}/Apps/ValidationTests/RelWithDebInfo'
+          contents: ValidationTests.*
+          targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+          cleanTargetFolder: false
+        displayName: 'Stage test app exe/pdb for publishing'
+        condition: failed()
+    
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: 'Win32_${{ parameters.platform }} Crash Dumps'
+          pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
+        displayName: 'Publish Tests Win32_${{ parameters.platform }} Dumps'
+        condition: failed()

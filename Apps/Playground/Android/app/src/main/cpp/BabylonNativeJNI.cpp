@@ -46,9 +46,9 @@ extern "C"
 
         g_nativeXr.reset();
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
+        g_graphics.reset();
 
         g_isXrActive = false;
     }
@@ -70,13 +70,17 @@ extern "C"
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
 
-            g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+            Babylon::WindowConfiguration graphicsConfig{};
+            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Width = static_cast<size_t>(width);
+            graphicsConfig.Height = static_cast<size_t>(height);
+            g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
             g_graphics->StartRenderingCurrentFrame();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
-            g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
+            g_runtime->Dispatch([](Napi::Env env)
             {
                 g_graphics->AddToJavaScript(env);
 
@@ -113,7 +117,7 @@ extern "C"
             g_scriptLoader->LoadScript("app:///Scripts/ammo.js");
             g_scriptLoader->LoadScript("app:///Scripts/recast.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+            g_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
         }
@@ -126,7 +130,11 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-                g_graphics->UpdateWindow<void*>(window);
+                Babylon::WindowConfiguration graphicsConfig{};
+                graphicsConfig.WindowPtr = window;
+                graphicsConfig.Width = width;
+                graphicsConfig.Height = height;
+                g_graphics->UpdateWindow(graphicsConfig);
                 g_graphics->UpdateSize(width, height);
             });
         }

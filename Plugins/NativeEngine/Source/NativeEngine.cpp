@@ -479,7 +479,7 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
-        , m_graphicsImpl{Graphics::Impl::GetFromJavaScript(info.Env())}
+        , m_graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
         , m_boundFrameBuffer{&m_graphicsImpl.DefaultFrameBuffer()}
     {
@@ -1212,6 +1212,7 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        m_graphicsImpl.RemoveTexture(texture->Handle);
         delete texture;
     }
 
@@ -1608,7 +1609,7 @@ namespace Babylon
         m_boundFrameBuffer->Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
-    Graphics::Impl::UpdateToken& NativeEngine::GetUpdateToken()
+    GraphicsImpl::UpdateToken& NativeEngine::GetUpdateToken()
     {
         if (!m_updateToken)
         {
