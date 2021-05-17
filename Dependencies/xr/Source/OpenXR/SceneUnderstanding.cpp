@@ -155,7 +155,12 @@ public:
 
                 m_sceneBounds.space = args.SceneSpace;
                 m_sceneBounds.time = args.DisplayTime;
-                m_sceneObserver->ComputeNewScene(m_sceneBounds);
+                std::vector<XrSceneComputeFeatureMSFT> computeOptions {
+                    XrSceneComputeFeatureMSFT::XR_SCENE_COMPUTE_FEATURE_PLANE_MSFT,
+                    XrSceneComputeFeatureMSFT::XR_SCENE_COMPUTE_FEATURE_PLANE_MESH_MSFT,
+                    XrSceneComputeFeatureMSFT::XR_SCENE_COMPUTE_FEATURE_VISUAL_MESH_MSFT
+                };
+                m_sceneObserver->ComputeNewScene(computeOptions, m_sceneBounds);
 
                 m_lastUpdateTime = args.DisplayTime;
                 m_scanState = ScanState::Waiting;
@@ -266,7 +271,7 @@ private:
             const auto objectId = m_objectIds.at(xrObject.id);
             m_updatedObjects.push_back(objectId);
             auto& object = m_objects.at(objectId);
-            object.Type = c_objectTypeMap.at(xrObject.kind);
+            object.Type = c_objectTypeMap.at(xrObject.type);
         }
 
         std::unordered_set<xr::su::SceneObject::Id> xrObjectIdsToRemove{};
@@ -288,7 +293,7 @@ private:
 
     void UpdateMeshes(UpdateFrameArgs& args)
     {
-        const auto xrMeshes = m_scene->GetMeshes();
+        const auto xrMeshes = m_scene->GetVisualMeshes();
         std::unordered_set<xr::su::SceneMesh::Id> observedXRMeshIds{};
         for (const auto& xrMesh : xrMeshes)
         {
@@ -340,23 +345,23 @@ private:
             auto& mesh = m_meshes.at(meshId);
             const auto& location = xrMeshLocations.at(i);
 
-            // TODO: in preview 3 of the OpenXR scene understanding extension, plane's will also have associated meshes
-            xr::SceneMeshBuffers meshBuffers;
-            xr::ReadMeshBuffers(m_scene->Handle(), args.Extensions, mesh.MeshBufferId, meshBuffers);
+            std::vector<XrVector3f> vertexBuffer{};
+            std::vector<uint32_t> indexBuffer{};
+            xr::ReadMeshBuffers(m_scene->Handle(), args.Extensions, mesh.MeshBufferId, vertexBuffer, indexBuffer);
 
             static_assert(sizeof(XrVector3f) == sizeof(xr::Vector3f));
-            mesh.Positions.resize(meshBuffers.vertexBuffer.size());
-            for (size_t n = 0; n < meshBuffers.vertexBuffer.size(); n++)
+            mesh.Positions.resize(vertexBuffer.size());
+            for (size_t n = 0; n < vertexBuffer.size(); n++)
             {
-                const auto position = TransformPoint(meshBuffers.vertexBuffer.at(n), location.pose);
+                const auto position = TransformPoint(vertexBuffer.at(n), location.pose);
                 mesh.Positions[n].X = position.x;
                 mesh.Positions[n].Y = position.y;
                 mesh.Positions[n].Z = position.z;
             }
 
             static_assert(sizeof(Mesh::IndexType) == sizeof(uint32_t));
-            mesh.Indices.resize(meshBuffers.indexBuffer.size());
-            memcpy(mesh.Indices.data(), meshBuffers.indexBuffer.data(), meshBuffers.indexBuffer.size() * sizeof(uint32_t));
+            mesh.Indices.resize(indexBuffer.size());
+            memcpy(mesh.Indices.data(), indexBuffer.data(), indexBuffer.size() * sizeof(uint32_t));
 
             mesh.HasNormals = false;
         }
@@ -480,16 +485,15 @@ private:
     std::vector<Plane::Identifier> m_updatedPlanes{};
     std::vector<Plane::Identifier> m_removedPlanes{};
 
-    const std::unordered_map<xr::su::SceneObject::Kind, xr::SceneObjectType> c_objectTypeMap
+    const std::unordered_map<xr::su::SceneObject::Type, xr::SceneObjectType> c_objectTypeMap
     {
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_UNCATEGORIZED_MSFT, xr::SceneObjectType::Unknown },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_BACKGROUND_MSFT, xr::SceneObjectType::Background },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_WALL_MSFT, xr::SceneObjectType::Wall },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_FLOOR_MSFT, xr::SceneObjectType::Floor },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_CEILING_MSFT, xr::SceneObjectType::Ceiling },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_PLATFORM_MSFT, xr::SceneObjectType::Platform },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_INFERRED_MSFT, xr::SceneObjectType::Inferred },
-        { XrSceneObjectKindMSFT::XR_SCENE_OBJECT_KIND_WORLD_MSFT, xr::SceneObjectType::World }
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_UNCATEGORIZED_MSFT, xr::SceneObjectType::Unknown },
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_BACKGROUND_MSFT, xr::SceneObjectType::Background },
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_WALL_MSFT, xr::SceneObjectType::Wall },
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_FLOOR_MSFT, xr::SceneObjectType::Floor },
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_CEILING_MSFT, xr::SceneObjectType::Ceiling },
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_PLATFORM_MSFT, xr::SceneObjectType::Platform },
+        { XrSceneObjectTypeMSFT::XR_SCENE_OBJECT_TYPE_INFERRED_MSFT, xr::SceneObjectType::Inferred },
     };
 };
 

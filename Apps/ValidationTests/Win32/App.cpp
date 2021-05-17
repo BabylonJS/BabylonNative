@@ -17,6 +17,7 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -96,7 +97,7 @@ namespace
 
     void Initialize(HWND hWnd)
     {
-        Babylon::GraphicsConfiguration graphicsConfig{};
+        Babylon::WindowConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = hWnd;
         graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
@@ -124,6 +125,8 @@ namespace
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 
+            Babylon::Plugins::NativeXr::Initialize(env);
+
             Babylon::TestUtils::CreateInstance(env, hWnd);
         });
 
@@ -133,7 +136,7 @@ namespace
 
         Babylon::ScriptLoader loader{ *runtime };
         loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
-        loader.LoadScript(scriptsRootUrl + "/babylon.glTF2FileLoader.js");
+        loader.LoadScript(scriptsRootUrl + "/babylonjs.loaders.js");
         loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
         loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
         loader.LoadScript(scriptsRootUrl + "/validation_native.js");
