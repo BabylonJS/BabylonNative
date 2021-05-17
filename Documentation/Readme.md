@@ -2,7 +2,7 @@
 
 ## Android Emulator tips
 
-[Some tips to improve your experience of Babylon  Native with the Android Simulator.](AndroidSimulator.md)
+[Some tips to improve your experience of Babylon Native with the Android Emulator.](AndroidEmulator.md)
 
 ## Build system overview
 
