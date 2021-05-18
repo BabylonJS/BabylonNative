@@ -31,3 +31,6 @@
 [submodule "Dependencies/llhttp"]
 	path = Dependencies/v8inspector/Dependencies/llhttp
 	url = https://github.com/nodejs/llhttp
+[submodule "Dependencies/LabSound"]
+	path = Dependencies/LabSound
+	url = https://github.com/LabSound/LabSound.git
