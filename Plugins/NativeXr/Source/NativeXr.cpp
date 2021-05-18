@@ -853,6 +853,18 @@ namespace Babylon
                 {
                     m_position = Napi::Persistent(Napi::Object::New(info.Env()));
                     m_orientation = Napi::Persistent(Napi::Object::New(info.Env()));
+                    
+                    auto position = m_position.Value();
+                    position.Set("x", 0.f);
+                    position.Set("y", 0.f);
+                    position.Set("z", 0.f);
+                    position.Set("w", 1.f);
+
+                    auto orientation = m_orientation.Value();
+                    orientation.Set("x", 0.f);
+                    orientation.Set("y", 0.f);
+                    orientation.Set("z", 0.f);
+                    orientation.Set("w", 1.f);
                 }
             }
 
