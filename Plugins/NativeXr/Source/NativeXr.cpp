@@ -857,8 +857,19 @@ namespace Babylon
                 }
                 else
                 {
-                    m_position = Napi::Persistent(Napi::Object::New(info.Env()));
-                    m_orientation = Napi::Persistent(Napi::Object::New(info.Env()));
+                    auto position{Napi::Object::New(info.Env())};
+                    position.Set("x", 0.f);
+                    position.Set("y", 0.f);
+                    position.Set("z", 0.f);
+                    position.Set("w", 1.f);
+                    m_position = Napi::Persistent(position);
+
+                    auto orientation{Napi::Object::New(info.Env())};
+                    orientation.Set("x", 0.f);
+                    orientation.Set("y", 0.f);
+                    orientation.Set("z", 0.f);
+                    orientation.Set("w", 1.f);
+                    m_orientation = Napi::Persistent(orientation);
                 }
             }
 
