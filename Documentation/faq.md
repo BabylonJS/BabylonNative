@@ -21,9 +21,9 @@ In VisualStudio, go to menu `Tools` -> `Get Tools and Features`. Then check for 
 
 ![msvc_arm64](Images/faq/msvc_arm64.png)
 
-## Unable to run BabylonNative on Android Simulator
+## Unable to run BabylonNative on Android Emulator
 
-[A detailed page is avaible here.](AndroidSimulator.md)
+[A detailed page is avaible here.](AndroidEmulator.md)
 
 ## Does Babylon Native support WASM?
 

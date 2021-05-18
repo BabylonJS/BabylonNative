@@ -342,12 +342,12 @@ be greyed and inaccessible. Instructions and tips on how to install the simulato
 **Required Tools:** 
 [Clang](https://clang.llvm.org/) or [GCC](https://gcc.gnu.org/)
 
-The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 8+ or GCC 9+ are required for building.
+The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 9+ or GCC 9+ are required for building.
 
-First step is to install packages mandatory for building. For example, with Clang-8 toolchain:
+First step is to install packages mandatory for building. For example, with Clang-9 toolchain:
 
 ```
-sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
+sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
 ```
 
 Then targeting a Ninja make file:
@@ -400,3 +400,4 @@ You should receive a response within 24 hours. If for some reason you do not, pl
 follow up via email to ensure we received your original message. Further information, 
 including the [MSRC PGP](https://technet.microsoft.com/en-us/security/dn606155) key, can 
 be found in the [Security TechCenter](https://technet.microsoft.com/en-us/security/default).
+ 
