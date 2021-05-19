@@ -1390,4 +1390,10 @@ namespace xr
         // TODO
         return false;
     }
+
+    bool System::Session::TrySetEyeTrackingEnabled(const bool /*enabled*/)
+    {
+        // TODO
+        return false;
+    }
 }

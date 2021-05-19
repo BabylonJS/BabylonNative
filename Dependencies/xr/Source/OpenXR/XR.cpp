@@ -323,6 +323,8 @@ namespace xr
             };
             std::array<XrPath, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionPaths{};
 
+         //   static constexpr char* GAZE__PATH
+
             static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_NAME{ "controller_get_pose_action" };
             static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
             static constexpr char* CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX{ "/input/grip/pose" };
@@ -388,6 +390,7 @@ namespace xr
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
             static constexpr char* MICROSOFT_HAND_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/hand_interaction" };
+            static constexpr char* XR_EYE_INTERACTION_PROFILE{ "/interaction_profiles/ext/eye_gaze_interaction" };
             XrPath DefaultXRInteractionPath{};
             XrPath MicrosoftXRInteractionPath{};
             XrPath MicrosoftHandInteractionPath{};
@@ -432,6 +435,8 @@ namespace xr
             XrBool32 SupportsArticulatedHandTracking{ false };
             XrBool32 HandTrackersInitialized{ false };
         } HandData;
+
+        bool SupportsEyeTracking{ false };
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -630,6 +635,16 @@ namespace xr
             openXRAnchors.erase(anchor.NativeAnchor);
         }
 
+        void InitializeEyeResources()
+        {
+            if (!SupportsEyeTracking)
+            {
+                return;
+            }
+
+
+        }
+
     private:
         static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
 
@@ -644,9 +659,13 @@ namespace xr
         void InitializeRenderResources(XrInstance instance, XrSystemId systemId)
         {
             // Read graphics properties for preferred swapchain length and logging, and hand tracking availability.
-            XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties{ XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
+            XrSystemEyeGazeInteractionPropertiesEXT eyeTrackingSystemProperties{ XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT};
+            XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties{ XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT, &eyeTrackingSystemProperties };
             XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES, &handTrackingSystemProperties };
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
+
+            SupportsEyeTracking = !!eyeTrackingSystemProperties.supportsEyeGazeInteraction;
+            InitializeEyeResources();
 
             // Initialize the hand resources
             HandData.SupportsArticulatedHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
@@ -662,6 +681,11 @@ namespace xr
 
             // Create the swapchains for the primary view configuration type. Secondary view configuration type swapchains will be populated once activated.
             PopulateSwapchains(primaryRenderResource.ViewState);
+        }
+
+        xr::System::Session::Frame::Space GetLatestEyeSpace()
+        {
+
         }
 
         void InitializeHandResources()
@@ -734,6 +758,7 @@ namespace xr
             XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &ActionResources.DefaultXRInteractionPath));
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &ActionResources.MicrosoftXRInteractionPath));
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_HAND_INTERACTION_PROFILE, &ActionResources.MicrosoftHandInteractionPath));
+            XrCheck(xrStringToPath(instance, ActionResources.XR_EYE_INTERACTION_PROFILE, &ActionResources.MicrosoftHandInteractionPath));
 
             std::vector<XrActionSuggestedBinding> defaultBindings{};
             std::vector<XrActionSuggestedBinding> microsoftControllerBindings{};
@@ -2046,6 +2071,23 @@ namespace xr
         };
 
         su.Initialize(initOptions);
+
+        return true;
+    }
+
+    bool System::Session::TrySetEyeTrackingEnabled(const bool enabled)
+    {
+        if (enabled)
+        {
+    //        const auto& session = m_impl->HmdImpl.Context.Session();
+    //        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
+            m_impl->InitializeEyeResources();
+            /*
+            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
+            SceneUnderstanding::InitOptions initOptions{ session, extensions };
+            su.Initialize(initOptions);
+            */
+        }
 
         return true;
     }
