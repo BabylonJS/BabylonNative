@@ -479,12 +479,10 @@ namespace Babylon
 
                     m_sessionState = std::make_unique<SessionState>(graphicsImpl);
 
-                    if (!m_system.IsInitialized())
+                    if (!m_system.IsInitialized() &&
+                        !m_system.TryInitialize())
                     {
-                        while (!m_system.TryInitialize())
-                        {
-                            // do nothing
-                        }
+                        throw std::runtime_error{"Failed to initialize xr system."};
                     }
 
                     return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
@@ -609,6 +607,12 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
+            // Don't try to create new textures if the window is no longer available.
+            if (m_windowPtr == nullptr)
+            {
+                return;
+            }
+
             m_sessionState->ActiveTextures.reserve(m_sessionState->Frame->Views.size());
             for (const auto& view : m_sessionState->Frame->Views)
             {
@@ -853,8 +857,19 @@ namespace Babylon
                 }
                 else
                 {
-                    m_position = Napi::Persistent(Napi::Object::New(info.Env()));
-                    m_orientation = Napi::Persistent(Napi::Object::New(info.Env()));
+                    auto position{Napi::Object::New(info.Env())};
+                    position.Set("x", 0.f);
+                    position.Set("y", 0.f);
+                    position.Set("z", 0.f);
+                    position.Set("w", 1.f);
+                    m_position = Napi::Persistent(position);
+
+                    auto orientation{Napi::Object::New(info.Env())};
+                    orientation.Set("x", 0.f);
+                    orientation.Set("y", 0.f);
+                    orientation.Set("z", 0.f);
+                    orientation.Set("w", 1.f);
+                    m_orientation = Napi::Persistent(orientation);
                 }
             }
 

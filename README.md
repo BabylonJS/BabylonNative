@@ -32,6 +32,7 @@ UWP, macOS, iOS, Android.
 - Network requests (including accessing local files using the `file://` protocol) 
 made throught the Babylon.js APIs.
 - Extending JavaScript functionality using N-API and native plugins.
+- Debugging JavaScript with V8 on the following platforms: Win32.
 
 The following major features are partially implemented but not yet supported. Note 
 that this list is not exhaustive.
@@ -42,7 +43,7 @@ that this list is not exhaustive.
 The following major features are not yet supported or implemented, even as previews, 
 but are expected to be supported in the future. Note that this list is not exhaustive.
 
-- Debugging JavaScript with V8.
+- Debugging JavaScript with V8 on the following platforms: Android, Apple, UWP, iOS, Linux.
 - User input.
 - Font rendering.
 - Sub-window, multi-window, and out-of-process rendering.
@@ -74,7 +75,7 @@ principles.
 
 ### **All Development Platforms, Common First Steps**
 
-**Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/)
+**Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/), [node.js](https://nodejs.org/en/)
 
 Step 1 for all development environments and targets is to clone the repo. Use a 
 git-enabled terminal to follow the steps below.
@@ -89,6 +90,13 @@ also necessary to set up the submodules.
 ```
 cd BabylonNative
 git submodule update --init --recursive
+```
+
+Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
+
+```
+cd Apps
+npm install
 ```
 
 Babylon Native's build system is based on CMake, which customarily uses a separate
@@ -311,7 +319,7 @@ First download the latest release of Ninja, extract the binary, and add it to yo
 Next install the Javascript engine dependencies. This is done by the Node.js npm package system.
 
 ```
-cd Apps\Playground\Android
+cd Apps
 npm install
 ```
 
@@ -334,12 +342,12 @@ be greyed and inaccessible. Instructions and tips on how to install the simulato
 **Required Tools:** 
 [Clang](https://clang.llvm.org/) or [GCC](https://gcc.gnu.org/)
 
-The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 8+ or GCC 9+ are required for building.
+The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 9+ or GCC 9+ are required for building.
 
-First step is to install packages mandatory for building. For example, with Clang-8 toolchain:
+First step is to install packages mandatory for building. For example, with Clang-9 toolchain:
 
 ```
-sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-8 libc++-8-dev libc++abi-8-dev lld-8 ninja-build
+sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
 ```
 
 Then targeting a Ninja make file:
@@ -392,3 +400,4 @@ You should receive a response within 24 hours. If for some reason you do not, pl
 follow up via email to ensure we received your original message. Further information, 
 including the [MSRC PGP](https://technet.microsoft.com/en-us/security/dn606155) key, can 
 be found in the [Security TechCenter](https://technet.microsoft.com/en-us/security/default).
+ 
