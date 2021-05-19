@@ -20,7 +20,7 @@
     "@react-native-community/slider": "4.0.0-rc.3",
     "logkitty": "^0.7.1",
     "react": "^17.0.1",
-    "react-native": "^0.64.0",
+    "react-native": "^0.64.1",
     "react-native-permissions": "^3.0.0",
     "react-native-windows": "^0.64.1"
   },
