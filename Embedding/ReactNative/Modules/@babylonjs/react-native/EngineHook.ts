@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
-import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color3 } from '@babylonjs/core';
+import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4 } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
 import './VersionValidation';
 import * as base64 from 'base-64';
@@ -86,7 +86,7 @@ if (Platform.OS === "android" || Platform.OS === "ios") {
         // TODO: https://github.com/BabylonJS/BabylonNative/issues/577
         // Windows HMDs require different rendering behaviors than default xr rendering for mobile devices
         const sessionManager = await originalEnterXRAsync.apply(this, args);
-        sessionManager.scene.clearColor = Color3.Black().toColor4();
+        sessionManager.scene.clearColor = new Color4(0, 0, 0, 0);
         sessionManager.scene.autoClear = true;
         return sessionManager;
     };
