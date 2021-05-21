@@ -241,7 +241,7 @@ CreateBoxAsync().then(function () {
                     if (hololens) {
                         // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
                         xrSessionManager.scene.autoClear = true;
-                        xrSessionManager.scene.clearColor = BABYLON.Color4.FromColor3(Color3.Black());
+                        xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
             });
