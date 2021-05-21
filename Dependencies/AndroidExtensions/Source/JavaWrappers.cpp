@@ -109,7 +109,7 @@ namespace java::lang
     String::operator std::string() const
     {
         if (m_string == nullptr) {
-            throw std::runtime_error("Tried to implicitly convert null Java String to C++ String");
+            throw std::runtime_error{"Tried to implicitly convert null Java String to C++ String"};
         }
         const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
         std::string str{buffer};
