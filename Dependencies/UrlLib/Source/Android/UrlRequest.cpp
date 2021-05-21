@@ -146,7 +146,7 @@ namespace UrlLib
                         m_responseUrl = connection.GetURL().ToString();
                     }
                 }
-                catch (const Throwable& throwable)
+                catch (const Throwable&)
                 {
                     // Catch Java exceptions, but retain the default status code of 0 to indicate a client side error.
                 }
