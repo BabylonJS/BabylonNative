@@ -609,12 +609,6 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
-            // Don't try to create new textures if the window is no longer available.
-            if (m_windowPtr == nullptr)
-            {
-                return;
-            }
-
             m_sessionState->ActiveTextures.reserve(m_sessionState->Frame->Views.size());
             for (const auto& view : m_sessionState->Frame->Views)
             {
