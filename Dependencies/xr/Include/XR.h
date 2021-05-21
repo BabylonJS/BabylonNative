@@ -13,7 +13,8 @@ namespace xr
     {
         RGBA8_SRGB,
         BGRA8_SRGB,
-        D24S8
+        D24S8,
+        D16
     };
 
     enum class SessionType

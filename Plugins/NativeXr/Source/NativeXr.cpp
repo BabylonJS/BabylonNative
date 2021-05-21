@@ -31,6 +31,8 @@ namespace
             // Depth Formats
             case xr::TextureFormat::D24S8:
                 return bgfx::TextureFormat::D24S8;
+            case xr::TextureFormat::D16:
+                return bgfx::TextureFormat::D16;
 
             default:
                 throw std::runtime_error{"Unsupported texture format"};
