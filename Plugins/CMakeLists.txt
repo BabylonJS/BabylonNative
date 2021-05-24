@@ -1,6 +1,9 @@
 # Add DevTools
 add_subdirectory(ChromeDevTools)
 
+# Add NativeAudio
+add_subdirectory(NativeAudio)
+
 # Add NativeCapture
 add_subdirectory(NativeCapture)
 

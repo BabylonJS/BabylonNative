@@ -12,6 +12,7 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/Plugins/NativeAudio.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ChromeDevTools.h>

@@ -137,3 +137,8 @@ if (WIN32 AND NOT (WINDOWS_STORE OR CMAKE_GENERATOR_PLATFORM_UPPER MATCHES "ARM.
     add_subdirectory(v8inspector)
     set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
 endif()
+
+# --------------------------- LabSound -------------------------------
+# Dependencies: none
+add_subdirectory(LabSound)
+set_property(TARGET LabSound PROPERTY FOLDER Dependencies)

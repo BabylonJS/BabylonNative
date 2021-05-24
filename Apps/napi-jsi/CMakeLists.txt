@@ -30,6 +30,7 @@ target_link_libraries(napi-jsi
     Graphics
     jsi
     JsRuntime
+    NativeAudio
     NativeCapture
     NativeEngine
     NativeInput
