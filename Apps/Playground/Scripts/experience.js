@@ -10,15 +10,15 @@ var ibl = false;
 var rtt = false;
 var vr = false;
 var ar = false;
-var xrHitTest = true;
+var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = true;
 var slate = true;
 
 function CreateBoxAsync() {
-    return Promise.resolve();
     BABYLON.Mesh.CreateBox("box1", 0.2);
+    return Promise.resolve();
 }
 
 function CreateSpheresAsync() {
@@ -233,10 +233,12 @@ CreateBoxAsync().then(function () {
                     sessionMode = "immersive-vr";
 
                     // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
+                /**
                     xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HAND_TRACKING,
                         "latest",
                         { xrInput: xr.input });
+                        */
                 }
 
                 xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
@@ -251,13 +253,7 @@ CreateBoxAsync().then(function () {
                     // Let's add a slate
                     var slate = new BABYLON.GUI.HolographicSlate("down");
                     manager.addControl(slate);
-                    slate.mesh.setPivotPoint(new BABYLON.Vector3(2.5, -1.5, 0));
-
-                    var gizmo = new BABYLON.GUI.BoundingBoxGizmo2D(manager.utilityLayer);
-                    gizmo.attachedSlate = slate;
-
-                    var followBehavior = new BABYLON.FollowBehavior();
-                    followBehavior.attach(slate.mesh);
+                    slate.scaling.scaleInPlace(0.3);
                 });
 
             });
