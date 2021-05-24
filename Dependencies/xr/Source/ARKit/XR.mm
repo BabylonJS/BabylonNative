@@ -564,9 +564,9 @@ namespace xr {
 
             [configuration release];
 
-            id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
-            id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
-            id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
+            lib = CompileShader(metalDevice, shaderSource);
+            vertexFunction = [lib newFunctionWithName:@"vertexShader"];
+            fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
             // Configure a pipeline descriptor that is used to create a pipeline state.
             MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -607,13 +607,17 @@ namespace xr {
             [session pause];
             [session release];
             [pipelineState release];
+            [vertexFunction release];
+            [fragmentFunction release];
+            [lib release];
+            [commandQueue release];
             UpdateXRView(nil);
         }
 
         void UpdateXRView() {
             UpdateXRView(getXRView());
         }
-        
+
         void UpdateXRView(MTKView* activeXRView) {
             // Check whether the xr view has changed, and if so, reconfigure it.
             if (activeXRView != xrView) {
@@ -703,7 +707,6 @@ namespace xr {
                     MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:width height:height mipmapped:NO];
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
-                    [texture retain];
 
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].ColorTextureFormat = TextureFormat::BGRA8_SRGB;
@@ -723,7 +726,6 @@ namespace xr {
                     textureDescriptor.storageMode = MTLStorageModePrivate;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
-                    [texture retain];
 
                     ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
@@ -994,7 +996,7 @@ namespace xr {
 
                 // ARKit feature points don't have confidence values, so just default to 1.0f
                 featurePoint.ConfidenceValue = 1.0f;
-                
+
                 // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
                 const uint64_t id { pointCloud.identifiers[i] };
                 auto featurePointIterator = featurePointIDMap.find(id);
@@ -1071,6 +1073,9 @@ namespace xr {
 #pragma clang diagnostic pop
         SessionDelegate* sessionDelegate{};
         id<MTLRenderPipelineState> pipelineState{};
+        id<MTLLibrary> lib;
+        id<MTLFunction> vertexFunction;
+        id<MTLFunction> fragmentFunction;
         vector_uint2 viewportSize{};
         id<MTLCommandQueue> commandQueue;
         std::vector<ARAnchor*> nativeAnchors{};
