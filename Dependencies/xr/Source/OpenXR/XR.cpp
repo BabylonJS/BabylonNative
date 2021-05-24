@@ -298,8 +298,8 @@ namespace xr
         struct RenderResource
         {
             ViewConfigurationState ViewState;
-            std::vector<Swapchain> ColorSwapchains;
-            std::vector<Swapchain> DepthSwapchains;
+            Swapchain ColorSwapchain{};
+            Swapchain DepthSwapchain{};
             std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews;
             std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews;
         };
@@ -519,42 +519,40 @@ namespace xr
             SwapchainFormat depthSwapchainFormat;
             SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
 
-            uint32_t viewCount = static_cast<uint32_t>(viewState.Views.size());
+            const auto viewCount = static_cast<uint32_t>(viewState.Views.size());
             auto& renderResource = RenderResources.ResourceMap[viewState.Type];
-            renderResource.ColorSwapchains.resize(viewCount);
-            renderResource.DepthSwapchains.resize(viewCount);
             
-            for (uint32_t idx = 0; idx < viewCount; ++idx)
-            {
-                const XrViewConfigurationView& view = viewState.ViewConfigViews[idx];
-                    PopulateSwapchain(session,
-                        colorSwapchainFormat,
-                        view.recommendedImageRectWidth,
-                        view.recommendedImageRectHeight,
-                        1,
-                        view.recommendedSwapchainSampleCount,
-                        0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
-                        viewState.Type,
-                        renderResource.ColorSwapchains[idx]);
-                    PopulateSwapchain(session,
-                        depthSwapchainFormat,
-                        view.recommendedImageRectWidth,
-                        view.recommendedImageRectHeight,
-                        1,
-                        view.recommendedSwapchainSampleCount,
-                        0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                        viewState.Type,
-                        renderResource.DepthSwapchains[idx]);
-            }
+            // All of the view config views should have the same recommended sizes,
+            // as long as we're working with stereoscopic HMD's.
+            const auto& viewConfigView = viewState.ViewConfigViews[0];
+
+            PopulateSwapchain(session,
+                colorSwapchainFormat,
+                viewConfigView.recommendedImageRectWidth,
+                viewConfigView.recommendedImageRectHeight,
+                viewCount,
+                viewConfigView.recommendedSwapchainSampleCount,
+                0,
+                XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                viewState.Type,
+                renderResource.ColorSwapchain);
+            PopulateSwapchain(session,
+                depthSwapchainFormat,
+                viewConfigView.recommendedImageRectWidth,
+                viewConfigView.recommendedImageRectHeight,
+                viewCount,
+                viewConfigView.recommendedSwapchainSampleCount,
+                0,
+                XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                viewState.Type,
+                renderResource.DepthSwapchain);
         }
 
         void CleanupSwapchains(ViewConfigurationState& viewState)
         {
             auto& renderResource = RenderResources.ResourceMap[viewState.Type];
-            renderResource.ColorSwapchains.clear();
-            renderResource.DepthSwapchains.clear();
+            renderResource.ColorSwapchain = {};
+            renderResource.DepthSwapchain = {};
         }
 
         Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable, XrTime time)
@@ -1002,21 +1000,21 @@ namespace xr
             XrCheck(xrEnumerateSwapchainFormats(session, static_cast<uint32_t>(swapchainFormats.size()), &swapchainFormatCount, swapchainFormats.data()));
 
             auto colorFormatPtr = std::find_first_of(
-                std::begin(swapchainFormats),
-                std::end(swapchainFormats),
                 std::begin(SUPPORTED_COLOR_FORMATS),
-                std::end(SUPPORTED_COLOR_FORMATS));
-            if (colorFormatPtr == std::end(swapchainFormats))
+                std::end(SUPPORTED_COLOR_FORMATS),
+                std::begin(swapchainFormats),
+                std::end(swapchainFormats));
+            if (colorFormatPtr == std::end(SUPPORTED_COLOR_FORMATS))
             {
                 throw std::runtime_error{ "No runtime swapchain format is supported for color." };
             }
 
             auto depthFormatPtr = std::find_first_of(
-                std::begin(swapchainFormats),
-                std::end(swapchainFormats),
                 std::begin(SUPPORTED_DEPTH_FORMATS),
-                std::end(SUPPORTED_DEPTH_FORMATS));
-            if (depthFormatPtr == std::end(swapchainFormats))
+                std::end(SUPPORTED_DEPTH_FORMATS),
+                std::begin(swapchainFormats),
+                std::end(swapchainFormats));
+            if (depthFormatPtr == std::end(SUPPORTED_DEPTH_FORMATS))
             {
                 throw std::runtime_error{ "No runtime swapchain format is supported for depth." };
             }
@@ -1168,8 +1166,8 @@ namespace xr
             XrCheck(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, viewConfigurationState.Views.data()));
 
             assert(viewCountOutput == viewCapacityInput);
-            assert(viewCountOutput == renderResource.ColorSwapchains.size());
-            assert(viewCountOutput == renderResource.DepthSwapchains.size());
+            assert(viewCountOutput == renderResource.ColorSwapchain.ArraySize);
+            assert(viewCountOutput == renderResource.DepthSwapchain.ArraySize);
 
             renderResource.ProjectionLayerViews.resize(viewCountOutput);
             if (context.Extensions()->DepthExtensionSupported)
@@ -1178,7 +1176,53 @@ namespace xr
             }
         }
 
-        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) {
+        void PopulateViewConfigurationState(
+            System::Session::Impl::RenderResource& renderResource,
+            std::vector<xr::System::Session::Frame::View>::iterator viewsStart,
+            std::vector<xr::System::Session::Frame::View>::iterator viewsEnd,
+            const bool depthSupported,
+            const bool isPrimaryObserver)
+        {
+            const auto& colorSwapchain = renderResource.ColorSwapchain;
+            const auto& depthSwapchain = renderResource.DepthSwapchain;
+            const auto colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
+            const auto depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
+
+            uint32_t viewIdx = 0;
+            for(auto viewIter = viewsStart; viewIter < viewsEnd; viewIter++, viewIdx++)
+            {
+                auto& currentView = *viewIter;
+                const auto& cachedView = renderResource.ViewState.Views.at(viewIdx);
+
+                // Use the full range of recommended image size to achieve optimum resolution
+                const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
+                assert(colorSwapchain.Width == depthSwapchain.Width);
+                assert(colorSwapchain.Height == depthSwapchain.Height);
+
+                // Populate the struct that consuming code will use for rendering.
+                PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, currentView);
+        
+                // Set is first person observer flag to true.
+                currentView.IsFirstPersonObserver = isPrimaryObserver;
+
+                renderResource.ProjectionLayerViews[viewIdx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+                auto& projectionLayerView = renderResource.ProjectionLayerViews[viewIdx];
+                PopulateProjectionView(cachedView, colorSwapchain, imageRect, viewIdx, projectionLayerView);
+
+                if (depthSupported)
+                {
+                    renderResource.DepthInfoViews[viewIdx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
+                    auto& depthInfoView = renderResource.DepthInfoViews[viewIdx];
+                    PopulateDepthInfoView(depthSwapchain, imageRect, viewIdx, depthInfoView);
+        
+                    // Chain depth info struct to the corresponding projection layer views's next
+                    projectionLayerView.next = &depthInfoView;
+                }
+            }
+        }
+
+        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) 
+        {
             const float n{sessionImpl.DepthNearZ};
             const float f{sessionImpl.DepthFarZ};
 
@@ -1234,10 +1278,12 @@ namespace xr
             view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
             view.ColorTextureSize.Width = colorSwapchain.Width;
             view.ColorTextureSize.Height = colorSwapchain.Height;
+            view.ColorTextureSize.Depth = colorSwapchain.ArraySize;
             view.DepthTextureFormat = SwapchainFormatToTextureFormat(depthSwapchain.Format);
             view.DepthTexturePointer = depthSwapchain.Images[depthSwapchainImageIndex].texture;
             view.DepthTextureSize.Width = depthSwapchain.Width;
             view.DepthTextureSize.Height = depthSwapchain.Height;
+            view.DepthTextureSize.Depth = depthSwapchain.ArraySize;
             view.DepthNearZ = sessionImpl.DepthNearZ;
             view.DepthFarZ = sessionImpl.DepthFarZ;
 
@@ -1247,17 +1293,19 @@ namespace xr
         void PopulateProjectionView(const XrView& cachedView,
             const xr::System::Session::Impl::Swapchain& colorSwapchain,
             const XrRect2Di imageRect,
+            const uint32_t imageArrayIndex,
             XrCompositionLayerProjectionView& projectionLayerView)
         {
             projectionLayerView.pose = cachedView.pose;
             projectionLayerView.fov = cachedView.fov;
             projectionLayerView.subImage.swapchain = colorSwapchain.Handle;
             projectionLayerView.subImage.imageRect = imageRect;
-            projectionLayerView.subImage.imageArrayIndex = 0;
+            projectionLayerView.subImage.imageArrayIndex = imageArrayIndex;
         }
 
         void PopulateDepthInfoView(const xr::System::Session::Impl::Swapchain& depthSwapchain,
             const XrRect2Di imageRect,
+            const uint32_t imageArrayIndex,
             XrCompositionLayerDepthInfoKHR& depthInfoView)
         {
             depthInfoView.minDepth = 0;
@@ -1266,7 +1314,7 @@ namespace xr
             depthInfoView.farZ = sessionImpl.DepthFarZ;
             depthInfoView.subImage.swapchain = depthSwapchain.Handle;
             depthInfoView.subImage.imageRect = imageRect;
-            depthInfoView.subImage.imageArrayIndex = 0;
+            depthInfoView.subImage.imageArrayIndex = imageArrayIndex;
         }
 
         // Returns true if the action is supported on the current input
@@ -1411,9 +1459,7 @@ namespace xr
                         sessionImpl.HmdImpl.Context.SystemId(),
                         secondaryViewConfigState.viewConfigurationType);
                     
-                    if (renderResource.ColorSwapchains.size() < viewConfigViews.size() ||
-                        renderResource.DepthSwapchains.size() < viewConfigViews.size() ||
-                        IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
+                    if (IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
                     {
                         viewState.ViewConfigViews = std::move(viewConfigViews);
                         sessionImpl.PopulateSwapchains(viewState);
@@ -1455,46 +1501,18 @@ namespace xr
             }
 
             totalViewCount += secondaryViewCount;
+
             Views.resize(totalViewCount);
 
-            // Prepare rendering parameters of each view for swapchain texture arrays
-            auto& primaryRenderResource = renderResources.ResourceMap[primaryType];
-            for (uint32_t idx = 0; idx < primaryViewCount; ++idx)
-            {
-                const auto& colorSwapchain = primaryRenderResource.ColorSwapchains[idx];
-                const auto& depthSwapchain = primaryRenderResource.DepthSwapchains[idx];
-                const auto& cachedView = primaryRenderResource.ViewState.Views.at(idx);
-
-                // Use the full range of recommended image size to achieve optimum resolution
-                const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
-                assert(colorSwapchain.Width == depthSwapchain.Width);
-                assert(colorSwapchain.Height == depthSwapchain.Height);
-
-                const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
-                const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
-
-                // Populate the struct that consuming code will use for rendering.
-                auto& view = Views[idx];
-                m_impl->PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, view);
-        
-                primaryRenderResource.ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-                auto& projectionLayerView = primaryRenderResource.ProjectionLayerViews[idx];
-                m_impl->PopulateProjectionView(cachedView, colorSwapchain, imageRect, projectionLayerView);
-
-                if (depthSupported)
-                {
-                    primaryRenderResource.DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
-                    auto& depthInfoView = primaryRenderResource.DepthInfoViews[idx];
-                    m_impl->PopulateDepthInfoView(depthSwapchain, imageRect, depthInfoView);
-        
-                    // Chain depth info struct to the corresponding projection layer views's next
-                    projectionLayerView.next = &depthInfoView;
-                }
-            }
+            auto& primaryRenderResource = renderResources.ResourceMap.at(primaryType);
+            m_impl->PopulateViewConfigurationState(
+                primaryRenderResource, 
+                Views.begin(), Views.begin() + primaryViewCount,
+                depthSupported, false);            
 
             if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
             {
-                int index = primaryViewCount;
+                int viewStartIdx = primaryViewCount;
                 for (const auto& viewConfigType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
                 {
                     auto& secondaryRenderResource = renderResources.ResourceMap.at(viewConfigType);
@@ -1502,44 +1520,13 @@ namespace xr
                     if (viewConfigurationState.Active)
                     {
                         const uint32_t viewCount = static_cast<uint32_t>(viewConfigurationState.Views.size());
-                        for (uint32_t idx = 0; idx < viewCount; ++idx)
-                        {
-                            const auto& colorSwapchain = secondaryRenderResource.ColorSwapchains[idx];
-                            const auto& depthSwapchain = secondaryRenderResource.DepthSwapchains[idx];
-                            const auto& cachedView = secondaryRenderResource.ViewState.Views.at(idx);
 
-                            // Use the full range of recommended image size to achieve optimum resolution
-                            const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
-                            assert(colorSwapchain.Width == depthSwapchain.Width);
-                            assert(colorSwapchain.Height == depthSwapchain.Height);
+                        m_impl->PopulateViewConfigurationState(
+                            primaryRenderResource, 
+                            Views.begin() + viewStartIdx, Views.begin() + viewStartIdx + viewCount,
+                            depthSupported, true); 
 
-                            const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
-                            const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
-
-                            // Populate the struct that consuming code will use for rendering.
-                            auto& view = Views[index];
-
-                            m_impl->PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, view);
-
-                            // Set is first person observer flag to true.
-                            view.IsFirstPersonObserver = true;
-
-                            secondaryRenderResource.ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-                            auto& projectionLayerView = secondaryRenderResource.ProjectionLayerViews[idx];
-                            m_impl->PopulateProjectionView(cachedView, colorSwapchain, imageRect, projectionLayerView);
-
-                            if (depthSupported)
-                            {
-                                secondaryRenderResource.DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
-                                auto& depthInfoView = secondaryRenderResource.DepthInfoViews[idx];
-                                m_impl->PopulateDepthInfoView(depthSwapchain, imageRect, depthInfoView);
-
-                                // Chain depth info struct to the corresponding projection layer views's next
-                                projectionLayerView.next = &depthInfoView;
-                            }
-
-                            index++;
-                        }
+                        viewStartIdx += viewCount;
                     }
                 }
             }
@@ -1819,20 +1806,17 @@ namespace xr
 
             for (const auto& [type, renderResource] : renderResources.ResourceMap)
             {
-                for (auto& swapchain : renderResource.ColorSwapchains)
+                const auto& colorSwapchain = renderResource.ColorSwapchain;
+                const auto& depthSwapchain = renderResource.DepthSwapchain;
+
+                if (colorSwapchain.Handle != XR_NULL_HANDLE)
                 {
-                    if (swapchain.Handle != XR_NULL_HANDLE)
-                    {
-                        XrAssert(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
-                    }
+                    XrAssert(xrReleaseSwapchainImage(colorSwapchain.Handle, &releaseInfo));
                 }
 
-                for (auto& swapchain : renderResource.DepthSwapchains)
+                if (depthSwapchain.Handle != XR_NULL_HANDLE)
                 {
-                    if (swapchain.Handle != XR_NULL_HANDLE)
-                    {
-                        XrAssert(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
-                    }
+                    XrAssert(xrReleaseSwapchainImage(depthSwapchain.Handle, &releaseInfo));
                 }
             }
 
