@@ -85,6 +85,14 @@ Babylon Native makes extensive use of submodules to supply its dependencies.
 git clone --recursive https://github.com/BabylonJS/BabylonNative.git
 ```
 
+Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
+
+```
+cd <repo root>
+cd Apps
+npm install
+```
+
 Babylon Native's build system is based on CMake, which customarily uses a separate
 build directory. Build directory location is up to you, but we recommend just creating 
 a `Build` directory within your clone of the Babylon Native repository (Babylon 
@@ -94,14 +102,6 @@ Native's `.gitignore` file is already set up to ignore this `Build` directory).
 cd <repo root>
 mkdir Build
 cd Build
-```
-
-Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
-
-```
-cd <repo root>
-cd Apps
-npm install
 ```
 
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32 x86 versus 
