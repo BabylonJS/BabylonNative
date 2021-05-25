@@ -16,7 +16,11 @@ var text = false;
 var hololens = false;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
+    var bb = BABYLON.Mesh.CreateBox("box1", 0.2);
+
+var hl = new BABYLON.HighlightLayer("hl1", scene);
+    hl.addMesh(bb, BABYLON.Color3.Green());
+
     return Promise.resolve();
 }
 
