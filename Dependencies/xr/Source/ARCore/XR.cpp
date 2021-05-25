@@ -62,7 +62,7 @@ namespace xr
             return Frame;
         }
 
-        virtual ~XrContextARCore(){}
+        virtual ~XrContextARCore() = default;
     };
 
     struct System::Impl
