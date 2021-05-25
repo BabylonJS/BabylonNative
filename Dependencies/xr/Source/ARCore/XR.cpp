@@ -392,7 +392,10 @@ namespace xr
                 ArHitResultList_destroy(hitResultList);
                 ArTrackableList_destroy(trackableList);
                 ArFrame_destroy(xrContext->Frame);
+                xrContext->Frame = nullptr;
                 ArSession_destroy(xrContext->Session);
+                xrContext->Session = nullptr;
+                xrContext->Initialized = false;
 
                 glDeleteTextures(1, &cameraTextureId);
                 glDeleteProgram(cameraShaderProgramId);
