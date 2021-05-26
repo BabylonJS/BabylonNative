@@ -106,11 +106,10 @@ namespace java::lang
         return m_string;
     }
 
-    String::operator std::optional<std::string>() const
+    String::operator std::string() const
     {
-        if (m_string == nullptr)
-        {
-            return {};
+        if (m_string == nullptr) {
+            throw std::runtime_error("Tried to implicitly convert null Java String to C++ String");
         }
         const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
         std::string str{buffer};
@@ -137,11 +136,7 @@ namespace java::lang
 
     const char* Throwable::what() const noexcept
     {
-        if (!m_message)
-        {
-            return {};
-        }
-        return m_message.value().c_str();
+        return m_message.c_str();
     }
 }
 

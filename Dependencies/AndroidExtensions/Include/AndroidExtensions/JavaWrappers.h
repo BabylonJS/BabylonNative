@@ -5,7 +5,6 @@
 #include <vector>
 #include <cstddef>
 #include <android/asset_manager.h>
-#include <optional>
 
 // --------------------
 // Forward Declarations
@@ -117,7 +116,7 @@ namespace java::lang
 
         operator jstring() const;
 
-        operator std::optional<std::string>() const;
+        operator std::string() const;
 
     protected:
         JNIEnv* m_env;
@@ -136,7 +135,7 @@ namespace java::lang
 
     private:
         jobject m_throwableRef;
-        std::optional<std::string> m_message;
+        std::string m_message;
     };
 }
 
