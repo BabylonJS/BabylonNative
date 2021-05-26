@@ -218,7 +218,7 @@ namespace Babylon
         {
 #if defined(ANDROID)
             auto path = "app://";
-#elsif defined(__APPLE__)
+#elif defined(__APPLE__)
             std::string path = "app:///";
 #else
             auto path = std::string("file://") + GetModulePath().parent_path().parent_path().generic_string();
