@@ -564,9 +564,9 @@ namespace xr {
 
             [configuration release];
 
-            lib = CompileShader(metalDevice, shaderSource);
-            vertexFunction = [lib newFunctionWithName:@"vertexShader"];
-            fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
+            id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
+            id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
+            id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
             // Configure a pipeline descriptor that is used to create a pipeline state.
             MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -583,6 +583,10 @@ namespace xr {
             }
 
             [pipelineStateDescriptor release];
+            [vertexFunction release];
+            [fragmentFunction release];
+            [lib release];
+
             commandQueue = [metalDevice newCommandQueue];
         }
 
@@ -607,9 +611,6 @@ namespace xr {
             [session pause];
             [session release];
             [pipelineState release];
-            [vertexFunction release];
-            [fragmentFunction release];
-            [lib release];
             [commandQueue release];
             UpdateXRView(nil);
         }
@@ -1073,9 +1074,6 @@ namespace xr {
 #pragma clang diagnostic pop
         SessionDelegate* sessionDelegate{};
         id<MTLRenderPipelineState> pipelineState{};
-        id<MTLLibrary> lib;
-        id<MTLFunction> vertexFunction;
-        id<MTLFunction> fragmentFunction;
         vector_uint2 viewportSize{};
         id<MTLCommandQueue> commandQueue;
         std::vector<ARAnchor*> nativeAnchors{};
