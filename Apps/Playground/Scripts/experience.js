@@ -16,11 +16,7 @@ var text = false;
 var hololens = false;
 
 function CreateBoxAsync() {
-    var bb = BABYLON.Mesh.CreateBox("box1", 0.2);
-
-var hl = new BABYLON.HighlightLayer("hl1", scene);
-    hl.addMesh(bb, BABYLON.Color3.Green());
-
+    BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
 }
 
@@ -63,7 +59,7 @@ function CreateInputHandling(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function () {
+//CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -79,7 +75,7 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedSimple/glTF/RiggedSimple.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/stevk/glTF-Asset-Generator/skins/Output/Animation_Skin/Animation_Skin_01.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf").then(function () {
-//BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
+BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
