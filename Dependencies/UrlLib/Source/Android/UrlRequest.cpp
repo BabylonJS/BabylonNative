@@ -65,10 +65,10 @@ namespace UrlLib
                 try
                 {
                     Uri uri{Uri::Parse(m_url.data())};
-                    String scheme{uri.getScheme()};
-                    if (scheme != nullptr && (std::string)scheme == "app")
+                    std::optional<std::string> scheme{uri.getScheme()};
+                    if (scheme && scheme.value() == "app")
                     {
-                        std::string path{std::string{uri.getPath()}.substr(1)};
+                        std::string path{std::optional<std::string>{uri.getPath()}.value().substr(1)};
                         AAssetManager* assetsManager{GetAppContext().getAssets()};
 
                         switch (m_responseType)
@@ -128,7 +128,8 @@ namespace UrlLib
                             case UrlResponseType::String:
                             {
                                 // TODO: use the charset from the content type?
-                                m_responseString = byteArrayOutputStream.ToString("UTF-8");
+                                std::optional<std::string> responseString{byteArrayOutputStream.ToString("UTF-8")};
+                                m_responseString = responseString.value();
                                 break;
                             }
                             case UrlResponseType::Buffer:
@@ -143,7 +144,8 @@ namespace UrlLib
                         }
 
                         // Must happen after getting the content to get the redirected URL.
-                        m_responseUrl = connection.GetURL().ToString();
+                        std::optional<std::string> responseUrl{connection.GetURL().ToString()};
+                        m_responseUrl = responseUrl.value();
                     }
                 }
                 catch (const Throwable&)
