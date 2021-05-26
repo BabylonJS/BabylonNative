@@ -2,7 +2,9 @@ if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR ANDROID)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(BABYLONSCRIPTS 
+FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
+
+set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
@@ -24,7 +26,7 @@ if(WIN32)
         "Win32/targetver.h")
     set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
+    add_executable(ValidationTests WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -55,13 +57,13 @@ elseif(APPLE)
      set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
      set(JSSCRIPT "${CMAKE_CURRENT_LIST_DIR}/Scripts/config.json"
         "${CMAKE_CURRENT_LIST_DIR}/Scripts/validation_native.js")
-     set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT} ${BABYLONSCRIPTS})
+     set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT} ${BABYLON_SCRIPTS})
      add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
-    add_executable(ValidationTests ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES})
+    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
 endif()
 
 warnings_as_errors(ValidationTests)
@@ -125,18 +127,28 @@ if(APPLE)
     endif()
 endif()
 
-foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
-    get_filename_component(SCRIPT_NAME "${script}" NAME)
+foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS})
+    get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
     # Copy scripts to the parent of the executable location since CMake can't use generator
     # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
     add_custom_command(
         OUTPUT "Scripts/${SCRIPT_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
         COMMENT "Copying ${SCRIPT_NAME}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
+endforeach()
+
+foreach(IMAGE ${REFERENCE_IMAGES})
+    get_filename_component(IMAGE_NAME "${IMAGE}" NAME)
+    add_custom_command(
+        OUTPUT "ReferenceImages/${IMAGE_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/ReferenceImages/${IMAGE_NAME}"
+        COMMENT "Copying ${IMAGE_NAME}"
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
 endforeach()
 
 set_property(TARGET ValidationTests PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLONSCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages PREFIX ReferenceImages FILES ${REFERENCE_IMAGES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

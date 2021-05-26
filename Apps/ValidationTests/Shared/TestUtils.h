@@ -216,18 +216,12 @@ namespace Babylon
 
         Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
         {
-#ifdef ANDROID
+#if defined(ANDROID)
             auto path = "app://";
-#else
-#ifdef __APPLE__
+#elsif defined(__APPLE__)
             std::string path = "app:///";
 #else
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-            path += "/Scripts/";
-#endif
+            auto path = std::string("file://") + GetModulePath().parent_path().parent_path().generic_string();
 #endif
             return Napi::Value::From(info.Env(), path);
         }

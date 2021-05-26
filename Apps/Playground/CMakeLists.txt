@@ -1,4 +1,4 @@
-set(BABYLONSCRIPTS
+set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
     "../node_modules/babylonjs/babylon.max.js"
@@ -99,9 +99,9 @@ endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${BABYLONSCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 else()
-    add_executable(Playground ${BABYLONSCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
 
 warnings_as_errors(Playground)
@@ -177,23 +177,23 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
 else()
-    foreach(script ${SCRIPTS} ${BABYLONSCRIPTS} ${DEPENDENCIES})
-        get_filename_component(SCRIPT_NAME "${script}" NAME)
+    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
+        get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         # Copy scripts to the parent of the executable location since CMake can't use generator
         # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
         add_custom_command(
             OUTPUT "Scripts/${SCRIPT_NAME}"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
             COMMENT "Copying ${SCRIPT_NAME}"
-            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
     endforeach()
 endif()
 
 set_property(TARGET Playground PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLONSCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FILES ${DEPENDENCIES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
