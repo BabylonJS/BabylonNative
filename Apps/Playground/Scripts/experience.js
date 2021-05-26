@@ -13,7 +13,8 @@ var ar = false;
 var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
-var hololens = false;
+var hololens = true;
+var slate = true;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -83,6 +84,7 @@ CreateBoxAsync().then(function () {
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
 
+
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
     }
@@ -141,7 +143,13 @@ CreateBoxAsync().then(function () {
 
     if (vr || ar || hololens) {
         setTimeout(function () {
-            scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true }).then((xr) => {
+            scene.createDefaultXRExperienceAsync({
+                disableDefaultUI: true,
+                disableTeleportation: true,
+                pointerSelectionOptions: {
+                    enablePointerSelectionOnAllControllers: true
+                }
+            }).then((xr) => {
                 if (xrHitTest) {
                     // Create the hit test module. OffsetRay specifies the target direction, and entityTypes can be any combination of "mesh", "plane", and "point".
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
@@ -231,11 +239,22 @@ CreateBoxAsync().then(function () {
                     sessionMode = "immersive-vr";
 
                     // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
+                /**
                     xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HAND_TRACKING,
                         "latest",
                         { xrInput: xr.input });
+                        */
                 }
+                xr.baseExperience.onInitialXRPoseSetObservable.add((camera) => {
+                    setTimeout(() => {
+                        var manager = new BABYLON.GUI.GUI3DManager(camera.getScene());
+
+                        // Let's add a slate
+                        var slate = new BABYLON.GUI.HolographicSlate("down");
+                        manager.addControl(slate);
+                    }, 2000)
+                })
 
                 xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
                     if (hololens) {
@@ -244,6 +263,7 @@ CreateBoxAsync().then(function () {
                         xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
+
             });
         }, 5000);
     }
