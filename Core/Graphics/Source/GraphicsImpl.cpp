@@ -315,6 +315,11 @@ namespace Babylon
         auto level = m_state.Resolution.HardwareScalingLevel;
         res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
         res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
+
+        if (m_frameBufferManager)
+        {
+            m_frameBufferManager->Resize(static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
+        }
     }
 
     void GraphicsImpl::DiscardIfDirty()

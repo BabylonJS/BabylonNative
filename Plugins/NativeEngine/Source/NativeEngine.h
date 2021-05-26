@@ -175,6 +175,8 @@ namespace Babylon
         void SetFloat2(const Napi::CallbackInfo& info);
         void SetFloat3(const Napi::CallbackInfo& info);
         void SetFloat4(const Napi::CallbackInfo& info);
+        void LoadBackbufferTexture(const Napi::CallbackInfo& info);
+        Napi::Value GetFinalBackbuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void LoadRawTexture(const Napi::CallbackInfo& info);

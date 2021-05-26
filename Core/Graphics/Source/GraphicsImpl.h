@@ -112,6 +112,7 @@ namespace Babylon
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
+        const std::unique_ptr<FrameBufferManager>& GetFrameBufferManager() const { return m_frameBufferManager; }
     private:
         friend class UpdateToken;
 

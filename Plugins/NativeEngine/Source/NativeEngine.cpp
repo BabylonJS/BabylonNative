@@ -388,6 +388,8 @@ namespace Babylon
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
+                InstanceMethod("loadBackbufferTexture", &NativeEngine::LoadBackbufferTexture),
+                InstanceMethod("getFinalBackbuffer", &NativeEngine::GetFinalBackbuffer),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -999,6 +1001,19 @@ namespace Babylon
     void NativeEngine::SetFloat4(const Napi::CallbackInfo& info)
     {
         SetFloatN<4>(info);
+    }
+
+    void NativeEngine::LoadBackbufferTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        auto& frameBufferManager = m_graphicsImpl.GetFrameBufferManager();
+        texture->Handle = bgfx::getTexture(frameBufferManager->DefaultFrameBuffer().Handle());
+    }
+
+    Napi::Value NativeEngine::GetFinalBackbuffer(const Napi::CallbackInfo& info)
+    {
+        auto& finalBackBuffer = m_graphicsImpl.GetFrameBufferManager()->FinalFrameBuffer();
+        return Napi::External<FrameBuffer>::New(info.Env(), &finalBackBuffer);
     }
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)

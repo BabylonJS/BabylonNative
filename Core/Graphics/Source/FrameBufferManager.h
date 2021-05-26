@@ -16,6 +16,7 @@ namespace Babylon
         FrameBufferManager(FrameBufferManager&&) = delete;
 
         FrameBuffer& DefaultFrameBuffer();
+        FrameBuffer& FinalFrameBuffer();
 
         FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
         void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
@@ -31,6 +32,7 @@ namespace Babylon
         void ClearTouchedViews() { m_touchedViews.clear(); }
         const std::vector<bgfx::ViewId> GetTouchedViews() const { return m_touchedViews; }
 
+        void Resize(uint16_t width, uint16_t height);
     private:
         void ResetViewId();
         void ResetFrameBuffers();
@@ -44,5 +46,6 @@ namespace Babylon
         std::vector<bgfx::ViewId> m_touchedViews;
 
         FrameBuffer m_default;
+        FrameBuffer m_backBuffer;
     };
 }
