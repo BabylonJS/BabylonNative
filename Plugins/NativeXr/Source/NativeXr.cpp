@@ -426,7 +426,7 @@ namespace Babylon
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::vector<ViewConfiguration*> ActiveViewConfigurations{};
                 std::unordered_map<ViewConfiguration*, uint32_t> ViewConfigurationStartViewIdx{};
-                std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};                
+                std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};
                 std::shared_ptr<xr::System::Session> Session{};
                 std::unique_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
@@ -643,16 +643,16 @@ namespace Babylon
                     viewConfig.ViewTextureSize = view.ColorTextureSize;
 
                     // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
+                    // Depth (numLayers) can be 0, bgfx will just reinterpret it as max(numLayers, 1).
                     assert(view.ColorTextureSize.Width != 0);
                     assert(view.ColorTextureSize.Height != 0);
-                    assert(view.ColorTextureSize.Depth != 0);
                     assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
                     assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
                     assert(view.ColorTextureSize.Depth == view.DepthTextureSize.Depth);
 
-                    const uint16_t textureWidth = static_cast<uint16_t>(view.ColorTextureSize.Width);
-                    const uint16_t textureHeight = static_cast<uint16_t>(view.ColorTextureSize.Height);
-                    const uint16_t textureLayers = static_cast<uint16_t>(view.ColorTextureSize.Depth);
+                    const auto textureWidth = static_cast<uint16_t>(view.ColorTextureSize.Width);
+                    const auto textureHeight = static_cast<uint16_t>(view.ColorTextureSize.Height);
+                    const auto textureLayers = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(view.ColorTextureSize.Depth));
 
                     // Create textures with the desired size. It will be freed and replaced with overrideInternal call
                     // This is mandatory as overrideInternal do not update texture size.
@@ -669,8 +669,9 @@ namespace Babylon
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
                     }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &viewConfig]() {
-                        viewConfig.FrameBuffers.resize(viewConfig.ViewTextureSize.Depth);
-                        for (uint16_t eyeIdx = 0; eyeIdx < viewConfig.ViewTextureSize.Depth; eyeIdx++)
+                        const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
+                        viewConfig.FrameBuffers.resize(eyeCount);
+                        for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
                         {
                             std::array<bgfx::Attachment, 2> attachments{};
                             attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
@@ -693,9 +694,8 @@ namespace Babylon
                             auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
                             auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
                             viewConfig.JsTextures[&frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-
-                            viewConfig.Initialized = true;
                         }
+                        viewConfig.Initialized = true;
                     }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {

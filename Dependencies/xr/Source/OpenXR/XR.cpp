@@ -1189,7 +1189,7 @@ namespace xr
             const auto depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
 
             uint32_t viewIdx = 0;
-            for(auto viewIter = viewsStart; viewIter < viewsEnd; viewIter++, viewIdx++)
+            for (auto viewIter = viewsStart; viewIter < viewsEnd; viewIter++, viewIdx++)
             {
                 auto& currentView = *viewIter;
                 const auto& cachedView = renderResource.ViewState.Views.at(viewIdx);
