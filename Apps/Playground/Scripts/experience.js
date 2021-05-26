@@ -262,6 +262,13 @@ CreateBoxAsync().then(function () {
                         xrSessionManager.scene.autoClear = true;
                         xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
+
+                    var manager = new BABYLON.GUI.GUI3DManager(xrSessionManager.scene);
+
+                    // Let's add a slate
+                    var slate = new BABYLON.GUI.HolographicSlate("down");
+                    manager.addControl(slate);
+                    slate.scaling.scaleInPlace(0.3);
                 });
 
             });
