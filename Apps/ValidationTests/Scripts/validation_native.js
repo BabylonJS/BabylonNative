@@ -43,10 +43,10 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
     }
     return error;
 }
@@ -118,7 +118,8 @@ function runTest(index, done) {
     seed = 100000;
 
     let onLoadFileError = function(request, exception) {
-        console.log("Failed to retrieve " + url + ".", exception);
+        console.error("Failed to retrieve " + url + ".", exception);
+        done(false);
     };
     var onload = function(data, responseURL) {
         if (typeof (data) === "string") {
@@ -273,7 +274,7 @@ function runTest(index, done) {
         }
     };
 
-    let url = "https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/tests/validation/ReferenceImages/" + test.referenceImage;
+    const url = TestUtils.getResourceDirectory() + "/ReferenceImages/" + test.referenceImage;
     BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
 }
 
@@ -313,7 +314,7 @@ document = {
 }
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
+xhr.open("GET", TestUtils.getResourceDirectory() + "/Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
     if (xhr.status === 200) {
