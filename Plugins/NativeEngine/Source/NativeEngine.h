@@ -48,7 +48,6 @@ namespace Babylon
     {
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
-        bool YFlip{false};
     };
 
     struct ProgramData final
@@ -75,17 +74,15 @@ namespace Babylon
         {
             std::vector<float> Data{};
             uint16_t ElementLength{};
-            bool YFlip{false};
         };
 
         std::unordered_map<uint16_t, UniformValue> Uniforms{};
 
-        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, bool YFlip, size_t elementLength = 1)
+        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
             UniformValue& value = Uniforms[handle.idx];
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
-            value.YFlip = YFlip;
         }
     };
 
@@ -136,6 +133,7 @@ namespace Babylon
 
         void Dispose(const Napi::CallbackInfo& info);
         Napi::Value HomogeneousDepth(const Napi::CallbackInfo& info);
+        Napi::Value OriginBottomLeft(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);

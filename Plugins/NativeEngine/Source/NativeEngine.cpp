@@ -344,6 +344,7 @@ namespace Babylon
             {
                 InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceAccessor("homogeneousDepth", &NativeEngine::HomogeneousDepth, nullptr),
+                InstanceAccessor("originBottomLeft", &NativeEngine::OriginBottomLeft, nullptr),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
                 InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
@@ -549,6 +550,11 @@ namespace Babylon
         return Napi::Value::From(info.Env(), bgfx::getCaps()->homogeneousDepth);
     }
 
+    Napi::Value NativeEngine::OriginBottomLeft(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), bgfx::getCaps()->originBottomLeft);
+    }
+
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         auto callback{info[0].As<Napi::Function>()};
@@ -693,12 +699,6 @@ namespace Babylon
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
                 uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
-                bool YFlip{false};
-                if (!bgfx::getCaps()->originBottomLeft)
-                {
-                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
-                }
-                uniformInfos[info.name].YFlip = YFlip;
             }
         }};
 
@@ -844,7 +844,7 @@ namespace Babylon
     {
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1), uniformInfo->YFlip);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1));
     }
 
     template<int size, typename arrayType>
@@ -867,7 +867,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, uniformInfo->YFlip, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, elementLength / size);
     }
 
     template<int size>
@@ -881,7 +881,7 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, values, uniformInfo->YFlip);
+        m_currentProgram->SetUniform(uniformInfo->Handle, values);
     }
 
     template<int size>
@@ -907,11 +907,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16), uniformInfo->YFlip);
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16));
         }
         else
         {
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength), uniformInfo->YFlip);
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength));
         }
     }
 
@@ -963,7 +963,7 @@ namespace Babylon
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), uniformInfo->YFlip, elementLength / 16);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1605,40 +1605,14 @@ namespace Babylon
             }
         }
 
-        if (!m_boundFrameBuffer->DefaultBackBuffer() && !bgfx::getCaps()->originBottomLeft)
+        for (const auto& it : m_currentProgram->Uniforms)
         {
-            // UV coordinates system are different between OpenGL and Direct3D/Metal
-            // This is not an issue with loaded textures (png/jpg...) because
-            // texel rows bytes are also using a different convention
-            // see https://www.puredevsoftware.com/blog/2018/03/17/texture-coordinates-d3d-vs-opengl/
-            // for render to texture, as the texel bytes are not reversed, sampling a RTT for
-            // post process or shadows will result in inversion on V axis (Y)
-            // to compensate for that, any matrix that is used to project onto clip-space has
-            // to be flipped.
-            // The involved matrices are determined by name and a boolean YFlip is set to true.
-            // When rendering to texture, those matrices are flipped and set as uniform datas.
-            // But because flipping clip-space coordinates also flips triangles winding,
-            // Culling also has to be flipped.
-            for (const auto& it : m_currentProgram->Uniforms)
-            {
-                const ProgramData::UniformValue& value = it.second;
-                if (value.YFlip)
-                {
-                    float tmpMatrix[16];
-                    static const float flipMatrix[16] = {
-                        1.f, 0.f, 0.f, 0.f,
-                        0.f, -1.f, 0.f, 0.f,
-                        0.f, 0.f, 1.f, 0.f,
-                        0.f, 0.f, 0.f, 1.f};
-                    bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
-                    encoder->setUniform({it.first}, tmpMatrix, value.ElementLength);
-                }
-                else
-                {
-                    encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
-                }
-            }
+            const ProgramData::UniformValue& value = it.second;
+            encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
+        }
 
+        if (!bgfx::getCaps()->originBottomLeft)
+        {
             // We need to explicitly swap the culling state flags (instead of XOR)
             // because we would like to preserve the no culling configuration, which is 00.
             const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
@@ -1652,12 +1626,6 @@ namespace Babylon
         }
         else
         {
-            for (const auto& it : m_currentProgram->Uniforms)
-            {
-                const ProgramData::UniformValue& value = it.second;
-                encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
-            }
-
             encoder->setState(m_engineState | fillModeState);
         }
 
