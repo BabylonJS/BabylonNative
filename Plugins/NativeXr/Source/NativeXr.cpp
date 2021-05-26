@@ -340,7 +340,7 @@ namespace Babylon
                 m_sessionState->DestroyRenderTexture = Napi::Persistent(destroyFunction);
             }
 
-            Napi::Value GetRenderTargetForViewIndex(int viewIndex) const
+            Napi::Value GetRenderTargetForViewIndex(uint32_t viewIndex) const
             {
                 const auto& activeViewConfigs = m_sessionState->ActiveViewConfigurations;
                 if (activeViewConfigs.size() <= viewIndex ||
@@ -665,10 +665,10 @@ namespace Babylon
                     auto depthTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, depthTextureFormat, BGFX_TEXTURE_RT);
                     m_sessionState->GraphicsImpl.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
 
-                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, viewIdx, &viewConfig]() {
+                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, viewIdx, &viewConfig]() {
+                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &viewConfig]() {
                         viewConfig.FrameBuffers.resize(viewConfig.ViewTextureSize.Depth);
                         for (uint16_t eyeIdx = 0; eyeIdx < viewConfig.ViewTextureSize.Depth; eyeIdx++)
                         {
@@ -776,7 +776,7 @@ namespace Babylon
                 }
             }
 
-            static auto EyeToIndex(const std::string& eye)
+            static uint32_t EyeToIndex(const std::string& eye)
             {
                 if (eye == LEFT)
                 {
