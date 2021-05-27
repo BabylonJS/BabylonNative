@@ -30,7 +30,7 @@ class ViewController: UIViewController, MTKViewDelegate {
             let gesture = UIPanGestureRecognizer(target: self, action:  #selector(self.panGesture))
             mtkView.addGestureRecognizer(gesture)
 
-            let scale = UIScreen.main.scale
+            let scale = view.contentScaleFactor
             let width = view.bounds.size.width
             let height = view.bounds.size.height
 
