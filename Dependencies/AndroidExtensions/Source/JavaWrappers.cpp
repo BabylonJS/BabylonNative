@@ -110,6 +110,8 @@ namespace java::lang
     {
         if (m_string == nullptr)
         {
+            // Java strings can be null, but an std::string cannot be null.
+            // If there is a possibility that the underlying Java string is null, you should test for that using (jstring != nullptr) before trying to implicitly convert.
             throw std::runtime_error("Tried to implicitly convert null Java String to C++ String");
         }
         const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
