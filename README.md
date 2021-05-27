@@ -77,24 +77,18 @@ principles.
 
 **Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/), [node.js](https://nodejs.org/en/)
 
-Step 1 for all development environments and targets is to clone the repo. Use a 
-git-enabled terminal to follow the steps below.
+The first step for all development environments and targets is to clone the repo. Use a 
+git-enabled terminal to follow the steps below. The `--recursive` flag is necessary as
+Babylon Native makes extensive use of submodules to supply its dependencies.
 
 ```
-git clone https://github.com/BabylonJS/BabylonNative.git
-```
-
-Babylon Native makes extensive use of submodules to supply its dependencies, so it's
-also necessary to set up the submodules.
-
-```
-cd BabylonNative
-git submodule update --init --recursive
+git clone --recursive https://github.com/BabylonJS/BabylonNative.git
 ```
 
 Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
 
 ```
+cd <repo root>
 cd Apps
 npm install
 ```
@@ -105,6 +99,7 @@ a `Build` directory within your clone of the Babylon Native repository (Babylon
 Native's `.gitignore` file is already set up to ignore this `Build` directory).
 
 ```
+cd <repo root>
 mkdir Build
 cd Build
 ```
