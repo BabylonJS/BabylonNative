@@ -27,6 +27,29 @@ namespace Babylon
 {
     namespace
     {
+        constexpr auto YFlipVertexShader = R"(
+            precision highp float;
+            in vec2 position;
+            out vec2 vUV;
+            void main(void)
+            {
+                gl_Position = vec4(position, 0.5, 1.0);
+                vUV = position * 0.5 + 0.5;
+            }
+        )";
+
+        constexpr auto YFlipFragmentShader = R"(
+            precision highp float;
+            in vec2 vUV;
+            uniform sampler2D backBuffer;
+            out vec4 glFragColor;
+            void main(void)
+            {
+                vec3 color = texture(backBuffer, vUV).xyz;
+                glFragColor = vec4(color, 1.0);
+            }
+        )";
+
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -388,8 +411,6 @@ namespace Babylon
                 InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
-                InstanceMethod("loadBackbufferTexture", &NativeEngine::LoadBackbufferTexture),
-                InstanceMethod("getFinalBackbuffer", &NativeEngine::GetFinalBackbuffer),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -525,6 +546,7 @@ namespace Babylon
         , m_runtimeScheduler{runtime}
         , m_boundFrameBuffer{&m_graphicsImpl.DefaultFrameBuffer()}
     {
+        LoadYFlipProgram();
     }
 
     NativeEngine::~NativeEngine()
@@ -545,6 +567,22 @@ namespace Babylon
     void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
     {
         Dispose();
+    }
+
+    void NativeEngine::LoadYFlipProgram()
+    {
+        if (!bgfx::getCaps()->originBottomLeft)
+        {
+            ShaderCompiler::BgfxShaderInfo shaderInfo{};
+
+            shaderInfo = m_shaderCompiler.Compile(YFlipVertexShader, YFlipFragmentShader);
+
+            auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
+            auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
+
+            auto handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+            m_graphicsImpl.SetYFlipProgram(handle);
+        }
     }
 
     Napi::Value NativeEngine::HomogeneousDepth(const Napi::CallbackInfo& info)
@@ -1001,19 +1039,6 @@ namespace Babylon
     void NativeEngine::SetFloat4(const Napi::CallbackInfo& info)
     {
         SetFloatN<4>(info);
-    }
-
-    void NativeEngine::LoadBackbufferTexture(const Napi::CallbackInfo& info)
-    {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        auto& frameBufferManager = m_graphicsImpl.GetFrameBufferManager();
-        texture->Handle = bgfx::getTexture(frameBufferManager->DefaultFrameBuffer().Handle());
-    }
-
-    Napi::Value NativeEngine::GetFinalBackbuffer(const Napi::CallbackInfo& info)
-    {
-        auto& finalBackBuffer = m_graphicsImpl.GetFrameBufferManager()->FinalFrameBuffer();
-        return Napi::External<FrameBuffer>::New(info.Env(), &finalBackBuffer);
     }
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)

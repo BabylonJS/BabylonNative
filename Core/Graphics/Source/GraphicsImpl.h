@@ -113,6 +113,7 @@ namespace Babylon
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         const std::unique_ptr<FrameBufferManager>& GetFrameBufferManager() const { return m_frameBufferManager; }
+        void SetYFlipProgram(bgfx::ProgramHandle program) { m_YFlipProgram = program; }
     private:
         friend class UpdateToken;
 
@@ -130,6 +131,7 @@ namespace Babylon
         bgfx::Encoder* GetEncoderForThread();
         void EndEncoders();
         void CaptureCallback(const BgfxCallback::CaptureData&);
+        void YFlip();
 
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
@@ -177,5 +179,9 @@ namespace Babylon
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
+
+        bgfx::ProgramHandle m_YFlipProgram{bgfx::kInvalidHandle};
+        bgfx::VertexBufferHandle m_YFlipVertexBuffer{bgfx::kInvalidHandle};
+        bgfx::UniformHandle m_YFlipSamplerUniform{bgfx::kInvalidHandle};
     };
 }

@@ -175,8 +175,6 @@ namespace Babylon
         void SetFloat2(const Napi::CallbackInfo& info);
         void SetFloat3(const Napi::CallbackInfo& info);
         void SetFloat4(const Napi::CallbackInfo& info);
-        void LoadBackbufferTexture(const Napi::CallbackInfo& info);
-        Napi::Value GetFinalBackbuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void LoadRawTexture(const Napi::CallbackInfo& info);
@@ -205,7 +203,7 @@ namespace Babylon
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(const Napi::CallbackInfo& info);
-
+        void LoadYFlipProgram();
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
         GraphicsImpl::UpdateToken& GetUpdateToken();
