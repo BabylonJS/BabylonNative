@@ -217,6 +217,8 @@ const copyCommonFiles = () => {
 
 const copySharedFiles = () => {
   return gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/BabylonNative.h')
+    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/XrContextHelper.h'))
+    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/XrAnchorHelper.h'))
     .pipe(gulp.dest('Assembled/shared'));
 };
 
@@ -242,6 +244,12 @@ const copyAndroidFiles = async () => {
       .pipe(gulp.dest('Assembled/android'))
       .on('end', resolve);
   });
+
+  await new Promise(resolve => {
+    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/src/ARCore/Include/*')
+      .pipe(gulp.dest('Assembled/android/include'))
+      .on('end', resolve);
+  })
 
   await new Promise(resolve => {
           gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/library_and_local_jars_jni/release/jni/**/*')
@@ -388,6 +396,8 @@ const validate = async () => {
 Assembled/EngineHook.ts
 Assembled/shared
 Assembled/shared/BabylonNative.h
+Assembled/shared/XrContextHelper.h
+Assembled/shared/XrAnchorHelper.h
 Assembled/EngineView.tsx
 Assembled/ios
 Assembled/ios/BabylonNativeInterop.mm
@@ -431,6 +441,8 @@ Assembled/README.md
 Assembled/package.json
 Assembled/android
 Assembled/android/build.gradle
+Assembled/android/include
+Assembled/android/include/IXrContextARCore.h
 Assembled/android/src
 Assembled/android/src/main
 Assembled/android/src/main/AndroidManifest.xml
