@@ -1660,15 +1660,8 @@ namespace Babylon
 
         if (!bgfx::getCaps()->originBottomLeft)
         {
-            // We need to explicitly swap the culling state flags (instead of XOR)
-            // because we would like to preserve the no culling configuration, which is 00.
-            const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
-            const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
-
             uint64_t engineStateYFlipped = m_engineState;
-            engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
-            engineStateYFlipped |= (cullCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
-
+            engineStateYFlipped ^= BGFX_STATE_FRONT_CCW;
             encoder->setState(engineStateYFlipped | fillModeState);
         }
         else

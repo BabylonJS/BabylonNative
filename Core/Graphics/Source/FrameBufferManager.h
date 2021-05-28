@@ -30,7 +30,7 @@ namespace Babylon
         // particular order.
         void AppendTouchedView(bgfx::ViewId viewId);
         void ClearTouchedViews() { m_touchedViews.clear(); }
-        const std::vector<bgfx::ViewId> GetTouchedViews() const { return m_touchedViews; }
+        const std::vector<bgfx::ViewId> GetTouchedViews();
 
         void Resize(uint16_t width, uint16_t height);
     private:

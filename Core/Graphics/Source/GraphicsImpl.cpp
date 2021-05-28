@@ -383,11 +383,11 @@ namespace Babylon
         // Automatically end bgfx encoders.
         EndEncoders();
 
-        // Discard everything if the bgfx state is dirty.
-        DiscardIfDirty();
-
         // Handle YFlip
         YFlip();
+
+        // Discard everything if the bgfx state is dirty.
+        DiscardIfDirty();
 
         // Request screen shots before bgfx::frame.
         RequestScreenShots();
