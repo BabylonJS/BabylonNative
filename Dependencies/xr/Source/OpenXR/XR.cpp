@@ -695,19 +695,23 @@ namespace xr
             XrAction* controllerAction,
             std::vector<XrActionSuggestedBinding> &bindings,
             XrInstance instance,
-            std::string path
+            const size_t idx
         )
         {
 
             XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
             actionInfo.actionType = controllerActionType;
-            strcpy_s(actionInfo.actionName, controllerActionName);
-            strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionName);
+            std::string controllerActionNameSuffixed {controllerActionName + std::to_string(idx)};
+            std::string controllerLocalizedActionNameSuffixed(controllerLocalizedActionName + std::to_string(idx));
+
+            strcpy_s(actionInfo.actionName, controllerActionNameSuffixed.data());
+            strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionNameSuffixed.data());
             actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
             actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
             XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, controllerAction));
 
             // Create suggested binding
+            std::string path = ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx];
             path.append(controllerActionSuffix);
             bindings.push_back({*controllerAction});
             XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
@@ -823,7 +827,18 @@ namespace xr
                     &ActionResources.DefaultGetSelectValueAction[idx],
                     defaultBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
+
+                // Create controller get trigger value action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX,
+                    &ActionResources.ControllerGetSqueezeClickAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
 
                 // Create controller get trigger value action and suggested bindings
                 CreateControllerActionAndBinding(
@@ -834,7 +849,7 @@ namespace xr
                     &ActionResources.ControllerGetTriggerValueAction[idx],
                     microsoftControllerBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
 
                 // Create controller get trackpad axes action and suggested bindings
                 CreateControllerActionAndBinding(
@@ -845,7 +860,7 @@ namespace xr
                     &ActionResources.ControllerGetTrackpadAxesAction[idx],
                     microsoftControllerBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
 
                 // Create controller get trackpad click action and suggested bindings
                 CreateControllerActionAndBinding(
@@ -856,7 +871,7 @@ namespace xr
                     &ActionResources.ControllerGetTrackpadClickAction[idx],
                     microsoftControllerBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
 
                 // Create controller get trackpad touch action and suggested bindings
                 CreateControllerActionAndBinding(
@@ -867,7 +882,7 @@ namespace xr
                     &ActionResources.ControllerGetTrackpadTouchAction[idx],
                     microsoftControllerBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
 
                 // Create controller get thumbstick axes action and suggested bindings
                 CreateControllerActionAndBinding(
@@ -878,7 +893,7 @@ namespace xr
                     &ActionResources.ControllerGetThumbstickAxesAction[idx],
                     microsoftControllerBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
 
                 // Create controller get thumbstick click action and suggested bindings
                 CreateControllerActionAndBinding(
@@ -889,7 +904,7 @@ namespace xr
                     &ActionResources.ControllerGetThumbstickClickAction[idx],
                     microsoftControllerBindings,
                     instance,
-                    ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                    idx);
 
                 if (HmdImpl.Context.Extensions()->HandInteractionSupported)
                 {
@@ -902,7 +917,7 @@ namespace xr
                         &ActionResources.HandGetSelectAction[idx],
                         microsoftHandBindings,
                         instance,
-                        ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                        idx);
 
                     CreateControllerActionAndBinding(
                         XR_ACTION_TYPE_BOOLEAN_INPUT, 
@@ -912,7 +927,7 @@ namespace xr
                         &ActionResources.HandGetSqueezeAction[idx],
                         microsoftHandBindings,
                         instance,
-                        ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx]);
+                        idx);
                 }
             }
 
