@@ -366,8 +366,6 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 InstanceMethod("dispose", &NativeEngine::Dispose),
-                InstanceAccessor("homogeneousDepth", &NativeEngine::HomogeneousDepth, nullptr),
-                InstanceAccessor("originBottomLeft", &NativeEngine::OriginBottomLeft, nullptr),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
                 InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
@@ -585,16 +583,6 @@ namespace Babylon
         }
     }
 
-    Napi::Value NativeEngine::HomogeneousDepth(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), bgfx::getCaps()->homogeneousDepth);
-    }
-
-    Napi::Value NativeEngine::OriginBottomLeft(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), bgfx::getCaps()->originBottomLeft);
-    }
-
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
     {
         auto callback{info[0].As<Napi::Function>()};
@@ -711,6 +699,25 @@ namespace Babylon
         vertexBufferData.Update(info.Env(), data, byteOffset, byteLength);
     }
 
+    // Change VS output coordinate system
+    std::string NativeEngine::ProcessShaderCoordinates(const std::string& vertexSource)
+    {
+        const auto* caps = bgfx::getCaps();
+        if (!caps->homogeneousDepth)
+        {
+            std::string patchedVertexSource;
+            const auto lastClosingCurly = vertexSource.find_last_of('}');
+            patchedVertexSource = vertexSource.substr(0, lastClosingCurly);
+            if (!caps->originBottomLeft)
+            {
+                patchedVertexSource += "gl_Position.y *= -1.;\n";
+            }
+            patchedVertexSource += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+            return patchedVertexSource;
+        }
+        return vertexSource;
+    }
+
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
         const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
@@ -721,7 +728,7 @@ namespace Babylon
 
         try
         {
-            shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
+            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), fragmentSource);
         }
         catch (const std::exception& ex)
         {

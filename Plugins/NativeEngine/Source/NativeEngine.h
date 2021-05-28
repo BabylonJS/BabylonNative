@@ -132,8 +132,6 @@ namespace Babylon
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
-        Napi::Value HomogeneousDepth(const Napi::CallbackInfo& info);
-        Napi::Value OriginBottomLeft(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);
@@ -205,6 +203,8 @@ namespace Babylon
         void SetStencil(const Napi::CallbackInfo& info);
         void LoadYFlipProgram();
         void Draw(bgfx::Encoder* encoder, int fillMode);
+
+        std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
         GraphicsImpl::UpdateToken& GetUpdateToken();
 
