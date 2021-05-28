@@ -108,6 +108,12 @@ namespace java::lang
 
     String::operator std::string() const
     {
+        if (m_string == nullptr)
+        {
+            // Java strings can be null, but an std::string cannot be null.
+            // If there is a possibility that the underlying Java string is null, you should test for that using (jstring != nullptr) before trying to implicitly convert.
+            throw std::runtime_error("Tried to implicitly convert null Java String to C++ String");
+        }
         const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
         std::string str{buffer};
         m_env->ReleaseStringUTFChars(m_string, buffer);
@@ -206,6 +212,7 @@ namespace java::net
         : Object{"java/net/URL"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), (jstring)url);
+        ThrowIfFaulted(m_env);
     }
 
     URL::URL(jobject object)
@@ -222,7 +229,9 @@ namespace java::net
 
     lang::String URL::ToString()
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "toString", "()Ljava/lang/String;"))};
+        auto string{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "toString", "()Ljava/lang/String;"))};
+        ThrowIfFaulted((m_env));
+        return {string};
     }
 
     URLConnection::URLConnection(jobject object)
@@ -238,12 +247,16 @@ namespace java::net
 
     URL URLConnection::GetURL() const
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
+        auto url{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
+        ThrowIfFaulted(m_env);
+        return {url};
     }
 
     int URLConnection::GetContentLength() const
     {
-        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getContentLength", "()I"));
+        auto contentLength{m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getContentLength", "()I"))};
+        ThrowIfFaulted(m_env);
+        return contentLength;
     }
 
     io::InputStream URLConnection::GetInputStream() const
@@ -397,18 +410,24 @@ namespace android::net
 
     java::lang::String Uri::getScheme() const
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getScheme", "()Ljava/lang/String;"))};
+        auto scheme{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getScheme", "()Ljava/lang/String;"))};
+        ThrowIfFaulted(m_env);
+        return {scheme};
     }
 
     java::lang::String Uri::getPath() const
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getPath", "()Ljava/lang/String;"))};
+        auto path{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getPath", "()Ljava/lang/String;"))};
+        ThrowIfFaulted(m_env);
+        return {path};
     }
 
     Uri Uri::Parse(java::lang::String uriString)
     {
         JNIEnv* env{GetEnvForCurrentThread()};
         jclass cls{env->FindClass("android/net/Uri")};
-        return {env->CallStaticObjectMethod(cls, env->GetStaticMethodID(cls, "parse", "(Ljava/lang/String;)Landroid/net/Uri;"), (jstring)uriString)};
+        auto uri{env->CallStaticObjectMethod(cls, env->GetStaticMethodID(cls, "parse", "(Ljava/lang/String;)Landroid/net/Uri;"), (jstring)uriString)};
+        ThrowIfFaulted(env);
+        return {uri};
     }
 }
