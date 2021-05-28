@@ -807,9 +807,18 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {});
+                    {
+                        Napi::ObjectWrap<PointerEvent>::InstanceAccessor("pointerId", &PointerEvent::GetPointerId, nullptr)
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            int pointerId = 10;
+
+            Napi::Value GetPointerId(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), pointerId);
             }
 
             static Napi::Object New(const Napi::CallbackInfo& info)
@@ -820,6 +829,8 @@ namespace Babylon
             PointerEvent(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<PointerEvent>{info}
             {
+                Napi::Object params = info[1].As<Napi::Object>();
+                pointerId = params.Get("pointerId").As<Napi::Number>().Int32Value();
             }
         };
 
