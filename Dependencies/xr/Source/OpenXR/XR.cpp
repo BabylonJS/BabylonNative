@@ -709,7 +709,7 @@ namespace xr
             XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, controllerAction));
 
             // Create suggested binding
-            std::string path = ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx];
+            std::string path { ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
             path.append(controllerActionSuffix);
             bindings.push_back({*controllerAction});
             XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
@@ -1653,9 +1653,6 @@ namespace xr
                         {
                             // map the openxr values to populate other states of a button and axes that webxr expects
                             gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value == 1);
-                            if (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed) {
-                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed;
-                            }
                             gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value > 0);
                             gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
                             gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
@@ -1686,9 +1683,6 @@ namespace xr
                                 (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction[idx], session, gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed)))
                             {
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                                if (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed) {
-                                    gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed;
-                                }
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
                                 gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed);
                                 gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed);
