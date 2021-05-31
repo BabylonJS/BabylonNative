@@ -63,7 +63,7 @@ elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
-    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
+    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${REFERENCE_IMAGES})
 endif()
 
 warnings_as_errors(ValidationTests)

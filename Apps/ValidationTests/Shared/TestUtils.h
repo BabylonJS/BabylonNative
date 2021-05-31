@@ -220,6 +220,8 @@ namespace Babylon
             auto path = "app://";
 #elif defined(__APPLE__)
             std::string path = "app:///";
+#elif __linux__
+            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
 #else
             auto path = std::string("file://") + GetModulePath().parent_path().parent_path().generic_string();
 #endif
@@ -231,15 +233,13 @@ namespace Babylon
         {
 #ifdef ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-#else
-#ifdef __APPLE__
+e#lif defined(__APPLE__)
             std::string path = getenv("HOME");
 #else
             auto path = GetModulePath().parent_path().generic_string();
+#endif
 #ifdef WIN32
             path += "/..";
-#endif
-#endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }
