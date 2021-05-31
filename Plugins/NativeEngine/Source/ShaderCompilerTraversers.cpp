@@ -718,41 +718,6 @@ namespace Babylon::ShaderCompilerTraversers
             std::map<std::string, TIntermSymbol*> m_samplerNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
-
-        class InvertYDerivativeOperandsTraverser : public TIntermTraverser
-        {
-        public:
-            static void Traverse(TProgram& program)
-            {
-                auto intermediate{program.getIntermediate(EShLangFragment)};
-                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{intermediate};
-                intermediate->getTreeRoot()->traverse(&invertYDerivativeOperandsTraverser);
-            }
-
-        protected:
-            virtual bool visitUnary(TVisit visit, TIntermUnary* unary) override
-            {
-                if (visit == EvPreVisit)
-                {
-                    auto op = unary->getOp();
-                    if (op == EOpDPdy || op == EOpDPdyFine || op == EOpDPdyCoarse)
-                    {
-                        unary->setOperand(m_intermediate->addUnaryNode(EOpNegative, unary->getOperand(), {}));
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-        private:
-            InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
-            {
-            }
-
-            TIntermediate* m_intermediate;
-        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -773,10 +738,5 @@ namespace Babylon::ShaderCompilerTraversers
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)
     {
         SamplerSplitterTraverser::Traverse(program, ids);
-    }
-
-    void InvertYDerivativeOperands(TProgram& program)
-    {
-        InvertYDerivativeOperandsTraverser::Traverse(program);
     }
 }

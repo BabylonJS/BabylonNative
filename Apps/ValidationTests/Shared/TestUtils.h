@@ -233,7 +233,7 @@ namespace Babylon
         {
 #ifdef ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-e#lif defined(__APPLE__)
+#elif defined(__APPLE__)
             std::string path = getenv("HOME");
 #else
             auto path = GetModulePath().parent_path().generic_string();
