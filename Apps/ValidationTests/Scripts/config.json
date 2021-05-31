@@ -2,6 +2,16 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Soft Shadows",
+            "playgroundId": "#0YYQ3N#0",
+            "referenceImage": "softShadows.png"
+        },
+        {
+            "title": "Soft Shadows (Right Handed)",
+            "playgroundId": "#0YYQ3N#2",
+            "referenceImage": "softShadowsRightHanded.png"
+        },
+        {
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "referenceImage": "LightProjectionTexture.png"
