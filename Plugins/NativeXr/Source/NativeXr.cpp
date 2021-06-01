@@ -607,11 +607,6 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
-            // Don't try to create new textures if the window is no longer available.
-            if (m_windowPtr == nullptr)
-            {
-                return;
-            }
 
             m_sessionState->ActiveTextures.reserve(m_sessionState->Frame->Views.size());
             for (const auto& view : m_sessionState->Frame->Views)
@@ -1208,6 +1203,13 @@ namespace Babylon
                 if (info[0].IsObject())
                 {
                     auto argumentObject = info[0].As<Napi::Object>();
+                    auto th = info.This();
+                    length = info.Length();
+                    auto dat = info[0];
+                    propNames = dat.Type();
+                     isObject = dat.IsObject();
+                     isArray = dat.IsArray();
+
                     auto originValue = argumentObject.Get("origin");
                     if (originValue.IsObject())
                     {
@@ -1230,14 +1232,21 @@ namespace Babylon
                     }
                 }
 
+                // Ensure the direction and origin exists in a valid state, to match webXR API
                 if (!originSet)
                 {
                     m_origin = Napi::Persistent(Napi::Object::New(info.Env()));
+                    m_origin.Set("x", Napi::Value::From(info.Env(), 0));
+                    m_origin.Set("y", Napi::Value::From(info.Env(), 0));
+                    m_origin.Set("z", Napi::Value::From(info.Env(), 0));
                 }
 
                 if (!directionSet)
                 {
                     m_direction = Napi::Persistent(Napi::Object::New(info.Env()));
+                    m_direction.Set("x", Napi::Value::From(info.Env(), 0));
+                    m_direction.Set("y", Napi::Value::From(info.Env(), 0));
+                    m_direction.Set("z", Napi::Value::From(info.Env(), -1));
                 }
 
                 if (!matrixSet)
@@ -1249,22 +1258,15 @@ namespace Babylon
             xr::Ray GetNativeRay()
             {
                 xr::Ray nativeRay{{0, 0, 0}, {0, 0, -1}};
-
                 auto originObject = m_origin.Value();
-                if (originObject.Has("x"))
-                {
-                    nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
-                    nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
-                    nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
-                }
+                nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
+                nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
+                nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
 
                 auto directionObject = m_direction.Value();
-                if (directionObject.Has("x"))
-                {
-                    nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
-                    nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
-                    nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
-                }
+                nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
+                nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
+                nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
                 
                 return nativeRay;
             }
@@ -1273,6 +1275,10 @@ namespace Babylon
             Napi::ObjectReference m_origin{};
             Napi::ObjectReference m_direction{};
             Napi::Reference<Napi::Float32Array> m_matrix{};
+            size_t length;
+            napi_valuetype propNames;
+            bool isArray;
+            bool isObject;
 
             Napi::Value Origin(const Napi::CallbackInfo&)
             {
