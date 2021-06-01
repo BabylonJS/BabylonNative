@@ -5,6 +5,7 @@
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Shared/InputManager.h>
@@ -61,6 +62,9 @@ bool g_isXrActive{};
         g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
         g_nativeXr->UpdateWindow(xrView);
         g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
+
+        // Initialize Camera 
+        Babylon::Plugins::Camera::Initialize(env);
 
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });

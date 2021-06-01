@@ -48,7 +48,9 @@ if(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
     endif()
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
+        PRIVATE ${JSCORE_LIBRARY}
+        PRIVATE NativeCamera)
     set(JSSCRIPT
         "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/ammo.js"
         "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/recast.js"
@@ -94,7 +96,7 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr NativeCamera)
 endif()
 
 if(WIN32)

@@ -14,6 +14,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
+var cameraTexture = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -88,6 +89,17 @@ CreateBoxAsync().then(function () {
     }
     else {
         scene.createDefaultLight(true);
+    }
+
+    if (cameraTexture) {
+        var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
+        var mat = new BABYLON.StandardMaterial("mat", scene);
+        mat.diffuseColor = BABYLON.Color3.Black();
+
+        BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+            mat.emissiveTexture = videoTexture;
+            cameraBox.material = mat;
+        }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
     }
 
     if (wireframe) {
