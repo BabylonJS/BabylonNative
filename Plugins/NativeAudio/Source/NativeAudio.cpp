@@ -86,7 +86,7 @@ namespace Babylon::Plugins::Internal
         // AudioContext methods
         //
 
-        Napi::Value Close(const Napi::CallbackInfo& info)
+        void Close(const Napi::CallbackInfo& info)
         {
             // Closes the audio context, releasing any system audio resources that it uses.
 
@@ -106,6 +106,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateMediaElementSource() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateMediaStreamSource(const Napi::CallbackInfo& info)
@@ -117,6 +118,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateMediaStreamSource() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateMediaStreamDestination(const Napi::CallbackInfo& info)
@@ -128,6 +130,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateMediaStreamDestination() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateMediaStreamTrackSource(const Napi::CallbackInfo& info)
@@ -139,6 +142,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateMediaStreamTrackSource() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value GetOutputTimestamp(const Napi::CallbackInfo& info)
@@ -150,9 +154,10 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetOutputTimestamp() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
-        Napi::Value Resume(const Napi::CallbackInfo& info)
+        void Resume(const Napi::CallbackInfo& info)
         {
             // Resumes the progression of time in an audio context that has previously been suspended.
 
@@ -163,7 +168,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value Suspend(const Napi::CallbackInfo& info)
+        void Suspend(const Napi::CallbackInfo& info)
         {
             // Suspends the progression of time in the audio context, temporarily halting audio hardware access and reducing CPU/battery usage in the process
 
@@ -188,6 +193,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetBaseLatency() is unimplemented.");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetOutputLatency(const Napi::CallbackInfo& info)
@@ -199,6 +205,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetOutputLatency() is unimplemented.");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         //
@@ -214,6 +221,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateAnalyser() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateBiquadFilter(const Napi::CallbackInfo& info)
@@ -225,6 +233,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateBiquadFilter() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateBuffer(const Napi::CallbackInfo& info)
@@ -236,6 +245,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateBuffer() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateBufferSource(const Napi::CallbackInfo& info)
@@ -247,6 +257,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateBufferSource() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateConstantSource(const Napi::CallbackInfo& info)
@@ -258,6 +269,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateConstantSource() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateChannelMerger(const Napi::CallbackInfo& info)
@@ -269,6 +281,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateChannelMerger() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateChannelSplitter(const Napi::CallbackInfo& info)
@@ -280,6 +293,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateChannelSplitter() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateConvolver(const Napi::CallbackInfo& info)
@@ -291,6 +305,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateConvolver() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateDelay(const Napi::CallbackInfo& info)
@@ -302,6 +317,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateDelay() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateDynamicsCompressor(const Napi::CallbackInfo& info) 
@@ -313,6 +329,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateDynamicsCompressor() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateGain(const Napi::CallbackInfo& info)
@@ -324,6 +341,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateGain() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateIIRFilter(const Napi::CallbackInfo& info)
@@ -335,6 +353,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateIIRFilter() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateOscillator(const Napi::CallbackInfo& info)
@@ -346,6 +365,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateOscillator() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreatePanner(const Napi::CallbackInfo& info)
@@ -357,6 +377,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreatePanner() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreatePeriodicWave(const Napi::CallbackInfo& info)
@@ -368,6 +389,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreatePeriodicWave() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateScriptProcessor(const Napi::CallbackInfo& info)
@@ -379,17 +401,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateScriptProcessor() is unimplemented.");
 #endif
-        }
-
-        Napi::Value CreatePeriodicWave(const Napi::CallbackInfo& info)
-        {
-            // Creates a StereoPannerNode, which can be used to apply stereo panning to an audio source.
-
-            // UNUSED
-#if WIN32
-            //TODO: we need a native-side debug logging solution...
-            OutputDebugStringW(L"AudioContext::CreatePeriodicWave() is unimplemented.");
-#endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateStereoPanner(const Napi::CallbackInfo& info)
@@ -401,6 +413,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateStereoPanner() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value CreateWaveShaper(const Napi::CallbackInfo& info)
@@ -412,6 +425,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::CreateWaveShaper() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value DecodeAudioData(const Napi::CallbackInfo& info) 
@@ -423,6 +437,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::DecodeAudioData() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         //
@@ -438,6 +453,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetOnStateChange() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         void SetOnStateChange(const Napi::CallbackInfo& info)
@@ -460,6 +476,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetAudioWorklet() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
 
@@ -473,6 +490,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetCurrentTime() is unimplemented.");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
         
 
@@ -484,6 +502,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetDestination() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value GetListener(const Napi::CallbackInfo& info)
@@ -495,6 +514,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetListener() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value GetSampleRate(const Napi::CallbackInfo& info)
@@ -506,6 +526,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetSampleRate() is unimplemented.");
 #endif 
+            return Napi::Value::From(info.Env(), 0);
         }
 
         Napi::Value GetState(const Napi::CallbackInfo& info)
@@ -521,6 +542,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioContext::GetState() is unimplemented.");
 #endif
+            return Napi::String::From(info.Env(), "running");
         }
 
         lab::AudioContext* GetAudioContext() {
@@ -535,6 +557,7 @@ namespace Babylon::Plugins::Internal
 
     class MediaElementAudioSourceNode : public Napi::ObjectWrap<MediaElementAudioSourceNode>
     {
+    public:
         static constexpr auto JS_CLASS_NAME = "MediaElementAudioSourceNode";
 
         static void Initialize(Napi::Env env)
@@ -550,6 +573,11 @@ namespace Babylon::Plugins::Internal
             env.Global().Set(JS_CLASS_NAME, func);
         }
 
+        MediaElementAudioSourceNode(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<MediaElementAudioSourceNode>{info}
+        {
+        }
+
         Napi::Value GetMediaElement(const Napi::CallbackInfo& info)
         {
             // Returns the HTMLMediaElement used when constructing this MediaStreamAudioSourceNode.
@@ -559,6 +587,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"MediaElementAudioSourceNode::GetMediaElement() is unimplemented.");
 #endif
+            return Napi::Object::New(info.Env());
         }
     };
 
@@ -589,6 +618,11 @@ namespace Babylon::Plugins::Internal
             env.Global().Set(JS_CLASS_NAME, func);
         }
 
+        AudioNode(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<AudioNode>{info}
+        {
+        }
+
         Napi::Value GetContext(const Napi::CallbackInfo& info)
         {
             // Returns the associated AudioContext, that is the object representing the processing graph the node is participating in.
@@ -597,6 +631,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioNode::GetContext()");
 #endif
+            return Napi::Object::New(info.Env());
         }
         
         Napi::Value GetNumberOfInputs(const Napi::CallbackInfo& info)
@@ -607,6 +642,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioNode::GetContext()");
 #endif
+            return Napi::Object::New(info.Env());
         }
 
         Napi::Value GetNumberOfOutputs(const Napi::CallbackInfo& info)
@@ -617,6 +653,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioNode::GetContext()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetChannelCount(const Napi::CallbackInfo& info)
@@ -627,6 +664,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioNode::GetContext()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetChannelCountMode(const Napi::CallbackInfo& info)
@@ -637,6 +675,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioNode::GetContext()");
 #endif
+            return Napi::String::From(info.Env(), "");
         }
 
         Napi::Value GetChannelInterpretation(const Napi::CallbackInfo& info)
@@ -647,6 +686,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioNode::GetContext()");
 #endif
+            return Napi::String::From(info.Env(), "");
         }
 
         //
@@ -719,6 +759,11 @@ namespace Babylon::Plugins::Internal
             env.Global().Set(JS_CLASS_NAME, func);
         }
 
+        AudioParam(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<AudioParam>{info}
+        {
+        }
+
         //
         // AudioParam Accessor implementations
         //
@@ -732,6 +777,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioParam::GetDefaultValue()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetMaxValue(const Napi::CallbackInfo& info)
@@ -743,6 +789,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioParam::GetMaxValue()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetMinValue(const Napi::CallbackInfo& info)
@@ -753,6 +800,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioParam::GetMinValue()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetValue(const Napi::CallbackInfo& info)
@@ -763,13 +811,14 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioParam::GetValue()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         //
         // AudioParam Method implementations
         //
 
-        Napi::Value SetValueAtTime(const Napi::CallbackInfo& info)
+        void SetValueAtTime(const Napi::CallbackInfo& info)
         {
             // Schedules an instant change to the value of the AudioParam at a precise time, as measured against AudioContext.currentTime. The new value is given by the value parameter.
             //TODO: Implement, as its used by Babylon.js
@@ -777,9 +826,10 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioParam::SetValueAtTime()");
 #endif
+
         }
 
-        Napi::Value LinearRampToValueAtTime(const Napi::CallbackInfo& info)
+        void LinearRampToValueAtTime(const Napi::CallbackInfo& info)
         {
             // Schedules a gradual linear change in the value of the AudioParam. The change starts at the time specified for the previous event, follows a linear ramp to the new value given in the value parameter, and reaches the new value at the time given in the endTime parameter.
             //TODO: Implement, as its used by Babylon.js
@@ -789,7 +839,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value ExponentialRampToValueAtTime(const Napi::CallbackInfo& info)
+        void ExponentialRampToValueAtTime(const Napi::CallbackInfo& info)
         {
             // Schedules a gradual exponential change in the value of the AudioParam. The change starts at the time specified for the previous event, follows an exponential ramp to the new value given in the value parameter, and reaches the new value at the time given in the endTime parameter.
             // UNUSED
@@ -799,7 +849,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value SetTargetAtTime(const Napi::CallbackInfo& info)
+        void SetTargetAtTime(const Napi::CallbackInfo& info)
         {
             // Schedules the start of a change to the value of the AudioParam. The change starts at the time specified in startTime and exponentially moves towards the value given by the target parameter. The exponential decay rate is defined by the timeConstant parameter, which is a time measured in seconds.
             // UNUSED
@@ -809,7 +859,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value SetValueCurveAtTime(const Napi::CallbackInfo& info)
+        void SetValueCurveAtTime(const Napi::CallbackInfo& info)
         {
             // Schedules the values of the AudioParam to follow a set of values, defined by an array of floating-point numbers scaled to fit into the given interval, starting at a given start time and spanning a given duration of time.
             // UNUSED
@@ -819,7 +869,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value CancelScheduledValues(const Napi::CallbackInfo& info)
+        void CancelScheduledValues(const Napi::CallbackInfo& info)
         {
             // Cancels all scheduled future changes to the AudioParam.
             //TODO: Implement, as its used by Babylon.js
@@ -829,7 +879,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value CancelAndHoldAtTime(const Napi::CallbackInfo& info)
+        void CancelAndHoldAtTime(const Napi::CallbackInfo& info)
         {
             // Cancels all scheduled future changes to the AudioParam but holds its value at a given time until further changes are made using other methods.
             // UNUSED
@@ -856,6 +906,11 @@ namespace Babylon::Plugins::Internal
                 });
             env.Global().Set(JS_CLASS_NAME, func);
         }
+
+        AudioScheduledSourceNode(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<AudioScheduledSourceNode>{info}
+        {
+        }
     };
 
     class OscillatorNode : public Napi::ObjectWrap<OscillatorNode>
@@ -873,6 +928,10 @@ namespace Babylon::Plugins::Internal
                     // UNUSED
                 });
             env.Global().Set(JS_CLASS_NAME, func);
+        }
+        OscillatorNode(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<OscillatorNode>{info}
+        {
         }
     };
 
@@ -902,6 +961,11 @@ namespace Babylon::Plugins::Internal
             env.Global().Set(JS_CLASS_NAME, func);
         }
 
+        AudioBuffer(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<AudioBuffer>{info}
+        {
+        }
+
         Napi::Value GetSampleRate(const Napi::CallbackInfo& info)
         {
             // Returns a float representing the sample rate, in samples per second, of the PCM data stored in the buffer.
@@ -910,6 +974,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioBuffer::GetSampleRate()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetLength(const Napi::CallbackInfo& info)
@@ -920,6 +985,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioBuffer::GetLength()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetDuration(const Napi::CallbackInfo& info)
@@ -930,6 +996,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioBuffer::GetDuration()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetNumberOfChannels(const Napi::CallbackInfo& info)
@@ -940,6 +1007,7 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioBuffer::GetNumberOfChannels()");
 #endif
+            return Napi::Number::From(info.Env(), 0);
         }
 
         Napi::Value GetChannelData(const Napi::CallbackInfo& info)
@@ -950,9 +1018,10 @@ namespace Babylon::Plugins::Internal
             //TODO: we need a native-side debug logging solution...
             OutputDebugStringW(L"AudioBuffer::GetChannelData()");
 #endif
+            return Napi::Float32Array::New(info.Env(), 0);
         }
 
-        Napi::Value CopyFromChannel(const Napi::CallbackInfo& info)
+        void CopyFromChannel(const Napi::CallbackInfo& info)
         {
             // Copies the samples from the specified channel of the AudioBuffer to the destination array.
             // UNUSED
@@ -962,7 +1031,7 @@ namespace Babylon::Plugins::Internal
 #endif
         }
 
-        Napi::Value CopyToChannel(const Napi::CallbackInfo& info)
+        void CopyToChannel(const Napi::CallbackInfo& info)
         {
             // Copies the samples to the specified channel of the AudioBuffer, from the source array.
             // UNUSED
@@ -990,6 +1059,11 @@ namespace Babylon::Plugins::Internal
                 });
             env.Global().Set(JS_CLASS_NAME, func);
         }
+
+        AudioBufferSourceNode(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<AudioBufferSourceNode>{info}
+        {
+        }
     };
 
     class AudioDestinationNode : public Napi::ObjectWrap<AudioDestinationNode>
@@ -997,25 +1071,18 @@ namespace Babylon::Plugins::Internal
     public:
         static constexpr auto JS_CLASS_NAME = "AudioDestinationNode";
 
-        Napi::HandleScope scope{env};
-        Napi::Function func = DefineClass(
-            env,
-            JS_CLASS_NAME,
-            {// methods we want the javascript object to implement.
-                AudioNode::InstanceMethod("connect", &AudioNode::Connect),
-                AudioNode::InstanceMethod("disconnect", &AudioNode::Disconnect),
-                AudioNode::InstanceAccessor("context", &AudioNode::GetContext, nullptr),
-                AudioNode::InstanceAccessor("numberOfInputs", &AudioNode::GetNumberOfInputs, nullptr),
-                AudioNode::InstanceAccessor("numberOfOutputs", &AudioNode::GetNumberOfOutputs, nullptr),
-                AudioNode::InstanceAccessor("channelCount", &AudioNode::GetChannelCount, nullptr),
-                AudioNode::InstanceAccessor("channelCountMode", &AudioNode::GetChannelCountMode, nullptr),
-                AudioNode::InstanceAccessor("channelInterpretation", &AudioNode::GetChannelInterpretation, nullptr)});
-    
+        static void Initialize(Napi::Env env)
+        {
+            Napi::HandleScope scope{env};
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    AudioDestinationNode::InstanceAccessor("maxChannelCount", &AudioDestinationNode::GetMaxChannelCount, nullptr)
+                });
+            env.Global().Set(JS_CLASS_NAME, func);
+        }
 
-        /// <summary>
-        /// Default Constructor - use default device i/o settings.
-        /// </summary>
-        /// <param name="info"></param>
         AudioDestinationNode(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<AudioDestinationNode>{info}
         {
@@ -1026,6 +1093,17 @@ namespace Babylon::Plugins::Internal
         static Napi::Object New(const Napi::CallbackInfo& info)
         {
             return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0], info[1]});
+        }
+
+        Napi::Value GetMaxChannelCount(const Napi::CallbackInfo& info)
+        {
+            // Returns an unsigned long defining the maximum number of channels that the physical device can handle.
+            // UNUSED
+#if WIN32
+            //TODO: we need a native-side debug logging solution...
+            OutputDebugStringW(L"AudioDestinationNode::GetMaxChannelCount()");
+#endif
+            return Napi::Number::From(info.Env(), 0);
         }
     };
 
@@ -1042,6 +1120,11 @@ namespace Babylon::Plugins::Internal
         {
             return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
         }
+
+        GainNode(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<GainNode>{info}
+        {
+        }
     };
 
 
@@ -1054,15 +1137,50 @@ namespace Babylon::Plugins::Internal
         {
             Napi::HandleScope scope{env};
 
-            Napi::Function func = NativeAudio::DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    NativeAudio::InstanceMethod("addCallback", &NativeAudio::AddCallback),
-                    NativeAudio::InstanceMethod("dispose", &NativeAudio::Dispose),
-                });
+            // Setup all our WebAudio class implementations in the JS environment.
+            // Commented component initializations here represent the WebAudio surface that the spec describes, but isn't implemented here.
 
-            env.Global().Set(JS_CLASS_NAME, func);
+            AudioContext::Initialize(env);
+            //AudioContextOptions::Initialize(env);
+            AudioNode::Initialize(env);
+            AudioParam::Initialize(env);
+            //AudioParamMap::Initialize(env);
+            
+            AudioScheduledSourceNode::Initialize(env);
+            OscillatorNode::Initialize(env);
+            AudioBuffer::Initialize(env);
+            AudioBufferSourceNode::Initialize(env);
+            MediaElementAudioSourceNode::Initialize(env);
+            //MediaStreamAudioSourceNode::Initialize(env);
+            //MediaStreamTrackAudioSourceNode::Initialize(env);
+
+            //BiquadFilterNode::Initialize(env);
+            //ConvolverNode::Initialize(env);
+            //DelayNode::Initialize(env);
+            //DynamicsCompressorNode::Initialize(env);
+            //GainNode::Initialize(env);
+            //PeriodicWave::Initialize(env);
+            //IIRFilterNode::Initialize(env);
+
+            AudioDestinationNode::Initialize(env);
+            //MediaStreamAudioDestinationNode::Initialize(env);
+
+            //AnalyserNode::Initialize(env);
+
+            //ChannelSplitterNode::Initialize(env);
+            //ChannelMergerNode::Initialize(env);
+
+            //AudioListener::Initialize(env);
+            //PannerNode::Initialize(env);
+            //StereoPannerNode::Initialize(env);
+
+            //AudioWorklet::Initialize(env);
+            //AudioWorkletNode::Initialize(env);
+            //AudioWorkletGlobalScope::Initialize(env);
+
+            //ScriptProcessorNode::Initialize(env);
+
+            //OfflineAudioContext::Initialize(env);
         }
 
         NativeAudio(const Napi::CallbackInfo& info)
