@@ -187,8 +187,7 @@ namespace Babylon::Polyfills::Internal
         m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
-                // Bail if UrlLib throws an exception.
-                std::abort();
+                throw Napi::Error::New(env, result.error());
             }
 
             SetReadyState(ReadyState::Done);

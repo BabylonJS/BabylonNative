@@ -1,7 +1,7 @@
-/// <reference path="../../BabylonScripts/babylon.module.d.ts" />
-/// <reference path="../../BabylonScripts/babylonjs.loaders.module.d.ts" />
-/// <reference path="../../BabylonScripts/babylonjs.materials.module.d.ts" />
-/// <reference path="../../BabylonScripts/babylon.gui.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs/babylon.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs-loaders/babylonjs.loaders.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
 
 var wireframe = false;
 var turntable = false;
@@ -253,7 +253,7 @@ CreateBoxAsync().then(function () {
                     if (hololens) {
                         // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
                         xrSessionManager.scene.autoClear = true;
-                        xrSessionManager.scene.clearColor = BABYLON.Color4.FromColor3(Color3.Black());
+                        xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
             });

@@ -7,6 +7,7 @@ set(SOURCES "Include/XR.h"
 
 if (ANDROID)
     set(SOURCES ${SOURCES}
+        "Source/ARCore/Include/IXrContextARCore.h"
         "Source/ARCore/XR.cpp")
 elseif (IOS)
     set(SOURCES ${SOURCES}

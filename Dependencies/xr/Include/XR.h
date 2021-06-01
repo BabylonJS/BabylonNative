@@ -13,7 +13,8 @@ namespace xr
     {
         RGBA8_SRGB,
         BGRA8_SRGB,
-        D24S8
+        D24S8,
+        D16
     };
 
     enum class SessionType
@@ -57,6 +58,7 @@ namespace xr
     {
         size_t Width{};
         size_t Height{};
+        size_t Depth{};
     };
 
     struct Vector3f

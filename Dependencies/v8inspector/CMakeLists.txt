@@ -1,7 +1,6 @@
 # ------------------------------- asio -------------------------------
 add_library(asio INTERFACE)
 target_include_directories(asio INTERFACE "Dependencies/asio/asio/include")
-set_property(TARGET asio PROPERTY FOLDER Dependencies)
 
 # ------------------------------ llhttp ------------------------------
 # Install node to use npm

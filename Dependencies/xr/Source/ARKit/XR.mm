@@ -583,6 +583,10 @@ namespace xr {
             }
 
             [pipelineStateDescriptor release];
+            [vertexFunction release];
+            [fragmentFunction release];
+            [lib release];
+
             commandQueue = [metalDevice newCommandQueue];
         }
 
@@ -607,13 +611,14 @@ namespace xr {
             [session pause];
             [session release];
             [pipelineState release];
+            [commandQueue release];
             UpdateXRView(nil);
         }
 
         void UpdateXRView() {
             UpdateXRView(getXRView());
         }
-        
+
         void UpdateXRView(MTKView* activeXRView) {
             // Check whether the xr view has changed, and if so, reconfigure it.
             if (activeXRView != xrView) {
@@ -637,7 +642,7 @@ namespace xr {
 #pragma clang diagnostic pop
                     metalLayer.device = metalDevice;
 
-                    auto scale = UIScreen.mainScreen.scale;
+                    auto scale = xrView.contentScaleFactor;
                     viewportSize.x = xrView.bounds.size.width * scale;
                     viewportSize.y = xrView.bounds.size.height * scale;
                     [sessionDelegate setViewSize:CGSizeMake(viewportSize.x, viewportSize.y)];
@@ -703,7 +708,6 @@ namespace xr {
                     MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:width height:height mipmapped:NO];
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
-                    [texture retain];
 
                     ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].ColorTextureFormat = TextureFormat::BGRA8_SRGB;
@@ -723,7 +727,6 @@ namespace xr {
                     textureDescriptor.storageMode = MTLStorageModePrivate;
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
-                    [texture retain];
 
                     ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void *>(texture);
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
@@ -994,7 +997,7 @@ namespace xr {
 
                 // ARKit feature points don't have confidence values, so just default to 1.0f
                 featurePoint.ConfidenceValue = 1.0f;
-                
+
                 // Check to see if this point ID exists in our point cloud mapping if not add it to the map.
                 const uint64_t id { pointCloud.identifiers[i] };
                 auto featurePointIterator = featurePointIDMap.find(id);
