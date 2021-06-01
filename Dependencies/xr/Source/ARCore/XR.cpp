@@ -41,8 +41,6 @@ using namespace android::OpenGLHelpers;
 
 namespace xr
 {
-<<<<<<< HEAD
-=======
     // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
     const int PERMISSION_REQUEST_ID{ 8435 };
 
@@ -69,7 +67,6 @@ namespace xr
         virtual ~XrContextARCore() = default;
     };
 
->>>>>>> befafc77497fceb8ea870f3f65f6420ac77f9392
     struct System::Impl
     {
         std::shared_ptr<XrContextARCore> XrContext{std::make_shared<XrContextARCore>()};
