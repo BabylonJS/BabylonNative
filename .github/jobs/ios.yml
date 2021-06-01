@@ -52,3 +52,21 @@ jobs:
         useXcpretty: false
         configuration: RelWithDebInfo
       displayName: 'Build ValidationTests iOS'
+
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+        scheme: 'Playground'
+        sdk: 'iphonesimulator'
+        useXcpretty: false
+        configuration: RelWithDebInfo
+      displayName: 'Build Playground iOS Simulator'
+
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+        scheme: 'ValidationTests'
+        sdk: 'iphonesimulator'
+        useXcpretty: false
+        configuration: RelWithDebInfo
+      displayName: 'Build ValidationTests iOS Simulator'
