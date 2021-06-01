@@ -41,9 +41,6 @@ using namespace android::OpenGLHelpers;
 
 namespace xr
 {
-    // Permission request ID used to uniquely identify our request in the callback when calling requestPermissions.
-    const int PERMISSION_REQUEST_ID{ 8435 };
-
     struct XrContextARCore : public IXrContextARCore {
         bool Initialized{false};
         ArSession* Session{nullptr};
