@@ -693,8 +693,7 @@ namespace xr
             XrAction* controllerAction,
             std::vector<XrActionSuggestedBinding> &bindings,
             XrInstance instance,
-            const size_t idx
-        )
+            const size_t idx)
         {
 
             XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
