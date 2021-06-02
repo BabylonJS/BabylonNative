@@ -262,6 +262,27 @@ CreateBoxAsync().then(function () {
                         //const handConstraint = new BABYLON.HandConstraintBehavior();
                         //handConstraint.linkToXRExperience(xr.baseExperience);
                         //handConstraint.attach(box);
+                        var box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
+
+                        // Let's add a slate
+                        var near = new BABYLON.GUI.NearMenu("near");
+                        manager.addControl(near);
+
+                        var button0 = new BABYLON.GUI.TouchHolographicButton("button0");
+                        button0.text = "Test 0";
+                        near.addButton(button0);
+
+                        var button1 = new BABYLON.GUI.TouchHolographicButton("button1");
+                        button1.text = "Test 1";
+                        near.addButton(button1);
+
+                        var button2 = new BABYLON.GUI.TouchHolographicButton("button2");
+                        button2.text = "Test 2";
+                        near.addButton(button2);
+
+                        // Our built-in 'ground' shape.
+                        near._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
+                        near._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
                     }, 2000)
                 })
 
