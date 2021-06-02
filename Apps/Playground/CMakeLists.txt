@@ -51,17 +51,7 @@ if(APPLE)
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
         PRIVATE ${JSCORE_LIBRARY}
         PRIVATE NativeCamera)
-    set(JSSCRIPT
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/ammo.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/recast.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/meshwriter.min.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs/babylon.max.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs-materials/babylonjs.materials.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs-gui/babylon.gui.js"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/experience.js"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/playground_runner.js")
-    set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT})
+    set(RESOURCE_FILES ${STORYBOARD} ${BABYLON_SCRIPTS} ${SCRIPTS} ${DEPENDENCIES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}

@@ -34,8 +34,11 @@ namespace Babylon::Plugins
             [avCaptureSession stopRunning];
             [avCaptureSession release];
             [cameraTextureDelegate release];
-            CVMetalTextureCacheFlush(textureCache, 0);
-            CFRelease(textureCache);
+            if (textureCache)
+            {
+                CVMetalTextureCacheFlush(textureCache, 0);
+                CFRelease(textureCache);
+            }
         }
         
         CameraTextureDelegate* cameraTextureDelegate{};
