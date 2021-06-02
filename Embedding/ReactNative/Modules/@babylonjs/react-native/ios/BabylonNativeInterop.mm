@@ -55,8 +55,9 @@ static NSMutableArray* activeTouches = [NSMutableArray new];
 }
 
 + (void)updateView:(MTKView*)mtkView {
-    const int width = static_cast<int>(mtkView.bounds.size.width * UIScreen.mainScreen.scale);
-    const int height = static_cast<int>(mtkView.bounds.size.height * UIScreen.mainScreen.scale);
+    const CGFloat scale = mtkView.contentScaleFactor;
+    const int width = static_cast<int>(mtkView.bounds.size.width * scale);
+    const int height = static_cast<int>(mtkView.bounds.size.height * scale);
     if (width != 0 && height != 0) {
         Babylon::UpdateView((__bridge void*)mtkView, width, height);
     }
@@ -81,7 +82,7 @@ static NSMutableArray* activeTouches = [NSMutableArray new];
 + (void)reportTouchEvent:(MTKView*)mtkView touches:(NSSet<UITouch*>*)touches event:(UIEvent*)event {
     for (UITouch* touch in touches) {
         if (touch.view == mtkView) {
-            const CGFloat scale = UIScreen.mainScreen.scale;
+            const CGFloat scale = mtkView.contentScaleFactor;
             const CGPoint pointerPosition = [touch locationInView:mtkView];
             const uint32_t x = static_cast<uint32_t>(pointerPosition.x * scale);
             const uint32_t y = static_cast<uint32_t>(pointerPosition.y * scale);
