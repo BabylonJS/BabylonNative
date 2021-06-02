@@ -699,8 +699,8 @@ namespace xr
 
             XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
             actionInfo.actionType = controllerActionType;
-            std::string controllerActionNameSuffixed {controllerActionName + std::to_string(idx)};
-            std::string controllerLocalizedActionNameSuffixed(controllerLocalizedActionName + std::to_string(idx));
+            std::string controllerActionNameSuffixed{ controllerActionName + std::to_string(idx) };
+            std::string controllerLocalizedActionNameSuffixed{ controllerLocalizedActionName + std::to_string(idx) };
 
             strcpy_s(actionInfo.actionName, controllerActionNameSuffixed.data());
             strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionNameSuffixed.data());
@@ -709,7 +709,7 @@ namespace xr
             XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, controllerAction));
 
             // Create suggested binding
-            std::string path { ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+            std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
             path.append(controllerActionSuffix);
             bindings.push_back({*controllerAction});
             XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
