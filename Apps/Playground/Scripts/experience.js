@@ -246,6 +246,10 @@ CreateBoxAsync().then(function () {
                         { xrInput: xr.input });
                         */
                 }
+                //const handsFeature = xr.baseExperience.featuresManager.enableFeature(BABYLON.WebXRFeatureName.HAND_TRACKING, "latest", {
+                //    xrInput: xr.input,
+                //});
+
                 xr.baseExperience.onInitialXRPoseSetObservable.add((camera) => {
                     setTimeout(() => {
                         var manager = new BABYLON.GUI.GUI3DManager(camera.getScene());
@@ -253,6 +257,11 @@ CreateBoxAsync().then(function () {
                         // Let's add a slate
                         var slate = new BABYLON.GUI.HolographicSlate("down");
                         manager.addControl(slate);
+
+                        //const box = BABYLON.Mesh.CreateBox("box2", 0.2);
+                        //const handConstraint = new BABYLON.HandConstraintBehavior();
+                        //handConstraint.linkToXRExperience(xr.baseExperience);
+                        //handConstraint.attach(box);
                     }, 2000)
                 })
 
