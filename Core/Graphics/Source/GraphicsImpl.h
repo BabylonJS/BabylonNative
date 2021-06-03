@@ -1,35 +1,86 @@
 #pragma once
 
-#include <Babylon/Graphics.h>
 #include "BgfxCallback.h"
+#include "FrameBufferManager.h"
+#include "SafeTimespanGuarantor.h"
 
+#include <arcana/containers/ticketed_collection.h>
+#include <arcana/threading/blocking_concurrent_queue.h>
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
 
+#include <napi/env.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <memory>
+#include <map>
+#include <unordered_map>
+
 namespace Babylon
 {
-    class Graphics::Impl
+    struct WindowConfiguration;
+    struct ContextConfiguration;
+
+    class GraphicsImpl
     {
-        static constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-
     public:
-        Impl();
-        ~Impl();
+        class UpdateToken final
+        {
+        public:
+            UpdateToken(const UpdateToken& other) = delete;
+            UpdateToken(UpdateToken&&) = default;
 
-        void* GetNativeWindow();
-        void SetNativeWindow(void* nativeWindowPtr, void* windowTypePtr);
+            bgfx::Encoder* GetEncoder();
+
+        private:
+            friend class GraphicsImpl;
+
+            UpdateToken(GraphicsImpl&);
+
+            GraphicsImpl& m_graphicsImpl;
+            SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
+        };
+
+        class RenderScheduler final
+        {
+        public:
+            template<typename CallableT>
+            void operator()(CallableT&& callable)
+            {
+                m_dispatcher(callable);
+            }
+
+        private:
+            friend GraphicsImpl;
+
+            arcana::manual_dispatcher<128> m_dispatcher;
+        };
+
+        struct TextureInfo final
+        {
+        public:
+            uint16_t Width{};
+            uint16_t Height{};
+            bool HasMips{};
+            uint16_t NumLayers{};
+            bgfx::TextureFormat::Enum Format{};
+        };
+
+        GraphicsImpl();
+        virtual ~GraphicsImpl();
+
+        void UpdateWindow(const WindowConfiguration& config);
+        void UpdateContext(const ContextConfiguration& config);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
-        static Impl& GetFromJavaScript(Napi::Env);
+        static GraphicsImpl& GetFromJavaScript(Napi::Env);
 
-        void AddRenderWorkTask(arcana::task<void, std::exception_ptr> renderWorkTask);
-        arcana::task<void, std::exception_ptr> GetBeforeRenderTask();
-        arcana::task<void, std::exception_ptr> GetAfterRenderTask();
+        RenderScheduler& BeforeRenderScheduler();
+        RenderScheduler& AfterRenderScheduler();
 
         void EnableRendering();
         void DisableRendering();
@@ -37,38 +88,93 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        void RenderCurrentFrame()
-        {
-            StartRenderingCurrentFrame();
-            FinishRenderingCurrentFrame();
-        }
+        UpdateToken GetUpdateToken();
 
-        void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
+        FrameBuffer& DefaultFrameBuffer();
 
-        BgfxCallback Callback{};
+        void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
+        void RemoveTexture(bgfx::TextureHandle handle);
+        TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
+
+        void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
+
+        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
+
+        float GetHardwareScalingLevel();
+        void SetHardwareScalingLevel(float level);
+
+        float GetDevicePixelRatio();
+
+        using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
+        CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
     private:
-        arcana::affinity m_renderThreadAffinity{};
+        friend class UpdateToken;
 
-        bool m_rendering{false};
+        template<typename WindowT>
+        WindowT GetNativeWindow();
+
+        void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
+        void ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& platformData);
+        void UpdateBgfxState();
+        void UpdateBgfxResolution();
+        float UpdateDevicePixelRatio();
+        void DiscardIfDirty();
+        void RequestScreenShots();
+        void Frame();
+        bgfx::Encoder* GetEncoderForThread();
+        void EndEncoders();
+        void CaptureCallback(const BgfxCallback::CaptureData&);
+
+        arcana::affinity m_renderThreadAffinity{};
+        bool m_rendering{};
+
+        std::unique_ptr<arcana::cancellation_source> m_cancellationSource{};
 
         struct
         {
-            std::mutex Mutex{};
+            std::recursive_mutex Mutex{};
 
-            bgfx::Init InitState{};
-            bool Initialized{};
-            bool Dirty{};
-        } m_bgfxState{};
+            struct
+            {
+                bgfx::Init InitState{};
+                bool Initialized{};
+                bool Dirty{};
+            } Bgfx{};
 
-        arcana::task_completion_source<void, std::exception_ptr> m_enableRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> m_beforeRenderTaskCompletionSource{};
-        arcana::task_completion_source<void, std::exception_ptr> m_afterRenderTaskCompletionSource{};
+            struct
+            {
+                size_t Width{};
+                size_t Height{};
+                float HardwareScalingLevel{1.0f};
+                float DevicePixelRatio{1.0f};
+            } Resolution{};
+        } m_state;
 
-        arcana::manual_dispatcher<128> m_renderWorkDispatcher{};
-        std::vector<arcana::task<void, std::exception_ptr>> m_renderWorkTasks{};
-        std::mutex m_renderWorkTasksMutex{};
+        BgfxCallback m_bgfxCallback;
 
-        arcana::task<void, std::exception_ptr> RenderCurrentFrameAsync(bool& finished, bool& workDone, std::exception_ptr& error);
+        SafeTimespanGuarantor m_safeTimespanGuarantor{};
+
+        RenderScheduler m_beforeRenderScheduler;
+        RenderScheduler m_afterRenderScheduler;
+
+        std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
+
+        std::mutex m_captureCallbacksMutex{};
+        arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
+
+        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
+
+        std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
+        std::mutex m_threadIdToEncoderMutex{};
+
+        std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
+
+        std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
+        std::mutex m_textureHandleToInfoMutex{};
     };
 }

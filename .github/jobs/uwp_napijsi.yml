@@ -1,0 +1,42 @@
+parameters:
+  name: ''
+  vmImage: ''
+  platform: ''
+  
+jobs:
+  - job: ${{ parameters.name }}
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+
+    steps:
+    - checkout: self
+      clean: true
+      submodules: recursive
+
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: 'Apps'
+      displayName: 'Install Babylon.js NPM packages'
+
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: Apps/napi-jsi
+      displayName: 'Install NPM Packages'
+
+    - script: |
+        cd Apps/napi-jsi
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DBABYLON_NATIVE_PLATFORM=UWP -A ${{ parameters.platform }}
+      displayName: 'Generate napi-jsi solution'
+
+    - task: VSBuild@1
+      inputs:
+        solution: 'Apps/napi-jsi/build/napi-jsi.sln'
+        maximumCpuCount: true
+        configuration: 'RelWithDebInfo'
+        msbuildArgs: '/p:AppxPackageSigningEnabled=false'
+        platform: ${{ parameters.platform }}
+      displayName: 'Build UWP ${{ parameters.platform }} napi-jsi'

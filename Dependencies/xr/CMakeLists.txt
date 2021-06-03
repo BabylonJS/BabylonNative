@@ -7,6 +7,7 @@ set(SOURCES "Include/XR.h"
 
 if (ANDROID)
     set(SOURCES ${SOURCES}
+        "Source/ARCore/Include/IXrContextARCore.h"
         "Source/ARCore/XR.cpp")
 elseif (IOS)
     set(SOURCES ${SOURCES}
@@ -26,6 +27,7 @@ else()
     endif()
 
     set(SOURCES ${SOURCES}
+        "Source/OpenXR/Include/IXrContextOpenXR.h"
         "Source/OpenXR/XrPlatformCommon.h"
         "Source/OpenXR/XrRegistry.h"
         "Source/OpenXR/XrSupportedExtensions.h"
@@ -56,11 +58,11 @@ else()
     endif()
 
     target_include_directories(xr PRIVATE "Dependencies/OpenXR-MixedReality/openxr_preview/include")
-    target_include_directories(xr PRIVATE "Dependencies/OpenXR-MixedReality/shared/XrUtility")
+    target_include_directories(xr PRIVATE "Dependencies/OpenXR-MixedReality/shared")
     target_include_directories(xr PRIVATE "Source/OpenXR")
 
     target_include_directories(xrInternal INTERFACE "Dependencies/OpenXR-MixedReality/openxr_preview/include")
-    target_include_directories(xrInternal INTERFACE "Dependencies/OpenXR-MixedReality/shared/XrUtility")
+    target_include_directories(xrInternal INTERFACE "Dependencies/OpenXR-MixedReality/shared")
     target_include_directories(xrInternal INTERFACE "Source/OpenXR")
 
     target_link_libraries(xr PRIVATE openxr_loader)

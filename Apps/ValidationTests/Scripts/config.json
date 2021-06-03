@@ -2,8 +2,19 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Light Projection Texture",
+            "playgroundId": "#CQNGRK#0",
+            "referenceImage": "LightProjectionTexture.png"
+        },
+        {
+            "title": "Point light shadows",
+            "playgroundId": "#U2F7P9#4",
+            "referenceImage": "point-light-shadows.png",
+            "renderCount": 2
+        },
+        {
             "title": "Texture cache",
-            "playgroundId": "#20OAV9#237",
+            "playgroundId": "#3TFH5I#0",
             "referenceImage": "texture cache.png"
         },
         {
@@ -31,11 +42,6 @@
             "errorRatio": 60.0
         },
         {
-            "title": "GLTF Buggy with Draco Mesh Compression",
-            "playgroundId": "#JNW207#1",
-            "referenceImage": "gltfBuggyDraco.png"
-        },
-        {
             "title": "LightFalloff",
             "playgroundId": "#20OAV9#201",
             "referenceImage": "lightFalloff.png"
@@ -56,7 +62,7 @@
             "renderCount": 10,
             "playgroundId": "#FFMFW5#0",
             "referenceImage": "lod.png",
-            "errorRatio": 8.0
+            "errorRatio": 9.0
         },
         {
             "title": "Capsule",

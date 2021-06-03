@@ -1,6 +1,9 @@
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/Globals.h>
+#include <android/surface_texture.h>
+#include <android/surface_texture_jni.h>
 #include <android/asset_manager_jni.h>
+#include <android/native_window_jni.h>
 
 using namespace android::global;
 
@@ -108,6 +111,12 @@ namespace java::lang
 
     String::operator std::string() const
     {
+        if (m_string == nullptr)
+        {
+            // Java strings can be null, but an std::string cannot be null.
+            // If there is a possibility that the underlying Java string is null, you should test for that using (jstring != nullptr) before trying to implicitly convert.
+            throw std::runtime_error("Tried to implicitly convert null Java String to C++ String");
+        }
         const char* buffer{m_env->GetStringUTFChars(m_string, nullptr)};
         std::string str{buffer};
         m_env->ReleaseStringUTFChars(m_string, buffer);
@@ -206,6 +215,7 @@ namespace java::net
         : Object{"java/net/URL"}
     {
         m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), (jstring)url);
+        ThrowIfFaulted(m_env);
     }
 
     URL::URL(jobject object)
@@ -222,7 +232,9 @@ namespace java::net
 
     lang::String URL::ToString()
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "toString", "()Ljava/lang/String;"))};
+        auto string{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "toString", "()Ljava/lang/String;"))};
+        ThrowIfFaulted((m_env));
+        return {string};
     }
 
     URLConnection::URLConnection(jobject object)
@@ -238,12 +250,16 @@ namespace java::net
 
     URL URLConnection::GetURL() const
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
+        auto url{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
+        ThrowIfFaulted(m_env);
+        return {url};
     }
 
     int URLConnection::GetContentLength() const
     {
-        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getContentLength", "()I"));
+        auto contentLength{m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getContentLength", "()I"))};
+        ThrowIfFaulted(m_env);
+        return contentLength;
     }
 
     io::InputStream URLConnection::GetInputStream() const
@@ -315,6 +331,10 @@ namespace android::content
         return m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
     }
 
+    res::Resources Context::getResources() {
+        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getResources", "()Landroid/content/res/Resources;"))};
+    }
+
     bool Context::checkSelfPermission(jstring systemPermissionName)
     {
         // Get the package manager, and get the value that represents a successful permission grant.
@@ -339,6 +359,26 @@ namespace android::content::res
     {
         return AAssetManager_fromJava(m_env, m_object);
     }
+
+    Configuration::Configuration(jobject object)
+        : Object(object)
+    {
+    }
+
+    int Configuration::getDensityDpi()
+    {
+        return m_env->GetIntField(m_object, m_env->GetFieldID(m_class, "densityDpi", "I"));
+    }
+
+    Resources::Resources(jobject object)
+        : Object(object)
+    {
+    }
+
+    Configuration Resources::getConfiguration()
+    {
+        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getConfiguration", "()Landroid/content/res/Configuration;"))};
+    }
 }
 
 namespace android::view
@@ -362,6 +402,12 @@ namespace android::view
     {
         return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getDefaultDisplay", "()Landroid/view/Display;"))};
     }
+
+    Surface::Surface(android::graphics::SurfaceTexture& surfaceTexture)
+        : Object("android/view/Surface")
+    {
+        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), (jobject)surfaceTexture);
+    }
 }
 
 namespace android::net
@@ -373,18 +419,44 @@ namespace android::net
 
     java::lang::String Uri::getScheme() const
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getScheme", "()Ljava/lang/String;"))};
+        auto scheme{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getScheme", "()Ljava/lang/String;"))};
+        ThrowIfFaulted(m_env);
+        return {scheme};
     }
 
     java::lang::String Uri::getPath() const
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getPath", "()Ljava/lang/String;"))};
+        auto path{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getPath", "()Ljava/lang/String;"))};
+        ThrowIfFaulted(m_env);
+        return {path};
     }
 
     Uri Uri::Parse(java::lang::String uriString)
     {
         JNIEnv* env{GetEnvForCurrentThread()};
         jclass cls{env->FindClass("android/net/Uri")};
-        return {env->CallStaticObjectMethod(cls, env->GetStaticMethodID(cls, "parse", "(Ljava/lang/String;)Landroid/net/Uri;"), (jstring)uriString)};
+        auto uri{env->CallStaticObjectMethod(cls, env->GetStaticMethodID(cls, "parse", "(Ljava/lang/String;)Landroid/net/Uri;"), (jstring)uriString)};
+        ThrowIfFaulted(env);
+        return {uri};
+    }
+}
+
+namespace android::graphics
+{
+    SurfaceTexture::SurfaceTexture()
+        : Object("android/graphics/SurfaceTexture")
+    {
+    }
+
+    void SurfaceTexture::InitWithTexture(int texture)
+    {
+        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
+    }
+
+    void SurfaceTexture::updateTexImage() const
+    {
+        if (m_object) {
+            m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "updateTexImage", "()V"));
+        }
     }
 }

@@ -13,7 +13,8 @@ namespace xr
     {
         RGBA8_SRGB,
         BGRA8_SRGB,
-        D24S8
+        D24S8,
+        D16
     };
 
     enum class SessionType
@@ -57,6 +58,7 @@ namespace xr
     {
         size_t Width{};
         size_t Height{};
+        size_t Depth{};
     };
 
     struct Vector3f
@@ -154,6 +156,7 @@ namespace xr
         Floor,
         Ceiling,
         Platform,
+        Inferred,
         Undefined
     };
 
@@ -164,7 +167,8 @@ namespace xr
         {xr::SceneObjectType::Ceiling, "ceiling" },
         {xr::SceneObjectType::Floor, "floor" },
         {xr::SceneObjectType::Platform, "platform" },
-        {xr::SceneObjectType::Wall, "wall" }
+        {xr::SceneObjectType::Wall, "wall" },
+        {xr::SceneObjectType::Inferred, "inferred" }
     };
 
     class System
@@ -172,8 +176,8 @@ namespace xr
     public:
         static constexpr float DEFAULT_DEPTH_NEAR_Z{ 0.5f };
         static constexpr float DEFAULT_DEPTH_FAR_Z{ 1000.f };
-        static constexpr uint32_t DEFAULT_CONTROLLER_BUTTONS{ 4 };
-        static constexpr uint32_t DEFAULT_CONTROLLER_AXES{ 4 };
+        static constexpr uint32_t DEFAULT_CONTROLLER_BUTTONS_COUNT{ 4 };
+        static constexpr uint32_t DEFAULT_CONTROLLER_AXES_COUNT{ 4 };
 
         class Session
         {
@@ -204,8 +208,8 @@ namespace xr
                         float Value{0};
                     };
 
-                    std::array<float, DEFAULT_CONTROLLER_AXES> Axes;
-                    std::array<Button, DEFAULT_CONTROLLER_BUTTONS> Buttons;
+                    std::vector<float> Axes{};
+                    std::vector<Button> Buttons{};
                 };
 
                 struct View
@@ -241,6 +245,8 @@ namespace xr
                     bool TrackedThisFrame{};
                     bool JointsTrackedThisFrame{};
                     bool GamepadTrackedThisFrame{};
+                    bool HandTrackedThisFrame{};
+                    std::string InteractionProfileName{""};
                     GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
@@ -255,9 +261,11 @@ namespace xr
                 {
                     using Identifier = int32_t;
                     const static Identifier INVALID_ID = -1;
-
-                    Identifier ID{ INVALID_ID };
+                    Identifier ID{ NEXT_ID++ };
                     SceneObjectType Type{ SceneObjectType::Undefined };
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
                 };
 
                 struct Plane
@@ -291,8 +299,6 @@ namespace xr
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
-                std::vector<Plane>& Planes;
-                std::vector<Mesh>& Meshes;
                 std::vector<FeaturePoint>& FeaturePointCloud;
 
                 std::vector<SceneObject::Identifier>UpdatedSceneObjects;
@@ -327,9 +333,8 @@ namespace xr
             // Move to private when changing to unique_ptr.
             Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider);
 
-            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<void(void* texturePointer)> deletedTextureCallback = [](void*){});
+            std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback = [](void*){ return arcana::task_from_result<std::exception_ptr>(); });
             void RequestEndSession();
-            Size GetWidthAndHeightForViewIndex(size_t viewIndex) const;
             void SetDepthsNearFar(float depthNear, float depthFar);
             void SetPlaneDetectionEnabled(bool enabled) const;
             bool TrySetFeaturePointCloudEnabled(bool enabled) const;
@@ -348,6 +353,9 @@ namespace xr
         bool IsInitialized() const;
         bool TryInitialize();
         static arcana::task<bool, std::exception_ptr> IsSessionSupportedAsync(SessionType);
+
+        uintptr_t GetNativeXrContext();
+        std::string GetNativeXrContextType();
 
     private:
         struct Impl;

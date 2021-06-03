@@ -5,25 +5,23 @@
 #include <bx/debug.h>
 #include <stdarg.h>
 #include <bgfx/bgfx.h>
-#include <Babylon/JsRuntime.h>
 #include <assert.h>
 
 namespace Babylon
 {
-    void BgfxCallback::addScreenShotCallback(Napi::Function callback)
+    BgfxCallback::BgfxCallback(std::function<void(const CaptureData&)> captureCallback)
+        : m_captureCallback{std::move(captureCallback)}
     {
-        std::scoped_lock lock{ m_ssCallbackAccess };
-        m_screenshotCallbacks.push(Napi::Persistent(callback));
     }
 
-    void BgfxCallback::trace(const char* _filePath, uint16_t _line, const char* _format, ...)
+    void BgfxCallback::AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback)
     {
-        va_list argList;
-        va_start(argList, _format);
+        m_screenShotCallbacks.emplace(std::move(callback));
+    }
 
-        traceVargs(_filePath, _line, _format, argList);
-
-        va_end(argList);
+    void BgfxCallback::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
+    {
+        m_outputFunction = std::move(outputFunction);
     }
 
     void BgfxCallback::fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str)
@@ -75,11 +73,6 @@ namespace Babylon
     {
     }
 
-    void BgfxCallback::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
-    {
-        m_outputFunction = std::move(outputFunction);
-    }
-
     uint32_t BgfxCallback::cacheReadSize(uint64_t /*id*/)
     {
         return 0;
@@ -96,10 +89,10 @@ namespace Babylon
 
     void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, const void* data, uint32_t /*size*/, bool yflip)
     {
-        assert(m_screenshotCallbacks.size()); // addScreenShotCallback not called before doing the screenshot call on bgfx
-        auto env = m_screenshotCallbacks.front().Env();
-        auto array = Napi::Uint8Array::New(env, height * pitch);
-        auto bitmap = static_cast<uint8_t*>(array.Data());
+        assert(!m_screenShotCallbacks.empty()); // addScreenShotCallback not called before doing the screenshot call on bgfx
+
+        std::vector<uint8_t> array(height * pitch);
+        uint8_t* bitmap{array.data()};
 
         for (uint32_t py = 0; py < height; py++)
         {
@@ -114,24 +107,38 @@ namespace Babylon
             }
         }
 
-        JsRuntime& runtime{ JsRuntime::GetFromJavaScript(env) };
-
-        runtime.Dispatch([this, array = std::move(array)](Napi::Env) {
-            std::scoped_lock lock{ m_ssCallbackAccess };
-            m_screenshotCallbacks.front().Call({ array });
-            m_screenshotCallbacks.pop();
-        });
+        m_screenShotCallbacks.front()(std::move(array));
+        m_screenShotCallbacks.pop();
     }
 
-    void BgfxCallback::captureBegin(uint32_t /*width*/, uint32_t /*height*/, uint32_t /*pitch*/, bgfx::TextureFormat::Enum /*format*/, bool /*yflip*/)
+    void BgfxCallback::captureBegin(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yflip)
     {
+        m_captureData.Width = width;
+        m_captureData.Height = height;
+        m_captureData.Pitch = pitch;
+        m_captureData.Format = format;
+        m_captureData.YFlip = yflip;
     }
 
     void BgfxCallback::captureEnd()
     {
     }
 
-    void BgfxCallback::captureFrame(const void* /*_data*/, uint32_t /*_size*/)
+    void BgfxCallback::captureFrame(const void* data, uint32_t size)
     {
+        m_captureData.Data = data;
+        m_captureData.DataSize = size;
+
+        m_captureCallback(m_captureData);
+    }
+
+    void BgfxCallback::trace(const char* _filePath, uint16_t _line, const char* _format, ...)
+    {
+        va_list argList;
+        va_start(argList, _format);
+
+        traceVargs(_filePath, _line, _format, argList);
+
+        va_end(argList);
     }
 }
