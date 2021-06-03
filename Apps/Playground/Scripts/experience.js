@@ -17,7 +17,7 @@ var hololens = true;
 var slate = true;
 
 function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
+    //BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
 }
 
@@ -246,43 +246,74 @@ CreateBoxAsync().then(function () {
                         { xrInput: xr.input });
                         */
                 }
-                //const handsFeature = xr.baseExperience.featuresManager.enableFeature(BABYLON.WebXRFeatureName.HAND_TRACKING, "latest", {
-                //    xrInput: xr.input,
-                //});
+                const handsFeature = xr.baseExperience.featuresManager.enableFeature(BABYLON.WebXRFeatureName.HAND_TRACKING, "latest", {
+                    xrInput: xr.input,
+                });
 
                 xr.baseExperience.onInitialXRPoseSetObservable.add((camera) => {
                     setTimeout(() => {
                         var manager = new BABYLON.GUI.GUI3DManager(camera.getScene());
 
                         // Let's add a slate
-                        var slate = new BABYLON.GUI.HolographicSlate("down");
-                        manager.addControl(slate);
+                        //var slate = new BABYLON.GUI.HolographicSlate("down");
+                        //manager.addControl(slate);
 
-                        //const box = BABYLON.Mesh.CreateBox("box2", 0.2);
-                        //const handConstraint = new BABYLON.HandConstraintBehavior();
-                        //handConstraint.linkToXRExperience(xr.baseExperience);
-                        //handConstraint.attach(box);
-                        var box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
+                        const zones = [
+                            BABYLON.HandConstraintZone.RADIAL_SIDE,
+                            BABYLON.HandConstraintZone.ABOVE_FINGER_TIPS,
+                            BABYLON.HandConstraintZone.ULNAR_SIDE,
+                            BABYLON.HandConstraintZone.BELOW_WRIST,
+                        ]
+
+                        for (let i = 0; i < 3; i++) {
+                            const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
+                            manager.addControl(handMenu);
+
+                            const button0 = new BABYLON.GUI.TouchHolographicButton("button0");
+                            button0.text = "Test 0";
+                            handMenu.addButton(button0);
+
+                            const button1 = new BABYLON.GUI.TouchHolographicButton("button1");
+                            button1.text = "Test 1";
+                            handMenu.addButton(button1);
+
+                            const button2 = new BABYLON.GUI.TouchHolographicButton("button2");
+                            button2.text = "Test 2";
+                            handMenu.addButton(button2);
+
+                            handMenu.rows = 3;
+
+                            //const handConstraint = new BABYLON.HandConstraintBehavior();
+                            //handConstraint.linkToXRExperience(xr.baseExperience);
+                            //handConstraint.attach(box);
+                            handMenu.handConstraintBehavior.targetOffset = 0.1;
+                            handMenu.handConstraintBehavior.targetZone = zones[i];
+                            handMenu.handConstraintBehavior.lerpTime = 50;
+                            handMenu.handConstraintBehavior.zoneOrientationMode = BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA;
+                            //handMenu.handConstraintBehavior.nodeOrientationMode = BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA;
+
+                        }
+                        // var box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
 
                         // Let's add a slate
-                        var near = new BABYLON.GUI.NearMenu("near");
-                        manager.addControl(near);
+                        //var near = new BABYLON.GUI.NearMenu("near");
+                        //manager.addControl(near);
 
-                        var button0 = new BABYLON.GUI.TouchHolographicButton("button0");
-                        button0.text = "Test 0";
-                        near.addButton(button0);
+                        //var button0 = new BABYLON.GUI.TouchHolographicButton("button0");
+                        //button0.text = "Test 0";
+                        //near.addButton(button0);
 
-                        var button1 = new BABYLON.GUI.TouchHolographicButton("button1");
-                        button1.text = "Test 1";
-                        near.addButton(button1);
+                        //var button1 = new BABYLON.GUI.TouchHolographicButton("button1");
+                        //button1.text = "Test 1";
+                        //near.addButton(button1);
 
-                        var button2 = new BABYLON.GUI.TouchHolographicButton("button2");
-                        button2.text = "Test 2";
-                        near.addButton(button2);
+                        //var button2 = new BABYLON.GUI.TouchHolographicButton("button2");
+                        //button2.text = "Test 2";
+                        //near.addButton(button2);
 
-                        // Our built-in 'ground' shape.
-                        near._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
-                        near._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
+                        //// Our built-in 'ground' shape.
+                        //near._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
+                        //near._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
                     }, 2000)
                 })
 
