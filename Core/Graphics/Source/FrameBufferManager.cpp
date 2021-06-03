@@ -99,8 +99,8 @@ namespace Babylon
         // frame N: remapped views = 1,2,0
         // frame N: remapped views = 0,1
         // bgfx ends up with remapped views : 0,1,0
-        // having twice view 0 leads incomplete reordering.
-        // Filling all view remapping with unused indices to fix that.
+        // having twice view 0 leads to incomplete reordering.
+        // Filling all view remapped with unused indices to fix that.
         auto start = m_touchedViews.size();
         for (size_t i = start; i < bgfx::getCaps()->limits.maxViews; i++)
         {

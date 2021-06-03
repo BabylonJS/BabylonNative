@@ -571,6 +571,9 @@ namespace Babylon
     {
         if (!bgfx::getCaps()->originBottomLeft)
         {
+            // This is temporary until a Shader plugin is developed.
+            // Shader is loaded/created here, then passed to graphics Impl for use and destruction.
+            // Idealy, this shader would be created and managed by a 3rd entity (Shader plugin)
             ShaderCompiler::BgfxShaderInfo shaderInfo{};
 
             shaderInfo = m_shaderCompiler.Compile(YFlipVertexShader, YFlipFragmentShader);
@@ -1324,9 +1327,13 @@ namespace Babylon
             assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
+            // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
+            // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
+            // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
+            // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
             std::array<bgfx::TextureHandle, 2> textures{
                 bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
+                bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
             {
