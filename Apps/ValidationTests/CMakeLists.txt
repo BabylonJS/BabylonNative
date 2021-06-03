@@ -55,13 +55,14 @@ elseif(APPLE)
             "Shared/TestUtils.h")
      endif()
      set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
-     set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS} ${BABYLON_SCRIPTS})
-     add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES})
+     set(RESOURCE_FILES ${STORYBOARD})
+     add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES} ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES})
+     set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
-    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
+    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${REFERENCE_IMAGES})
 endif()
 
 warnings_as_errors(ValidationTests)

@@ -100,6 +100,10 @@ namespace Babylon
 #elif __APPLE__
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
             dispatch_async(dispatch_get_main_queue(), ^{
+                if (graphics)
+                {
+                    graphics->FinishRenderingCurrentFrame();
+                }
                 runtime.reset();
                 graphics.reset();
                 UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
