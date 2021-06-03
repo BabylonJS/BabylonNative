@@ -136,6 +136,8 @@ namespace
 
             Babylon::Plugins::NativeXr::Initialize(env);
 
+            Babylon::Plugins::NativeAudio::Initialize(env);
+
             InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
 
             chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));

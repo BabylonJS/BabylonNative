@@ -14,6 +14,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
+var audio = true;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -56,7 +57,7 @@ function CreateInputHandling(scene) {
     });
 }
 
-var engine = new BABYLON.NativeEngine();
+var engine = new BABYLON.NativeEngine({audioEngine: audio});
 var scene = new BABYLON.Scene(engine);
 
 CreateBoxAsync().then(function () {
@@ -246,6 +247,12 @@ CreateBoxAsync().then(function () {
                 });
             });
         }, 5000);
+    }
+
+    if (audio){
+        debugger;
+        var sound = new BABYLON.Sound("music", "https://cdn.jsdelivr.net/gh/Drigax/WebAssetHosting@master/Sounds/Tensino.mp3", scene);
+        sound.autoplay = true;
     }
 
     if (text) {
