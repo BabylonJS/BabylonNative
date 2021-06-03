@@ -95,6 +95,10 @@ namespace Babylon
 #elif __APPLE__
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
             dispatch_async(dispatch_get_main_queue(), ^{
+                if (graphics)
+                {
+                    graphics->FinishRenderingCurrentFrame();
+                }
                 runtime.reset();
                 graphics.reset();
                 UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
@@ -216,14 +220,15 @@ namespace Babylon
 
         Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
         {
+            const auto subFolder = info[0].As<Napi::String>().Utf8Value();
 #if defined(ANDROID)
             auto path = "app://";
 #elif defined(__APPLE__)
             std::string path = "app:///";
 #elif __linux__
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
+            auto path = std::string("file://") + GetModulePath().parent_path().generic_string() + subFolder;
 #else
-            auto path = std::string("file://") + GetModulePath().parent_path().parent_path().generic_string();
+            auto path = std::string("file://") + GetModulePath().parent_path().parent_path().generic_string() + subFolder;
 #endif
             return Napi::Value::From(info.Env(), path);
         }
