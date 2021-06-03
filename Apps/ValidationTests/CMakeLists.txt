@@ -55,9 +55,6 @@ elseif(APPLE)
             "Shared/TestUtils.h")
      endif()
      set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
-     set(JSSCRIPT "${CMAKE_CURRENT_LIST_DIR}/Scripts/config.json"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/validation_native.js")
-     set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES})
      add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES})
 elseif(UNIX)
     set(SOURCES

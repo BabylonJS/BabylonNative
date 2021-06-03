@@ -13,3 +13,7 @@ add_subdirectory(NativeEngine)
 # Add NativeXr
 # Dependencies: NativeEngine
 add_subdirectory(NativeXr)
+
+# Add NativeCamera
+add_subdirectory(NativeCamera)
+
