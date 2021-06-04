@@ -607,6 +607,11 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
+            // Don't try to create new textures if the window is no longer available.
+            if (m_windowPtr == nullptr)
+            {
+                return;
+            }
 
             m_sessionState->ActiveTextures.reserve(m_sessionState->Frame->Views.size());
             for (const auto& view : m_sessionState->Frame->Views)
@@ -1280,7 +1285,7 @@ namespace Babylon
                 nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
                 nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
                 nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
-                
+
                 return nativeRay;
             }
 
@@ -1288,10 +1293,6 @@ namespace Babylon
             Napi::ObjectReference m_origin{};
             Napi::ObjectReference m_direction{};
             Napi::Reference<Napi::Float32Array> m_matrix{};
-            size_t length;
-            napi_valuetype propNames;
-            bool isArray;
-            bool isObject;
 
             Napi::Value Origin(const Napi::CallbackInfo&)
             {
