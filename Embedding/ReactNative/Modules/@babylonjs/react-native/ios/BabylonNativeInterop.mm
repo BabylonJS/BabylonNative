@@ -89,12 +89,14 @@ static NSMutableArray* activeTouches = [NSMutableArray new];
 
             switch (touch.phase) {
                 case UITouchPhaseBegan: {
+                    // The activeTouches array only grows, it does not shrink (to keep indices constant since they are used as pointer ids),
+                    // so look for an unused (null) array element and reuse it if found. Otherwise, add a new entry to the array.
                     NSUInteger pointerId = [activeTouches indexOfObject:[NSNull null]];
-                    if (pointerId == NSNotFound) {
+                    if (pointerId != NSNotFound) {
+                        [activeTouches replaceObjectAtIndex:pointerId withObject:touch];
+                    } else {
                         pointerId = [activeTouches count];
                         [activeTouches addObject:touch];
-                    } else {
-                        [activeTouches replaceObjectAtIndex:pointerId withObject:touch];
                     }
                     Babylon::SetTouchButtonState(static_cast<uint32_t>(pointerId), true, x, y);
                     break;
@@ -102,15 +104,19 @@ static NSMutableArray* activeTouches = [NSMutableArray new];
 
                 case UITouchPhaseMoved: {
                     NSUInteger pointerId = [activeTouches indexOfObject:touch];
-                    Babylon::SetTouchPosition(static_cast<uint32_t>(pointerId), x, y);
+                    if (pointerId != NSNotFound) {
+                        Babylon::SetTouchPosition(static_cast<uint32_t>(pointerId), x, y);
+                    }
                     break;
                 }
 
                 case UITouchPhaseEnded:
                 case UITouchPhaseCancelled: {
                     NSUInteger pointerId = [activeTouches indexOfObject:touch];
-                    [activeTouches replaceObjectAtIndex:pointerId withObject:[NSNull null]];
-                    Babylon::SetTouchButtonState(static_cast<uint32_t>(pointerId), false, x, y);
+                    if (pointerId != NSNotFound) {
+                        [activeTouches replaceObjectAtIndex:pointerId withObject:[NSNull null]];
+                        Babylon::SetTouchButtonState(static_cast<uint32_t>(pointerId), false, x, y);
+                    }
                     break;
                 }
 
