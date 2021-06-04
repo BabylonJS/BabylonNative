@@ -160,14 +160,12 @@ namespace {
  Returns the orientation of the app based on the current status bar orientation.
 */
 - (UIInterfaceOrientation)orientation {
-    auto sharedApplication = [UIApplication sharedApplication];
-    auto window = sharedApplication.windows.firstObject;
-    if (@available(iOS 13.0, *)) {
-        return window.windowScene.interfaceOrientation;
-    }
-    else {
-        return [[UIApplication sharedApplication] statusBarOrientation];
-    }
+    UIApplication* sharedApplication = [UIApplication sharedApplication];
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
+    return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+#else
+    return [sharedApplication statusBarOrientation];
+#endif
 }
 
 /**
