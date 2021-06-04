@@ -17,6 +17,7 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -44,48 +45,55 @@ namespace
 {
     void Uninitialize()
     {
+        if (graphics)
+        {
+            graphics->FinishRenderingCurrentFrame();
+        }
+
         runtime.reset();
         graphics.reset();
     }
 
     void Initialize(HWND hWnd)
     {
-        graphics = Babylon::Graphics::CreateGraphics<void*>(hWnd, static_cast<size_t>(TEST_WIDTH), static_cast<size_t>(TEST_HEIGHT));
+        Babylon::WindowConfiguration graphicsConfig{};
+        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
+        graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
+
+        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+        graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
-        runtime->Dispatch([hWnd](Napi::Env env)
-            {
-                const int width = TEST_WIDTH;
-                const int height = TEST_HEIGHT;
+        runtime->Dispatch([hWnd](Napi::Env env) {
+            graphics->AddToJavaScript(env);
 
-                Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                    OutputDebugStringA(message);
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                OutputDebugStringA(message);
 
-                    printf("%s", message);
-                    fflush(stdout);
-                });
-
-                Babylon::Polyfills::Window::Initialize(env);
-                Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-                Babylon::Polyfills::Window::Initialize(env);
-
-                // Initialize NativeEngine plugin.
-                graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env);
-
-                Babylon::TestUtils::CreateInstance(env, hWnd);
+                printf("%s", message);
+                fflush(stdout);
             });
+
+            Babylon::Polyfills::Window::Initialize(env);
+
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+            Babylon::Plugins::NativeEngine::Initialize(env);
+
+            Babylon::Plugins::NativeXr::Initialize(env);
+
+            Babylon::TestUtils::CreateInstance(env, hWnd);
+        });
 
         Babylon::ScriptLoader loader{ *runtime };
         loader.LoadScript("app:///Scripts/babylon.max.js");
-        loader.LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
         loader.LoadScript("app:///Scripts/babylonjs.materials.js");
         loader.LoadScript("app:///Scripts/babylon.gui.js");
-        loader.LoadScript("app:///Scripts/draco_decoder_gltf.js");
         loader.LoadScript("app:///Scripts/validation_native.js");
     }
 }
@@ -111,15 +119,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VALIDATIONTESTSWIN32));
 
-    MSG msg;
+    MSG msg{};
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (msg.message != WM_QUIT)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        if (graphics)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            graphics->FinishRenderingCurrentFrame();
+            graphics->StartRenderingCurrentFrame();
+        }
+
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT)
+        {
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
     }
 
@@ -165,7 +182,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
     hInst = hInstance; // Store instance handle in our global variable
-    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
         CW_USEDEFAULT, CW_USEDEFAULT, TEST_WIDTH, TEST_HEIGHT, nullptr, nullptr, hInstance, nullptr);
 
     if (!hWnd)
@@ -194,29 +211,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-        case WM_SYSCOMMAND:
-        {
-            if ((wParam & 0xFFF0) == SC_MINIMIZE)
-            {
-                runtime->Suspend();
-            }
-            else if ((wParam & 0xFFF0) == SC_RESTORE)
-            {
-                runtime->Resume();
-            }
-            DefWindowProc(hWnd, message, wParam, lParam);
-            break;
-        }
-        case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            BeginPaint(hWnd, &ps);
-            EndPaint(hWnd, &ps);
-            break;
-        }
         case WM_SIZE:
         {
-            if (graphics != nullptr)
+            if (graphics)
             {
                 size_t width = static_cast<size_t>(LOWORD(lParam));
                 size_t height = static_cast<size_t>(HIWORD(lParam));

@@ -1,8 +1,8 @@
 # Babylon Native Documention
 
-## Android Simulator tips
+## Android Emulator tips
 
-[Some tips to improve your experience of Babylon  Native with the Android Simulator.](AndroidSimulator.md)
+[Some tips to improve your experience of Babylon Native with the Android Emulator.](AndroidEmulator.md)
 
 ## Build system overview
 
@@ -23,3 +23,6 @@
 ## Continuous Integration
 
 [All about the validation checks for each pull request.](ContinuousIntegration.md)
+
+## Frequently Asked Questions
+[Any other assorted information not answered in the above sections can be found here](faq.md)

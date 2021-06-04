@@ -14,6 +14,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -21,12 +22,12 @@
 
 namespace
 {
-    constexpr bool RENDER_ON_JS_THREAD{true};
-
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
+    std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
+    bool g_isXrActive{};
 }
 
 extern "C"
@@ -39,10 +40,18 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
+        if (g_graphics)
+        {
+            g_graphics->FinishRenderingCurrentFrame();
+        }
+
+        g_nativeXr.reset();
         g_scriptLoader.reset();
-        g_graphics.reset();
         g_inputBuffer.reset();
         g_runtime.reset();
+        g_graphics.reset();
+
+        g_isXrActive = false;
     }
 
     JNIEXPORT void JNICALL
@@ -61,13 +70,20 @@ extern "C"
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
-            
+
+            Babylon::WindowConfiguration graphicsConfig{};
+            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Width = static_cast<size_t>(width);
+            graphicsConfig.Height = static_cast<size_t>(height);
+            g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+            g_graphics->StartRenderingCurrentFrame();
+
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
-            g_runtime->Dispatch([javaVM, window, width, height](Napi::Env env)
+            g_runtime->Dispatch([](Napi::Env env)
             {
-                g_graphics = Babylon::Graphics::CreateGraphics<void*>(window, static_cast<size_t>(width), static_cast<size_t>(height));
+                g_graphics->AddToJavaScript(env);
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -85,12 +101,14 @@ extern "C"
                     }
                 });
 
-                g_graphics->AddToJavaScript(env);
-                Babylon::Plugins::NativeEngine::Initialize(env, RENDER_ON_JS_THREAD);
+                Babylon::Plugins::NativeEngine::Initialize(env);
 
-                Babylon::Plugins::NativeXr::Initialize(env);
+                g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
+                g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
+                Babylon::Plugins::Camera::Initialize(env, true);
                 Babylon::Polyfills::Window::Initialize(env);
+
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
                 InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
@@ -101,7 +119,7 @@ extern "C"
             g_scriptLoader->LoadScript("app:///Scripts/ammo.js");
             g_scriptLoader->LoadScript("app:///Scripts/recast.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");
+            g_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
             g_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
         }
@@ -114,7 +132,11 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-                g_graphics->UpdateWindow<void*>(window);
+                Babylon::WindowConfiguration graphicsConfig{};
+                graphicsConfig.WindowPtr = window;
+                graphicsConfig.Width = width;
+                graphicsConfig.Height = height;
+                g_graphics->UpdateWindow(graphicsConfig);
                 g_graphics->UpdateSize(width, height);
             });
         }
@@ -199,9 +221,30 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        if (!RENDER_ON_JS_THREAD)
+        if (g_graphics)
         {
-            g_graphics->RenderCurrentFrame();
+            g_graphics->FinishRenderingCurrentFrame();
+            g_graphics->StartRenderingCurrentFrame();
         }
+    }
+
+    JNIEXPORT void JNICALL
+    Java_BabylonNative_Wrapper_xrSurfaceChanged(JNIEnv* env, jclass clazz, jobject surface)
+    {
+        if (g_nativeXr)
+        {
+            ANativeWindow* window{};
+            if (surface)
+            {
+                window = ANativeWindow_fromSurface(env, surface);
+            }
+            g_nativeXr->UpdateWindow(window);
+        }
+    }
+
+    JNIEXPORT jboolean JNICALL
+    Java_BabylonNative_Wrapper_isXRActive(JNIEnv* env, jclass clazz)
+    {
+        return g_isXrActive;
     }
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "XrSupportedExtensions.h"
-#include "XrSceneUnderstanding.h"
+#include "XrUtility/XrSceneUnderstanding.h"
 
 namespace xr
 {
@@ -33,31 +33,10 @@ namespace xr
             const XrTime DisplayTime;
             std::vector<System::Session::Frame::SceneObject::Identifier>& UpdatedSceneObjects;
             std::vector<System::Session::Frame::SceneObject::Identifier>& RemovedSceneObjects;
-            std::vector<System::Session::Frame::Plane>& Planes;
             std::vector<System::Session::Frame::Plane::Identifier>& UpdatedPlanes;
             std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
-            std::vector<System::Session::Frame::Mesh>& Meshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& UpdatedMeshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& RemovedMeshes;
-        };
-
-        struct Mesh : SceneMesh
-        {
-            XrSceneMeshKeyMSFT key;
-            XrSceneObjectKeyMSFT parentObjectKey;
-        };
-
-        struct Plane : ScenePlane
-        {
-            XrScenePlaneKeyMSFT key;
-            XrSceneObjectKeyMSFT parentObjectKey;
-        };
-
-        struct SceneObject : public xr::System::Session::Frame::SceneObject
-        {
-            std::map<XrSceneMeshKeyMSFT, Mesh> Meshes;
-            std::map<XrScenePlaneKeyMSFT, Plane> Planes;
-            XrPosef Pose;
         };
 
         SceneUnderstanding();

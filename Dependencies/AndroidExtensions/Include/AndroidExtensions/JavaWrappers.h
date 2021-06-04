@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstddef>
 #include <android/asset_manager.h>
+#include <android/native_window.h>
 
 // --------------------
 // Forward Declarations
@@ -48,6 +49,8 @@ namespace android::content
 namespace android::content::res
 {
     class AssetManager;
+    class Resources;
+    class Configuration;
 }
 
 namespace android::net
@@ -236,6 +239,8 @@ namespace android::content
 
         res::AssetManager getAssets() const;
 
+        res::Resources getResources();
+
         template<typename ServiceT>
         ServiceT getSystemService()
         {
@@ -257,6 +262,33 @@ namespace android::content::res
 
         operator AAssetManager*() const;
     };
+
+    class Resources : public java::lang::Object
+    {
+    public:
+        Resources(jobject object);
+
+        Configuration getConfiguration();
+    };
+
+    class Configuration : public java::lang::Object
+    {
+    public:
+        Configuration(jobject object);
+
+        int getDensityDpi();
+    };
+}
+
+namespace android::graphics
+{
+    class SurfaceTexture : public java::lang::Object
+    {
+    public:
+        SurfaceTexture();
+        void InitWithTexture(int texture);
+        void updateTexImage() const;
+    };
 }
 
 namespace android::view
@@ -276,6 +308,12 @@ namespace android::view
         WindowManager(jobject object);
 
         Display getDefaultDisplay();
+    };
+
+    class Surface : public java::lang::Object
+    {
+    public:
+        Surface(android::graphics::SurfaceTexture& surfaceTexture);
     };
 }
 

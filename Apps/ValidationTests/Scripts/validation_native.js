@@ -1,4 +1,5 @@
 var engine;
+var canvas;
 var currentScene;
 var config;
 var justOnce;
@@ -42,16 +43,16 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.title + ".png");
+        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.title + ".png");
+        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
     }
     return error;
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done) {
-    /*var canvasImageData =*/ engine._native.getFramebufferData(function (screenshot) { 
+    /*var canvasImageData =*/ engine._native.getFrameBufferData(function (screenshot) { 
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {
@@ -117,7 +118,8 @@ function runTest(index, done) {
     seed = 100000;
 
     let onLoadFileError = function(request, exception) {
-        console.log("Failed to retrieve " + url + ".", exception);
+        console.error("Failed to retrieve " + url + ".", exception);
+        done(false);
     };
     var onload = function(data, responseURL) {
         if (typeof (data) === "string") {
@@ -272,85 +274,76 @@ function runTest(index, done) {
         }
     };
 
-    let url = "https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/tests/validation/ReferenceImages/" + test.referenceImage;
+    const url = "app:///ReferenceImages/" + test.referenceImage;
     BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
 }
 
-var engine;
-var scene;
-var canvas;
-var xhr;
+engine = new BABYLON.NativeEngine();
+canvas = window;
 
-_native.whenGraphicsReady().then(() => {
+engine.getRenderingCanvas = function () {
+    return window;
+}
 
-    engine = new BABYLON.NativeEngine();
-    scene = new BABYLON.Scene(engine);
-    canvas = window;
+engine.getInputElement = function () {
+    return 0;
+}
 
-    engine.getRenderingCanvas = function () {
-        return window;
-    }
-
-    engine.getInputElement = function () {
-        return 0;
-    }
-
-    OffscreenCanvas = function(width, height) {
-        return {
-            width: width
-            , height: height
-            , getContext: function(type) {
-                return {
-                    fillRect: function(x, y, w, h) { }
-                    , measureText: function(text) { return 8; }
-                    , fillText: function(text, x, y) { }
-                };
-            }
-        };
-    }
-
-    document = {
-        createElement: function (type) {
-            if (type === "canvas") {
-                return new OffscreenCanvas(64, 64);
-            }
-            return {};
-        },
-        removeEventListener: function () { }
-    }
-
-    xhr = new XMLHttpRequest();
-    xhr.open("GET", TestUtils.getResourceDirectory() + "config.json", true);
-
-    xhr.addEventListener("readystatechange", function() {
-        if (xhr.status === 200) {
-            config = JSON.parse(xhr.responseText);
-
-            // Run tests
-            var index = 0;
-            var recursiveRunTest = function(i) {
-                runTest(i, function(status) {
-                    if (!status) {
-                        TestUtils.exit(-1);
-                        return;
-                    }
-                    i++;
-                    if (justOnce || i >= config.tests.length) {
-                        engine.dispose();
-                        TestUtils.exit(0);
-                        return;
-                    }
-                    recursiveRunTest(i);
-                });
-            }
-
-            recursiveRunTest(index);
+OffscreenCanvas = function(width, height) {
+    return {
+        width: width
+        , height: height
+        , getContext: function(type) {
+            return {
+                fillRect: function(x, y, w, h) { }
+                , measureText: function(text) { return 8; }
+                , fillText: function(text, x, y) { }
+            };
         }
-    }, false);
+    };
+}
 
-    _native.RootUrl = "https://playground.babylonjs.com";
-    console.log("Starting");
-    TestUtils.setTitle("Starting Native Validation Tests");
-    TestUtils.updateSize(testWidth, testHeight);
-    xhr.send();
-});
+document = {
+    createElement: function (type) {
+        if (type === "canvas") {
+            return new OffscreenCanvas(64, 64);
+        }
+        return {};
+    },
+    removeEventListener: function () { }
+}
+
+var xhr = new XMLHttpRequest();
+xhr.open("GET", "app:///Scripts/config.json", true);
+
+xhr.addEventListener("readystatechange", function() {
+    if (xhr.status === 200) {
+        config = JSON.parse(xhr.responseText);
+
+        // Run tests
+        var index = 0;
+        var recursiveRunTest = function(i) {
+            runTest(i, function(status) {
+                if (!status) {
+                    TestUtils.exit(-1);
+                    return;
+                }
+                i++;
+                if (justOnce || i >= config.tests.length) {
+                    engine.dispose();
+                    TestUtils.exit(0);
+                    return;
+                }
+                recursiveRunTest(i);
+            });
+        }
+
+        recursiveRunTest(index);
+    }
+}, false);
+
+_native.RootUrl = "https://playground.babylonjs.com";
+console.log("Starting");
+TestUtils.setTitle("Starting Native Validation Tests");
+TestUtils.updateSize(testWidth, testHeight);
+xhr.send();

@@ -13,7 +13,6 @@ namespace Babylon::Polyfills::Internal
         static Window& GetFromJavaScript(Napi::Env);
 
         Window(const Napi::CallbackInfo& info);
-
     private:
         JsRuntime& m_runtime;
 
@@ -21,6 +20,7 @@ namespace Babylon::Polyfills::Internal
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);
+        static Napi::Value GetDevicePixelRatio(const Napi::CallbackInfo& info);
 
         void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::system_clock::time_point whenToRun);
     };
