@@ -41,13 +41,6 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    std::filesystem::path GetModulePath()
-    {
-        char buffer[1024];
-        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
-        return std::filesystem::path{buffer};
-    }
-
     std::string GetUrlFromPath(const std::filesystem::path& path)
     {
         char url[1024];
