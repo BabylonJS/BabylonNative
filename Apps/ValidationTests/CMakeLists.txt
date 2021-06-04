@@ -42,6 +42,8 @@ elseif(APPLE)
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm"
             "Shared/TestUtils.h")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -53,11 +55,12 @@ elseif(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h"
             "Shared/TestUtils.h")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
      endif()
      set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
      set(RESOURCE_FILES ${STORYBOARD})
      add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES} ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES})
-     set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}

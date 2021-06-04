@@ -36,6 +36,7 @@ if(APPLE)
             "iOS/ViewController.swift"
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -47,11 +48,12 @@ if(APPLE)
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
     endif()
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
         PRIVATE ${JSCORE_LIBRARY}
         PRIVATE NativeCamera)
-    set(RESOURCE_FILES ${STORYBOARD} ${BABYLON_SCRIPTS} ${SCRIPTS} ${DEPENDENCIES})
+    set(RESOURCE_FILES ${STORYBOARD})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
