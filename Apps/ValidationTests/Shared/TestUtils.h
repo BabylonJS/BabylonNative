@@ -229,6 +229,16 @@ namespace Babylon
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
 #elif __APPLE__
             std::string path = getenv("HOME");
+#elif __linux__
+            char exe[1024];
+            int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
+            if(ret == -1)
+            {
+                throw Napi::Error::New(info.Env(), "Unable to get executable location");
+            }
+            exe[ret] = 0;
+
+            auto path = std::string("file://") + std::filesystem::path{exe}.parent_path().generic_string();
 #elif WIN32
             auto path = GetModulePath().parent_path().generic_string();
 #endif
