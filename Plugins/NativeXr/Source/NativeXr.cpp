@@ -1197,62 +1197,75 @@ namespace Babylon
             XRRay(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRay>{info}
             {
-                bool originSet = false;
-                bool directionSet = false;
-                bool matrixSet = false;
-                if (info[0].IsObject())
+                auto argLength = info.Length();
+                xr::Ray tempVals{};
+                tempVals.Direction.Z = -1.0;
+
+                m_origin = Napi::Persistent(Napi::Object::New(info.Env()));
+                m_direction = Napi::Persistent(Napi::Object::New(info.Env()));
+                m_matrix = Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE));
+
+                // The constructor is either sent a BABYLON.Vector3, {}, an XRRigidTransform, or {x,y,z,w},{x,y,z,w}
+                if (argLength > 0 && info[0].IsObject())
                 {
                     auto argumentObject = info[0].As<Napi::Object>();
-                    auto th = info.This();
-                    length = info.Length();
-                    auto dat = info[0];
-                    propNames = dat.Type();
-                     isObject = dat.IsObject();
-                     isArray = dat.IsArray();
 
-                    auto originValue = argumentObject.Get("origin");
-                    if (originValue.IsObject())
+                    XRRigidTransform* transform = XRRigidTransform::Unwrap(argumentObject);
+                    if (transform != nullptr)
                     {
-                        originSet = true;
-                        m_origin = Napi::Persistent(originValue.As<Napi::Object>());
+                        // The value passed in to the contructor is an XRRigidTransform
+                        xr::Pose pose = transform->GetNativePose();
+                        tempVals.Origin = pose.Position;
+
+                        // Grab forward direction from quaternion
+                        tempVals.Direction.X = 2 * ((pose.Orientation.X * pose.Orientation.Z) + (pose.Orientation.W * pose.Orientation.Y));
+                        tempVals.Direction.Y = 2 * ((pose.Orientation.Y * pose.Orientation.Z) - (pose.Orientation.W * pose.Orientation.X));
+                        tempVals.Direction.Z = 1 - (2 * ((pose.Orientation.X * pose.Orientation.X) + (pose.Orientation.Y * pose.Orientation.Y)));
                     }
 
-                    auto directionValue = argumentObject.Get("direction");
-                    if (directionValue.IsObject())
+                    if (argumentObject.Has("x"))
                     {
-                        directionSet = true;
-                        m_direction = Napi::Persistent(directionValue.As<Napi::Object>());
+                        tempVals.Origin.X = argumentObject.Get("x").ToNumber().FloatValue();
                     }
-
-                    auto matrixValue = argumentObject.Get("matrix");
-                    if (matrixValue.IsArray())
+                    if (argumentObject.Has("y"))
                     {
-                        matrixSet = true;
-                        m_matrix = Napi::Persistent(matrixValue.As<Napi::Float32Array>());
+                        tempVals.Origin.Y = argumentObject.Get("y").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("z"))
+                    {
+                        tempVals.Origin.Z = argumentObject.Get("z").ToNumber().FloatValue();
+                    }
+                }
+                if (argLength >= 2 && info[1].IsObject())
+                {
+                    auto argumentObject = info[1].As<Napi::Object>();
+
+                    if (argumentObject.Has("x"))
+                    {
+                        tempVals.Direction.X = argumentObject.Get("x").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("y"))
+                    {
+                        tempVals.Direction.Y = argumentObject.Get("y").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("z"))
+                    {
+                        tempVals.Direction.Z = argumentObject.Get("z").ToNumber().FloatValue();
                     }
                 }
 
-                // Ensure the direction and origin exists in a valid state, to match webXR API
-                if (!originSet)
-                {
-                    m_origin = Napi::Persistent(Napi::Object::New(info.Env()));
-                    m_origin.Set("x", Napi::Value::From(info.Env(), 0));
-                    m_origin.Set("y", Napi::Value::From(info.Env(), 0));
-                    m_origin.Set("z", Napi::Value::From(info.Env(), 0));
-                }
+                // Normalize the direction
+                auto norm = bx::normalize(bx::Vec3(tempVals.Direction.X, tempVals.Direction.Y, tempVals.Direction.Z));
+                tempVals.Direction = {norm.x, norm.y, norm.z};
 
-                if (!directionSet)
-                {
-                    m_direction = Napi::Persistent(Napi::Object::New(info.Env()));
-                    m_direction.Set("x", Napi::Value::From(info.Env(), 0));
-                    m_direction.Set("y", Napi::Value::From(info.Env(), 0));
-                    m_direction.Set("z", Napi::Value::From(info.Env(), -1));
-                }
-
-                if (!matrixSet)
-                {
-                    m_matrix = Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE));
-                }
+                m_origin.Set("x", Napi::Value::From(info.Env(), tempVals.Origin.X));
+                m_origin.Set("y", Napi::Value::From(info.Env(), tempVals.Origin.Y));
+                m_origin.Set("z", Napi::Value::From(info.Env(), tempVals.Origin.Z));
+                m_origin.Set("w", Napi::Value::From(info.Env(), 1.0));
+                m_direction.Set("x", Napi::Value::From(info.Env(), tempVals.Direction.X));
+                m_direction.Set("y", Napi::Value::From(info.Env(), tempVals.Direction.Y));
+                m_direction.Set("z", Napi::Value::From(info.Env(), tempVals.Direction.Z));
+                m_direction.Set("w", Napi::Value::From(info.Env(), 0));
             }
 
             xr::Ray GetNativeRay()
