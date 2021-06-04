@@ -261,6 +261,26 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
+        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteStride)
+        {
+            const size_t count = m_bytes.size() / byteStride;
+            const size_t destinationSize = count * numElements * sizeof(float);
+            if (destinationSize != m_bytes.size()) // ensure both vectors have different size
+            {
+                std::vector<uint8_t> bytes(destinationSize);
+                float* destination = (float*)bytes.data();
+                for (size_t i = 0; i < count; i++)
+                {
+                    sourceType* source = (sourceType*)(m_bytes.data() + byteStride * i);
+                    for (size_t element = 0; element < numElements; element++)
+                    {
+                        *destination++ = static_cast<float>(*source++);
+                    }
+                }
+                m_bytes = std::move(bytes);
+            }
+        }
+
         void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
         {
             const auto nonDynamic = [&layout, this](auto handle) {
@@ -326,6 +346,12 @@ namespace Babylon
                 encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
+        }
+
+        // size in bytes
+        size_t Size() const 
+        { 
+            return m_bytes.size();
         }
 
     private:
@@ -604,13 +630,53 @@ namespace Babylon
 
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
         const bgfx::AttribType::Enum attribType = static_cast<bgfx::AttribType::Enum>(type);
-        vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
-        vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+
+        const bool promoteToFloats = (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 || 
+            bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 || 
+            bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan) && 
+            (attribType == bgfx::AttribType::Int8 || 
+            attribType == bgfx::AttribType::Uint8 || 
+            attribType == bgfx::AttribType::Uint10 || 
+            attribType == bgfx::AttribType::Int16 || 
+            attribType == bgfx::AttribType::Uint16) &&
+            (attrib == bgfx::Attrib::Position ||
+            attrib == bgfx::Attrib::Normal ||
+            attrib == bgfx::Attrib::Bitangent ||
+            attrib == bgfx::Attrib::Tangent);
+
+        if (promoteToFloats)
+        {
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float, normalized);
+            vertexLayout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
+            switch(attribType)
+            {
+            case bgfx::AttribType::Int8:
+                vertexBufferData->PromoteToFloats<int8_t>(numElements, byteStride);
+                break;
+            case bgfx::AttribType::Uint8:
+                vertexBufferData->PromoteToFloats<uint8_t>(numElements, byteStride);
+                break;
+            case bgfx::AttribType::Int16:
+                vertexBufferData->PromoteToFloats<int16_t>(numElements, byteStride);
+                break;
+            case bgfx::AttribType::Uint16:
+                vertexBufferData->PromoteToFloats<uint16_t>(numElements, byteStride);
+                break;
+            case bgfx::AttribType::Uint10: // is supported by any format ?
+            default:
+                throw std::runtime_error("Unable to promote vertex stream to a float array.");
+            }
+        }
+        else
+        {
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
+            vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+        }
         vertexLayout.end();
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
-        vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
+        vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / vertexLayout.m_stride, bgfx::createVertexLayout(vertexLayout)};
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
