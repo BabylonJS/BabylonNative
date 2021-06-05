@@ -180,7 +180,7 @@ namespace UrlLib
                 // Curl can't parse URL starting with app://
                 // doing it manually instead
                 const auto appSchema = "app://";
-                if (!m_url.find(appSchema))
+                if (m_url.find(appSchema) == 0)
                 {
                     char exe[1024];
                     int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
