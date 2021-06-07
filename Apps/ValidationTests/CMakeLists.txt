@@ -145,6 +145,11 @@ foreach(IMAGE ${REFERENCE_IMAGES})
         MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
 endforeach()
 
+
+# directory for generated images and errors
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Results")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Errors")
+
 set_property(TARGET ValidationTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages PREFIX ReferenceImages FILES ${REFERENCE_IMAGES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})

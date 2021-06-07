@@ -10,6 +10,8 @@ CI validation is composed of 3 main parts:
 - The ValidationTests app
 - The platform integration
 
+For adding new Validation Tests, [you'll find extensive documentation here.](Documentation/AddingNewValidationTests.md)
+
 # Test datas
 They are shared with babylonjs for the most part.
 Validation test scenes are listed in `Apps\ValidationTests\Scripts\config.json`. It lists playground identifier that will be opened sequentialy. Per PG is may have additional parameters for validation pixels difference threshold.
