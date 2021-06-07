@@ -42,6 +42,8 @@ elseif(APPLE)
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm"
             "Shared/TestUtils.h")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -53,17 +55,17 @@ elseif(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h"
             "Shared/TestUtils.h")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
      endif()
      set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
-     set(JSSCRIPT "${CMAKE_CURRENT_LIST_DIR}/Scripts/config.json"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/validation_native.js")
-     set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT} ${BABYLON_SCRIPTS})
-     add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES})
+     set(RESOURCE_FILES ${STORYBOARD})
+     add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES} ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
-    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
+    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${REFERENCE_IMAGES})
 endif()
 
 warnings_as_errors(ValidationTests)
@@ -127,13 +129,11 @@ if(APPLE)
     endif()
 endif()
 
-foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS})
+foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
-    # Copy scripts to the parent of the executable location since CMake can't use generator
-    # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
     add_custom_command(
-        OUTPUT "Scripts/${SCRIPT_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
+        OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
         COMMENT "Copying ${SCRIPT_NAME}"
         MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
 endforeach()
@@ -141,8 +141,8 @@ endforeach()
 foreach(IMAGE ${REFERENCE_IMAGES})
     get_filename_component(IMAGE_NAME "${IMAGE}" NAME)
     add_custom_command(
-        OUTPUT "ReferenceImages/${IMAGE_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/ReferenceImages/${IMAGE_NAME}"
+        OUTPUT "${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
         COMMENT "Copying ${IMAGE_NAME}"
         MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
 endforeach()

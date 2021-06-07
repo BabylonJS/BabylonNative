@@ -36,6 +36,7 @@ if(APPLE)
             "iOS/ViewController.swift"
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -47,19 +48,12 @@ if(APPLE)
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
     endif()
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
-    set(JSSCRIPT
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/ammo.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/recast.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/meshwriter.min.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs/babylon.max.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs-materials/babylonjs.materials.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../node_modules/babylonjs-gui/babylon.gui.js"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/experience.js"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/playground_runner.js")
-    set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT})
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
+        PRIVATE ${JSCORE_LIBRARY}
+        PRIVATE NativeCamera)
+    set(RESOURCE_FILES ${STORYBOARD})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
@@ -94,7 +88,7 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr NativeCamera)
 endif()
 
 if(WIN32)
@@ -182,11 +176,9 @@ if(WINDOWS_STORE)
 else()
     foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
-        # Copy scripts to the parent of the executable location since CMake can't use generator
-        # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
         add_custom_command(
-            OUTPUT "Scripts/${SCRIPT_NAME}"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
+            OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
             COMMENT "Copying ${SCRIPT_NAME}"
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
     endforeach()
