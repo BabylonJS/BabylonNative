@@ -1,5 +1,6 @@
 #include <UrlLib/UrlLib.h>
 #include <Unknwn.h>
+#include <PathCch.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_conversions.h>
 #include <robuffer.h>
@@ -22,6 +23,19 @@ namespace UrlLib
                 default:
                     throw std::runtime_error("Unsupported method");
             }
+        }
+
+        winrt::hstring GetInstalledLocation()
+        {
+#ifdef WIN32
+            WCHAR modulePath[4096];
+            DWORD result{::GetModuleFileNameW(nullptr, modulePath, ARRAYSIZE(modulePath))};
+            winrt::check_bool(result != 0 && result != std::size(modulePath));
+            winrt::check_hresult(PathCchRemoveFileSpec(modulePath, ARRAYSIZE(modulePath)));
+            return modulePath;
+#else
+            return ApplicationModel::Package::Current().InstalledLocation().Path;
+#endif
         }
 
         std::wstring GetLocalPath(Foundation::Uri url)
@@ -67,7 +81,10 @@ namespace UrlLib
 
             if (url.SchemeName() == L"app")
             {
-                return arcana::create_task<std::exception_ptr>(ApplicationModel::Package::Current().InstalledLocation().GetFileAsync(GetLocalPath(url)))
+                return arcana::create_task<std::exception_ptr>(Storage::StorageFolder::GetFolderFromPathAsync(GetInstalledLocation()))
+                    .then(arcana::inline_scheduler, m_cancellationSource, [this, url{std::move(url)}](Storage::StorageFolder folder) {
+                        return arcana::create_task<std::exception_ptr>(folder.GetFileAsync(GetLocalPath(url)));
+                    })
                     .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::StorageFile file) {
                         return LoadFileAsync(file);
                     });
