@@ -1,15 +1,17 @@
-set(BABYLONSCRIPTS
-    "../BabylonScripts/babylonjs.loaders.js"
-    "../BabylonScripts/babylonjs.loaders.js.map"
-    "../BabylonScripts/babylon.max.js"
-    "../BabylonScripts/babylon.max.js.map"
-    "../BabylonScripts/babylonjs.materials.js"
-    "../BabylonScripts/babylonjs.materials.js.map"
-    "../BabylonScripts/babylon.gui.js"
-    "../BabylonScripts/babylon.gui.js.map"
-    "../BabylonScripts/ammo.js"
-    "../BabylonScripts/meshwriter.min.js"
-    "../BabylonScripts/recast.js")
+set(BABYLON_SCRIPTS
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
+    "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs/babylon.max.js.map"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/babylonjs-gui/babylon.gui.js.map")
+
+set(DEPENDENCIES
+    "../Dependencies/ammo.js"
+    "../Dependencies/meshwriter.min.js"
+    "../Dependencies/recast.js")
 
 set(SCRIPTS
     "Scripts/experience.js"
@@ -46,17 +48,10 @@ if(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
     endif()
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
-    set(JSSCRIPT
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/ammo.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/recast.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.loaders.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.max.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylonjs.materials.js"
-        "${CMAKE_CURRENT_LIST_DIR}/../BabylonScripts/babylon.gui.js"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/experience.js"
-        "${CMAKE_CURRENT_LIST_DIR}/Scripts/playground_runner.js")
-    set(RESOURCE_FILES ${STORYBOARD} ${JSSCRIPT})
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
+        PRIVATE ${JSCORE_LIBRARY}
+        PRIVATE NativeCamera)
+    set(RESOURCE_FILES ${STORYBOARD} ${BABYLON_SCRIPTS} ${SCRIPTS} ${DEPENDENCIES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
@@ -91,14 +86,14 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr NativeCamera)
 endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 else()
-    add_executable(Playground ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
 
 warnings_as_errors(Playground)
@@ -174,23 +169,24 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
 else()
-    foreach(script ${SCRIPTS} ${BABYLONSCRIPTS})
-        get_filename_component(SCRIPT_NAME "${script}" NAME)
+    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
+        get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         # Copy scripts to the parent of the executable location since CMake can't use generator
         # expressions with OUTPUT. See https://gitlab.kitware.com/cmake/cmake/-/issues/12877.
         add_custom_command(
             OUTPUT "Scripts/${SCRIPT_NAME}"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${script}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/Scripts/${SCRIPT_NAME}"
             COMMENT "Copying ${SCRIPT_NAME}"
-            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
     endforeach()
 endif()
 
 set_property(TARGET Playground PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../BabylonScripts PREFIX Scripts FILES ${BABYLONSCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FILES ${DEPENDENCIES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)

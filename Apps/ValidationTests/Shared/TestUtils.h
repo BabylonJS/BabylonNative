@@ -235,26 +235,6 @@ namespace Babylon
             return Napi::Value::From(info.Env(), data);
         }
 
-        Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
-        {
-#if defined(__cplusplus_winrt)
-            auto path = "app:///Scripts/";
-#elif ANDROID
-            auto path = "app://";
-#else
-#ifdef __APPLE__
-            std::string path = "app:///";
-#else
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-            path += "/Scripts/";
-#endif
-#endif
-            return Napi::Value::From(info.Env(), path);
-        }
-
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #if defined(__cplusplus_winrt)

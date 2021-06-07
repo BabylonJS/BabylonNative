@@ -69,10 +69,10 @@ jobs:
 # Ubuntu/Linux
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_Clang8
+      name: Ubuntu_Clang9
       vmImage: 'ubuntu-latest'
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
   
   - template: .github/jobs/linux.yml
     parameters:
@@ -119,9 +119,3 @@ jobs:
       name: UWP_napi_jsi_x64
       vmImage: 'windows-latest'
       platform: x64
-
-# Babylon.js Scripts
-  - template: .github/jobs/scripts.yml
-    parameters:
-      name: BabylonJS_Scripts_Validation
-      vmImage: 'windows-latest'
