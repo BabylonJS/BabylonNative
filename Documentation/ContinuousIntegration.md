@@ -80,8 +80,6 @@ The tests are performed in `azure-pipelines.yml` after the build commands.
 By far the simplest CI tests. Runs the feshly built executable in the working directory.
 ```shell
     cd buildWin32_x64\Apps\ValidationTests
-    mkdir Results
-    mkdir Errors
     cd Release
     ValidationTests
 ```
@@ -95,8 +93,6 @@ Almost the same as win32 but the headles  display has to be configured:
     Xvfb :99 -screen 0 1600x900x24 &
     sleep 3
     cd build/Apps/ValidationTests
-    mkdir Errors
-    mkdir Results
     ./ValidationTests
 ```
 The `sleep 3` command lets Xvfb finish initializing before running the command. 3 seconds is an arbitraty value.

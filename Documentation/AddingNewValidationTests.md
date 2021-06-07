@@ -38,4 +38,4 @@ Copy the reference image for your test from that folder to `Apps/ValidationTests
 # Test new reference
 
 Revert your change to `Apps\ValidationTests\Scripts\validation_native.js` and run validation tests.
-Your new reference will compared to the rendering of your newly added Playground
+Your new reference will compared to the rendering of your newly added Playground.
