@@ -246,7 +246,7 @@ const copyAndroidFiles = async () => {
   });
 
   await new Promise(resolve => {
-    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/src/ARCore/Include/*')
+    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARCore/Include/*')
       .pipe(gulp.dest('Assembled/android/include'))
       .on('end', resolve);
   })
@@ -395,9 +395,9 @@ const validate = async () => {
 `Assembled
 Assembled/EngineHook.ts
 Assembled/shared
-Assembled/shared/BabylonNative.h
 Assembled/shared/XrContextHelper.h
 Assembled/shared/XrAnchorHelper.h
+Assembled/shared/BabylonNative.h
 Assembled/EngineView.tsx
 Assembled/ios
 Assembled/ios/BabylonNativeInterop.mm
@@ -440,9 +440,9 @@ Assembled/ios/BabylonModule.mm
 Assembled/README.md
 Assembled/package.json
 Assembled/android
-Assembled/android/build.gradle
 Assembled/android/include
 Assembled/android/include/IXrContextARCore.h
+Assembled/android/build.gradle
 Assembled/android/src
 Assembled/android/src/main
 Assembled/android/src/main/AndroidManifest.xml
