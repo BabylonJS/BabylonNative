@@ -1201,24 +1201,24 @@ namespace Babylon
 
             XRRay(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRay>{info}
+                , m_origin{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_direction{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
-                auto argLength = info.Length();
+                auto argLength{info.Length()};
                 xr::Ray tempVals{};
-                tempVals.Direction.Z = -1.0;
 
-                m_origin = Napi::Persistent(Napi::Object::New(info.Env()));
-                m_direction = Napi::Persistent(Napi::Object::New(info.Env()));
-                m_matrix = Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE));
+                tempVals.Direction.Z = -1.0;
 
                 // The constructor is either sent a BABYLON.Vector3, {}, an XRRigidTransform, or {x,y,z,w},{x,y,z,w}
                 if (argLength > 0 && info[0].IsObject())
                 {
                     auto argumentObject = info[0].As<Napi::Object>();
 
-                    XRRigidTransform* transform = XRRigidTransform::Unwrap(argumentObject);
+                    XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
                     if (transform != nullptr)
                     {
-                        // The value passed in to the contructor is an XRRigidTransform
+                        // The value passed in to the constructor is an XRRigidTransform
                         xr::Pose pose = transform->GetNativePose();
                         tempVals.Origin = pose.Position;
 
@@ -1227,18 +1227,24 @@ namespace Babylon
                         tempVals.Direction.Y = 2 * ((pose.Orientation.Y * pose.Orientation.Z) - (pose.Orientation.W * pose.Orientation.X));
                         tempVals.Direction.Z = 1 - (2 * ((pose.Orientation.X * pose.Orientation.X) + (pose.Orientation.Y * pose.Orientation.Y)));
                     }
-
-                    if (argumentObject.Has("x"))
+                    else
                     {
-                        tempVals.Origin.X = argumentObject.Get("x").ToNumber().FloatValue();
-                    }
-                    if (argumentObject.Has("y"))
-                    {
-                        tempVals.Origin.Y = argumentObject.Get("y").ToNumber().FloatValue();
-                    }
-                    if (argumentObject.Has("z"))
-                    {
-                        tempVals.Origin.Z = argumentObject.Get("z").ToNumber().FloatValue();
+                        if (argumentObject.Has("x"))
+                        {
+                            tempVals.Origin.X = argumentObject.Get("x").ToNumber().FloatValue();
+                        }
+                        if (argumentObject.Has("y"))
+                        {
+                            tempVals.Origin.Y = argumentObject.Get("y").ToNumber().FloatValue();
+                        }
+                        if (argumentObject.Has("z"))
+                        {
+                            tempVals.Origin.Z = argumentObject.Get("z").ToNumber().FloatValue();
+                        }
+                        if (argumentObject.Has("w") && argumentObject.Get("w").ToNumber().FloatValue() != 1.0)
+                        {
+                            Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Origin is not 1").ThrowAsJavaScriptException();
+                        }
                     }
                 }
                 if (argLength >= 2 && info[1].IsObject())
@@ -1256,6 +1262,10 @@ namespace Babylon
                     if (argumentObject.Has("z"))
                     {
                         tempVals.Direction.Z = argumentObject.Get("z").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("w") && argumentObject.Get("w").ToNumber().FloatValue() != 0.0)
+                    {
+                        Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Direction is not 0").ThrowAsJavaScriptException();
                     }
                 }
 
