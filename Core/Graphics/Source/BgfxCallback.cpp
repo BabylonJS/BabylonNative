@@ -91,7 +91,7 @@ namespace Babylon
     {
         assert(!m_screenShotCallbacks.empty()); // addScreenShotCallback not called before doing the screenshot call on bgfx
 
-        std::vector<uint8_t> array(height * pitch);
+        std::vector<uint8_t> array(width * height * 4); // do not use pitch to define output size because it's padded
         uint8_t* bitmap{array.data()};
 
         for (uint32_t py = 0; py < height; py++)
