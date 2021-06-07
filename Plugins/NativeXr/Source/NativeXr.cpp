@@ -151,23 +151,26 @@ namespace
 
             if (inputSource.JointsTrackedThisFrame)
             {
-                auto handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
+                auto handJointCollection = jsInputSource.Get("hand").As<Napi::Array>();
+                if (!jsInputSource.Has("hand"))
+                {
+                    handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
+
+                    auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
+                        return handJointCollection.Get(info[0].As<Napi::String>());
+                    };
+
+                    handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
+                    handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
+
+                    jsInputSource.Set("hand", handJointCollection);
+                }
 
                 for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
                 {
                     auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
                     handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
                 }
-
-                auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
-                    return handJointCollection.Get(info[0].As<Napi::String>());
-                };
-
-                handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
-                handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
-
-                jsInputSource.Set("hand", handJointCollection);
-
             }
             else
             {
@@ -2019,6 +2022,8 @@ namespace Babylon
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
+                        InstanceMethod("fillPoses", &XRFrame::FillPoses),
+                        InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
@@ -2181,6 +2186,44 @@ namespace Babylon
                 {
                     return info.Env().Undefined();
                 }
+            }
+
+            Napi::Value FillPoses(const Napi::CallbackInfo& info)
+            {
+                const auto spaces = info[0].As<Napi::Array>();
+                auto transforms = info[2].As<Napi::Float32Array>();
+                if (spaces.Length() != transforms.ElementLength() >> 4)
+                {
+                    throw std::runtime_error{"Number of spaces doesn't match number of transforms * 16."};
+                }
+
+                for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
+                {
+                    const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+                    const auto transformMatrix = CreateTransformMatrix(jointSpace, false).data();
+                    memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix, 4 /*Float32*/ * 16);
+                }
+
+                return Napi::Value::From(info.Env(), true);
+            }
+
+            Napi::Value FillJointRadii(const Napi::CallbackInfo& info) 
+            {
+                const auto spaces = info[0].As<Napi::Array>();
+                auto radii = info[1].As<Napi::Float32Array>();
+                if (spaces.Length() != radii.ElementLength()) 
+                {
+                    throw std::runtime_error{"Number of spaces doesn't match number of radii."};
+                }
+
+                for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
+                {
+                    const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
+                    const auto jointRadius = jointSpace.PoseRadius;
+                    *(radii.Data() + spaceIdx) = jointRadius;
+                }
+
+                return Napi::Value::From(info.Env(), true);
             }
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
