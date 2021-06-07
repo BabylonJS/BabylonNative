@@ -38,14 +38,14 @@ jobs:
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode12_iOS12
+      name: iOS_Xcode12_iOS13
       vmImage: 'macOS-10.15'
       xCodeVersion: 12.4
       deploymentTarget: 13
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode12_iOS12
+      name: iOS_Xcode12_iOS14
       vmImage: 'macOS-10.15'
       xCodeVersion: 12.4
       deploymentTarget: 14
