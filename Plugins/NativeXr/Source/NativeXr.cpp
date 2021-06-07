@@ -1213,13 +1213,13 @@ namespace Babylon
                 // The constructor is either sent a BABYLON.Vector3, {}, an XRRigidTransform, or {x,y,z,w},{x,y,z,w}
                 if (argLength > 0 && info[0].IsObject())
                 {
-                    auto argumentObject = info[0].As<Napi::Object>();
+                    auto argumentObject{info[0].As<Napi::Object>()};
 
                     XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
                     if (transform != nullptr)
                     {
                         // The value passed in to the constructor is an XRRigidTransform
-                        xr::Pose pose = transform->GetNativePose();
+                        xr::Pose pose{transform->GetNativePose()};
                         tempVals.Origin = pose.Position;
 
                         // Grab forward direction from quaternion
@@ -1249,7 +1249,7 @@ namespace Babylon
                 }
                 if (argLength >= 2 && info[1].IsObject())
                 {
-                    auto argumentObject = info[1].As<Napi::Object>();
+                    auto argumentObject{info[1].As<Napi::Object>()};
 
                     if (argumentObject.Has("x"))
                     {
@@ -1270,7 +1270,7 @@ namespace Babylon
                 }
 
                 // Normalize the direction
-                auto norm = bx::normalize(bx::Vec3(tempVals.Direction.X, tempVals.Direction.Y, tempVals.Direction.Z));
+                auto norm{bx::normalize(bx::Vec3(tempVals.Direction.X, tempVals.Direction.Y, tempVals.Direction.Z))};
                 tempVals.Direction = {norm.x, norm.y, norm.z};
 
                 m_origin.Set("x", Napi::Value::From(info.Env(), tempVals.Origin.X));
@@ -1286,12 +1286,12 @@ namespace Babylon
             xr::Ray GetNativeRay()
             {
                 xr::Ray nativeRay{{0, 0, 0}, {0, 0, -1}};
-                auto originObject = m_origin.Value();
+                auto originObject{m_origin.Value()};
                 nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
                 nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
                 nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
 
-                auto directionObject = m_direction.Value();
+                auto directionObject{m_direction.Value()};
                 nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
                 nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
                 nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
