@@ -12,7 +12,7 @@ jobs:
       
     steps:
     - script: |
-        git submodule update --init --recursive --depth 1 --shallow-submodules
+        git submodule update --init --recursive --recommend-shallow
       displayName: 'Checkout dependencies'
 
     - task: Npm@1
