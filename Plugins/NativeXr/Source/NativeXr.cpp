@@ -1203,14 +1203,13 @@ namespace Babylon
                 : Napi::ObjectWrap<XRRay>{info}
                 , m_origin{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_direction{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
                 auto argLength{info.Length()};
                 xr::Ray tempVals{};
 
                 tempVals.Direction.Z = -1.0;
 
-                // The constructor is either sent a BABYLON.Vector3, {}, an XRRigidTransform, or {x,y,z,w},{x,y,z,w}
+                // Currently the constructor is either sent a BABYLON.Vector3, {}, an XRRigidTransform, or {x,y,z,w},{x,y,z,w}
                 if (argLength > 0 && info[0].IsObject())
                 {
                     auto argumentObject{info[0].As<Napi::Object>()};
@@ -1243,7 +1242,7 @@ namespace Babylon
                         }
                         if (argumentObject.Has("w") && argumentObject.Get("w").ToNumber().FloatValue() != 1.0)
                         {
-                            Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Origin is not 1").ThrowAsJavaScriptException();
+                            throw Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Origin is not 1");
                         }
                     }
                 }
@@ -1265,7 +1264,7 @@ namespace Babylon
                     }
                     if (argumentObject.Has("w") && argumentObject.Get("w").ToNumber().FloatValue() != 0.0)
                     {
-                        Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Direction is not 0").ThrowAsJavaScriptException();
+                        throw Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Direction is not 0");
                     }
                 }
 
@@ -1302,7 +1301,6 @@ namespace Babylon
         private:
             Napi::ObjectReference m_origin{};
             Napi::ObjectReference m_direction{};
-            Napi::Reference<Napi::Float32Array> m_matrix{};
 
             Napi::Value Origin(const Napi::CallbackInfo&)
             {
@@ -1316,7 +1314,7 @@ namespace Babylon
 
             Napi::Value Matrix(const Napi::CallbackInfo&)
             {
-                return m_matrix.Value();
+                throw Napi::Error::New(info.Env(), "XRRay.matrix is not implemented");
             }
         };
 
