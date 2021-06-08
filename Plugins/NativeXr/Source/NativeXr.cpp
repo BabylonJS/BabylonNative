@@ -1175,7 +1175,6 @@ namespace Babylon
         class XRRay : public Napi::ObjectWrap<XRRay>
         {
             static constexpr auto JS_CLASS_NAME = "XRRay";
-            static constexpr size_t MATRIX_SIZE = 16;
 
         public:
             static void Initialize(Napi::Env env)
