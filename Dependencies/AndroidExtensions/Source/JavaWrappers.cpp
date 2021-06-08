@@ -1,6 +1,9 @@
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/Globals.h>
+#include <android/surface_texture.h>
+#include <android/surface_texture_jni.h>
 #include <android/asset_manager_jni.h>
+#include <android/native_window_jni.h>
 
 using namespace android::global;
 
@@ -399,6 +402,12 @@ namespace android::view
     {
         return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getDefaultDisplay", "()Landroid/view/Display;"))};
     }
+
+    Surface::Surface(android::graphics::SurfaceTexture& surfaceTexture)
+        : Object("android/view/Surface")
+    {
+        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), (jobject)surfaceTexture);
+    }
 }
 
 namespace android::net
@@ -429,5 +438,25 @@ namespace android::net
         auto uri{env->CallStaticObjectMethod(cls, env->GetStaticMethodID(cls, "parse", "(Ljava/lang/String;)Landroid/net/Uri;"), (jstring)uriString)};
         ThrowIfFaulted(env);
         return {uri};
+    }
+}
+
+namespace android::graphics
+{
+    SurfaceTexture::SurfaceTexture()
+        : Object("android/graphics/SurfaceTexture")
+    {
+    }
+
+    void SurfaceTexture::InitWithTexture(int texture)
+    {
+        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
+    }
+
+    void SurfaceTexture::updateTexImage() const
+    {
+        if (m_object) {
+            m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "updateTexImage", "()V"));
+        }
     }
 }
