@@ -41,13 +41,6 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    std::filesystem::path GetModulePath()
-    {
-        char buffer[1024];
-        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
-        return std::filesystem::path{buffer};
-    }
-
     std::string GetUrlFromPath(const std::filesystem::path& path)
     {
         char url[1024];
@@ -149,24 +142,20 @@ namespace
             }
         });
 
-        // Scripts are copied to the parent of the executable due to CMake issues.
-        // See the CMakeLists.txt comments for more details.
-        std::string scriptsRootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path() / "Scripts");
-
         Babylon::ScriptLoader loader{*runtime};
         loader.Eval("document = {}", "");
-        loader.LoadScript(scriptsRootUrl + "/ammo.js");
-        loader.LoadScript(scriptsRootUrl + "/recast.js");
-        loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
-        loader.LoadScript(scriptsRootUrl + "/babylonjs.loaders.js");
-        loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
-        loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
-        loader.LoadScript(scriptsRootUrl + "/meshwriter.min.js");
+        loader.LoadScript("app:///Scripts/ammo.js");
+        loader.LoadScript("app:///Scripts/recast.js");
+        loader.LoadScript("app:///Scripts/babylon.max.js");
+        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+        loader.LoadScript("app:///Scripts/babylon.gui.js");
+        loader.LoadScript("app:///Scripts/meshwriter.min.js");
 
         std::vector<std::string> scripts = GetCommandLineArguments();
         if (scripts.empty())
         {
-            loader.LoadScript(scriptsRootUrl + "/experience.js");
+            loader.LoadScript("app:///Scripts/experience.js");
         }
         else
         {
@@ -175,7 +164,7 @@ namespace
                 loader.LoadScript(GetUrlFromPath(script));
             }
 
-            loader.LoadScript(scriptsRootUrl + "/playground_runner.js");
+            loader.LoadScript("app:///Scripts/playground_runner.js");
         }
     }
 
