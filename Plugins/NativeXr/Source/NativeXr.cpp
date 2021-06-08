@@ -31,6 +31,8 @@ namespace
             // Depth Formats
             case xr::TextureFormat::D24S8:
                 return bgfx::TextureFormat::D24S8;
+            case xr::TextureFormat::D16:
+                return bgfx::TextureFormat::D16;
 
             default:
                 throw std::runtime_error{"Unsupported texture format"};
@@ -338,16 +340,19 @@ namespace Babylon
                 m_sessionState->DestroyRenderTexture = Napi::Persistent(destroyFunction);
             }
 
-            Napi::Value GetRenderTargetForViewIndex(int viewIndex) const
+            Napi::Value GetRenderTargetForViewIndex(uint32_t viewIndex) const
             {
-                auto itTextureToFrameBuffer{m_sessionState->TextureToFrameBufferMap.find(m_sessionState->ActiveTextures[viewIndex])};
-                if (itTextureToFrameBuffer == m_sessionState->TextureToFrameBufferMap.end())
+                const auto& activeViewConfigs = m_sessionState->ActiveViewConfigurations;
+                if (activeViewConfigs.size() <= viewIndex ||
+                    activeViewConfigs[viewIndex] == nullptr ||
+                    !activeViewConfigs[viewIndex]->Initialized)
                 {
                     return m_env.Null();
                 }
-
-                auto itFrameBufferToJsTexture{m_sessionState->FrameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
-                return itFrameBufferToJsTexture->second.Value();
+                
+                const auto viewConfig = activeViewConfigs[viewIndex];
+                const auto startViewIdx = m_sessionState->ViewConfigurationStartViewIdx[viewConfig];
+                return viewConfig->JsTextures[viewConfig->FrameBuffers[viewIndex - startViewIdx]].Value();
             }
 
             void SetDepthsNarFar(float depthNear, float depthFar)
@@ -399,6 +404,16 @@ namespace Babylon
             std::optional<arcana::task<void, std::exception_ptr>> m_beginTask{};
             arcana::task<void, std::exception_ptr> m_endTask{arcana::task_from_result<std::exception_ptr>()};
 
+            struct ViewConfiguration final
+            {
+                void* ColorTexturePointer{nullptr};
+                void* DepthTexturePointer{nullptr};
+                xr::Size ViewTextureSize{};
+                std::vector<FrameBuffer*> FrameBuffers{};
+                std::map<FrameBuffer*, Napi::ObjectReference> JsTextures{};
+                bool Initialized{false};
+            };
+
             struct SessionState final
             {
                 explicit SessionState(GraphicsImpl& graphicsImpl)
@@ -409,9 +424,9 @@ namespace Babylon
                 GraphicsImpl& GraphicsImpl;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
-                std::map<void*, FrameBuffer*> TextureToFrameBufferMap{};
-                std::map<FrameBuffer*, Napi::ObjectReference> FrameBufferToJsTextureMap{};
-                std::vector<void*> ActiveTextures{};
+                std::vector<ViewConfiguration*> ActiveViewConfigurations{};
+                std::unordered_map<ViewConfiguration*, uint32_t> ViewConfigurationStartViewIdx{};
+                std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};
                 std::shared_ptr<xr::System::Session> Session{};
                 std::unique_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
@@ -502,9 +517,9 @@ namespace Babylon
 
             m_sessionState->CancellationSource.cancel();
 
-            m_sessionState->FrameBufferToJsTextureMap.clear();
-            m_sessionState->TextureToFrameBufferMap.clear();
-            m_sessionState->ActiveTextures.clear();
+            m_sessionState->ActiveViewConfigurations.clear();
+            m_sessionState->ViewConfigurationStartViewIdx.clear();
+            m_sessionState->TextureToViewConfigurationMap.clear();
             m_sessionState->ScheduleFrameCallbacks.clear();
             m_sessionState->CreateRenderTexture.Reset();
 
@@ -585,17 +600,18 @@ namespace Babylon
             bool shouldRestartSession{};
             m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
                 return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
-                    auto itTextureToFrameBuffer{m_sessionState->TextureToFrameBufferMap.find(texturePointer)};
-                    if (itTextureToFrameBuffer != m_sessionState->TextureToFrameBufferMap.end())
+                    const auto itViewConfig{m_sessionState->TextureToViewConfigurationMap.find(texturePointer)};
+                    if (itViewConfig != m_sessionState->TextureToViewConfigurationMap.end())
                     {
-                        auto itFrameBufferToJsTexture{m_sessionState->FrameBufferToJsTextureMap.find(itTextureToFrameBuffer->second)};
-                        if (itFrameBufferToJsTexture != m_sessionState->FrameBufferToJsTextureMap.end())
+                        auto& viewConfig = itViewConfig->second;
+                        auto& frameBuffers = viewConfig.FrameBuffers;
+                        for (const auto& frameBuffer : frameBuffers)
                         {
-                            m_sessionState->DestroyRenderTexture.Call({itFrameBufferToJsTexture->second.Value()});
-                            m_sessionState->FrameBufferToJsTextureMap.erase(itFrameBufferToJsTexture);
+                            auto& jsTexture = viewConfig.JsTextures[frameBuffer];
+                            m_sessionState->DestroyRenderTexture.Call({jsTexture.Value()});
                         }
 
-                        m_sessionState->TextureToFrameBufferMap.erase(itTextureToFrameBuffer);
+                        m_sessionState->TextureToViewConfigurationMap.erase(texturePointer);
                     }
                 });
             });
@@ -607,61 +623,79 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
-            // Don't try to create new textures if the window is no longer available.
-            if (m_windowPtr == nullptr)
+            m_sessionState->ActiveViewConfigurations.resize(m_sessionState->Frame->Views.size());
+            for (uint32_t viewIdx = 0; viewIdx < m_sessionState->Frame->Views.size(); viewIdx++)
             {
-                return;
-            }
+                const auto& view = m_sessionState->Frame->Views[viewIdx];
+                const auto& it{m_sessionState->TextureToViewConfigurationMap.find(view.ColorTexturePointer)};
 
-            m_sessionState->ActiveTextures.reserve(m_sessionState->Frame->Views.size());
-            for (const auto& view : m_sessionState->Frame->Views)
-            {
-                m_sessionState->ActiveTextures.push_back(view.ColorTexturePointer);
-
-                auto it{m_sessionState->TextureToFrameBufferMap.find(view.ColorTexturePointer)};
-                if (it == m_sessionState->TextureToFrameBufferMap.end() || it->second->Width() != view.ColorTextureSize.Width || it->second->Height() != view.ColorTextureSize.Height)
+                if (it == m_sessionState->TextureToViewConfigurationMap.end() || 
+                    it->second.ViewTextureSize.Width != view.ColorTextureSize.Width || 
+                    it->second.ViewTextureSize.Height != view.ColorTextureSize.Height ||
+                    it->second.ViewTextureSize.Depth != view.ColorTextureSize.Depth)
                 {
+                    auto& viewConfig = m_sessionState->TextureToViewConfigurationMap[view.ColorTexturePointer] = {};
+                    m_sessionState->ActiveViewConfigurations[viewIdx] = &viewConfig;
+                    m_sessionState->ViewConfigurationStartViewIdx[&viewConfig] = viewIdx;
+
+                    viewConfig.ColorTexturePointer = view.ColorTexturePointer;
+                    viewConfig.DepthTexturePointer = view.DepthTexturePointer;
+                    viewConfig.ViewTextureSize = view.ColorTextureSize;
+
                     // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
+                    // Depth (numLayers) can be 0, bgfx will just reinterpret it as max(numLayers, 1).
                     assert(view.ColorTextureSize.Width != 0);
                     assert(view.ColorTextureSize.Height != 0);
                     assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
                     assert(view.ColorTextureSize.Height == view.DepthTextureSize.Height);
+                    assert(view.ColorTextureSize.Depth == view.DepthTextureSize.Depth);
+
+                    const auto textureWidth = static_cast<uint16_t>(view.ColorTextureSize.Width);
+                    const auto textureHeight = static_cast<uint16_t>(view.ColorTextureSize.Height);
+                    const auto textureLayers = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(view.ColorTextureSize.Depth));
 
                     // Create textures with the desired size. It will be freed and replaced with overrideInternal call
                     // This is mandatory as overrideInternal do not update texture size.
                     // And size is used for determining viewport when rendering to texture.
                     auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                    auto colorTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat, BGFX_TEXTURE_RT);
-                    m_sessionState->GraphicsImpl.AddTexture(colorTexture, static_cast<uint16_t>(view.ColorTextureSize.Width), static_cast<uint16_t>(view.ColorTextureSize.Height), false, 1, colorTextureFormat);
+                    auto colorTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, colorTextureFormat, BGFX_TEXTURE_RT);
+                    m_sessionState->GraphicsImpl.AddTexture(colorTexture, textureWidth, textureHeight, false, textureLayers, colorTextureFormat);
 
                     auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
-                    auto depthTexture = bgfx::createTexture2D(static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat, BGFX_TEXTURE_RT);
-                    m_sessionState->GraphicsImpl.AddTexture(depthTexture, static_cast<uint16_t>(view.DepthTextureSize.Width), static_cast<uint16_t>(view.DepthTextureSize.Height), false, 1, depthTextureFormat);
+                    auto depthTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, depthTextureFormat, BGFX_TEXTURE_RT);
+                    m_sessionState->GraphicsImpl.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
 
-                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &view]() {
-                        bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(view.ColorTexturePointer));
-                        bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(view.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &view]() {
-                        std::array<bgfx::Attachment, 2> attachments{};
-                        attachments[0].init(colorTexture);
-                        attachments[1].init(depthTexture);
-                        auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
+                        bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
+                        bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
+                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &viewConfig]() {
+                        const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
+                        viewConfig.FrameBuffers.resize(eyeCount);
+                        for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
+                        {
+                            std::array<bgfx::Attachment, 2> attachments{};
+                            attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
+                            attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
+                            
+                            auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                        auto& frameBuffer{m_sessionState->GraphicsImpl.AddFrameBuffer(frameBufferHandle,
-                            static_cast<uint16_t>(view.ColorTextureSize.Width),
-                            static_cast<uint16_t>(view.ColorTextureSize.Height),
-                            true)};
+                            auto& frameBuffer{m_sessionState->GraphicsImpl.AddFrameBuffer(frameBufferHandle,
+                                static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
+                                static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
+                                true)};
 
-                        // WebXR, at least in its current implementation, specifies an implicit default clear to black.
-                        // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                        frameBuffer.Clear(m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                            // WebXR, at least in its current implementation, specifies an implicit default clear to black.
+                            // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
+                            frameBuffer.Clear(m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
 
-                        m_sessionState->TextureToFrameBufferMap[view.ColorTexturePointer] = &frameBuffer;
+                            viewConfig.FrameBuffers[eyeIdx] = &frameBuffer;
 
-                        auto jsWidth{Napi::Value::From(m_env, view.ColorTextureSize.Width)};
-                        auto jsHeight{Napi::Value::From(m_env, view.ColorTextureSize.Height)};
-                        auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
-                        m_sessionState->FrameBufferToJsTextureMap[&frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                            auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
+                            auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
+                            auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
+                            viewConfig.JsTextures[&frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                        }
+                        viewConfig.Initialized = true;
                     }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
@@ -669,12 +703,19 @@ namespace Babylon
                         }
                     });
                 }
+                else
+                {
+                    auto& viewConfig = it->second;
+                    m_sessionState->ActiveViewConfigurations[viewIdx] = &viewConfig;
+                    m_sessionState->ViewConfigurationStartViewIdx.try_emplace(&viewConfig, viewIdx);
+                }
             }
         }
 
         void NativeXr::Impl::EndUpdate()
         {
-            m_sessionState->ActiveTextures.clear();
+            m_sessionState->ActiveViewConfigurations.clear();
+            m_sessionState->ViewConfigurationStartViewIdx.clear();
         }
 
         void NativeXr::Impl::EndFrame()
@@ -735,7 +776,7 @@ namespace Babylon
                 }
             }
 
-            static auto EyeToIndex(const std::string& eye)
+            static uint32_t EyeToIndex(const std::string& eye)
             {
                 if (eye == LEFT)
                 {
