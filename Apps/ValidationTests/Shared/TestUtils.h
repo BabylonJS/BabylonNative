@@ -23,9 +23,6 @@
 
 namespace
 {
-#if !defined(__APPLE__) && !defined(ANDROID) && !defined(__cplusplus_winrt)
-    std::filesystem::path GetModulePath();
-#endif
     std::atomic<bool> doExit{};
     int errorCode{};
 
@@ -41,6 +38,14 @@ namespace
             ::WideCharToMultiByte(CP_UTF8, 0, w, static_cast<int>(size), &ret[0], length, nullptr, nullptr);
         }
         return ret;
+#endif
+
+#ifdef WIN32
+    std::filesystem::path GetModulePath()
+    {
+        char buffer[1024];
+        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
+        return std::filesystem::path{ buffer }.parent_path();
     }
 #endif
 }
@@ -75,7 +80,6 @@ namespace Babylon
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
-                    ParentT::InstanceMethod("getResourceDirectory", &TestUtils::GetResourceDirectory),
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
@@ -113,6 +117,10 @@ namespace Babylon
 #elif __APPLE__
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
             dispatch_async(dispatch_get_main_queue(), ^{
+                if (graphics)
+                {
+                    graphics->FinishRenderingCurrentFrame();
+                }
                 runtime.reset();
                 graphics.reset();
                 UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
@@ -244,15 +252,20 @@ namespace Babylon
             std::string path{WStringToString(wpath.data(), wpath.size())};
 #elif ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-#else
-#ifdef __APPLE__
+#elif __APPLE__
             std::string path = getenv("HOME");
-#else
+#elif __linux__
+            char exe[1024];
+            int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
+            if(ret == -1)
+            {
+                throw Napi::Error::New(info.Env(), "Unable to get executable location");
+            }
+            exe[ret] = 0;
+
+            auto path = std::string("file://") + std::filesystem::path{exe}.parent_path().generic_string();
+#elif WIN32
             auto path = GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-#endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }
