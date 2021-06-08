@@ -1312,7 +1312,7 @@ namespace Babylon
                 return m_direction.Value();
             }
 
-            Napi::Value Matrix(const Napi::CallbackInfo&)
+            Napi::Value Matrix(const Napi::CallbackInfo& info)
             {
                 throw Napi::Error::New(info.Env(), "XRRay.matrix is not implemented");
             }
