@@ -168,7 +168,7 @@ CreateBoxAsync().then(function () {
                 }
                 else {
                     setTimeout(function () {
-                        scene.meshes[0].position.z = 2;
+                        scene.meshes[0].position.z = 1;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                     }, 5000);
                 }
@@ -248,6 +248,10 @@ CreateBoxAsync().then(function () {
                 }
                 const handsFeature = xr.baseExperience.featuresManager.enableFeature(BABYLON.WebXRFeatureName.HAND_TRACKING, "latest", {
                     xrInput: xr.input,
+                    jointMeshes: {
+                        invisible: true,
+                        disableDefaultHandMesh: true
+                    }
                 });
 
                 xr.baseExperience.onInitialXRPoseSetObservable.add((camera) => {
