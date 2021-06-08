@@ -5,6 +5,7 @@
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -65,18 +66,21 @@ bool g_isXrActive{};
         g_nativeXr->UpdateWindow(xrView);
         g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
+        // Initialize Camera 
+        Babylon::Plugins::Camera::Initialize(env);
+
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
     loader.Eval("document = {}", "");
-    loader.LoadScript("app:///ammo.js");
-    loader.LoadScript("app:///recast.js");
-    loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylonjs.loaders.js");
-    loader.LoadScript("app:///babylonjs.materials.js");
-    loader.LoadScript("app:///babylon.gui.js");
-    loader.LoadScript("app:///experience.js");
+    loader.LoadScript("app:///Scripts/ammo.js");
+    loader.LoadScript("app:///Scripts/recast.js");
+    loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/babylon.gui.js");
+    loader.LoadScript("app:///Scripts/experience.js");
 }
 
 - (void)resize:(int)inWidth height:(int)inHeight

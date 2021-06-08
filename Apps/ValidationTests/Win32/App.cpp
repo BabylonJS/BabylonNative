@@ -44,47 +44,6 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    std::filesystem::path GetModulePath()
-    {
-        char buffer[1024];
-        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
-        return std::filesystem::path{ buffer };
-    }
-
-    std::string GetUrlFromPath(const std::filesystem::path& path)
-    {
-        char url[1024];
-        DWORD length = ARRAYSIZE(url);
-        HRESULT hr = UrlCreateFromPathA(path.u8string().data(), url, &length, 0);
-        if (FAILED(hr))
-        {
-            throw std::exception("Failed to create url from path", hr);
-        }
-
-        return { url };
-    }
-
-    std::vector<std::string> GetCommandLineArguments()
-    {
-        int argc;
-        auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-
-        std::vector<std::string> arguments{};
-        arguments.reserve(argc);
-
-        for (int idx = 1; idx < argc; idx++)
-        {
-            std::wstring hstr{ argv[idx] };
-            int bytesRequired = ::WideCharToMultiByte(CP_UTF8, 0, &hstr[0], static_cast<int>(hstr.size()), nullptr, 0, nullptr, nullptr);
-            arguments.push_back(std::string(bytesRequired, 0));
-            ::WideCharToMultiByte(CP_UTF8, 0, hstr.data(), static_cast<int>(hstr.size()), arguments.back().data(), bytesRequired, nullptr, nullptr);
-        }
-
-        LocalFree(argv);
-
-        return arguments;
-    }
-
     void Uninitialize()
     {
         if (graphics)
@@ -131,17 +90,12 @@ namespace
             Babylon::TestUtils::CreateInstance(env, hWnd);
         });
 
-        // Scripts are copied to the parent of the executable due to CMake issues.
-        // See the CMakeLists.txt comments for more details.
-        std::string scriptsRootUrl = GetUrlFromPath(GetModulePath().parent_path().parent_path() / "Scripts");
-
         Babylon::ScriptLoader loader{ *runtime };
-        loader.LoadScript(scriptsRootUrl + "/babylon.max.js");
-        loader.LoadScript(scriptsRootUrl + "/babylonjs.loaders.js");
-        loader.LoadScript(scriptsRootUrl + "/babylonjs.materials.js");
-        loader.LoadScript(scriptsRootUrl + "/babylon.gui.js");
-        loader.LoadScript(scriptsRootUrl + "/validation_native.js");
-
+        loader.LoadScript("app:///Scripts/babylon.max.js");
+        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+        loader.LoadScript("app:///Scripts/babylon.gui.js");
+        loader.LoadScript("app:///Scripts/validation_native.js");
     }
 }
 

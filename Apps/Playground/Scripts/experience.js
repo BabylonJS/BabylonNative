@@ -1,7 +1,7 @@
-/// <reference path="../../BabylonScripts/babylon.module.d.ts" />
-/// <reference path="../../BabylonScripts/babylonjs.loaders.module.d.ts" />
-/// <reference path="../../BabylonScripts/babylonjs.materials.module.d.ts" />
-/// <reference path="../../BabylonScripts/babylon.gui.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs/babylon.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs-loaders/babylonjs.loaders.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
+/// <reference path="../../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
 
 var wireframe = false;
 var turntable = false;
@@ -14,6 +14,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = false;
+var cameraTexture = false;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2).setEnabled(false);
@@ -90,6 +91,7 @@ CreateBoxAsync().then(function () {
         scene.createDefaultLight(true);
     }
 
+<<<<<<< HEAD
     engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
         if (premulAlpha === void 0) { premulAlpha = false; }
         var webGLTexture = texture._hardwareTexture.underlyingResource;
@@ -193,7 +195,17 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
             addPushButton(scene, manager);
             
         }, undefined, undefined, true);
-        
+
+    if (cameraTexture) {
+        var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
+        var mat = new BABYLON.StandardMaterial("mat", scene);
+        mat.diffuseColor = BABYLON.Color3.Black();
+
+        BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+            mat.emissiveTexture = videoTexture;
+            cameraBox.material = mat;
+        }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
+    }
 
     if (wireframe) {
         var material = new BABYLON.StandardMaterial("wireframe", scene);
@@ -346,7 +358,7 @@ BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/m
                     if (hololens) {
                         // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
                         xrSessionManager.scene.autoClear = true;
-                        xrSessionManager.scene.clearColor = BABYLON.Color4.FromColor3(Color3.Black());
+                        xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
             });

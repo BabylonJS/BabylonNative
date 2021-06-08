@@ -56,7 +56,6 @@ target_link_libraries(BabylonNativeJNI
         EGL
         log
         -lz
-        AndroidExtensions
         AppRuntime
         NativeEngine
         NativeXr
@@ -64,7 +63,10 @@ target_link_libraries(BabylonNativeJNI
         Canvas
         Window
         ScriptLoader
-        XMLHttpRequest)
+        XMLHttpRequest
+        NativeCamera
+        AndroidExtensions
+        )
 
 configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"
