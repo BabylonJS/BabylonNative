@@ -261,10 +261,11 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        template<typename sourceType, bool normalized> void PromoteToFloats(uint32_t numElements, uint32_t byteStride, float maxRange = 1.f)
+        template<typename sourceType, bool normalized> void PromoteToFloats(uint32_t numElements, uint32_t byteStride)
         {
             const size_t count = m_bytes.size() / byteStride;
             const size_t destinationSize = count * numElements * sizeof(float);
+            const float maxRange = static_cast<float>(std::numeric_limits<sourceType>::max());
             if (destinationSize != m_bytes.size()) // ensure both vectors have different size
             {
                 std::vector<uint8_t> bytes(destinationSize);
@@ -646,11 +647,7 @@ namespace Babylon
             attribType == bgfx::AttribType::Uint8 || 
             attribType == bgfx::AttribType::Uint10 || 
             attribType == bgfx::AttribType::Int16 || 
-            attribType == bgfx::AttribType::Uint16) &&
-            (attrib == bgfx::Attrib::Position ||
-            attrib == bgfx::Attrib::Normal ||
-            attrib == bgfx::Attrib::Bitangent ||
-            attrib == bgfx::Attrib::Tangent);
+            attribType == bgfx::AttribType::Uint16);
 
         if (promoteToFloats)
         {
@@ -661,16 +658,16 @@ namespace Babylon
                 switch (attribType)
                 {
                 case bgfx::AttribType::Int8:
-                    vertexBufferData->PromoteToFloats<int8_t, true>(numElements, byteStride, 127.f);
+                    vertexBufferData->PromoteToFloats<int8_t, true>(numElements, byteStride);
                     break;
                 case bgfx::AttribType::Uint8:
-                    vertexBufferData->PromoteToFloats<uint8_t, true>(numElements, byteStride, 255.f);
+                    vertexBufferData->PromoteToFloats<uint8_t, true>(numElements, byteStride);
                     break;
                 case bgfx::AttribType::Int16:
-                    vertexBufferData->PromoteToFloats<int16_t, true>(numElements, byteStride, 32767.f);
+                    vertexBufferData->PromoteToFloats<int16_t, true>(numElements, byteStride);
                     break;
                 case bgfx::AttribType::Uint16:
-                    vertexBufferData->PromoteToFloats<uint16_t, true>(numElements, byteStride, 65535.f);
+                    vertexBufferData->PromoteToFloats<uint16_t, true>(numElements, byteStride);
                     break;
                 case bgfx::AttribType::Uint10: // is supported by any format ?
                 default:
