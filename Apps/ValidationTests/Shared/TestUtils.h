@@ -38,8 +38,7 @@ namespace
             ::WideCharToMultiByte(CP_UTF8, 0, w, static_cast<int>(size), &ret[0], length, nullptr, nullptr);
         }
         return ret;
-#endif
-
+#else
 #ifdef WIN32
     std::filesystem::path GetModulePath()
     {
@@ -47,6 +46,7 @@ namespace
         ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
         return std::filesystem::path{ buffer }.parent_path();
     }
+#endif
 #endif
 }
 
