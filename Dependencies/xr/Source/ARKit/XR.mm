@@ -164,7 +164,12 @@ namespace {
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
     return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
 #else
-    return [sharedApplication statusBarOrientation];
+    if (@available(iOS 13.0, *)) {
+        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+    }
+    else {
+        return [sharedApplication statusBarOrientation];
+    }
 #endif
 }
 
