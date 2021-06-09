@@ -12,6 +12,11 @@
             "referenceImage": "softShadowsRightHanded.png"
         },
         {
+            "title": "RenderingGroupId",
+            "playgroundId": "#1J6IGD#0",
+            "referenceImage": "RenderingGroupId.png"
+        },
+        {
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "referenceImage": "LightProjectionTexture.png"

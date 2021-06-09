@@ -42,8 +42,6 @@ jobs:
     
       - script: |
           cd buildWin32_${{ parameters.platform }}\Apps\ValidationTests
-          mkdir Results
-          mkdir Errors
           cd RelWithDebInfo
           ValidationTests
         displayName: 'Validation Tests'

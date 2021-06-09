@@ -613,7 +613,7 @@ namespace Babylon
 
                         m_sessionState->TextureToViewConfigurationMap.erase(texturePointer);
                     }
-                });
+                }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), []{}); // Ensure continuations run on the render thread if they use inline_scheduler.
             });
 
             // Ending a session outside of calls to EndSessionAsync() is currently not supported.

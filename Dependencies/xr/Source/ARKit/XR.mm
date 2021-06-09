@@ -161,14 +161,17 @@ namespace {
  Returns the orientation of the app based on the current status bar orientation.
 */
 - (UIInterfaceOrientation)orientation {
-    auto sharedApplication = [UIApplication sharedApplication];
-    auto window = sharedApplication.windows.firstObject;
+    UIApplication* sharedApplication = [UIApplication sharedApplication];
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
+    return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+#else
     if (@available(iOS 13.0, *)) {
-        return window.windowScene.interfaceOrientation;
+        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
     }
     else {
-        return [[UIApplication sharedApplication] statusBarOrientation];
+        return [sharedApplication statusBarOrientation];
     }
+#endif
 }
 
 /**
@@ -719,8 +722,10 @@ namespace xr {
                 {
                     if (ActiveFrameViews[0].DepthTexturePointer != nil) {
                         id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
-                        [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
-                        [oldDepthTexture release];
+                        deletedTextureAsyncCallback(ActiveFrameViews[0].DepthTexturePointer).then(arcana::inline_scheduler, arcana::cancellation::none(), [oldDepthTexture]() {
+                            [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
+                            [oldDepthTexture release];
+                        });
                         ActiveFrameViews[0].DepthTexturePointer = nil;
                     }
 

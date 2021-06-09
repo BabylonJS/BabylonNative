@@ -23,11 +23,17 @@
 
 namespace
 {
-#if !defined(__APPLE__) && !defined(ANDROID)
-    std::filesystem::path GetModulePath();
-#endif
     std::atomic<bool> doExit{};
     int errorCode{};
+
+#ifdef WIN32
+    std::filesystem::path GetModulePath()
+    {
+        char buffer[1024];
+        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
+        return std::filesystem::path{ buffer }.parent_path();
+    }
+#endif
 }
 
 // can't externalize variable with ObjC++. Using a function instead.
@@ -60,7 +66,6 @@ namespace Babylon
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
-                    ParentT::InstanceMethod("getResourceDirectory", &TestUtils::GetResourceDirectory),
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
@@ -218,33 +223,24 @@ namespace Babylon
             return Napi::Value::From(info.Env(), data);
         }
 
-        Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
-        {
-            const auto subFolder = info[0].As<Napi::String>().Utf8Value();
-#if defined(ANDROID)
-            auto path = "app://";
-#elif defined(__APPLE__)
-            std::string path = "app:///";
-#elif __linux__
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string() + subFolder;
-#else
-            auto path = std::string("file://") + GetModulePath().parent_path().parent_path().generic_string() + subFolder;
-#endif
-            return Napi::Value::From(info.Env(), path);
-        }
-
-
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-#elif defined(__APPLE__)
+#elif __APPLE__
             std::string path = getenv("HOME");
-#else
+#elif __linux__
+            char exe[1024];
+            int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
+            if(ret == -1)
+            {
+                throw Napi::Error::New(info.Env(), "Unable to get executable location");
+            }
+            exe[ret] = 0;
+
+            auto path = std::string("file://") + std::filesystem::path{exe}.parent_path().generic_string();
+#elif WIN32
             auto path = GetModulePath().parent_path().generic_string();
-#endif
-#ifdef WIN32
-            path += "/..";
 #endif
             return Napi::Value::From(info.Env(), path);
         }
