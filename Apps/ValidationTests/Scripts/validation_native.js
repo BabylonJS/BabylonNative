@@ -286,7 +286,7 @@ function runTest(index, done) {
         loadPlayground(test, done, index, undefined, saveRenderedResult);
     } else {
         // run test and image comparison
-        const url = TestUtils.getResourceDirectory() + "/ReferenceImages/" + test.referenceImage;
+        const url = "app:///ReferenceImages/" + test.referenceImage;
         BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
     }
 }
@@ -327,7 +327,7 @@ document = {
 }
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", TestUtils.getResourceDirectory() + "/Scripts/config.json", true);
+xhr.open("GET", "app:///Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function() {
     if (xhr.status === 200) {

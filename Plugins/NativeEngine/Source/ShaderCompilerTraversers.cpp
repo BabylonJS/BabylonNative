@@ -67,8 +67,21 @@ namespace Babylon::ShaderCompilerTraversers
                 }
                 else if (auto* branch = parent->getAsSelectionNode())
                 {
-                    RemoveAllTreeNodes(branch->getCondition());
-                    branch->setCondition(replacement);
+                    if (symbol == branch->getCondition())
+                    {
+                        RemoveAllTreeNodes(branch->getCondition());
+                        branch->setCondition(replacement);
+                    }
+                    else if (symbol == branch->getTrueBlock())
+                    {
+                        RemoveAllTreeNodes(branch->getTrueBlock());
+                        branch->setTrueBlock(replacement);
+                    }
+                    else if (symbol == branch->getFalseBlock())
+                    {
+                        RemoveAllTreeNodes(branch->getFalseBlock());
+                        branch->setFalseBlock(replacement);
+                    }
                 }
                 else
                 {
