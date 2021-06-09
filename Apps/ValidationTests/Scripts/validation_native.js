@@ -93,6 +93,7 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
             try {
                 currentScene.render();
                 renderCount--;
+
                 if (renderCount === 0) {
                     engine.stopRenderLoop();
                     evaluate(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);

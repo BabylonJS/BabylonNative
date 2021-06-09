@@ -26,8 +26,6 @@ namespace Babylon
 
     class GraphicsImpl
     {
-        static constexpr auto JS_GRAPHICS_IMPL_NAME = "_GraphicsImpl";
-
     public:
         class UpdateToken final
         {
