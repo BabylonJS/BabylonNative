@@ -111,4 +111,9 @@ namespace Babylon
             encoder->touch(m_viewId.value());
         }
     }
+
+    void FrameBuffer::AcquireNewViewId()
+    {
+        NewView<false>(nullptr, m_viewPort);
+    }
 }

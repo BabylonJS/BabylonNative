@@ -6,7 +6,7 @@ var justOnce;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
-
+var generateReferences = false;
 // Random replacement
 var seed = 1;
 Math.random = function () {
@@ -51,7 +51,12 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
     return error;
 }
 
-function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done) {
+function saveRenderedResult(test, renderData) {
+    TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
+    return false; // no error
+}
+
+function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
     /*var canvasImageData =*/ engine._native.getFrameBufferData(function (screenshot) { 
         var testRes = true;
         // Visual check
@@ -59,7 +64,7 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
 
             var defaultErrorRatio = 2.5
 
-            if (compare(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
+            if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
                 testRes = false;
                 console.log('failed');
             } else {
@@ -76,7 +81,7 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
     });
 }
 
-function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done) {
+function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction) {
     currentScene.useConstantAnimationDeltaTime = true;
     var renderCount = test.renderCount || 1;
 
@@ -91,7 +96,7 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
 
                 if (renderCount === 0) {
                     engine.stopRenderLoop();
-                    evaluate(test, resultCanvas, result, renderImage, index, waitRing, done);
+                    evaluate(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);
                 }
             }
             catch (e) {
@@ -102,6 +107,152 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
     });
 }
 
+function loadPlayground(test, done, index, referenceImage, compareFunction) {
+    if (test.sceneFolder) {
+        BABYLON.SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene) {
+            currentScene = newScene;
+            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+        },
+            null,
+            function (loadedScene, msg) {
+                console.error(msg);
+                done(false);
+            });
+    }
+    else if (test.playgroundId) {
+        if (test.playgroundId[0] !== "#" || test.playgroundId.indexOf("#", 1) === -1) {
+            console.error("Invalid playground id");
+            done(false);
+            return;
+        }
+
+        var snippetUrl = "https://snippet.babylonjs.com";
+        var pgRoot = "https://playground.babylonjs.com";
+
+        var retryTime = 500;
+        var maxRetry = 5;
+        var retry = 0;
+
+        var onError = function () {
+            retry++;
+            if (retry < maxRetry) {
+                setTimeout(function () {
+                    loadPG();
+                }, retryTime);
+            }
+            else {
+                // Skip the test as we can not fetch the source.
+                done(true);
+            }
+        }
+
+        var loadPG = function () {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.addEventListener("readystatechange", function () {
+                if (xmlHttp.readyState === 4) {
+                    try {
+                        xmlHttp.onreadystatechange = null;
+                        var snippet = JSON.parse(xmlHttp.responseText);
+                        var code = JSON.parse(snippet.jsonPayload).code.toString();
+                        code = code.replace(/\/textures\//g, pgRoot + "/textures/");
+                        code = code.replace(/"textures\//g, "\"" + pgRoot + "/textures/");
+                        code = code.replace(/\/scenes\//g, pgRoot + "/scenes/");
+                        code = code.replace(/"scenes\//g, "\"" + pgRoot + "/scenes/");
+                        if (test.replace) {
+                            var split = test.replace.split(",");
+                            for (var i = 0; i < split.length; i += 2) {
+                                var source = split[i].trim();
+                                var destination = split[i + 1].trim();
+                                code = code.replace(source, destination);
+                            }
+                        }
+                        currentScene = eval(code + "\r\ncreateScene(engine)");
+                        var resultCanvas = 0;
+                        var result;
+                        var waitRing;
+
+                        if (currentScene.then) {
+                            // Handle if createScene returns a promise
+                            currentScene.then(function (scene) {
+                                currentScene = scene;
+                                processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+                            }).catch(function (e) {
+                                console.error(e);
+                                onError();
+                            })
+                        } else {
+                            // Handle if createScene returns a scene
+                            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+                        }
+
+                    }
+                    catch (e) {
+                        console.error(e);
+                        onError();
+                    }
+                }
+            }, false);
+            xmlHttp.onerror = function () {
+                console.error("Network error during test load.");
+                onError();
+            }
+            xmlHttp.open("GET", snippetUrl + test.playgroundId.replace(/#/g, "/"));
+            xmlHttp.send();
+        }
+        loadPG();
+    } else {
+        // Fix references
+        if (test.specificRoot) {
+            BABYLON.Tools.BaseUrl = config.root + test.specificRoot;
+        }
+
+        var request = new XMLHttpRequest();
+        request.open('GET', config.root + test.scriptToRun, true);
+
+        request.onreadystatechange = function () {
+            if (request.readyState === 4) {
+                try {
+                    request.onreadystatechange = null;
+
+                    var scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
+                    scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
+                    scriptToRun = scriptToRun.replace(/\/assets\//g, config.root + "/Assets/");
+
+                    if (test.replace) {
+                        var split = test.replace.split(",");
+                        for (var i = 0; i < split.length; i += 2) {
+                            var source = split[i].trim();
+                            var destination = split[i + 1].trim();
+                            scriptToRun = scriptToRun.replace(source, destination);
+                        }
+                    }
+
+                    if (test.replaceUrl) {
+                        var split = test.replaceUrl.split(",");
+                        for (var i = 0; i < split.length; i++) {
+                            var source = split[i].trim();
+                            var regex = new RegExp(source, "g");
+                            scriptToRun = scriptToRun.replace(regex, config.root + test.rootPath + source);
+                        }
+                    }
+
+                    currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
+                    processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);
+                }
+                catch (e) {
+                    console.error(e);
+                    done(false);
+                }
+            }
+        };
+        request.onerror = function () {
+            console.error("Network error during test load.");
+            done(false);
+        }
+
+        request.send(null);
+    }
+}
 function runTest(index, done) {
     if (index >= config.tests.length) {
         done(false);
@@ -127,155 +278,17 @@ function runTest(index, done) {
         }
 
         var referenceImage = TestUtils.decodeImage(data);
-
-        if (test.sceneFolder) {
-            BABYLON.SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function(newScene) {
-                currentScene = newScene;
-                processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
-            },
-                null,
-                function(loadedScene, msg) {
-                    console.error(msg);
-                    done(false);
-                });
-        }
-        else if (test.playgroundId) {
-            if (test.playgroundId[0] !== "#" || test.playgroundId.indexOf("#", 1) === -1) {
-                console.error("Invalid playground id");
-                done(false);
-                return;
-            }
-
-            var snippetUrl = "https://snippet.babylonjs.com";
-            var pgRoot = "https://playground.babylonjs.com";
-
-            var retryTime = 500;
-            var maxRetry = 5;
-            var retry = 0;
-
-            var onError = function() {
-                retry++;
-                if (retry < maxRetry) {
-                    setTimeout(function() {
-                        loadPG();
-                    }, retryTime);
-                }
-                else {
-                    // Skip the test as we can not fetch the source.
-                    done(true);
-                }
-            }
-
-            var loadPG = function() {
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.addEventListener("readystatechange", function() {
-                    if (xmlHttp.readyState === 4) {
-                        try {
-                            xmlHttp.onreadystatechange = null;
-                            var snippet = JSON.parse(xmlHttp.responseText);
-                            var code = JSON.parse(snippet.jsonPayload).code.toString();
-                            code = code.replace(/\/textures\//g, pgRoot + "/textures/");
-                            code = code.replace(/"textures\//g, "\"" + pgRoot + "/textures/");
-                            code = code.replace(/\/scenes\//g, pgRoot + "/scenes/");
-                            code = code.replace(/"scenes\//g, "\"" + pgRoot + "/scenes/");
-                            if (test.replace) {
-                                var split = test.replace.split(",");
-                                for (var i = 0; i < split.length; i += 2) {
-                                    var source = split[i].trim();
-                                    var destination = split[i + 1].trim();
-                                    code = code.replace(source, destination);
-                                }
-                            }
-                            currentScene = eval(code + "\r\ncreateScene(engine)");
-                            var resultCanvas = 0;
-                            var result;
-                            var waitRing;
-
-                            if (currentScene.then) {
-                                // Handle if createScene returns a promise
-                                currentScene.then(function(scene) {
-                                    currentScene = scene;
-                                    processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
-                                }).catch(function(e) {
-                                    console.error(e);
-                                    onError();
-                                })
-                            } else {
-                                // Handle if createScene returns a scene
-                                processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done);
-                            }
-
-                        }
-                        catch (e) {
-                            console.error(e);
-                            onError();
-                        }
-                    }
-                }, false);
-                xmlHttp.onerror = function() {
-                    console.error("Network error during test load.");
-                    onError();
-                }
-                xmlHttp.open("GET", snippetUrl + test.playgroundId.replace(/#/g, "/"));
-                xmlHttp.send();
-            }
-            loadPG();
-        } else {
-            // Fix references
-            if (test.specificRoot) {
-                BABYLON.Tools.BaseUrl = config.root + test.specificRoot;
-            }
-
-            var request = new XMLHttpRequest();
-            request.open('GET', config.root + test.scriptToRun, true);
-
-            request.onreadystatechange = function() {
-                if (request.readyState === 4) {
-                    try {
-                        request.onreadystatechange = null;
-
-                        var scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
-                        scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
-                        scriptToRun = scriptToRun.replace(/\/assets\//g, config.root + "/Assets/");
-
-                        if (test.replace) {
-                            var split = test.replace.split(",");
-                            for (var i = 0; i < split.length; i += 2) {
-                                var source = split[i].trim();
-                                var destination = split[i + 1].trim();
-                                scriptToRun = scriptToRun.replace(source, destination);
-                            }
-                        }
-
-                        if (test.replaceUrl) {
-                            var split = test.replaceUrl.split(",");
-                            for (var i = 0; i < split.length; i++) {
-                                var source = split[i].trim();
-                                var regex = new RegExp(source, "g");
-                                scriptToRun = scriptToRun.replace(regex, config.root + test.rootPath + source);
-                            }
-                        }
-
-                        currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
-                        processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done);
-                    }
-                    catch (e) {
-                        console.error(e);
-                        done(false);
-                    }
-                }
-            };
-            request.onerror = function() {
-                console.error("Network error during test load.");
-                done(false);
-            }
-
-            request.send(null);
-        }
+        loadPlayground(test, done, index, referenceImage, compare);
+        
     };
 
-    const url = "app:///ReferenceImages/" + test.referenceImage;
-    BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
+    if (generateReferences) {
+        loadPlayground(test, done, index, undefined, saveRenderedResult);
+    } else {
+        // run test and image comparison
+        const url = "app:///ReferenceImages/" + test.referenceImage;
+        BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
+    }
 }
 
 engine = new BABYLON.NativeEngine();
