@@ -40,6 +40,12 @@ add_library(xrInternal INTERFACE)
 
 target_compile_definitions(xr PRIVATE _CRT_SECURE_NO_WARNINGS)
 
+if (APPLE)
+    set_target_properties(xr PROPERTIES
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    )
+endif()
+
 if (ANDROID)
     add_library(arcore SHARED IMPORTED)
     set_target_properties(arcore PROPERTIES IMPORTED_LOCATION
