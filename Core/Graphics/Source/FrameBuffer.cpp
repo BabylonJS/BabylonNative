@@ -72,7 +72,6 @@ namespace Babylon
         }
 
         encoder->submit(m_viewId.value(), programHandle, 0, flags);
-        m_manager.AppendTouchedView(m_viewId.value());
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder* encoder, uint32_t stencilState)

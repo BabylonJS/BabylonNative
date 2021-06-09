@@ -82,33 +82,6 @@ namespace Babylon
         m_default.Reset();
     }
 
-    void FrameBufferManager::AppendTouchedView(bgfx::ViewId viewId)
-    {
-        if (m_touchedViews.empty() || m_touchedViews.back() != viewId)
-        {
-            m_touchedViews.push_back(viewId);
-        }
-    }
-
-    const std::vector<bgfx::ViewId> FrameBufferManager::GetTouchedViews()
-    { 
-        // view orders are presistent between frames.
-        // If, for some reasons, the number of remapped view is different, 
-        // viewIds can be missed.
-        // example:
-        // frame N: remapped views = 1,2,0
-        // frame N: remapped views = 0,1
-        // bgfx ends up with remapped views : 0,1,0
-        // having twice view 0 leads to incomplete reordering.
-        // Filling all view remapped with unused indices to fix that.
-        auto start = m_touchedViews.size();
-        for (size_t i = start; i < bgfx::getCaps()->limits.maxViews; i++)
-        {
-            m_touchedViews.push_back(bgfx::ViewId(i));
-        }
-        return m_touchedViews; 
-    }
-
     void FrameBufferManager::Resize(uint16_t width, uint16_t height)
     {
         if (bgfx::getCaps()->originBottomLeft)

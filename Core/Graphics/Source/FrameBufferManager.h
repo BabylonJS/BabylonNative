@@ -4,7 +4,6 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <vector>
 
 namespace Babylon
 {
@@ -24,14 +23,6 @@ namespace Babylon
         bgfx::ViewId NewViewId();
         void Reset();
 
-        // Draw calls can happen independently of NewViewId calls.
-        // For example, clear on backbuffer then draw calls on renderTarget and then drawcalls on backbuffer
-        // To preserve drawcalls orders, we have to keep track of touched views and draw views in that 
-        // particular order.
-        void AppendTouchedView(bgfx::ViewId viewId);
-        void ClearTouchedViews() { m_touchedViews.clear(); }
-        const std::vector<bgfx::ViewId> GetTouchedViews();
-
         void Resize(uint16_t width, uint16_t height);
     private:
         void ResetViewId();
@@ -42,8 +33,6 @@ namespace Babylon
 
         std::mutex m_frameBuffersMutex{};
         std::list<FrameBuffer> m_frameBuffers{};
-
-        std::vector<bgfx::ViewId> m_touchedViews;
 
         FrameBuffer m_default;
         FrameBuffer m_backBuffer;

@@ -374,7 +374,6 @@ namespace Babylon
             bgfx::setVertexBuffer(0, m_YFlipVertexBuffer);
             bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_DEPTH_TEST_ALWAYS);
             bgfx::submit(viewId, m_YFlipProgram);
-            m_frameBufferManager->AppendTouchedView(viewId);
         }
     }
 
@@ -391,14 +390,6 @@ namespace Babylon
 
         // Request screen shots before bgfx::frame.
         RequestScreenShots();
-
-        // Handle order of views
-        const auto& viewOrder = m_frameBufferManager->GetTouchedViews();
-        if (!viewOrder.empty())
-        {
-            bgfx::setViewOrder(viewOrder[0], static_cast<uint16_t>(viewOrder.size()), viewOrder.data());
-            m_frameBufferManager->ClearTouchedViews();
-        }
 
         // Advance frame and render!
         uint32_t frameNumber{bgfx::frame()};
