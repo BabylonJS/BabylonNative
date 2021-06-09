@@ -15,7 +15,6 @@ file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/nanovg.cpp)
 set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
 
 add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES})
-warnings_as_errors(Canvas)
 
 target_include_directories(Canvas PUBLIC "Include"
     PRIVATE "${BGFX_DIR}/3rdparty"
@@ -32,6 +31,7 @@ target_link_to_dependencies(Canvas PUBLIC napi
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-# disable warnings because of 3rd party 
+source_group("3rd party Sources" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FONT_SOURCES} ${NANOVG_SOURCES} ${ATLAS_SOURCES})
+# disable warnings because of 3rd party issue with anonymous struct
 disable_warnings(Canvas)
 target_compile_definitions(Canvas PRIVATE _CRT_SECURE_NO_WARNINGS)
