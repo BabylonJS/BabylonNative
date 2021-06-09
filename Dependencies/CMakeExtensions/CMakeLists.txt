@@ -91,7 +91,7 @@ function(warnings_as_errors target)
       # 5205 : delete of an abstract XXX that has a non-virtual destructor results in undefined behavior (coming from WinRT)
       target_compile_options(${target} PRIVATE /W4 /WX /wd5205)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-gnu-anonymous-struct)
+      target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
     else()
       # c99-extensions and gnu-zero-variadic-macro-arguments coming from included bgfx headers
       target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-c99-extensions -Wno-gnu-zero-variadic-macro-arguments)
