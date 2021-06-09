@@ -91,7 +91,6 @@ CreateBoxAsync().then(function () {
         scene.createDefaultLight(true);
     }
 
-<<<<<<< HEAD
     engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
         if (premulAlpha === void 0) { premulAlpha = false; }
         var webGLTexture = texture._hardwareTexture.underlyingResource;
