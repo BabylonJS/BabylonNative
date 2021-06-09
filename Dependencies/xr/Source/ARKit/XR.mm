@@ -721,8 +721,10 @@ namespace xr {
                 {
                     if (ActiveFrameViews[0].DepthTexturePointer != nil) {
                         id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
-                        [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
-                        [oldDepthTexture release];
+                        deletedTextureAsyncCallback(ActiveFrameViews[0].DepthTexturePointer).then(arcana::inline_scheduler, arcana::cancellation::none(), [oldDepthTexture]() {
+                            [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
+                            [oldDepthTexture release];
+                        });
                         ActiveFrameViews[0].DepthTexturePointer = nil;
                     }
 
