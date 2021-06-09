@@ -28,7 +28,7 @@ if(WINDOWS_STORE)
     set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
     set(SOURCES
-        ${SOURCES}
+        "Shared/TestUtils.h"
         ${APPX_FILES}
         ${APPX_ASSETS}
         "UWP/App.cpp"

@@ -13,6 +13,8 @@
 
 #include <winrt/windows.ui.core.h>
 
+#include <Shared/TestUtils.h>
+
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Core;
 using namespace Windows::ApplicationModel::Activation;

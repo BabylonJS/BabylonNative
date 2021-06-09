@@ -1,6 +1,9 @@
 #pragma once
 
-#include <Shared/TestUtils.h>
+// NOMINMAX to prevent compilation errors with bgfx
+#define NOMINMAX
+#include <Windows.h>
+#undef NOMINMAX
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 
