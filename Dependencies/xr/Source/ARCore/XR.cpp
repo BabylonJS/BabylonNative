@@ -64,29 +64,6 @@ namespace xr
         virtual ~XrContextARCore() = default;
     };
 
-    struct XrContextARCore : public IXrContextARCore {
-        bool Initialized{false};
-        ArSession* Session{nullptr};
-        ArFrame* Frame{nullptr};
-
-        bool IsInitialized() const override
-        {
-            return Initialized;
-        }
-
-        ArSession* XrSession() const override
-        {
-            return Session;
-        }
-
-        ArFrame* XrFrame() const override
-        {
-            return Frame;
-        }
-
-        virtual ~XrContextARCore() = default;
-    };
-
     struct System::Impl
     {
         std::shared_ptr<XrContextARCore> XrContext{std::make_shared<XrContextARCore>()};
