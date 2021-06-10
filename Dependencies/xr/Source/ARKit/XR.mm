@@ -196,27 +196,25 @@ namespace {
  Updates the AR Camera texture, and Camera pose. If a size change is detected also sets the UVs, and FoV values.
  */
 - (void)session:(ARSession *)__unused session didUpdateFrameInternal:(ARFrame *)frame {
-    @autoreleasepool{
-        // Update both metal textures used by the renderer to display the camera image.
-        CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
-        CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
+    // Update both metal textures used by the renderer to display the camera image.
+    CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
+    CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
 
-        // Swap the camera textures, do this under synchronization lock to prevent null access.
-        @synchronized(self) {
-            [self cleanupTextures];
-            _cameraTextureY = newCameraTextureY;
-            _cameraTextureCbCr = newCameraTextureCbCr;
-        }
-
-        // Check if our orientation or size has changed and update camera UVs if necessary.
-        if ([self checkAndUpdateCameraUVs:frame]) {
-            // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
-            [self updateProjectionMatrix:frame.camera];
-        }
-
-        // Finally update the XR pose based on the current transform from ARKit.
-        [self updateDisplayOrientedPose:(frame.camera)];
+    // Swap the camera textures, do this under synchronization lock to prevent null access.
+    @synchronized(self) {
+        [self cleanupTextures];
+        _cameraTextureY = newCameraTextureY;
+        _cameraTextureCbCr = newCameraTextureCbCr;
     }
+
+    // Check if our orientation or size has changed and update camera UVs if necessary.
+    if ([self checkAndUpdateCameraUVs:frame]) {
+        // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
+        [self updateProjectionMatrix:frame.camera];
+    }
+
+    // Finally update the XR pose based on the current transform from ARKit.
+    [self updateDisplayOrientedPose:(frame.camera)];
 }
 
 /**
@@ -647,13 +645,7 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
-            // We may or may not be under the scope of an autoreleasepool already, so to guard against both cases grab the
-            // current frame inside a locally scoped autoreleasepool and manually retain the frame without marking for autorelease.
-            // DEVNOTE: We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see:
-            // https://github.com/BabylonJS/BabylonNative/issues/527
-            @autoreleasepool {
-                currentFrame = session.currentFrame;
-            }
+            currentFrame = session.currentFrame;
 
             UpdateXRView();
 
@@ -706,57 +698,55 @@ namespace xr {
                 }
             }
 
-            @autoreleasepool {
-                // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
-                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"DrawCameraToBabylonTextureCommandBuffer";
-                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+            // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
+            id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+            commandBuffer.label = @"DrawCameraToBabylonTextureCommandBuffer";
+            MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                id<MTLTexture> cameraTextureY = nil;
-                id<MTLTexture> cameraTextureCbCr = nil;
-                @synchronized(sessionDelegate) {
-                    cameraTextureY = [sessionDelegate GetCameraTextureY];
-                    cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
+            id<MTLTexture> cameraTextureY = nil;
+            id<MTLTexture> cameraTextureCbCr = nil;
+            @synchronized(sessionDelegate) {
+                cameraTextureY = [sessionDelegate GetCameraTextureY];
+                cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
+            }
+
+            @try {
+                if(renderPassDescriptor != nil) {
+                    // Attach the color texture, on which we'll draw the camera texture.
+                    renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+
+                    // Create and end the render encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
+
+                    // Set the shader pipeline.
+                    [renderEncoder setRenderPipelineState:pipelineState];
+
+                    // Set the vertex data.
+                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+
+                    // Set the textures.
+                    [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
+                    [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
+
+                    // Draw the triangles.
+                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+
+                    [renderEncoder endEncoding];
                 }
 
-                @try {
-                    if(renderPassDescriptor != nil) {
-                        // Attach the color texture, on which we'll draw the camera texture.
-                        renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
-                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-
-                        // Create and end the render encoder.
-                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                        renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
-
-                        // Set the shader pipeline.
-                        [renderEncoder setRenderPipelineState:pipelineState];
-
-                        // Set the vertex data.
-                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
-
-                        // Set the textures.
-                        [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
-                        [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
-
-                        // Draw the triangles.
-                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
-
-                        [renderEncoder endEncoding];
-                    }
-
-                    // Finalize rendering here & push the command buffer to the GPU.
-                    [commandBuffer commit];
-                    [commandBuffer waitUntilCompleted];
+                // Finalize rendering here & push the command buffer to the GPU.
+                [commandBuffer commit];
+                [commandBuffer waitUntilCompleted];
+            }
+            @finally {
+                if (cameraTextureY != nil) {
+                    [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
                 }
-                @finally {
-                    if (cameraTextureY != nil) {
-                        [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
-                    }
 
-                    if (cameraTextureCbCr != nil) {
-                        [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                    }
+                if (cameraTextureCbCr != nil) {
+                    [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                 }
             }
 
@@ -769,62 +759,58 @@ namespace xr {
         }
 
         void DrawFrame() {
-            @autoreleasepool {
-                if (metalLayer) {
-                    // Create a new command buffer for each render pass to the current drawable.
-                    id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                    commandBuffer.label = @"XRDisplayCommandBuffer";
+            if (metalLayer) {
+                // Create a new command buffer for each render pass to the current drawable.
+                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+                commandBuffer.label = @"XRDisplayCommandBuffer";
 
-                    id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
-                    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
+                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                    if (renderPassDescriptor != nil) {
-                        renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                if (renderPassDescriptor != nil) {
+                    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
-                        // Create a render command encoder.
-                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                        renderEncoder.label = @"XRDisplayEncoder";
+                    // Create a render command encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"XRDisplayEncoder";
 
-                        // Set the region of the drawable to draw into.
-                        [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
+                    // Set the region of the drawable to draw into.
+                    [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
 
-                        // Set the shader pipeline.
-                        [renderEncoder setRenderPipelineState:pipelineState];
+                    // Set the shader pipeline.
+                    [renderEncoder setRenderPipelineState:pipelineState];
 
-                        // Set the vertex data.
-                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                    // Set the vertex data.
+                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
-                        // Set the textures.
-                        [renderEncoder setFragmentTexture:(__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer atIndex:0];
+                    // Set the textures.
+                    [renderEncoder setFragmentTexture:(__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer atIndex:0];
 
-                        // Draw the triangles.
-                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                    // Draw the triangles.
+                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-                        [renderEncoder endEncoding];
+                    [renderEncoder endEncoding];
 
-                        // Schedule a present once the framebuffer is complete using the current drawable.
-                        [commandBuffer presentDrawable:drawable];
-                    }
-
-                    // Finalize rendering here & push the command buffer to the GPU.
-                    [commandBuffer commit];
+                    // Schedule a present once the framebuffer is complete using the current drawable.
+                    [commandBuffer presentDrawable:drawable];
                 }
 
-                if (currentFrame != nil) {
-                    currentFrame = nil;
-                }
+                // Finalize rendering here & push the command buffer to the GPU.
+                [commandBuffer commit];
+            }
+
+            if (currentFrame != nil) {
+                currentFrame = nil;
             }
         }
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
-            @autoreleasepool {
-                if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
-                    if (@available(iOS 13.0, *)) {
-                        GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
-                    } else {
-                        GetHitTestResultsLegacy(filteredResults, trackableTypes);
-                    }
+            if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
+                if (@available(iOS 13.0, *)) {
+                    GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
+                } else {
+                    GetHitTestResultsLegacy(filteredResults, trackableTypes);
                 }
             }
         }

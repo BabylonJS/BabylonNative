@@ -36,6 +36,7 @@ namespace Babylon
         void RunPlatformTier();
         void RunEnvironmentTier(const char* executablePath = ".");
         void Run(Napi::Env);
+        void Execute(std::function<void()> callback);
 
         static void DefaultUnhandledExceptionHandler(std::exception_ptr ptr);
 
