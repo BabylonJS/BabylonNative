@@ -1373,9 +1373,9 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(const Napi::CallbackInfo& info)
+            static Napi::Object New(const Napi::Env& env)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
             }
 
             XRAnchor(const Napi::CallbackInfo& info)
@@ -1991,7 +1991,7 @@ namespace Babylon
                 auto nativeAnchor = m_frame->CreateAnchor(pose, nativeTrackable);
 
                 // Create the XRAnchor object, and initialize its members.
-                auto napiAnchor = Napi::Persistent(XRAnchor::New(info));
+                auto napiAnchor = Napi::Persistent(XRAnchor::New(info.Env()));
                 auto* xrAnchor = XRAnchor::Unwrap(napiAnchor.Value());
                 xrAnchor->SetAnchor(nativeAnchor);
 
@@ -2002,6 +2002,32 @@ namespace Babylon
                 auto deferred = Napi::Promise::Deferred::New(info.Env());
                 deferred.Resolve(m_trackedAnchors.back().Value());
                 return deferred.Promise();
+            }
+
+            Napi::Value DeclareNativeAnchor(const Napi::Env& env, xr::NativeAnchorPtr nativeAnchor)
+            {
+                for (const auto& anchor : m_trackedAnchors)
+                {
+                    const auto xrAnchor = XRAnchor::Unwrap(anchor.Value());
+                    if (xrAnchor->GetNativeAnchor().NativeAnchor == nativeAnchor)
+                    {
+                        return anchor.Value();
+                    }
+                }
+
+                // Provide the native anchor to the native frame.
+                auto newAnchor = m_frame->DeclareAnchor(nativeAnchor);
+
+                // Create and populate the napi object.
+                auto napiAnchor = Napi::Persistent(XRAnchor::New(env));
+                auto xrAnchor = XRAnchor::Unwrap(napiAnchor.Value());
+                xrAnchor->SetAnchor(newAnchor);
+
+                // Track the napi object.
+                m_trackedAnchors.emplace_back(std::move(napiAnchor));
+
+                // Return the napi object.
+                return napiAnchor.Value();
             }
 
             xr::System::Session::Frame::Plane& GetPlaneFromID(xr::System::Session::Frame::Plane::Identifier planeID)
@@ -2457,6 +2483,11 @@ namespace Babylon
             void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
             {
                 return m_xr->SetRenderTextureFunctions(createFunction, destroyFunction);
+            }
+
+            Napi::Value DeclareNativeAnchor(const Napi::Env& env, xr::NativeAnchorPtr nativeAnchor)
+            {
+                return m_xrFrame.DeclareNativeAnchor(env, nativeAnchor);
             }
 
         private:
@@ -2983,6 +3014,7 @@ namespace Babylon
                         InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
                         InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
                         InstanceMethod("getNativeAnchor", &XR::GetNativeAnchor),
+                        InstanceMethod("declareNativeAnchor", &XR::DeclareNativeAnchor),
                         InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
                     });
 
@@ -3097,6 +3129,20 @@ namespace Babylon
                 }
 
                 return info.Env().Undefined();
+            }
+
+            Napi::Value DeclareNativeAnchor(const Napi::CallbackInfo& info)
+            {
+                if (info.Length() != 2 ||
+                    !info[0].IsObject() /*XRSession*/ ||
+                    !info[1].IsNumber() /*NativeAnchorPtr*/)
+                {
+                    throw std::runtime_error{"Invalid argument provided."};
+                }
+
+                const auto session = XRSession::Unwrap(info[0].As<Napi::Object>());
+                const auto anchorPtr = reinterpret_cast<void*>(static_cast<uintptr_t>(info[1].As<Napi::Number>().DoubleValue()));
+                return session->DeclareNativeAnchor(info.Env(), anchorPtr);
             }
         };
     }

@@ -837,6 +837,27 @@ namespace xr
             return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
         }
 
+        Anchor DeclareAnchor(NativeAnchorPtr anchor)
+        {
+            ArAnchor* arAnchor{reinterpret_cast<ArAnchor*>(anchor)};
+            const auto iterator = std::find(arCoreAnchors.begin(), arCoreAnchors.end(), arAnchor);
+            if (iterator == arCoreAnchors.end())
+            {
+                arCoreAnchors.push_back(arAnchor);
+            }
+
+            ArPose* arPose{};
+            ArAnchor_getPose(xrContext->Session, arAnchor, arPose);
+
+            float rawPose[7]{};
+            ArPose_getPoseRaw(xrContext->Session, arPose, rawPose);
+
+            Pose pose{};
+            RawToPose(rawPose, pose);
+
+            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
+        };
+
         void UpdateAnchor(xr::Anchor& anchor)
         {
             // First check if the anchor still exists, if not then mark the anchor as no longer valid.
@@ -1241,6 +1262,11 @@ namespace xr
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
     {
         return m_impl->sessionImpl.CreateAnchor(pose, trackable);
+    }
+
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr anchor) const
+    {
+        return m_impl->sessionImpl.DeclareAnchor(anchor);
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const

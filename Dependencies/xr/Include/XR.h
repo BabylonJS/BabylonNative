@@ -314,6 +314,7 @@ namespace xr
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
+                Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
                 SceneObject& GetSceneObjectByID(SceneObject::Identifier) const;
