@@ -2200,8 +2200,8 @@ namespace Babylon
                 for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
                 {
                     const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
-                    const auto transformMatrix = CreateTransformMatrix(jointSpace, false).data();
-                    memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix, 4 /*Float32*/ * 16);
+                    const auto transformMatrix = CreateTransformMatrix(jointSpace, false);
+                    memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), 4 /*Float32*/ * 16);
                 }
 
                 return Napi::Value::From(info.Env(), true);
