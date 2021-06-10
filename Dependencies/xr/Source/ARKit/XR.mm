@@ -574,13 +574,13 @@ namespace xr {
 
         ~Impl() {
             if (ActiveFrameViews[0].ColorTexturePointer != nil) {
-                id<MTLTexture> oldColorTexture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
+                id<MTLTexture> oldColorTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                 [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
                 ActiveFrameViews[0].ColorTexturePointer = nil;
             }
 
             if (ActiveFrameViews[0].DepthTexturePointer != nil) {
-                id<MTLTexture> oldDepthTexture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                id<MTLTexture> oldDepthTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
                 [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
                 ActiveFrameViews[0].DepthTexturePointer = nil;
             }
@@ -840,7 +840,7 @@ namespace xr {
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
             [session addAnchor:anchor];
             nativeAnchors.push_back(anchor);
-            return { pose, (__bridge_retained NativeAnchorPtr)anchor };
+            return { pose, (__bridge NativeAnchorPtr)anchor };
         }
 
         /**
@@ -865,7 +865,7 @@ namespace xr {
             // If this anchor has not already been deleted, then remove it from the current AR session,
             // and clean up its state in memory.
             if (anchor.NativeAnchor != nil) {
-                auto arAnchor = (__bridge_transfer ARAnchor*)anchor.NativeAnchor;
+                auto arAnchor = (__bridge ARAnchor*)anchor.NativeAnchor;
                 anchor.NativeAnchor = nil;
 
                 CleanupAnchor(arAnchor);
