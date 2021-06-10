@@ -92,7 +92,7 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::runtime_error{program.getInfoDebugLog()};
+            throw std::runtime_error{program.getInfoLog()};
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
