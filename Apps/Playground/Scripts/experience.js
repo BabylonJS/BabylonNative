@@ -261,14 +261,15 @@ CreateBoxAsync().then(function () {
                         const zones = [
                             BABYLON.HandConstraintZone.RADIAL_SIDE,
                             BABYLON.HandConstraintZone.ULNAR_SIDE,
-                        ];
+                        ]
 
                         const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
                         box.position.z += 0.5;
-                        const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
-                         manager.addControl(handMenu);
 
                         for (let i = 0; i < zones.length; i++) {
+                            const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
+                            manager.addControl(handMenu);
+
                             const button0 = new BABYLON.GUI.TouchHolographicButton("button0");
                             button0.text = "Open slate";
                             button0.onPointerUpObservable.add(() => {
@@ -323,6 +324,7 @@ CreateBoxAsync().then(function () {
                             handMenu.handConstraintBehavior.targetOffset = 0.1;
                             handMenu.handConstraintBehavior.targetZone = zones[i];
                             handMenu.handConstraintBehavior.lerpTime = 100;
+
                         }
 
                     }, 2000)
