@@ -1245,7 +1245,7 @@ namespace xr {
         return m_impl->sessionImpl.CreateAnchor(pose);
     }
     
-    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr anchor) const {
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
         throw std::runtime_error("not implemented"); 
     }
 
