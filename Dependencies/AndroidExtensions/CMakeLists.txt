@@ -1,8 +1,12 @@
 set(SOURCES
     "Include/AndroidExtensions/Globals.h"
     "Include/AndroidExtensions/JavaWrappers.h"
+    "Include/AndroidExtensions/OpenGLHelpers.h"
+    "Include/AndroidExtensions/Permissions.h"
     "Source/Globals.cpp"
-    "Source/JavaWrappers.cpp")
+    "Source/JavaWrappers.cpp"
+    "Source/OpenGLHelpers.cpp"
+    "Source/Permissions.cpp")
 
 add_library(AndroidExtensions ${SOURCES})
 warnings_as_errors(AndroidExtensions)
