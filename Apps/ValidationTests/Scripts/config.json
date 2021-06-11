@@ -2,6 +2,11 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "RenderingGroupId",
+            "playgroundId": "#1J6IGD#0",
+            "referenceImage": "RenderingGroupId.png"
+        },
+        {
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "referenceImage": "LightProjectionTexture.png"
@@ -9,8 +14,7 @@
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "referenceImage": "point-light-shadows.png",
-            "renderCount": 2
+            "referenceImage": "point-light-shadows.png"
         },
         {
             "title": "Texture cache",

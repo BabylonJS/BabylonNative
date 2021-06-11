@@ -1379,6 +1379,7 @@ namespace Babylon
         UNUSED(frameBuffer);
 
         m_boundFrameBuffer = &m_graphicsImpl.DefaultFrameBuffer();
+        m_boundFrameBuffer->AcquireNewViewId();
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)

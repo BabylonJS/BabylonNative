@@ -613,7 +613,7 @@ namespace Babylon
 
                         m_sessionState->TextureToViewConfigurationMap.erase(texturePointer);
                     }
-                });
+                }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), []{}); // Ensure continuations run on the render thread if they use inline_scheduler.
             });
 
             // Ending a session outside of calls to EndSessionAsync() is currently not supported.
@@ -1216,7 +1216,6 @@ namespace Babylon
         class XRRay : public Napi::ObjectWrap<XRRay>
         {
             static constexpr auto JS_CLASS_NAME = "XRRay";
-            static constexpr size_t MATRIX_SIZE = 16;
 
         public:
             static void Initialize(Napi::Env env)
@@ -1242,60 +1241,96 @@ namespace Babylon
 
             XRRay(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRRay>{info}
+                , m_origin{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_direction{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
-                bool originSet = false;
-                bool directionSet = false;
-                bool matrixSet = false;
-                if (info[0].IsObject())
+                auto argLength{info.Length()};
+                xr::Ray tempVals{};
+
+                tempVals.Direction.Z = -1.0;
+
+                // Currently the constructor is either sent a BABYLON.Vector3, {}, an XRRigidTransform, or {x,y,z,w},{x,y,z,w}
+                if (argLength > 0 && info[0].IsObject())
                 {
-                    auto argumentObject = info[0].As<Napi::Object>();
-                    auto originValue = argumentObject.Get("origin");
-                    if (originValue.IsObject())
+                    auto argumentObject{info[0].As<Napi::Object>()};
+
+                    XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
+                    if (transform != nullptr)
                     {
-                        originSet = true;
-                        m_origin = Napi::Persistent(originValue.As<Napi::Object>());
-                    }
+                        // The value passed in to the constructor is an XRRigidTransform
+                        xr::Pose pose{transform->GetNativePose()};
+                        tempVals.Origin = pose.Position;
 
-                    auto directionValue = argumentObject.Get("direction");
-                    if (directionValue.IsObject())
+                        // Grab forward direction from quaternion
+                        tempVals.Direction.X = 2 * ((pose.Orientation.X * pose.Orientation.Z) + (pose.Orientation.W * pose.Orientation.Y));
+                        tempVals.Direction.Y = 2 * ((pose.Orientation.Y * pose.Orientation.Z) - (pose.Orientation.W * pose.Orientation.X));
+                        tempVals.Direction.Z = 1 - (2 * ((pose.Orientation.X * pose.Orientation.X) + (pose.Orientation.Y * pose.Orientation.Y)));
+                    }
+                    else
                     {
-                        directionSet = true;
-                        m_direction = Napi::Persistent(directionValue.As<Napi::Object>());
+                        if (argumentObject.Has("x"))
+                        {
+                            tempVals.Origin.X = argumentObject.Get("x").ToNumber().FloatValue();
+                        }
+                        if (argumentObject.Has("y"))
+                        {
+                            tempVals.Origin.Y = argumentObject.Get("y").ToNumber().FloatValue();
+                        }
+                        if (argumentObject.Has("z"))
+                        {
+                            tempVals.Origin.Z = argumentObject.Get("z").ToNumber().FloatValue();
+                        }
+                        if (argumentObject.Has("w") && argumentObject.Get("w").ToNumber().FloatValue() != 1.0)
+                        {
+                            throw Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Origin is not 1");
+                        }
                     }
+                }
+                if (argLength >= 2 && info[1].IsObject())
+                {
+                    auto argumentObject{info[1].As<Napi::Object>()};
 
-                    auto matrixValue = argumentObject.Get("matrix");
-                    if (matrixValue.IsArray())
+                    if (argumentObject.Has("x"))
                     {
-                        matrixSet = true;
-                        m_matrix = Napi::Persistent(matrixValue.As<Napi::Float32Array>());
+                        tempVals.Direction.X = argumentObject.Get("x").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("y"))
+                    {
+                        tempVals.Direction.Y = argumentObject.Get("y").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("z"))
+                    {
+                        tempVals.Direction.Z = argumentObject.Get("z").ToNumber().FloatValue();
+                    }
+                    if (argumentObject.Has("w") && argumentObject.Get("w").ToNumber().FloatValue() != 0.0)
+                    {
+                        throw Napi::Error::New(info.Env(), "TypeError: w-axis provided for XRRay's Direction is not 0");
                     }
                 }
 
-                if (!originSet)
-                {
-                    m_origin = Napi::Persistent(Napi::Object::New(info.Env()));
-                }
+                // Normalize the direction
+                auto norm{bx::normalize(bx::Vec3(tempVals.Direction.X, tempVals.Direction.Y, tempVals.Direction.Z))};
+                tempVals.Direction = {norm.x, norm.y, norm.z};
 
-                if (!directionSet)
-                {
-                    m_direction = Napi::Persistent(Napi::Object::New(info.Env()));
-                }
-
-                if (!matrixSet)
-                {
-                    m_matrix = Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE));
-                }
+                m_origin.Set("x", Napi::Value::From(info.Env(), tempVals.Origin.X));
+                m_origin.Set("y", Napi::Value::From(info.Env(), tempVals.Origin.Y));
+                m_origin.Set("z", Napi::Value::From(info.Env(), tempVals.Origin.Z));
+                m_origin.Set("w", Napi::Value::From(info.Env(), 1.0));
+                m_direction.Set("x", Napi::Value::From(info.Env(), tempVals.Direction.X));
+                m_direction.Set("y", Napi::Value::From(info.Env(), tempVals.Direction.Y));
+                m_direction.Set("z", Napi::Value::From(info.Env(), tempVals.Direction.Z));
+                m_direction.Set("w", Napi::Value::From(info.Env(), 0));
             }
 
             xr::Ray GetNativeRay()
             {
                 xr::Ray nativeRay{{0, 0, 0}, {0, 0, -1}};
-                auto originObject = m_origin.Value();
+                auto originObject{m_origin.Value()};
                 nativeRay.Origin.X = originObject.Get("x").ToNumber().FloatValue();
                 nativeRay.Origin.Y = originObject.Get("y").ToNumber().FloatValue();
                 nativeRay.Origin.Z = originObject.Get("z").ToNumber().FloatValue();
 
-                auto directionObject = m_direction.Value();
+                auto directionObject{m_direction.Value()};
                 nativeRay.Direction.X = directionObject.Get("x").ToNumber().FloatValue();
                 nativeRay.Direction.Y = directionObject.Get("y").ToNumber().FloatValue();
                 nativeRay.Direction.Z = directionObject.Get("z").ToNumber().FloatValue();
@@ -1306,7 +1341,6 @@ namespace Babylon
         private:
             Napi::ObjectReference m_origin{};
             Napi::ObjectReference m_direction{};
-            Napi::Reference<Napi::Float32Array> m_matrix{};
 
             Napi::Value Origin(const Napi::CallbackInfo&)
             {
@@ -1318,9 +1352,9 @@ namespace Babylon
                 return m_direction.Value();
             }
 
-            Napi::Value Matrix(const Napi::CallbackInfo&)
+            Napi::Value Matrix(const Napi::CallbackInfo& info)
             {
-                return m_matrix.Value();
+                throw Napi::Error::New(info.Env(), "XRRay.matrix is not implemented");
             }
         };
 

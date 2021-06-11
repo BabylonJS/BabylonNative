@@ -27,6 +27,12 @@ namespace Babylon
         void SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
 
+        // Temporary fix to get a new viewId for the FrameBuffer
+        // This method is called when a FrameBuffer is unbound so drawcalls are performed with the intented order
+        // Without a new viewId, drawcalls might be associated with a previous viewId and performed by bgfx before
+        // they should.
+        void AcquireNewViewId();
+
     private:
         struct ViewPort
         {
