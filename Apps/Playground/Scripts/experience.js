@@ -13,7 +13,7 @@ var ar = false;
 var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
-var hololens = true;
+var hololens = false;
 var ui = false;
 var cameraTexture = false;
 
@@ -269,7 +269,7 @@ CreateBoxAsync().then(function () {
                             ]
 
                             const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
-                            box.position.z += 0.5;
+                            box.position.z -= 0.5;
 
                             for (let i = 0; i < zones.length; i++) {
                                 const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
