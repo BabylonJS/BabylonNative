@@ -69,6 +69,36 @@ namespace Babylon::Plugins::NativeXr
         nativeAnchorPtr = static_cast<uintptr_t>(getNativeAnchor.Call({ anchor }).As<Napi::Number>().DoubleValue());
         return true;
     }
+
+    bool TryDeclareNativeAnchor(Napi::Env env, const Napi::Value& session, uintptr_t nativeAnchorPtr, Napi::Value& xrAnchor)
+    {
+        xrAnchor = env.Undefined();
+        if (!session.IsObject())
+        {
+            return false;
+        }
+
+        if (!env.Global().Has("navigator"))
+        {
+            return false;
+        }
+
+        auto navigator{ env.Global().Get("navigator").ToObject() };
+        if (!navigator.Has("xr"))
+        {
+            return false;
+        }
+
+        auto nativeXr{ navigator.Get("xr").ToObject() };
+        if (!nativeXr.Has("declareNativeAnchor"))
+        {
+            return false;
+        }
+
+        auto declareNativeAnchor{nativeXr.Get("declareNativeAnchor").As<Napi::Function>()};
+        xrAnchor = declareNativeAnchor.Call({ session, Napi::Number::From(env, nativeAnchorPtr) });
+        return true;
+    }
 }
 #endif
 
@@ -143,6 +173,12 @@ namespace Babylon::Plugins::NativeXr
         }
 
         return false;
+    }
+
+    bool TryDeclareNativeAnchor(Napi::Env env, const Napi::Value& session, ArAnchor* nativeAnchor, Napi::Value& xrAnchor)
+    {
+        uintptr_t nativeAnchorPtr{reinterpret_cast<uintptr_t>(nativeAnchor)};
+        return TryDeclareNativeAnchor(env, session, nativeAnchorPtr, xrAnchor);
     }
 }
 #endif
