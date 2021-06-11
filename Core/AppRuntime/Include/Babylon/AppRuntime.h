@@ -36,6 +36,9 @@ namespace Babylon
         void RunPlatformTier();
         void RunEnvironmentTier(const char* executablePath = ".");
         void Run(Napi::Env);
+
+        // This method is called from Dispatch to allow platform-specific code to add
+        // extra logic around the invocation of a dispatched callback.
         void Execute(std::function<void()> callback);
 
         static void DefaultUnhandledExceptionHandler(std::exception_ptr ptr);
