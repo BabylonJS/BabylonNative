@@ -181,7 +181,7 @@ CreateBoxAsync().then(function () {
                 }
                 else {
                     setTimeout(function () {
-                        scene.meshes[0].position.z += 2;
+                        scene.meshes[0].position.z = 2;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                     }, 5000);
                 }
@@ -252,7 +252,7 @@ CreateBoxAsync().then(function () {
                     sessionMode = "immersive-vr";
 
                     // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
-                
+
                     xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HAND_TRACKING,
                         "latest",
