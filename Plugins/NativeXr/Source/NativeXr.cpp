@@ -1452,7 +1452,7 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(const Napi::Env& env)
+            static Napi::Object New(const Napi::Env env)
             {
                 return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
             }
