@@ -1936,6 +1936,10 @@ namespace xr
         return m_impl->sessionImpl.CreateAnchor(pose, trackable, displayTime);
     }
 
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
+        throw std::runtime_error("not implemented"); 
+    }
+
     void System::Session::Frame::UpdateAnchor(Anchor& anchor) const
     {
         const auto displayTime = m_impl->sessionImpl.HmdImpl.Context.DisplayTime();
