@@ -660,11 +660,7 @@ namespace xr
         Anchor DeclareAnchor(NativeAnchorPtr anchor)
         {
             ArAnchor* arAnchor{reinterpret_cast<ArAnchor*>(anchor)};
-            const auto iterator = std::find(arCoreAnchors.begin(), arCoreAnchors.end(), arAnchor);
-            if (iterator == arCoreAnchors.end())
-            {
-                arCoreAnchors.push_back(arAnchor);
-            }
+            arCoreAnchors.push_back(arAnchor);
 
             ArPose* arPose{};
             ArAnchor_getPose(xrContext->Session, arAnchor, arPose);
