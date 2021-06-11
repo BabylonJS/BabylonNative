@@ -14,7 +14,7 @@ var xrHitTest = false;
 var xrFeaturePoints = false;
 var text = false;
 var hololens = true;
-var slate = true;
+var ui = false;
 
 function CreateBoxAsync() {
     //BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -246,89 +246,92 @@ CreateBoxAsync().then(function () {
                         { xrInput: xr.input });
                         */
                 }
-                const handsFeature = xr.baseExperience.featuresManager.enableFeature(BABYLON.WebXRFeatureName.HAND_TRACKING, "latest", {
-                    xrInput: xr.input,
-                    jointMeshes: {
-                        invisible: true,
-                        disableDefaultHandMesh: true
-                    }
-                });
 
-                xr.baseExperience.onInitialXRPoseSetObservable.add((camera) => {
-                    setTimeout(() => {
-                        const manager = new BABYLON.GUI.GUI3DManager(camera.getScene());
+                if (ui) {
+                    const handsFeature = xr.baseExperience.featuresManager.enableFeature(BABYLON.WebXRFeatureName.HAND_TRACKING, "latest", {
+                        xrInput: xr.input,
+                        jointMeshes: {
+                            invisible: true,
+                            disableDefaultHandMesh: true
+                        }
+                    });
 
-                        const zones = [
-                            BABYLON.HandConstraintZone.RADIAL_SIDE,
-                            BABYLON.HandConstraintZone.ULNAR_SIDE,
-                        ]
+                    xr.baseExperience.onInitialXRPoseSetObservable.add((camera) => {
+                        setTimeout(() => {
+                            const manager = new BABYLON.GUI.GUI3DManager(camera.getScene());
 
-                        const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
-                        box.position.z += 0.5;
+                            const zones = [
+                                BABYLON.HandConstraintZone.RADIAL_SIDE,
+                                BABYLON.HandConstraintZone.ULNAR_SIDE,
+                            ]
 
-                        for (let i = 0; i < zones.length; i++) {
-                            const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
-                            manager.addControl(handMenu);
+                            const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
+                            box.position.z += 0.5;
 
-                            const button0 = new BABYLON.GUI.TouchHolographicButton("button0");
-                            button0.text = "Open slate";
-                            button0.onPointerUpObservable.add(() => {
-                                const slate = new BABYLON.GUI.HolographicSlate("down");
-                                manager.addControl(slate);
-
-                                slate._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
-                                slate._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
-                            });
-                            handMenu.addButton(button0);
-
-                            const button1 = new BABYLON.GUI.TouchHolographicButton("button1");
-                            button1.text = "Test 1";
-                            handMenu.addButton(button1);
-                            button1.onPointerUpObservable.add(() => {
-                                const near = new BABYLON.GUI.NearMenu("near");
-                                manager.addControl(near);
+                            for (let i = 0; i < zones.length; i++) {
+                                const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
+                                manager.addControl(handMenu);
 
                                 const button0 = new BABYLON.GUI.TouchHolographicButton("button0");
-                                button0.text = "Test 0";
-                                near.addButton(button0);
+                                button0.text = "Open slate";
+                                button0.onPointerUpObservable.add(() => {
+                                    const slate = new BABYLON.GUI.HolographicSlate("down");
+                                    manager.addControl(slate);
+
+                                    slate._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
+                                    slate._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
+                                });
+                                handMenu.addButton(button0);
 
                                 const button1 = new BABYLON.GUI.TouchHolographicButton("button1");
                                 button1.text = "Test 1";
-                                near.addButton(button1);
+                                handMenu.addButton(button1);
+                                button1.onPointerUpObservable.add(() => {
+                                    const near = new BABYLON.GUI.NearMenu("near");
+                                    manager.addControl(near);
+
+                                    const button0 = new BABYLON.GUI.TouchHolographicButton("button0");
+                                    button0.text = "Test 0";
+                                    near.addButton(button0);
+
+                                    const button1 = new BABYLON.GUI.TouchHolographicButton("button1");
+                                    button1.text = "Test 1";
+                                    near.addButton(button1);
+
+                                    const button2 = new BABYLON.GUI.TouchHolographicButton("button2");
+                                    button2.text = "Test 2";
+                                    near.addButton(button2);
+
+                                    near._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
+                                    near._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
+                                })
 
                                 const button2 = new BABYLON.GUI.TouchHolographicButton("button2");
                                 button2.text = "Test 2";
-                                near.addButton(button2);
+                                handMenu.addButton(button2);
+                                button2.onPointerUpObservable.add(() => {
+                                    if (handMenu.handConstraintBehavior.zoneOrientationMode === BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA) {
+                                        handMenu.handConstraintBehavior.zoneOrientationMode = BABYLON.HandConstraintOrientation.HAND_ROTATION;
+                                        handMenu.handConstraintBehavior.nodeOrientationMode = BABYLON.HandConstraintOrientation.HAND_ROTATION;
+                                    } else {
+                                        handMenu.handConstraintBehavior.zoneOrientationMode = BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA;
+                                        handMenu.handConstraintBehavior.nodeOrientationMode = BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA;
+                                    }
+                                });
 
-                                near._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
-                                near._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
-                            })
-
-                            const button2 = new BABYLON.GUI.TouchHolographicButton("button2");
-                            button2.text = "Test 2";
-                            handMenu.addButton(button2);
-                            button2.onPointerUpObservable.add(() => {
-                                if (handMenu.handConstraintBehavior.zoneOrientationMode === BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA) {
-                                    handMenu.handConstraintBehavior.zoneOrientationMode = BABYLON.HandConstraintOrientation.HAND_ROTATION;
-                                    handMenu.handConstraintBehavior.nodeOrientationMode = BABYLON.HandConstraintOrientation.HAND_ROTATION;
-                                } else {
-                                    handMenu.handConstraintBehavior.zoneOrientationMode = BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA;
-                                    handMenu.handConstraintBehavior.nodeOrientationMode = BABYLON.HandConstraintOrientation.LOOK_AT_CAMERA;
+                                if (i === 1) {
+                                    handMenu.rows = 3;
                                 }
-                            });
 
-                            if (i === 1) {
-                                handMenu.rows = 3;
+                                handMenu.handConstraintBehavior.targetOffset = 0.1;
+                                handMenu.handConstraintBehavior.targetZone = zones[i];
+                                handMenu.handConstraintBehavior.lerpTime = 100;
+
                             }
 
-                            handMenu.handConstraintBehavior.targetOffset = 0.1;
-                            handMenu.handConstraintBehavior.targetZone = zones[i];
-                            handMenu.handConstraintBehavior.lerpTime = 100;
-
-                        }
-
-                    }, 2000)
-                })
+                        }, 2000)
+                    })
+                }
 
                 xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
                     if (hololens) {
