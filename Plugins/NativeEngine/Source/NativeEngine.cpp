@@ -1601,7 +1601,7 @@ namespace Babylon
 
     void NativeEngine::SetStencil(const Napi::CallbackInfo& info)
     {
-        //const auto writeMask{info[0].As<Napi::Number>().Uint32Value()}; // not usable with bgfx
+        const auto writeMask{info[0].As<Napi::Number>().Uint32Value()};
         const auto stencilOpFail{info[1].As<Napi::Number>().Uint32Value()};
         const auto depthOpFail{info[2].As<Napi::Number>().Uint32Value()};
         const auto depthOpPass{info[3].As<Napi::Number>().Uint32Value()};
@@ -1611,7 +1611,17 @@ namespace Babylon
         m_stencilState = BGFX_STENCIL_FUNC_RMASK(0xFF); //  always 0xFF
         m_stencilState |= stencilOpFail;
         m_stencilState |= depthOpFail;
-        m_stencilState |= depthOpPass;
+        // bgfx write mask is always 0xFF, to not change stencil value when writemask is 0
+        // its value is kept unchanged.
+        // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L2874
+        if (writeMask == 0)
+        {
+            m_stencilState |= BGFX_STENCIL_OP_PASS_Z_KEEP;
+        }
+        else
+        {
+            m_stencilState |= depthOpPass;
+        }
         m_stencilState |= func;
         m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
     }
