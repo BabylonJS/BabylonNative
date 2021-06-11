@@ -16,9 +16,10 @@ var text = false;
 var hololens = false;
 var ui = false;
 var cameraTexture = false;
+var box;
 
 function CreateBoxAsync() {
-    //BABYLON.Mesh.CreateBox("box1", 0.2);
+    box = BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
 }
 
@@ -180,7 +181,7 @@ CreateBoxAsync().then(function () {
                 }
                 else {
                     setTimeout(function () {
-                        scene.meshes[0].position.z = 2;
+                        scene.meshes[0].position.z += 2;
                         scene.meshes[0].rotate(BABYLON.Vector3.Up(), 3.14159);
                     }, 5000);
                 }
@@ -267,9 +268,6 @@ CreateBoxAsync().then(function () {
                                 BABYLON.HandConstraintZone.RADIAL_SIDE,
                                 BABYLON.HandConstraintZone.ULNAR_SIDE,
                             ]
-
-                            const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.1 }, scene);
-                            box.position.z -= 0.5;
 
                             for (let i = 0; i < zones.length; i++) {
                                 const handMenu = new BABYLON.GUI.HandMenu("hand", xr.baseExperience);
