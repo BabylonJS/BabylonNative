@@ -21,4 +21,9 @@ namespace Babylon
             std::cerr << "Uncaught Error: " << error.Message() << std::endl;
         }
     }
+
+    void AppRuntime::Execute(std::function<void()> callback)
+    {
+        callback();
+    }
 }
