@@ -37,6 +37,8 @@ namespace Babylon
 
     void AppRuntime::Dispatch(std::function<void(Napi::Env)> func)
     {
-        m_workQueue->Append(std::move(func));
+        m_workQueue->Append([this, func{std::move(func)}] (Napi::Env env) {
+            Execute({[env, func{std::move(func)}] { func(env); }});
+        });
     }
 }
