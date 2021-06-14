@@ -706,6 +706,8 @@ namespace Babylon
     std::string NativeEngine::ProcessShaderCoordinates(const std::string& vertexSource)
     {
         const auto* caps = bgfx::getCaps();
+        // patching shader code to append clip space coordinates for the current rendering API
+        // Can be done with glslang shader traversal. Done with string patching for now.
         if (!caps->homogeneousDepth)
         {
             std::string patchedVertexSource;

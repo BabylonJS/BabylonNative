@@ -112,7 +112,9 @@ namespace Babylon
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
-        const std::unique_ptr<FrameBufferManager>& GetFrameBufferManager() const { return m_frameBufferManager; }
+        // This is temporary until a Shader plugin is developed.
+        // Shader is loaded/created in nativeEngine, then passed to graphics Impl for use and destruction.
+        // Idealy, this shader would be created and managed by a 3rd entity (Shader plugin)
         void SetYFlipProgram(bgfx::ProgramHandle program) { m_YFlipProgram = program; }
     private:
         friend class UpdateToken;
