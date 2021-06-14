@@ -7,9 +7,8 @@ namespace Babylon::Polyfills::Internal
 {
     class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>
     {
-    public:
         using ParentT = Napi::ObjectWrap<NativeCanvas>;
-
+    public:
         static void CreateInstance(Napi::Env env);
 
         explicit NativeCanvas(const Napi::CallbackInfo& info);
