@@ -25,4 +25,9 @@ namespace Babylon
             OutputDebugStringA(ss.str().data());
         }
     }
+
+    void AppRuntime::Execute(std::function<void()> callback)
+    {
+        callback();
+    }
 }
