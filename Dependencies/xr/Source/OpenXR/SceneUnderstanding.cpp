@@ -310,7 +310,7 @@ private:
             const auto meshId = m_meshIds.at(xrMesh.id);
             m_updatedMeshes.push_back(meshId);
             auto& mesh = m_meshes.at(meshId);
-            mesh.ParentSceneObjectID = m_objectIds.at(xrMesh.parentObjectId);
+            mesh.ParentSceneObjectID = m_objectIds.at(xrMesh.parentId);
             mesh.MeshBufferId = xrMesh.meshBufferId;
         }
 
@@ -386,7 +386,7 @@ private:
             const auto planeId = m_planeIds.at(xrPlane.id);
             m_updatedPlanes.push_back(planeId);
             auto& plane = m_planes.at(planeId);
-            plane.ParentSceneObjectID = m_objectIds.at(xrPlane.parentObjectId);
+            plane.ParentSceneObjectID = m_objectIds.at(xrPlane.parentId);
             plane.Size = xrPlane.size;
         }
 
