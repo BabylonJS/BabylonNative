@@ -40,11 +40,6 @@ jobs:
       uses: microsoft/setup-msbuild@v1.0.2
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
-    - name: Make validation directories 
-      run: |
-          cd buildWin32_x64/Apps/ValidationTests
-          mkdir Results
-          mkdir Errors
     - name: Run Validation Tests
       run: |
           ValidationTests.exe
