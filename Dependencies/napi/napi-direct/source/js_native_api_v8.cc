@@ -3036,16 +3036,10 @@ napi_status napi_detach_arraybuffer(napi_env env, napi_value arraybuffer) {
   v8::Local<v8::ArrayBuffer> it = value.As<v8::ArrayBuffer>();
   RETURN_STATUS_IF_FALSE(
       env, it->IsExternal(), napi_detachable_arraybuffer_expected);
-#if V8_MAJOR_VERSION > 7 || (V8_MAJOR_VERSION == 7 && V8_MINOR_VERSION >= 4)
   RETURN_STATUS_IF_FALSE(
       env, it->IsDetachable(), napi_detachable_arraybuffer_expected);
 
   it->Detach();
-#else
-  RETURN_STATUS_IF_FALSE(
-      env, it->IsNeuterable(), napi_detachable_arraybuffer_expected);
 
-  it->Neuter();
-#endif
   return napi_clear_last_error(env);
 }
