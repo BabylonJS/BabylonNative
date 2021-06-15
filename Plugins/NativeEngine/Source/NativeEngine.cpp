@@ -272,7 +272,7 @@ namespace Babylon
                 float* destination = (float*)bytes.data();
                 for (size_t i = 0; i < count; i++)
                 {
-                    sourceType* source = (sourceType*)(m_bytes.data() + byteStride * i);
+                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteStride * i);
                     for (size_t element = 0; element < numElements; element++)
                     {
                         if (normalized)
@@ -355,12 +355,6 @@ namespace Babylon
                 encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
             };
             DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        // size in bytes
-        size_t Size() const 
-        { 
-            return m_bytes.size();
         }
 
     private:
