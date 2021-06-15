@@ -269,7 +269,7 @@ namespace Babylon
             if (destinationSize != m_bytes.size()) // ensure both vectors have different size
             {
                 std::vector<uint8_t> bytes(destinationSize);
-                float* destination = (float*)bytes.data();
+                float* destination = reinterpret_cast<float*>(bytes.data());
                 for (size_t i = 0; i < count; i++)
                 {
                     sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteStride * i);
