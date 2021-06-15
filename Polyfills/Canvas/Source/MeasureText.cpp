@@ -3,6 +3,7 @@
 #include "Canvas.h"
 #include "Context.h"
 #include "MeasureText.h"
+// disable anonymous struct warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "nanovg/nanovg.h"
@@ -10,10 +11,12 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    static constexpr auto JS_CONSTRUCTOR_NAME = "TextDimension";
+
     Napi::Value MeasureText::CreateInstance(Napi::Env env, Context* context, const std::string& text)
     {
         Napi::HandleScope scope{ env };
-        Napi::Function func = ParentT::DefineClass(
+        Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
             {
@@ -24,7 +27,7 @@ namespace Babylon::Polyfills::Internal
     }
 
     MeasureText::MeasureText(const Napi::CallbackInfo& info)
-        : ParentT{ info }
+        : Napi::ObjectWrap<MeasureText>{info}
     {
         auto context{info[0].As<Napi::External<Context>>().Data()};
         auto text{info[1].As<Napi::String>().Utf8Value()};

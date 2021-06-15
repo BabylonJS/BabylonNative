@@ -11,10 +11,6 @@ namespace Babylon::Polyfills::Internal
     class Context final : public Napi::ObjectWrap<Context>
     {
     public:
-        static constexpr auto JS_CONSTRUCTOR_NAME = "Context";
-
-        using ParentT = Napi::ObjectWrap<Context>;
-
         static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
 
         explicit Context(const Napi::CallbackInfo& info);

@@ -14,23 +14,23 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::HandleScope scope{env};
 
-        Napi::Function func = ParentT::DefineClass(
+        Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
             {
-                ParentT::StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
-                ParentT::InstanceMethod("getContext", &NativeCanvas::GetContext),
+                StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
+                InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
-                ParentT::InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
-                ParentT::InstanceMethod("dispose", &NativeCanvas::Dispose),
+                InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
+                InstanceMethod("dispose", &NativeCanvas::Dispose),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
-        : ParentT{info}
+        : Napi::ObjectWrap<NativeCanvas>{info}
         , m_graphicsImpl{ Babylon::GraphicsImpl::GetFromJavaScript(info.Env()) }
     {
     }

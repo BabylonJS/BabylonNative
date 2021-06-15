@@ -21,11 +21,13 @@ namespace Babylon::Polyfills::Internal
         const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
     }
 
+    static constexpr auto JS_CONSTRUCTOR_NAME = "Context";
+
     Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
     {
         Napi::HandleScope scope{ env };
 
-        Napi::Function func = ParentT::DefineClass(
+        Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
             {
@@ -73,12 +75,12 @@ namespace Babylon::Polyfills::Internal
     }
 
     Context::Context(const Napi::CallbackInfo& info)
-        : ParentT{ info }
-        , m_canvas{ info[0].As<Napi::External<NativeCanvas>>().Data() }
-        , m_nvg{ nvgCreate(1) }
-        , m_graphicsImpl{ Babylon::GraphicsImpl::GetFromJavaScript(info.Env()) }
-        , m_cancellationSource{ std::make_shared<arcana::cancellation_source>() }
-        , m_runtimeScheduler{ Babylon::JsRuntime::GetFromJavaScript(info.Env()) }
+        : Napi::ObjectWrap<Context>{info}
+        , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
+        , m_nvg{nvgCreate(1)}
+        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+        , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
     {
         for (auto& font : NativeCanvas::fontsInfos)
         {

@@ -7,10 +7,6 @@ namespace Babylon::Polyfills::Internal
     class MeasureText final : public Napi::ObjectWrap<MeasureText>
     {
     public:
-        static constexpr auto JS_CONSTRUCTOR_NAME = "TextDimension";
-
-        using ParentT = Napi::ObjectWrap<MeasureText>;
-
         static Napi::Value CreateInstance(Napi::Env env, Context* context, const std::string& text);
 
         explicit MeasureText(const Napi::CallbackInfo& info);
