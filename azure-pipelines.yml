@@ -20,10 +20,10 @@ jobs:
   
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_Clang9_JSC
+      name: Ubuntu_GCC9_JSC
       vmImage: 'ubuntu-latest'
-      CC: clang-9
-      CXX: clang++-9
+      CC: gcc-9
+      CXX: g++-9
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/linux.yml

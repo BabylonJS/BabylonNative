@@ -38,7 +38,7 @@ jobs:
     - script: |
         mkdir build
         cd build
-        cmake .. -GNinja -DNAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
+        cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DNAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON
         ninja
       displayName: 'Build X11'
     
