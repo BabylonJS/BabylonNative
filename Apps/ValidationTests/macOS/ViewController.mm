@@ -7,6 +7,7 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
+#import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/ScriptLoader.h>
 #import <MetalKit/MetalKit.h>
 #import <Shared/TestUtils.h>
@@ -86,6 +87,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Canvas::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 

@@ -119,6 +119,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE Console
     PRIVATE Window
     PRIVATE ScriptLoader
+    PRIVATE Canvas
     ${ADDITIONAL_LIBRARIES}
     PRIVATE XMLHttpRequest)
 
