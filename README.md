@@ -347,31 +347,35 @@ sudo apt-get install libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev l
 
 Depending on the JavaScript engine you wan't to use, you will have to install the package accordingly:
 
-For JavaScriptCore:
+#### JavaScriptCore
+
+Install the following package:
 
 ```
 sudo apt-get install libjavascriptcoregtk-4.0-dev 
 ```
 
-For V8:
-
-```
-sudo apt-get install libv8-dev 
-```
-
-Then targeting a Ninja make file for JavaScriptCore:
+Then, run cmake targetting a Ninja make file:
 
 ```
 cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so  -DNAPI_JAVASCRIPT_ENGINE=JavaScriptCore ..
 ```
 
-For V8:
+#### V8
+
+Install the following package:
+
+```
+sudo apt-get install libv8-dev 
+```
+
+Then, run cmake targetting a Ninja make file:
 
 ```
 cmake -GNinja -DNAPI_JAVASCRIPT_ENGINE=V8 ..
 ```
 
-And finally, run a build:
+And finally, for any JavaScript engine, run a build:
 
 ```
 ninja

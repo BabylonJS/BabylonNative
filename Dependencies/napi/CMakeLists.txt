@@ -10,7 +10,7 @@ elseif (ANDROID)
 elseif (APPLE)
     set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for N-API.")
 elseif (UNIX)
-    # engine is selected by cmake command line
+    set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for N-API.")
 else()
     message(FATAL_ERROR "Unable to select N-API JavaScript engine for platform.")
 endif()
