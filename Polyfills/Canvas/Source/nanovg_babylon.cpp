@@ -31,7 +31,6 @@
 
 #include <bx/bx.h>
 #include <bx/allocator.h>
-#include <bx/uint32_t.h>
 
 #include "GraphicsImpl.h"
 

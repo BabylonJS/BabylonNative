@@ -14,6 +14,9 @@
 #include "Context.h"
 #include "MeasureText.h"
 
+/*
+Most of these context methods are preliminary work. They are currenbly not tested properly.
+*/
 namespace Babylon::Polyfills::Internal
 {
     namespace

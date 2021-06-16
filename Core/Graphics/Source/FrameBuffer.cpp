@@ -108,8 +108,6 @@ namespace Babylon
         // if no other draw calls are submitted to the view.
         if (doTouch)
         {
-            // discard everything or touch call will use what is bound.
-            encoder->discard();
             encoder->touch(m_viewId.value());
         }
     }

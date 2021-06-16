@@ -25,7 +25,6 @@ namespace Babylon
         void UpdateSize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
-        static Graphics& GetFromJavaScript(Napi::Env);
 
         void EnableRendering();
         void DisableRendering();

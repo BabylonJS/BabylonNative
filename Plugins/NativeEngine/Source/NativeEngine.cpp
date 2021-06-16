@@ -1026,6 +1026,9 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
     {
+        // This code does not copy texture but overrides texture handle.
+        // It will leak texture memory and should be fixed.
+        // See task in this list : https://github.com/BabylonJS/BabylonNative/issues/616#issuecomment-831162396
         const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
         const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
         textureDestination->Handle = textureSource->Handle;
