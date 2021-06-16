@@ -261,6 +261,35 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
+        template<typename sourceType, bool normalized> void PromoteToFloats(uint32_t numElements, uint32_t byteStride)
+        {
+            const size_t count = m_bytes.size() / byteStride;
+            const size_t destinationSize = count * numElements * sizeof(float);
+            const float maxRange = static_cast<float>(std::numeric_limits<sourceType>::max());
+            if (destinationSize != m_bytes.size()) // ensure both vectors have different size
+            {
+                std::vector<uint8_t> bytes(destinationSize);
+                float* destination = reinterpret_cast<float*>(bytes.data());
+                for (size_t i = 0; i < count; i++)
+                {
+                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteStride * i);
+                    for (size_t element = 0; element < numElements; element++)
+                    {
+                        if (normalized)
+                        {
+                            // https://www.khronos.org/opengl/wiki/Normalized_Integer
+                            *destination++ = std::max(static_cast<float>(*source++) / maxRange, -1.f);
+                        }
+                        else
+                        {
+                            *destination++ = static_cast<float>(*source++);
+                        }
+                    }
+                }
+                m_bytes = std::move(bytes);
+            }
+        }
+
         void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
         {
             const auto nonDynamic = [&layout, this](auto handle) {
@@ -604,12 +633,73 @@ namespace Babylon
 
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
         const bgfx::AttribType::Enum attribType = static_cast<bgfx::AttribType::Enum>(type);
-        vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
-        vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+
+        const bool promoteToFloats = (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 || 
+            bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 || 
+            bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan) && 
+            (attribType == bgfx::AttribType::Int8 || 
+            attribType == bgfx::AttribType::Uint8 || 
+            attribType == bgfx::AttribType::Uint10 || 
+            attribType == bgfx::AttribType::Int16 || 
+            attribType == bgfx::AttribType::Uint16);
+
+        if (promoteToFloats)
+        {
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float, normalized);
+            vertexLayout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
+            if (normalized)
+            {
+                switch (attribType)
+                {
+                case bgfx::AttribType::Int8:
+                    vertexBufferData->PromoteToFloats<int8_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint8:
+                    vertexBufferData->PromoteToFloats<uint8_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Int16:
+                    vertexBufferData->PromoteToFloats<int16_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint16:
+                    vertexBufferData->PromoteToFloats<uint16_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint10: // is supported by any format ?
+                default:
+                    throw std::runtime_error("Unable to promote vertex stream to a float array.");
+                }
+            }
+            else
+            {
+                switch (attribType)
+                {
+                case bgfx::AttribType::Int8:
+                    vertexBufferData->PromoteToFloats<int8_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint8:
+                    vertexBufferData->PromoteToFloats<uint8_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Int16:
+                    vertexBufferData->PromoteToFloats<int16_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint16:
+                    vertexBufferData->PromoteToFloats<uint16_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint10: // is supported by any format ?
+                default:
+                    throw std::runtime_error("Unable to promote vertex stream to a float array.");
+                }
+            }
+        }
+        else
+        {
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
+            vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+        }
         vertexLayout.end();
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
+        // Second parameter is first vertex. byteOffset and byteStride are both using original values (without float promotion)
         vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
     }
 
