@@ -79,6 +79,7 @@ namespace Babylon
             }
 
             g_graphics->EnableRendering();
+            m_isRenderingEnabled = true;
 
             std::call_once(m_isGraphicsInitialized, [this]()
             {
@@ -97,7 +98,9 @@ namespace Babylon
 
         void RenderView()
         {
-            if (g_graphics)
+            // If rendering has not been explicitly enabled, or has been explicitly disabled, then don't try to render.
+            // Otherwise rendering can be implicitly enabled, which may not be desirable (e.g. after the engine is disposed).
+            if (g_graphics && m_isRenderingEnabled)
             {
                 g_graphics->StartRenderingCurrentFrame();
                 g_graphics->FinishRenderingCurrentFrame();
@@ -115,6 +118,8 @@ namespace Babylon
                     CreateInitPromise();
                 });
             }
+
+            m_isRenderingEnabled = false;
         }
 
         void SetMouseButtonState(uint32_t buttonId, bool isDown, uint32_t x, uint32_t y)
@@ -198,6 +203,7 @@ namespace Babylon
         Dispatcher m_jsDispatcher{};
 
         std::shared_ptr<bool> m_isRunning{};
+        bool m_isRenderingEnabled{};
         std::once_flag m_isGraphicsInitialized{};
         Plugins::NativeInput* m_nativeInput{};
         std::optional<Plugins::NativeXr> m_nativeXr{};
