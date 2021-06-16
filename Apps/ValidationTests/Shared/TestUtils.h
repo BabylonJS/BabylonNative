@@ -238,7 +238,7 @@ namespace Babylon
             }
             exe[ret] = 0;
 
-            auto path = std::string("file://") + std::filesystem::path{exe}.parent_path().generic_string();
+            auto path = std::filesystem::path{exe}.parent_path().generic_string();
 #elif WIN32
             auto path = GetModulePath().parent_path().generic_string();
 #endif
