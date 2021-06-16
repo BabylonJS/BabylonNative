@@ -418,6 +418,7 @@ namespace Babylon
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
+                InstanceMethod("copyTexture", &NativeEngine::CopyTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
@@ -1111,6 +1112,16 @@ namespace Babylon
                     onSuccessRef.Call({});
                 }
             });
+    }
+
+    void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
+    {
+        // This code does not copy texture but overrides texture handle.
+        // It will leak texture memory and should be fixed.
+        // See task in this list : https://github.com/BabylonJS/BabylonNative/issues/616#issuecomment-831162396
+        const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
+        const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
+        textureDestination->Handle = textureSource->Handle;
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
