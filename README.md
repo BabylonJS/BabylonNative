@@ -342,16 +342,40 @@ The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 9+ or GCC 
 First step is to install packages mandatory for building. For example, with Clang-9 toolchain:
 
 ```
-sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
+sudo apt-get install libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
 ```
 
-Then targeting a Ninja make file:
+Depending on the JavaScript engine you wan't to use, you will have to install the package accordingly:
+
+#### JavaScriptCore
+
+Install the following package:
 
 ```
-cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so ..
+sudo apt-get install libjavascriptcoregtk-4.0-dev 
 ```
 
-And finally, run a build:
+Then, run cmake targetting a Ninja make file:
+
+```
+cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so  -DNAPI_JAVASCRIPT_ENGINE=JavaScriptCore ..
+```
+
+#### V8
+
+Install the following package:
+
+```
+sudo apt-get install libv8-dev 
+```
+
+Then, run cmake targetting a Ninja make file:
+
+```
+cmake -GNinja -DNAPI_JAVASCRIPT_ENGINE=V8 ..
+```
+
+And finally, for any JavaScript engine, run a build:
 
 ```
 ninja
