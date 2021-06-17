@@ -41,5 +41,8 @@ namespace Babylon::Polyfills::Internal
         bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
         Babylon::FrameBuffer* m_frameBuffer{};
         bool m_dirty{};
+
+        struct Impl;
+        std::unique_ptr<Impl> m_impl;
     };
 }

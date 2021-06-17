@@ -5,10 +5,16 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
+#include <NativeEngine.h>
 
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
+
+    struct NativeCanvas::Impl
+    {
+        std::unique_ptr<Babylon::TextureData> m_textureData;
+    };
 
     void NativeCanvas::CreateInstance(Napi::Env env)
     {
@@ -32,6 +38,7 @@ namespace Babylon::Polyfills::Internal
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
         , m_graphicsImpl{ Babylon::GraphicsImpl::GetFromJavaScript(info.Env()) }
+        , m_impl{std::make_unique<Impl>()}
     {
     }
 
@@ -99,31 +106,14 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    struct TextureData final
-    {
-        ~TextureData()
-        {
-            if (bgfx::isValid(Handle))
-            {
-                bgfx::destroy(Handle);
-            }
-        }
-
-        bgfx::TextureHandle Handle{ bgfx::kInvalidHandle };
-        uint32_t Width{ 0 };
-        uint32_t Height{ 0 };
-        uint32_t Flags{ 0 };
-        uint8_t AnisotropicLevel{ 0 };
-    };
-
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
         assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
-        auto data = new TextureData();
-        data->Handle = bgfx::getTexture(m_frameBufferHandle);
-        data->Width = m_width;
-        data->Height = m_height;
-        return Napi::External<TextureData>::New(info.Env(), data);
+        m_impl->m_textureData = std::make_unique<TextureData>();
+        m_impl->m_textureData->Handle = bgfx::getTexture(m_frameBufferHandle);
+        m_impl->m_textureData->Width = m_width;
+        m_impl->m_textureData->Height = m_height;
+        return Napi::External<TextureData>::New(info.Env(), m_impl->m_textureData.get());
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
