@@ -830,7 +830,7 @@ namespace Babylon
             }
 
         private:
-            int32_t pointerId;
+            size_t pointerId;
         };
 
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
