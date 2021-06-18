@@ -86,7 +86,6 @@ CreateBoxAsync().then(function () {
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
 
-
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
     }
