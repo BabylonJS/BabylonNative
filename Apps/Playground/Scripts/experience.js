@@ -16,10 +16,9 @@ var text = false;
 var hololens = false;
 var ui = false;
 var cameraTexture = false;
-var box;
 
 function CreateBoxAsync() {
-    box = BABYLON.Mesh.CreateBox("box1", 0.2);
+    var box = BABYLON.Mesh.CreateBox("box1", 0.2);
     return Promise.resolve();
 }
 
@@ -279,7 +278,7 @@ CreateBoxAsync().then(function () {
                                     const slate = new BABYLON.GUI.HolographicSlate("down");
                                     manager.addControl(slate);
 
-                                    slate._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
+                                    slate._defaultBehavior.surfaceMagnetismBehavior.meshes = [scene.meshes[0]];
                                     slate._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
                                 });
                                 handMenu.addButton(button0);
@@ -303,7 +302,7 @@ CreateBoxAsync().then(function () {
                                     button2.text = "Test 2";
                                     near.addButton(button2);
 
-                                    near._defaultBehavior.surfaceMagnetismBehavior.meshes = [box];
+                                    near._defaultBehavior.surfaceMagnetismBehavior.meshes = [scene.meshes[0]];
                                     near._defaultBehavior.surfaceMagnetismBehavior.maxStickingDistance = 3;
                                 })
 
