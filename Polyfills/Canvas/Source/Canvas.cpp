@@ -42,17 +42,15 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
     {
-        std::string fontName = info[0].As<Napi::String>().Utf8Value();
-        if (fontsInfos.find(fontName) != fontsInfos.end())
-        {
-            // If the font is already loaded, we should avoid resetting the data. This can invalidate the font stash and cause graphics crashes.
-            // TODO: we may want to populate fonts on the graphics thread in the future.
-            return;
-        }
-
+        auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
+        const auto cancellationSource = std::shared_ptr<arcana::cancellation_source>();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
-        fontsInfos[fontName] = std::vector<uint8_t>(buffer.ByteLength());
-        memcpy(fontsInfos[fontName].data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+        std::vector<uint8_t> fontBuffer{};
+        fontBuffer.resize(buffer.ByteLength());
+        memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+        arcana::make_task(graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
+            fontsInfos[fontName] = fontData;
+        });
     }
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
