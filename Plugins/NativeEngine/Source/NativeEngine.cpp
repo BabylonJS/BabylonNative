@@ -1116,12 +1116,6 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
     {
-        if (!info[0].IsExternal() ||
-            !info[1].IsExternal())
-        {
-            return;
-        }
-
         // This code does not copy texture but overrides texture handle.
         // It will leak texture memory and should be fixed.
         // See task in this list : https://github.com/BabylonJS/BabylonNative/issues/616#issuecomment-831162396
