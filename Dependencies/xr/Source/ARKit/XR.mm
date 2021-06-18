@@ -1,5 +1,9 @@
+#if ! __has_feature(objc_arc)
+#error "ARC is off"
+#endif
+
 #import <XR.h>
-#include <XRHelpers.h>
+#import <XRHelpers.h>
 
 #import <UIKit/UIKit.h>
 #import <ARKit/ARKit.h>
@@ -195,27 +199,25 @@ namespace {
  Updates the AR Camera texture, and Camera pose. If a size change is detected also sets the UVs, and FoV values.
  */
 - (void)session:(ARSession *)__unused session didUpdateFrameInternal:(ARFrame *)frame {
-    @autoreleasepool{
-        // Update both metal textures used by the renderer to display the camera image.
-        CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
-        CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
+    // Update both metal textures used by the renderer to display the camera image.
+    CVMetalTextureRef newCameraTextureY = [self getCameraTexture:frame.capturedImage plane:0];
+    CVMetalTextureRef newCameraTextureCbCr = [self getCameraTexture:frame.capturedImage plane:1];
 
-        // Swap the camera textures, do this under synchronization lock to prevent null access.
-        @synchronized(self) {
-            [self cleanupTextures];
-            _cameraTextureY = newCameraTextureY;
-            _cameraTextureCbCr = newCameraTextureCbCr;
-        }
-
-        // Check if our orientation or size has changed and update camera UVs if necessary.
-        if ([self checkAndUpdateCameraUVs:frame]) {
-            // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
-            [self updateProjectionMatrix:frame.camera];
-        }
-
-        // Finally update the XR pose based on the current transform from ARKit.
-        [self updateDisplayOrientedPose:(frame.camera)];
+    // Swap the camera textures, do this under synchronization lock to prevent null access.
+    @synchronized(self) {
+        [self cleanupTextures];
+        _cameraTextureY = newCameraTextureY;
+        _cameraTextureCbCr = newCameraTextureCbCr;
     }
+
+    // Check if our orientation or size has changed and update camera UVs if necessary.
+    if ([self checkAndUpdateCameraUVs:frame]) {
+        // If our camera UVs updated, then also update the projection matrix to match the updated UVs.
+        [self updateProjectionMatrix:frame.camera];
+    }
+
+    // Finally update the XR pose based on the current transform from ARKit.
+    [self updateDisplayOrientedPose:(frame.camera)];
 }
 
 /**
@@ -342,12 +344,7 @@ namespace {
     [self LockPlanes];
     for (ARAnchor* newAnchor : anchors) {
         if ([newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-            auto insertResult = updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
-
-            // We need to keep the pointer alive, so mark the anchor as retained.
-            if (insertResult.second) {
-                [newAnchor retain];
-            }
+            updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
         }
     }
 
@@ -362,12 +359,7 @@ namespace {
     [self LockPlanes];
     for (ARAnchor* updatedAnchor : anchors) {
         if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-            auto insertResult = updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
-
-            // We need to keep the pointer alive, so mark the anchor as retained.
-            if (insertResult.second) {
-                [updatedAnchor retain];
-            }
+            updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
         }
     }
 
@@ -383,7 +375,6 @@ namespace {
     for (ARAnchor* removedAnchor : anchors) {
         if ([removedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
             deletedPlanes.push_back((ARPlaneAnchor*)removedAnchor);
-            [removedAnchor retain];
         }
     }
 
@@ -410,10 +401,6 @@ namespace {
       CFRelease(textureCache);
       textureCache = nil;
   }
-
-  [planeLock release];
-
-  [super dealloc];
 }
 
 - (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize)size {
@@ -548,8 +535,8 @@ namespace xr {
 
         Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
-            , getXRView{ [windowProvider{ std::move(windowProvider) }] { return reinterpret_cast<MTKView*>(windowProvider()); } }
-            , metalDevice{ id<MTLDevice>(graphicsContext) } {
+            , getXRView{ [windowProvider{ std::move(windowProvider) }] { return (__bridge MTKView*)windowProvider(); } }
+            , metalDevice{ (__bridge id<MTLDevice>)graphicsContext } {
 
             // Create the ARSession enable plane detection, and disable lighting estimation.
             session = [ARSession new];
@@ -564,8 +551,6 @@ namespace xr {
             UpdateXRView();
 
             [session runWithConfiguration:configuration];
-
-            [configuration release];
 
             id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
@@ -585,36 +570,25 @@ namespace xr {
                 NSLog(@"Failed to create pipeline state: %@", error);
             }
 
-            [pipelineStateDescriptor release];
-            [vertexFunction release];
-            [fragmentFunction release];
-            [lib release];
-
             commandQueue = [metalDevice newCommandQueue];
         }
 
         ~Impl() {
             if (ActiveFrameViews[0].ColorTexturePointer != nil) {
-                id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
+                id<MTLTexture> oldColorTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                 [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
-                [oldColorTexture release];
                 ActiveFrameViews[0].ColorTexturePointer = nil;
             }
 
             if (ActiveFrameViews[0].DepthTexturePointer != nil) {
-                id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
+                id<MTLTexture> oldDepthTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
                 [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
-                [oldDepthTexture release];
                 ActiveFrameViews[0].DepthTexturePointer = nil;
             }
 
             Planes.clear();
             CleanupAnchor(nil);
-            [sessionDelegate release];
             [session pause];
-            [session release];
-            [pipelineState release];
-            [commandQueue release];
             UpdateXRView(nil);
         }
 
@@ -628,15 +602,12 @@ namespace xr {
                 if (xrView) {
                     xrView.delegate = nil;
                     [xrView releaseDrawables];
-                    [xrView release];
                     metalLayer = nil;
                 }
 
                 xrView = activeXRView;
 
                 if (xrView) {
-                    [xrView retain];
-
                     xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
 #pragma clang diagnostic push
@@ -677,14 +648,7 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
-            // We may or may not be under the scope of an autoreleasepool already, so to guard against both cases grab the
-            // current frame inside a locally scoped autoreleasepool and manually retain the frame without marking for autorelease.
-            // DEVNOTE: We should change the contract to always run the work queue tick as part of an autoreleasepool so that it is the same for all environments see:
-            // https://github.com/BabylonJS/BabylonNative/issues/527
-            @autoreleasepool {
-                currentFrame = session.currentFrame;
-                [currentFrame retain];
-            }
+            currentFrame = session.currentFrame;
 
             UpdateXRView();
 
@@ -700,10 +664,9 @@ namespace xr {
                 // Color texture
                 {
                     if (ActiveFrameViews[0].ColorTexturePointer != nil) {
-                        id<MTLTexture> oldColorTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
+                        id<MTLTexture> oldColorTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                         deletedTextureAsyncCallback(ActiveFrameViews[0].ColorTexturePointer).then(arcana::inline_scheduler, arcana::cancellation::none(), [oldColorTexture]() {
                             [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
-                            [oldColorTexture release];
                         });
                         ActiveFrameViews[0].ColorTexturePointer = nil;
                     }
@@ -712,7 +675,7 @@ namespace xr {
                     textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
 
-                    ActiveFrameViews[0].ColorTexturePointer = reinterpret_cast<void *>(texture);
+                    ActiveFrameViews[0].ColorTexturePointer = (__bridge_retained void*)texture;
                     ActiveFrameViews[0].ColorTextureFormat = TextureFormat::BGRA8_SRGB;
                     ActiveFrameViews[0].ColorTextureSize = {width, height};
                 }
@@ -720,10 +683,9 @@ namespace xr {
                 // Allocate and store the depth texture
                 {
                     if (ActiveFrameViews[0].DepthTexturePointer != nil) {
-                        id<MTLTexture> oldDepthTexture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].DepthTexturePointer);
+                        id<MTLTexture> oldDepthTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
                         deletedTextureAsyncCallback(ActiveFrameViews[0].DepthTexturePointer).then(arcana::inline_scheduler, arcana::cancellation::none(), [oldDepthTexture]() {
                             [oldDepthTexture setPurgeableState:MTLPurgeableStateEmpty];
-                            [oldDepthTexture release];
                         });
                         ActiveFrameViews[0].DepthTexturePointer = nil;
                     }
@@ -733,63 +695,61 @@ namespace xr {
                     textureDescriptor.usage = MTLTextureUsageRenderTarget;
                     id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
 
-                    ActiveFrameViews[0].DepthTexturePointer = reinterpret_cast<void *>(texture);
+                    ActiveFrameViews[0].DepthTexturePointer = (__bridge_retained void*)texture;
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
             }
 
-            @autoreleasepool {
-                // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
-                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"DrawCameraToBabylonTextureCommandBuffer";
-                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+            // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
+            id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+            commandBuffer.label = @"DrawCameraToBabylonTextureCommandBuffer";
+            MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                id<MTLTexture> cameraTextureY = nil;
-                id<MTLTexture> cameraTextureCbCr = nil;
-                @synchronized(sessionDelegate) {
-                    cameraTextureY = [sessionDelegate GetCameraTextureY];
-                    cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
+            id<MTLTexture> cameraTextureY = nil;
+            id<MTLTexture> cameraTextureCbCr = nil;
+            @synchronized(sessionDelegate) {
+                cameraTextureY = [sessionDelegate GetCameraTextureY];
+                cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
+            }
+
+            @try {
+                if(renderPassDescriptor != nil) {
+                    // Attach the color texture, on which we'll draw the camera texture.
+                    renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+
+                    // Create and end the render encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
+
+                    // Set the shader pipeline.
+                    [renderEncoder setRenderPipelineState:pipelineState];
+
+                    // Set the vertex data.
+                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+
+                    // Set the textures.
+                    [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
+                    [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
+
+                    // Draw the triangles.
+                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+
+                    [renderEncoder endEncoding];
                 }
 
-                @try {
-                    if(renderPassDescriptor != nil) {
-                        // Attach the color texture, on which we'll draw the camera texture.
-                        renderPassDescriptor.colorAttachments[0].texture = reinterpret_cast<id<MTLTexture>>(ActiveFrameViews[0].ColorTexturePointer);
-                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-
-                        // Create and end the render encoder.
-                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                        renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
-
-                        // Set the shader pipeline.
-                        [renderEncoder setRenderPipelineState:pipelineState];
-
-                        // Set the vertex data.
-                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
-
-                        // Set the textures.
-                        [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
-                        [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
-
-                        // Draw the triangles.
-                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
-
-                        [renderEncoder endEncoding];
-                    }
-
-                    // Finalize rendering here & push the command buffer to the GPU.
-                    [commandBuffer commit];
-                    [commandBuffer waitUntilCompleted];
+                // Finalize rendering here & push the command buffer to the GPU.
+                [commandBuffer commit];
+                [commandBuffer waitUntilCompleted];
+            }
+            @finally {
+                if (cameraTextureY != nil) {
+                    [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
                 }
-                @finally {
-                    if (cameraTextureY != nil) {
-                        [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
-                    }
 
-                    if (cameraTextureCbCr != nil) {
-                        [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                    }
+                if (cameraTextureCbCr != nil) {
+                    [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                 }
             }
 
@@ -802,65 +762,60 @@ namespace xr {
         }
 
         void DrawFrame() {
-            @autoreleasepool {
-                if (metalLayer) {
-                    // Create a new command buffer for each render pass to the current drawable.
-                    id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                    commandBuffer.label = @"XRDisplayCommandBuffer";
+            if (metalLayer) {
+                // Create a new command buffer for each render pass to the current drawable.
+                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+                commandBuffer.label = @"XRDisplayCommandBuffer";
 
-                    id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
-                    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
+                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-                    if (renderPassDescriptor != nil) {
-                        renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                if (renderPassDescriptor != nil) {
+                    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
-                        // Create a render command encoder.
-                        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                        renderEncoder.label = @"XRDisplayEncoder";
+                    // Create a render command encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"XRDisplayEncoder";
 
-                        // Set the region of the drawable to draw into.
-                        [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
+                    // Set the region of the drawable to draw into.
+                    [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
 
-                        // Set the shader pipeline.
-                        [renderEncoder setRenderPipelineState:pipelineState];
+                    // Set the shader pipeline.
+                    [renderEncoder setRenderPipelineState:pipelineState];
 
-                        // Set the vertex data.
-                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                    // Set the vertex data.
+                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
-                        // Set the textures.
-                        [renderEncoder setFragmentTexture:id<MTLTexture>(ActiveFrameViews[0].ColorTexturePointer) atIndex:0];
+                    // Set the textures.
+                    [renderEncoder setFragmentTexture:(__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer atIndex:0];
 
-                        // Draw the triangles.
-                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                    // Draw the triangles.
+                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-                        [renderEncoder endEncoding];
+                    [renderEncoder endEncoding];
 
-                        // Schedule a present once the framebuffer is complete using the current drawable.
-                        [commandBuffer presentDrawable:drawable];
-                    }
-
-                    // Finalize rendering here & push the command buffer to the GPU.
-                    [commandBuffer commit];
+                    // Schedule a present once the framebuffer is complete using the current drawable.
+                    [commandBuffer presentDrawable:drawable];
                 }
 
-                if (currentFrame != nil) {
-                    [currentFrame release];
-                    currentFrame = nil;
-                }
+                // Finalize rendering here & push the command buffer to the GPU.
+                [commandBuffer commit];
+            }
+
+            if (currentFrame != nil) {
+                currentFrame = nil;
             }
         }
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
-            @autoreleasepool {
-                if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
-                    if (@available(iOS 13.0, *)) {
-                        GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
-                    } else {
+            if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
+                if (@available(iOS 13.0, *)) {
+                    GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
+                } else {
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_14_0)
-                        GetHitTestResultsLegacy(filteredResults, trackableTypes);
+                    GetHitTestResultsLegacy(filteredResults, trackableTypes);
 #endif
-                    }
                 }
             }
         }
@@ -876,7 +831,7 @@ namespace xr {
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
             [session addAnchor:anchor];
             nativeAnchors.push_back(anchor);
-            return { pose, reinterpret_cast<NativeAnchorPtr>(anchor) };
+            return { pose, (__bridge NativeAnchorPtr)anchor };
         }
 
         /**
@@ -884,7 +839,7 @@ namespace xr {
          */
         void UpdateAnchor(xr::Anchor& anchor) {
             // First check if the anchor still exists, if not then mark the anchor as no longer valid.
-            auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+            auto arAnchor = (__bridge ARAnchor*)anchor.NativeAnchor;
             if (arAnchor == nil) {
                 anchor.IsValid = false;
                 return;
@@ -901,7 +856,7 @@ namespace xr {
             // If this anchor has not already been deleted, then remove it from the current AR session,
             // and clean up its state in memory.
             if (anchor.NativeAnchor != nil) {
-                auto arAnchor = reinterpret_cast<ARAnchor*>(anchor.NativeAnchor);
+                auto arAnchor = (__bridge ARAnchor*)anchor.NativeAnchor;
                 anchor.NativeAnchor = nil;
 
                 CleanupAnchor(arAnchor);
@@ -936,21 +891,18 @@ namespace xr {
                     }
 
                     // Update the existing plane if it exists, otherwise create a new plane, and add it to our list of planes.
-                    auto planeIterator = planeMap.find(updatedPlane.identifier);
+                    auto planeIterator = planeMap.find({[updatedPlane.identifier.UUIDString UTF8String]});
                     if (planeIterator != planeMap.end()) {
                         UpdatePlane(updatedPlanes, GetPlaneByID(planeIterator->second), updatedPlane, planePolygonBuffer, polygonSize);
                     } else {
                         // This is a new plane, create it and initialize its values.
                         Planes.emplace_back();
                         auto& plane = Planes.back();
-                        [updatedPlane.identifier retain];
-                        planeMap.insert({updatedPlane.identifier, plane.ID});
+                        planeMap.insert({{[updatedPlane.identifier.UUIDString UTF8String]}, plane.ID});
 
                         // Fill in the polygon and center pose.
                         UpdatePlane(updatedPlanes, plane, updatedPlane, planePolygonBuffer, polygonSize);
                     }
-
-                    [updatedPlane release];
                 }
 
                 // Clear the list of updated planes to start building up for the next frame update.
@@ -960,7 +912,7 @@ namespace xr {
                 auto removedARKitPlanes = [sessionDelegate GetDeletedPlanes];
                 for (ARPlaneAnchor* removedPlane: *removedARKitPlanes) {
                     // Find the plane in the set of existing planes.
-                    auto planeIterator = planeMap.find(removedPlane.identifier);
+                    auto planeIterator = planeMap.find({[removedPlane.identifier.UUIDString UTF8String]});
                     if (planeIterator != planeMap.end()) {
                         // Release the held ref to the native plane ID and clean up its polygon as it is no longer needed.
                         auto [nativePlaneID, planeID] = *planeIterator;
@@ -970,10 +922,7 @@ namespace xr {
                         plane.Polygon.clear();
                         plane.PolygonSize = 0;
                         planeMap.erase(planeIterator);
-                        [nativePlaneID release];
                     }
-
-                    [removedPlane release];
                 }
 
                 // Clear the list of removed frames to start building up for the next plane update.
@@ -1041,7 +990,6 @@ namespace xr {
             while (anchorIter != nativeAnchors.end()) {
                 if (arAnchor == nil || arAnchor == *anchorIter) {
                     [session removeAnchor:*anchorIter];
-                    [*anchorIter release];
                     anchorIter = nativeAnchors.erase(anchorIter);
 
                     if (arAnchor != nil) {
@@ -1085,7 +1033,7 @@ namespace xr {
         id<MTLCommandQueue> commandQueue;
         std::vector<ARAnchor*> nativeAnchors{};
         std::vector<float> planePolygonBuffer{};
-        std::unordered_map<NSUUID*, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<std::string, Frame::Plane::Identifier> planeMap{};
         std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
         bool planeDetectionEnabled{ false };
@@ -1175,7 +1123,6 @@ namespace xr {
 
             // Perform the actual raycast.
             auto rayCastResults = [session raycast:raycastQuery];
-            [raycastQuery release];
 
             // Process the results and push them into the results list.
             for (ARRaycastResult* result in rayCastResults) {
@@ -1247,6 +1194,10 @@ namespace xr {
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr) const {
         return m_impl->sessionImpl.CreateAnchor(pose);
+    }
+    
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
+        throw std::runtime_error("not implemented"); 
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
