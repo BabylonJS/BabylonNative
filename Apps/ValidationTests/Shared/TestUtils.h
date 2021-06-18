@@ -39,15 +39,13 @@ namespace
         }
         return ret;
     }
-#else
-#ifdef WIN32
+#elif defined(WIN32)
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
         ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
         return std::filesystem::path{ buffer }.parent_path();
     }
-#endif
 #endif
 }
 
@@ -103,8 +101,7 @@ namespace Babylon
             // ceguille: I didn't find a better way to do it for UWP
             exit(errorCode);
 #elif ANDROID
-#else
-#ifdef WIN32
+#elif WIN32
             PostMessageW(_nativeWindowPtr, WM_DESTROY, 0, 0);
 #elif __linux__
             Display* display = XOpenDisplay(NULL);
@@ -142,7 +139,6 @@ namespace Babylon
 #endif
 #else
             // TODO: handle exit for other platforms
-#endif
 #endif
         }
 

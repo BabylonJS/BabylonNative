@@ -1,7 +1,6 @@
 [![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
 [![Nightly build](https://github.com/BabylonJS/BabylonNative/workflows/Nightly%20build/badge.svg)](https://github.com/BabylonJS/BabylonNative/actions?query=workflow%3A%22Nightly+build%22)
 
-
 # Babylon Native
 
 Welcome! Babylon Native is a collection of technologies intended to bring 
