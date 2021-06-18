@@ -26,20 +26,7 @@ namespace
     std::atomic<bool> doExit{};
     int errorCode{};
 
-#if defined(__cplusplus_winrt)
-    std::string WStringToString(const wchar_t* w, size_t size)
-    {
-        auto length{ ::WideCharToMultiByte(CP_UTF8, 0, w,static_cast<int>(size), nullptr, 0, nullptr, nullptr) };
-
-        std::string ret{};
-        if (length)
-        {
-            ret.resize(length);
-            ::WideCharToMultiByte(CP_UTF8, 0, w, static_cast<int>(size), &ret[0], length, nullptr, nullptr);
-        }
-        return ret;
-    }
-#elif defined(WIN32)
+#if WIN32 && !__cplusplus_winrt
     std::filesystem::path GetModulePath()
     {
         char buffer[1024];
@@ -246,7 +233,7 @@ namespace Babylon
             using namespace Windows::Storage;
             StorageFolder^ localFolder = ApplicationData::Current->LocalFolder;
             std::wstring wpath = localFolder->Path->Data();
-            std::string path{WStringToString(wpath.data(), wpath.size())};
+            std::string path{winrt::to_string(wpath)};
 #elif ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
 #elif __APPLE__

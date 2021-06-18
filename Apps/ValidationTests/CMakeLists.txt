@@ -113,7 +113,6 @@ if(WINDOWS_STORE)
     target_compile_options(ValidationTests PRIVATE /await)
 endif()
 
-
 target_link_to_dependencies(ValidationTests
     PRIVATE bgfx
     PRIVATE bimg
@@ -185,7 +184,6 @@ else()
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
     endforeach()
 endif()
-
 
 # directory for generated images and errors
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Results")
