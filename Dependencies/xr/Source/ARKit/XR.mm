@@ -854,11 +854,11 @@ namespace xr {
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
             @autoreleasepool {
                 if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
-                    if (@available(iOS 13.0, *)) {
-                        GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
-                    } else {
-                        GetHitTestResultsLegacy(filteredResults, trackableTypes);
-                    }
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
+                    GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
+#else
+                    GetHitTestResultsLegacy(filteredResults, trackableTypes);
+#endif
                 }
             }
         }
@@ -1181,6 +1181,7 @@ namespace xr {
             }
         }
 
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED <= __IPHONE_13_0)
         // On iOS versions prior to 13, fall back to doing a raycast from a screen point, for now don't support translating the offset ray.
         void GetHitTestResultsLegacy(std::vector<HitResult>& filteredResults, xr::HitTestTrackableType trackableTypes) const {
             // First set the type filter based on the requested trackable types.
@@ -1207,6 +1208,7 @@ namespace xr {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
         }
+#endif
     };
 
     struct System::Session::Frame::Impl {
