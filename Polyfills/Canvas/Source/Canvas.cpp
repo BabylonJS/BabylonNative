@@ -43,8 +43,7 @@ namespace Babylon::Polyfills::Internal
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
-        std::vector<uint8_t> fontBuffer{};
-        fontBuffer.resize(buffer.ByteLength());
+        std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
         auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
