@@ -813,7 +813,7 @@ namespace xr {
                 if (@available(iOS 13.0, *)) {
                     GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                 } else {
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_14_0)
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED <= __IPHONE_13_0)
                     GetHitTestResultsLegacy(filteredResults, trackableTypes);
 #endif
                 }
