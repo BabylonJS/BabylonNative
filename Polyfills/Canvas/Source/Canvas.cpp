@@ -19,7 +19,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
-                StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
+                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
@@ -40,17 +40,23 @@ namespace Babylon::Polyfills::Internal
     {
     }
 
-    void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
+    Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
-        auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
-        const auto cancellationSource = std::shared_ptr<arcana::cancellation_source>();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
         std::vector<uint8_t> fontBuffer{};
         fontBuffer.resize(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+
+        auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
+        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
+        auto deferred{Napi::Promise::Deferred::New(info.Env())};
         arcana::make_task(graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
             fontsInfos[fontName] = fontData;
+        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{ info.Env() }, deferred]() {
+            deferred.Resolve(env.Undefined());
         });
+
+        return deferred.Promise();
     }
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
