@@ -85,7 +85,6 @@ CreateBoxAsync().then(function () {
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);
 
-
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
     }
@@ -251,7 +250,6 @@ CreateBoxAsync().then(function () {
                     sessionMode = "immersive-vr";
 
                     // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
-
                     xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.HAND_TRACKING,
                         "latest",
@@ -340,7 +338,6 @@ CreateBoxAsync().then(function () {
                         xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
-
             });
         }, 5000);
     }
