@@ -5,13 +5,6 @@
 
 namespace Babylon
 {
-
-    int test(int argc, char** argv)
-    {
-        ::testing::InitGoogleTest(&argc, argv);
-        return RUN_ALL_TESTS();
-    }
-
     void WaitForCompletion(arcana::task<void, std::exception_ptr> task) {
         bool done{false};
         task.then(arcana::inline_scheduler, arcana::cancellation::none(), [&done](arcana::expected<void, std::exception_ptr> result) {
