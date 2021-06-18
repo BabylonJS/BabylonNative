@@ -6,9 +6,13 @@ FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImag
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
     "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs/babylon.max.js.map"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js")
+    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/babylonjs-gui/babylon.gui.js.map")
 
 set(SCRIPTS
     "Scripts/validation_native.js"
@@ -35,7 +39,7 @@ if(WINDOWS_STORE)
         "UWP/App.h")
     set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(ValidationTests WIN32 ${BABYLONSCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(ValidationTests WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 elseif(WIN32)
     set(SOURCES
         "Shared/TestUtils.h"
@@ -159,8 +163,8 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${SCRIPTS} ${BABYLONSCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
     set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
 else()
     foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
