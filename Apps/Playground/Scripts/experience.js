@@ -341,7 +341,6 @@ CreateBoxAsync().then(function () {
                         xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
-
             });
         }, 5000);
     }
