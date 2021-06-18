@@ -854,11 +854,13 @@ namespace xr {
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
             @autoreleasepool {
                 if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-                    GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
-#else
-                    GetHitTestResultsLegacy(filteredResults, trackableTypes);
+                    if (@available(iOS 13.0, *)) {
+                        GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
+                    } else {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_14_0)
+                        GetHitTestResultsLegacy(filteredResults, trackableTypes);
 #endif
+                    }
                 }
             }
         }
