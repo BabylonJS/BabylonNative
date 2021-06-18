@@ -11,9 +11,9 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
 
-    struct NativeCanvas::Impl
+    struct NativeCanvas::Impl final
     {
-        std::unique_ptr<Babylon::TextureData> m_textureData;
+        std::unique_ptr<Babylon::TextureData> TextureData;
     };
 
     void NativeCanvas::CreateInstance(Napi::Env env)
@@ -115,12 +115,12 @@ namespace Babylon::Polyfills::Internal
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
         assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
-        m_impl->m_textureData = std::make_unique<TextureData>();
-        m_impl->m_textureData->Handle = bgfx::getTexture(m_frameBufferHandle);
-        m_impl->m_textureData->OwnsHandle = false;
-        m_impl->m_textureData->Width = m_width;
-        m_impl->m_textureData->Height = m_height;
-        return Napi::External<TextureData>::New(info.Env(), m_impl->m_textureData.get());
+        m_impl->TextureData = std::make_unique<TextureData>();
+        m_impl->TextureData->Handle = bgfx::getTexture(m_frameBufferHandle);
+        m_impl->TextureData->OwnsHandle = false;
+        m_impl->TextureData->Width = m_width;
+        m_impl->TextureData->Height = m_height;
+        return Napi::External<TextureData>::New(info.Env(), m_impl->TextureData.get());
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
