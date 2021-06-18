@@ -2,7 +2,6 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <GraphicsImpl.h>
-#include <NativeEngine.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -42,7 +41,5 @@ namespace Babylon::Polyfills::Internal
         bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
         Babylon::FrameBuffer* m_frameBuffer{};
         bool m_dirty{};
-
-        Babylon::TextureData m_textureData{};
     };
 }

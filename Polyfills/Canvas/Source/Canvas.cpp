@@ -5,6 +5,7 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
+#include <NativeEngine.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -108,11 +109,12 @@ namespace Babylon::Polyfills::Internal
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
         assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
-        m_textureData.Handle = bgfx::getTexture(m_frameBufferHandle);
-        m_textureData.OwnsHandle = false;
-        m_textureData.Width = m_width;
-        m_textureData.Height = m_height;
-        return Napi::External<TextureData>::New(info.Env(), &m_textureData);
+        const auto textureData = new TextureData();
+        textureData->Handle = bgfx::getTexture(m_frameBufferHandle);
+        textureData->OwnsHandle = false;
+        textureData->Width = m_width;
+        textureData->Height = m_height;
+        return Napi::External<TextureData>::New(info.Env(), textureData, [](Napi::Env, TextureData* data) { delete data; });
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
