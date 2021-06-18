@@ -117,6 +117,7 @@ namespace Babylon::Polyfills::Internal
         assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
         m_impl->m_textureData = std::make_unique<TextureData>();
         m_impl->m_textureData->Handle = bgfx::getTexture(m_frameBufferHandle);
+        m_impl->m_textureData->OwnsHandle = false;
         m_impl->m_textureData->Width = m_width;
         m_impl->m_textureData->Height = m_height;
         return Napi::External<TextureData>::New(info.Env(), m_impl->m_textureData.get());
