@@ -19,3 +19,4 @@ target_link_libraries(UnitTests
 add_test(NAME UnitTests COMMAND UnitTests)
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
+set_property(TARGET gtest gtest_main gmock gmock_main PROPERTY FOLDER "Dependencies/GoogleTest")
