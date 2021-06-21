@@ -279,6 +279,10 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
+            if (str == "transparent")
+            {
+                return nvgRGBA(0, 0, 0, 0);
+            }
             auto iter = webColors.find(str);
             if (iter != webColors.end())
             {
@@ -300,11 +304,11 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        NVGpaint paint = nvgLinearGradient(m_nvg, 0, 5, 0, 10, nvgRGBA(0, 160, 192, 255), nvgRGBA(0, 160, 192, 255));
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, left, top, width, height);
 
-        nvgFillPaint(m_nvg, paint);
+        const auto color = StringToColor(m_fillStyle);
+        nvgFillColor(m_nvg, color);
         nvgFill(m_nvg);
         SetDirty();
     }
