@@ -27,7 +27,9 @@ target_link_to_dependencies(Canvas PUBLIC napi
     PRIVATE bgfx
     PRIVATE bimg
     PRIVATE bx
-    PRIVATE GraphicsInternal)
+    PRIVATE GraphicsInternal
+    PRIVATE NativeEngine
+    PRIVATE NativeEngineInternal)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
