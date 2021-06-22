@@ -23,7 +23,7 @@ execute_process(COMMAND "${GIT_EXECUTABLE}" -C bgfx rev-list --count HEAD
                 ERROR_QUIET)
 
 # read version(100) from bgfx.idl
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/bgfx/scripts/bgfx.idl" BGFX_IDL)
+file(READ "${BGFX_DIR}/scripts/bgfx.idl" BGFX_IDL)
 string(REGEX MATCH "version\\(([^\)]+)\\)"
        BGFX_API_VERSION ${BGFX_IDL})
 set(BGFX_API_VERSION ${CMAKE_MATCH_1})
