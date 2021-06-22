@@ -61,6 +61,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("strokeText", &Context::StrokeText),
                 InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
                 InstanceMethod("setTransform", &Context::SetTransform),
+                InstanceMethod("dispose", &Context::Dispose),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
@@ -94,8 +95,22 @@ namespace Babylon::Polyfills::Internal
 
     Context::~Context()
     {
-        nvgDelete(m_nvg);
+        Dispose();
         m_cancellationSource->cancel();
+    }
+
+    void Context::Dispose(const Napi::CallbackInfo&)
+    {
+        Dispose();
+    }
+
+    void Context::Dispose()
+    {
+        if (m_nvg)
+        {
+            nvgDelete(m_nvg);
+            m_nvg = nullptr;
+        }
     }
 
     NVGcolor StringToColor(const std::string& colorString)
