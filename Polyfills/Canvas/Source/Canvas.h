@@ -18,7 +18,8 @@ namespace Babylon::Polyfills::Internal
 
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
 
-        void UpdateRenderTarget();
+        // returns true if frameBuffer size has changed
+        bool UpdateRenderTarget();
         Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
     private:

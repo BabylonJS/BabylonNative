@@ -533,13 +533,19 @@ namespace Babylon::Polyfills::Internal
 
     void Context::EndFrame()
     {
-        m_canvas->UpdateRenderTarget();
+        // on some systems (Ubuntu), the framebuffer contains garbage.
+        // Unlike other systems where it's cleared.
+        bool needClear = m_canvas->UpdateRenderTarget();
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                if (needClear)
+                {
+                    frameBuffer.Clear(encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
+                }
                 frameBuffer.SetViewPort(encoder, 0.f, 0.f, 1.f, 1.f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);

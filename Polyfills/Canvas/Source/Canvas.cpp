@@ -94,7 +94,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void NativeCanvas::UpdateRenderTarget()
+    bool NativeCanvas::UpdateRenderTarget()
     {
         if (m_dirty)
         {
@@ -106,7 +106,9 @@ namespace Babylon::Polyfills::Internal
             m_frameBuffer = &m_graphicsImpl.AddFrameBuffer(m_frameBufferHandle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
             assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
             m_dirty = false;
+            return true;
         }
+        return false;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
