@@ -27,6 +27,7 @@ namespace Babylon
         void SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
         void SetStencil(bgfx::Encoder* encoder, uint32_t stencilState);
+        void Blit(bgfx::Encoder* encoder, bgfx::TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, bgfx::TextureHandle _src, uint16_t _srcX = 0, uint16_t _srcY = 0, uint16_t _width = UINT16_MAX, uint16_t _height = UINT16_MAX);
 
         // Temporary fix to get a new viewId for the FrameBuffer
         // This method is called when a FrameBuffer is unbound so drawcalls are performed with the intented order

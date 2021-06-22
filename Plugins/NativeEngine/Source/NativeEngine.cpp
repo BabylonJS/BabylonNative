@@ -150,6 +150,17 @@ namespace Babylon
             texture->Height = image->m_height;
         }
 
+        void CreateBlitTexture(TextureData* texture)
+        {
+            if (texture->Flags & BGFX_TEXTURE_BLIT_DST)
+            {
+                return;
+            }
+            bgfx::destroy(texture->Handle);
+            texture->Handle = bgfx::createTexture2D((uint16_t)texture->Width, (uint16_t)texture->Height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST);
+            texture->Flags |= BGFX_TEXTURE_BLIT_DST;
+        }
+
         void CreateCubeTextureFromImages(TextureData* texture, const std::vector<bimg::ImageContainer*>& images, bool hasMips)
         {
             const bimg::ImageContainer* firstImage = images.front();
@@ -1205,12 +1216,32 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
     {
-        // This code does not copy texture but overrides texture handle.
-        // It will leak texture memory and should be fixed.
-        // See task in this list : https://github.com/BabylonJS/BabylonNative/issues/616#issuecomment-831162396
         const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
         const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
-        textureDestination->Handle = textureSource->Handle;
+        const auto handleSource{textureSource->Handle};
+        // Make sure destination texture is valid for BLIT and is not created from static datas.
+        CreateBlitTexture(textureDestination);
+        const auto handleDestination{ textureDestination->Handle };
+
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+                // JS Thread
+                if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
+                {
+                    bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                    m_boundFrameBuffer->Blit(encoder, handleDestination, 0, 0, handleSource);
+                }
+                else
+                {
+                    throw std::runtime_error{ "This platform does not support texture blit." };
+                }
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
+                if (!cancellationSource->cancelled() && result.has_error())
+                {
+                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
+                }
+            });
+        });
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)

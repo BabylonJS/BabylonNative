@@ -30,6 +30,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
+        void Dispose();
 
         uint32_t m_width{1};
         uint32_t m_height{1};

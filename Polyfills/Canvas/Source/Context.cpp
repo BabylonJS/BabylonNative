@@ -279,7 +279,7 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            if (str == "transparent")
+            if (str == "transparent" || !str.length())
             {
                 return nvgRGBA(0, 0, 0, 0);
             }
@@ -291,7 +291,7 @@ namespace Babylon::Polyfills::Internal
             }
             else
             {
-                assert(0);
+                throw std::runtime_error{"Unknown color name"};
             }
         }
         return nvgRGBA(255, 0, 255, 255);

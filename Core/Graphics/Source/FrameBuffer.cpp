@@ -74,6 +74,13 @@ namespace Babylon
         encoder->submit(m_viewId.value(), programHandle, 0, flags);
     }
 
+    void FrameBuffer::Blit(bgfx::Encoder* encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
+    {
+        // 1 blit per view, create a new viewId for each blit
+        NewView<false>(encoder, {});
+        encoder->blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
+    }
+
     void FrameBuffer::SetStencil(bgfx::Encoder* encoder, uint32_t stencilState)
     {
         encoder->setStencil(stencilState);
