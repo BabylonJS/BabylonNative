@@ -38,6 +38,7 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::~NativeCanvas()
     {
+        Dispose();
     }
 
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
@@ -93,20 +94,21 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void NativeCanvas::UpdateRenderTarget()
+    bool NativeCanvas::UpdateRenderTarget()
     {
         if (m_dirty)
         {
             if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
             {
                 m_graphicsImpl.RemoveFrameBuffer(*m_frameBuffer);
-                bgfx::destroy(m_frameBufferHandle);
             }
             m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
             m_frameBuffer = &m_graphicsImpl.AddFrameBuffer(m_frameBufferHandle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
             assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
             m_dirty = false;
+            return true;
         }
+        return false;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
@@ -120,8 +122,17 @@ namespace Babylon::Polyfills::Internal
         return Napi::External<TextureData>::New(info.Env(), textureData, [](Napi::Env, TextureData* data) { delete data; });
     }
 
+    void NativeCanvas::Dispose()
+    {
+        if (bgfx::isValid(m_frameBufferHandle))
+        {
+            m_graphicsImpl.RemoveFrameBuffer(*m_frameBuffer);
+        }
+    }
+
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
     {
+        Dispose();
     }
 }
 

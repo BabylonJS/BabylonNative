@@ -355,8 +355,13 @@ xhr.addEventListener("readystatechange", function() {
     }
 }, false);
 
-_native.RootUrl = "https://playground.babylonjs.com";
-console.log("Starting");
-TestUtils.setTitle("Starting Native Validation Tests");
-TestUtils.updateSize(testWidth, testHeight);
-xhr.send();
+
+BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+    _native.NativeCanvas.loadTTFAsync("droidsans", data).then(function () {
+        _native.RootUrl = "https://playground.babylonjs.com";
+        console.log("Starting");
+        TestUtils.setTitle("Starting Native Validation Tests");
+        TestUtils.updateSize(testWidth, testHeight);
+        xhr.send();
+    });
+}, undefined, undefined, true);
