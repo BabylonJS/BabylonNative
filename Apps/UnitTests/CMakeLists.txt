@@ -1,3 +1,4 @@
+# Build only on Win32, not on UWP
 if((NOT WIN32) OR WINDOWS_STORE)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -8,6 +9,7 @@ FetchContent_Declare(
   # Specify the commit you depend on and update it regularly.
   URL https://github.com/google/googletest/archive/23ef29555ef4789f555f1ba8c51b4c52975f0907.zip
 )
+# Downloads the google test source and binaries and places them in in /build/<platform>/_deps
 FetchContent_MakeAvailable(googletest)
 
 add_executable(UnitTests "UnitTests.cpp")
