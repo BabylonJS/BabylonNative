@@ -137,6 +137,12 @@
             "referenceImage": "gltfAnimationSkin1.png"
         },
         {
+            "title": "GLTF Buffer Interleaved",
+            "playgroundId": "#DS8AA7#18",
+            "replace": "__folder__, Buffer_Interleaved, __page__, 0",
+            "referenceImage": "gltfBufferInterleaved.png"
+        },
+        {
             "title": "GLTF Material",
             "playgroundId": "#DS8AA7#18",
             "replace": "__folder__, Material, __page__, 0",
