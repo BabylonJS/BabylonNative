@@ -1260,7 +1260,7 @@ namespace Babylon
             throw std::runtime_error{"The data size does not match width, height, and format"};
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, bytes)};
+        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
 
         if (invertY)
         {
