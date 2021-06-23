@@ -7,11 +7,6 @@
             "referenceImage": "visibility.png"
         },
         {
-            "title": "MeshSimplification",
-            "playgroundId": "#1ED15P#35",
-            "referenceImage": "meshSimplification.png"
-        },
-        {
             "title": "Edges",
             "playgroundId": "#TYAHX#114",
             "referenceImage": "edges.png"
