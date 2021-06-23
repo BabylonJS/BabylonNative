@@ -2,6 +2,31 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "GLTF Mesh Primitive Attribute",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveAttribute, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveAttribute.png"
+        },
+        {
+            "title": "GLTF Mesh Primitive Vertex Color",
+            "renderCount": 5,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveVertexColor, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveVertexColor.png"
+        },
+        {
+            "title": "GLTF Alpha Blend",
+            "playgroundId": "#SYQW69#579",
+            "referenceImage": "glTFAlphaBlend.png",
+            "renderCount": 1
+        },
+        {
+            "title": "GLTF Node Attribute (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Node_Attribute, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfNodeAttribute1.png"
+        },
+        {
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "referenceImage": "softShadows.png"
