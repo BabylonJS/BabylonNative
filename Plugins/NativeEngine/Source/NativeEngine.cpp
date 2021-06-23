@@ -265,7 +265,6 @@ namespace Babylon
         {
             const size_t count = m_bytes.size() / byteStride;
             const size_t destinationSize = count * numElements * sizeof(float);
-            constexpr const float maxRange = static_cast<float>(std::numeric_limits<sourceType>::max());
             if (destinationSize != m_bytes.size()) // ensure both vectors have different size
             {
                 std::vector<uint8_t> bytes(destinationSize);
