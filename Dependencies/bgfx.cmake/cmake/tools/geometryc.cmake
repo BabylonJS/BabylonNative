@@ -22,5 +22,5 @@ endif()
 
 if (IOS)
 	set_target_properties(geometryc PROPERTIES MACOSX_BUNDLE ON
-											   MACOSX_BUNDLE_GUI_IDENTIFIER example-${ARG_NAME})
+											   MACOSX_BUNDLE_GUI_IDENTIFIER geometryc)
 endif()
