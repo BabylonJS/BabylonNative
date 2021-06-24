@@ -2,6 +2,73 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Visibility",
+            "playgroundId": "#PXC9CF#2",
+            "referenceImage": "visibility.png"
+        },
+        {
+            "title": "Edges",
+            "playgroundId": "#TYAHX#114",
+            "referenceImage": "edges.png"
+        },
+        {
+            "title": "Outline",
+            "playgroundId": "#10WJ5S#6",
+            "referenceImage": "outline.png"
+        },
+        {
+            "title": "Glow layer and LODs",
+            "playgroundId": "#UNS6ZV#2",
+            "referenceImage": "glowlayerandlods.png"
+        },
+        {
+            "title": "Nested BBG",
+            "playgroundId": "#ZG0C8B#1",
+            "renderCount": 10,
+            "referenceImage": "nested_BBG.png"
+        },
+        {
+            "title": "GUI3D SpherePanel",
+            "playgroundId": "#HB4C01#9",
+            "renderCount": 50,
+            "referenceImage": "spherepanel.png"
+        },
+        {
+            "title": "Kernel Blur",
+            "playgroundId": "#Y0WKT0#0",
+            "referenceImage": "KernelBlur.png"
+        },
+        {
+            "title": "Instanced Bones",
+            "playgroundId": "#2YLJ1L#2",
+            "referenceImage": "instancedBones.png"
+        },
+        {
+            "title": "GLTF Mesh Primitive Attribute",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveAttribute, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveAttribute.png"
+        },
+        {
+            "title": "GLTF Mesh Primitive Vertex Color",
+            "renderCount": 5,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveVertexColor, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveVertexColor.png"
+        },
+        {
+            "title": "GLTF Alpha Blend",
+            "playgroundId": "#SYQW69#579",
+            "referenceImage": "glTFAlphaBlend.png",
+            "renderCount": 1
+        },
+        {
+            "title": "GLTF Node Attribute (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Node_Attribute, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfNodeAttribute1.png"
+        },
+        {
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "referenceImage": "softShadows.png"
