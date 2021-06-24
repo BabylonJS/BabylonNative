@@ -151,11 +151,10 @@ namespace
 
             if (inputSource.JointsTrackedThisFrame)
             {
-                auto handJointCollection = jsInputSource.Get("hand").As<Napi::Array>();
-                if (!jsInputSource.Has("hand"))
+                const auto shouldInitHand = !jsInputSource.Has("hand");
+                auto handJointCollection = shouldInitHand ? Napi::Array::New(env, HAND_JOINT_NAMES.size()) : jsInputSource.Get("hand").As<Napi::Array>();
+                if (shouldInitHand)
                 {
-                    handJointCollection = Napi::Array::New(env, HAND_JOINT_NAMES.size());
-
                     auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
                         return handJointCollection.Get(info[0].As<Napi::String>());
                     };
@@ -2230,7 +2229,7 @@ namespace Babylon
             {
                 const auto spaces = info[0].As<Napi::Array>();
                 auto transforms = info[2].As<Napi::Float32Array>();
-                if (spaces.Length() != transforms.ElementLength() >> 4)
+                if (spaces.Length() != (transforms.ElementLength() >> 4))
                 {
                     throw std::runtime_error{"Number of spaces doesn't match number of transforms * 16."};
                 }
@@ -2239,7 +2238,7 @@ namespace Babylon
                 {
                     const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
                     const auto transformMatrix = CreateTransformMatrix(jointSpace, false);
-                    memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), 4 /*Float32*/ * 16);
+                    memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), sizeof(float) * 16);
                 }
 
                 return Napi::Value::From(info.Env(), true);
@@ -2258,7 +2257,7 @@ namespace Babylon
                 {
                     const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
                     const auto jointRadius = jointSpace.PoseRadius;
-                    *(radii.Data() + spaceIdx) = jointRadius;
+                    radii.Data()[spaceIdx] = jointRadius;
                 }
 
                 return Napi::Value::From(info.Env(), true);
