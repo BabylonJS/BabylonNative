@@ -10,19 +10,12 @@ namespace Babylon
         : m_nextViewId{}
         , m_frameBuffers{}
         , m_default{*this, BGFX_INVALID_HANDLE, 0, 0, true}
-        , m_backBuffer{*this, BGFX_INVALID_HANDLE, 0, 0, true}
     {
-        Resize(bgfx::getStats()->width, bgfx::getStats()->height);
     }
 
     FrameBuffer& FrameBufferManager::DefaultFrameBuffer()
     {
         return m_default;
-    }
-
-    FrameBuffer& FrameBufferManager::FinalFrameBuffer()
-    {
-        return m_backBuffer;
     }
 
     FrameBuffer& FrameBufferManager::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
@@ -80,31 +73,5 @@ namespace Babylon
         }
 
         m_default.Reset();
-    }
-
-    void FrameBufferManager::Resize(uint16_t width, uint16_t height)
-    {
-        if (bgfx::getCaps()->originBottomLeft)
-        {
-            // no resize needed for originBottomLeft (OpenGL)
-            return;
-        }
-
-        // resize the render target used as back buffer
-        auto previousHandle = m_default.Handle();
-        if (bgfx::isValid(previousHandle))
-        {
-            bgfx::destroy(previousHandle);
-        }
-
-        std::array<bgfx::TextureHandle, 2> textures{
-            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
-        std::array<bgfx::Attachment, textures.size()> attachments{};
-        for (size_t idx = 0; idx < attachments.size(); ++idx)
-        {
-            attachments[idx].init(textures[idx]);
-        }
-        m_default.m_handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
     }
 }

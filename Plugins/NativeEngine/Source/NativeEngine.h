@@ -202,7 +202,6 @@ namespace Babylon
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(const Napi::CallbackInfo& info);
-        void LoadYFlipProgram();
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);

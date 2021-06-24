@@ -46,7 +46,7 @@ namespace Babylon
             }
 
             std::string hlsl = compiler->compile();
-
+            
             Microsoft::WRL::ComPtr<ID3DBlob> errorMsgs;
             const char* target = stage == EShLangVertex ? "vs_4_0" : "ps_4_0";
 
@@ -100,6 +100,7 @@ namespace Babylon
         std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids, vertexAttributeRenaming);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {

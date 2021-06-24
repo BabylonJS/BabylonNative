@@ -538,12 +538,6 @@ namespace Babylon::Polyfills::Internal
         const auto height = m_canvas->GetHeight();
 
         nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-
-        if (!bgfx::getCaps()->originBottomLeft)
-        {
-            nvgScale(m_nvg, 1.f, -1.f);
-            nvgTranslate(m_nvg, 0.f, -float(height));
-        }
     }
 
     void Context::EndFrame()

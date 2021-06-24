@@ -127,17 +127,6 @@ namespace Babylon
 
         if (m_state.Bgfx.Initialized)
         {
-            // free YFlip resource
-            if (bgfx::isValid(m_YFlipProgram))
-            {
-                bgfx::destroy(m_YFlipProgram);
-            }
-            if (bgfx::isValid(m_YFlipVertexBuffer))
-            {
-                bgfx::destroy(m_YFlipVertexBuffer);
-                bgfx::destroy(m_YFlipSamplerUniform);
-            }
-
             // HACK: Render one more frame to drain the before/after render work queues.
             StartRenderingCurrentFrame();
             FinishRenderingCurrentFrame();
@@ -326,11 +315,6 @@ namespace Babylon
         auto level = m_state.Resolution.HardwareScalingLevel;
         res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
         res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
-
-        if (m_frameBufferManager)
-        {
-            m_frameBufferManager->Resize(static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
-        }
     }
 
     void GraphicsImpl::DiscardIfDirty()
@@ -352,38 +336,10 @@ namespace Babylon
         }
     }
 
-    void GraphicsImpl::YFlip()
-    {
-        if (!bgfx::getCaps()->originBottomLeft && bgfx::isValid(m_YFlipProgram))
-        {
-            if (!bgfx::isValid(m_YFlipVertexBuffer))
-            {
-                static constexpr float vertices[] = {3.f, -1.f, -1.f, -1.f, -1.f, 3.f};
-                bgfx::VertexLayout vertexLayout;
-                vertexLayout.begin().add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float).end();
-                m_YFlipVertexBuffer = bgfx::createVertexBuffer(bgfx::makeRef(vertices, sizeof(vertices)), vertexLayout);
-                m_YFlipSamplerUniform = bgfx::createUniform("backBuffer",bgfx::UniformType::Sampler);
-            }
-            const auto viewId = m_frameBufferManager->NewViewId();
-            const auto& res = m_state.Bgfx.InitState.resolution;
-            bgfx::setViewFrameBuffer(viewId, m_frameBufferManager->FinalFrameBuffer().Handle());
-            bgfx::setViewClear(viewId, BGFX_CLEAR_DEPTH);
-            bgfx::setViewRect(viewId, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
-            bgfx::discard();
-            bgfx::setTexture(0, m_YFlipSamplerUniform, bgfx::getTexture(m_frameBufferManager->DefaultFrameBuffer().Handle()));
-            bgfx::setVertexBuffer(0, m_YFlipVertexBuffer);
-            bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_DEPTH_TEST_ALWAYS);
-            bgfx::submit(viewId, m_YFlipProgram);
-        }
-    }
-
     void GraphicsImpl::Frame()
     {
         // Automatically end bgfx encoders.
         EndEncoders();
-
-        // Handle YFlip
-        YFlip();
 
         // Discard everything if the bgfx state is dirty.
         DiscardIfDirty();

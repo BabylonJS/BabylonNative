@@ -112,10 +112,6 @@ namespace Babylon
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
-        // This is temporary until a Shader plugin is developed.
-        // Shader is loaded/created in nativeEngine, then passed to graphics Impl for use and destruction.
-        // Idealy, this shader would be created and managed by a 3rd entity (Shader plugin)
-        void SetYFlipProgram(bgfx::ProgramHandle program) { m_YFlipProgram = program; }
     private:
         friend class UpdateToken;
 
@@ -133,7 +129,6 @@ namespace Babylon
         bgfx::Encoder* GetEncoderForThread();
         void EndEncoders();
         void CaptureCallback(const BgfxCallback::CaptureData&);
-        void YFlip();
 
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
@@ -181,9 +176,5 @@ namespace Babylon
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
-
-        bgfx::ProgramHandle m_YFlipProgram{bgfx::kInvalidHandle};
-        bgfx::VertexBufferHandle m_YFlipVertexBuffer{bgfx::kInvalidHandle};
-        bgfx::UniformHandle m_YFlipSamplerUniform{bgfx::kInvalidHandle};
     };
 }
