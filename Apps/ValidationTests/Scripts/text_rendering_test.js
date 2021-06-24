@@ -28,19 +28,11 @@ scene.createDefaultCamera(true);
 CreateInputHandling(scene);
 scene.createDefaultLight(true);
 
-
-engine.updateDynamicTexture = function (texture, canvas, invertY, premulAlpha, format) {
-    if (premulAlpha === void 0) { premulAlpha = false; }
-    var webGLTexture = texture._hardwareTexture.underlyingResource;
-    this._native.copyTexture(webGLTexture, canvas.getCanvasTexture());
-    texture.isReady = true;
-};
-
 console.log("Reading font");
 var textureGround;
 var font = "bold 44px monospace";
 BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-    _native.NativeCanvas.loadTTF("droidsans", data);
+    _native.NativeCanvas.loadTTFAsync("droidsans", data);
     /*
     var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
     ground.rotation.x = Math.PI * 0.5;

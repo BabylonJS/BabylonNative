@@ -15,6 +15,7 @@ namespace Babylon
         FrameBufferManager(FrameBufferManager&&) = delete;
 
         FrameBuffer& DefaultFrameBuffer();
+        FrameBuffer& FinalFrameBuffer();
 
         FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
         void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
@@ -22,6 +23,7 @@ namespace Babylon
         bgfx::ViewId NewViewId();
         void Reset();
 
+        void Resize(uint16_t width, uint16_t height);
     private:
         void ResetViewId();
         void ResetFrameBuffers();
@@ -33,5 +35,6 @@ namespace Babylon
         std::list<FrameBuffer> m_frameBuffers{};
 
         FrameBuffer m_default;
+        FrameBuffer m_backBuffer;
     };
 }

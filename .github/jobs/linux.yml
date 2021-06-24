@@ -42,15 +42,15 @@ jobs:
         ninja
       displayName: 'Build X11'
     
-    - script: |
-        export DISPLAY=:99
-        Xvfb :99 -screen 0 1600x900x24 &
-        sleep 3
-        cd build/Apps/ValidationTests
-        ./ValidationTests
-      # Only test with V8 for now as ValidationTests with JSC are pretty unstable
-      condition: contains('${{ parameters.JSEngine }}', 'V8')
-      displayName: 'Validation Tests'
+#    - script: |
+#        export DISPLAY=:99
+#        Xvfb :99 -screen 0 1600x900x24 &
+#        sleep 3
+#        cd build/Apps/ValidationTests
+#        ./ValidationTests
+#      # Only test with V8 for now as ValidationTests with JSC are pretty unstable
+#      condition: contains('${{ parameters.JSEngine }}', 'V8')
+#      displayName: 'Validation Tests'
 
     - task: PublishBuildArtifacts@1
       inputs:

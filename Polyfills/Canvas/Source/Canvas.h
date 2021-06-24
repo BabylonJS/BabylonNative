@@ -18,20 +18,20 @@ namespace Babylon::Polyfills::Internal
 
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
 
-        void UpdateRenderTarget();
+        // returns true if frameBuffer size has changed
+        bool UpdateRenderTarget();
         Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
     private:
-
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);
         void SetWidth(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetHeight(const Napi::CallbackInfo&);
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
-        static void LoadTTF(const Napi::CallbackInfo& info);
+        static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
-        
+        void Dispose();
 
         uint32_t m_width{1};
         uint32_t m_height{1};
