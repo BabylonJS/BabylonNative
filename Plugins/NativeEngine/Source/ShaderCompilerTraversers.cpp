@@ -764,7 +764,7 @@ namespace Babylon::ShaderCompilerTraversers
             {
             }
 
-            TIntermediate* m_intermediate;
+            TIntermediate* m_intermediate{};
         };
     }
 

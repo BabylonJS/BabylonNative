@@ -46,7 +46,7 @@ namespace Babylon
             }
 
             std::string hlsl = compiler->compile();
-            
+
             Microsoft::WRL::ComPtr<ID3DBlob> errorMsgs;
             const char* target = stage == EShLangVertex ? "vs_4_0" : "ps_4_0";
 
