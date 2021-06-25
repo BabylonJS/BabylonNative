@@ -788,7 +788,6 @@ namespace Babylon
             std::string patchedVertexSource = vertexSource;
 
             static const std::string shaderNameDefineStr = "#define SHADER_NAME";
-            static const std::string samplingStr = "texture(";
             const auto shaderNameDefine = vertexSource.find(shaderNameDefineStr);
             if (shaderNameDefine != std::string::npos)
             {
