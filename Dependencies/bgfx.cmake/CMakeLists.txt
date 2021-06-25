@@ -69,7 +69,9 @@ if( BGFX_BUILD_TOOLS )
 	include( cmake/tools.cmake )
 endif()
 
-include( cmake/examples.cmake )
+if( BGFX_BUILD_TOOLS OR BGFX_BUILD_EXAMPLES )
+	include( cmake/examples.cmake )
+endif()
 
 if( BGFX_INSTALL )
 	include(GNUInstallDirs)
