@@ -27,6 +27,26 @@ namespace Babylon
 {
     namespace
     {
+        void TransformVector3Coordinates(const Napi::CallbackInfo& info)
+        {
+            auto coordinates = info[0].As<Napi::TypedArrayOf<float>>();
+            const auto transform = info[1].As<Napi::Object>();
+            const auto m = transform.Get("_m").As<Napi::TypedArrayOf<float>>();
+
+            for (size_t index = 0; index < coordinates.ElementLength(); index += 3)
+            {
+                const auto x{coordinates[index]}, y{coordinates[index+1]}, z{coordinates[index+2]};
+                const auto rx = x * m[0] + y * m[4] + z * m[8] + m[12];
+                const auto ry = x * m[1] + y * m[5] + z * m[9] + m[13];
+                const auto rz = x * m[2] + y * m[6] + z * m[10] + m[14];
+                const auto rw = 1 / (x * m[3] + y * m[7] + z * m[11] + m[15]);
+
+                coordinates[index] = rx * rw;
+                coordinates[index+1] = ry * rw;
+                coordinates[index+2] = rz * rw;
+            }
+        }
+
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -500,6 +520,8 @@ namespace Babylon
         // clang-format on
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("TransformVector3Coordinates", Napi::Function::New(env, TransformVector3Coordinates, "TransformVector3Coordinates"));
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
