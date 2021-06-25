@@ -2238,7 +2238,7 @@ namespace Babylon
                 {
                     const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
                     const auto transformMatrix = CreateTransformMatrix(jointSpace, false);
-                    memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), sizeof(float) * 16);
+                    std::memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), sizeof(float) << 4);
                 }
 
                 return Napi::Value::From(info.Env(), true);
