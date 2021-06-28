@@ -27,29 +27,6 @@ namespace Babylon
 {
     namespace
     {
-        constexpr auto YFlipVertexShader = R"(
-            precision highp float;
-            in vec2 position;
-            out vec2 vUV;
-            void main(void)
-            {
-                gl_Position = vec4(position, 0.5, 1.0);
-                vUV = position * 0.5 + 0.5;
-            }
-        )";
-
-        constexpr auto YFlipFragmentShader = R"(
-            precision highp float;
-            in vec2 vUV;
-            uniform sampler2D backBuffer;
-            out vec4 glFragColor;
-            void main(void)
-            {
-                vec3 color = texture(backBuffer, vUV).xyz;
-                glFragColor = vec4(color, 1.0);
-            }
-        )";
-
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -585,7 +562,6 @@ namespace Babylon
         , m_runtimeScheduler{runtime}
         , m_boundFrameBuffer{&m_graphicsImpl.DefaultFrameBuffer()}
     {
-        LoadYFlipProgram();
     }
 
     NativeEngine::~NativeEngine()
@@ -606,25 +582,6 @@ namespace Babylon
     void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
     {
         Dispose();
-    }
-
-    void NativeEngine::LoadYFlipProgram()
-    {
-        if (!bgfx::getCaps()->originBottomLeft)
-        {
-            // This is temporary until a Shader plugin is developed.
-            // Shader is loaded/created here, then passed to graphics Impl for use and destruction.
-            // Idealy, this shader would be created and managed by a 3rd entity (Shader plugin)
-            ShaderCompiler::BgfxShaderInfo shaderInfo{};
-
-            shaderInfo = m_shaderCompiler.Compile(YFlipVertexShader, YFlipFragmentShader);
-
-            auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-            auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-
-            auto handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-            m_graphicsImpl.SetYFlipProgram(handle);
-        }
     }
 
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
@@ -815,11 +772,39 @@ namespace Babylon
             std::string patchedVertexSource;
             const auto lastClosingCurly = vertexSource.find_last_of('}');
             patchedVertexSource = vertexSource.substr(0, lastClosingCurly);
-            if (!caps->originBottomLeft)
-            {
-                patchedVertexSource += "gl_Position.y *= -1.;\n";
-            }
+
             patchedVertexSource += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+            return patchedVertexSource;
+        }
+        return vertexSource;
+    }
+
+    std::string ProcessSamplerFlip(const std::string& vertexSource)
+    {
+        const auto* caps = bgfx::getCaps();
+        // for d3d, vulkan, metal, flip the texture sampling on vertical axis
+        if (!caps->originBottomLeft)
+        {
+            std::string patchedVertexSource = vertexSource;
+
+            static const std::string shaderNameDefineStr = "#define SHADER_NAME";
+            const auto shaderNameDefine = vertexSource.find(shaderNameDefineStr);
+            if (shaderNameDefine != std::string::npos)
+            {
+                static const auto textureSamplerFunctions = R"(
+                    highp vec2 flip(highp vec2 uv)
+                    {
+                        return vec2(uv.x, 1. - uv.y);
+                    }
+                    highp vec3 flip(highp vec3 uv)
+                    {
+                        return uv;
+                    }
+                    #define texture(x,y) texture(x, flip(y))
+                    #define SHADER_NAME)";
+
+                patchedVertexSource.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
+            }
             return patchedVertexSource;
         }
         return vertexSource;
@@ -835,7 +820,7 @@ namespace Babylon
 
         try
         {
-            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), fragmentSource);
+            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
         }
         catch (const std::exception& ex)
         {
@@ -1165,11 +1150,16 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         const auto data = info[1].As<Napi::TypedArray>();
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
-        const auto invertY = info[3].As<Napi::Boolean>().Value();
+        auto invertY = info[3].As<Napi::Boolean>().Value();
         const auto onSuccess = info[4].As<Napi::Function>();
         const auto onError = info[5].As<Napi::Function>();
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
+
+        if (!bgfx::getCaps()->originBottomLeft)
+        {
+            invertY = !invertY;
+        }
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [this, dataSpan, generateMips, invertY, texture, cancellationSource{m_cancellationSource}]() {
@@ -1252,7 +1242,7 @@ namespace Babylon
         const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value())};
         const auto generateMips{info[5].As<Napi::Boolean>().Value()};
-        const auto invertY{info[6].As<Napi::Boolean>().Value()};
+        auto invertY{info[6].As<Napi::Boolean>().Value()};
 
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
@@ -1261,6 +1251,11 @@ namespace Babylon
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
+
+        if (!bgfx::getCaps()->originBottomLeft)
+        {
+            invertY = !invertY;
+        }
 
         if (invertY)
         {
@@ -1810,16 +1805,7 @@ namespace Babylon
             encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
 
-        if (!bgfx::getCaps()->originBottomLeft)
-        {
-            uint64_t engineStateYFlipped = m_engineState;
-            engineStateYFlipped ^= BGFX_STATE_FRONT_CCW;
-            encoder->setState(engineStateYFlipped | fillModeState);
-        }
-        else
-        {
-            encoder->setState(m_engineState | fillModeState);
-        }
+        encoder->setState(m_engineState | fillModeState);
 
         // stencil
         m_boundFrameBuffer->SetStencil(encoder, m_stencilState);
