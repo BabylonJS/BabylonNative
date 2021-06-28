@@ -197,6 +197,16 @@ namespace Babylon
         return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
     }
 
+    FrameBuffer& GraphicsImpl::AddCubeFrameBuffer(bgfx::FrameBufferHandle handles[6], uint16_t size)
+    {
+        if (!m_frameBufferManager)
+        {
+            throw std::runtime_error{ "FrameBufferManager has not been initialized!" };
+        }
+
+        return m_frameBufferManager->AddCubeFrameBuffer(handles, size);
+    }
+
     void GraphicsImpl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
         if (!m_frameBufferManager)

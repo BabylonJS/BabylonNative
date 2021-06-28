@@ -17,6 +17,7 @@ namespace Babylon
         FrameBuffer& DefaultFrameBuffer();
 
         FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
+        FrameBuffer& AddCubeFrameBuffer(bgfx::FrameBufferHandle handles[6], uint16_t size);
         void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
 
         bgfx::ViewId NewViewId();

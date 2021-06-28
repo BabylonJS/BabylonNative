@@ -2,6 +2,11 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "point light shadows",
+            "playgroundId": "#XDNVAY#1",
+            "referenceImage": "pointLightShadows.png"
+        },
+        {
             "title": "Visibility",
             "playgroundId": "#PXC9CF#2",
             "referenceImage": "visibility.png"

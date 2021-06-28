@@ -438,6 +438,7 @@ namespace Babylon
                 InstanceMethod("setTexture", &NativeEngine::SetTexture),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
+                InstanceMethod("createCubeFrameBuffer", &NativeEngine::CreateCubeFrameBuffer),
                 InstanceMethod("deleteFrameBuffer", &NativeEngine::DeleteFrameBuffer),
                 InstanceMethod("bindFrameBuffer", &NativeEngine::BindFrameBuffer),
                 InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
@@ -798,7 +799,7 @@ namespace Babylon
                     }
                     highp vec3 flip(highp vec3 uv)
                     {
-                        return uv;
+                        return vec3(uv.x, -uv.y, uv.z);
                     }
                     #define texture(x,y) texture(x, flip(y))
                     #define SHADER_NAME)";
@@ -1483,6 +1484,49 @@ namespace Babylon
         return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
     }
 
+    Napi::Value NativeEngine::CreateCubeFrameBuffer(const Napi::CallbackInfo& info)
+    {
+        TextureData* texture{info[0].As<Napi::External<TextureData>>().Data()};
+        uint16_t size{ static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value()) };
+        bgfx::TextureFormat::Enum format{static_cast<bgfx::TextureFormat::Enum>(info[2].As<Napi::Number>().Uint32Value())};
+        bool generateStencilBuffer{info[3].As<Napi::Boolean>()};
+        bool generateDepth{info[4].As<Napi::Boolean>()};
+        bool generateMips{info[5].As<Napi::Boolean>()};
+
+        bgfx::FrameBufferHandle frameBufferHandles[6] = {};
+        auto depthStencilFormat = bgfx::TextureFormat::D32;
+        if (generateStencilBuffer)
+        {
+            depthStencilFormat = bgfx::TextureFormat::D24S8;
+        }
+
+        assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
+        assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
+
+        std::array<bgfx::TextureHandle, 2> textures;
+        textures[0] = bgfx::createTextureCube(size, generateMips, 1, format, BGFX_TEXTURE_RT);
+
+        const auto textureCount = generateDepth ? 2 : 1;
+
+        for (uint16_t faceIndex = 0; faceIndex < 6; faceIndex++)
+        {
+            std::array<bgfx::Attachment, textures.size()> attachments{};
+            attachments[0].init(textures[0], bgfx::Access::Write, faceIndex);
+            if (generateDepth)
+            {
+                textures[1] = bgfx::createTexture2D(size, size, false, 1, depthStencilFormat, BGFX_TEXTURE_RT);
+                attachments[1].init(textures[1], bgfx::Access::Write, 0);
+            }
+            static const int faceRemap[6] = {0, 1, 3, 2, 4, 5};
+            frameBufferHandles[faceRemap[faceIndex]] = bgfx::createFrameBuffer(static_cast<uint8_t>(textureCount), attachments.data(), true);
+        }
+        texture->Handle = textures[0];
+        texture->OwnsHandle = false;
+
+        auto& frameBuffer{ m_graphicsImpl.AddCubeFrameBuffer(frameBufferHandles, size) };
+        return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
+    }
+
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
@@ -1492,7 +1536,13 @@ namespace Babylon
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
         auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        uint8_t faceIndex{0};
+        if (info[1].IsNumber())
+        {
+            faceIndex = static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value());
+        }
         m_boundFrameBuffer = frameBuffer;
+        m_boundFrameBuffer->SetCurrentFaceIndex(faceIndex);
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)

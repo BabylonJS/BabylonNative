@@ -25,6 +25,13 @@ namespace Babylon
         return m_frameBuffers.back();
     }
 
+    FrameBuffer& FrameBufferManager::AddCubeFrameBuffer(bgfx::FrameBufferHandle handles[6], uint16_t size)
+    {
+        std::scoped_lock lock{ m_frameBuffersMutex };
+        m_frameBuffers.emplace_back(*this, handles, size);
+        return m_frameBuffers.back();
+    }
+
     void FrameBufferManager::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
     {
         std::scoped_lock lock{m_frameBuffersMutex};

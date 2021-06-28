@@ -13,6 +13,7 @@ namespace Babylon
         friend class FrameBufferManager;
 
         FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer);
+        FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handle[6], uint16_t size);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -35,6 +36,9 @@ namespace Babylon
         // they should.
         void AcquireNewViewId();
 
+        // select cube face to render to
+        void SetCurrentFaceIndex(uint8_t faceIndex);
+
     private:
         struct ViewPort
         {
@@ -50,13 +54,19 @@ namespace Babylon
         void Reset();
 
         FrameBufferManager& m_manager;
-        bgfx::FrameBufferHandle m_handle;
+        union
+        {
+            bgfx::FrameBufferHandle m_handle;
+            bgfx::FrameBufferHandle m_cubeHandle[6];
+        };
         const uint16_t m_width;
         const uint16_t m_height;
         const bool m_defaultBackBuffer;
+        const bool m_cubeFrameBuffer;
 
         std::optional<bgfx::ViewId> m_viewId;
         ViewPort m_viewPort;
         std::optional<ViewPort> m_requestedViewPort;
+        uint8_t m_currentFaceIndex{};
     };
 }

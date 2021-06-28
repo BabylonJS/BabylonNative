@@ -11,22 +11,56 @@ namespace Babylon
         , m_width{width}
         , m_height{height}
         , m_defaultBackBuffer{defaultBackBuffer}
+        , m_cubeFrameBuffer{false}
         , m_viewId{}
         , m_viewPort{}
         , m_requestedViewPort{}
     {
     }
 
+    FrameBuffer::FrameBuffer(FrameBufferManager& manager, bgfx::FrameBufferHandle handles[6], uint16_t size)
+        : m_manager{manager}
+        , m_width{size}
+        , m_height{size}
+        , m_defaultBackBuffer{false}
+        , m_cubeFrameBuffer{true}
+        , m_viewId{}
+        , m_viewPort{}
+        , m_requestedViewPort{}
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            m_cubeHandle[i] = handles[i];
+        }
+    }
+
     FrameBuffer::~FrameBuffer()
     {
-        if (bgfx::isValid(m_handle))
+        if (m_cubeFrameBuffer)
         {
-            bgfx::destroy(m_handle);
+            for (int i = 0; i < 6; i++)
+            {
+                if (bgfx::isValid(m_cubeHandle[i]))
+                {
+                    bgfx::destroy(m_cubeHandle[i]);
+                }
+            }
+        }
+        else
+        {
+            if (bgfx::isValid(m_handle))
+            {
+                bgfx::destroy(m_handle);
+            }
         }
     }
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
     {
+        if (m_cubeFrameBuffer)
+        {
+            return m_cubeHandle[m_currentFaceIndex];
+        }
         return m_handle;
     }
 
@@ -109,7 +143,7 @@ namespace Babylon
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE);
-        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
         bgfx::setViewRect(m_viewId.value(),
             static_cast<uint16_t>(m_viewPort.X * Width()),
             static_cast<uint16_t>(m_viewPort.Y * Height()),
@@ -127,5 +161,14 @@ namespace Babylon
     void FrameBuffer::AcquireNewViewId()
     {
         NewView<false>(nullptr, m_viewPort);
+    }
+
+    void FrameBuffer::SetCurrentFaceIndex(uint8_t faceIndex)
+    {
+        if (faceIndex && !m_cubeFrameBuffer)
+        {
+            throw std::runtime_error{"Cannot use face index with non cubemap framebuffer" };
+        }
+        m_currentFaceIndex = faceIndex;
     }
 }
