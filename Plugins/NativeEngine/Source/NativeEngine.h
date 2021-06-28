@@ -244,6 +244,7 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         const VertexArray* m_boundVertexArray{};
+        FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
     };
 }

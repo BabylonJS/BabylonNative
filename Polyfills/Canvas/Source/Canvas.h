@@ -2,6 +2,7 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <GraphicsImpl.h>
+#include <FrameBuffer.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -20,7 +21,7 @@ namespace Babylon::Polyfills::Internal
 
         // returns true if frameBuffer size has changed
         bool UpdateRenderTarget();
-        Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+        Babylon::FrameBuffer& GetFrameBuffer() { return m_frameBuffer; }
 
     private:
         Napi::Value GetContext(const Napi::CallbackInfo&);
@@ -39,7 +40,7 @@ namespace Babylon::Polyfills::Internal
         Babylon::GraphicsImpl& m_graphicsImpl;
 
         bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
-        Babylon::FrameBuffer* m_frameBuffer{};
+        Babylon::FrameBuffer m_frameBuffer;
         bool m_dirty{};
     };
 }

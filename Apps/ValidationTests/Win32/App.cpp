@@ -81,7 +81,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            Babylon::Polyfills::Canvas::Initialize(env);
+            //Babylon::Polyfills::Canvas::Initialize(env);
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 

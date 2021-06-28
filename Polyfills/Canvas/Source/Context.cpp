@@ -553,9 +553,9 @@ namespace Babylon::Polyfills::Internal
                 bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
                 if (needClear)
                 {
-                    frameBuffer.Clear(encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
+                    frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
                 }
-                frameBuffer.SetViewPort(encoder, 0.f, 0.f, 1.f, 1.f);
+                frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);
                 BeginFrame();

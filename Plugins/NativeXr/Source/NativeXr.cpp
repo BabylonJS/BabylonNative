@@ -681,14 +681,17 @@ namespace Babylon
                             
                             auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                            auto& frameBuffer{m_sessionState->GraphicsImpl.AddFrameBuffer(frameBufferHandle,
+                            // TODO: HACK This logic must be completely reworked so that somebody holds onto the FrameBuffer.
+                            FrameBuffer frameBuffer{
+                                m_sessionState->GraphicsImpl, 
+                                frameBufferHandle,
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
-                                true)};
+                                true};
 
                             // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                             // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
+                            frameBuffer.Clear(*m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
 
                             viewConfig.FrameBuffers[eyeIdx] = &frameBuffer;
 
