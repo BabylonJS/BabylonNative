@@ -175,7 +175,7 @@ namespace Babylon
                 // texture YFlip with faces remapping
                 // remapping the face and its mipmap images
                 const uint8_t levelCount = static_cast<uint8_t>(images.size() / 6);
-                for (int imageIndex = 0; imageIndex < images.size(); imageIndex++)
+                for (size_t imageIndex = 0; imageIndex < images.size(); imageIndex++)
                 {
                     const uint32_t faceIndex = imageIndex / levelCount;
                     const uint32_t levelIndex = imageIndex % levelCount;
