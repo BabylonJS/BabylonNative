@@ -54,7 +54,8 @@ target_link_libraries(BabylonNative
     NativeInput
     NativeXr
     Window
-    XMLHttpRequest)
+    XMLHttpRequest
+    Canvas)
 
 # TODO: For some reason these don't work, so we specify these in the CMake command line args.
 set_target_properties(BabylonNative PROPERTIES

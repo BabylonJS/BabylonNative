@@ -22,6 +22,7 @@ Pod::Spec.new do |s|
                 'bgfx',
                 'bimg',
                 'bx',
+                'Canvas',
                 'GenericCodeGen',
                 'glslang',
                 'Graphics',

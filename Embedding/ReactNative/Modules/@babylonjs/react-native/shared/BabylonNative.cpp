@@ -8,6 +8,7 @@
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Canvas.h>
 
 #include <DispatchFunction.h>
 
@@ -53,6 +54,9 @@ namespace Babylon
             // NOTE: React Native's XMLHttpRequest is slow and allocates a lot of memory. This does not override
             // React Native's implementation, but rather adds a second one scoped to Babylon and used by WebRequest.ts.
             Polyfills::XMLHttpRequest::Initialize(m_env);
+
+            // Initialize Canvas polyfill for text support
+            Polyfills::Canvas::Initialize(m_env);
         }
 
         ~ReactNativeModule() override

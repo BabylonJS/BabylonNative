@@ -8,6 +8,7 @@ set(PACKAGED_LIBS
     bgfx
     bimg
     bx
+    Canvas
     GenericCodeGen
     glslang
     Graphics

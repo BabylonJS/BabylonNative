@@ -44,7 +44,8 @@ target_link_libraries(BabylonNative
     NativeInput
     NativeXr
     Window
-    XMLHttpRequest)
+    XMLHttpRequest
+    Canvas)
 
 if(DEFINED EXTENSIONS_DIRS)
     foreach(extensionDir IN LISTS EXTENSIONS_DIRS)

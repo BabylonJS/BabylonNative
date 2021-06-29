@@ -148,6 +148,7 @@
         $(BabylonNativeBuildDir)\Plugins\NativeXr\$(Configuration);
         $(BabylonNativeBuildDir)\Polyfills\Window\$(Configuration);
         $(BabylonNativeBuildDir)\Polyfills\XMLHttpRequest\$(Configuration);
+        $(BabylonNativeBuildDir)\Polyfills\Canvas\$(Configuration);
         $(BabylonNativeBuildDir)\$(Configuration);
         %(AdditionalLibraryDirectories);
       </AdditionalLibraryDirectories>
@@ -175,6 +176,7 @@
         bgfx.lib;
         bimg.lib;
         bx.lib;
+        Canvas.lib;
         edtaa3.lib;
         etc1.lib;
         etc2.lib;
@@ -231,6 +233,7 @@
         bgfx.lib;
         bimg.lib;
         bx.lib;
+        Canvas.lib;
         edtaa3.lib;
         etc1.lib;
         etc2.lib;
