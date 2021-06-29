@@ -13,7 +13,13 @@ jobs:
     - script: |
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
-  
+    
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: 'Apps'
+      displayName: 'Install Babylon.js NPM packages'
+
     - script: |
         mkdir buildUWP_${{ parameters.platform }}
         cd buildUWP_${{ parameters.platform }}

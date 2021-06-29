@@ -36,8 +36,9 @@ namespace xr
         DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
     };
 
-    constexpr std::array<SwapchainFormat, 1> SUPPORTED_DEPTH_FORMATS
+    constexpr std::array<SwapchainFormat, 2> SUPPORTED_DEPTH_FORMATS
     {
+        DXGI_FORMAT_D16_UNORM,
         DXGI_FORMAT_D24_UNORM_S8_UINT
     };
 
@@ -51,6 +52,8 @@ namespace xr
             return xr::TextureFormat::RGBA8_SRGB;
         case DXGI_FORMAT_D24_UNORM_S8_UINT:
             return xr::TextureFormat::D24S8;
+        case DXGI_FORMAT_D16_UNORM:
+            return xr::TextureFormat::D16;
         default:
             throw std::runtime_error{ "Unsupported texture format" };
         }

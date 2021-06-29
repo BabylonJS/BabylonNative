@@ -5,6 +5,8 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
+#import <Babylon/Polyfills/Canvas.h>
+#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
 #import <MetalKit/MetalKit.h>
@@ -91,6 +93,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Canvas::Initialize(env);
+        Babylon::Plugins::Camera::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -99,16 +103,16 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 
     Babylon::ScriptLoader loader{ *runtime };
     loader.Eval("document = {}", "");
-    loader.LoadScript("app:///ammo.js");
-    loader.LoadScript("app:///recast.js");
-    loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylonjs.loaders.js");
-    loader.LoadScript("app:///babylonjs.materials.js");
-    loader.LoadScript("app:///babylon.gui.js");
+    loader.LoadScript("app:///Scripts/ammo.js");
+    loader.LoadScript("app:///Scripts/recast.js");
+    loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/babylon.gui.js");
 
     if (scripts.empty())
     {
-        loader.LoadScript("app:///experience.js");
+        loader.LoadScript("app:///Scripts/experience.js");
     }
     else
     {
@@ -117,7 +121,7 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
             loader.LoadScript(script);
         }
 
-        loader.LoadScript("app:///playground_runner.js");
+        loader.LoadScript("app:///Scripts/playground_runner.js");
     }
 }
 

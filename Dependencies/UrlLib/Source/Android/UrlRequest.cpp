@@ -65,8 +65,8 @@ namespace UrlLib
                 try
                 {
                     Uri uri{Uri::Parse(m_url.data())};
-                    std::string scheme{uri.getScheme()};
-                    if (scheme == "app")
+                    String scheme{uri.getScheme()};
+                    if (scheme != nullptr && (std::string)scheme == "app")
                     {
                         std::string path{std::string{uri.getPath()}.substr(1)};
                         AAssetManager* assetsManager{GetAppContext().getAssets()};

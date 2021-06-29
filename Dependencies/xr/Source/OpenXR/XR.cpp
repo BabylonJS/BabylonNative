@@ -298,8 +298,8 @@ namespace xr
         struct RenderResource
         {
             ViewConfigurationState ViewState;
-            std::vector<Swapchain> ColorSwapchains;
-            std::vector<Swapchain> DepthSwapchains;
+            Swapchain ColorSwapchain{};
+            Swapchain DepthSwapchain{};
             std::vector<XrCompositionLayerProjectionView> ProjectionLayerViews;
             std::vector<XrCompositionLayerDepthInfoKHR> DepthInfoViews;
         };
@@ -340,52 +340,52 @@ namespace xr
             static constexpr char* DEFAULT_GET_SELECT_CLICK_ACTION_NAME{ "default_get_select_action" };
             static constexpr char* DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME{ "Default Select" };
             static constexpr char* DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX{ "/input/select/click" };
-            XrAction DefaultGetSelectValueAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> DefaultGetSelectValueAction{};
 
             static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME{ "controller_get_trigger_action" };
             static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME{ "Controller Trigger" };
             static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX{ "/input/trigger/value" };
-            XrAction ControllerGetTriggerValueAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTriggerValueAction{};
 
             static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME{ "controller_get_squeeze_action" };
             static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME{ "Controller Squeeze" };
             static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX{ "/input/squeeze/click" };
-            XrAction ControllerGetSqueezeClickAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetSqueezeClickAction{};
 
             static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME{ "controller_get_trackpad_axes_action" };
             static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME{ "Controller Trackpad Axes" };
             static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX{ "/input/trackpad" };
-            XrAction ControllerGetTrackpadAxesAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTrackpadAxesAction{};
 
             static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME{ "controller_get_trackpad_click_action" };
             static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME{ "Controller Trackpad Click" };
             static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX{ "/input/trackpad/click" };
-            XrAction ControllerGetTrackpadClickAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTrackpadClickAction{};
 
             static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME{ "controller_get_trackpad_touch_action" };
             static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME{ "Controller Trackpad Touch" };
             static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX{ "/input/trackpad/touch" };
-            XrAction ControllerGetTrackpadTouchAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTrackpadTouchAction{};
 
             static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME{ "controller_get_thumbstick_axes_action" };
             static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME{ "Controller Thumbstick Axes" };
             static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX{ "/input/thumbstick" };
-            XrAction ControllerGetThumbstickAxesAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetThumbstickAxesAction{};
 
             static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME{ "controller_get_thumbstick_click_action" };
             static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME{ "Controller Thumbstick Click" };
             static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX{ "/input/thumbstick/click" };
-            XrAction ControllerGetThumbstickClickAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetThumbstickClickAction{};
 
             static constexpr char* HAND_GET_SELECT_ACTION_NAME{ "hand_get_select_action" };
             static constexpr char* HAND_GET_SELECT_ACTION_LOCALIZED_NAME{ "Hand Select" };
             static constexpr char* HAND_GET_SELECT_PATH_SUFFIX{ "/input/select/value" };
-            XrAction HandGetSelectAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> HandGetSelectAction{};
 
             static constexpr char* HAND_GET_SQUEEZE_ACTION_NAME{ "hand_get_squeeze_action" };
             static constexpr char* HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME{ "Hand Squeeze" };
             static constexpr char* HAND_GET_SQUEEZE_PATH_SUFFIX{ "/input/squeeze/value" };
-            XrAction HandGetSqueezeAction{};
+            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> HandGetSqueezeAction{};
 
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
@@ -524,42 +524,40 @@ namespace xr
             SwapchainFormat depthSwapchainFormat;
             SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
 
-            uint32_t viewCount = static_cast<uint32_t>(viewState.Views.size());
+            const auto viewCount = static_cast<uint32_t>(viewState.Views.size());
             auto& renderResource = RenderResources.ResourceMap[viewState.Type];
-            renderResource.ColorSwapchains.resize(viewCount);
-            renderResource.DepthSwapchains.resize(viewCount);
             
-            for (uint32_t idx = 0; idx < viewCount; ++idx)
-            {
-                const XrViewConfigurationView& view = viewState.ViewConfigViews[idx];
-                    PopulateSwapchain(session,
-                        colorSwapchainFormat,
-                        view.recommendedImageRectWidth,
-                        view.recommendedImageRectHeight,
-                        1,
-                        view.recommendedSwapchainSampleCount,
-                        0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
-                        viewState.Type,
-                        renderResource.ColorSwapchains[idx]);
-                    PopulateSwapchain(session,
-                        depthSwapchainFormat,
-                        view.recommendedImageRectWidth,
-                        view.recommendedImageRectHeight,
-                        1,
-                        view.recommendedSwapchainSampleCount,
-                        0,
-                        XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                        viewState.Type,
-                        renderResource.DepthSwapchains[idx]);
-            }
+            // All of the view config views should have the same recommended sizes,
+            // as long as we're working with stereoscopic HMD's.
+            const auto& viewConfigView = viewState.ViewConfigViews[0];
+
+            PopulateSwapchain(session,
+                colorSwapchainFormat,
+                viewConfigView.recommendedImageRectWidth,
+                viewConfigView.recommendedImageRectHeight,
+                viewCount,
+                viewConfigView.recommendedSwapchainSampleCount,
+                0,
+                XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                viewState.Type,
+                renderResource.ColorSwapchain);
+            PopulateSwapchain(session,
+                depthSwapchainFormat,
+                viewConfigView.recommendedImageRectWidth,
+                viewConfigView.recommendedImageRectHeight,
+                viewCount,
+                viewConfigView.recommendedSwapchainSampleCount,
+                0,
+                XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                viewState.Type,
+                renderResource.DepthSwapchain);
         }
 
         void CleanupSwapchains(ViewConfigurationState& viewState)
         {
             auto& renderResource = RenderResources.ResourceMap[viewState.Type];
-            renderResource.ColorSwapchains.clear();
-            renderResource.DepthSwapchains.clear();
+            renderResource.ColorSwapchain = {};
+            renderResource.DepthSwapchain = {};
         }
 
         Anchor CreateAnchor(Pose pose, NativeTrackablePtr trackable, XrTime time)
@@ -718,24 +716,26 @@ namespace xr
             const char* controllerActionSuffix,
             XrAction* controllerAction,
             std::vector<XrActionSuggestedBinding> &bindings,
-            XrInstance instance)
+            XrInstance instance,
+            const size_t idx)
         {
+
             XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
             actionInfo.actionType = controllerActionType;
-            strcpy_s(actionInfo.actionName, controllerActionName);
-            strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionName);
+            std::string controllerActionNameSuffixed{ controllerActionName + std::to_string(idx) };
+            std::string controllerLocalizedActionNameSuffixed{ controllerLocalizedActionName + std::to_string(idx) };
+
+            strcpy_s(actionInfo.actionName, controllerActionNameSuffixed.data());
+            strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionNameSuffixed.data());
             actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
             actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
             XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, controllerAction));
-            // For each controller subaction
-            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
-            {
-                // Create suggested binding
-                std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
-                path.append(controllerActionSuffix);
-                bindings.push_back({*controllerAction});
-                XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
-            }
+
+            // Create suggested binding
+            std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
+            path.append(controllerActionSuffix);
+            bindings.push_back({*controllerAction});
+            XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
         }
 
         void InitializeActionResources(XrInstance instance)
@@ -838,106 +838,119 @@ namespace xr
                 }
             }
 
-            // Create default action and suggested bindings for select
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_NAME,
-                ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME,
-                ActionResources.DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX,
-                &ActionResources.DefaultGetSelectValueAction,
-                defaultBindings,
-                instance);
-
-            // Create controller get trigger value action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_FLOAT_INPUT, 
-                ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX,
-                &ActionResources.ControllerGetTriggerValueAction,
-                microsoftControllerBindings,
-                instance);
-
-            // Create controller get squeeze click action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX,
-                &ActionResources.ControllerGetSqueezeClickAction,
-                microsoftControllerBindings,
-                instance);
-
-            // Create controller get trackpad axes action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_VECTOR2F_INPUT, 
-                ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX,
-                &ActionResources.ControllerGetTrackpadAxesAction,
-                microsoftControllerBindings,
-                instance);
-
-            // Create controller get trackpad click action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX,
-                &ActionResources.ControllerGetTrackpadClickAction,
-                microsoftControllerBindings,
-                instance);
-
-            // Create controller get trackpad touch action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX,
-                &ActionResources.ControllerGetTrackpadTouchAction,
-                microsoftControllerBindings,
-                instance);
-
-            // Create controller get thumbstick axes action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_VECTOR2F_INPUT, 
-                ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX,
-                &ActionResources.ControllerGetThumbstickAxesAction,
-                microsoftControllerBindings,
-                instance);
-
-            // Create controller get thumbstick click action and suggested bindings
-            CreateControllerActionAndBinding(
-                XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME,
-                ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME,
-                ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX,
-                &ActionResources.ControllerGetThumbstickClickAction,
-                microsoftControllerBindings,
-                instance);
-
-            if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
             {
-                // Create action and suggested bindings specific to hands
+                // Create default action and suggested bindings for select
                 CreateControllerActionAndBinding(
                     XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.HAND_GET_SELECT_ACTION_NAME,
-                    ActionResources.HAND_GET_SELECT_ACTION_LOCALIZED_NAME,
-                    ActionResources.HAND_GET_SELECT_PATH_SUFFIX,
-                    &ActionResources.HandGetSelectAction,
-                    microsoftHandBindings,
-                    instance);
+                    ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_NAME,
+                    ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME,
+                    ActionResources.DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX,
+                    &ActionResources.DefaultGetSelectValueAction[idx],
+                    defaultBindings,
+                    instance,
+                    idx);
 
+                // Create controller get trigger value action and suggested bindings
                 CreateControllerActionAndBinding(
                     XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.HAND_GET_SQUEEZE_ACTION_NAME,
-                    ActionResources.HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME,
-                    ActionResources.HAND_GET_SQUEEZE_PATH_SUFFIX,
-                    &ActionResources.HandGetSqueezeAction,
-                    microsoftHandBindings,
-                    instance);
+                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX,
+                    &ActionResources.ControllerGetSqueezeClickAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                // Create controller get trigger value action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_FLOAT_INPUT, 
+                    ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX,
+                    &ActionResources.ControllerGetTriggerValueAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                // Create controller get trackpad axes action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_VECTOR2F_INPUT, 
+                    ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX,
+                    &ActionResources.ControllerGetTrackpadAxesAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                // Create controller get trackpad click action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX,
+                    &ActionResources.ControllerGetTrackpadClickAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                // Create controller get trackpad touch action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX,
+                    &ActionResources.ControllerGetTrackpadTouchAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                // Create controller get thumbstick axes action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_VECTOR2F_INPUT, 
+                    ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX,
+                    &ActionResources.ControllerGetThumbstickAxesAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                // Create controller get thumbstick click action and suggested bindings
+                CreateControllerActionAndBinding(
+                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                    ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME,
+                    ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME,
+                    ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX,
+                    &ActionResources.ControllerGetThumbstickClickAction[idx],
+                    microsoftControllerBindings,
+                    instance,
+                    idx);
+
+                if (HmdImpl.Context.Extensions()->HandInteractionSupported)
+                {
+                    // Create action and suggested bindings specific to hands
+                    CreateControllerActionAndBinding(
+                        XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                        ActionResources.HAND_GET_SELECT_ACTION_NAME,
+                        ActionResources.HAND_GET_SELECT_ACTION_LOCALIZED_NAME,
+                        ActionResources.HAND_GET_SELECT_PATH_SUFFIX,
+                        &ActionResources.HandGetSelectAction[idx],
+                        microsoftHandBindings,
+                        instance,
+                        idx);
+
+                    CreateControllerActionAndBinding(
+                        XR_ACTION_TYPE_BOOLEAN_INPUT, 
+                        ActionResources.HAND_GET_SQUEEZE_ACTION_NAME,
+                        ActionResources.HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME,
+                        ActionResources.HAND_GET_SQUEEZE_PATH_SUFFIX,
+                        &ActionResources.HandGetSqueezeAction[idx],
+                        microsoftHandBindings,
+                        instance,
+                        idx);
+                }
             }
 
             // Provide default suggested bindings to instance
@@ -1027,21 +1040,21 @@ namespace xr
             XrCheck(xrEnumerateSwapchainFormats(session, static_cast<uint32_t>(swapchainFormats.size()), &swapchainFormatCount, swapchainFormats.data()));
 
             auto colorFormatPtr = std::find_first_of(
-                std::begin(swapchainFormats),
-                std::end(swapchainFormats),
                 std::begin(SUPPORTED_COLOR_FORMATS),
-                std::end(SUPPORTED_COLOR_FORMATS));
-            if (colorFormatPtr == std::end(swapchainFormats))
+                std::end(SUPPORTED_COLOR_FORMATS),
+                std::begin(swapchainFormats),
+                std::end(swapchainFormats));
+            if (colorFormatPtr == std::end(SUPPORTED_COLOR_FORMATS))
             {
                 throw std::runtime_error{ "No runtime swapchain format is supported for color." };
             }
 
             auto depthFormatPtr = std::find_first_of(
-                std::begin(swapchainFormats),
-                std::end(swapchainFormats),
                 std::begin(SUPPORTED_DEPTH_FORMATS),
-                std::end(SUPPORTED_DEPTH_FORMATS));
-            if (depthFormatPtr == std::end(swapchainFormats))
+                std::end(SUPPORTED_DEPTH_FORMATS),
+                std::begin(swapchainFormats),
+                std::end(swapchainFormats));
+            if (depthFormatPtr == std::end(SUPPORTED_DEPTH_FORMATS))
             {
                 throw std::runtime_error{ "No runtime swapchain format is supported for depth." };
             }
@@ -1193,8 +1206,8 @@ namespace xr
             XrCheck(xrLocateViews(session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, viewConfigurationState.Views.data()));
 
             assert(viewCountOutput == viewCapacityInput);
-            assert(viewCountOutput == renderResource.ColorSwapchains.size());
-            assert(viewCountOutput == renderResource.DepthSwapchains.size());
+            assert(viewCountOutput == renderResource.ColorSwapchain.ArraySize);
+            assert(viewCountOutput == renderResource.DepthSwapchain.ArraySize);
 
             renderResource.ProjectionLayerViews.resize(viewCountOutput);
             if (context.Extensions()->DepthExtensionSupported)
@@ -1203,7 +1216,53 @@ namespace xr
             }
         }
 
-        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) {
+        void PopulateViewConfigurationState(
+            System::Session::Impl::RenderResource& renderResource,
+            std::vector<xr::System::Session::Frame::View>::iterator viewsStart,
+            std::vector<xr::System::Session::Frame::View>::iterator viewsEnd,
+            const bool depthSupported,
+            const bool isPrimaryObserver)
+        {
+            const auto& colorSwapchain = renderResource.ColorSwapchain;
+            const auto& depthSwapchain = renderResource.DepthSwapchain;
+            const auto colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
+            const auto depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
+
+            uint32_t viewIdx = 0;
+            for (auto viewIter = viewsStart; viewIter < viewsEnd; viewIter++, viewIdx++)
+            {
+                auto& currentView = *viewIter;
+                const auto& cachedView = renderResource.ViewState.Views.at(viewIdx);
+
+                // Use the full range of recommended image size to achieve optimum resolution
+                const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
+                assert(colorSwapchain.Width == depthSwapchain.Width);
+                assert(colorSwapchain.Height == depthSwapchain.Height);
+
+                // Populate the struct that consuming code will use for rendering.
+                PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, currentView);
+        
+                // Set is first person observer flag to true.
+                currentView.IsFirstPersonObserver = isPrimaryObserver;
+
+                renderResource.ProjectionLayerViews[viewIdx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+                auto& projectionLayerView = renderResource.ProjectionLayerViews[viewIdx];
+                PopulateProjectionView(cachedView, colorSwapchain, imageRect, viewIdx, projectionLayerView);
+
+                if (depthSupported)
+                {
+                    renderResource.DepthInfoViews[viewIdx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
+                    auto& depthInfoView = renderResource.DepthInfoViews[viewIdx];
+                    PopulateDepthInfoView(depthSwapchain, imageRect, viewIdx, depthInfoView);
+        
+                    // Chain depth info struct to the corresponding projection layer views's next
+                    projectionLayerView.next = &depthInfoView;
+                }
+            }
+        }
+
+        void PopulateProjectionMatrix(const XrView& cachedView, xr::System::Session::Frame::View& view) 
+        {
             const float n{sessionImpl.DepthNearZ};
             const float f{sessionImpl.DepthFarZ};
 
@@ -1259,10 +1318,12 @@ namespace xr
             view.ColorTexturePointer = colorSwapchain.Images[colorSwapchainImageIndex].texture;
             view.ColorTextureSize.Width = colorSwapchain.Width;
             view.ColorTextureSize.Height = colorSwapchain.Height;
+            view.ColorTextureSize.Depth = colorSwapchain.ArraySize;
             view.DepthTextureFormat = SwapchainFormatToTextureFormat(depthSwapchain.Format);
             view.DepthTexturePointer = depthSwapchain.Images[depthSwapchainImageIndex].texture;
             view.DepthTextureSize.Width = depthSwapchain.Width;
             view.DepthTextureSize.Height = depthSwapchain.Height;
+            view.DepthTextureSize.Depth = depthSwapchain.ArraySize;
             view.DepthNearZ = sessionImpl.DepthNearZ;
             view.DepthFarZ = sessionImpl.DepthFarZ;
 
@@ -1272,17 +1333,19 @@ namespace xr
         void PopulateProjectionView(const XrView& cachedView,
             const xr::System::Session::Impl::Swapchain& colorSwapchain,
             const XrRect2Di imageRect,
+            const uint32_t imageArrayIndex,
             XrCompositionLayerProjectionView& projectionLayerView)
         {
             projectionLayerView.pose = cachedView.pose;
             projectionLayerView.fov = cachedView.fov;
             projectionLayerView.subImage.swapchain = colorSwapchain.Handle;
             projectionLayerView.subImage.imageRect = imageRect;
-            projectionLayerView.subImage.imageArrayIndex = 0;
+            projectionLayerView.subImage.imageArrayIndex = imageArrayIndex;
         }
 
         void PopulateDepthInfoView(const xr::System::Session::Impl::Swapchain& depthSwapchain,
             const XrRect2Di imageRect,
+            const uint32_t imageArrayIndex,
             XrCompositionLayerDepthInfoKHR& depthInfoView)
         {
             depthInfoView.minDepth = 0;
@@ -1291,7 +1354,7 @@ namespace xr
             depthInfoView.farZ = sessionImpl.DepthFarZ;
             depthInfoView.subImage.swapchain = depthSwapchain.Handle;
             depthInfoView.subImage.imageRect = imageRect;
-            depthInfoView.subImage.imageArrayIndex = 0;
+            depthInfoView.subImage.imageArrayIndex = imageArrayIndex;
         }
 
         // Returns true if the action is supported on the current input
@@ -1436,9 +1499,7 @@ namespace xr
                         sessionImpl.HmdImpl.Context.SystemId(),
                         secondaryViewConfigState.viewConfigurationType);
                     
-                    if (renderResource.ColorSwapchains.size() < viewConfigViews.size() ||
-                        renderResource.DepthSwapchains.size() < viewConfigViews.size() ||
-                        IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
+                    if (IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
                     {
                         viewState.ViewConfigViews = std::move(viewConfigViews);
                         sessionImpl.PopulateSwapchains(viewState);
@@ -1480,46 +1541,18 @@ namespace xr
             }
 
             totalViewCount += secondaryViewCount;
+
             Views.resize(totalViewCount);
 
-            // Prepare rendering parameters of each view for swapchain texture arrays
-            auto& primaryRenderResource = renderResources.ResourceMap[primaryType];
-            for (uint32_t idx = 0; idx < primaryViewCount; ++idx)
-            {
-                const auto& colorSwapchain = primaryRenderResource.ColorSwapchains[idx];
-                const auto& depthSwapchain = primaryRenderResource.DepthSwapchains[idx];
-                const auto& cachedView = primaryRenderResource.ViewState.Views.at(idx);
-
-                // Use the full range of recommended image size to achieve optimum resolution
-                const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
-                assert(colorSwapchain.Width == depthSwapchain.Width);
-                assert(colorSwapchain.Height == depthSwapchain.Height);
-
-                const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
-                const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
-
-                // Populate the struct that consuming code will use for rendering.
-                auto& view = Views[idx];
-                m_impl->PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, view);
-        
-                primaryRenderResource.ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-                auto& projectionLayerView = primaryRenderResource.ProjectionLayerViews[idx];
-                m_impl->PopulateProjectionView(cachedView, colorSwapchain, imageRect, projectionLayerView);
-
-                if (depthSupported)
-                {
-                    primaryRenderResource.DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
-                    auto& depthInfoView = primaryRenderResource.DepthInfoViews[idx];
-                    m_impl->PopulateDepthInfoView(depthSwapchain, imageRect, depthInfoView);
-        
-                    // Chain depth info struct to the corresponding projection layer views's next
-                    projectionLayerView.next = &depthInfoView;
-                }
-            }
+            auto& primaryRenderResource = renderResources.ResourceMap.at(primaryType);
+            m_impl->PopulateViewConfigurationState(
+                primaryRenderResource, 
+                Views.begin(), Views.begin() + primaryViewCount,
+                depthSupported, false);            
 
             if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
             {
-                int index = primaryViewCount;
+                int viewStartIdx = primaryViewCount;
                 for (const auto& viewConfigType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
                 {
                     auto& secondaryRenderResource = renderResources.ResourceMap.at(viewConfigType);
@@ -1527,44 +1560,13 @@ namespace xr
                     if (viewConfigurationState.Active)
                     {
                         const uint32_t viewCount = static_cast<uint32_t>(viewConfigurationState.Views.size());
-                        for (uint32_t idx = 0; idx < viewCount; ++idx)
-                        {
-                            const auto& colorSwapchain = secondaryRenderResource.ColorSwapchains[idx];
-                            const auto& depthSwapchain = secondaryRenderResource.DepthSwapchains[idx];
-                            const auto& cachedView = secondaryRenderResource.ViewState.Views.at(idx);
 
-                            // Use the full range of recommended image size to achieve optimum resolution
-                            const XrRect2Di imageRect = { {0, 0}, { colorSwapchain.Width, colorSwapchain.Height } };
-                            assert(colorSwapchain.Width == depthSwapchain.Width);
-                            assert(colorSwapchain.Height == depthSwapchain.Height);
+                        m_impl->PopulateViewConfigurationState(
+                            primaryRenderResource, 
+                            Views.begin() + viewStartIdx, Views.begin() + viewStartIdx + viewCount,
+                            depthSupported, true); 
 
-                            const uint32_t colorSwapchainImageIndex = AquireAndWaitForSwapchainImage(colorSwapchain.Handle);
-                            const uint32_t depthSwapchainImageIndex = AquireAndWaitForSwapchainImage(depthSwapchain.Handle);
-
-                            // Populate the struct that consuming code will use for rendering.
-                            auto& view = Views[index];
-
-                            m_impl->PopulateView(cachedView, colorSwapchain, colorSwapchainImageIndex, depthSwapchain, depthSwapchainImageIndex, view);
-
-                            // Set is first person observer flag to true.
-                            view.IsFirstPersonObserver = true;
-
-                            secondaryRenderResource.ProjectionLayerViews[idx] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-                            auto& projectionLayerView = secondaryRenderResource.ProjectionLayerViews[idx];
-                            m_impl->PopulateProjectionView(cachedView, colorSwapchain, imageRect, projectionLayerView);
-
-                            if (depthSupported)
-                            {
-                                secondaryRenderResource.DepthInfoViews[idx] = { XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR };
-                                auto& depthInfoView = secondaryRenderResource.DepthInfoViews[idx];
-                                m_impl->PopulateDepthInfoView(depthSwapchain, imageRect, depthInfoView);
-
-                                // Chain depth info struct to the corresponding projection layer views's next
-                                projectionLayerView.next = &depthInfoView;
-                            }
-
-                            index++;
-                        }
+                        viewStartIdx += viewCount;
                     }
                 }
             }
@@ -1665,13 +1667,13 @@ namespace xr
                         gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT);
 
                         // Update gamepad data
-                        if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction, session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
-                            (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction, session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction, session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
-                            (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction, session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction, session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
+                        if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction[idx], session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
+                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction[idx], session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
+                            (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction[idx], session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
+                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction[idx], session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
+                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction[idx], session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
+                            (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction[idx], session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
+                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction[idx], session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
                         {
                             // map the openxr values to populate other states of a button and axes that webxr expects
                             gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value == 1);
@@ -1701,8 +1703,8 @@ namespace xr
                             gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT + 1);
 
                             // Get interaction data
-                            if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
-                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction, session, gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed)))
+                            if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction[idx], session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
+                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction[idx], session, gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed)))
                             {
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
                                 gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
@@ -1773,7 +1775,7 @@ namespace xr
                         gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT);
 
                         // Get interaction data for select
-                        if ((m_impl->TryUpdateControllerBooleanAction(actionResources.DefaultGetSelectValueAction, session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)))
+                        if ((m_impl->TryUpdateControllerBooleanAction(actionResources.DefaultGetSelectValueAction[idx], session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)))
                         {
                             gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
                             gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
@@ -1844,20 +1846,17 @@ namespace xr
 
             for (const auto& [type, renderResource] : renderResources.ResourceMap)
             {
-                for (auto& swapchain : renderResource.ColorSwapchains)
+                const auto& colorSwapchain = renderResource.ColorSwapchain;
+                const auto& depthSwapchain = renderResource.DepthSwapchain;
+
+                if (colorSwapchain.Handle != XR_NULL_HANDLE)
                 {
-                    if (swapchain.Handle != XR_NULL_HANDLE)
-                    {
-                        XrAssert(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
-                    }
+                    XrAssert(xrReleaseSwapchainImage(colorSwapchain.Handle, &releaseInfo));
                 }
 
-                for (auto& swapchain : renderResource.DepthSwapchains)
+                if (depthSwapchain.Handle != XR_NULL_HANDLE)
                 {
-                    if (swapchain.Handle != XR_NULL_HANDLE)
-                    {
-                        XrAssert(xrReleaseSwapchainImage(swapchain.Handle, &releaseInfo));
-                    }
+                    XrAssert(xrReleaseSwapchainImage(depthSwapchain.Handle, &releaseInfo));
                 }
             }
 
@@ -1975,6 +1974,10 @@ namespace xr
     {
         const auto displayTime = m_impl->sessionImpl.HmdImpl.Context.DisplayTime();
         return m_impl->sessionImpl.CreateAnchor(pose, trackable, displayTime);
+    }
+
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
+        throw std::runtime_error("not implemented"); 
     }
 
     void System::Session::Frame::UpdateAnchor(Anchor& anchor) const

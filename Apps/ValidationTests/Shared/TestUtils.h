@@ -23,11 +23,17 @@
 
 namespace
 {
-#if !defined(__APPLE__) && !defined(ANDROID)
-    std::filesystem::path GetModulePath();
-#endif
     std::atomic<bool> doExit{};
     int errorCode{};
+
+#ifdef WIN32
+    std::filesystem::path GetModulePath()
+    {
+        char buffer[1024];
+        ::GetModuleFileNameA(nullptr, buffer, ARRAYSIZE(buffer));
+        return std::filesystem::path{ buffer }.parent_path();
+    }
+#endif
 }
 
 // can't externalize variable with ObjC++. Using a function instead.
@@ -60,7 +66,6 @@ namespace Babylon
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
-                    ParentT::InstanceMethod("getResourceDirectory", &TestUtils::GetResourceDirectory),
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
@@ -95,6 +100,10 @@ namespace Babylon
 #elif __APPLE__
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
             dispatch_async(dispatch_get_main_queue(), ^{
+                if (graphics)
+                {
+                    graphics->FinishRenderingCurrentFrame();
+                }
                 runtime.reset();
                 graphics.reset();
                 UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
@@ -214,38 +223,24 @@ namespace Babylon
             return Napi::Value::From(info.Env(), data);
         }
 
-        Napi::Value GetResourceDirectory(const Napi::CallbackInfo& info)
-        {
-#ifdef ANDROID
-            auto path = "app://";
-#else
-#ifdef __APPLE__
-            std::string path = "app:///";
-#else
-            auto path = std::string("file://") + GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-            path += "/Scripts/";
-#endif
-#endif
-            return Napi::Value::From(info.Env(), path);
-        }
-
-
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info)
         {
 #ifdef ANDROID
             auto path = "/data/data/com.android.babylonnative.validationtests/cache";
-#else
-#ifdef __APPLE__
+#elif __APPLE__
             std::string path = getenv("HOME");
-#else
+#elif __linux__
+            char exe[1024];
+            int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
+            if(ret == -1)
+            {
+                throw Napi::Error::New(info.Env(), "Unable to get executable location");
+            }
+            exe[ret] = 0;
+
+            auto path = std::filesystem::path{exe}.parent_path().generic_string();
+#elif WIN32
             auto path = GetModulePath().parent_path().generic_string();
-#ifdef WIN32
-            path += "/..";
-#endif
-#endif
 #endif
             return Napi::Value::From(info.Env(), path);
         }

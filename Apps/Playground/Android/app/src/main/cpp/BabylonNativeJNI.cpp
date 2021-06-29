@@ -14,9 +14,11 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Canvas.h>
 #include <InputManager.h>
 
 namespace
@@ -105,9 +107,11 @@ extern "C"
                 g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
                 g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
+                Babylon::Plugins::Camera::Initialize(env, true);
                 Babylon::Polyfills::Window::Initialize(env);
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+                Babylon::Polyfills::Canvas::Initialize(env);
 
                 InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
             });

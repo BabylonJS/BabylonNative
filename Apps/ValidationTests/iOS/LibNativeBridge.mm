@@ -5,6 +5,7 @@
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <UIKit/UIKit.h>
@@ -48,6 +49,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Canvas::Initialize(env);
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
@@ -59,14 +61,11 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     });
 
     Babylon::ScriptLoader loader{ *runtime };
-    loader.Eval("document = {}", "");
-    loader.LoadScript("app:///ammo.js");
-    loader.LoadScript("app:///recast.js");
-    loader.LoadScript("app:///babylon.max.js");
-    loader.LoadScript("app:///babylonjs.loaders.js");
-    loader.LoadScript("app:///babylonjs.materials.js");
-    loader.LoadScript("app:///babylon.gui.js");
-    loader.LoadScript("app:///validation_native.js");
+    loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/babylon.gui.js");
+    loader.LoadScript("app:///Scripts/validation_native.js");
 }
 
 - (void)resize:(int)inWidth height:(int)inHeight

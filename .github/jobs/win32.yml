@@ -14,6 +14,12 @@ jobs:
           git submodule update --init --recursive
         displayName: 'Checkout dependencies'
     
+      - task: Npm@1
+        inputs:
+          command: 'install'
+          workingDir: 'Apps'
+        displayName: 'Install Babylon.js NPM packages'
+
       - script: |
           mkdir buildWin32_${{ parameters.platform }}
           cd buildWin32_${{ parameters.platform }}
@@ -36,8 +42,6 @@ jobs:
     
       - script: |
           cd buildWin32_${{ parameters.platform }}\Apps\ValidationTests
-          mkdir Results
-          mkdir Errors
           cd RelWithDebInfo
           ValidationTests
         displayName: 'Validation Tests'

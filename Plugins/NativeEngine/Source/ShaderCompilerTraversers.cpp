@@ -67,8 +67,21 @@ namespace Babylon::ShaderCompilerTraversers
                 }
                 else if (auto* branch = parent->getAsSelectionNode())
                 {
-                    RemoveAllTreeNodes(branch->getCondition());
-                    branch->setCondition(replacement);
+                    if (symbol == branch->getCondition())
+                    {
+                        RemoveAllTreeNodes(branch->getCondition());
+                        branch->setCondition(replacement);
+                    }
+                    else if (symbol == branch->getTrueBlock())
+                    {
+                        RemoveAllTreeNodes(branch->getTrueBlock());
+                        branch->setTrueBlock(replacement);
+                    }
+                    else if (symbol == branch->getFalseBlock())
+                    {
+                        RemoveAllTreeNodes(branch->getFalseBlock());
+                        branch->setFalseBlock(replacement);
+                    }
                 }
                 else
                 {
@@ -724,8 +737,8 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             static void Traverse(TProgram& program)
             {
-                auto intermediate{program.getIntermediate(EShLangFragment)};
-                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{intermediate};
+                auto intermediate{ program.getIntermediate(EShLangFragment) };
+                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{ intermediate };
                 intermediate->getTreeRoot()->traverse(&invertYDerivativeOperandsTraverser);
             }
 
@@ -747,11 +760,11 @@ namespace Babylon::ShaderCompilerTraversers
 
         private:
             InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
+                : m_intermediate{ intermediate }
             {
             }
 
-            TIntermediate* m_intermediate;
+            TIntermediate* m_intermediate{};
         };
     }
 

@@ -127,6 +127,17 @@ namespace Babylon
             texture->Height = image->m_height;
         }
 
+        void CreateBlitTexture(TextureData* texture)
+        {
+            if (texture->Flags & BGFX_TEXTURE_BLIT_DST)
+            {
+                return;
+            }
+            bgfx::destroy(texture->Handle);
+            texture->Handle = bgfx::createTexture2D((uint16_t)texture->Width, (uint16_t)texture->Height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST);
+            texture->Flags |= BGFX_TEXTURE_BLIT_DST;
+        }
+
         void CreateCubeTextureFromImages(TextureData* texture, const std::vector<bimg::ImageContainer*>& images, bool hasMips)
         {
             const bimg::ImageContainer* firstImage = images.front();
@@ -261,6 +272,35 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
+        template<typename sourceType, bool normalized> void PromoteToFloats(uint32_t numElements, uint32_t byteStride)
+        {
+            const size_t count = m_bytes.size() / byteStride;
+            const size_t destinationSize = count * numElements * sizeof(float);
+            const float maxRange = static_cast<float>(std::numeric_limits<sourceType>::max());
+            if (destinationSize != m_bytes.size()) // ensure both vectors have different size
+            {
+                std::vector<uint8_t> bytes(destinationSize);
+                float* destination = reinterpret_cast<float*>(bytes.data());
+                for (size_t i = 0; i < count; i++)
+                {
+                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteStride * i);
+                    for (size_t element = 0; element < numElements; element++)
+                    {
+                        if (normalized)
+                        {
+                            // https://www.khronos.org/opengl/wiki/Normalized_Integer
+                            *destination++ = std::max(static_cast<float>(*source++) / maxRange, -1.f);
+                        }
+                        else
+                        {
+                            *destination++ = static_cast<float>(*source++);
+                        }
+                    }
+                }
+                m_bytes = std::move(bytes);
+            }
+        }
+
         void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
         {
             const auto nonDynamic = [&layout, this](auto handle) {
@@ -343,7 +383,6 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 InstanceMethod("dispose", &NativeEngine::Dispose),
-                InstanceAccessor("homogeneousDepth", &NativeEngine::HomogeneousDepth, nullptr),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
                 InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
@@ -389,6 +428,7 @@ namespace Babylon
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
+                InstanceMethod("copyTexture", &NativeEngine::CopyTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
@@ -412,6 +452,7 @@ namespace Babylon
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
+                InstanceMethod("setStencil", &NativeEngine::SetStencil),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -449,8 +490,10 @@ namespace Babylon
                 InstanceValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
                 InstanceValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
 
+                InstanceValue("ATTRIB_TYPE_INT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int8))),
                 InstanceValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
                 InstanceValue("ATTRIB_TYPE_INT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int16))),
+                InstanceValue("ATTRIB_TYPE_UINT16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint16))),
                 InstanceValue("ATTRIB_TYPE_FLOAT", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Float))),
 
                 InstanceValue("ALPHA_DISABLE", Napi::Number::From(env, AlphaMode::DISABLE)),
@@ -464,6 +507,42 @@ namespace Babylon
                 InstanceValue("ALPHA_PREMULTIPLIED_PORTERDUFF", Napi::Number::From(env, AlphaMode::PREMULTIPLIED_PORTERDUFF)),
                 InstanceValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
                 InstanceValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
+
+                InstanceValue("STENCIL_TEST_LESS", Napi::Number::From(env, BGFX_STENCIL_TEST_LESS)),
+                InstanceValue("STENCIL_TEST_LEQUAL", Napi::Number::From(env, BGFX_STENCIL_TEST_LEQUAL)),
+                InstanceValue("STENCIL_TEST_EQUAL", Napi::Number::From(env, BGFX_STENCIL_TEST_EQUAL)),
+                InstanceValue("STENCIL_TEST_GEQUAL", Napi::Number::From(env, BGFX_STENCIL_TEST_GEQUAL)),
+                InstanceValue("STENCIL_TEST_GREATER", Napi::Number::From(env, BGFX_STENCIL_TEST_GREATER)),
+                InstanceValue("STENCIL_TEST_NOTEQUAL", Napi::Number::From(env, BGFX_STENCIL_TEST_NOTEQUAL)),
+                InstanceValue("STENCIL_TEST_NEVER", Napi::Number::From(env, BGFX_STENCIL_TEST_NEVER)),
+                InstanceValue("STENCIL_TEST_ALWAYS", Napi::Number::From(env, BGFX_STENCIL_TEST_ALWAYS)),
+
+                InstanceValue("STENCIL_OP_FAIL_S_ZERO", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_ZERO)),
+                InstanceValue("STENCIL_OP_FAIL_S_KEEP", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_KEEP)),
+                InstanceValue("STENCIL_OP_FAIL_S_REPLACE", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_REPLACE)),
+                InstanceValue("STENCIL_OP_FAIL_S_INCR", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_INCR)),
+                InstanceValue("STENCIL_OP_FAIL_S_INCRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_INCRSAT)),
+                InstanceValue("STENCIL_OP_FAIL_S_DECR", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_DECR)),
+                InstanceValue("STENCIL_OP_FAIL_S_DECRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_DECRSAT)),
+                InstanceValue("STENCIL_OP_FAIL_S_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_S_INVERT)),
+
+                InstanceValue("STENCIL_OP_FAIL_Z_ZERO", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_ZERO)),
+                InstanceValue("STENCIL_OP_FAIL_Z_KEEP", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_KEEP)),
+                InstanceValue("STENCIL_OP_FAIL_Z_REPLACE", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_REPLACE)),
+                InstanceValue("STENCIL_OP_FAIL_Z_INCR", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_INCR)),
+                InstanceValue("STENCIL_OP_FAIL_Z_INCRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_INCRSAT)),
+                InstanceValue("STENCIL_OP_FAIL_Z_DECR", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_DECR)),
+                InstanceValue("STENCIL_OP_FAIL_Z_DECRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_DECRSAT)),
+                InstanceValue("STENCIL_OP_FAIL_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_FAIL_Z_INVERT)),
+
+                InstanceValue("STENCIL_OP_PASS_Z_ZERO", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_ZERO)),
+                InstanceValue("STENCIL_OP_PASS_Z_KEEP", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_KEEP)),
+                InstanceValue("STENCIL_OP_PASS_Z_REPLACE", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_REPLACE)),
+                InstanceValue("STENCIL_OP_PASS_Z_INCR", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INCR)),
+                InstanceValue("STENCIL_OP_PASS_Z_INCRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INCRSAT)),
+                InstanceValue("STENCIL_OP_PASS_Z_DECR", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_DECR)),
+                InstanceValue("STENCIL_OP_PASS_Z_DECRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_DECRSAT)),
+                InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
             });
         // clang-format on
 
@@ -503,11 +582,6 @@ namespace Babylon
     void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
     {
         Dispose();
-    }
-
-    Napi::Value NativeEngine::HomogeneousDepth(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(info.Env(), bgfx::getCaps()->homogeneousDepth);
     }
 
     void NativeEngine::RequestAnimationFrame(const Napi::CallbackInfo& info)
@@ -602,12 +676,73 @@ namespace Babylon
 
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
         const bgfx::AttribType::Enum attribType = static_cast<bgfx::AttribType::Enum>(type);
-        vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
-        vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+
+        const bool promoteToFloats = (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 || 
+            bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 || 
+            bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan) && 
+            (attribType == bgfx::AttribType::Int8 || 
+            attribType == bgfx::AttribType::Uint8 || 
+            attribType == bgfx::AttribType::Uint10 || 
+            attribType == bgfx::AttribType::Int16 || 
+            attribType == bgfx::AttribType::Uint16);
+
+        if (promoteToFloats)
+        {
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float, normalized);
+            vertexLayout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
+            if (normalized)
+            {
+                switch (attribType)
+                {
+                case bgfx::AttribType::Int8:
+                    vertexBufferData->PromoteToFloats<int8_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint8:
+                    vertexBufferData->PromoteToFloats<uint8_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Int16:
+                    vertexBufferData->PromoteToFloats<int16_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint16:
+                    vertexBufferData->PromoteToFloats<uint16_t, true>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint10: // is supported by any format ?
+                default:
+                    throw std::runtime_error("Unable to promote vertex stream to a float array.");
+                }
+            }
+            else
+            {
+                switch (attribType)
+                {
+                case bgfx::AttribType::Int8:
+                    vertexBufferData->PromoteToFloats<int8_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint8:
+                    vertexBufferData->PromoteToFloats<uint8_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Int16:
+                    vertexBufferData->PromoteToFloats<int16_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint16:
+                    vertexBufferData->PromoteToFloats<uint16_t, false>(numElements, byteStride);
+                    break;
+                case bgfx::AttribType::Uint10: // is supported by any format ?
+                default:
+                    throw std::runtime_error("Unable to promote vertex stream to a float array.");
+                }
+            }
+        }
+        else
+        {
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
+            vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+        }
         vertexLayout.end();
 
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
+        // Second parameter is first vertex. byteOffset and byteStride are both using original values (without float promotion)
         vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
     }
 
@@ -626,6 +761,55 @@ namespace Babylon
         vertexBufferData.Update(info.Env(), data, byteOffset, byteLength);
     }
 
+    // Change VS output coordinate system
+    std::string NativeEngine::ProcessShaderCoordinates(const std::string& vertexSource)
+    {
+        const auto* caps = bgfx::getCaps();
+        // patching shader code to append clip space coordinates for the current rendering API
+        // Can be done with glslang shader traversal. Done with string patching for now.
+        if (!caps->homogeneousDepth)
+        {
+            std::string patchedVertexSource;
+            const auto lastClosingCurly = vertexSource.find_last_of('}');
+            patchedVertexSource = vertexSource.substr(0, lastClosingCurly);
+
+            patchedVertexSource += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+            return patchedVertexSource;
+        }
+        return vertexSource;
+    }
+
+    std::string ProcessSamplerFlip(const std::string& vertexSource)
+    {
+        const auto* caps = bgfx::getCaps();
+        // for d3d, vulkan, metal, flip the texture sampling on vertical axis
+        if (!caps->originBottomLeft)
+        {
+            std::string patchedVertexSource = vertexSource;
+
+            static const std::string shaderNameDefineStr = "#define SHADER_NAME";
+            const auto shaderNameDefine = vertexSource.find(shaderNameDefineStr);
+            if (shaderNameDefine != std::string::npos)
+            {
+                static const auto textureSamplerFunctions = R"(
+                    highp vec2 flip(highp vec2 uv)
+                    {
+                        return vec2(uv.x, 1. - uv.y);
+                    }
+                    highp vec3 flip(highp vec3 uv)
+                    {
+                        return uv;
+                    }
+                    #define texture(x,y) texture(x, flip(y))
+                    #define SHADER_NAME)";
+
+                patchedVertexSource.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
+            }
+            return patchedVertexSource;
+        }
+        return vertexSource;
+    }
+
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
         const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
@@ -636,7 +820,7 @@ namespace Babylon
 
         try
         {
-            shaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
+            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
         }
         catch (const std::exception& ex)
         {
@@ -654,12 +838,6 @@ namespace Babylon
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
                 uniformInfos[info.name] = {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]};
-                bool YFlip{false};
-                if (!bgfx::getCaps()->originBottomLeft)
-                {
-                    YFlip = (!strcmp(info.name, "projection")) || (!strcmp(info.name, "viewProjection"));
-                }
-                uniformInfos[info.name].YFlip = YFlip;
             }
         }};
 
@@ -805,7 +983,7 @@ namespace Babylon
     {
         const auto uniformInfo = info[0].As<Napi::External<UniformInfo>>().Data();
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1), uniformInfo->YFlip);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(&value, 1));
     }
 
     template<int size, typename arrayType>
@@ -828,7 +1006,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, uniformInfo->YFlip, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo->Handle, m_scratch, elementLength / size);
     }
 
     template<int size>
@@ -842,7 +1020,7 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, values, uniformInfo->YFlip);
+        m_currentProgram->SetUniform(uniformInfo->Handle, values);
     }
 
     template<int size>
@@ -868,11 +1046,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16), uniformInfo->YFlip);
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrixValues.data(), 16));
         }
         else
         {
-            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength), uniformInfo->YFlip);
+            m_currentProgram->SetUniform(uniformInfo->Handle, gsl::make_span(matrix.Data(), elementLength));
         }
     }
 
@@ -924,7 +1102,7 @@ namespace Babylon
         const size_t elementLength = matricesArray.ElementLength();
         assert(elementLength % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), uniformInfo->YFlip, elementLength / 16);
+        m_currentProgram->SetUniform(uniformInfo->Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -972,11 +1150,16 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         const auto data = info[1].As<Napi::TypedArray>();
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
-        const auto invertY = info[3].As<Napi::Boolean>().Value();
+        auto invertY = info[3].As<Napi::Boolean>().Value();
         const auto onSuccess = info[4].As<Napi::Function>();
         const auto onError = info[5].As<Napi::Function>();
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
+
+        if (!bgfx::getCaps()->originBottomLeft)
+        {
+            invertY = !invertY;
+        }
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [this, dataSpan, generateMips, invertY, texture, cancellationSource{m_cancellationSource}]() {
@@ -1021,6 +1204,36 @@ namespace Babylon
             });
     }
 
+    void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
+    {
+        const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
+        const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
+        const auto handleSource{textureSource->Handle};
+        // Make sure destination texture is valid for BLIT and is not created from static datas.
+        CreateBlitTexture(textureDestination);
+        const auto handleDestination{ textureDestination->Handle };
+
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+                // JS Thread
+                if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
+                {
+                    bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                    m_boundFrameBuffer->Blit(encoder, handleDestination, 0, 0, handleSource);
+                }
+                else
+                {
+                    throw std::runtime_error{ "This platform does not support texture blit." };
+                }
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
+                if (!cancellationSource->cancelled() && result.has_error())
+                {
+                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
+                }
+            });
+        });
+    }
+
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
         const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
@@ -1029,7 +1242,7 @@ namespace Babylon
         const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value())};
         const auto generateMips{info[5].As<Napi::Boolean>().Value()};
-        const auto invertY{info[6].As<Napi::Boolean>().Value()};
+        auto invertY{info[6].As<Napi::Boolean>().Value()};
 
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
@@ -1037,7 +1250,12 @@ namespace Babylon
             throw std::runtime_error{"The data size does not match width, height, and format"};
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, bytes)};
+        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
+
+        if (!bgfx::getCaps()->originBottomLeft)
+        {
+            invertY = !invertY;
+        }
 
         if (invertY)
         {
@@ -1238,9 +1456,13 @@ namespace Babylon
             assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
+            // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
+            // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
+            // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
+            // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
             std::array<bgfx::TextureHandle, 2> textures{
                 bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, generateMips, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
+                bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
             {
@@ -1281,6 +1503,7 @@ namespace Babylon
         UNUSED(frameBuffer);
 
         m_boundFrameBuffer = &m_graphicsImpl.DefaultFrameBuffer();
+        m_boundFrameBuffer->AcquireNewViewId();
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
@@ -1505,6 +1728,33 @@ namespace Babylon
         });
     }
 
+    void NativeEngine::SetStencil(const Napi::CallbackInfo& info)
+    {
+        const auto writeMask{info[0].As<Napi::Number>().Uint32Value()};
+        const auto stencilOpFail{info[1].As<Napi::Number>().Uint32Value()};
+        const auto depthOpFail{info[2].As<Napi::Number>().Uint32Value()};
+        const auto depthOpPass{info[3].As<Napi::Number>().Uint32Value()};
+        const auto func{info[4].As<Napi::Number>().Uint32Value()};
+        const auto ref{info[5].As<Napi::Number>().Uint32Value()};
+        
+        m_stencilState = BGFX_STENCIL_FUNC_RMASK(0xFF); //  always 0xFF
+        m_stencilState |= stencilOpFail;
+        m_stencilState |= depthOpFail;
+        // bgfx write mask is always 0xFF, to not change stencil value when writemask is 0
+        // its value is kept unchanged.
+        // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L2874
+        if (writeMask == 0)
+        {
+            m_stencilState |= BGFX_STENCIL_OP_PASS_Z_KEEP;
+        }
+        else
+        {
+            m_stencilState |= depthOpPass;
+        }
+        m_stencilState |= func;
+        m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
+    }
+
     void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)
     {
         uint64_t fillModeState{0}; // indexed triangle list
@@ -1549,61 +1799,16 @@ namespace Babylon
             }
         }
 
-        if (!m_boundFrameBuffer->DefaultBackBuffer() && !bgfx::getCaps()->originBottomLeft)
+        for (const auto& it : m_currentProgram->Uniforms)
         {
-            // UV coordinates system are different between OpenGL and Direct3D/Metal
-            // This is not an issue with loaded textures (png/jpg...) because
-            // texel rows bytes are also using a different convention
-            // see https://www.puredevsoftware.com/blog/2018/03/17/texture-coordinates-d3d-vs-opengl/
-            // for render to texture, as the texel bytes are not reversed, sampling a RTT for
-            // post process or shadows will result in inversion on V axis (Y)
-            // to compensate for that, any matrix that is used to project onto clip-space has
-            // to be flipped.
-            // The involved matrices are determined by name and a boolean YFlip is set to true.
-            // When rendering to texture, those matrices are flipped and set as uniform datas.
-            // But because flipping clip-space coordinates also flips triangles winding,
-            // Culling also has to be flipped.
-            for (const auto& it : m_currentProgram->Uniforms)
-            {
-                const ProgramData::UniformValue& value = it.second;
-                if (value.YFlip)
-                {
-                    float tmpMatrix[16];
-                    static const float flipMatrix[16] = {
-                        1.f, 0.f, 0.f, 0.f,
-                        0.f, -1.f, 0.f, 0.f,
-                        0.f, 0.f, 1.f, 0.f,
-                        0.f, 0.f, 0.f, 1.f};
-                    bx::mtxMul(tmpMatrix, value.Data.data(), flipMatrix);
-                    encoder->setUniform({it.first}, tmpMatrix, value.ElementLength);
-                }
-                else
-                {
-                    encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
-                }
-            }
-
-            // We need to explicitly swap the culling state flags (instead of XOR)
-            // because we would like to preserve the no culling configuration, which is 00.
-            const auto cullCW = (m_engineState & BGFX_STATE_CULL_CCW) != 0 ? BGFX_STATE_CULL_CW : 0;
-            const auto cullCCW = (m_engineState & BGFX_STATE_CULL_CW) != 0 ? BGFX_STATE_CULL_CCW : 0;
-
-            uint64_t engineStateYFlipped = m_engineState;
-            engineStateYFlipped &= ~BGFX_STATE_CULL_MASK;
-            engineStateYFlipped |= (cullCW | cullCCW) << BGFX_STATE_CULL_SHIFT;
-
-            encoder->setState(engineStateYFlipped | fillModeState);
+            const ProgramData::UniformValue& value = it.second;
+            encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
-        else
-        {
-            for (const auto& it : m_currentProgram->Uniforms)
-            {
-                const ProgramData::UniformValue& value = it.second;
-                encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
-            }
 
-            encoder->setState(m_engineState | fillModeState);
-        }
+        encoder->setState(m_engineState | fillModeState);
+
+        // stencil
+        m_boundFrameBuffer->SetStencil(encoder, m_stencilState);
 
         // Discard everything except bindings since we keep the state of everything else.
         m_boundFrameBuffer->Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);

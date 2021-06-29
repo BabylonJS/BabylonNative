@@ -3,7 +3,8 @@ parameters:
   vmImage: ''
   xCodeVersion: ''
   macOSCodename: ''
-  
+  deploymentTarget: '12'
+
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
@@ -14,6 +15,12 @@ jobs:
     - script: |
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
+
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: 'Apps'
+      displayName: 'Install Babylon.js NPM packages'
 
     - template: cmake.yml
       parameters:
@@ -26,7 +33,7 @@ jobs:
     - script: |
         mkdir buildiOS
         cd buildiOS
-        cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
+        cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5

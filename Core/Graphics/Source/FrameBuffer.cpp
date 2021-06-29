@@ -47,7 +47,7 @@ namespace Babylon
 
     void FrameBuffer::Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
-        NewView(encoder, {});
+        NewView<true>(encoder, {});
 
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
     }
@@ -64,14 +64,26 @@ namespace Babylon
     {
         if (m_requestedViewPort.has_value() && !m_requestedViewPort->Equals(m_viewPort))
         {
-            NewView(encoder, m_requestedViewPort.value());
+            NewView<false>(encoder, m_requestedViewPort.value());
         }
         else if (!m_viewId.has_value())
         {
-            NewView(encoder, {});
+            NewView<false>(encoder, {});
         }
 
         encoder->submit(m_viewId.value(), programHandle, 0, flags);
+    }
+
+    void FrameBuffer::Blit(bgfx::Encoder* encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
+    {
+        // 1 blit per view, create a new viewId for each blit
+        NewView<false>(encoder, {});
+        encoder->blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
+    }
+
+    void FrameBuffer::SetStencil(bgfx::Encoder* encoder, uint32_t stencilState)
+    {
+        encoder->setStencil(stencilState);
     }
 
     void FrameBuffer::Reset()
@@ -90,7 +102,7 @@ namespace Babylon
             std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
     }
 
-    void FrameBuffer::NewView(bgfx::Encoder* encoder, const ViewPort& viewPort)
+    template<bool doTouch> void FrameBuffer::NewView(bgfx::Encoder* encoder, const ViewPort& viewPort)
     {
         m_viewId = m_manager.NewViewId();
         m_viewPort = viewPort;
@@ -106,6 +118,14 @@ namespace Babylon
 
         // This dummy draw call is here to make sure that the view is cleared
         // if no other draw calls are submitted to the view.
-        encoder->touch(m_viewId.value());
+        if (doTouch)
+        {
+            encoder->touch(m_viewId.value());
+        }
+    }
+
+    void FrameBuffer::AcquireNewViewId()
+    {
+        NewView<false>(nullptr, m_viewPort);
     }
 }

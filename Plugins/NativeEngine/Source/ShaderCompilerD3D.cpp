@@ -22,7 +22,7 @@ namespace Babylon
 
             if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
-                throw std::runtime_error{shader.getInfoDebugLog()};
+                throw std::runtime_error{shader.getInfoLog()};
             }
 
             program.addShader(&shader);
@@ -92,7 +92,7 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::runtime_error{program.getInfoDebugLog()};
+            throw std::runtime_error{program.getInfoLog()};
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};

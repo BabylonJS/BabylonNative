@@ -1,12 +1,14 @@
 name: Dispatch master branch update
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
 
 jobs:
   dispatch:
+    name: Dispatch ${{ github.sha }}
     runs-on: windows-latest
     strategy:
       matrix:
@@ -18,3 +20,4 @@ jobs:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: ${{ matrix.repo }}
           event-type: babylonnative-master-update
+          client-payload: '{ "sha": "${{ github.sha }}" }'

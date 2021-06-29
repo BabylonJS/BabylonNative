@@ -5,3 +5,7 @@ endif()
 if((WIN32 OR (UNIX AND NOT ANDROID)) AND NOT WINDOWS_STORE) # Default JS engine for platform only?
     add_subdirectory(ValidationTests)
 endif()
+
+if(WIN32 AND NOT WINDOWS_STORE)
+    add_subdirectory(UnitTests)
+endif()

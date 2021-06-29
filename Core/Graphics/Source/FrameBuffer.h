@@ -26,6 +26,14 @@ namespace Babylon
         void Clear(bgfx::Encoder* encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
         void SetViewPort(bgfx::Encoder* encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder* encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
+        void SetStencil(bgfx::Encoder* encoder, uint32_t stencilState);
+        void Blit(bgfx::Encoder* encoder, bgfx::TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, bgfx::TextureHandle _src, uint16_t _srcX = 0, uint16_t _srcY = 0, uint16_t _width = UINT16_MAX, uint16_t _height = UINT16_MAX);
+
+        // Temporary fix to get a new viewId for the FrameBuffer
+        // This method is called when a FrameBuffer is unbound so drawcalls are performed with the intented order
+        // Without a new viewId, drawcalls might be associated with a previous viewId and performed by bgfx before
+        // they should.
+        void AcquireNewViewId();
 
     private:
         struct ViewPort
@@ -38,7 +46,7 @@ namespace Babylon
             bool Equals(const ViewPort& other) const;
         };
 
-        void NewView(bgfx::Encoder* encoder, const ViewPort& viewPort);
+        template<bool doTouch> void NewView(bgfx::Encoder* encoder, const ViewPort& viewPort);
         void Reset();
 
         FrameBufferManager& m_manager;
@@ -46,6 +54,7 @@ namespace Babylon
         const uint16_t m_width;
         const uint16_t m_height;
         const bool m_defaultBackBuffer;
+
         std::optional<bgfx::ViewId> m_viewId;
         ViewPort m_viewPort;
         std::optional<ViewPort> m_requestedViewPort;

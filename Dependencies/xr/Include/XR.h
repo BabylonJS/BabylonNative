@@ -13,7 +13,8 @@ namespace xr
     {
         RGBA8_SRGB,
         BGRA8_SRGB,
-        D24S8
+        D24S8,
+        D16
     };
 
     enum class SessionType
@@ -57,6 +58,7 @@ namespace xr
     {
         size_t Width{};
         size_t Height{};
+        size_t Depth{};
     };
 
     struct Vector3f
@@ -313,6 +315,7 @@ namespace xr
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
+                Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
                 void DeleteAnchor(Anchor&) const;
                 SceneObject& GetSceneObjectByID(SceneObject::Identifier) const;
