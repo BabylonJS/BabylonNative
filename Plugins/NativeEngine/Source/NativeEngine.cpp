@@ -177,8 +177,8 @@ namespace Babylon
                 const uint8_t levelCount = static_cast<uint8_t>(images.size() / 6);
                 for (size_t imageIndex = 0; imageIndex < images.size(); imageIndex++)
                 {
-                    const uint32_t faceIndex = imageIndex / levelCount;
-                    const uint32_t levelIndex = imageIndex % levelCount;
+                    const uint32_t faceIndex = static_cast<uint32_t>(imageIndex / levelCount);
+                    const uint32_t levelIndex = static_cast<uint32_t>(imageIndex % levelCount);
                     auto* image = images[faceRemapOther[faceIndex] * levelCount + levelIndex];
                     std::memcpy(ptr, image->m_data, image->m_size);
                     ptr += image->m_size;
