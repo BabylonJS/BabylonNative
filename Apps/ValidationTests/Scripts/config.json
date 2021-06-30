@@ -2,6 +2,26 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "GLTF Sheen",
+            "playgroundId": "#YG3BBF#2",
+            "referenceImage": "glTFSheen.png"
+        },
+        {
+            "title": "GLTF Extension KHR_materials_specular",
+            "playgroundId": "#RNT7K4#9",
+            "referenceImage": "gltfExtensionKhrMaterialsSpecular.png"
+        },
+        {
+            "title": "GLTF Extension KHR_texture_transform",
+            "playgroundId": "#RNT7K4#2",
+            "referenceImage": "gltfExtensionKhrTextureTransform.png"
+        },
+        {
+            "title": "GLTF Extension KHR_materials_variants",
+            "playgroundId": "#BKGTKL#3",
+            "referenceImage": "gltfExtensionKhrMaterialsVariants.png"
+        },
+        {
             "title": "Visibility",
             "playgroundId": "#PXC9CF#2",
             "referenceImage": "visibility.png"
