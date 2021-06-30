@@ -48,7 +48,6 @@ namespace Babylon
     {
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
-        bool YFlip{false};
     };
 
     struct ProgramData final
@@ -75,17 +74,15 @@ namespace Babylon
         {
             std::vector<float> Data{};
             uint16_t ElementLength{};
-            bool YFlip{false};
         };
 
         std::unordered_map<uint16_t, UniformValue> Uniforms{};
 
-        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, bool YFlip, size_t elementLength = 1)
+        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
             UniformValue& value = Uniforms[handle.idx];
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
-            value.YFlip = YFlip;
         }
     };
 
@@ -135,7 +132,6 @@ namespace Babylon
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
-        Napi::Value HomogeneousDepth(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);
@@ -205,8 +201,10 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
-
+        void SetStencil(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
+
+        std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
         GraphicsImpl::UpdateToken& GetUpdateToken();
 
@@ -229,6 +227,7 @@ namespace Babylon
 
         bx::DefaultAllocator m_allocator{};
         uint64_t m_engineState{BGFX_STATE_DEFAULT};
+        uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const Napi::CallbackInfo& info);

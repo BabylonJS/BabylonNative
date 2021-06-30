@@ -2,6 +2,7 @@
 #include "FrameBuffer.h"
 #include <algorithm>
 #include <stdexcept>
+#include <array>
 
 namespace Babylon
 {
