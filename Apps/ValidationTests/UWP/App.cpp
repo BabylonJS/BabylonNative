@@ -6,6 +6,7 @@
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
+#include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
 #include <pplawait.h>
@@ -209,6 +210,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
+
+        Babylon::Polyfills::Canvas::Initialize(env);
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
