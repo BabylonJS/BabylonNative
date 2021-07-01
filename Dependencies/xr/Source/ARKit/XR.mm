@@ -1027,7 +1027,7 @@ namespace xr {
         }
 
         /**
-         Updates existing meshes in place,  gets the list of updated/created mesh IDs, and removed mesh IDs.
+         Updates existing meshes in place, gets the list of updated/created mesh IDs and removed mesh IDs.
          */
         void UpdateMeshes(std::vector<Frame::Mesh::Identifier>& updatedMeshes, std::vector<Frame::Mesh::Identifier>& deletedMeshes) {
             if (!meshDetectionEnabled)
@@ -1092,7 +1092,7 @@ namespace xr {
                             meshNormalsBuffer[i].Y = position[1];
                             meshNormalsBuffer[i].Z = position[2];
                         }
-                        // Update the existing mesh if it exists, otherwise create a new mesh, and add it to our list of meshes.
+                        // Update the existing mesh if it exists, otherwise create a new mesh and add it to our list of meshes.
                         auto meshIterator = meshMap.find({[updatedMesh.identifier.UUIDString UTF8String]});
                         if (meshIterator != meshMap.end()) {
                             // if meshID was found, update values
@@ -1307,23 +1307,20 @@ namespace xr {
 
         void UpdateMesh(std::vector<Frame::Mesh::Identifier>& updatedMeshes, Frame::Mesh& mesh, std::vector<Vector3f>& vertexBuffer, std::vector<uint32_t>& indexBuffer, std::vector<Vector3f>& normalsBuffer) {
             // Check if mesh was actually updated
-            BOOL flag = false;
-            
-            if(mesh.Positions.size() != vertexBuffer.size()){ flag = true;
-                
+            BOOL checkIfMeshUpdated = false;
+            if(mesh.Positions.size() != vertexBuffer.size()) {
+                checkIfMeshUpdated = true;
             } else {
-                for (size_t i = 0; i < vertexBuffer.size(); i++)
-                {
+                for (size_t i = 0; i < vertexBuffer.size(); i++) {
                     if (abs(mesh.Positions[i].X - vertexBuffer[i].X) > 0.02f
                         || abs(mesh.Positions[i].Y - vertexBuffer[i].Y) > 0.02f
                         || abs(mesh.Positions[i].Z - vertexBuffer[i].Z) > 0.02f) {
-                        
-                        flag = true;
+                        checkIfMeshUpdated = true;
                     }
                 }
             }
             
-            if(flag) {
+            if(checkIfMeshUpdated) {
                 // Store the new mesh information
                 mesh.Positions.resize(vertexBuffer.size());
                 mesh.Positions.swap(vertexBuffer);
