@@ -12,6 +12,7 @@ var vr = false;
 var ar = false;
 var xrHitTest = false;
 var xrFeaturePoints = false;
+var meshDetection = false;
 var text = false;
 var hololens = false;
 var cameraTexture = false;
@@ -177,6 +178,73 @@ CreateBoxAsync().then(function () {
                     }, 5000);
                 }
 
+                // Showing visualization for ARKit LiDAR mesh data
+                if(meshDetection) {
+                    var mat = new BABYLON.StandardMaterial("mat", scene);
+                    mat.wireframe = true;
+                    mat.diffuseColor = BABYLON.Color3.Blue();
+                    const xrMeshes = xr.baseExperience.featuresManager.enableFeature(
+                    BABYLON.WebXRFeatureName.MESH_DETECTION,
+                    "latest",
+                    {convertCoordinateSystems: true});
+                    console.log("Enabled mesh detection.");
+                    const meshes = [];
+                    const meshID = [];
+                    
+                    // adding meshes
+                    xrMeshes.onMeshAddedObservable.add(mesh=> {
+                        try {
+                            console.log("Mesh added.");
+                            // create new mesh object
+                            var customMesh = new BABYLON.Mesh("custom", scene);
+                            var vertexData = new BABYLON.VertexData();
+                            vertexData.positions = mesh.positions;
+                            vertexData.indices = mesh.indices;
+                            vertexData.normals = mesh.normals;
+                            vertexData.applyToMesh(customMesh, true);
+                            customMesh.material = mat;
+                            // add mesh and mesh id to arrays
+                            meshes.splice(mesh.id, 0, (customMesh));
+                            meshID[mesh.id] = mesh.id;
+                        } catch (ex) {
+                            console.error(ex);
+                        }
+                    });
+                    
+                    // updating meshes
+                    xrMeshes.onMeshUpdatedObservable.add(mesh=> {
+                        try{
+                            console.log("Mesh updated.");
+                            if(mesh.id == meshID[mesh.id]) {
+                                var vertexData = new BABYLON.VertexData();
+                                vertexData.positions = mesh.positions;
+                                vertexData.indices = mesh.indices;
+                                vertexData.normals = mesh.normals;
+                                vertexData.applyToMesh(meshes[mesh.id], true);
+                            }
+                        } catch (ex) {
+                            console.error(ex);
+                        }
+                    });
+                    
+                    // removing meshes
+                    xrMeshes.onMeshRemovedObservable.add(mesh => {
+                        try{
+                            console.log("Mesh removed.");
+                            if(mesh.id == meshID[mesh.id]) {
+                                meshes[mesh.id].positions.dispose();
+                                meshes[mesh.id].normals.dispose();
+                                meshes[mesh.id].indices.dispose();
+                                scene.remove(meshes[mesh.id]);
+                                meshes[mesh.id].dispose();
+                                delete meshID[mesh.id];
+                            }
+                        } catch (ex) {
+                            console.error(ex);
+                        }
+                    });
+                }
+                
                 // Below is an example of how to process feature points.
                 if (xrFeaturePoints) {
                     // First we attach the feature point system feature the XR experience.

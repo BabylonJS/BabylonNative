@@ -203,11 +203,11 @@ namespace {
 }
 
 - (void) LockMeshes {
-    [planeLock lock];
+    [meshLock lock];
 }
 
 - (void) UnlockMeshes {
-    [planeLock unlock];
+    [meshLock unlock];
 }
 
 /**
@@ -422,9 +422,9 @@ namespace {
             }
         }
         
-        [self UnlockPlanes];
-        
+        [self UnlockPlanes];  
     }
+
     if (meshDetectionEnabled) {
         [self LockMeshes];
         for (ARAnchor* updatedAnchor : anchors) {
@@ -440,8 +440,6 @@ namespace {
     return;
 }
 
-
-
 - (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (planeDetectionEnabled) {
         [self LockPlanes];
@@ -453,6 +451,7 @@ namespace {
         
         [self UnlockPlanes];
     }
+
     if (meshDetectionEnabled) {
         [self LockMeshes];
         for (ARAnchor* removedAnchor : anchors) {
@@ -467,7 +466,6 @@ namespace {
     }
     return;
 }
-
 
 -(void)cleanupTextures {
     if (_cameraTextureY != nil) {
