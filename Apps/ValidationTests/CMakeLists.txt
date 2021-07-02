@@ -1,4 +1,4 @@
-if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR WINDOWS_STORE OR ANDROID)
+if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR ANDROID)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
@@ -6,15 +6,41 @@ FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImag
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
     "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs/babylon.max.js.map"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js")
+    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/babylonjs-gui/babylon.gui.js.map")
 
 set(SCRIPTS
     "Scripts/validation_native.js"
     "Scripts/config.json")
 
-if(WIN32)
+if(WINDOWS_STORE)
+    set(APPX_FILES "UWP/Package.appxmanifest" "UWP/TemporaryKey.pfx")
+    set_property(SOURCE ${APPX_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set(APPX_ASSETS
+        "UWP/Assets/LockScreenLogo.scale-200.png"
+        "UWP/Assets/SplashScreen.scale-200.png"
+        "UWP/Assets/Square44x44Logo.scale-200.png"
+        "UWP/Assets/Square44x44Logo.targetsize-24_altform-unplated.png"
+        "UWP/Assets/Square150x150Logo.scale-200.png"
+        "UWP/Assets/StoreLogo.png"
+        "UWP/Assets/Wide310x150Logo.scale-200.png")
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
+    set(SOURCES
+        "Shared/TestUtils.h"
+        ${APPX_FILES}
+        ${APPX_ASSETS}
+        "UWP/App.cpp"
+        "UWP/App.h")
+    set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
+    set(WIN32_EXECUTABLE TRUE)
+    add_executable(ValidationTests WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+elseif(WIN32)
     set(SOURCES
         "Shared/TestUtils.h"
         "Win32/App.cpp"
@@ -82,6 +108,11 @@ if (UNIX AND NOT APPLE AND NOT ANDROID)
         PRIVATE stdc++fs)
 endif()
 
+if(WINDOWS_STORE)
+    target_compile_options(ValidationTests PRIVATE /ZW)
+    target_compile_options(ValidationTests PRIVATE /await)
+endif()
+
 target_link_to_dependencies(ValidationTests
     PRIVATE bgfx
     PRIVATE bimg
@@ -130,24 +161,29 @@ if(APPLE)
     endif()
 endif()
 
-foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
-    get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
-    add_custom_command(
-        OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
-        COMMENT "Copying ${SCRIPT_NAME}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
-endforeach()
+if(WINDOWS_STORE)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
+else()
+    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
+        get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
+        add_custom_command(
+            OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+            COMMENT "Copying ${SCRIPT_NAME}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
+    endforeach()
 
-foreach(IMAGE ${REFERENCE_IMAGES})
-    get_filename_component(IMAGE_NAME "${IMAGE}" NAME)
-    add_custom_command(
-        OUTPUT "${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
-        COMMENT "Copying ${IMAGE_NAME}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
-endforeach()
-
+    foreach(IMAGE ${REFERENCE_IMAGES})
+        get_filename_component(IMAGE_NAME "${IMAGE}" NAME)
+        add_custom_command(
+            OUTPUT "${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
+            COMMENT "Copying ${IMAGE_NAME}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
+    endforeach()
+endif()
 
 # directory for generated images and errors
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Results")
@@ -158,3 +194,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages PREFIX ReferenceIm
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ValidationTests)
