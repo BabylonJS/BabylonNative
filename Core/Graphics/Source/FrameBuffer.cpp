@@ -94,6 +94,11 @@ namespace Babylon
 
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
+        if (m_viewPort.X == x && m_viewPort.Y == y && m_viewPort.Width == width && m_viewPort.Height == height)
+        {
+            return;
+        }
+
         if (m_hasViewIdBeenUsed)
         {
             m_viewId = m_impl.AcquireNewViewId(encoder);
