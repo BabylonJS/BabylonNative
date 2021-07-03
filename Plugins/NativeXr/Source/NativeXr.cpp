@@ -138,8 +138,8 @@ namespace
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
-        jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
-        jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
+        jsInputSource.Set("targetRaySpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.AimSpace));
+        jsInputSource.Set("gripSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.GripSpace));
 
         // Don't set hands up unless hand data is supported/available
         if (inputSource.HandTrackedThisFrame || inputSource.JointsTrackedThisFrame)
@@ -167,7 +167,7 @@ namespace
 
                 for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
                 {
-                    auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
+                    auto napiJoint = Napi::External<xr::System::Session::Frame::JointSpace>::New(env, &inputSource.HandJoints[i]);
                     handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
                 }
             }
@@ -2236,7 +2236,7 @@ namespace Babylon
 
                 for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
                 {
-                    const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+                    const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
                     const auto transformMatrix = CreateTransformMatrix(jointSpace, false);
                     std::memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), sizeof(float) << 4);
                 }
