@@ -317,13 +317,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             else if ((wParam & 0xFFF0) == SC_RESTORE)
             {
-                minimized = false;
-
-                runtime->Resume();
-
-                if (graphics)
+                if (minimized)
                 {
-                    graphics->StartRenderingCurrentFrame();
+                    runtime->Resume();
+
+                    minimized = false;
+
+                    if (graphics)
+                    {
+                        graphics->StartRenderingCurrentFrame();
+                    }
                 }
             }
             DefWindowProc(hWnd, message, wParam, lParam);
