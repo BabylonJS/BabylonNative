@@ -1483,8 +1483,7 @@ namespace Babylon
         UNUSED(frameBuffer);
 
         m_boundFrameBuffer->Unbind(*encoder);
-        m_boundFrameBuffer = &m_defaultFrameBuffer;
-        m_boundFrameBuffer->Bind(*encoder);
+        m_boundFrameBuffer = nullptr;
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
@@ -1812,13 +1811,17 @@ namespace Babylon
 
     FrameBuffer& NativeEngine::GetBoundFrameBuffer(bgfx::Encoder& encoder)
     {
-        if (m_boundFrameBufferNeedsRebinding.Get(encoder))
+        if (m_boundFrameBuffer == nullptr)
+        {
+            m_boundFrameBuffer = &m_defaultFrameBuffer;
+            m_defaultFrameBuffer.Bind(encoder);
+        } else if (m_boundFrameBufferNeedsRebinding.Get(encoder))
         {
             m_boundFrameBuffer->Unbind(encoder);
             m_boundFrameBuffer->Bind(encoder);
-            m_boundFrameBufferNeedsRebinding.Set(encoder, false);
         }
-
+        
+        m_boundFrameBufferNeedsRebinding.Set(encoder, false);
         return *m_boundFrameBuffer;
     }
 
