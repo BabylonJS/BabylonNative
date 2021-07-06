@@ -94,7 +94,7 @@ namespace
         Uninitialize();
 
         RECT rect;
-        if (!GetWindowRect(hWnd, &rect))
+        if (!GetClientRect(hWnd, &rect))
         {
             return;
         }
