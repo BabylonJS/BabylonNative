@@ -2,6 +2,7 @@
 
 #include "BgfxCallback.h"
 #include "FrameBuffer.h"
+#include "PerFrameValue.h"
 #include "ShaderCompiler.h"
 
 #include <Babylon/JsRuntime.h>
@@ -244,48 +245,9 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        template<typename T>
-        class SingleFrameValue
-        {
-        public:
-            SingleFrameValue(GraphicsImpl& impl, arcana::cancellation_source& cancellation, T defaultValue)
-                : m_impl{impl}
-                , m_cancellationSource{cancellation}
-                , m_defaultValue{defaultValue}
-                , m_value{defaultValue}
-                , m_isResetScheduled{false}
-            {
-            }
-            
-            T Get(bgfx::Encoder&) const
-            {
-                return m_value;
-            }
-
-            void Set(bgfx::Encoder&, bool value)
-            {
-                m_value = value;
-                if (!m_isResetScheduled)
-                {
-                    arcana::make_task(m_impl.AfterRenderScheduler(), m_cancellationSource, [this]() {
-                        m_value = m_defaultValue;
-                        m_isResetScheduled = false;
-                    });
-                    m_isResetScheduled = true;
-                }
-            }
-
-        private:
-            GraphicsImpl& m_impl;
-            arcana::cancellation_source& m_cancellationSource;
-            const T m_defaultValue{};
-            T m_value{};
-            bool m_isResetScheduled{};
-        };
-
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
-        SingleFrameValue<bool> m_boundFrameBufferNeedsRebinding;
+        PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
     };
 }
