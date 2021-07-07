@@ -1032,16 +1032,16 @@ namespace xr {
                 return;
             }
 
-            [sessionDelegate LockMeshes];
-            @try {
-                if (@available(iOS 13.4, *)) {
+            if (@available(iOS 13.4, *)) {
+                [sessionDelegate LockMeshes];
+                @try {
                     // Update all meshes that have been updated since the last frame
                     auto updatedARKitMeshes = [sessionDelegate GetUpdatedMeshes];
                     for (ARMeshAnchor* updatedMesh : *updatedARKitMeshes) {
-                        const auto geometry = updatedMesh.geometry;
-                        const auto faces = geometry.faces;
-                        const auto vertices = geometry.vertices;
-                        const auto normals = geometry.normals;
+                        const auto& geometry = updatedMesh.geometry;
+                        const auto& faces = geometry.faces;
+                        const auto& vertices = geometry.vertices;
+                        const auto& normals = geometry.normals;
                         // get vertices data for vertex buffer
                         meshVertexBuffer.clear();
                         meshVertexBuffer.resize(vertices.count);
@@ -1125,9 +1125,9 @@ namespace xr {
 
                     // Clear the list of removed frames to start building up for the next mesh update.
                     removedARKitMeshes->clear();
+                } @finally {
+                    [sessionDelegate UnlockMeshes];
                 }
-            } @finally {
-                [sessionDelegate UnlockMeshes];
             }
         }
 
