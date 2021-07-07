@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BgfxCallback.h"
-#include "FrameBufferManager.h"
 #include "SafeTimespanGuarantor.h"
 
 #include <arcana/containers/ticketed_collection.h>
@@ -90,10 +89,6 @@ namespace Babylon
 
         UpdateToken GetUpdateToken();
 
-        FrameBuffer& AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer);
-        void RemoveFrameBuffer(const FrameBuffer& frameBuffer);
-        FrameBuffer& DefaultFrameBuffer();
-
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
@@ -111,6 +106,8 @@ namespace Babylon
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
+
+        bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
 
     private:
         friend class UpdateToken;
@@ -132,6 +129,8 @@ namespace Babylon
 
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
+
+        std::atomic<bgfx::ViewId> m_nextViewId{0};
 
         std::unique_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -161,8 +160,6 @@ namespace Babylon
 
         RenderScheduler m_beforeRenderScheduler;
         RenderScheduler m_afterRenderScheduler;
-
-        std::unique_ptr<FrameBufferManager> m_frameBufferManager{};
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};

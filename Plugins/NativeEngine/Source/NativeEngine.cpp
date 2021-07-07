@@ -573,7 +573,9 @@ namespace Babylon
         , m_runtime{runtime}
         , m_graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
-        , m_boundFrameBuffer{&m_graphicsImpl.DefaultFrameBuffer()}
+        , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true}
+        , m_boundFrameBuffer{&m_defaultFrameBuffer}
+        , m_boundFrameBufferNeedsRebinding{m_graphicsImpl, *m_cancellationSource, true}
     {
     }
 
@@ -1193,7 +1195,7 @@ namespace Babylon
                 if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
                 {
                     bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
-                    m_boundFrameBuffer->Blit(encoder, handleDestination, 0, 0, handleSource);
+                    GetBoundFrameBuffer(*encoder).Blit(*encoder, handleDestination, 0, 0, handleSource);
                 }
                 else
                 {
@@ -1453,31 +1455,36 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
-        return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
+        auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false);
+        return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer, [](Napi::Env, FrameBuffer* frameBuffer) { delete frameBuffer; });
     }
 
-    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo&)
     {
-        const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
-        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
         auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        auto* encoder = GetUpdateToken().GetEncoder();
+
+        m_boundFrameBuffer->Unbind(*encoder);
         m_boundFrameBuffer = frameBuffer;
+        m_boundFrameBuffer->Bind(*encoder);
+        m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        auto* encoder = GetUpdateToken().GetEncoder();
 
         assert(frameBuffer == m_boundFrameBuffer);
         UNUSED(frameBuffer);
 
-        m_boundFrameBuffer = &m_graphicsImpl.DefaultFrameBuffer();
-        m_boundFrameBuffer->AcquireNewViewId();
+        m_boundFrameBuffer->Unbind(*encoder);
+        m_boundFrameBuffer = nullptr;
+        m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
@@ -1568,7 +1575,7 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        m_boundFrameBuffer->Clear(encoder, flags, rgba, depth, stencil);
+        GetBoundFrameBuffer(*encoder).Clear(*encoder, flags, rgba, depth, stencil);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -1591,7 +1598,7 @@ namespace Babylon
         const auto height = info[3].As<Napi::Number>().FloatValue();
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_boundFrameBuffer->SetViewPort(encoder, x, yOrigin, width, height);
+        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
     }
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
@@ -1782,10 +1789,11 @@ namespace Babylon
         encoder->setState(m_engineState | fillModeState);
 
         // stencil
-        m_boundFrameBuffer->SetStencil(encoder, m_stencilState);
+        auto& boundFrameBuffer = GetBoundFrameBuffer(*encoder);
+        boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except bindings since we keep the state of everything else.
-        m_boundFrameBuffer->Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     GraphicsImpl::UpdateToken& NativeEngine::GetUpdateToken()
@@ -1799,6 +1807,22 @@ namespace Babylon
         }
 
         return m_updateToken.value();
+    }
+
+    FrameBuffer& NativeEngine::GetBoundFrameBuffer(bgfx::Encoder& encoder)
+    {
+        if (m_boundFrameBuffer == nullptr)
+        {
+            m_boundFrameBuffer = &m_defaultFrameBuffer;
+            m_defaultFrameBuffer.Bind(encoder);
+        } else if (m_boundFrameBufferNeedsRebinding.Get(encoder))
+        {
+            m_boundFrameBuffer->Unbind(encoder);
+            m_boundFrameBuffer->Bind(encoder);
+        }
+        
+        m_boundFrameBufferNeedsRebinding.Set(encoder, false);
+        return *m_boundFrameBuffer;
     }
 
     void NativeEngine::ScheduleRequestAnimationFrameCallbacks()

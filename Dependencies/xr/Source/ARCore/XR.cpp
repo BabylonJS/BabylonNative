@@ -450,6 +450,7 @@ namespace xr
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
                 auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
                 auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+                auto disableStencilTransaction{ GLTransactions::SetCapability(GL_STENCIL_TEST, false) };
 
                 glUseProgram(cameraShaderProgramId);
 
@@ -499,6 +500,7 @@ namespace xr
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
                 auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
                 auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+                auto disableStencilTransaction{ GLTransactions::SetCapability(GL_STENCIL_TEST, false) };
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(babylonShaderProgramId);

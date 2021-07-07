@@ -98,13 +98,9 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_dirty)
         {
-            if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
-            {
-                m_graphicsImpl.RemoveFrameBuffer(*m_frameBuffer);
-            }
-            m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-            m_frameBuffer = &m_graphicsImpl.AddFrameBuffer(m_frameBufferHandle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
-            assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
+            auto handle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+            assert(handle.idx != bgfx::kInvalidHandle);
+            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
             m_dirty = false;
             return true;
         }
@@ -113,9 +109,9 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
-        assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
+        assert(m_frameBuffer->Handle().idx != bgfx::kInvalidHandle);
         const auto textureData = new TextureData();
-        textureData->Handle = bgfx::getTexture(m_frameBufferHandle);
+        textureData->Handle = bgfx::getTexture(m_frameBuffer->Handle());
         textureData->OwnsHandle = false;
         textureData->Width = m_width;
         textureData->Height = m_height;
@@ -124,10 +120,7 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Dispose()
     {
-        if (bgfx::isValid(m_frameBufferHandle))
-        {
-            m_graphicsImpl.RemoveFrameBuffer(*m_frameBuffer);
-        }
+        m_frameBuffer.reset();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
