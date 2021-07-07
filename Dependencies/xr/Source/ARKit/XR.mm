@@ -50,7 +50,7 @@ namespace {
     {
         uint32_t x, y, z;
     };
-    
+
     /**
      Helper function to convert a transform into an xr::pose.
      */
@@ -162,7 +162,7 @@ namespace {
 
 - (bool) TrySetMeshDetectorEnabled:(const bool)enabled {
     meshDetectionEnabled = enabled;
-    return enabled;
+    return true;
 }
 
 /**
@@ -387,27 +387,27 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
-    if (planeDetectionEnabled) {   
+    if (planeDetectionEnabled) {
         [self LockPlanes];
         for (ARAnchor* newAnchor : anchors) {
             if ([newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
                 updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
             }
         }
-        
+
         [self UnlockPlanes];
     }
-    
-    if (meshDetectionEnabled) {
-        [self LockMeshes];
-        for (ARAnchor* newAnchor : anchors) {
-            if (@available(iOS 13.4, *)) {
+
+    if (@available(iOS 13.4, *)) {
+        if (meshDetectionEnabled) {
+            [self LockMeshes];
+            for (ARAnchor* newAnchor : anchors) {
                 if ([newAnchor isKindOfClass:[ARMeshAnchor class]]) {
                     updatedMeshes.insert((ARMeshAnchor*)newAnchor);
                 }
             }
         }
-        
+
         [self UnlockMeshes];
     }
     return;
@@ -421,20 +421,20 @@ namespace {
                 updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
             }
         }
-        
-        [self UnlockPlanes];  
+
+        [self UnlockPlanes];
     }
 
-    if (meshDetectionEnabled) {
-        [self LockMeshes];
-        for (ARAnchor* updatedAnchor : anchors) {
-            if (@available(iOS 13.4, *)) {
+    if (@available(iOS 13.4, *)) {
+        if (meshDetectionEnabled) {
+            [self LockMeshes];
+            for (ARAnchor* updatedAnchor : anchors) {
                 if ([updatedAnchor isKindOfClass:[ARMeshAnchor class]]) {
                     updatedMeshes.insert((ARMeshAnchor*)updatedAnchor);
                 }
             }
         }
-        
+
         [self UnlockMeshes];
     }
     return;
@@ -448,20 +448,20 @@ namespace {
                 deletedPlanes.push_back((ARPlaneAnchor*)removedAnchor);
             }
         }
-        
+
         [self UnlockPlanes];
     }
 
-    if (meshDetectionEnabled) {
-        [self LockMeshes];
-        for (ARAnchor* removedAnchor : anchors) {
-            if (@available(iOS 13.4, *)) {
+    if (@available(iOS 13.4, *)) {
+        if (meshDetectionEnabled) {
+            [self LockMeshes];
+            for (ARAnchor* removedAnchor : anchors) {
                 if ([removedAnchor isKindOfClass:[ARMeshAnchor class]]) {
                     deletedMeshes.push_back((ARMeshAnchor*)removedAnchor);
                 }
             }
         }
-        
+
         [self UnlockMeshes];
     }
     return;
@@ -1028,21 +1028,20 @@ namespace xr {
          Updates existing meshes in place, gets the list of updated/created mesh IDs and removed mesh IDs.
          */
         void UpdateMeshes(std::vector<Frame::Mesh::Identifier>& updatedMeshes, std::vector<Frame::Mesh::Identifier>& deletedMeshes) {
-            if (!meshDetectionEnabled)
-            {
+            if (![sessionDelegate TrySetMeshDetectorEnabled: true]) {
                 return;
             }
-            
+
             [sessionDelegate LockMeshes];
             @try {
                 if (@available(iOS 13.4, *)) {
                     // Update all meshes that have been updated since the last frame
                     auto updatedARKitMeshes = [sessionDelegate GetUpdatedMeshes];
                     for (ARMeshAnchor* updatedMesh : *updatedARKitMeshes) {
-                        auto geometry = updatedMesh.geometry;
-                        auto faces = geometry.faces;
-                        auto vertices = geometry.vertices;
-                        auto normals = geometry.normals;
+                        const auto geometry = updatedMesh.geometry;
+                        const auto faces = geometry.faces;
+                        const auto vertices = geometry.vertices;
+                        const auto normals = geometry.normals;
                         // get vertices data for vertex buffer
                         meshVertexBuffer.clear();
                         meshVertexBuffer.resize(vertices.count);
@@ -1050,17 +1049,17 @@ namespace xr {
                         vertexData.resize(vertices.count);
                         memcpy(vertexData.data(), vertices.buffer.contents, vertices.stride * vertices.count);
                         for(int i = 0; i < vertices.count; i++) {
-                            auto vertex = vertexData[i];
+                            const auto vertex = vertexData[i];
                             auto vertexTransform = matrix_identity_float4x4;
                             vertexTransform.columns[3] = simd_float4{vertex.X, vertex.Y, vertex.Z, 1};
                             auto transform = matrix_multiply(updatedMesh.transform, vertexTransform);
-                            auto position = simd_float3{transform.columns[3].x ,transform.columns[3].y, transform.columns[3].z};
+                            const auto position = simd_float3{transform.columns[3].x ,transform.columns[3].y, transform.columns[3].z};
                             meshVertexBuffer[i].X = position[0];
                             meshVertexBuffer[i].Y = position[1];
                             meshVertexBuffer[i].Z = position[2];
                         }
                         // get indices data for index buffer
-                        auto indexCount = faces.count * faces.indexCountPerPrimitive;
+                        const auto indexCount = faces.count * faces.indexCountPerPrimitive;
                         meshIndexBuffer.clear();
                         meshIndexBuffer.resize(indexCount);
                         std::vector<Index3> indexData{};
@@ -1080,12 +1079,12 @@ namespace xr {
                         normalsData.resize(normals.count);
                         memcpy(normalsData.data(), normals.buffer.contents, normals.stride * normals.count);
                         for(int i = 0; i < normals.count; i++) {
-                            auto normal = normalsData[i];
+                            const auto normal = normalsData[i];
                             auto normalTransform = matrix_identity_float4x4;
                             normalTransform.columns[3] = simd_float4{normal.X, normal.Y, normal.Z, 1};
                             auto meshTranspose = simd_transpose(simd_inverse(updatedMesh.transform));
                             auto transform = matrix_multiply(meshTranspose, normalTransform);
-                            auto position = simd_float3{transform.columns[3].x ,transform.columns[3].y, transform.columns[3].z};
+                            const auto position = simd_float3{transform.columns[3].x ,transform.columns[3].y, transform.columns[3].z};
                             meshNormalsBuffer[i].X = position[0];
                             meshNormalsBuffer[i].Y = position[1];
                             meshNormalsBuffer[i].Z = position[2];
@@ -1106,7 +1105,7 @@ namespace xr {
                     }
                     // Clear the list of updated meshes to start building up for the next frame update.
                     updatedARKitMeshes->clear();
-                    
+
                     // Now loop over all deleted meshes, find them in the existing meshes map, and if the entry exists add it to the list of removed meshes
                     auto removedARKitMeshes = [sessionDelegate GetDeletedMeshes];
                     for (ARMeshAnchor* removedMesh: *removedARKitMeshes) {
@@ -1123,7 +1122,7 @@ namespace xr {
                             meshMap.erase(meshIterator);
                         }
                     }
-                    
+
                     // Clear the list of removed frames to start building up for the next mesh update.
                     removedARKitMeshes->clear();
                 }
@@ -1131,7 +1130,7 @@ namespace xr {
                 [sessionDelegate UnlockMeshes];
             }
         }
-        
+
         void UpdateFeaturePointCloud() {
             if (!FeaturePointCloudEnabled) {
                 return;
@@ -1190,10 +1189,10 @@ namespace xr {
                     return mesh;
                 }
             }
-            
+
             throw std::runtime_error{"Tried to get non-existent mesh."};
         }
-        
+
         /**
          Deallocates the native ARKit anchor object, and removes it from the anchor list.
          */
@@ -1224,11 +1223,9 @@ namespace xr {
 
         bool TrySetMeshDetectorEnabled(const bool enabled)
         {
-            meshDetectionEnabled = enabled;
-            [sessionDelegate TrySetMeshDetectorEnabled:enabled];
-            return enabled;
+            return [sessionDelegate TrySetMeshDetectorEnabled:enabled];
         }
-        
+
         bool IsTracking() const {
             // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
             // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
@@ -1262,7 +1259,6 @@ namespace xr {
         std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
         bool planeDetectionEnabled{ false };
-        bool meshDetectionEnabled{ false };
 
         /*
          Helper function to translate a world transform into a hit test result.
@@ -1306,19 +1302,16 @@ namespace xr {
         void UpdateMesh(std::vector<Frame::Mesh::Identifier>& updatedMeshes, Frame::Mesh& mesh, std::vector<Vector3f>& vertexBuffer, std::vector<uint32_t>& indexBuffer, std::vector<Vector3f>& normalsBuffer) {
             // Check if mesh was actually updated
             BOOL checkIfMeshUpdated = false;
-            if(mesh.Positions.size() != vertexBuffer.size()) {
+            if (mesh.Positions.size() != vertexBuffer.size()) {
                 checkIfMeshUpdated = true;
             } else {
-                for (size_t i = 0; i < vertexBuffer.size(); i++) {
-                    if (abs(mesh.Positions[i].X - vertexBuffer[i].X) > 0.02f
-                        || abs(mesh.Positions[i].Y - vertexBuffer[i].Y) > 0.02f
-                        || abs(mesh.Positions[i].Z - vertexBuffer[i].Z) > 0.02f) {
-                        checkIfMeshUpdated = true;
-                    }
+                int compare =  memcmp(mesh.Positions.data(), vertexBuffer.data(), vertexBuffer.size() * sizeof(Vector3f));
+                if (compare != 0) {
+                    checkIfMeshUpdated = true;
                 }
             }
-            
-            if(checkIfMeshUpdated) {
+
+            if (checkIfMeshUpdated) {
                 // Store the new mesh information
                 mesh.Positions.resize(vertexBuffer.size());
                 mesh.Positions.swap(vertexBuffer);
@@ -1331,7 +1324,7 @@ namespace xr {
                 updatedMeshes.push_back(mesh.ID);
             }
         }
-        
+
         // For iOS 13.0 and up make use of the ARRaycastQuery protocol for raycasting against all target trackable types.
         API_AVAILABLE(ios(13.0))
         void GetHitTestResultsForiOS13(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const{
@@ -1552,8 +1545,7 @@ namespace xr {
 
     bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
     {
-        m_impl->TrySetMeshDetectorEnabled(enabled);
-        return enabled;
+        return m_impl->TrySetMeshDetectorEnabled(enabled);
     }
 
     bool System::Session::TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions&)
