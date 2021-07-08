@@ -24,8 +24,7 @@ namespace {
         bool operator()(const ARPlaneAnchor* lhs, const ARPlaneAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
         }
-
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
         API_AVAILABLE(ios(13.4))
         bool operator()(const ARMeshAnchor* lhs, const ARMeshAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
@@ -99,7 +98,7 @@ namespace {
     std::set<ARPlaneAnchor*,ARAnchorComparer> updatedPlanes;
     std::vector<ARPlaneAnchor*> deletedPlanes;
     bool planeDetectionEnabled;
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
     API_AVAILABLE(ios(13.4))
     std::set<ARMeshAnchor*,ARAnchorComparer> updatedMeshes;
     API_AVAILABLE(ios(13.4))
@@ -147,7 +146,7 @@ namespace {
     return &updatedPlanes;
 }
 
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
 /**
  Returns the set of all updated meshes since the last time we consumed mesh updates.
  */
@@ -167,19 +166,19 @@ namespace {
     planeDetectionEnabled = enabled;
 }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
 - (bool) TrySetMeshDetectorEnabled:(const bool)enabled {
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
     if (@available(iOS 13.4, *)) {
         if([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
             meshDetectionEnabled = enabled;
             return true;
         }
     }
-#endif
     return false;
 }
+#endif
 
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
 /**
  Returns the vector containing all deleted meshes since the last time we consumed mesh updates.
  */
@@ -203,9 +202,10 @@ namespace {
     updatedPlanes = {};
     deletedPlanes = {};
     planeLock = [[NSLock alloc] init];
-
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
     updatedMeshes = {};
     deletedMeshes = {};
+#endif
     meshLock = [[NSLock alloc] init];
     return self;
 }
@@ -414,7 +414,7 @@ namespace {
         [self UnlockPlanes];
     }
 
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
     if (@available(iOS 13.4, *)) {
         if (meshDetectionEnabled) {
             [self LockMeshes];
@@ -443,7 +443,7 @@ namespace {
         [self UnlockPlanes];
     }
 
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
     if (@available(iOS 13.4, *)) {
         if (meshDetectionEnabled) {
             [self LockMeshes];
@@ -472,7 +472,7 @@ namespace {
         [self UnlockPlanes];
     }
 
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
     if (@available(iOS 13.4, *)) {
         if (meshDetectionEnabled) {
             [self LockMeshes];
@@ -649,7 +649,7 @@ namespace xr {
             // Create the ARSession enable plane detection, include scene reconstruction mesh if supported, and disable lighting estimation.
             session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
             if (@available(iOS 13.4, *)) {
                 if ([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
                     configuration.sceneReconstruction = ARSceneReconstructionMesh;
@@ -1048,6 +1048,7 @@ namespace xr {
             }
         }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
         /**
          Updates existing meshes in place, gets the list of updated/created mesh IDs and removed mesh IDs.
          */
@@ -1055,7 +1056,6 @@ namespace xr {
             if (![sessionDelegate TrySetMeshDetectorEnabled: true]) {
                 return;
             }
-#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
             if (@available(iOS 13.4, *)) {
                 [sessionDelegate LockMeshes];
                 @try {
@@ -1153,8 +1153,8 @@ namespace xr {
                     [sessionDelegate UnlockMeshes];
                 }
             }
-#endif
         }
+#endif
 
         void UpdateFeaturePointCloud() {
             if (!FeaturePointCloudEnabled) {
@@ -1246,10 +1246,12 @@ namespace xr {
             [sessionDelegate SetPlaneDetectionEnabled:enabled];
         }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
         bool TrySetMeshDetectorEnabled(const bool enabled)
         {
             return [sessionDelegate TrySetMeshDetectorEnabled:enabled];
         }
+#endif
 
         bool IsTracking() const {
             // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
@@ -1454,7 +1456,9 @@ namespace xr {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
         m_impl->sessionImpl.UpdateMeshes(UpdatedMeshes, RemovedMeshes);
+#endif
         m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
@@ -1570,7 +1574,10 @@ namespace xr {
 
     bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
     {
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
         return m_impl->TrySetMeshDetectorEnabled(enabled);
+#endif
+        return enabled;
     }
 
     bool System::Session::TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions&)
