@@ -573,7 +573,7 @@ namespace Babylon
         , m_runtime{runtime}
         , m_graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
-        , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true}
+        , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
         , m_boundFrameBufferNeedsRebinding{m_graphicsImpl, *m_cancellationSource, true}
     {
@@ -1455,7 +1455,7 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false);
+        auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer, [](Napi::Env, FrameBuffer* frameBuffer) { delete frameBuffer; });
     }
 
@@ -1563,13 +1563,13 @@ namespace Babylon
             flags |= BGFX_CLEAR_COLOR;
         }
 
-        if (!info[1].IsUndefined())
+        if (!info[1].IsUndefined() && m_boundFrameBuffer->HasDepth())
         {
             depth = info[1].As<Napi::Number>().FloatValue();
             flags |= BGFX_CLEAR_DEPTH;
         }
 
-        if (!info[2].IsUndefined())
+        if (!info[2].IsUndefined() && m_boundFrameBuffer->HasStencil())
         {
             stencil = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
             flags |= BGFX_CLEAR_STENCIL;
@@ -1786,10 +1786,17 @@ namespace Babylon
             encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
 
-        encoder->setState(m_engineState | fillModeState);
+        auto& boundFrameBuffer = GetBoundFrameBuffer(*encoder);
+        if (boundFrameBuffer.HasDepth())
+        {
+            encoder->setState(m_engineState | fillModeState);
+        }
+        else
+        {
+            encoder->setState((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
+        }
 
         // stencil
-        auto& boundFrameBuffer = GetBoundFrameBuffer(*encoder);
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except bindings since we keep the state of everything else.
