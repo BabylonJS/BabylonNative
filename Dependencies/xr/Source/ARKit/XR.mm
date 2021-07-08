@@ -24,10 +24,13 @@ namespace {
         bool operator()(const ARPlaneAnchor* lhs, const ARPlaneAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
         }
+
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
         API_AVAILABLE(ios(13.4))
         bool operator()(const ARMeshAnchor* lhs, const ARMeshAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
         }
+#endif
     };
 
     /**
@@ -96,10 +99,12 @@ namespace {
     std::set<ARPlaneAnchor*,ARAnchorComparer> updatedPlanes;
     std::vector<ARPlaneAnchor*> deletedPlanes;
     bool planeDetectionEnabled;
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
     API_AVAILABLE(ios(13.4))
     std::set<ARMeshAnchor*,ARAnchorComparer> updatedMeshes;
     API_AVAILABLE(ios(13.4))
     std::vector<ARMeshAnchor*> deletedMeshes;
+#endif
     bool meshDetectionEnabled;
 
     CVMetalTextureCacheRef textureCache;
@@ -142,12 +147,14 @@ namespace {
     return &updatedPlanes;
 }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
 /**
  Returns the set of all updated meshes since the last time we consumed mesh updates.
  */
 - (std::set<ARMeshAnchor*, ARAnchorComparer>*) GetUpdatedMeshes  API_AVAILABLE(ios(13.4)){
     return &updatedMeshes;
 }
+#endif
 
 /**
  Returns the vector containing all deleted planes since the last time we consumed plane updates.
@@ -161,16 +168,25 @@ namespace {
 }
 
 - (bool) TrySetMeshDetectorEnabled:(const bool)enabled {
-    meshDetectionEnabled = enabled;
-    return true;
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
+    if (@available(iOS 13.4, *)) {
+        if([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
+            meshDetectionEnabled = enabled;
+            return true;
+        }
+    }
+#endif
+    return false;
 }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
 /**
  Returns the vector containing all deleted meshes since the last time we consumed mesh updates.
  */
 - (std::vector<ARMeshAnchor*>*) GetDeletedMeshes  API_AVAILABLE(ios(13.4)){
     return &deletedMeshes;
 }
+#endif
 
 /**
  Initializes this session delgate with the given frame views and metal graphics context.
@@ -187,9 +203,9 @@ namespace {
     updatedPlanes = {};
     deletedPlanes = {};
     planeLock = [[NSLock alloc] init];
-    
+
     updatedMeshes = {};
-    deletedMeshes= {};
+    deletedMeshes = {};
     meshLock = [[NSLock alloc] init];
     return self;
 }
@@ -398,6 +414,7 @@ namespace {
         [self UnlockPlanes];
     }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
     if (@available(iOS 13.4, *)) {
         if (meshDetectionEnabled) {
             [self LockMeshes];
@@ -406,10 +423,11 @@ namespace {
                     updatedMeshes.insert((ARMeshAnchor*)newAnchor);
                 }
             }
-        }
 
-        [self UnlockMeshes];
+            [self UnlockMeshes];
+        }
     }
+#endif
     return;
 }
 
@@ -425,6 +443,7 @@ namespace {
         [self UnlockPlanes];
     }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
     if (@available(iOS 13.4, *)) {
         if (meshDetectionEnabled) {
             [self LockMeshes];
@@ -433,10 +452,11 @@ namespace {
                     updatedMeshes.insert((ARMeshAnchor*)updatedAnchor);
                 }
             }
-        }
 
-        [self UnlockMeshes];
+            [self UnlockMeshes];
+        }
     }
+#endif
     return;
 }
 
@@ -452,6 +472,7 @@ namespace {
         [self UnlockPlanes];
     }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
     if (@available(iOS 13.4, *)) {
         if (meshDetectionEnabled) {
             [self LockMeshes];
@@ -460,10 +481,11 @@ namespace {
                     deletedMeshes.push_back((ARMeshAnchor*)removedAnchor);
                 }
             }
-        }
 
-        [self UnlockMeshes];
+            [self UnlockMeshes];
+        }
     }
+#endif
     return;
 }
 
@@ -627,11 +649,13 @@ namespace xr {
             // Create the ARSession enable plane detection, include scene reconstruction mesh if supported, and disable lighting estimation.
             session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
             if (@available(iOS 13.4, *)) {
-                if([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
+                if ([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
                     configuration.sceneReconstruction = ARSceneReconstructionMesh;
                 }
             }
+#endif
             configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
             configuration.lightEstimationEnabled = false;
             configuration.worldAlignment = ARWorldAlignmentGravity;
@@ -1031,17 +1055,17 @@ namespace xr {
             if (![sessionDelegate TrySetMeshDetectorEnabled: true]) {
                 return;
             }
-
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_4)
             if (@available(iOS 13.4, *)) {
                 [sessionDelegate LockMeshes];
                 @try {
                     // Update all meshes that have been updated since the last frame
                     auto updatedARKitMeshes = [sessionDelegate GetUpdatedMeshes];
                     for (ARMeshAnchor* updatedMesh : *updatedARKitMeshes) {
-                        const auto& geometry = updatedMesh.geometry;
-                        const auto& faces = geometry.faces;
-                        const auto& vertices = geometry.vertices;
-                        const auto& normals = geometry.normals;
+                        const auto& geometry{ updatedMesh.geometry };
+                        const auto& faces{ geometry.faces };
+                        const auto& vertices{ geometry.vertices };
+                        const auto& normals{ geometry.normals };
                         // get vertices data for vertex buffer
                         meshVertexBuffer.clear();
                         meshVertexBuffer.resize(vertices.count);
@@ -1129,6 +1153,7 @@ namespace xr {
                     [sessionDelegate UnlockMeshes];
                 }
             }
+#endif
         }
 
         void UpdateFeaturePointCloud() {
@@ -1444,9 +1469,9 @@ namespace xr {
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr) const {
         return m_impl->sessionImpl.CreateAnchor(pose);
     }
-    
+
     Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
-        throw std::runtime_error("not implemented"); 
+        throw std::runtime_error("not implemented");
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
@@ -1464,7 +1489,7 @@ namespace xr {
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
     }
-    
+
     System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier meshID) const {
         return m_impl->sessionImpl.GetMeshByID(meshID);
     }
