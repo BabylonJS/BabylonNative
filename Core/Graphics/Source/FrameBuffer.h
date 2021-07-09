@@ -20,7 +20,7 @@ namespace Babylon
     class FrameBuffer
     {
     public:
-        FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer);
+        FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -40,6 +40,9 @@ namespace Babylon
         void SetStencil(bgfx::Encoder& encoder, uint32_t stencilState);
         void Blit(bgfx::Encoder& encoder, bgfx::TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, bgfx::TextureHandle _src, uint16_t _srcX = 0, uint16_t _srcY = 0, uint16_t _width = UINT16_MAX, uint16_t _height = UINT16_MAX);
 
+        bool HasDepth() const { return m_hasDepth; }
+        bool HasStencil() const { return m_hasStencil; }
+
     private:
 
         GraphicsImpl& m_impl;
@@ -47,6 +50,8 @@ namespace Babylon
         const uint16_t m_width;
         const uint16_t m_height;
         const bool m_defaultBackBuffer;
+        const bool m_hasDepth;
+        const bool m_hasStencil;
 
         bgfx::ViewId m_viewId{};
         ViewPort m_viewPort{};

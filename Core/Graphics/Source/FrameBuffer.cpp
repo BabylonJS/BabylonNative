@@ -24,12 +24,14 @@ namespace Babylon
         }
     }
 
-    FrameBuffer::FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer)
+    FrameBuffer::FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
         : m_impl{impl}
         , m_handle{handle}
         , m_width{width}
         , m_height{height}
         , m_defaultBackBuffer{defaultBackBuffer}
+        , m_hasDepth(hasDepth)
+        , m_hasStencil(hasStencil)
     {
     }
 
@@ -130,7 +132,7 @@ namespace Babylon
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
     {
-        encoder.setStencil(stencilState);
+        encoder.setStencil(m_hasStencil ? stencilState : 0);
     }
 
     bool ViewPort::Equals(const ViewPort& other) const

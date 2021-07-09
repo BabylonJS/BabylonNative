@@ -100,7 +100,7 @@ namespace Babylon::Polyfills::Internal
         {
             auto handle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
             assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
+            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
             return true;
         }
