@@ -113,8 +113,6 @@ namespace Babylon
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
-            m_frameBufferManager = std::make_unique<FrameBufferManager>();
-
             m_cancellationSource = std::make_unique<arcana::cancellation_source>();
         }
     }
@@ -132,8 +130,6 @@ namespace Babylon
             FinishRenderingCurrentFrame();
 
             m_cancellationSource->cancel();
-
-            m_frameBufferManager.reset();
 
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
@@ -185,36 +181,6 @@ namespace Babylon
     GraphicsImpl::UpdateToken GraphicsImpl::GetUpdateToken()
     {
         return {*this};
-    }
-
-    FrameBuffer& GraphicsImpl::AddFrameBuffer(bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool backBuffer)
-    {
-        if (!m_frameBufferManager)
-        {
-            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
-        }
-
-        return m_frameBufferManager->AddFrameBuffer(handle, width, height, backBuffer);
-    }
-
-    void GraphicsImpl::RemoveFrameBuffer(const FrameBuffer& frameBuffer)
-    {
-        if (!m_frameBufferManager)
-        {
-            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
-        }
-
-        m_frameBufferManager->RemoveFrameBuffer(frameBuffer);
-    }
-
-    FrameBuffer& GraphicsImpl::DefaultFrameBuffer()
-    {
-        if (!m_frameBufferManager)
-        {
-            throw std::runtime_error{"FrameBufferManager has not been initialized!"};
-        }
-
-        return m_frameBufferManager->DefaultFrameBuffer();
     }
 
     void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
@@ -289,6 +255,11 @@ namespace Babylon
         return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
     }
 
+    bgfx::ViewId GraphicsImpl::AcquireNewViewId(bgfx::Encoder&)
+    {
+        return m_nextViewId.fetch_add(1);
+    }
+
     void GraphicsImpl::UpdateBgfxState()
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -358,8 +329,7 @@ namespace Babylon
             m_readTextureRequests.pop();
         }
 
-        // Reset the frame buffers.
-        m_frameBufferManager->Reset();
+        m_nextViewId.store(0);
     }
 
     bgfx::Encoder* GraphicsImpl::GetEncoderForThread()

@@ -681,21 +681,25 @@ namespace Babylon
                             
                             auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                            auto& frameBuffer{m_sessionState->GraphicsImpl.AddFrameBuffer(frameBufferHandle,
+                            auto* frameBuffer = new FrameBuffer(
+                                m_sessionState->GraphicsImpl, 
+                                frameBufferHandle,
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
-                                true)};
+                                true,
+                                true,
+                                true);
 
                             // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                             // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
+                            frameBuffer->Clear(*m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
 
-                            viewConfig.FrameBuffers[eyeIdx] = &frameBuffer;
+                            viewConfig.FrameBuffers[eyeIdx] = frameBuffer;
 
                             auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
                             auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
-                            auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
-                            viewConfig.JsTextures[&frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                            auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, frameBuffer, [](Napi::Env, FrameBuffer* data) { delete data; })};
+                            viewConfig.JsTextures[frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
                         }
                         viewConfig.Initialized = true;
                     }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {

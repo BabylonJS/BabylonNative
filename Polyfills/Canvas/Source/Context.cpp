@@ -551,13 +551,15 @@ namespace Babylon::Polyfills::Internal
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                frameBuffer.Bind(*encoder);
                 if (needClear)
                 {
-                    frameBuffer.Clear(encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
+                    frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
                 }
-                frameBuffer.SetViewPort(encoder, 0.f, 0.f, 1.f, 1.f);
+                frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);
+                frameBuffer.Unbind(*encoder);
                 BeginFrame();
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {

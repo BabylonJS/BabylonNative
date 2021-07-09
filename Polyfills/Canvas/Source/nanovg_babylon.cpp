@@ -22,6 +22,8 @@
 //
 #define NVG_ANTIALIAS 1
 
+#include "nanovg_babylon.h"
+
 #include <stdlib.h>
 #include <math.h>
 #include "nanovg.h"
@@ -604,7 +606,7 @@ namespace
 				gl->encoder->setVertexBuffer(0, &gl->tvb);
 				gl->encoder->setTexture(0, gl->s_tex, gl->th);
 				fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
-				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+				gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 			}
 		}
 
@@ -628,7 +630,7 @@ namespace
 					);
 				gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
 				gl->encoder->setTexture(0, gl->s_tex, gl->th);
-				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+				gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 			}
 		}
 
@@ -643,7 +645,7 @@ namespace
 				| BGFX_STENCIL_OP_FAIL_Z_ZERO
 				| BGFX_STENCIL_OP_PASS_Z_ZERO
 				);
-		gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+		gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 	}
 
 	static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -660,7 +662,7 @@ namespace
 			gl->encoder->setVertexBuffer(0, &gl->tvb);
 			gl->encoder->setTexture(0, gl->s_tex, gl->th);
 			fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
-			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+			gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 		}
 
 		if (gl->edgeAntiAlias)
@@ -673,7 +675,7 @@ namespace
 					);
 				gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
 				gl->encoder->setTexture(0, gl->s_tex, gl->th);
-				gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+				gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 			}
 		}
 	}
@@ -693,7 +695,7 @@ namespace
 				);
 			gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
 			gl->encoder->setTexture(0, gl->s_tex, gl->th);
-			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+			gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 		}
 	}
 
@@ -706,7 +708,7 @@ namespace
 			gl->encoder->setState(gl->state);
 			gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
 			gl->encoder->setTexture(0, gl->s_tex, gl->th);
-			gl->frameBuffer->Submit(gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+			gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 		}
 	}
 
