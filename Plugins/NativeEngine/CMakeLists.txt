@@ -1,15 +1,3 @@
-if(APPLE)
-    set(GRAPHICS_API Metal)
-elseif(ANDROID)
-    set(GRAPHICS_API OpenGL)
-elseif(UNIX)
-    set(GRAPHICS_API OpenGL)
-elseif(WIN32)
-    set(GRAPHICS_API D3D)
-else()
-    message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
-endif()
-
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/NativeEngineAPI.cpp"
