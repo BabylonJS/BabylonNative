@@ -16,8 +16,6 @@ namespace Babylon
 
     namespace
     {
-		
-
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
         {
             const std::array<const char*, 1> sources{source.data()};
