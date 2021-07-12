@@ -150,7 +150,7 @@ namespace {
 /**
  Returns the set of all updated meshes since the last time we consumed mesh updates.
  */
-- (std::set<ARMeshAnchor*, ARAnchorComparer>*) GetUpdatedMeshes  API_AVAILABLE(ios(13.4)){
+- (std::set<ARMeshAnchor*, ARAnchorComparer>*) GetUpdatedMeshes API_AVAILABLE(ios(13.4)) {
     return &updatedMeshes;
 }
 #endif
@@ -178,11 +178,18 @@ namespace {
 }
 #endif
 
+/**
+ Returns the boolean that keeps track of whether mesh detection is enabled or not.
+ */
+- (bool) GetMeshDetectionEnabled {
+    return meshDetectionEnabled;
+}
+
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
 /**
  Returns the vector containing all deleted meshes since the last time we consumed mesh updates.
  */
-- (std::vector<ARMeshAnchor*>*) GetDeletedMeshes  API_AVAILABLE(ios(13.4)){
+- (std::vector<ARMeshAnchor*>*) GetDeletedMeshes API_AVAILABLE(ios(13.4)) {
     return &deletedMeshes;
 }
 #endif
@@ -1053,7 +1060,7 @@ namespace xr {
          Updates existing meshes in place, gets the list of updated/created mesh IDs and removed mesh IDs.
          */
         void UpdateMeshes(std::vector<Frame::Mesh::Identifier>& updatedMeshes, std::vector<Frame::Mesh::Identifier>& deletedMeshes) {
-            if (![sessionDelegate TrySetMeshDetectorEnabled: true]) {
+            if (![sessionDelegate GetMeshDetectionEnabled]) {
                 return;
             }
             if (@available(iOS 13.4, *)) {
@@ -1328,7 +1335,7 @@ namespace xr {
 
         void UpdateMesh(std::vector<Frame::Mesh::Identifier>& updatedMeshes, Frame::Mesh& mesh, std::vector<Vector3f>& vertexBuffer, std::vector<uint32_t>& indexBuffer, std::vector<Vector3f>& normalsBuffer) {
             // Check if mesh was actually updated
-            BOOL checkIfMeshUpdated = false;
+            bool checkIfMeshUpdated{ false };
             if (mesh.Positions.size() != vertexBuffer.size()) {
                 checkIfMeshUpdated = true;
             } else {
