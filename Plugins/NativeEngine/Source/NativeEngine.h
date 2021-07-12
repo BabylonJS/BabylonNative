@@ -2,6 +2,7 @@
 
 #include "BgfxCallback.h"
 #include "FrameBuffer.h"
+#include "PerFrameValue.h"
 #include "ShaderCompiler.h"
 
 #include <Babylon/JsRuntime.h>
@@ -207,6 +208,7 @@ namespace Babylon
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
         GraphicsImpl::UpdateToken& GetUpdateToken();
+        FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -244,6 +246,8 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         const VertexArray* m_boundVertexArray{};
+        FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
+        PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
     };
 }

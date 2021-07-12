@@ -138,8 +138,8 @@ namespace
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
-        jsInputSource.Set("targetRaySpace", Napi::External<decltype(inputSource.AimSpace)>::New(env, &inputSource.AimSpace));
-        jsInputSource.Set("gripSpace", Napi::External<decltype(inputSource.GripSpace)>::New(env, &inputSource.GripSpace));
+        jsInputSource.Set("targetRaySpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.AimSpace));
+        jsInputSource.Set("gripSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.GripSpace));
 
         // Don't set hands up unless hand data is supported/available
         if (inputSource.HandTrackedThisFrame || inputSource.JointsTrackedThisFrame)
@@ -167,7 +167,7 @@ namespace
 
                 for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
                 {
-                    auto napiJoint = Napi::External<std::decay_t<decltype(*inputSource.HandJoints.begin())>>::New(env, &inputSource.HandJoints[i]);
+                    auto napiJoint = Napi::External<xr::System::Session::Frame::JointSpace>::New(env, &inputSource.HandJoints[i]);
                     handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
                 }
             }
@@ -686,21 +686,25 @@ namespace Babylon
                             
                             auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                            auto& frameBuffer{m_sessionState->GraphicsImpl.AddFrameBuffer(frameBufferHandle,
+                            auto* frameBuffer = new FrameBuffer(
+                                m_sessionState->GraphicsImpl, 
+                                frameBufferHandle,
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
-                                true)};
+                                true,
+                                true,
+                                true);
 
                             // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                             // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
+                            frameBuffer->Clear(*m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
 
-                            viewConfig.FrameBuffers[eyeIdx] = &frameBuffer;
+                            viewConfig.FrameBuffers[eyeIdx] = frameBuffer;
 
                             auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
                             auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
-                            auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, &frameBuffer)};
-                            viewConfig.JsTextures[&frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                            auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, frameBuffer, [](Napi::Env, FrameBuffer* data) { delete data; })};
+                            viewConfig.JsTextures[frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
                         }
                         viewConfig.Initialized = true;
                     }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
@@ -2241,7 +2245,7 @@ namespace Babylon
 
                 for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
                 {
-                    const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+                    const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
                     const auto transformMatrix = CreateTransformMatrix(jointSpace, false);
                     std::memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), sizeof(float) << 4);
                 }

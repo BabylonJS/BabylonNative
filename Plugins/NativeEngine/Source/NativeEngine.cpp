@@ -272,32 +272,45 @@ namespace Babylon
             DoForHandleTypes(nonDynamic, dynamic);
         }
 
-        template<typename sourceType, bool normalized> void PromoteToFloats(uint32_t numElements, uint32_t byteStride)
+        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
         {
             const size_t count = m_bytes.size() / byteStride;
             const size_t destinationSize = count * numElements * sizeof(float);
-            const float maxRange = static_cast<float>(std::numeric_limits<sourceType>::max());
             if (destinationSize != m_bytes.size()) // ensure both vectors have different size
             {
                 std::vector<uint8_t> bytes(destinationSize);
                 float* destination = reinterpret_cast<float*>(bytes.data());
                 for (size_t i = 0; i < count; i++)
                 {
-                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteStride * i);
+                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteOffset + byteStride * i);
                     for (size_t element = 0; element < numElements; element++)
                     {
-                        if (normalized)
-                        {
-                            // https://www.khronos.org/opengl/wiki/Normalized_Integer
-                            *destination++ = std::max(static_cast<float>(*source++) / maxRange, -1.f);
-                        }
-                        else
-                        {
-                            *destination++ = static_cast<float>(*source++);
-                        }
+                        *destination++ = static_cast<float>(*source++);
                     }
                 }
                 m_bytes = std::move(bytes);
+            }
+        }
+
+        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
+        {
+            switch (attribType)
+            {
+            case bgfx::AttribType::Int8:
+                PromoteToFloats<int8_t>(numElements, byteOffset, byteStride);
+                break;
+            case bgfx::AttribType::Uint8:
+                PromoteToFloats<uint8_t>(numElements, byteOffset, byteStride);
+                break;
+            case bgfx::AttribType::Int16:
+                PromoteToFloats<int16_t>(numElements, byteOffset, byteStride);
+                break;
+            case bgfx::AttribType::Uint16:
+                PromoteToFloats<uint16_t>(numElements, byteOffset, byteStride);
+                break;
+            case bgfx::AttribType::Uint10: // is supported by any format ?
+            default:
+                throw std::runtime_error("Unable to promote vertex stream to a float array.");
             }
         }
 
@@ -560,7 +573,9 @@ namespace Babylon
         , m_runtime{runtime}
         , m_graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
-        , m_boundFrameBuffer{&m_graphicsImpl.DefaultFrameBuffer()}
+        , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
+        , m_boundFrameBuffer{&m_defaultFrameBuffer}
+        , m_boundFrameBufferNeedsRebinding{m_graphicsImpl, *m_cancellationSource, true}
     {
     }
 
@@ -677,69 +692,30 @@ namespace Babylon
         const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
         const bgfx::AttribType::Enum attribType = static_cast<bgfx::AttribType::Enum>(type);
 
-        const bool promoteToFloats = (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 || 
-            bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 || 
-            bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan) && 
-            (attribType == bgfx::AttribType::Int8 || 
-            attribType == bgfx::AttribType::Uint8 || 
-            attribType == bgfx::AttribType::Uint10 || 
-            attribType == bgfx::AttribType::Int16 || 
-            attribType == bgfx::AttribType::Uint16);
+        const bool promoteToFloats = !normalized
+            && (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 ||
+                bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 ||
+                bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan)
+            && (attribType == bgfx::AttribType::Int8 ||
+                attribType == bgfx::AttribType::Uint8 ||
+                attribType == bgfx::AttribType::Uint10 ||
+                attribType == bgfx::AttribType::Int16 ||
+                attribType == bgfx::AttribType::Uint16);
 
         if (promoteToFloats)
         {
-            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float, normalized);
+            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float);
             vertexLayout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
-            if (normalized)
-            {
-                switch (attribType)
-                {
-                case bgfx::AttribType::Int8:
-                    vertexBufferData->PromoteToFloats<int8_t, true>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Uint8:
-                    vertexBufferData->PromoteToFloats<uint8_t, true>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Int16:
-                    vertexBufferData->PromoteToFloats<int16_t, true>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Uint16:
-                    vertexBufferData->PromoteToFloats<uint16_t, true>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Uint10: // is supported by any format ?
-                default:
-                    throw std::runtime_error("Unable to promote vertex stream to a float array.");
-                }
-            }
-            else
-            {
-                switch (attribType)
-                {
-                case bgfx::AttribType::Int8:
-                    vertexBufferData->PromoteToFloats<int8_t, false>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Uint8:
-                    vertexBufferData->PromoteToFloats<uint8_t, false>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Int16:
-                    vertexBufferData->PromoteToFloats<int16_t, false>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Uint16:
-                    vertexBufferData->PromoteToFloats<uint16_t, false>(numElements, byteStride);
-                    break;
-                case bgfx::AttribType::Uint10: // is supported by any format ?
-                default:
-                    throw std::runtime_error("Unable to promote vertex stream to a float array.");
-                }
-            }
+            vertexBufferData->PromoteToFloats(attribType, numElements, byteOffset, byteStride);
         }
         else
         {
             vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
             vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
+            vertexLayout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
         }
-        vertexLayout.end();
 
+        vertexLayout.end();
         vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
 
         // Second parameter is first vertex. byteOffset and byteStride are both using original values (without float promotion)
@@ -1219,7 +1195,7 @@ namespace Babylon
                 if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
                 {
                     bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
-                    m_boundFrameBuffer->Blit(encoder, handleDestination, 0, 0, handleSource);
+                    GetBoundFrameBuffer(*encoder).Blit(*encoder, handleDestination, 0, 0, handleSource);
                 }
                 else
                 {
@@ -1479,31 +1455,36 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        auto& frameBuffer{m_graphicsImpl.AddFrameBuffer(frameBufferHandle, width, height, false)};
-        return Napi::External<FrameBuffer>::New(info.Env(), &frameBuffer);
+        auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
+        return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer, [](Napi::Env, FrameBuffer* frameBuffer) { delete frameBuffer; });
     }
 
-    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo&)
     {
-        const auto& frameBuffer{*info[0].As<Napi::External<FrameBuffer>>().Data()};
-        m_graphicsImpl.RemoveFrameBuffer(frameBuffer);
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
         auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        auto* encoder = GetUpdateToken().GetEncoder();
+
+        m_boundFrameBuffer->Unbind(*encoder);
         m_boundFrameBuffer = frameBuffer;
+        m_boundFrameBuffer->Bind(*encoder);
+        m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
     {
         const auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        auto* encoder = GetUpdateToken().GetEncoder();
 
         assert(frameBuffer == m_boundFrameBuffer);
         UNUSED(frameBuffer);
 
-        m_boundFrameBuffer = &m_graphicsImpl.DefaultFrameBuffer();
-        m_boundFrameBuffer->AcquireNewViewId();
+        m_boundFrameBuffer->Unbind(*encoder);
+        m_boundFrameBuffer = nullptr;
+        m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
     void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
@@ -1582,19 +1563,19 @@ namespace Babylon
             flags |= BGFX_CLEAR_COLOR;
         }
 
-        if (!info[1].IsUndefined())
+        if (!info[1].IsUndefined() && m_boundFrameBuffer->HasDepth())
         {
             depth = info[1].As<Napi::Number>().FloatValue();
             flags |= BGFX_CLEAR_DEPTH;
         }
 
-        if (!info[2].IsUndefined())
+        if (!info[2].IsUndefined() && m_boundFrameBuffer->HasStencil())
         {
             stencil = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        m_boundFrameBuffer->Clear(encoder, flags, rgba, depth, stencil);
+        GetBoundFrameBuffer(*encoder).Clear(*encoder, flags, rgba, depth, stencil);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -1617,7 +1598,7 @@ namespace Babylon
         const auto height = info[3].As<Napi::Number>().FloatValue();
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        m_boundFrameBuffer->SetViewPort(encoder, x, yOrigin, width, height);
+        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
     }
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
@@ -1805,13 +1786,21 @@ namespace Babylon
             encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
         }
 
-        encoder->setState(m_engineState | fillModeState);
+        auto& boundFrameBuffer = GetBoundFrameBuffer(*encoder);
+        if (boundFrameBuffer.HasDepth())
+        {
+            encoder->setState(m_engineState | fillModeState);
+        }
+        else
+        {
+            encoder->setState((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
+        }
 
         // stencil
-        m_boundFrameBuffer->SetStencil(encoder, m_stencilState);
+        boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except bindings since we keep the state of everything else.
-        m_boundFrameBuffer->Submit(encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     GraphicsImpl::UpdateToken& NativeEngine::GetUpdateToken()
@@ -1825,6 +1814,22 @@ namespace Babylon
         }
 
         return m_updateToken.value();
+    }
+
+    FrameBuffer& NativeEngine::GetBoundFrameBuffer(bgfx::Encoder& encoder)
+    {
+        if (m_boundFrameBuffer == nullptr)
+        {
+            m_boundFrameBuffer = &m_defaultFrameBuffer;
+            m_defaultFrameBuffer.Bind(encoder);
+        } else if (m_boundFrameBufferNeedsRebinding.Get(encoder))
+        {
+            m_boundFrameBuffer->Unbind(encoder);
+            m_boundFrameBuffer->Bind(encoder);
+        }
+        
+        m_boundFrameBufferNeedsRebinding.Set(encoder, false);
+        return *m_boundFrameBuffer;
     }
 
     void NativeEngine::ScheduleRequestAnimationFrameCallbacks()

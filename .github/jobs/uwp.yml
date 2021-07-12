@@ -2,7 +2,7 @@ parameters:
   name: ''
   vmImage: ''
   platform: ''
-  
+
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
