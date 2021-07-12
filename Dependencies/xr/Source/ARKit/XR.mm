@@ -1581,10 +1581,12 @@ namespace xr {
 
     bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
     {
+        if (enabled) {
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
         return m_impl->TrySetMeshDetectorEnabled(enabled);
 #endif
-        return enabled;
+        }
+        return false;
     }
 
     bool System::Session::TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions&)
