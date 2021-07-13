@@ -124,6 +124,7 @@ void App::Uninitialize()
         m_graphics->FinishRenderingCurrentFrame();
     }
 
+    m_chromeDevTools.reset();
     m_inputBuffer.reset();
     m_runtime.reset();
     m_graphics.reset();
@@ -291,6 +292,12 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeXr::Initialize(env);
 
         InputManager<Babylon::AppRuntime>::Initialize(env, *m_inputBuffer);
+
+        m_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
+        if (m_chromeDevTools->SupportsInspector())
+        {
+            m_chromeDevTools->StartInspector(4653, "BabylonNative Playground");
+        }
     });
 
     Babylon::ScriptLoader loader{*m_runtime};

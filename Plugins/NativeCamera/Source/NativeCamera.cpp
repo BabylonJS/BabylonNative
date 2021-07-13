@@ -66,18 +66,7 @@ namespace Babylon
 
                 // append media devices to navigator
                 Napi::Object mediaDevices = Napi::Object::New(env);
-                mediaDevices.Set("getUserMedia", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                    auto env = info.Env();
-                    auto deferred{ Napi::Promise::Deferred::New(env) };
-                    auto promise{ deferred.Promise() };
-
-                    auto& jsRuntime{ JsRuntime::GetFromJavaScript(env) };
-                    jsRuntime.Dispatch([deferred{ std::move(deferred) }](Napi::Env env) {
-                        deferred.Resolve(env.Null());
-                    });
-
-                    return promise;
-                }));
+                mediaDevices.Set("getUserMedia", Napi::Function::New(env, &NativeCamera::GetUserMedia, "getUserMedia"));
                 navigator.Set("mediaDevices", mediaDevices);
             }
 
@@ -119,6 +108,20 @@ namespace Babylon
                 auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
 
                 videoObject->UpdateTexture(texture->Handle);
+            }
+
+            static Napi::Value GetUserMedia(const Napi::CallbackInfo& info) 
+            {
+                auto env = info.Env();
+                auto deferred{Napi::Promise::Deferred::New(env)};
+                auto promise{deferred.Promise()};
+
+                auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
+                jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
+                    deferred.Resolve(env.Null());
+                });
+
+                return promise;
             }
         };
 
