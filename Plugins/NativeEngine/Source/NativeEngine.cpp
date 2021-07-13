@@ -47,6 +47,110 @@ namespace Babylon
             }
         }
 
+        void TransformVector3Normals(const Napi::CallbackInfo& info)
+        {
+            auto normals = info[0].As<Napi::TypedArrayOf<float>>();
+            const auto transform = info[1].As<Napi::Object>();
+            const auto m = transform.Get("_m").As<Napi::TypedArrayOf<float>>();
+
+            for (size_t index = 0; index < normals.ElementLength(); index += 3)
+            {
+                const auto x{normals[index]}, y{normals[index+1]}, z{normals[index+2]};
+
+                normals[index] = x * m[0] + y * m[4] + z * m[8];
+                normals[index+1] = x * m[1] + y * m[5] + z * m[9];
+                normals[index+2] = x * m[2] + y * m[6] + z * m[10];
+            }
+        }
+
+        void extractMinAndMaxIndexed(const Napi::CallbackInfo& info)
+        {
+            const auto positions = info[0].As<Napi::TypedArrayOf<float>>();
+            const auto indices = info[1].As<Napi::TypedArrayOf<uint32_t>>();
+            const auto indexStart = info[2].As<Napi::Number>().Uint32Value();
+            const auto indexCount = info[3].As<Napi::Number>().Uint32Value();
+            auto minVector = info[4].As<Napi::Object>();
+            auto maxVector = info[5].As<Napi::Object>();
+
+            auto minX = minVector.Get("_x").As<Napi::Number>().FloatValue();
+            auto minY = minVector.Get("_y").As<Napi::Number>().FloatValue();
+            auto minZ = minVector.Get("_z").As<Napi::Number>().FloatValue();
+            auto maxX = maxVector.Get("_x").As<Napi::Number>().FloatValue();
+            auto maxY = maxVector.Get("_y").As<Napi::Number>().FloatValue();
+            auto maxZ = maxVector.Get("_z").As<Napi::Number>().FloatValue();
+
+            for (auto index = indexStart; index < indexStart + indexCount; index++)
+            {
+                const auto offset = indices[index] * 3;
+                const auto x = positions[offset];
+                const auto y = positions[offset + 1];
+                const auto z = positions[offset + 2];
+
+                minX = std::min(minX, x);
+                minY = std::min(minY, y);
+                minZ = std::min(minZ, z);
+                maxX = std::max(maxX, x);
+                maxY = std::max(maxY, y);
+                maxZ = std::max(maxZ, z);
+            }
+
+            minVector.Set("_x", minX);
+            minVector.Set("_y", minY);
+            minVector.Set("_z", minZ);
+            maxVector.Set("_x", maxX);
+            maxVector.Set("_y", maxY);
+            maxVector.Set("_z", maxZ);
+        }
+
+        void extractMinAndMax(const Napi::CallbackInfo& info)
+        {
+            const auto positions = info[0].As<Napi::TypedArrayOf<float>>();
+            const auto start = info[1].As<Napi::Number>().Uint32Value();
+            const auto count = info[2].As<Napi::Number>().Uint32Value();
+            const auto stride = info[3].As<Napi::Number>().Uint32Value();
+            auto minVector = info[4].As<Napi::Object>();
+            auto maxVector = info[5].As<Napi::Object>();
+
+            auto minX = minVector.Get("_x").As<Napi::Number>().FloatValue();
+            auto minY = minVector.Get("_y").As<Napi::Number>().FloatValue();
+            auto minZ = minVector.Get("_z").As<Napi::Number>().FloatValue();
+            auto maxX = maxVector.Get("_x").As<Napi::Number>().FloatValue();
+            auto maxY = maxVector.Get("_y").As<Napi::Number>().FloatValue();
+            auto maxZ = maxVector.Get("_z").As<Napi::Number>().FloatValue();
+
+            for (auto index = start, offset = start * stride; index < start + count; index++, offset += stride)
+            {
+                const auto x = positions[offset];
+                const auto y = positions[offset + 1];
+                const auto z = positions[offset + 2];
+
+                minX = std::min(minX, x);
+                minY = std::min(minY, y);
+                minZ = std::min(minZ, z);
+                maxX = std::max(maxX, x);
+                maxY = std::max(maxY, y);
+                maxZ = std::max(maxZ, z);
+            }
+
+            minVector.Set("_x", minX);
+            minVector.Set("_y", minY);
+            minVector.Set("_z", minZ);
+            maxVector.Set("_x", maxX);
+            maxVector.Set("_y", maxY);
+            maxVector.Set("_z", maxZ);
+        }
+
+        void flipIndices(const Napi::CallbackInfo& info)
+        {
+            auto indices{info[0].As<Napi::TypedArrayOf<uint16_t>>()};
+            for (size_t index = 0; index < indices.ElementLength(); index += 3)
+            {
+                const auto tmp = indices[index + 1];
+                indices[index + 1] = indices[index + 2];
+                indices[index + 2] = tmp;
+            }
+        }
+
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -522,6 +626,10 @@ namespace Babylon
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set("TransformVector3Coordinates", Napi::Function::New(env, TransformVector3Coordinates, "TransformVector3Coordinates"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("TransformVector3Normals", Napi::Function::New(env, TransformVector3Normals, "TransformVector3Normals"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("extractMinAndMaxIndexed", Napi::Function::New(env, extractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("extractMinAndMax", Napi::Function::New(env, extractMinAndMax, "extractMinAndMax"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("flipIndices", Napi::Function::New(env, flipIndices, "flipIndices"));
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
