@@ -12,10 +12,10 @@ namespace Babylon::Plugins::NativeOptimizations
         for (size_t index = 0; index < coordinates.ElementLength(); index += 3)
         {
             const auto x{coordinates[index]}, y{coordinates[index+1]}, z{coordinates[index+2]};
-            const auto rx = x * m[0] + y * m[4] + z * m[8] + m[12];
-            const auto ry = x * m[1] + y * m[5] + z * m[9] + m[13];
-            const auto rz = x * m[2] + y * m[6] + z * m[10] + m[14];
-            const auto rw = 1 / (x * m[3] + y * m[7] + z * m[11] + m[15]);
+            const auto rx = x * m[0U] + y * m[4U] + z * m[8U] + m[12U];
+            const auto ry = x * m[1U] + y * m[5U] + z * m[9U] + m[13U];
+            const auto rz = x * m[2U] + y * m[6U] + z * m[10U] + m[14U];
+            const auto rw = 1 / (x * m[3U] + y * m[7U] + z * m[11U] + m[15U]);
 
             coordinates[index] = rx * rw;
             coordinates[index+1] = ry * rw;
@@ -33,9 +33,9 @@ namespace Babylon::Plugins::NativeOptimizations
         {
             const auto x{normals[index]}, y{normals[index+1]}, z{normals[index+2]};
 
-            normals[index] = x * m[0] + y * m[4] + z * m[8];
-            normals[index+1] = x * m[1] + y * m[5] + z * m[9];
-            normals[index+2] = x * m[2] + y * m[6] + z * m[10];
+            normals[index] = x * m[0U] + y * m[4U] + z * m[8U];
+            normals[index+1] = x * m[1U] + y * m[5U] + z * m[9U];
+            normals[index+2] = x * m[2U] + y * m[6U] + z * m[10U];
         }
     }
 
@@ -49,9 +49,9 @@ namespace Babylon::Plugins::NativeOptimizations
         {
             const auto x{normals[index]}, y{normals[index+1]}, z{normals[index+2]};
 
-            normals[index] = x * m[0] + y * m[4] + z * m[8];
-            normals[index+1] = x * m[1] + y * m[5] + z * m[9];
-            normals[index+2] = x * m[2] + y * m[6] + z * m[10];
+            normals[index] = x * m[0U] + y * m[4U] + z * m[8U];
+            normals[index+1] = x * m[1U] + y * m[5U] + z * m[9U];
+            normals[index+2] = x * m[2U] + y * m[6U] + z * m[10U];
         }
     }
 
@@ -67,7 +67,7 @@ namespace Babylon::Plugins::NativeOptimizations
 
         for (auto index = indexStart; index < indexStart + indexCount; index++)
         {
-            const auto offset = indices[index] * 3;
+            const auto offset{static_cast<size_t>(indices[index] * 3)};
             const auto x = positions[offset];
             const auto y = positions[offset + 1];
             const auto z = positions[offset + 2];
