@@ -10,6 +10,7 @@ if (APPLE)
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
 endif()
 
+# Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
 elseif(APPLE)
@@ -23,6 +24,24 @@ elseif(UNIX)
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
+
+#setting Graphics API
+if(APPLE)
+    set(GRAPHICS_API Metal)
+elseif(ANDROID)
+    set(GRAPHICS_API OpenGL)
+elseif(UNIX)
+    set(GRAPHICS_API OpenGL)
+elseif(WIN32)
+    if(VULKAN)
+        set(GRAPHICS_API Vulkan)
+    else()
+        set(GRAPHICS_API D3D)
+    endif()
+else()
+    message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
+endif()
+
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

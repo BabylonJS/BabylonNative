@@ -6,5 +6,9 @@
 
 namespace Babylon
 {
+#if APIVulkan
+    constexpr auto inline BgfxDefaultRendererType{bgfx::RendererType::Vulkan};
+#else
     constexpr auto inline BgfxDefaultRendererType{bgfx::RendererType::Direct3D11};
+#endif
 }
