@@ -61,6 +61,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("strokeText", &Context::StrokeText),
                 InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
                 InstanceMethod("setTransform", &Context::SetTransform),
+                InstanceMethod("dispose", &Context::Dispose),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
@@ -94,8 +95,22 @@ namespace Babylon::Polyfills::Internal
 
     Context::~Context()
     {
-        nvgDelete(m_nvg);
+        Dispose();
         m_cancellationSource->cancel();
+    }
+
+    void Context::Dispose(const Napi::CallbackInfo&)
+    {
+        Dispose();
+    }
+
+    void Context::Dispose()
+    {
+        if (m_nvg)
+        {
+            nvgDelete(m_nvg);
+            m_nvg = nullptr;
+        }
     }
 
     NVGcolor StringToColor(const std::string& colorString)
@@ -279,6 +294,10 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
+            if (str == "transparent" || !str.length())
+            {
+                return nvgRGBA(0, 0, 0, 0);
+            }
             auto iter = webColors.find(str);
             if (iter != webColors.end())
             {
@@ -287,7 +306,7 @@ namespace Babylon::Polyfills::Internal
             }
             else
             {
-                assert(0);
+                throw std::runtime_error{"Unknown color name"};
             }
         }
         return nvgRGBA(255, 0, 255, 255);
@@ -300,11 +319,11 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        NVGpaint paint = nvgLinearGradient(m_nvg, 0, 5, 0, 10, nvgRGBA(0, 160, 192, 255), nvgRGBA(0, 160, 192, 255));
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, left, top, width, height);
 
-        nvgFillPaint(m_nvg, paint);
+        const auto color = StringToColor(m_fillStyle);
+        nvgFillColor(m_nvg, color);
         nvgFill(m_nvg);
         SetDirty();
     }
@@ -519,26 +538,28 @@ namespace Babylon::Polyfills::Internal
         const auto height = m_canvas->GetHeight();
 
         nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-
-        if (!bgfx::getCaps()->originBottomLeft)
-        {
-            nvgScale(m_nvg, 1.f, -1.f);
-            nvgTranslate(m_nvg, 0.f, -float(height));
-        }
     }
 
     void Context::EndFrame()
     {
-        m_canvas->UpdateRenderTarget();
+        // on some systems (Ubuntu), the framebuffer contains garbage.
+        // Unlike other systems where it's cleared.
+        bool needClear = m_canvas->UpdateRenderTarget();
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
-                frameBuffer.SetViewPort(encoder, 0.f, 0.f, 1.f, 1.f);
+                frameBuffer.Bind(*encoder);
+                if (needClear)
+                {
+                    frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
+                }
+                frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);
+                frameBuffer.Unbind(*encoder);
                 BeginFrame();
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {

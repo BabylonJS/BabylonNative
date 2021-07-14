@@ -69,13 +69,13 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetCanvas(const Napi::CallbackInfo&);
-
+        void Dispose(const Napi::CallbackInfo&);
+        void Dispose();
         void SetDirty();
         void BeginFrame();
         void EndFrame();
 
         NativeCanvas* m_canvas;
-        bgfx::ViewId m_viewId;
         NVGcontext* m_nvg;
 
         std::string m_fillStyle{};

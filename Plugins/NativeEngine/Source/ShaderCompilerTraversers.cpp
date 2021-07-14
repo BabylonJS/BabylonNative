@@ -737,8 +737,8 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             static void Traverse(TProgram& program)
             {
-                auto intermediate{program.getIntermediate(EShLangFragment)};
-                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{intermediate};
+                auto intermediate{ program.getIntermediate(EShLangFragment) };
+                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{ intermediate };
                 intermediate->getTreeRoot()->traverse(&invertYDerivativeOperandsTraverser);
             }
 
@@ -760,11 +760,11 @@ namespace Babylon::ShaderCompilerTraversers
 
         private:
             InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
+                : m_intermediate{ intermediate }
             {
             }
 
-            TIntermediate* m_intermediate;
+            TIntermediate* m_intermediate{};
         };
     }
 

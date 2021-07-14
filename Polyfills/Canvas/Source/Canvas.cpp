@@ -5,6 +5,7 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
+#include <NativeEngine.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -18,7 +19,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
-                StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
+                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
@@ -37,15 +38,25 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::~NativeCanvas()
     {
+        Dispose();
     }
 
-    void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
+    Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
-        std::string fontName = info[0].As<Napi::String>().Utf8Value();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
+        std::vector<uint8_t> fontBuffer(buffer.ByteLength());
+        memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
-        fontsInfos[fontName] = std::vector<uint8_t>(buffer.ByteLength());
-        memcpy(fontsInfos[fontName].data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+        auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
+        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
+        auto deferred{Napi::Promise::Deferred::New(info.Env())};
+        arcana::make_task(graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
+            fontsInfos[fontName] = fontData;
+        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{ info.Env() }, deferred]() {
+            deferred.Resolve(env.Undefined());
+        });
+
+        return deferred.Promise();
     }
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
@@ -83,51 +94,38 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void NativeCanvas::UpdateRenderTarget()
+    bool NativeCanvas::UpdateRenderTarget()
     {
         if (m_dirty)
         {
-            if (m_frameBufferHandle.idx != bgfx::kInvalidHandle)
-            {
-                m_graphicsImpl.RemoveFrameBuffer(*m_frameBuffer);
-                bgfx::destroy(m_frameBufferHandle);
-            }
-            m_frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-            m_frameBuffer = &m_graphicsImpl.AddFrameBuffer(m_frameBufferHandle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false);
-            assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
+            auto handle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+            assert(handle.idx != bgfx::kInvalidHandle);
+            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
+            return true;
         }
+        return false;
     }
-
-    struct TextureData final
-    {
-        ~TextureData()
-        {
-            if (bgfx::isValid(Handle))
-            {
-                bgfx::destroy(Handle);
-            }
-        }
-
-        bgfx::TextureHandle Handle{ bgfx::kInvalidHandle };
-        uint32_t Width{ 0 };
-        uint32_t Height{ 0 };
-        uint32_t Flags{ 0 };
-        uint8_t AnisotropicLevel{ 0 };
-    };
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
-        assert(m_frameBufferHandle.idx != bgfx::kInvalidHandle);
-        auto data = new TextureData();
-        data->Handle = bgfx::getTexture(m_frameBufferHandle);
-        data->Width = m_width;
-        data->Height = m_height;
-        return Napi::External<TextureData>::New(info.Env(), data);
+        assert(m_frameBuffer->Handle().idx != bgfx::kInvalidHandle);
+        const auto textureData = new TextureData();
+        textureData->Handle = bgfx::getTexture(m_frameBuffer->Handle());
+        textureData->OwnsHandle = false;
+        textureData->Width = m_width;
+        textureData->Height = m_height;
+        return Napi::External<TextureData>::New(info.Env(), textureData, [](Napi::Env, TextureData* data) { delete data; });
+    }
+
+    void NativeCanvas::Dispose()
+    {
+        m_frameBuffer.reset();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
     {
+        Dispose();
     }
 }
 
