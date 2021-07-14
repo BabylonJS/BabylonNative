@@ -323,7 +323,11 @@ namespace xr
             };
             std::array<XrPath, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionPaths{};
 
-         //   static constexpr char* GAZE__PATH
+            static constexpr char* GAZE_SUBACTION_PATH_PREFIX
+            {
+                "user/eyes_ext"
+            };
+            XrPath EyeSubactionPath{};
 
             static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_NAME{ "controller_get_pose_action" };
             static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
@@ -387,6 +391,12 @@ namespace xr
             static constexpr char* HAND_GET_SQUEEZE_PATH_SUFFIX{ "/input/squeeze/value" };
             std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> HandGetSqueezeAction{};
 
+            static constexpr char* EYE_GET_POSE_ACTION_NAME{ "eye_get_pose_action" };
+            static constexpr char* EYE_GET_POSE_ACTION_LOCALIZED_NAME{ "Eye Pose" };
+            static constexpr char* EYE_GET_POSE_PATH_SUFFIX{ "/input/gaze_ext/pose" };
+            XrAction EyeGetPoseAction{};
+            XrSpace EyePoseActionSpace{};
+
             static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
             static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
             static constexpr char* MICROSOFT_HAND_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/hand_interaction" };
@@ -394,6 +404,7 @@ namespace xr
             XrPath DefaultXRInteractionPath{};
             XrPath MicrosoftXRInteractionPath{};
             XrPath MicrosoftHandInteractionPath{};
+            XrPath MicrosoftEyeInteractionPath{};
 
             std::vector<Frame::InputSource> ActiveInputSources{};
             std::vector<FeaturePoint> FeaturePointCloud{};
@@ -640,7 +651,7 @@ namespace xr
                 return;
             }
 
-
+//maybe nothing happens here?
         }
 
     private:
@@ -662,7 +673,7 @@ namespace xr
             XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES, &handTrackingSystemProperties };
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
-            SupportsEyeTracking = !!eyeTrackingSystemProperties.supportsEyeGazeInteraction;
+            SupportsEyeTracking = !!eyeTrackingSystemProperties.supportsEyeGazeInteraction; // redundant property alongside HmdImpl.Context.Extensions()->EyeTrackingSupported?
             InitializeEyeResources();
 
             // Initialize the hand resources
@@ -763,8 +774,9 @@ namespace xr
             std::vector<XrActionSuggestedBinding> defaultBindings{};
             std::vector<XrActionSuggestedBinding> microsoftControllerBindings{};
             std::vector<XrActionSuggestedBinding> microsoftHandBindings{};
+            XrActionSuggestedBinding eyeTrackingBinding{};
 
-            // Create controller get grip pose action, suggested bindings, and spaces
+            // Create the controller get grip pose action, suggested bindings, and spaces
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
@@ -801,7 +813,7 @@ namespace xr
                 }
             }
 
-            // Create controller get aim pose action, suggested bindings, and spaces
+            // Create the controller get aim pose action, suggested bindings, and spaces
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
@@ -835,6 +847,37 @@ namespace xr
                     actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
                     actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
                     XrCheck(xrCreateActionSpace(session, &actionSpaceCreateInfo, &ActionResources.ControllerAimPoseSpaces[idx]));
+                }
+            }
+
+            // Create the eye tracking get pose action, suggested binding, and space
+                    if (HmdImpl.Context.Extensions()->EyeTrackingSupported)
+            {
+                XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
+                actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+                strcpy_s(actionInfo.actionName, ActionResources.EYE_GET_POSE_ACTION_NAME);
+                strcpy_s(actionInfo.localizedActionName, ActionResources.EYE_GET_POSE_ACTION_LOCALIZED_NAME);
+         //       actionInfo.countSubactionPaths = 1;
+         //       actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
+                XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.EyeGetPoseAction));
+
+                    // Create suggested binding
+                    std::string path{ ActionResources.GAZE_SUBACTION_PATH_PREFIX };
+                    path.append(ActionResources.EYE_GET_POSE_PATH_SUFFIX);
+
+                    eyeTrackingBinding.action = ActionResources.EyeGetPoseAction;
+                    XrCheck(xrStringToPath(instance, path.data(), &eyeTrackingBinding.binding));
+
+                // For each controller subaction
+            //    for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
+                {
+
+                    // Create subaction space
+                    XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
+                    actionSpaceCreateInfo.action = ActionResources.EyeGetPoseAction;
+                    actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
+                 //   actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
+                    XrCheck(xrCreateActionSpace(session, &actionSpaceCreateInfo, &ActionResources.EyePoseActionSpace));
                 }
             }
 
@@ -975,6 +1018,16 @@ namespace xr
                 microsoftHandSuggestedBindings.suggestedBindings = microsoftHandBindings.data();
                 microsoftHandSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftHandBindings.size();
                 XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftHandSuggestedBindings));
+            }
+
+            if (HmdImpl.Context.Extensions()->EyeTrackingSupported)
+            {
+                // Provide Microsoft hand suggested binding to instance
+                XrInteractionProfileSuggestedBinding xrEyeSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+                XrCheck(xrStringToPath(instance, ActionResources.XR_EYE_INTERACTION_PROFILE, &xrEyeSuggestedBindings.interactionProfile));
+                xrEyeSuggestedBindings.suggestedBindings = &eyeTrackingBinding;
+                xrEyeSuggestedBindings.countSuggestedBindings = 1;
+                XrCheck(xrSuggestInteractionProfileBindings(instance, &xrEyeSuggestedBindings));
             }
 
             XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
