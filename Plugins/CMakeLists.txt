@@ -17,3 +17,5 @@ add_subdirectory(NativeXr)
 # Add NativeCamera
 add_subdirectory(NativeCamera)
 
+# Add NativeOptimizations
+add_subdirectory(NativeOptimizations)

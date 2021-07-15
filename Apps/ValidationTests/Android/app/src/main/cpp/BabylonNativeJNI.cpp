@@ -13,6 +13,7 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -93,6 +94,8 @@ extern "C"
                 });
 
                 Babylon::Plugins::NativeEngine::Initialize(env);
+
+                Babylon::Plugins::NativeOptimizations::Initialize(env);
 
                 Babylon::Plugins::NativeXr::Initialize(env);
 

@@ -15,6 +15,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
+#include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -103,6 +104,7 @@ extern "C"
                 });
 
                 Babylon::Plugins::NativeEngine::Initialize(env);
+                Babylon::Plugins::NativeOptimizations::Initialize(env);
 
                 g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
                 g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });

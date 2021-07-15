@@ -5,6 +5,7 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -90,6 +91,8 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
         Babylon::Polyfills::Canvas::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
+
+        Babylon::Plugins::NativeOptimizations::Initialize(env);
 
         Babylon::TestUtils::CreateInstance(env, engineView);
     });

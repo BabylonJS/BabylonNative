@@ -4,6 +4,7 @@
 #import <Babylon/Graphics.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Window.h>
@@ -53,6 +54,8 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
+
+        Babylon::Plugins::NativeOptimizations::Initialize(env);
 
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
