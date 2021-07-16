@@ -35,26 +35,20 @@ Step 1 for all development environments and targets is to clone the repo. Use a 
 git clone https://github.com/BabylonJS/BabylonReactNative
 ```
 
-Babylon React Native makes extensive use of submodules to supply its dependencies, so it's also necessary to set up the submodules.
-
-```
-cd BabylonReactNative
-git submodule update --init --recursive
-```
-
-The Playground sample/test app is a standard React Native app, and as such also makes extensive use of NPM packages to supply its dependencies, so it's also necessary to install these packages.
+The Playground sample/test app is a standard React Native app, and as such makes extensive use of NPM packages to supply its dependencies, so it's also necessary to install these packages.
 
 ```
 cd Apps/Playground
 npm install
 ```
 
-For iOS, CocoaPods are also used, and these must be installed.
+This will also automatically do the following to prepare your repo for development:
 
-```
-cd Apps/Playground/ios
-pod install --repo-update
-```
+- Update git submodules to fetch Babylon Native and its dependencies
+- [MacOS only] Run CMake to generate the iOS XCode project for Babylon React Native
+- [MacOS only] Run `pod install` to install cocoa pod depdendencies
+
+After merging upstream changes in the future, you will need to either run `npm install` again, or run individual commands for the above operations (e.g. `git submodule update --init --submodule` / `npm run iosCMake` / `pod install`).
 
 ### **Configuring a Mac Dev Environment**
 
@@ -128,13 +122,9 @@ After having run the above commands, you can also open `Apps/Playground/android`
 
 #### iOS
 
-iOS can only be built on a Mac. Additionally, `CMake` must manually be run to generate the XCode project that the [Playground XCode workspace](Apps/Playground/ios/Playground.xcworkspace/contents.xcworkspacedata) includes.
+iOS can only be built on a Mac.
 
 ```
-pushd Apps/Playground/node_modules/@babylonjs/react-native/ios
-cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF -DENABLE_PCH=OFF .
-popd
-
 cd Apps/Playground
 npm run ios
 ```
