@@ -686,13 +686,7 @@ namespace Babylon
         auto uniforms = Napi::Array::New(info.Env(), length);
         for (uint32_t index = 0; index < length; ++index)
         {
-            if (!names[index].IsString())
-            {
-                uniforms[index] = info.Env().Null();
-                continue;
-            }
-
-            const auto name = names[index].As<Napi::String>().Utf8Value();
+            const auto name = names[index].IsString() ? names[index].As<Napi::String>().Utf8Value() : "";
 
             auto vertexFound = program->VertexUniformInfos.find(name);
             auto fragmentFound = program->FragmentUniformInfos.find(name);
