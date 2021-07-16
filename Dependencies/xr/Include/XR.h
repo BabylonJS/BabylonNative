@@ -246,6 +246,7 @@ namespace xr
                     bool JointsTrackedThisFrame{};
                     bool GamepadTrackedThisFrame{};
                     bool HandTrackedThisFrame{};
+                    bool EyesTrackedThisFrame{};
                     std::string InteractionProfileName{""};
                     GamePad GamepadObject{};
                     Space GripSpace{};
@@ -300,6 +301,7 @@ namespace xr
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<FeaturePoint>& FeaturePointCloud;
+                Space& EyeTrackerSpace{};
 
                 std::vector<SceneObject::Identifier>UpdatedSceneObjects;
                 std::vector<SceneObject::Identifier>RemovedSceneObjects;

@@ -177,6 +177,11 @@ namespace
                 jsInputSource.Set("hand", env.Null());
             }
         }
+
+        if (inputSource.EyesTrackedThisFrame)
+        {
+            jsInputSource.Set("eye", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.EyeSpace));
+        }
     }
 
     void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)
