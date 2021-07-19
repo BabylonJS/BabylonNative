@@ -1854,7 +1854,6 @@ namespace xr
                     secondaryViewLayer.space = sceneSpace;
                     secondaryViewLayer.viewCount = static_cast<uint32_t>(secondaryRenderResource.ProjectionLayerViews.size());
                     secondaryViewLayer.views = secondaryRenderResource.ProjectionLayerViews.data();
-
                     secondaryViewLayerInfo.layerCount = 1;
                     secondaryViewLayerInfo.layers = &secondaryLayersPtr;
                 }
