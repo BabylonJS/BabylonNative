@@ -1178,7 +1178,7 @@ namespace xr {
             }
 
             // Now perform the actual hit test and process the results
-            auto hitTestResults = [sessionImpl.Frame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            auto hitTestResults = [SystemImpl.XrContext->Frame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
             for (ARHitTestResult* result in hitTestResults) {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
