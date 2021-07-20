@@ -139,3 +139,41 @@ namespace Babylon::Plugins::NativeXr
 }
 #endif
 #endif
+
+#if __has_include("IXrContextARKit.h")
+#include "IXrContextARKit.h"
+#if __has_include("jsi/jsi.h")
+namespace Babylon::Plugins::NativeXr
+{
+    bool TryGetXrContext(facebook::jsi::Runtime& jsiRuntime, IXrContextARKit*& xrContext)
+    {
+        xrContext = nullptr;
+        uintptr_t nativePtr{reinterpret_cast<uintptr_t>(nullptr)};
+        if (TryGetXrContext(jsiRuntime, "ARKit", nativePtr))
+        {
+            xrContext = reinterpret_cast<IXrContextARKit*>(nativePtr);
+            return true;
+        }
+        
+        return false;
+    }
+}
+#endif
+#if __has_include("napi/env.h")
+namespace Babylon::Plugins::NativeXr
+{
+    bool TryGetXrContext(Napi::Env env, IXrContextARKit*& xrContext)
+    {
+        xrContext = nullptr;
+        uintptr_t nativePtr{reinterpret_cast<uintptr_t>(nullptr)};
+        if (TryGetXrContext(env, "ARKit", nativePtr))
+        {
+            xrContext = reinterpret_cast<IXrContextARKit*>(nativePtr);
+            return true;
+        }
+        
+        return false;
+    }
+}
+#endif
+#endif

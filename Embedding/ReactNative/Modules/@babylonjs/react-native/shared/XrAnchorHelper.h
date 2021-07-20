@@ -183,3 +183,47 @@ namespace Babylon::Plugins::NativeXr
 }
 #endif
 #endif
+
+#if __has_include("IXrContextARKit.h")
+#include "IXrContextARKit.h"
+#if __has_include("jsi/jsi.h")
+namespace Babylon::Plugins::NativeXr
+{
+    bool TryGetNativeAnchor(facebook::jsi::Runtime& jsiRuntime, facebook::jsi::Value& jsAnchor, ARAnchor*& nativeAnchor)
+    {
+        nativeAnchor = nullptr;
+        uintptr_t nativeAnchorPtr{reinterpret_cast<uintptr_t>(nullptr)};
+        if (TryGetNativeAnchor(jsiRuntime, jsAnchor, nativeAnchorPtr))
+        {
+            nativeAnchor = reinterpret_cast<ARAnchor*>(nativeAnchorPtr);
+            return true;
+        }
+
+        return false;
+    }
+}
+#endif
+#if __has_include("napi/env.h")
+namespace Babylon::Plugins::NativeXr
+{
+    bool TryGetNativeAnchor(Napi::Env env, Napi::Value anchor, ARAnchor*& nativeAnchor)
+    {
+        nativeAnchor = nullptr;
+        uintptr_t nativeAnchorPtr{reinterpret_cast<uintptr_t>(nullptr)};
+        if (TryGetNativeAnchor(env, anchor, nativeAnchorPtr))
+        {
+            nativeAnchor = reinterpret_cast<ARAnchor*>(nativeAnchorPtr);
+            return true;
+        }
+
+        return false;
+    }
+
+    bool TryDeclareNativeAnchor(Napi::Env env, const Napi::Value& session, ARAnchor* nativeAnchor, Napi::Value& xrAnchor)
+    {
+        uintptr_t nativeAnchorPtr{reinterpret_cast<uintptr_t>(nativeAnchor)};
+        return TryDeclareNativeAnchor(env, session, nativeAnchorPtr, xrAnchor);
+    }
+}
+#endif
+#endif
