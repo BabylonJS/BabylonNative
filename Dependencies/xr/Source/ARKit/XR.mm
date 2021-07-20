@@ -862,6 +862,17 @@ namespace xr {
         }
 
         /**
+         Declares an ARKit anchor that was created outside the BabylonNative xr system.
+         */
+        xr::Anchor DeclareAnchor(NativeAnchorPtr anchor)
+        {
+            const auto arAnchor = (__bridge ARAnchor*)anchor;
+            nativeAnchors.push_back(arAnchor);
+            const auto pose{TransformToPose(arAnchor.transform)};
+            return { pose, anchor };
+        }
+        
+        /**
          For a given anchor update the current pose, and determine if it is still valid.
          */
         void UpdateAnchor(xr::Anchor& anchor) {
@@ -1222,8 +1233,8 @@ namespace xr {
         return m_impl->sessionImpl.CreateAnchor(pose);
     }
     
-    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
-        throw std::runtime_error("not implemented"); 
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr anchor) const {
+        return m_impl->sessionImpl.DeclareAnchor(anchor);
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
