@@ -13,7 +13,7 @@ add_library(napi ${SOURCES})
 target_include_directories(napi
     PUBLIC "include")
 
-target_link_libraries(napi
+target_link_to_dependencies(napi
     PUBLIC jsi)
 
 if(WIN32)
