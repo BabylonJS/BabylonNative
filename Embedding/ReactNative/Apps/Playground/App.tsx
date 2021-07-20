@@ -36,7 +36,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
       (scene.activeCamera as ArcRotateCamera).beta -= Math.PI / 8;
       setCamera(scene.activeCamera!);
       scene.createDefaultLight(true);
-      const rootNode = new TransformNode("Root Container", scene);
+      const rootNode = new TransformNode('Root Container', scene);
       setRootNode(rootNode);
 
       const deviceSourceManager = new DeviceSourceManager(engine);
@@ -63,7 +63,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
         }
       });
 
-      const transformContainer = new TransformNode("Transform Container", scene);
+      const transformContainer = new TransformNode('Transform Container', scene);
       transformContainer.parent = rootNode;
       transformContainer.scaling.scaleInPlace(0.2);
       transformContainer.position.y -= .2;
@@ -72,7 +72,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
         transformContainer.rotate(Vector3.Up(), 0.005 * scene.getAnimationRatio());
       };
 
-      SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb").then(result => {
+      SceneLoader.ImportMeshAsync('', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb').then(result => {
         const mesh = result.meshes[0];
         mesh.parent = transformContainer;
       });
@@ -86,7 +86,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
   }, [rootNode, scale]);
 
   const trackingStateToString = (trackingState: WebXRTrackingState | undefined) : string => {
-    return trackingState === undefined ? "" : WebXRTrackingState[trackingState];
+    return trackingState === undefined ? '' : WebXRTrackingState[trackingState];
   };
 
   const onToggleXr = useCallback(() => {
@@ -96,7 +96,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
       } else {
         if (rootNode !== undefined && scene !== undefined) {
           const xr = await scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true })
-          const session = await xr.baseExperience.enterXRAsync("immersive-ar", "unbounded", xr.renderTarget);
+          const session = await xr.baseExperience.enterXRAsync('immersive-ar', 'unbounded', xr.renderTarget);
           setXrSession(session);
           session.onXRSessionEnded.add(() => {
             setXrSession(undefined);
@@ -124,7 +124,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
 
   const onSnapshot = useCallback(async () => {
     if (engineViewCallbacks) {
-      setSnapshotData("data:image/jpeg;base64," + await engineViewCallbacks.takeSnapshot());
+      setSnapshotData('data:image/jpeg;base64,' + await engineViewCallbacks.takeSnapshot());
     }
   }, [engineViewCallbacks]);
 
@@ -132,16 +132,16 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
     <>
       <View style={props.style}>
         <Button title="Toggle EngineView" onPress={() => { setToggleView(!toggleView) }} />
-        <Button title={ xrSession ? "Stop XR" : "Start XR"} onPress={onToggleXr} />
+        <Button title={ xrSession ? 'Stop XR' : 'Start XR'} onPress={onToggleXr} />
         { !toggleView &&
           <View style={{flex: 1}}>
             { enableSnapshots && 
               <View style ={{flex: 1}}>
-                <Button title={"Take Snapshot"} onPress={onSnapshot}/>
+                <Button title={'Take Snapshot'} onPress={onSnapshot}/>
                 <Image style={{flex: 1}} source={{uri: snapshotData }} />
               </View>
             }
-            <EngineView style={props.style} camera={camera} onInitialized={onInitialized} />
+            <EngineView camera={camera} onInitialized={onInitialized} />
             <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} step={0.01} value={defaultScale} onValueChange={setScale} />
             <Text style={{fontSize: 12, color: 'yellow',  position: 'absolute', margin: 10}}>{trackingStateToString(trackingState)}</Text>
           </View>
@@ -163,7 +163,7 @@ const App = () => {
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={{flex: 1, backgroundColor: "white"}}>
+      <SafeAreaView style={{flex: 1, backgroundColor: 'white'}}>
         { !toggleScreen &&
           <EngineScreen style={{flex: 1}} />
         }
@@ -173,7 +173,7 @@ const App = () => {
             <Text style={{fontSize: 12}}>Engine has been disposed, and will be recreated.</Text>
           </View>
         }
-        <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen) }} />
+        <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen); }} />
       </SafeAreaView>
     </>
   );

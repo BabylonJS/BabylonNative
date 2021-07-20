@@ -135,7 +135,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
 
     if (initialized !== false) {
         return (
-            <View style={[props.style, { overflow: "hidden" }]}>
+            <View style={[{ flex: 1 }, props.style, { overflow: "hidden" }]}>
                 { initialized && <NativeEngineView ref={engineViewRef} style={{ flex: 1 }} onSnapshotDataReturned={snapshotDataReturnedHandler} /> }
                 { fps && <Text style={{ color: 'yellow', position: 'absolute', margin: 10, right: 0, top: 0 }}>FPS: {Math.round(fps)}</Text> }
             </View>

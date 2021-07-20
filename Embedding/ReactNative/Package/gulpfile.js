@@ -1,11 +1,13 @@
 const util = require('util');
 const fs = require('fs');
+const path = require('path');
 const readdirAsync = util.promisify(fs.readdir);
 const log = require('fancy-log');
 const gulp = require('gulp');
 const shelljs = require('shelljs');
 const rename = require('gulp-rename');
-const { join } = require('path');
+const glob = require('glob');
+const chalk = require('chalk');
 
 function exec(command, workingDirectory = '.', logCommand = true) {
   if (logCommand) {
@@ -25,6 +27,15 @@ const clean = async () => {
   if (shelljs.test('-d', 'Assembled-Windows')) {
     shelljs.rm('-r', 'Assembled');
   }
+};
+
+const buildTypeScript = async () => {
+  exec('node_modules/typescript/bin/tsc --noEmit false --outDir ../../../Package/Assembled', '../Modules/@babylonjs/react-native');
+
+  // Update the 'main' property in package.json to be 'index.js' instead of 'index.ts'
+  const packageJson = JSON.parse(fs.readFileSync('Assembled/package.json'));
+  packageJson.main = `${path.basename(packageJson.main, '.ts')}.js`;
+  fs.writeFileSync('Assembled/package.json', JSON.stringify(packageJson, null, 4));
 };
 
 const makeXCodeProj = async () => {
@@ -208,9 +219,7 @@ const buildUWPPlayground = gulp.parallel(
 const buildUWP = gulp.series(makeUWPProject, buildUWPProject);
 
 const copyCommonFiles = () => {
-  return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/package.json')
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/README.md'))
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/*.ts*'))
+  return gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/README.md')
     .pipe(gulp.src('react-native-babylon.podspec'))
     .pipe(gulp.dest('Assembled'));
 };
@@ -389,94 +398,127 @@ const copyUWPFiles = gulp.series(
     copyOpenXRHelperHeaders));
 
 const validate = async () => {
-  // When the package contents are updated *and validated*, update the expected below by running 'find Assembled | pbcopy' and pasting it over the expected string.
+  // When the package contents are updated *and validated*, update the expected below from the output of the failed validation console output (run `gulp validate`).
   // This helps ensure a bad package is not accidentally published due to tooling changes, etc.
-  const expected =
-`Assembled
-Assembled/EngineHook.ts
-Assembled/shared
-Assembled/shared/XrContextHelper.h
-Assembled/shared/XrAnchorHelper.h
-Assembled/shared/BabylonNative.h
-Assembled/EngineView.tsx
-Assembled/ios
-Assembled/ios/BabylonNativeInterop.mm
-Assembled/ios/libs
-Assembled/ios/libs/libxr.a
-Assembled/ios/libs/libMachineIndependent.a
-Assembled/ios/libs/libWindow.a
-Assembled/ios/libs/libbimg.a
-Assembled/ios/libs/libOGLCompiler.a
-Assembled/ios/libs/libastc.a
-Assembled/ios/libs/libNativeEngine.a
-Assembled/ios/libs/libNativeXr.a
-Assembled/ios/libs/libNativeCapture.a
-Assembled/ios/libs/libspirv-cross-glsl.a
-Assembled/ios/libs/libNativeInput.a
-Assembled/ios/libs/libJsRuntime.a
-Assembled/ios/libs/libGraphics.a
-Assembled/ios/libs/libOSDependent.a
-Assembled/ios/libs/libXMLHttpRequest.a
-Assembled/ios/libs/libUrlLib.a
-Assembled/ios/libs/libastc-codec.a
-Assembled/ios/libs/libCanvas.a
-Assembled/ios/libs/libGenericCodeGen.a
-Assembled/ios/libs/libspirv-cross-core.a
-Assembled/ios/libs/libspirv-cross-msl.a
-Assembled/ios/libs/libspirv-cross-hlsl.a
-Assembled/ios/libs/libbx.a
-Assembled/ios/libs/libnapi.a
-Assembled/ios/libs/libBabylonNative.a
-Assembled/ios/libs/libSPIRV.a
-Assembled/ios/libs/libbgfx.a
-Assembled/ios/libs/libglslang.a
-Assembled/ios/EngineViewManager.mm
-Assembled/ios/BabylonNativeInterop.h
-Assembled/ios/ReactNativeBabylon.xcodeproj
-Assembled/ios/ReactNativeBabylon.xcodeproj/project.pbxproj
-Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace
-Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace/xcshareddata
-Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
-Assembled/ios/BabylonModule.mm
-Assembled/README.md
-Assembled/package.json
-Assembled/android
-Assembled/android/include
-Assembled/android/include/IXrContextARCore.h
-Assembled/android/build.gradle
-Assembled/android/src
-Assembled/android/src/main
-Assembled/android/src/main/AndroidManifest.xml
-Assembled/android/src/main/java
-Assembled/android/src/main/java/com
-Assembled/android/src/main/java/com/babylonreactnative
-Assembled/android/src/main/java/com/babylonreactnative/BabylonNativeInterop.java
-Assembled/android/src/main/java/com/babylonreactnative/SnapshotDataReturnedEvent.java
-Assembled/android/src/main/java/com/babylonreactnative/BabylonModule.java
-Assembled/android/src/main/java/com/babylonreactnative/BabylonPackage.java
-Assembled/android/src/main/java/com/babylonreactnative/EngineViewManager.java
-Assembled/android/src/main/java/com/babylonreactnative/EngineView.java
-Assembled/android/src/main/jniLibs
-Assembled/android/src/main/jniLibs/armeabi-v7a
-Assembled/android/src/main/jniLibs/armeabi-v7a/libturbomodulejsijni.so
-Assembled/android/src/main/jniLibs/armeabi-v7a/libBabylonNative.so
-Assembled/android/src/main/jniLibs/x86
-Assembled/android/src/main/jniLibs/x86/libturbomodulejsijni.so
-Assembled/android/src/main/jniLibs/x86/libBabylonNative.so
-Assembled/android/src/main/jniLibs/arm64-v8a
-Assembled/android/src/main/jniLibs/arm64-v8a/libturbomodulejsijni.so
-Assembled/android/src/main/jniLibs/arm64-v8a/libBabylonNative.so
-Assembled/react-native-babylon.podspec
-Assembled/NativeCapture.ts
-Assembled/index.ts
-Assembled/VersionValidation.ts
-Assembled/BabylonModule.ts
-Assembled/ReactNativeEngine.ts
-`;
+  const expected = [
+    'Assembled/android',
+    'Assembled/android/build.gradle',
+    'Assembled/android/include',
+    'Assembled/android/include/IXrContextARCore.h',
+    'Assembled/android/src',
+    'Assembled/android/src/main',
+    'Assembled/android/src/main/AndroidManifest.xml',
+    'Assembled/android/src/main/java',
+    'Assembled/android/src/main/java/com',
+    'Assembled/android/src/main/java/com/babylonreactnative',
+    'Assembled/android/src/main/java/com/babylonreactnative/BabylonModule.java',
+    'Assembled/android/src/main/java/com/babylonreactnative/BabylonNativeInterop.java',
+    'Assembled/android/src/main/java/com/babylonreactnative/BabylonPackage.java',
+    'Assembled/android/src/main/java/com/babylonreactnative/EngineView.java',
+    'Assembled/android/src/main/java/com/babylonreactnative/EngineViewManager.java',
+    'Assembled/android/src/main/java/com/babylonreactnative/SnapshotDataReturnedEvent.java',
+    'Assembled/android/src/main/jniLibs',
+    'Assembled/android/src/main/jniLibs/arm64-v8a',
+    'Assembled/android/src/main/jniLibs/arm64-v8a/libBabylonNative.so',
+    'Assembled/android/src/main/jniLibs/arm64-v8a/libturbomodulejsijni.so',
+    'Assembled/android/src/main/jniLibs/armeabi-v7a',
+    'Assembled/android/src/main/jniLibs/armeabi-v7a/libBabylonNative.so',
+    'Assembled/android/src/main/jniLibs/armeabi-v7a/libturbomodulejsijni.so',
+    'Assembled/android/src/main/jniLibs/x86',
+    'Assembled/android/src/main/jniLibs/x86/libBabylonNative.so',
+    'Assembled/android/src/main/jniLibs/x86/libturbomodulejsijni.so',
+    'Assembled/BabylonModule.d.ts',
+    'Assembled/BabylonModule.js',
+    'Assembled/BabylonModule.js.map',
+    'Assembled/EngineHook.d.ts',
+    'Assembled/EngineHook.js',
+    'Assembled/EngineHook.js.map',
+    'Assembled/EngineView.d.ts',
+    'Assembled/EngineView.js',
+    'Assembled/EngineView.js.map',
+    'Assembled/index.d.ts',
+    'Assembled/index.js',
+    'Assembled/index.js.map',
+    'Assembled/ios',
+    'Assembled/ios/BabylonModule.mm',
+    'Assembled/ios/BabylonNativeInterop.h',
+    'Assembled/ios/BabylonNativeInterop.mm',
+    'Assembled/ios/EngineViewManager.mm',
+    'Assembled/ios/libs',
+    'Assembled/ios/libs/libastc-codec.a',
+    'Assembled/ios/libs/libastc.a',
+    'Assembled/ios/libs/libBabylonNative.a',
+    'Assembled/ios/libs/libbgfx.a',
+    'Assembled/ios/libs/libbimg.a',
+    'Assembled/ios/libs/libbx.a',
+    'Assembled/ios/libs/libCanvas.a',
+    'Assembled/ios/libs/libGenericCodeGen.a',
+    'Assembled/ios/libs/libglslang.a',
+    'Assembled/ios/libs/libGraphics.a',
+    'Assembled/ios/libs/libJsRuntime.a',
+    'Assembled/ios/libs/libMachineIndependent.a',
+    'Assembled/ios/libs/libnapi.a',
+    'Assembled/ios/libs/libNativeCapture.a',
+    'Assembled/ios/libs/libNativeEngine.a',
+    'Assembled/ios/libs/libNativeInput.a',
+    'Assembled/ios/libs/libNativeXr.a',
+    'Assembled/ios/libs/libOGLCompiler.a',
+    'Assembled/ios/libs/libOSDependent.a',
+    'Assembled/ios/libs/libspirv-cross-core.a',
+    'Assembled/ios/libs/libspirv-cross-glsl.a',
+    'Assembled/ios/libs/libspirv-cross-hlsl.a',
+    'Assembled/ios/libs/libspirv-cross-msl.a',
+    'Assembled/ios/libs/libSPIRV.a',
+    'Assembled/ios/libs/libUrlLib.a',
+    'Assembled/ios/libs/libWindow.a',
+    'Assembled/ios/libs/libXMLHttpRequest.a',
+    'Assembled/ios/libs/libxr.a',
+    'Assembled/ios/ReactNativeBabylon.xcodeproj',
+    'Assembled/ios/ReactNativeBabylon.xcodeproj/project.pbxproj',
+    'Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace',
+    'Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace/xcshareddata',
+    'Assembled/ios/ReactNativeBabylon.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings',
+    'Assembled/NativeCapture.d.ts',
+    'Assembled/NativeCapture.js',
+    'Assembled/NativeCapture.js.map',
+    'Assembled/package.json',
+    'Assembled/react-native-babylon.podspec',
+    'Assembled/ReactNativeEngine.d.ts',
+    'Assembled/ReactNativeEngine.js',
+    'Assembled/ReactNativeEngine.js.map',
+    'Assembled/README.md',
+    'Assembled/shared',
+    'Assembled/shared/BabylonNative.h',
+    'Assembled/shared/XrAnchorHelper.h',
+    'Assembled/shared/XrContextHelper.h',
+    'Assembled/VersionValidation.d.ts',
+    'Assembled/VersionValidation.js',
+    'Assembled/VersionValidation.js.map'
+  ];
 
-  const result = shelljs.exec('find Assembled', {silent: true});
-  if (result.stdout != expected) {
-    throw `Expected:\n${expected}\n\nActual:\n${result.stdout}`;
+  const actual = glob.sync('Assembled/**/*');
+
+  const extras = actual.filter(path => !expected.includes(path));
+  const missing = expected.filter(path => !actual.includes(path));
+
+  let isValid = true;
+
+  if (extras.length !== 0) {
+    console.error(chalk.white.bgRedBright(`The Assembled directory contains unexpected files:`));
+    console.log(extras);
+    isValid = false;
+  }
+
+  if (missing.length !== 0) {
+    console.error(chalk.white.bgRedBright(`The Assembled directory is missing some expected files:`));
+    console.log(missing);
+    isValid = false;
+  }
+
+  if (!isValid) {
+    console.log(chalk.black.bgCyan(`If the Assembled directory is correct, update the file validation list in gulpfile.js with the following:`))
+    console.log(actual);
+    throw `The Assembled directory does not contain the expected files.`;
   }
 }
 
@@ -490,12 +532,13 @@ const createPackageUWP = async () => {
 
 const copyFiles = gulp.parallel(copyCommonFiles, copySharedFiles, copyIOSFiles, copyAndroidFiles);
 
-const build = gulp.series(buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validate);
+const build = gulp.series(buildTypeScript, buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validate);
 const rebuild = gulp.series(clean, build);
 const pack = gulp.series(rebuild, createPackage);
 
 exports.validate = validate;
 
+exports.buildTypeScript = buildTypeScript;
 exports.buildIOS = buildIOS;
 exports.buildAndroid = buildAndroid;
 exports.createIOSUniversalLibs = createIOSUniversalLibs;

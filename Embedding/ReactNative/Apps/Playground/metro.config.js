@@ -8,13 +8,19 @@ const path = require('path');
 const fs = require('fs');
 const exclusionList = require('metro-config/src/defaults/exclusionList');
 
+// Escape function taken from the MDN documentation: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#Escaping
+function escapeRegExp(string) {
+  return string.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
 // NOTE: The Metro bundler does not support symlinks (see https://github.com/facebook/metro/issues/1), which NPM uses for local packages.
 //       To work around this, we explicity tell the metro bundler where to find local/linked packages.
 
 // Create a mapping of package ids to linked directories.
-function getModuleMappings() {
+function processModuleSymLinks() {
   const nodeModulesPath = path.resolve(__dirname, 'node_modules');
   let moduleMappings = {};
+  let moduleExclusions = [];
 
   function findPackageDirs(directory) {
     fs.readdirSync(directory).forEach(item => {
@@ -32,6 +38,15 @@ function getModuleMappings() {
           if (fs.existsSync(packagePath)) {
             const packageId = path.relative(nodeModulesPath, itemPath);
             moduleMappings[packageId] = linkPath;
+
+            const packageInfoData = fs.readFileSync(packagePath);
+            const packageInfo = JSON.parse(packageInfoData);
+
+            // Search for any dev dependencies of the package. They should be excluded from metro so the packages don't get 
+            // imported twice in the bundle
+            for (const devDependency in packageInfo.devDependencies) {
+              moduleExclusions.push(new RegExp(escapeRegExp(path.join(linkPath, "node_modules", devDependency)) + "\/.*"));
+            }
           }
         }
       } else if (itemStat.isDirectory()) {
@@ -42,10 +57,10 @@ function getModuleMappings() {
 
   findPackageDirs(nodeModulesPath);
 
-  return moduleMappings;
+  return [moduleMappings, moduleExclusions];
 }
 
-const moduleMappings = getModuleMappings();
+const [moduleMappings, moduleExclusions] = processModuleSymLinks();
 console.log("Mapping the following sym linked packages:");
 console.log(moduleMappings);
 
@@ -71,7 +86,7 @@ module.exports = {
       },
     ),
     
-    blockList: exclusionList([
+    blockList: exclusionList(moduleExclusions.concat([
       // Avoid error EBUSY: resource busy or locked, open 'D:\a\1\s\packages\playground\msbuild.ProjectImports.zip' in pipeline
       /.*\.ProjectImports\.zip/,
   
@@ -79,7 +94,7 @@ module.exports = {
       new RegExp(
         `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
       ),
-    ]),
+    ])),
   },
 
   projectRoot: path.resolve(__dirname),

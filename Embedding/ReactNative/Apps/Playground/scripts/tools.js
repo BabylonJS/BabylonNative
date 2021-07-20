@@ -14,6 +14,9 @@ function postInstall() {
     throw `Error: BabylonReactNative Playground development requires npm version 6.13.*, Your current npm version is ${version}. Run npm install -g npm@6.13 to update your npm version.`;
   }
 
+  console.log(chalk.black.bgCyan('Installing Babylon React Native npm packages...'));
+  shelljs.exec('npm install', {cwd: '../../Modules/@babylonjs/react-native'});
+
   console.log(chalk.black.bgCyan('Updating submodules...'));
   shelljs.exec('git submodule update --init --recursive', {cwd: '../../'});
 
