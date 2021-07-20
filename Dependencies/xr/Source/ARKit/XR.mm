@@ -10,6 +10,8 @@
 #import <ARKit/ARConfiguration.h>
 #import <MetalKit/MetalKit.h>
 
+#import "Include/IXrContextARKit.h"
+
 @interface SessionDelegate : NSObject <ARSessionDelegate, MTKViewDelegate>
 @end
 
@@ -622,12 +624,37 @@ namespace xr {
         }
     }
 
+    struct XrContextARKit : public IXrContextARKit {
+        bool Initialized{true};
+        ARSession* Session{nullptr};
+        ARFrame* Frame{nullptr};
+
+        bool IsInitialized() const override
+        {
+            return Initialized;
+        }
+
+        ARSession* XrSession() const override
+        {
+            return Session;
+        }
+
+        ARFrame* XrFrame() const override
+        {
+            return Frame;
+        }
+
+        virtual ~XrContextARKit() = default;
+    };
+
     struct System::Impl {
     public:
+        std::unique_ptr<XrContextARKit> XrContext{std::make_unique<XrContextARKit>()};
+
         Impl(const std::string&) {}
 
         bool IsInitialized() const {
-            return true;
+            return XrContext->IsInitialized();
         }
 
         bool TryInitialize() {
@@ -643,7 +670,6 @@ namespace xr {
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool FeaturePointCloudEnabled{ false };
@@ -654,7 +680,7 @@ namespace xr {
             , metalDevice{ (__bridge id<MTLDevice>)graphicsContext } {
 
             // Create the ARSession enable plane detection, include scene reconstruction mesh if supported, and disable lighting estimation.
-            session = [ARSession new];
+            SystemImpl.XrContext->Session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
             if (@available(iOS 13.4, *)) {
@@ -668,11 +694,11 @@ namespace xr {
             configuration.worldAlignment = ARWorldAlignmentGravity;
 
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
-            session.delegate = sessionDelegate;
+            SystemImpl.XrContext->Session.delegate = sessionDelegate;
 
             UpdateXRView();
 
-            [session runWithConfiguration:configuration];
+            [SystemImpl.XrContext->Session runWithConfiguration:configuration];
 
             id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
@@ -711,7 +737,7 @@ namespace xr {
             Planes.clear();
             Meshes.clear();
             CleanupAnchor(nil);
-            [session pause];
+            [SystemImpl.XrContext->Session pause];
             UpdateXRView(nil);
         }
 
@@ -757,7 +783,7 @@ namespace xr {
             CFRunLoopRef mainRunLoop = CFRunLoopGetMain();
             const auto intervalInSeconds = 0.033;
             CFRunLoopTimerRef timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), intervalInSeconds, 0, 0, ^(CFRunLoopTimerRef timer){
-                if ([session currentFrame] != nil) {
+                if ([SystemImpl.XrContext->Session currentFrame] != nil) {
                     CFRunLoopRemoveTimer(mainRunLoop, timer, kCFRunLoopCommonModes);
                     CFRelease(timer);
                     tcs.complete();
@@ -771,11 +797,11 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
-            currentFrame = session.currentFrame;
+            SystemImpl.XrContext->Frame = SystemImpl.XrContext->Session.currentFrame;
 
             UpdateXRView();
 
-            [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
+            [sessionDelegate session:SystemImpl.XrContext->Session didUpdateFrameInternal:SystemImpl.XrContext->Frame];
 
             auto viewSize = [sessionDelegate viewSize];
             viewportSize.x = viewSize.width;
@@ -926,13 +952,13 @@ namespace xr {
                 [commandBuffer commit];
             }
 
-            if (currentFrame != nil) {
-                currentFrame = nil;
+            if (SystemImpl.XrContext->Frame != nil) {
+                SystemImpl.XrContext->Frame = nil;
             }
         }
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
-            if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
+            if (SystemImpl.XrContext->Frame != nil && SystemImpl.XrContext->Frame.camera != nil && [SystemImpl.XrContext->Frame.camera trackingState] == ARTrackingStateNormal) {
                 if (@available(iOS 13.0, *)) {
                     GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                 } else {
@@ -952,11 +978,22 @@ namespace xr {
 
             // Create the anchor and add it to the ARKit session.
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
-            [session addAnchor:anchor];
+            [SystemImpl.XrContext->Session addAnchor:anchor];
             nativeAnchors.push_back(anchor);
             return { pose, (__bridge NativeAnchorPtr)anchor };
         }
 
+        /**
+         Declares an ARKit anchor that was created outside the BabylonNative xr system.
+         */
+        xr::Anchor DeclareAnchor(NativeAnchorPtr anchor)
+        {
+            const auto arAnchor = (__bridge ARAnchor*)anchor;
+            nativeAnchors.push_back(arAnchor);
+            const auto pose{TransformToPose(arAnchor.transform)};
+            return { pose, anchor };
+        }
+        
         /**
          For a given anchor update the current pose, and determine if it is still valid.
          */
@@ -1168,7 +1205,7 @@ namespace xr {
                 return;
             }
 
-            ARPointCloud* pointCloud = currentFrame.rawFeaturePoints;
+            ARPointCloud* pointCloud = SystemImpl.XrContext->Frame.rawFeaturePoints;
 
             FeaturePointCloud.resize(pointCloud.count);
             for (NSUInteger i = 0; i < pointCloud.count; i++) {
@@ -1234,7 +1271,7 @@ namespace xr {
             auto anchorIter = nativeAnchors.begin();
             while (anchorIter != nativeAnchors.end()) {
                 if (arAnchor == nil || arAnchor == *anchorIter) {
-                    [session removeAnchor:*anchorIter];
+                    [SystemImpl.XrContext->Session removeAnchor:*anchorIter];
                     anchorIter = nativeAnchors.erase(anchorIter);
 
                     if (arAnchor != nil) {
@@ -1265,11 +1302,10 @@ namespace xr {
             // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
             // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
             // ARTrackingStateNormal.
-            return currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
+            return SystemImpl.XrContext->Frame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
 
     private:
-        ARSession* session{};
         std::function<MTKView*()> getXRView{};
         MTKView* xrView{};
         bool sessionEnded{ false };
@@ -1404,7 +1440,7 @@ namespace xr {
                                  alignment:ARRaycastTargetAlignmentAny];
 
             // Perform the actual raycast.
-            auto rayCastResults = [session raycast:raycastQuery];
+            auto rayCastResults = [SystemImpl.XrContext->Session raycast:raycastQuery];
 
             // Process the results and push them into the results list.
             for (ARRaycastResult* result in rayCastResults) {
@@ -1434,7 +1470,7 @@ namespace xr {
             }
 
             // Now perform the actual hit test and process the results
-            auto hitTestResults = [currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            auto hitTestResults = [SystemImpl.XrContext->Frame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
             for (ARHitTestResult* result in hitTestResults) {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
@@ -1481,8 +1517,8 @@ namespace xr {
         return m_impl->sessionImpl.CreateAnchor(pose);
     }
 
-    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
-        throw std::runtime_error("not implemented");
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr anchor) const {
+        return m_impl->sessionImpl.DeclareAnchor(anchor);
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
@@ -1525,14 +1561,12 @@ namespace xr {
 
     uintptr_t System::GetNativeXrContext()
     {
-        // TODO
-        return 0;
+        return reinterpret_cast<uintptr_t>(m_impl->XrContext.get());
     }
 
     std::string System::GetNativeXrContextType()
     {
-        // TODO
-        return "";
+        return "ARKit";
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
