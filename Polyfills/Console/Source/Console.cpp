@@ -5,9 +5,9 @@
 
 namespace
 {
-    std::vector<napi_value> GetCallbackInfoArgs(const Napi::CallbackInfo& info)
+    std::vector<Napi::Value> GetCallbackInfoArgs(const Napi::CallbackInfo& info)
     {
-        auto args = std::vector<napi_value>();
+        auto args = std::vector<Napi::Value>();
         for (unsigned int index = 0; index < info.Length(); index++)
             args.push_back(info[index]);
         return args;
@@ -34,7 +34,7 @@ namespace Babylon::Polyfills::Internal
         const auto existingConsole = env.Global().Get(JS_INSTANCE_NAME);
         if (!existingConsole.IsUndefined())
         {
-            Console::Unwrap(console)->m_engineConsole = std::make_unique<Napi::FunctionReference>(Napi::Persistent(existingConsole.As<Napi::Function>()));
+            Console::Unwrap(console)->m_engineConsole = std::make_unique<Napi::ObjectReference>(Napi::Persistent(existingConsole.As<Napi::Object>()));
         }
         env.Global().Set(JS_INSTANCE_NAME, console);
     }
@@ -83,8 +83,10 @@ namespace Babylon::Polyfills::Internal
         if (m_engineConsole != nullptr)
         {
             const auto engineConsoleFunc = m_engineConsole->Value().Get(functionName).As<Napi::Function>();
-            if (!engineConsoleFunc.IsUndefined())
-                engineConsoleFunc.As<Napi::Function>().Call(m_engineConsole->Value(), GetCallbackInfoArgs(info));
+            if (!engineConsoleFunc.IsUndefined()) {
+                const auto args = GetCallbackInfoArgs(info);
+                engineConsoleFunc.As<Napi::Function>().Call(m_engineConsole->Value(), args.size(), args.data());
+            }
         }
     }
 }

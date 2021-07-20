@@ -1013,6 +1013,7 @@ namespace Napi {
     Value Call(size_t argc, const napi_value* args) const;
     Value Call(napi_value recv, const std::initializer_list<napi_value>& args) const;
     Value Call(napi_value recv, const std::vector<napi_value>& args) const;
+    Value Call(napi_value recv, size_t argc, const Napi::Value* args) const;
     Value Call(napi_value recv, size_t argc, const napi_value* args) const;
 
 #ifndef NODE_ADDON_API_DISABLE_NODE_SPECIFIC

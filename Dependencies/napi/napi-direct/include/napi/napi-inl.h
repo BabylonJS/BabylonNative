@@ -1781,6 +1781,24 @@ inline Value Function::Call(napi_value recv, const std::vector<napi_value>& args
   return Call(recv, args.size(), args.data());
 }
 
+inline Value Function::Call(napi_value recv, size_t argc, const Napi::Value* args) const {
+    napi_value stackArgs[6];
+    std::vector<napi_value> heapArgs;
+    napi_value* argv;
+    if (argc <= std::size(stackArgs)) {
+        argv = stackArgs;
+    } else {
+        heapArgs.resize(argc);
+        argv = heapArgs.data();
+    }
+
+    for (size_t i = 0; i < argc; ++i) {
+        argv[i] = args[i];
+    }
+
+    return Call(recv, argc, argv);
+}
+
 inline Value Function::Call(napi_value recv, size_t argc, const napi_value* args) const {
   napi_value result;
   napi_status status = napi_call_function(

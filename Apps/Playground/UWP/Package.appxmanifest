@@ -36,5 +36,6 @@
     <Capability Name="internetClient" />
     <rescap:Capability Name="broadFileSystemAccess" />
     <uap2:Capability Name="spatialPerception"/>
+    <Capability Name="internetClientServer"/>
   </Capabilities>
 </Package>
