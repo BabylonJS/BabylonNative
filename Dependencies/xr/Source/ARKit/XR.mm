@@ -649,7 +649,7 @@ namespace xr {
 
     struct System::Impl {
     public:
-        std::shared_ptr<XrContextARKit> XrContext{std::make_shared<XrContextARKit>()};
+        std::unique_ptr<XrContextARKit> XrContext{std::make_unique<XrContextARKit>()};
 
         Impl(const std::string&) {}
 
