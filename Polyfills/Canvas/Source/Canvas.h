@@ -2,6 +2,7 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <GraphicsImpl.h>
+#include <FrameBuffer.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -38,8 +39,7 @@ namespace Babylon::Polyfills::Internal
 
         Babylon::GraphicsImpl& m_graphicsImpl;
 
-        bgfx::FrameBufferHandle m_frameBufferHandle{ bgfx::kInvalidHandle };
-        Babylon::FrameBuffer* m_frameBuffer{};
+        std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
         bool m_dirty{};
     };
 }

@@ -5,8 +5,6 @@ set(SOURCES
     "Source/BgfxCallback.h"
     "Source/FrameBuffer.cpp"
     "Source/FrameBuffer.h"
-    "Source/FrameBufferManager.cpp"
-    "Source/FrameBufferManager.h"
     "Source/Graphics.cpp"
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
