@@ -24,7 +24,6 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetNaturalHeight(const Napi::CallbackInfo&);
         Napi::Value GetSrc(const Napi::CallbackInfo&);
         void SetSrc(const Napi::CallbackInfo&, const Napi::Value&);
-        Napi::Value GetOnload(const Napi::CallbackInfo&);
         void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
 
         uint32_t m_width{1};

@@ -25,7 +25,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
                 InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
                 InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
-                InstanceAccessor("onload", &NativeCanvasImage::GetOnload, &NativeCanvasImage::SetOnload),
+                InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
