@@ -1,6 +1,7 @@
 #include <bgfx/bgfx.h>
 #include <map>
 #include "Canvas.h"
+#include "Image.h"
 #include "Context.h"
 #include <functional>
 #include <sstream>
@@ -134,5 +135,6 @@ namespace Babylon::Polyfills::Canvas
     void Initialize(Napi::Env env)
     {
         Internal::NativeCanvas::CreateInstance(env);
+        Internal::NativeCanvasImage::CreateInstance(env);
     }
 }
