@@ -231,12 +231,21 @@ const copySharedFiles = () => {
     .pipe(gulp.dest('Assembled/shared'));
 };
 
-const copyIOSFiles = () => {
-  return  gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.h')
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.mm'))
-    // This xcodeproj is garbage that we don't need in the package, but `pod install` ignores the package if it doesn't contain at least one xcodeproj. 🤷🏼‍♂️
-    .pipe(gulp.src('iOS/Build/ReactNativeBabylon.xcodeproj**/**/*'))
-    .pipe(gulp.dest('Assembled/ios'));
+const copyIOSFiles = async () => {
+  await new Promise(resolve => {
+    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.h')
+      .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.mm'))
+      // This xcodeproj is garbage that we don't need in the package, but `pod install` ignores the package if it doesn't contain at least one xcodeproj. 🤷🏼‍♂️
+      .pipe(gulp.src('iOS/Build/ReactNativeBabylon.xcodeproj**/**/*'))
+      .pipe(gulp.dest('Assembled/ios'))
+      .on('end', resolve);
+  });
+
+  await new Promise(resolve => {
+    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARKit/Include/*')
+      .pipe(gulp.dest('Assembled/ios/include'))
+      .on('end', resolve);
+  });
 };
 
 const createIOSUniversalLibs = async () => {
@@ -258,7 +267,7 @@ const copyAndroidFiles = async () => {
     gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARCore/Include/*')
       .pipe(gulp.dest('Assembled/android/include'))
       .on('end', resolve);
-  })
+  });
 
   await new Promise(resolve => {
           gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/library_and_local_jars_jni/release/jni/**/*')
@@ -444,6 +453,8 @@ const validate = async () => {
     'Assembled/ios/BabylonNativeInterop.h',
     'Assembled/ios/BabylonNativeInterop.mm',
     'Assembled/ios/EngineViewManager.mm',
+    'Assembled/ios/include',
+    'Assembled/ios/include/IXrContextARKit.h',
     'Assembled/ios/libs',
     'Assembled/ios/libs/libastc-codec.a',
     'Assembled/ios/libs/libastc.a',
