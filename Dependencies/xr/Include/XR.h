@@ -251,6 +251,7 @@ namespace xr
                     GamePad GamepadObject{};
                     Space GripSpace{};
                     Space AimSpace{};
+                    Space EyeSpace{};
                     HandednessEnum Handedness{};
                     std::vector<JointSpace> HandJoints{};
 
@@ -301,7 +302,8 @@ namespace xr
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<FeaturePoint>& FeaturePointCloud;
-                Space& EyeTrackerSpace{};
+
+                std::pair<bool,Space>& EyeTrackerSpace;
 
                 std::vector<SceneObject::Identifier>UpdatedSceneObjects;
                 std::vector<SceneObject::Identifier>RemovedSceneObjects;

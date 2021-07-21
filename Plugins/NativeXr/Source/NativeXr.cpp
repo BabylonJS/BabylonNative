@@ -177,11 +177,6 @@ namespace
                 jsInputSource.Set("hand", env.Null());
             }
         }
-
-        if (inputSource.EyesTrackedThisFrame)
-        {
-            jsInputSource.Set("eye", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.EyeSpace));
-        }
     }
 
     void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)
@@ -2610,6 +2605,8 @@ namespace Babylon
             static constexpr auto JS_EVENT_NAME_SQUEEZE = "squeeze";
             static constexpr auto JS_EVENT_NAME_SQUEEZE_START = "squeezestart";
             static constexpr auto JS_EVENT_NAME_SQUEEZE_END = "squeezeend";
+            static constexpr auto JS_EVENT_NAME_EYE_TRACKING_START= "eyetrackingstart";
+            static constexpr auto JS_EVENT_NAME_EYE_TRACKING_END= "eyetrackingend";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2725,6 +2722,7 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+            std::pair<bool, Napi::ObjectReference> m_eyeTrackedSource{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
@@ -2786,6 +2784,47 @@ namespace Babylon
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
+
+                if (frame.EyeTrackerSpace.first)
+                {
+                    if (!m_eyeTrackedSource.first)
+                    {
+                        m_eyeTrackedSource.first = true;
+                        m_eyeTrackedSource.second = Napi::Persistent(Napi::Object::New(env));
+                   //     xr::System::Session::Frame::Space t1 = frame.EyeTrackerSpace.second;
+                 //       xr::System::Session::Frame::Space& t2 = frame.EyeTrackerSpace.second;
+                        m_eyeTrackedSource.second.Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.second));
+
+                 //       auto eyeTrackingChangeEvent = Napi::Object::New(env);//m_eyeInputSource
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_EYE_TRACKING_START)
+                            {
+                                Napi::Object obj = m_eyeTrackedSource.second.Value();
+                                callback.Call({obj});
+                            }
+                        }
+                    }
+                    else
+                    {
+                        m_eyeTrackedSource.second.Set("eyeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.second));
+                    }
+                }
+                else if (!frame.EyeTrackerSpace.first && m_eyeTrackedSource.first)
+                {
+                    m_eyeTrackedSource.second.Set("eyeSpace", env.Null());
+                    m_eyeTrackedSource.first = false;
+
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                    {
+                        if (name == JS_EVENT_NAME_EYE_TRACKING_END)
+                        {
+                            callback.Call({});
+                        }
+                    }
+                }
+            //    if (m_eyeInputSource)
+            //    jsInputSource.Set("hand", env.Null());
 
                 for (auto& inputSource : frame.InputSources)
                 {
