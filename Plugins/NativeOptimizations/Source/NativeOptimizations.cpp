@@ -56,6 +56,39 @@ namespace Babylon::Plugins::NativeOptimizations
     }
 
     template<typename IndexT>
+    void FlipIndicesT(Napi::TypedArrayOf<IndexT> indices)
+    {
+        for (size_t index = 0; index < indices.ElementLength(); index += 3)
+        {
+            const auto tmp = indices[index + 1];
+            indices[index + 1] = indices[index + 2];
+            indices[index + 2] = tmp;
+        }
+    }
+
+    void FlipIndices(const Napi::CallbackInfo& info)
+    {
+        auto indices{info[0].As<Napi::TypedArray>()};
+
+        if (indices.TypedArrayType() == napi_typedarray_type::napi_int32_array)
+        {
+            FlipIndicesT<int32_t>(indices.As<Napi::Int32Array>());
+        }
+        else if (indices.TypedArrayType() == napi_typedarray_type::napi_uint32_array)
+        {
+            FlipIndicesT<uint32_t>(indices.As<Napi::Uint32Array>());
+        }
+        else if (indices.TypedArrayType() == napi_typedarray_type::napi_uint16_array)
+        {
+            FlipIndicesT<uint16_t>(indices.As<Napi::Uint16Array>());
+        }
+        else
+        {
+            throw std::runtime_error{"Indices TypedArray element type was unexpected."};
+        }
+    }
+
+    template<typename IndexT>
     void ExtractMinAndMaxIndexedT(const Napi::TypedArrayOf<float> positions, const Napi::TypedArrayOf<IndexT> indices, uint32_t indexStart, uint32_t indexCount, Napi::Object minVector, Napi::Object maxVector)
     {
         auto minX = minVector.Get("_x").As<Napi::Number>().FloatValue();
@@ -153,46 +186,13 @@ namespace Babylon::Plugins::NativeOptimizations
         maxVector.Set("_z", maxZ);
     }
 
-    template<typename IndexT>
-    void FlipIndicesT(Napi::TypedArrayOf<IndexT> indices)
-    {
-        for (size_t index = 0; index < indices.ElementLength(); index += 3)
-        {
-            const auto tmp = indices[index + 1];
-            indices[index + 1] = indices[index + 2];
-            indices[index + 2] = tmp;
-        }
-    }
-
-    void FlipIndices(const Napi::CallbackInfo& info)
-    {
-        auto indices{info[0].As<Napi::TypedArray>()};
-
-        if (indices.TypedArrayType() == napi_typedarray_type::napi_int32_array)
-        {
-            FlipIndicesT<int32_t>(indices.As<Napi::Int32Array>());
-        }
-        else if (indices.TypedArrayType() == napi_typedarray_type::napi_uint32_array)
-        {
-            FlipIndicesT<uint32_t>(indices.As<Napi::Uint32Array>());
-        }
-        else if (indices.TypedArrayType() == napi_typedarray_type::napi_uint16_array)
-        {
-            FlipIndicesT<uint16_t>(indices.As<Napi::Uint16Array>());
-        }
-        else
-        {
-            throw std::runtime_error{"Indices TypedArray element type was unexpected."};
-        }
-    }
-
     void Initialize(Napi::Env env)
     {
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set("transformVector3Coordinates", Napi::Function::New(env, TransformVector3Coordinates, "transformVector3Coordinates"));
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set("transformVector3Normals", Napi::Function::New(env, TransformVector3Normals, "transformVector3Normals"));
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set("transformVector4Normals", Napi::Function::New(env, TransformVector4Normals, "transformVector4Normals"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("_TransformVector3Coordinates", Napi::Function::New(env, TransformVector3Coordinates, "_TransformVector3Coordinates"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("_TransformVector3Normals", Napi::Function::New(env, TransformVector3Normals, "_TransformVector3Normals"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("_TransformVector4Normals", Napi::Function::New(env, TransformVector4Normals, "_TransformVector4Normals"));
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("_FlipIndices", Napi::Function::New(env, FlipIndices, "_FlipIndices"));
         JsRuntime::NativeObject::GetFromJavaScript(env).Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         JsRuntime::NativeObject::GetFromJavaScript(env).Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set("flipIndices", Napi::Function::New(env, FlipIndices, "flipIndices"));
     }
 }
