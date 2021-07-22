@@ -387,11 +387,6 @@ namespace Babylon
                 return m_sessionState->Session->TrySetPreferredMeshDetectorOptions(options);
             }
 
-            bool TrySetEyeTrackingEnabled(const bool enabled)
-            {
-                return m_sessionState->Session->TrySetEyeTrackingEnabled(enabled);
-            }
-
             uintptr_t GetNativeXrContext()
             {
                 return m_system.GetNativeXrContext();
@@ -2517,82 +2512,6 @@ namespace Babylon
             return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
         }
 
-        class XREyeTracking : public Napi::ObjectWrap<XREyeTracking>
-        {
-            static constexpr auto JS_EVENT_NAME_EYE_TRACKING_UPDATE = "eyetrackingupdate";
-
-            static constexpr auto JS_CLASS_NAME = "XREyeTracking";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                        InstanceMethod("getLatestSpace", &XREyeTracking::GetLatestSpace),
-                        InstanceMethod("addEventListener", &XREyeTracking::AddEventListener),
-                        InstanceMethod("removeEventListener", &XREyeTracking::RemoveEventListener),
-                    });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XREyeTracking(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XREyeTracking>{info}
-            {
-            }
-
-        private:
-            std::vector<std::pair<std::string, Napi::FunctionReference>> m_eventNamesAndCallbacks{};
-            xr::System::Session::Frame::Space m_latestEyeSpace{};
-
-            Napi::Value GetLatestSpace(const Napi::CallbackInfo& info)
-            {
-                return Napi::External<decltype(m_latestEyeSpace)>::New(info.Env(), &m_latestEyeSpace);
-            }
-
-            void UpdateCachedEyeSpace(xr::System::Session::Frame::Space eyeSpace, Napi::Env env)
-            {
-                m_latestEyeSpace = eyeSpace;
-                auto jsEyeSpace = Napi::External<decltype(eyeSpace)>::New(env, &eyeSpace);
-
-                for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                {
-                    if (name == JS_EVENT_NAME_EYE_TRACKING_UPDATE)
-                    {
-                        callback.Call({jsEyeSpace});
-                    }
-                }
-            }
-
-            void AddEventListener(const Napi::CallbackInfo& info)
-            {
-                m_eventNamesAndCallbacks.emplace_back(
-                    info[0].As<Napi::String>().Utf8Value(),
-                    Napi::Persistent(info[1].As<Napi::Function>()));
-            }
-
-            void RemoveEventListener(const Napi::CallbackInfo& info)
-            {
-                auto name = info[0].As<Napi::String>().Utf8Value();
-                auto callback = info[1].As<Napi::Function>();
-                m_eventNamesAndCallbacks.erase(
-                    std::remove_if(
-                        m_eventNamesAndCallbacks.begin(),
-                        m_eventNamesAndCallbacks.end(),
-                        [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener) {
-                            return listener.first == name && listener.second.Value() == callback;
-                        }),
-                    m_eventNamesAndCallbacks.end());
-            }
-        };
-
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
         class XRSession : public Napi::ObjectWrap<XRSession>
         {
@@ -2628,7 +2547,6 @@ namespace Babylon
                         InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
                         InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
                         InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
-                        InstanceMethod("trySetEyeTrackingEnabled", &XRSession::TrySetEyeTrackingEnabled),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -2791,11 +2709,8 @@ namespace Babylon
                     {
                         m_eyeTrackedSource.first = true;
                         m_eyeTrackedSource.second = Napi::Persistent(Napi::Object::New(env));
-                   //     xr::System::Session::Frame::Space t1 = frame.EyeTrackerSpace.second;
-                 //       xr::System::Session::Frame::Space& t2 = frame.EyeTrackerSpace.second;
                         m_eyeTrackedSource.second.Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.second));
 
-                 //       auto eyeTrackingChangeEvent = Napi::Object::New(env);//m_eyeInputSource
                         for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                         {
                             if (name == JS_EVENT_NAME_EYE_TRACKING_START)
@@ -2823,9 +2738,7 @@ namespace Babylon
                         }
                     }
                 }
-            //    if (m_eyeInputSource)
-            //    jsInputSource.Set("hand", env.Null());
-
+                
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -3152,19 +3065,6 @@ namespace Babylon
                 const auto result = m_xr->TrySetPreferredMeshDetectorOptions(options);
                 return Napi::Value::From(info.Env(), result);
             }
-
-            Napi::Value TrySetEyeTrackingEnabled(const Napi::CallbackInfo& info)
-            {
-                if (info.Length() != 1 ||
-                    !info[0].IsBoolean())
-                {
-                    throw std::exception(/*invalid arguments*/);
-                }
-
-                const auto enabled = info[0].As<Napi::Boolean>();
-                const auto result = m_xr->TrySetEyeTrackingEnabled(enabled);
-                return Napi::Value::From(info.Env(), result);
-            }
         };
 
         class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget>
@@ -3457,7 +3357,6 @@ namespace Babylon
             XRSession::Initialize(env);
             NativeWebXRRenderTarget::Initialize(env);
             NativeRenderTargetProvider::Initialize(env);
-            XREyeTracking::Initialize(env);
             XR::Initialize(env, impl);
 
             return {impl};
