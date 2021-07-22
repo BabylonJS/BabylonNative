@@ -1173,15 +1173,16 @@ namespace xr
 
                     for (size_t idx = 0; idx < ActionResources.ActiveInputSources.size(); ++idx)
                     {
+                        XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
                         const auto& instance = HmdImpl.Context.Instance();
                         auto& inputSource = ActionResources.ActiveInputSources[idx];
-                        XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
+                        
                         XrCheck(xrGetCurrentInteractionProfile(HmdImpl.Context.Session(), ActionResources.ControllerSubactionPaths[idx], &state));
 
                         if (state.interactionProfile == XR_NULL_PATH)
                         {
                             inputSource.InteractionProfileName = "";
-                            return;
+                            continue;
                         }
 
                         uint32_t count;
