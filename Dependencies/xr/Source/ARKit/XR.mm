@@ -529,6 +529,7 @@ namespace xr {
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
+        std::pair<bool, Frame::Space> EyeTrackerSpace{};
         ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -1173,6 +1174,7 @@ namespace xr {
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources}
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , EyeTrackerSpace{ sessionImpl.EyeTrackerSpace }
         , UpdatedPlanes{}
         , RemovedPlanes{}
         , UpdatedMeshes{}
