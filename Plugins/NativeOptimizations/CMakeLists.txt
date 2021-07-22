@@ -6,7 +6,7 @@ add_library(NativeOptimizations ${SOURCES})
 warnings_as_errors(NativeOptimizations)
 
 if (APPLE)
-    set_target_properties(xr PROPERTIES
+    set_target_properties(NativeOptimizations PROPERTIES
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     )
 endif()
