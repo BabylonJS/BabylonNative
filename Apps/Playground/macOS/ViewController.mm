@@ -7,6 +7,7 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Plugins/NativeCamera.h>
+#import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
 #import <MetalKit/MetalKit.h>
@@ -97,6 +98,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         Babylon::Plugins::Camera::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
+
+        Babylon::Plugins::NativeOptimizations::Initialize(env);
 
         InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
     });
