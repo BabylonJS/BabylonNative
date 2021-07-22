@@ -523,14 +523,14 @@ namespace xr
         void PopulateSwapchains(ViewConfigurationState& viewState)
         {
             const auto& session = HmdImpl.Context.Session();
-            assert(viewState.Views.size() > 0);
+            const auto viewCount = static_cast<uint32_t>(viewState.Views.size());
+            assert(viewCount > 0);
 
             // Select color and depth swapchain pixel formats
             SwapchainFormat colorSwapchainFormat;
             SwapchainFormat depthSwapchainFormat;
             SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
 
-            const auto viewCount = static_cast<uint32_t>(viewState.Views.size());
             auto& renderResource = RenderResources.ResourceMap[viewState.Type];
             
             // All of the view config views should have the same recommended sizes,
@@ -1037,7 +1037,8 @@ namespace xr
             {
                 XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT
             };
-            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported)
+            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported && 
+                viewConfigType == XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT)
             {
                 secondaryViewConfigCreateInfo.viewConfigurationType = viewConfigType;
                 swapchainCreateInfo.next = &secondaryViewConfigCreateInfo;
@@ -1045,10 +1046,10 @@ namespace xr
 
             XrCheck(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Handle));
 
-            uint32_t chainLength;
-            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, 0, &chainLength, nullptr));
-            swapchain.Images.resize(chainLength, { SWAPCHAIN_IMAGE_TYPE_ENUM });
-            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &chainLength,
+            uint32_t imageCount{ 0 };
+            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, 0, &imageCount, nullptr));
+            swapchain.Images.resize(imageCount, { SWAPCHAIN_IMAGE_TYPE_ENUM });
+            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &imageCount,
                 reinterpret_cast<XrSwapchainImageBaseHeader*>(swapchain.Images.data())));
         }
 
@@ -1107,18 +1108,18 @@ namespace xr
                 XrSessionBeginInfo sessionBeginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
                 sessionBeginInfo.primaryViewConfigurationType = HmdImpl.PrimaryViewConfigurationType;
 
-                XrSecondaryViewConfigurationSessionBeginInfoMSFT secondaryViewConfigInfo
+                XrSecondaryViewConfigurationSessionBeginInfoMSFT secondaryViewConfigSessionBeginInfo
                 {
                     XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SESSION_BEGIN_INFO_MSFT
                 };
-
+                const auto& supportedSecondaryViewConfigTypes = HmdImpl.SupportedSecondaryViewConfigurationTypes;
                 if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported &&
                     HmdImpl.Context.Extensions()->FirstPersonObserverSupported &&
-                    HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+                    supportedSecondaryViewConfigTypes.size() > 0)
                 {
-                    secondaryViewConfigInfo.viewConfigurationCount = static_cast<uint32_t>(HmdImpl.SupportedSecondaryViewConfigurationTypes.size());
-                    secondaryViewConfigInfo.enabledViewConfigurationTypes = HmdImpl.SupportedSecondaryViewConfigurationTypes.data();
-                    InsertExtensionStruct(sessionBeginInfo, secondaryViewConfigInfo);
+                    secondaryViewConfigSessionBeginInfo.viewConfigurationCount = static_cast<uint32_t>(supportedSecondaryViewConfigTypes.size());
+                    secondaryViewConfigSessionBeginInfo.enabledViewConfigurationTypes = supportedSecondaryViewConfigTypes.data();
+                    InsertExtensionStruct(sessionBeginInfo, secondaryViewConfigSessionBeginInfo);
                 }
 
                 XrCheck(xrBeginSession(session, &sessionBeginInfo));
@@ -1485,18 +1486,12 @@ namespace xr
         XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
         XrFrameState frameState{ XR_TYPE_FRAME_STATE };
 
-        XrSecondaryViewConfigurationFrameStateMSFT secondaryViewConfigFrameState{XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_STATE_MSFT};
-        std::vector<XrSecondaryViewConfigurationStateMSFT> secondaryViewConfigStates;
-        if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+        const auto& supportedSecondaryViewConfigTypes = m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes;
+        const auto secondaryViewConfigCount = supportedSecondaryViewConfigTypes.size();
+        std::vector<XrSecondaryViewConfigurationStateMSFT> secondaryViewConfigStates(secondaryViewConfigCount, { XR_TYPE_SECONDARY_VIEW_CONFIGURATION_STATE_MSFT });
+        XrSecondaryViewConfigurationFrameStateMSFT secondaryViewConfigFrameState{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_STATE_MSFT };
+        if (secondaryViewConfigCount > 0)
         {
-            uint32_t viewCount = 0;
-            for (const auto& viewConfigurationType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
-            {
-                const auto& viewState = renderResources.ResourceMap.at(viewConfigurationType).ViewState;
-                viewCount += static_cast<uint32_t>(viewState.Views.size());
-            }
-
-            secondaryViewConfigStates.resize(viewCount, { XR_TYPE_SECONDARY_VIEW_CONFIGURATION_STATE_MSFT });
             secondaryViewConfigFrameState.viewConfigurationCount = (uint32_t)secondaryViewConfigStates.size();
             secondaryViewConfigFrameState.viewConfigurationStates = secondaryViewConfigStates.data();
             InsertExtensionStruct(frameState, secondaryViewConfigFrameState);
@@ -1509,30 +1504,29 @@ namespace xr
         XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
         XrCheck(xrBeginFrame(session, &frameBeginInfo));
 
-        if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+        for (const auto& secondaryViewConfigState : secondaryViewConfigStates)
         {
-            for (const auto& secondaryViewConfigState : secondaryViewConfigStates)
+            auto& renderResource = renderResources.ResourceMap[secondaryViewConfigState.viewConfigurationType];
+            auto& viewState = renderResource.ViewState;
+            viewState.Active = secondaryViewConfigState.active;
+            const auto& colorSwapchainHandle = renderResource.ColorSwapchain.Handle;
+            if (viewState.Active)
             {
-                auto& renderResource = renderResources.ResourceMap[secondaryViewConfigState.viewConfigurationType];
-                auto& viewState = renderResource.ViewState;
-                viewState.Active = secondaryViewConfigState.active;
-                if (viewState.Active)
+                std::vector<XrViewConfigurationView> viewConfigViews = EnumerateViewConfigurationViews(
+                    sessionImpl.HmdImpl.Context.Instance(),
+                    sessionImpl.HmdImpl.Context.SystemId(),
+                    secondaryViewConfigState.viewConfigurationType);
+
+                if (IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews) ||
+                    colorSwapchainHandle == XR_NULL_HANDLE)
                 {
-                    std::vector<XrViewConfigurationView> viewConfigViews = EnumerateViewConfigurationViews(
-                        sessionImpl.HmdImpl.Context.Instance(),
-                        sessionImpl.HmdImpl.Context.SystemId(),
-                        secondaryViewConfigState.viewConfigurationType);
-                    
-                    if (IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
-                    {
-                        viewState.ViewConfigViews = std::move(viewConfigViews);
-                        sessionImpl.PopulateSwapchains(viewState);
-                    }
+                    viewState.ViewConfigViews = std::move(viewConfigViews);
+                    sessionImpl.PopulateSwapchains(viewState);
                 }
-                else
-                {
-                    sessionImpl.CleanupSwapchains(viewState);
-                }
+            }
+            else if(colorSwapchainHandle != XR_NULL_HANDLE)
+            {
+                sessionImpl.CleanupSwapchains(viewState);
             }
         }
 
@@ -1550,17 +1544,14 @@ namespace xr
             totalViewCount += primaryViewCount;
 
             uint32_t secondaryViewCount = 0;
-            if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+            for (const auto& viewConfigType : supportedSecondaryViewConfigTypes)
             {
-                for (const auto& viewConfigType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
+                const auto& viewState = renderResources.ResourceMap[viewConfigType].ViewState;
+                if (viewState.Active)
                 {
-                    const auto& viewState = renderResources.ResourceMap[viewConfigType].ViewState;
-                    if (viewState.Active)
-                    {
-                        uint32_t tempViewCount = 0;
-                        m_impl->LocateViews(viewConfigType, tempViewCount);
-                        secondaryViewCount += tempViewCount;
-                    }
+                    uint32_t tempViewCount = 0;
+                    m_impl->LocateViews(viewConfigType, tempViewCount);
+                    secondaryViewCount += tempViewCount;
                 }
             }
 
@@ -1574,24 +1565,21 @@ namespace xr
                 Views.begin(), Views.begin() + primaryViewCount,
                 depthSupported, false);            
 
-            if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+            int viewStartIdx = primaryViewCount;
+            for (const auto& viewConfigType : supportedSecondaryViewConfigTypes)
             {
-                int viewStartIdx = primaryViewCount;
-                for (const auto& viewConfigType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
+                auto& secondaryRenderResource = renderResources.ResourceMap.at(viewConfigType);
+                ViewConfigurationState& viewConfigurationState = secondaryRenderResource.ViewState;
+                if (viewConfigurationState.Active)
                 {
-                    auto& secondaryRenderResource = renderResources.ResourceMap.at(viewConfigType);
-                    ViewConfigurationState& viewConfigurationState = secondaryRenderResource.ViewState;
-                    if (viewConfigurationState.Active)
-                    {
-                        const uint32_t viewCount = static_cast<uint32_t>(viewConfigurationState.Views.size());
+                    const uint32_t viewCount = static_cast<uint32_t>(viewConfigurationState.Views.size());
 
-                        m_impl->PopulateViewConfigurationState(
-                            primaryRenderResource, 
-                            Views.begin() + viewStartIdx, Views.begin() + viewStartIdx + viewCount,
-                            depthSupported, true); 
+                    m_impl->PopulateViewConfigurationState(
+                        secondaryRenderResource, 
+                        Views.begin() + viewStartIdx, Views.begin() + viewStartIdx + viewCount,
+                        depthSupported, true); 
 
-                        viewStartIdx += viewCount;
-                    }
+                    viewStartIdx += viewCount;
                 }
             }
 
@@ -1852,7 +1840,6 @@ namespace xr
             return;
         }
 
-        std::vector<XrCompositionLayerProjection> layers{};
         const auto& context = m_impl->sessionImpl.HmdImpl.Context;
         const auto& session = context.Session();
         const auto& sceneSpace = context.Space();
@@ -1863,18 +1850,19 @@ namespace xr
         frameEndInfo.displayTime = displayTime;
         frameEndInfo.environmentBlendMode = m_impl->sessionImpl.HmdImpl.ViewProperties.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).BlendMode;
 
-        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo
-        {
-            XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT
-        };
-        std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
-
         // Chain secondary view configuration layers data to endFrameInfo
-        if (extensions->SecondaryViewConfigurationSupported &&
-            m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0) {
-            for (auto& secondaryViewConfigType : m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes) {
-                auto& secondaryViewConfig = m_impl->sessionImpl.RenderResources.ResourceMap.at(secondaryViewConfigType).ViewState;
-                if (secondaryViewConfig.Active) {
+        const auto& supportedSecondaryViewConfigTypes = m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes;
+        std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
+        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT };
+        if (extensions->SecondaryViewConfigurationSupported && supportedSecondaryViewConfigTypes.size() > 0) 
+        {
+            activeSecondaryViewConfigLayerInfos.reserve(supportedSecondaryViewConfigTypes.size());
+            const auto& resourceMap = m_impl->sessionImpl.RenderResources.ResourceMap;
+            for (auto& secondaryViewConfigType : supportedSecondaryViewConfigTypes) 
+            {
+                const auto& secondaryViewConfig = resourceMap.at(secondaryViewConfigType).ViewState;
+                if (secondaryViewConfig.Active) 
+                {
                     activeSecondaryViewConfigLayerInfos.emplace_back(
                         XrSecondaryViewConfigurationLayerInfoMSFT
                         {
@@ -1886,12 +1874,17 @@ namespace xr
                 }
             }
 
-            if (activeSecondaryViewConfigLayerInfos.size() > 0) {
-                frameEndSecondaryViewConfigInfo.viewConfigurationCount = (uint32_t)activeSecondaryViewConfigLayerInfos.size();
+            if (activeSecondaryViewConfigLayerInfos.size() > 0) 
+            {
+                frameEndSecondaryViewConfigInfo.viewConfigurationCount = static_cast<uint32_t>(activeSecondaryViewConfigLayerInfos.size());
                 frameEndSecondaryViewConfigInfo.viewConfigurationLayersInfo = activeSecondaryViewConfigLayerInfos.data();
                 xr::InsertExtensionStruct(frameEndInfo, frameEndSecondaryViewConfigInfo);
             }
         }
+
+        // Allocate the layer structs up here so that they're still alive for the xrEndFrame call.
+        XrCompositionLayerProjection primaryLayer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+        std::vector<XrCompositionLayerProjection> secondaryLayers(activeSecondaryViewConfigLayerInfos.size(), { XR_TYPE_COMPOSITION_LAYER_PROJECTION });
 
         if (m_impl->shouldRender)
         {
@@ -1899,7 +1892,7 @@ namespace xr
 
             XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 
-            for (const auto& [type, renderResource] : renderResources.ResourceMap)
+            for (const auto& [viewConfigType, renderResource] : renderResources.ResourceMap)
             {
                 const auto& colorSwapchain = renderResource.ColorSwapchain;
                 const auto& depthSwapchain = renderResource.DepthSwapchain;
@@ -1915,13 +1908,9 @@ namespace xr
                 }
             }
 
-            layers.resize(1 + activeSecondaryViewConfigLayerInfos.size());
-
             // Inform the runtime to consider alpha channel during composition
             // The primary display on Hololens has additive environment blend mode. It will ignore alpha channel.
             // But mixed reality capture has alpha blend mode display and use alpha channel to blend content to environment.
-            layers[0] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-            auto& primaryLayer = layers[0];
             primaryLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
             primaryLayer.space = sceneSpace;
             const auto& primaryRenderResource = renderResources.ResourceMap.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType);
@@ -1930,21 +1919,22 @@ namespace xr
             auto layersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&primaryLayer);
             frameEndInfo.layerCount = 1;
             frameEndInfo.layers = &layersPtr;
-                    
-            if (extensions->SecondaryViewConfigurationSupported &&
-                activeSecondaryViewConfigLayerInfos.size() > 0) {
 
-                for (size_t i = 0; i < activeSecondaryViewConfigLayerInfos.size(); i++) {
-                    XrSecondaryViewConfigurationLayerInfoMSFT& secondaryViewLayerInfo = activeSecondaryViewConfigLayerInfos.at(i);
-                    layers[i + 1] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-                    XrCompositionLayerProjection& secondaryViewLayer = layers.at(i + 1);
+            if (extensions->SecondaryViewConfigurationSupported &&
+                activeSecondaryViewConfigLayerInfos.size() > 0) 
+            {
+                for (size_t i = 0; i < activeSecondaryViewConfigLayerInfos.size(); i++) 
+                {
+                    auto& secondaryViewLayerInfo = activeSecondaryViewConfigLayerInfos.at(i);
+                    auto& secondaryViewLayer = secondaryLayers.at(i);
+                    const auto& secondaryRenderResource = renderResources.ResourceMap.at(secondaryViewLayerInfo.viewConfigurationType);
+                    const auto secondaryLayersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&secondaryViewLayer);
+
                     secondaryViewLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
                     secondaryViewLayer.space = sceneSpace;
-                    const auto& secondaryRenderResource = renderResources.ResourceMap.at(secondaryViewLayerInfo.viewConfigurationType);
                     secondaryViewLayer.viewCount = static_cast<uint32_t>(secondaryRenderResource.ProjectionLayerViews.size());
                     secondaryViewLayer.views = secondaryRenderResource.ProjectionLayerViews.data();
                     secondaryViewLayerInfo.layerCount = 1;
-                    XrCompositionLayerBaseHeader* secondaryLayersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&secondaryViewLayer);
                     secondaryViewLayerInfo.layers = &secondaryLayersPtr;
                 }
             }

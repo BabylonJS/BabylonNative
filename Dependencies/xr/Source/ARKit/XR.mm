@@ -10,6 +10,8 @@
 #import <ARKit/ARConfiguration.h>
 #import <MetalKit/MetalKit.h>
 
+#import "Include/IXrContextARKit.h"
+
 @interface SessionDelegate : NSObject <ARSessionDelegate, MTKViewDelegate>
 @end
 
@@ -24,6 +26,12 @@ namespace {
         bool operator()(const ARPlaneAnchor* lhs, const ARPlaneAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
         }
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+        API_AVAILABLE(ios(13.4))
+        bool operator()(const ARMeshAnchor* lhs, const ARMeshAnchor* rhs) const {
+            return lhs.identifier < rhs.identifier;
+        }
+#endif
     };
 
     /**
@@ -37,6 +45,14 @@ namespace {
         { { -1, 1 },    { 0, 0 },   { 0, 0} },
         { { 1, -1 },    { 1, 1 },   { 0, 0} },
         { { 1, 1 },     { 1, 0 },   { 0, 0} },
+    };
+
+    /**
+     Defines the three-index combination that forms a unique triangle, or face. The index refers to that vertex's position in the vertices array.
+     */
+    struct Index3
+    {
+        uint32_t x, y, z;
     };
 
     /**
@@ -80,9 +96,17 @@ namespace {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
 
     NSLock* planeLock;
+    NSLock* meshLock;
     std::set<ARPlaneAnchor*,ARAnchorComparer> updatedPlanes;
     std::vector<ARPlaneAnchor*> deletedPlanes;
     bool planeDetectionEnabled;
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+    API_AVAILABLE(ios(13.4))
+    std::set<ARMeshAnchor*,ARAnchorComparer> updatedMeshes;
+    API_AVAILABLE(ios(13.4))
+    std::vector<ARMeshAnchor*> deletedMeshes;
+#endif
+    bool meshDetectionEnabled;
 
     CVMetalTextureCacheRef textureCache;
     CVMetalTextureRef _cameraTextureY;
@@ -124,6 +148,15 @@ namespace {
     return &updatedPlanes;
 }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+/**
+ Returns the set of all updated meshes since the last time we consumed mesh updates.
+ */
+- (std::set<ARMeshAnchor*, ARAnchorComparer>*) GetUpdatedMeshes API_AVAILABLE(ios(13.4)) {
+    return &updatedMeshes;
+}
+#endif
+
 /**
  Returns the vector containing all deleted planes since the last time we consumed plane updates.
  */
@@ -134,6 +167,34 @@ namespace {
 - (void) SetPlaneDetectionEnabled:(bool)enabled {
     planeDetectionEnabled = enabled;
 }
+
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+- (bool) TrySetMeshDetectorEnabled:(const bool)enabled {
+    if (@available(iOS 13.4, *)) {
+        if([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
+            meshDetectionEnabled = enabled;
+            return true;
+        }
+    }
+    return false;
+}
+#endif
+
+/**
+ Returns the boolean that keeps track of whether mesh detection is enabled or not.
+ */
+- (bool) GetMeshDetectionEnabled {
+    return meshDetectionEnabled;
+}
+
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+/**
+ Returns the vector containing all deleted meshes since the last time we consumed mesh updates.
+ */
+- (std::vector<ARMeshAnchor*>*) GetDeletedMeshes API_AVAILABLE(ios(13.4)) {
+    return &deletedMeshes;
+}
+#endif
 
 /**
  Initializes this session delgate with the given frame views and metal graphics context.
@@ -150,6 +211,11 @@ namespace {
     updatedPlanes = {};
     deletedPlanes = {};
     planeLock = [[NSLock alloc] init];
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+    updatedMeshes = {};
+    deletedMeshes = {};
+#endif
+    meshLock = [[NSLock alloc] init];
     return self;
 }
 
@@ -159,6 +225,14 @@ namespace {
 
 - (void) UnlockPlanes {
     [planeLock unlock];
+}
+
+- (void) LockMeshes {
+    [meshLock lock];
+}
+
+- (void) UnlockMeshes {
+    [meshLock unlock];
 }
 
 /**
@@ -338,48 +412,90 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
-    if (!planeDetectionEnabled) {
-        return;
+    if (planeDetectionEnabled) {
+        [self LockPlanes];
+        for (ARAnchor* newAnchor : anchors) {
+            if ([newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
+            }
+        }
+
+        [self UnlockPlanes];
     }
 
-    [self LockPlanes];
-    for (ARAnchor* newAnchor : anchors) {
-        if ([newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-            updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+    if (@available(iOS 13.4, *)) {
+        if (meshDetectionEnabled) {
+            [self LockMeshes];
+            for (ARAnchor* newAnchor : anchors) {
+                if ([newAnchor isKindOfClass:[ARMeshAnchor class]]) {
+                    updatedMeshes.insert((ARMeshAnchor*)newAnchor);
+                }
+            }
+
+            [self UnlockMeshes];
         }
     }
-
-    [self UnlockPlanes];
+#endif
+    return;
 }
 
 - (void)session:(ARSession *)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
-    if (!planeDetectionEnabled) {
-        return;
+    if (planeDetectionEnabled) {
+        [self LockPlanes];
+        for (ARAnchor* updatedAnchor : anchors) {
+            if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
+            }
+        }
+
+        [self UnlockPlanes];
     }
 
-    [self LockPlanes];
-    for (ARAnchor* updatedAnchor : anchors) {
-        if ([updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-            updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+    if (@available(iOS 13.4, *)) {
+        if (meshDetectionEnabled) {
+            [self LockMeshes];
+            for (ARAnchor* updatedAnchor : anchors) {
+                if ([updatedAnchor isKindOfClass:[ARMeshAnchor class]]) {
+                    updatedMeshes.insert((ARMeshAnchor*)updatedAnchor);
+                }
+            }
+
+            [self UnlockMeshes];
         }
     }
-
-    [self UnlockPlanes];
+#endif
+    return;
 }
 
 - (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
-    if (!planeDetectionEnabled) {
-        return;
+    if (planeDetectionEnabled) {
+        [self LockPlanes];
+        for (ARAnchor* removedAnchor : anchors) {
+            if ([removedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                deletedPlanes.push_back((ARPlaneAnchor*)removedAnchor);
+            }
+        }
+
+        [self UnlockPlanes];
     }
 
-    [self LockPlanes];
-    for (ARAnchor* removedAnchor : anchors) {
-        if ([removedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-            deletedPlanes.push_back((ARPlaneAnchor*)removedAnchor);
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+    if (@available(iOS 13.4, *)) {
+        if (meshDetectionEnabled) {
+            [self LockMeshes];
+            for (ARAnchor* removedAnchor : anchors) {
+                if ([removedAnchor isKindOfClass:[ARMeshAnchor class]]) {
+                    deletedMeshes.push_back((ARMeshAnchor*)removedAnchor);
+                }
+            }
+
+            [self UnlockMeshes];
         }
     }
-
-    [self UnlockPlanes];
+#endif
+    return;
 }
 
 -(void)cleanupTextures {
@@ -508,12 +624,37 @@ namespace xr {
         }
     }
 
+    struct XrContextARKit : public IXrContextARKit {
+        bool Initialized{true};
+        ARSession* Session{nullptr};
+        ARFrame* Frame{nullptr};
+
+        bool IsInitialized() const override
+        {
+            return Initialized;
+        }
+
+        ARSession* XrSession() const override
+        {
+            return Session;
+        }
+
+        ARFrame* XrFrame() const override
+        {
+            return Frame;
+        }
+
+        virtual ~XrContextARKit() = default;
+    };
+
     struct System::Impl {
     public:
+        std::unique_ptr<XrContextARKit> XrContext{std::make_unique<XrContextARKit>()};
+
         Impl(const std::string&) {}
 
         bool IsInitialized() const {
-            return true;
+            return XrContext->IsInitialized();
         }
 
         bool TryInitialize() {
@@ -530,7 +671,6 @@ namespace xr {
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         std::pair<bool, Frame::Space> EyeTrackerSpace{};
-        ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool FeaturePointCloudEnabled{ false };
@@ -540,19 +680,26 @@ namespace xr {
             , getXRView{ [windowProvider{ std::move(windowProvider) }] { return (__bridge MTKView*)windowProvider(); } }
             , metalDevice{ (__bridge id<MTLDevice>)graphicsContext } {
 
-            // Create the ARSession enable plane detection, and disable lighting estimation.
-            session = [ARSession new];
+            // Create the ARSession enable plane detection, include scene reconstruction mesh if supported, and disable lighting estimation.
+            SystemImpl.XrContext->Session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+            if (@available(iOS 13.4, *)) {
+                if ([ARWorldTrackingConfiguration supportsSceneReconstruction: ARSceneReconstructionMesh]) {
+                    configuration.sceneReconstruction = ARSceneReconstructionMesh;
+                }
+            }
+#endif
             configuration.planeDetection = ARPlaneDetectionHorizontal | ARPlaneDetectionVertical;
             configuration.lightEstimationEnabled = false;
             configuration.worldAlignment = ARWorldAlignmentGravity;
 
             sessionDelegate = [[SessionDelegate new]init:&ActiveFrameViews metalContext:metalDevice];
-            session.delegate = sessionDelegate;
+            SystemImpl.XrContext->Session.delegate = sessionDelegate;
 
             UpdateXRView();
 
-            [session runWithConfiguration:configuration];
+            [SystemImpl.XrContext->Session runWithConfiguration:configuration];
 
             id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
@@ -589,8 +736,9 @@ namespace xr {
             }
 
             Planes.clear();
+            Meshes.clear();
             CleanupAnchor(nil);
-            [session pause];
+            [SystemImpl.XrContext->Session pause];
             UpdateXRView(nil);
         }
 
@@ -636,7 +784,7 @@ namespace xr {
             CFRunLoopRef mainRunLoop = CFRunLoopGetMain();
             const auto intervalInSeconds = 0.033;
             CFRunLoopTimerRef timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), intervalInSeconds, 0, 0, ^(CFRunLoopTimerRef timer){
-                if ([session currentFrame] != nil) {
+                if ([SystemImpl.XrContext->Session currentFrame] != nil) {
                     CFRunLoopRemoveTimer(mainRunLoop, timer, kCFRunLoopCommonModes);
                     CFRelease(timer);
                     tcs.complete();
@@ -650,11 +798,11 @@ namespace xr {
             shouldEndSession = sessionEnded;
             shouldRestartSession = false;
 
-            currentFrame = session.currentFrame;
+            SystemImpl.XrContext->Frame = SystemImpl.XrContext->Session.currentFrame;
 
             UpdateXRView();
 
-            [sessionDelegate session:session didUpdateFrameInternal:currentFrame];
+            [sessionDelegate session:SystemImpl.XrContext->Session didUpdateFrameInternal:SystemImpl.XrContext->Frame];
 
             auto viewSize = [sessionDelegate viewSize];
             viewportSize.x = viewSize.width;
@@ -805,13 +953,13 @@ namespace xr {
                 [commandBuffer commit];
             }
 
-            if (currentFrame != nil) {
-                currentFrame = nil;
+            if (SystemImpl.XrContext->Frame != nil) {
+                SystemImpl.XrContext->Frame = nil;
             }
         }
 
         void GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const {
-            if (currentFrame != nil && currentFrame.camera != nil && [currentFrame.camera trackingState] == ARTrackingStateNormal) {
+            if (SystemImpl.XrContext->Frame != nil && SystemImpl.XrContext->Frame.camera != nil && [SystemImpl.XrContext->Frame.camera trackingState] == ARTrackingStateNormal) {
                 if (@available(iOS 13.0, *)) {
                     GetHitTestResultsForiOS13(filteredResults, offsetRay, trackableTypes);
                 } else {
@@ -831,11 +979,22 @@ namespace xr {
 
             // Create the anchor and add it to the ARKit session.
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
-            [session addAnchor:anchor];
+            [SystemImpl.XrContext->Session addAnchor:anchor];
             nativeAnchors.push_back(anchor);
             return { pose, (__bridge NativeAnchorPtr)anchor };
         }
 
+        /**
+         Declares an ARKit anchor that was created outside the BabylonNative xr system.
+         */
+        xr::Anchor DeclareAnchor(NativeAnchorPtr anchor)
+        {
+            const auto arAnchor = (__bridge ARAnchor*)anchor;
+            nativeAnchors.push_back(arAnchor);
+            const auto pose{TransformToPose(arAnchor.transform)};
+            return { pose, anchor };
+        }
+        
         /**
          For a given anchor update the current pose, and determine if it is still valid.
          */
@@ -934,12 +1093,120 @@ namespace xr {
             }
         }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+        /**
+         Updates existing meshes in place, gets the list of updated/created mesh IDs and removed mesh IDs.
+         */
+        void UpdateMeshes(std::vector<Frame::Mesh::Identifier>& updatedMeshes, std::vector<Frame::Mesh::Identifier>& deletedMeshes) {
+            if (![sessionDelegate GetMeshDetectionEnabled]) {
+                return;
+            }
+            if (@available(iOS 13.4, *)) {
+                [sessionDelegate LockMeshes];
+                @try {
+                    // Update all meshes that have been updated since the last frame
+                    auto updatedARKitMeshes = [sessionDelegate GetUpdatedMeshes];
+                    for (ARMeshAnchor* updatedMesh : *updatedARKitMeshes) {
+                        const auto& geometry{ updatedMesh.geometry };
+                        const auto& faces{ geometry.faces };
+                        const auto& vertices{ geometry.vertices };
+                        const auto& normals{ geometry.normals };
+                        // get vertices data for vertex buffer
+                        meshVertexBuffer.clear();
+                        meshVertexBuffer.resize(vertices.count);
+                        std::vector<Vector3f> vertexData{};
+                        vertexData.resize(vertices.count);
+                        memcpy(vertexData.data(), vertices.buffer.contents, vertices.stride * vertices.count);
+                        for(int i = 0; i < vertices.count; i++) {
+                            const auto vertex = vertexData[i];
+                            auto vertexTransform = matrix_identity_float4x4;
+                            vertexTransform.columns[3] = simd_float4{vertex.X, vertex.Y, vertex.Z, 1};
+                            auto transform = matrix_multiply(updatedMesh.transform, vertexTransform);
+                            const auto position = simd_float3{transform.columns[3].x ,transform.columns[3].y, transform.columns[3].z};
+                            meshVertexBuffer[i].X = position[0];
+                            meshVertexBuffer[i].Y = position[1];
+                            meshVertexBuffer[i].Z = position[2];
+                        }
+                        // get indices data for index buffer
+                        const auto indexCount = faces.count * faces.indexCountPerPrimitive;
+                        meshIndexBuffer.clear();
+                        meshIndexBuffer.resize(indexCount);
+                        std::vector<Index3> indexData{};
+                        indexData.resize(faces.count);
+                        memcpy(indexData.data(), faces.buffer.contents, faces.bytesPerIndex * faces.count * faces.indexCountPerPrimitive);
+                        auto index = 0;
+                        for(int i=0; i<faces.count; i++){
+                            meshIndexBuffer[index] = indexData[i].x;
+                            meshIndexBuffer[index + 1] = indexData[i].y;
+                            meshIndexBuffer[index + 2] = indexData[i].z;
+                            index+=3;
+                        }
+                        // get normals data for normals buffer
+                        meshNormalsBuffer.clear();
+                        meshNormalsBuffer.resize(normals.count);
+                        std::vector<Vector3f> normalsData{};
+                        normalsData.resize(normals.count);
+                        memcpy(normalsData.data(), normals.buffer.contents, normals.stride * normals.count);
+                        for(int i = 0; i < normals.count; i++) {
+                            const auto normal = normalsData[i];
+                            auto normalTransform = matrix_identity_float4x4;
+                            normalTransform.columns[3] = simd_float4{normal.X, normal.Y, normal.Z, 1};
+                            auto meshTranspose = simd_transpose(simd_inverse(updatedMesh.transform));
+                            auto transform = matrix_multiply(meshTranspose, normalTransform);
+                            const auto position = simd_float3{transform.columns[3].x ,transform.columns[3].y, transform.columns[3].z};
+                            meshNormalsBuffer[i].X = position[0];
+                            meshNormalsBuffer[i].Y = position[1];
+                            meshNormalsBuffer[i].Z = position[2];
+                        }
+                        // Update the existing mesh if it exists, otherwise create a new mesh and add it to our list of meshes.
+                        auto meshIterator = meshMap.find({[updatedMesh.identifier.UUIDString UTF8String]});
+                        if (meshIterator != meshMap.end()) {
+                            // if meshID was found, update values
+                            UpdateMesh(updatedMeshes, GetMeshByID(meshIterator->second), meshVertexBuffer, meshIndexBuffer, meshNormalsBuffer);
+                        } else {
+                            // create new mesh and initialize its values.
+                            Meshes.emplace_back();
+                            auto& mesh = Meshes.back();
+                            meshMap.insert({{[updatedMesh.identifier.UUIDString UTF8String]}, mesh.ID});
+                            // Fill in the mesh info
+                            UpdateMesh(updatedMeshes, mesh, meshVertexBuffer, meshIndexBuffer, meshNormalsBuffer);
+                        }
+                    }
+                    // Clear the list of updated meshes to start building up for the next frame update.
+                    updatedARKitMeshes->clear();
+
+                    // Now loop over all deleted meshes, find them in the existing meshes map, and if the entry exists add it to the list of removed meshes
+                    auto removedARKitMeshes = [sessionDelegate GetDeletedMeshes];
+                    for (ARMeshAnchor* removedMesh: *removedARKitMeshes) {
+                        // Find the mesh in the set of existing meshes.
+                        auto meshIterator = meshMap.find({[removedMesh.identifier.UUIDString UTF8String]});
+                        if (meshIterator != meshMap.end()) {
+                            // Release the held ref to the native mesh ID and clean up its data as it is no longer needed.
+                            auto [nativeMeshID, meshID] = *meshIterator;
+                            deletedMeshes.push_back(meshID);
+                            auto& mesh = GetMeshByID(meshID);
+                            mesh.Positions.clear();
+                            mesh.Indices.clear();
+                            mesh.Normals.clear();
+                            meshMap.erase(meshIterator);
+                        }
+                    }
+
+                    // Clear the list of removed frames to start building up for the next mesh update.
+                    removedARKitMeshes->clear();
+                } @finally {
+                    [sessionDelegate UnlockMeshes];
+                }
+            }
+        }
+#endif
+
         void UpdateFeaturePointCloud() {
             if (!FeaturePointCloudEnabled) {
                 return;
             }
 
-            ARPointCloud* pointCloud = currentFrame.rawFeaturePoints;
+            ARPointCloud* pointCloud = SystemImpl.XrContext->Frame.rawFeaturePoints;
 
             FeaturePointCloud.resize(pointCloud.count);
             for (NSUInteger i = 0; i < pointCloud.count; i++) {
@@ -982,6 +1249,20 @@ namespace xr {
             throw std::runtime_error{"Tried to get non-existent plane."};
         }
 
+        Frame::Mesh& GetMeshByID(Frame::Mesh::Identifier meshID)
+        {
+            // Loop over the mesh vector and find the correct mesh.
+            for (Frame::Mesh& mesh : Meshes)
+            {
+                if (mesh.ID == meshID)
+                {
+                    return mesh;
+                }
+            }
+
+            throw std::runtime_error{"Tried to get non-existent mesh."};
+        }
+
         /**
          Deallocates the native ARKit anchor object, and removes it from the anchor list.
          */
@@ -991,7 +1272,7 @@ namespace xr {
             auto anchorIter = nativeAnchors.begin();
             while (anchorIter != nativeAnchors.end()) {
                 if (arAnchor == nil || arAnchor == *anchorIter) {
-                    [session removeAnchor:*anchorIter];
+                    [SystemImpl.XrContext->Session removeAnchor:*anchorIter];
                     anchorIter = nativeAnchors.erase(anchorIter);
 
                     if (arAnchor != nil) {
@@ -1010,16 +1291,22 @@ namespace xr {
             [sessionDelegate SetPlaneDetectionEnabled:enabled];
         }
 
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+        bool TrySetMeshDetectorEnabled(const bool enabled)
+        {
+            return [sessionDelegate TrySetMeshDetectorEnabled:enabled];
+        }
+#endif
+
         bool IsTracking() const {
             // There are three different tracking states as defined in ARKit: https://developer.apple.com/documentation/arkit/artrackingstate
             // From my testing even while obscuring the camera for a long duration the state still registers as ARTrackingStateLimited
             // rather than ARTrackingStateNotAvailable. For that reason the only state that should be considered to be trully tracking is
             // ARTrackingStateNormal.
-            return currentFrame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
+            return SystemImpl.XrContext->Frame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
 
     private:
-        ARSession* session{};
         std::function<MTKView*()> getXRView{};
         MTKView* xrView{};
         bool sessionEnded{ false };
@@ -1035,7 +1322,11 @@ namespace xr {
         id<MTLCommandQueue> commandQueue;
         std::vector<ARAnchor*> nativeAnchors{};
         std::vector<float> planePolygonBuffer{};
+        std::vector<Vector3f> meshVertexBuffer{};
+        std::vector<uint32_t> meshIndexBuffer{};
+        std::vector<Vector3f> meshNormalsBuffer{};
         std::unordered_map<std::string, Frame::Plane::Identifier> planeMap{};
+        std::unordered_map<std::string, Frame::Mesh::Identifier> meshMap{};
         std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
         bool planeDetectionEnabled{ false };
@@ -1077,6 +1368,32 @@ namespace xr {
             plane.PolygonSize = polygonSize;
             plane.PolygonFormat = PolygonFormat::XYZ;
             updatedPlanes.push_back(plane.ID);
+        }
+
+        void UpdateMesh(std::vector<Frame::Mesh::Identifier>& updatedMeshes, Frame::Mesh& mesh, std::vector<Vector3f>& vertexBuffer, std::vector<uint32_t>& indexBuffer, std::vector<Vector3f>& normalsBuffer) {
+            // Check if mesh was actually updated
+            bool checkIfMeshUpdated{ false };
+            if (mesh.Positions.size() != vertexBuffer.size()) {
+                checkIfMeshUpdated = true;
+            } else {
+                int compare =  memcmp(mesh.Positions.data(), vertexBuffer.data(), vertexBuffer.size() * sizeof(Vector3f));
+                if (compare != 0) {
+                    checkIfMeshUpdated = true;
+                }
+            }
+
+            if (checkIfMeshUpdated) {
+                // Store the new mesh information
+                mesh.Positions.resize(vertexBuffer.size());
+                mesh.Positions.swap(vertexBuffer);
+                static_assert(sizeof(Frame::Mesh::IndexType) == sizeof(uint32_t));
+                mesh.Indices.resize(indexBuffer.size());
+                memcpy(mesh.Indices.data(), indexBuffer.data(), indexBuffer.size() * sizeof(uint32_t));
+                mesh.HasNormals = true;
+                mesh.Normals.resize(normalsBuffer.size());
+                mesh.Normals.swap(normalsBuffer);
+                updatedMeshes.push_back(mesh.ID);
+            }
         }
 
         // For iOS 13.0 and up make use of the ARRaycastQuery protocol for raycasting against all target trackable types.
@@ -1124,7 +1441,7 @@ namespace xr {
                                  alignment:ARRaycastTargetAlignmentAny];
 
             // Perform the actual raycast.
-            auto rayCastResults = [session raycast:raycastQuery];
+            auto rayCastResults = [SystemImpl.XrContext->Session raycast:raycastQuery];
 
             // Process the results and push them into the results list.
             for (ARRaycastResult* result in rayCastResults) {
@@ -1154,7 +1471,7 @@ namespace xr {
             }
 
             // Now perform the actual hit test and process the results
-            auto hitTestResults = [currentFrame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
+            auto hitTestResults = [SystemImpl.XrContext->Frame hitTest:CGPointMake(.5, .5) types:(typeFilter)];
             for (ARHitTestResult* result in hitTestResults) {
                 filteredResults.push_back(transformToHitResult(result.worldTransform));
             }
@@ -1184,6 +1501,9 @@ namespace xr {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
         Views[0].DepthFarZ = sessionImpl.DepthFarZ;
         m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+        m_impl->sessionImpl.UpdateMeshes(UpdatedMeshes, RemovedMeshes);
+#endif
         m_impl->sessionImpl.UpdateFeaturePointCloud();
     }
 
@@ -1198,9 +1518,9 @@ namespace xr {
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr) const {
         return m_impl->sessionImpl.CreateAnchor(pose);
     }
-    
-    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr /*anchor*/) const {
-        throw std::runtime_error("not implemented"); 
+
+    Anchor System::Session::Frame::DeclareAnchor(NativeAnchorPtr anchor) const {
+        return m_impl->sessionImpl.DeclareAnchor(anchor);
     }
 
     void System::Session::Frame::UpdateAnchor(xr::Anchor& anchor) const {
@@ -1219,8 +1539,8 @@ namespace xr {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
     }
 
-    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier) const {
-        throw std::runtime_error("not implemented");
+    System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier meshID) const {
+        return m_impl->sessionImpl.GetMeshByID(meshID);
     }
 
     System::System(const char* appName)
@@ -1243,14 +1563,12 @@ namespace xr {
 
     uintptr_t System::GetNativeXrContext()
     {
-        // TODO
-        return 0;
+        return reinterpret_cast<uintptr_t>(m_impl->XrContext.get());
     }
 
     std::string System::GetNativeXrContextType()
     {
-        // TODO
-        return "";
+        return "ARKit";
     }
 
     arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
@@ -1297,9 +1615,13 @@ namespace xr {
         return false;
     }
 
-    bool System::Session::TrySetMeshDetectorEnabled(const bool)
+    bool System::Session::TrySetMeshDetectorEnabled(const bool enabled)
     {
-        // TODO
+        if (enabled) {
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
+        return m_impl->TrySetMeshDetectorEnabled(enabled);
+#endif
+        }
         return false;
     }
 
