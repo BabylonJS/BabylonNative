@@ -323,14 +323,6 @@ namespace xr
             };
             std::array<XrPath, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionPaths{};
 
-            static constexpr std::array<const char*, 3> INPUT_SUBACTION_PATH_PREFIXES
-            {
-                "/user/hand/left",
-                "/user/hand/right",
-                "/user/eyes_ext"
-            };
-            std::array<XrPath, INPUT_SUBACTION_PATH_PREFIXES.size()> InputSubactionPaths{};
-
             static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_NAME{ "controller_get_pose_action" };
             static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
             static constexpr char* CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX{ "/input/grip/pose" };
@@ -647,17 +639,6 @@ namespace xr
             openXRAnchors.erase(anchor.NativeAnchor);
         }
 
-        void InitializeEyeResources()
-        {
-            if (!SupportsEyeTracking)
-            {
-                return;
-            }
-
-     //       auto eyeSpace = new System::Session::Frame::Space();
-   //         EyeTrackerSpace = new std::pair<bool, System::Session::Frame::Space>(false, &eyeSpace);
-        }
-
     private:
         static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
 
@@ -678,7 +659,6 @@ namespace xr
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
             SupportsEyeTracking = !!eyeTrackingSystemProperties.supportsEyeGazeInteraction;
-            InitializeEyeResources();
 
             // Initialize the hand resources
             HandData.SupportsArticulatedHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
@@ -694,11 +674,6 @@ namespace xr
 
             // Create the swapchains for the primary view configuration type. Secondary view configuration type swapchains will be populated once activated.
             PopulateSwapchains(primaryRenderResource.ViewState);
-        }
-
-        xr::System::Session::Frame::Space GetLatestEyeSpace()
-        {
-
         }
 
         void InitializeHandResources()
@@ -734,7 +709,6 @@ namespace xr
             XrInstance instance,
             const size_t idx)
         {
-
             XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
             actionInfo.actionType = controllerActionType;
             std::string controllerActionNameSuffixed{ controllerActionName + std::to_string(idx) };
@@ -768,13 +742,7 @@ namespace xr
             {
                 XrCheck(xrStringToPath(instance, ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx], &ActionResources.ControllerSubactionPaths[idx]));
             }
-/*
-            // Cache paths for subactions
-            for (size_t idx = 0; idx < ActionResources.INPUT_SUBACTION_PATH_PREFIXES.size(); ++idx)
-            {
-                XrCheck(xrStringToPath(instance, ActionResources.INPUT_SUBACTION_PATH_PREFIXES[idx], &ActionResources.InputSubactionPaths[idx]));
-            }
-*/
+
             // Cache paths for interaction profiles.
             XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &ActionResources.DefaultXRInteractionPath));
             XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &ActionResources.MicrosoftXRInteractionPath));
@@ -867,12 +835,10 @@ namespace xr
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 strcpy_s(actionInfo.actionName, ActionResources.EYE_GET_POSE_ACTION_NAME);
                 strcpy_s(actionInfo.localizedActionName, ActionResources.EYE_GET_POSE_ACTION_LOCALIZED_NAME);
-         //       actionInfo.countSubactionPaths = 1;
-         //       actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.EyeGetPoseAction));
 
                 // Create suggested binding
-                std::string path{ ActionResources.INPUT_SUBACTION_PATH_PREFIXES[2] };
+                std::string path{ "/user/eyes_ext" };
                 path.append(ActionResources.EYE_GET_POSE_PATH_SUFFIX);
 
                 eyeTrackingBinding.action = ActionResources.EyeGetPoseAction;
@@ -882,7 +848,6 @@ namespace xr
                 XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
                 actionSpaceCreateInfo.action = ActionResources.EyeGetPoseAction;
                 actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
-             //   actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
                 XrCheck(xrCreateActionSpace(session, &actionSpaceCreateInfo, &ActionResources.EyePoseActionSpace));
             }
 
@@ -1186,24 +1151,6 @@ namespace xr
             XrEventDataBuffer buffer{ XR_TYPE_EVENT_DATA_BUFFER };
             XrEventDataBaseHeader* header = reinterpret_cast<XrEventDataBaseHeader*>(&buffer);
 
-            const auto& instance = HmdImpl.Context.Instance();
-            const auto& session = HmdImpl.Context.Session();
-            auto updateInteractionProfileName = [instance, session](XrPath subactionPath, std::string& profileNameOut) {
-                XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
-                XrCheck(xrGetCurrentInteractionProfile(session, subactionPath, &state));
-
-                if (state.interactionProfile == XR_NULL_PATH)
-                {
-                    profileNameOut = "";
-                    return;
-                }
-
-                uint32_t count;
-                XrCheck(xrPathToString(instance, state.interactionProfile, 0, &count, nullptr));
-                profileNameOut.resize(count);
-                XrCheck(xrPathToString(instance, state.interactionProfile, count, &count, profileNameOut.data()));
-            };
-
             // Process all pending messages.
             while (TryReadNextEvent(buffer))
             {
@@ -1226,7 +1173,21 @@ namespace xr
 
                     for (size_t idx = 0; idx < ActionResources.ActiveInputSources.size(); ++idx)
                     {
-                        updateInteractionProfileName(ActionResources.ControllerSubactionPaths[idx], ActionResources.ActiveInputSources[idx].InteractionProfileName);
+                        const auto& instance = HmdImpl.Context.Instance();
+                        auto& inputSource = ActionResources.ActiveInputSources[idx];
+                        XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
+                        XrCheck(xrGetCurrentInteractionProfile(HmdImpl.Context.Session(), ActionResources.ControllerSubactionPaths[idx], &state));
+
+                        if (state.interactionProfile == XR_NULL_PATH)
+                        {
+                            inputSource.InteractionProfileName = "";
+                            return;
+                        }
+
+                        uint32_t count;
+                        XrCheck(xrPathToString(instance, state.interactionProfile, 0, &count, nullptr));
+                        inputSource.InteractionProfileName.resize(count);
+                        XrCheck(xrPathToString(instance, state.interactionProfile, count, &count, inputSource.InteractionProfileName.data()));
                     }
 
                     break;
@@ -1672,9 +1633,6 @@ namespace xr
                 // source data until we get an interaction profile changed event (and know what the source is)
                 if (!inputSource.InteractionProfileName.empty())
                 {
-                    XrPath interactionProfilePath;
-                    XrCheck(xrStringToPath(m_impl->sessionImpl.HmdImpl.Context.Instance(), inputSource.InteractionProfileName.data(), &interactionProfilePath));
-
                     // Get grip space
                     bool gripSpaceTracked = false;
                     {
@@ -1719,6 +1677,8 @@ namespace xr
 
                     inputSource.TrackedThisFrame = aimSpaceTracked && gripSpaceTracked;
 
+                    XrPath interactionProfilePath;
+                    XrCheck(xrStringToPath(m_impl->sessionImpl.HmdImpl.Context.Instance(), inputSource.InteractionProfileName.data(), &interactionProfilePath));
 
                     if (interactionProfilePath == actionResources.MicrosoftXRInteractionPath)
                     {
@@ -2168,23 +2128,6 @@ namespace xr
         };
 
         su.Initialize(initOptions);
-
-        return true;
-    }
-
-    bool System::Session::TrySetEyeTrackingEnabled(const bool enabled)
-    {
-        if (enabled)
-        {
-    //        const auto& session = m_impl->HmdImpl.Context.Session();
-    //        const auto& extensions = *m_impl->HmdImpl.Context.Extensions();
-            m_impl->InitializeEyeResources();
-            /*
-            auto& su = m_impl->HmdImpl.Context.SceneUnderstanding();
-            SceneUnderstanding::InitOptions initOptions{ session, extensions };
-            su.Initialize(initOptions);
-            */
-        }
 
         return true;
     }

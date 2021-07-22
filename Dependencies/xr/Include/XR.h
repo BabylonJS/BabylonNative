@@ -345,7 +345,6 @@ namespace xr
             bool TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions& options);
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
-            bool TrySetEyeTrackingEnabled(const bool enabled);
 
         private:
             std::unique_ptr<Impl> m_impl{};
