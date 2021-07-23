@@ -28,36 +28,32 @@ target_include_directories(napi PUBLIC "include")
 
 # Install v8 SDK from NuGet
 function (install_v8_nuget V8_VERSION ARCH VS_PLAT_TOOLSET)
-    set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
-    set(NUGET_EXE "${NUGET_PATH}/nuget.exe")
-    if(NOT EXISTS ${NUGET_EXE})
-        file(DOWNLOAD "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" ${NUGET_EXE})
-    endif()
-    file(COPY "packages.config" DESTINATION ${NUGET_PATH})
-    execute_process(COMMAND ${NUGET_EXE} install WORKING_DIRECTORY ${NUGET_PATH})
+    download_nuget()
+    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}")
+    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}")
+
     add_library(v8_libbase SHARED IMPORTED)
-    set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libbase.dll.lib")
+    set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
     add_library(v8_libplatform SHARED IMPORTED)
-    set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libplatform.dll.lib")
+    set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libplatform.dll.lib")
     add_library(v8 SHARED IMPORTED)
-    set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8.dll.lib")
+    set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8.dll.lib")
     target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
-    target_include_directories(v8 INTERFACE "${NUGET_PATH}/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/include")
+    target_include_directories(v8 INTERFACE "${V8_PACKAGE_PATH}/include")
 
     set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/icudtl.dat"
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/icui18n.dll"
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/icuuc.dll"
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8.dll"
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libbase.dll"
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/v8_libplatform.dll"
-        "${NUGET_PATH}/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}/lib/Release/zlib.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icui18n.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/zlib.dll"
         CACHE STRING "N-API runtime output artifacts")
 endfunction()
 
 if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
-    add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")
     if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         if(WIN32)
             set_win32_arch()        

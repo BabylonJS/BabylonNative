@@ -124,3 +124,19 @@ function(set_win32_arch)
         message(FATAL_ERROR "Unrecognized compiler: ${CMAKE_CXX_COMPILER}")
     endif()
 endfunction()
+
+# Uses the nuget.config and packages.config files in the current directory to download packages from NuGet.
+# NUGET_PATH will be set to the directory where the packages are installed.
+function (download_nuget)
+    set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
+    set(NUGET_PATH "${NUGET_PATH}" PARENT_SCOPE)
+    set(NUGET_EXE "${NUGET_PATH}/nuget.exe")
+    if(NOT EXISTS ${NUGET_EXE})
+        file(DOWNLOAD "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" ${NUGET_EXE})
+    endif()
+    file(COPY "nuget.config" DESTINATION ${NUGET_PATH})
+    file(COPY "packages.config" DESTINATION ${NUGET_PATH})
+
+    execute_process(COMMAND ${NUGET_EXE} restore WORKING_DIRECTORY ${NUGET_PATH})
+    execute_process(COMMAND ${NUGET_EXE} install WORKING_DIRECTORY ${NUGET_PATH})
+endfunction()

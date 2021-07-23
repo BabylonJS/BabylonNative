@@ -68,16 +68,16 @@ namespace Babylon
                 Napi::Object mediaDevices = Napi::Object::New(env);
                 mediaDevices.Set("getUserMedia", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
                     auto env = info.Env();
-                    auto deferred{ Napi::Promise::Deferred::New(env) };
-                    auto promise{ deferred.Promise() };
+                    auto deferred{Napi::Promise::Deferred::New(env)};
+                    auto promise{deferred.Promise()};
 
-                    auto& jsRuntime{ JsRuntime::GetFromJavaScript(env) };
-                    jsRuntime.Dispatch([deferred{ std::move(deferred) }](Napi::Env env) {
+                    auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
+                    jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
                         deferred.Resolve(env.Null());
                     });
 
-                    return promise;
-                }));
+                    return static_cast<Napi::Value>(promise);
+                }, "getUserMedia"));
                 navigator.Set("mediaDevices", mediaDevices);
             }
 
