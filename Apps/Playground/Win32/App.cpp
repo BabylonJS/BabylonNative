@@ -140,7 +140,7 @@ namespace
             chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
             if (chromeDevTools->SupportsInspector())
             {
-                chromeDevTools->StartInspector(4653, "BabylonNative Playground");
+                chromeDevTools->StartInspector(5643, "BabylonNative Playground");
             }
         });
 

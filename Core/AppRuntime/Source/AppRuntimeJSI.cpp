@@ -30,9 +30,9 @@ namespace Babylon
     };
 
     void AppRuntime::RunEnvironmentTier(const char*)
-    {   
+    {
         v8runtime::V8RuntimeArgs args{};
-        args.inspectorPort = 4653;
+        args.inspectorPort = 5643;
         args.foreground_task_runner = std::make_shared<TaskRunnerAdapter>(*m_workQueue);
         
         const auto runtime = v8runtime::makeV8Runtime(std::move(args));

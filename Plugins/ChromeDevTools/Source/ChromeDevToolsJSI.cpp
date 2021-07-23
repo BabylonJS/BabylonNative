@@ -61,7 +61,7 @@ namespace Babylon::Plugins
 
     /*
         Note: V8JSI doesn't currently support setting the port or appName at runtime.
-        For now the port is set to 4653 in AppRuntimeJSI.cpp.
+        For now the port is set to 5643 in AppRuntimeJSI.cpp.
     */
     void ChromeDevTools::StartInspector(const unsigned short port, const std::string& appName) const
     {

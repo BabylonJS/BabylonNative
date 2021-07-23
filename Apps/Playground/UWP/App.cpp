@@ -296,7 +296,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         m_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
         if (m_chromeDevTools->SupportsInspector())
         {
-            m_chromeDevTools->StartInspector(4653, "BabylonNative Playground");
+            m_chromeDevTools->StartInspector(5643, "BabylonNative Playground");
         }
     });
 
