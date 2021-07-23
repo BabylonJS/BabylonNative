@@ -2,8 +2,11 @@ set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"
     "Source/Canvas.h"
+    "Source/Colors.h"
     "Source/Image.cpp"
     "Source/Image.h"
+    "Source/ImageData.cpp"
+    "Source/ImageData.h"
     "Source/Context.cpp"
     "Source/Context.h"
     "Source/MeasureText.cpp"
@@ -31,7 +34,8 @@ target_link_to_dependencies(Canvas PUBLIC napi
     PRIVATE bx
     PRIVATE GraphicsInternal
     PRIVATE NativeEngine
-    PRIVATE NativeEngineInternal)
+    PRIVATE NativeEngineInternal
+    PRIVATE UrlLib)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
