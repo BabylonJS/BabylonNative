@@ -2,9 +2,9 @@ set(SOURCES
     "include/napi/env.h"
     "include/napi/napi.h"
     "include/napi/napi-inl.h"
-    "include/napi/js_native_api_types.h"
-    "include/napi/js_native_api.h"
     "source/env.cc")
+
+add_library(napi ${SOURCES})
 
 if(NOT TARGET jsi)
     if(WIN32)
@@ -26,32 +26,29 @@ if(NOT TARGET jsi)
         set(V8JSI_DLL_PATH_DEBUG "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Debug/${WIN32_ARCH}/v8jsi.dll")
         set(V8JSI_DLL_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${WIN32_ARCH}/v8jsi.dll")
 
-        add_library(jsi SHARED IMPORTED)
-        set_target_properties(jsi PROPERTIES 
+        add_library(v8jsi SHARED IMPORTED)
+        set_target_properties(v8jsi PROPERTIES 
             IMPORTED_IMPLIB_DEBUG ${V8JSI_LIB_PATH_DEBUG}
             IMPORTED_IMPLIB_RELEASE ${V8JSI_LIB_PATH_RELEASE}
             IMPORTED_IMPLIB_MINSIZEREL ${V8JSI_LIB_PATH_RELEASE}
             IMPORTED_IMPLIB_RELWITHDEBINFO ${V8JSI_LIB_PATH_RELEASE})
 
-        target_include_directories(jsi INTERFACE "${V8JSI_PACKAGE_PATH}/build/native/include")
-        target_include_directories(jsi INTERFACE "${V8JSI_PACKAGE_PATH}/build/native/jsi")
+        target_include_directories(v8jsi INTERFACE "${V8JSI_PACKAGE_PATH}/build/native/include")
+        target_include_directories(v8jsi INTERFACE "${V8JSI_PACKAGE_PATH}/build/native/jsi")
         set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS_DEBUG ${V8JSI_DLL_PATH_DEBUG} CACHE STRING "N-API runtime output artifacts (debug)")
         set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS_RELEASE ${V8JSI_DLL_PATH_RELEASE} CACHE STRING "N-API runtime output artifacts (release)")
         set(NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS ${V8JSI_DLL_PATH} CACHE STRING "N-API runtime output artifacts")
-        target_compile_definitions(jsi INTERFACE V8JSI_ENABLE_INSPECTOR)
+        target_compile_definitions(v8jsi INTERFACE V8JSI_ENABLE_INSPECTOR)
 
-        set(SOURCES ${SOURCES} "source/jsi.cpp")
+        add_library(jsi "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
+        target_include_directories(jsi 
+            PUBLIC "${V8JSI_PACKAGE_PATH}/build/native/include"
+            PUBLIC "${V8JSI_PACKAGE_PATH}/build/native/jsi")
+        target_link_libraries(jsi PUBLIC v8jsi)
+        set_property(TARGET jsi PROPERTY FOLDER Dependencies)
     else()
         message(FATAL_ERROR "jsi target is required")
     endif()
-endif()
-
-add_library(napi ${SOURCES})
-
-if (DEFINED V8JSI_PACKAGE_PATH)
-    target_include_directories(napi 
-        PUBLIC "${V8JSI_PACKAGE_PATH}/build/native/include"
-        PUBLIC "${V8JSI_PACKAGE_PATH}/build/native/jsi")
 endif()
 
 target_include_directories(napi 

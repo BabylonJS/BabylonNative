@@ -1,7 +1,5 @@
 #pragma once
 
-#include "js_native_api.h"
-#include "js_native_api_types.h"
 #include <jsi/jsi.h>
 #include <functional>
 #include <initializer_list>
@@ -9,6 +7,41 @@
 #include <string>
 #include <vector>
 #include <optional>
+
+// Copied from js_native_api_types.h
+typedef enum {
+  napi_default = 0,
+  napi_writable = 1 << 0,
+  napi_enumerable = 1 << 1,
+  napi_configurable = 1 << 2,
+} napi_property_attributes;
+
+typedef enum {
+  // ES6 types (corresponds to typeof)
+  napi_undefined,
+  napi_null,
+  napi_boolean,
+  napi_number,
+  napi_string,
+  napi_symbol,
+  napi_object,
+  napi_function,
+  napi_external,
+} napi_valuetype;
+
+typedef enum {
+  napi_int8_array,
+  napi_uint8_array,
+  napi_uint8_clamped_array,
+  napi_int16_array,
+  napi_uint16_array,
+  napi_int32_array,
+  napi_uint32_array,
+  napi_float32_array,
+  napi_float64_array,
+  napi_bigint64_array,
+  napi_biguint64_array,
+} napi_typedarray_type;
 
 struct napi_env__ {
   napi_env__(facebook::jsi::Runtime& rt)
