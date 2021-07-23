@@ -2,6 +2,8 @@ set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"
     "Source/Canvas.h"
+    "Source/Image.cpp"
+    "Source/Image.h"
     "Source/Context.cpp"
     "Source/Context.h"
     "Source/MeasureText.cpp"
