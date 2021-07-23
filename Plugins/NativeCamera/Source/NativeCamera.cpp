@@ -77,7 +77,7 @@ namespace Babylon
                     });
 
                     return static_cast<Napi::Value>(promise);
-                }));
+                }, "getUserMedia"));
                 navigator.Set("mediaDevices", mediaDevices);
             }
 
