@@ -472,6 +472,7 @@ const validate = async () => {
     'Assembled/ios/libs/libNativeCapture.a',
     'Assembled/ios/libs/libNativeEngine.a',
     'Assembled/ios/libs/libNativeInput.a',
+    'Assembled/ios/libs/libNativeOptimizations.a',
     'Assembled/ios/libs/libNativeXr.a',
     'Assembled/ios/libs/libOGLCompiler.a',
     'Assembled/ios/libs/libOSDependent.a',

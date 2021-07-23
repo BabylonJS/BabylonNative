@@ -34,6 +34,7 @@ Pod::Spec.new do |s|
                 'NativeCapture',
                 'NativeEngine',
                 'NativeInput',
+                'NativeOptimizations',
                 'NativeXR',
                 'SPIRV',
                 'spirv-cross-core',

@@ -68,7 +68,7 @@ PODS:
   - glog (0.3.5)
   - libevent (2.1.12)
   - OpenSSL-Universal (1.1.180)
-  - Permission-Camera (2.1.5):
+  - Permission-Camera (2.2.2):
     - RNPermissions
   - RCTRequired (0.63.1)
   - RCTTypeSafety (0.63.1):
@@ -298,8 +298,8 @@ PODS:
     - React-Core (= 0.63.1)
     - React-cxxreact (= 0.63.1)
     - React-jsi (= 0.63.1)
-  - RNPermissions (2.1.5):
-    - React
+  - RNPermissions (2.2.2):
+    - React-Core
   - Yoga (1.14.0)
   - YogaKit (1.18.1):
     - Yoga (~> 1.14)
@@ -449,7 +449,7 @@ SPEC CHECKSUMS:
   glog: 40a13f7840415b9a77023fbcae0f1e6f43192af3
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   OpenSSL-Universal: 1aa4f6a6ee7256b83db99ec1ccdaa80d10f9af9b
-  Permission-Camera: 53d46bd722aea28d796e20f05fb3cbe6cde6ccb6
+  Permission-Camera: 375576c57ea625c88137d2cc52ba6dfeb21db036
   RCTRequired: d9b1a9e6fa097744ca3ede59f86a35096df7202b
   RCTTypeSafety: c227cd061983e9e964115afbc4e8730d6a6f1395
   React: 86e972a20967ee4137aa19dc48319405927c2e94
@@ -471,7 +471,7 @@ SPEC CHECKSUMS:
   React-RCTText: 4f95d322b7e6da72817284abf8a2cdcec18b9cd8
   React-RCTVibration: f3a9123c244f35c40d3c9f3ec3f0b9e5717bb292
   ReactCommon: 2905859f84a94a381bb0d8dd3921ccb1a0047cb8
-  RNPermissions: 1888705aebcc81714efa5dbff94351e4388ae012
+  RNPermissions: 067727df624665d4a6c8e2cffcc172ba608b96ed
   Yoga: d5bd05a2b6b94c52323745c2c2b64557c8c66f64
   YogaKit: f782866e155069a2cca2517aafea43200b01fd5a
 

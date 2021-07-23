@@ -5,6 +5,7 @@
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
+#include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -47,6 +48,7 @@ namespace Babylon
             m_nativeXr->SetSessionStateChangedCallback([isXRActive{ m_isXRActive }](bool isSessionActive) { *isXRActive = isSessionActive; });
             Plugins::NativeCapture::Initialize(m_env);
             m_nativeInput = &Plugins::NativeInput::CreateForJavaScript(m_env);
+            Plugins::NativeOptimizations::Initialize(m_env);
 
             // Initialize Babylon Native polyfills
             Polyfills::Window::Initialize(m_env);
