@@ -8,7 +8,7 @@ set(SOURCES
 
 if(NOT TARGET jsi)
     if(WIN32)
-        nuget_download()
+        download_nuget()
         set_win32_arch()
         set(V8JSI_VERSION "0.64.16")
         if (WINDOWS_STORE)

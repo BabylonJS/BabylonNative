@@ -127,7 +127,7 @@ endfunction()
 
 # Uses the nuget.config and packages.config files in the current directory to download packages from NuGet.
 # NUGET_PATH will be set to the directory where the packages are installed.
-function (nuget_download)
+function (download_nuget)
     set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
     set(NUGET_PATH "${NUGET_PATH}" PARENT_SCOPE)
     set(NUGET_EXE "${NUGET_PATH}/nuget.exe")

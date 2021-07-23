@@ -4,7 +4,7 @@ function(on_linked_as_dependency target)
     # Propagate this file to the target so that it will be transitively available to targets that
     # link to that one, too.
     propagate_on_linked_as_dependency_cmake_file(napi ${target})
-    if (DEFINED NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS)    
+    if (DEFINED NAPI_JAVASCRIPT_RUNTIME_OUTPUT_ARTIFACTS)
         # We only need to actually copy files if we're being linked from an executable.
         get_target_property(type ${target} TYPE)
         if(${type} STREQUAL "EXECUTABLE")

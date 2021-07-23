@@ -28,7 +28,7 @@ target_include_directories(napi PUBLIC "include")
 
 # Install v8 SDK from NuGet
 function (install_v8_nuget V8_VERSION ARCH VS_PLAT_TOOLSET)
-    nuget_download()
+    download_nuget()
     set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}")
     set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}")
 
