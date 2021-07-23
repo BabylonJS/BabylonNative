@@ -1222,7 +1222,7 @@ namespace details
   struct Function {
     static inline jsi::Value Callback(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t count, void* data, Callable cb) {
       CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
-      return jsi::Value(env->rt, cb(std::move(callbackInfo)));
+      return {env->rt, cb(callbackInfo)};
     }
   };
 

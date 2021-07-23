@@ -1130,8 +1130,6 @@ namespace Napi {
     CallbackInfo(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t argc, const jsi::Value& newTarget, void* data);
     ~CallbackInfo();
 
-    CallbackInfo(CallbackInfo &&) = default;
-
     // Disallow copying to prevent multiple free of _dynamicArgs
     CallbackInfo(CallbackInfo const &) = delete;
     void operator=(CallbackInfo const &) = delete;
