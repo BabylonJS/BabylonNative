@@ -387,12 +387,12 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    void Context::DrawImage(const Napi::CallbackInfo& info)
+    void Context::DrawImage(const Napi::CallbackInfo&)
     {
         throw std::runtime_error{ "not implemented" };
     }
 
-    Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
+    Napi::Value Context::GetImageData(const Napi::CallbackInfo&)
     {
         throw std::runtime_error{ "not implemented" };
     }
