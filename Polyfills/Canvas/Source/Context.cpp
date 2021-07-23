@@ -106,10 +106,6 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_nvg)
         {
-            for(auto& image : m_nvgImageIndices)
-            {
-                nvgDeleteImage(m_nvg, image.second);
-            }
             nvgDelete(m_nvg);
             m_nvg = nullptr;
         }
@@ -393,88 +389,12 @@ namespace Babylon::Polyfills::Internal
 
     void Context::DrawImage(const Napi::CallbackInfo& info)
     {
-        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(info[0].As<Napi::Object>());
-
-        int imageIndex{-1};
-        const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
-        if (nvgImageIter == m_nvgImageIndices.end())
-        {
-            imageIndex = canvasImage->CreateNVGImageForContext(m_nvg);
-            m_nvgImageIndices.insert(std::make_pair(canvasImage, imageIndex));
-        }
-        else
-        {
-            imageIndex = nvgImageIter->second;
-        }
-        assert(imageIndex != -1);
-
-        if (info.Length() == 3)
-        {
-            const auto dx = info[1].As<Napi::Number>().Int32Value();
-            const auto dy = info[2].As<Napi::Number>().Int32Value();
-            const auto width = static_cast<float>(canvasImage->GetWidth());
-            const auto height = static_cast<float>(canvasImage->GetHeight());
-
-            NVGpaint imagePaint = nvgImagePattern(m_nvg, 0.f, 0.f, width, height, 0.f, imageIndex, 1.f);
-            nvgBeginPath(m_nvg);
-            nvgRect(m_nvg, dx, dy, width, height);
-            nvgFillPaint(m_nvg, imagePaint);
-            //nvgFill(m_nvg);
-            SetDirty();
-        } 
-        else if (info.Length() == 5)
-        {
-            const auto dx = info[1].As<Napi::Number>().Int32Value();
-            const auto dy = info[2].As<Napi::Number>().Int32Value();
-            const auto dWidth = info[3].As<Napi::Number>().Uint32Value();
-            const auto dHeight = info[4].As<Napi::Number>().Uint32Value();
-
-            NVGpaint imagePaint = nvgImagePattern(m_nvg, 0.f, 0.f, static_cast<float>(canvasImage->GetWidth()), static_cast<float>(canvasImage->GetHeight()), 0.f, imageIndex, 1.f);
-            nvgBeginPath(m_nvg);
-            nvgRect(m_nvg, dx, dy, dWidth, dHeight);
-            nvgFillPaint(m_nvg, imagePaint);
-            //nvgFill(m_nvg);
-            SetDirty();
-        }
-        else if (info.Length() == 9)
-        {
-            const auto sx = info[1].As<Napi::Number>().Int32Value();
-            const auto sy = info[2].As<Napi::Number>().Int32Value();
-            auto sWidth = info[3].As<Napi::Number>().Uint32Value();
-            auto sHeight = info[4].As<Napi::Number>().Uint32Value();
-            const auto dx = info[5].As<Napi::Number>().Int32Value();
-            const auto dy = info[6].As<Napi::Number>().Int32Value();
-            auto dWidth = info[7].As<Napi::Number>().Uint32Value();
-            auto dHeight = info[8].As<Napi::Number>().Uint32Value();
-            const auto width = static_cast<float>(canvasImage->GetWidth());
-            const auto height = static_cast<float>(canvasImage->GetHeight());
-
-            sWidth = (sWidth == 0xFFFFFFFF) ? width : sWidth;
-            sHeight = (sHeight == 0xFFFFFFFF) ? height : sHeight;
-            dWidth = (dWidth == 0xFFFFFFFF) ? width : dWidth;
-            dHeight = (dHeight == 0xFFFFFFFF) ? height : dHeight;
-
-            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(sWidth), static_cast<float>(sHeight), 0.f, imageIndex, 1.f);
-            nvgBeginPath(m_nvg);
-            nvgRect(m_nvg, dx, dy, dWidth, dHeight);
-            nvgFillPaint(m_nvg, imagePaint);
-            //nvgFill(m_nvg);
-            SetDirty();
-        }
-        else
-        {
-            throw std::runtime_error{ "Invalid number of parameters for DrawImage" };
-        }
+        throw std::runtime_error{ "not implemented" };
     }
 
     Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
-        //const auto sx = info[0].As<Napi::Number>().Uint32Value();
-        //const auto sy = info[1].As<Napi::Number>().Uint32Value();
-        const auto sw = info[2].As<Napi::Number>().Uint32Value();
-        const auto sh = info[3].As<Napi::Number>().Uint32Value();
-
-        return ImageData::CreateInstance(info.Env(), this, sw, sh);
+        throw std::runtime_error{ "not implemented" };
     }
 
     void Context::SetLineDash(const Napi::CallbackInfo&)
