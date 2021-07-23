@@ -8,7 +8,7 @@
 #include <vector>
 #include <optional>
 
-// Copied from js_native_api_types.h
+// Copied from js_native_api_types.h (https://git.io/J8aI5)
 typedef enum {
   napi_default = 0,
   napi_writable = 1 << 0,
