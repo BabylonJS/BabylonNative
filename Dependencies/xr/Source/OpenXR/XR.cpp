@@ -387,7 +387,7 @@ namespace xr
 
             static constexpr char* EYE_GET_POSE_ACTION_NAME{ "eye_get_pose_action" };
             static constexpr char* EYE_GET_POSE_ACTION_LOCALIZED_NAME{ "Eye Pose" };
-            static constexpr char* EYE_GET_POSE_PATH_SUFFIX{ "/input/gaze_ext/pose" };
+            static constexpr char* EYE_GET_POSE_PATH{ "/user/eyes_ext/input/gaze_ext/pose" };
             XrAction EyeGetPoseAction{};
             XrSpace EyePoseActionSpace{};
 
@@ -401,7 +401,7 @@ namespace xr
             XrPath XREyeInteractionPath{};
 
             std::vector<Frame::InputSource> ActiveInputSources{};
-            std::pair<bool, Frame::Space> EyeTrackerSpace{};
+            std::optional<Frame::Space> EyeTrackerSpace{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
@@ -442,7 +442,7 @@ namespace xr
             XrBool32 HandTrackersInitialized{ false };
         } HandData;
 
-        bool SupportsEyeTracking{ false };
+        XrBool32 SupportsEyeTracking{ false };
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -658,7 +658,7 @@ namespace xr
             XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES, &handTrackingSystemProperties };
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
-            SupportsEyeTracking = !!eyeTrackingSystemProperties.supportsEyeGazeInteraction;
+            SupportsEyeTracking = eyeTrackingSystemProperties.supportsEyeGazeInteraction;
 
             // Initialize the hand resources
             HandData.SupportsArticulatedHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
@@ -754,7 +754,7 @@ namespace xr
             std::vector<XrActionSuggestedBinding> microsoftHandBindings{};
             XrActionSuggestedBinding eyeTrackingBinding{};
 
-            // Create the controller get grip pose action, suggested bindings, and spaces
+            // Create controller get grip pose action, suggested bindings, and spaces
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
@@ -791,7 +791,7 @@ namespace xr
                 }
             }
 
-            // Create the controller get aim pose action, suggested bindings, and spaces
+            // Create controller get aim pose action, suggested bindings, and spaces
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
                 actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
@@ -828,7 +828,7 @@ namespace xr
                 }
             }
 
-            // Create the eye tracking get pose action, suggested binding, and space
+            // Create eye tracking get pose action, suggested binding, and space
             if (SupportsEyeTracking)
             {
                 XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
@@ -838,8 +838,7 @@ namespace xr
                 XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.EyeGetPoseAction));
 
                 // Create suggested binding
-                std::string path{ "/user/eyes_ext" };
-                path.append(ActionResources.EYE_GET_POSE_PATH_SUFFIX);
+                std::string path{ ActionResources.EYE_GET_POSE_PATH };
 
                 eyeTrackingBinding.action = ActionResources.EyeGetPoseAction;
                 XrCheck(xrStringToPath(instance, path.data(), &eyeTrackingBinding.binding));
@@ -1176,7 +1175,7 @@ namespace xr
                         XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
                         const auto& instance = HmdImpl.Context.Instance();
                         auto& inputSource = ActionResources.ActiveInputSources[idx];
-                        
+
                         XrCheck(xrGetCurrentInteractionProfile(HmdImpl.Context.Session(), ActionResources.ControllerSubactionPaths[idx], &state));
 
                         if (state.interactionProfile == XR_NULL_PATH)
@@ -1809,7 +1808,7 @@ namespace xr
             }
 
             // Get eye space
-            EyeTrackerSpace.first = false;
+            bool hasValidEyeData = false;
             if (sessionImpl.SupportsEyeTracking)
             {
                 XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE};
@@ -1833,10 +1832,19 @@ namespace xr
 
                     if ((location.locationFlags & RequiredFlags) == RequiredFlags)
                     {
-                        m_impl->UpdatePoseData(EyeTrackerSpace.second.Pose, location.pose);
-                        EyeTrackerSpace.first = true;
+                        if (!EyeTrackerSpace.has_value())
+                        {
+                            EyeTrackerSpace.emplace();
+                        }
+                        m_impl->UpdatePoseData(EyeTrackerSpace.value().Pose, location.pose);
+                        hasValidEyeData = true;
                     }
                 }
+            }
+
+            if (!hasValidEyeData)
+            {
+                EyeTrackerSpace.reset();
             }
         }
     }

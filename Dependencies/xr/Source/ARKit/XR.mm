@@ -529,7 +529,7 @@ namespace xr {
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        std::pair<bool, Frame::Space> EyeTrackerSpace{};
+        std::optional<Frame::Space> EyeTrackerSpace{};
         ARFrame* currentFrame{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };

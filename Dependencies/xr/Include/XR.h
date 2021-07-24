@@ -301,7 +301,7 @@ namespace xr
                 std::vector<InputSource>& InputSources;
                 std::vector<FeaturePoint>& FeaturePointCloud;
 
-                std::pair<bool,Space>& EyeTrackerSpace;
+                std::optional<Space>& EyeTrackerSpace;
 
                 std::vector<SceneObject::Identifier>UpdatedSceneObjects;
                 std::vector<SceneObject::Identifier>RemovedSceneObjects;
