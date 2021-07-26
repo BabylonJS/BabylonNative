@@ -2640,7 +2640,7 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
-            std::optional<Napi::ObjectReference> m_eyeTrackedSource{};
+            Napi::ObjectReference m_jsEyeTrackedSource{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
@@ -2693,24 +2693,22 @@ namespace Babylon
                 
             void ProcessEyeInputSource(const xr::System::Session::Frame& frame, Napi::Env env)
             {
-                if (frame.EyeTrackerSpace.has_value() && !m_eyeTrackedSource.has_value())
+                if (frame.EyeTrackerSpace.has_value() && m_jsEyeTrackedSource.IsEmpty())
                 {
-                    m_eyeTrackedSource.emplace(Napi::Persistent(Napi::Object::New(env)));
-                    m_eyeTrackedSource.value().Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
+                    m_jsEyeTrackedSource = Napi::Persistent(Napi::Object::New(env));
+                    m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
 
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
                         if (name == JS_EVENT_NAME_EYE_TRACKING_START)
                         {
-                            Napi::Object obj = m_eyeTrackedSource.value().Value();
+                            Napi::Object obj = m_jsEyeTrackedSource.Value();
                             callback.Call({obj});
                         }
                     }
                 }
-                else if (!frame.EyeTrackerSpace.has_value() && m_eyeTrackedSource.has_value())
+                else if (!frame.EyeTrackerSpace.has_value() && !m_jsEyeTrackedSource.IsEmpty())
                 {
-                    m_eyeTrackedSource.reset();
-
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
                         if (name == JS_EVENT_NAME_EYE_TRACKING_END)
@@ -2718,6 +2716,8 @@ namespace Babylon
                             callback.Call({});
                         }
                     }
+
+                    m_jsEyeTrackedSource.Reset();
                 }
             }
 
