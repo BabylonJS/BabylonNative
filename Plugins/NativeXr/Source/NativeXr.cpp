@@ -2703,25 +2703,19 @@ namespace Babylon
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
 
-                if (frame.EyeTrackerSpace.has_value())
+                // Process the eye-tracked input source
+                if (frame.EyeTrackerSpace.has_value() && !m_eyeTrackedSource.has_value())
                 {
-                    if (!m_eyeTrackedSource.has_value())
-                    {
-                        m_eyeTrackedSource.emplace(Napi::Persistent(Napi::Object::New(env)));
-                        m_eyeTrackedSource.value().Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
+                    m_eyeTrackedSource.emplace(Napi::Persistent(Napi::Object::New(env)));
+                    m_eyeTrackedSource.value().Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
 
-                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                        {
-                            if (name == JS_EVENT_NAME_EYE_TRACKING_START)
-                            {
-                                Napi::Object obj = m_eyeTrackedSource.value().Value();
-                                callback.Call({obj});
-                            }
-                        }
-                    }
-                    else
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
-                        m_eyeTrackedSource.value().Set("eyeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
+                        if (name == JS_EVENT_NAME_EYE_TRACKING_START)
+                        {
+                            Napi::Object obj = m_eyeTrackedSource.value().Value();
+                            callback.Call({obj});
+                        }
                     }
                 }
                 else if (!frame.EyeTrackerSpace.has_value() && m_eyeTrackedSource.has_value())
@@ -2737,6 +2731,7 @@ namespace Babylon
                     }
                 }
                 
+                // Process the controller-based input sources
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
