@@ -2690,20 +2690,9 @@ namespace Babylon
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
-
-            void ProcessInputSources(const xr::System::Session::Frame& frame, Napi::Env env)
+                
+            void ProcessEyeInputSource(const xr::System::Session::Frame& frame, Napi::Env env)
             {
-                // Figure out the new state.
-                std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
-                std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
-                std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
-
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
-                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
-
-                // Process the eye-tracked input source
                 if (frame.EyeTrackerSpace.has_value() && !m_eyeTrackedSource.has_value())
                 {
                     m_eyeTrackedSource.emplace(Napi::Persistent(Napi::Object::New(env)));
@@ -2730,7 +2719,20 @@ namespace Babylon
                         }
                     }
                 }
-                
+            }
+
+            void ProcessControllerInputSources(const xr::System::Session::Frame& frame, Napi::Env env)
+            {
+                // Figure out the new state.
+                std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> current{};
+                std::set<xr::System::Session::Frame::InputSource::Identifier> removed{};
+
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectStarts{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> selectEnds{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
+                std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
+
                 // Process the controller-based input sources
                 for (auto& inputSource : frame.InputSources)
                 {
@@ -2872,7 +2874,8 @@ namespace Babylon
                 Napi::Function callback{info[0].As<Napi::Function>()};
 
                 m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](const auto& frame) {
-                    ProcessInputSources(frame, Env());
+                    ProcessEyeInputSource(frame, Env());
+                    ProcessControllerInputSources(frame, Env());
 
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 
