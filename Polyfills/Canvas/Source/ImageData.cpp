@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
     {
         auto context{info[0].As<Napi::External<Context>>().Data()};
         auto width{info[1].As<Napi::Number>().Uint32Value()};
-        auto height{ info[1].As<Napi::Number>().Uint32Value() };
+        auto height{info[1].As<Napi::Number>().Uint32Value()};
         m_width = width;
         m_height = height;
     }
@@ -51,8 +51,8 @@ namespace Babylon::Polyfills::Internal
     {
         // return a well size array with 0
         // TODO: Get datas from context/canvas
-        const auto size = m_width * m_height * 4;
-        auto data = Napi::Uint8Array::New(info.Env(), size);
+        const auto size{m_width * m_height * 4};
+        auto data{Napi::Uint8Array::New(info.Env(), size)};
         memset(data.Data(), 0, size);
         return Napi::Value::From(info.Env(), data);
     }
