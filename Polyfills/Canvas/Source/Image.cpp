@@ -53,6 +53,7 @@ namespace Babylon::Polyfills::Internal
             bimg::imageFree(m_imageContainer);
             m_imageContainer = nullptr;
         }
+        m_cancellationSource->cancel();
     }
 
     Napi::Value NativeCanvasImage::GetWidth(const Napi::CallbackInfo&)
