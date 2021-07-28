@@ -19,6 +19,10 @@ def safeExtGet(prop, fallback) {
     rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
 }
 
+def reactProperties = new Properties()
+file("$projectDir/../../../react-native/ReactAndroid/gradle.properties").withInputStream { reactProperties.load(it) }
+def REACT_VERSION = reactProperties.getProperty("VERSION_NAME").split("\\.")[1].toInteger()
+
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
@@ -57,6 +61,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+}
+
+// The full/real version of libturbomodulejsijni.so will be built and included in apps using React Native 0.64 or newer,
+// so exclude Babylon React Native's minimal version of these libs in this case.
+if (REACT_VERSION >= 64) {
+    android.packagingOptions.excludes += 'lib/armeabi-v7a/libturbomodulejsijni.so'
+    android.packagingOptions.excludes += 'lib/arm64-v8a/libturbomodulejsijni.so'
+    android.packagingOptions.excludes += 'lib/x86/libturbomodulejsijni.so'
 }
 
 repositories {
