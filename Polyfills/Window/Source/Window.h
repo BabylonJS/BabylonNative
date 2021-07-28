@@ -2,6 +2,11 @@
 
 #include <Babylon/JsRuntime.h>
 
+namespace
+{
+    class TimeoutDispatcher;
+}
+
 namespace Babylon::Polyfills::Internal
 {
     class Window : public Napi::ObjectWrap<Window>
@@ -15,6 +20,7 @@ namespace Babylon::Polyfills::Internal
         Window(const Napi::CallbackInfo& info);
     private:
         JsRuntime& m_runtime;
+        std::unique_ptr<TimeoutDispatcher> m_timeoutDispatcher;
 
         static void SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
