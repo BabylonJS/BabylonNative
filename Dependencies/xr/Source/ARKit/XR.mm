@@ -867,6 +867,17 @@ namespace xr {
                     // Attach the color texture, on which we'll draw the camera texture.
                     renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                    // Clear the depth texture
+                    renderPassDescriptor.depthAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                    renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+
+                    // Clear the stencil texture
+                    renderPassDescriptor.stencilAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                    renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
 
                     // Create and end the render encoder.
                     id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
