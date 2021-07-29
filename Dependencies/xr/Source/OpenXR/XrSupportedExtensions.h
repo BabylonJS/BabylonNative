@@ -41,6 +41,7 @@ namespace xr
             HandTrackingSupported = TryEnableExtension(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
             SceneUnderstandingSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_EXTENSION_NAME);
             SceneUnderstandingSerializationSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_SERIALIZATION_EXTENSION_NAME);
+            EyeTrackingSupported = TryEnableExtension(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME);
         }
 
         bool TryEnableExtension(const char* extensionName)
@@ -78,6 +79,7 @@ namespace xr
         bool HandTrackingSupported{ false };
         bool SceneUnderstandingSupported{ false };
         bool SceneUnderstandingSerializationSupported{ false };
+        bool EyeTrackingSupported{ false };
 
     private:
         std::vector<XrExtensionProperties> m_extensionProperties{};
