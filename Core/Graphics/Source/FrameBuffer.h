@@ -31,6 +31,8 @@ namespace Babylon
         uint16_t Height() const;
         bool DefaultBackBuffer() const;
 
+        void Dispose();
+
         void Bind(bgfx::Encoder& encoder);
         void Unbind(bgfx::Encoder& encoder);
 
