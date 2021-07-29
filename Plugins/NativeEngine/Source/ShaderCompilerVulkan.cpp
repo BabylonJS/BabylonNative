@@ -58,8 +58,6 @@ namespace Babylon
     ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
-        
-        std::string sourceVertexOriginal(vertexSource.data());
 
         glslang::TShader vertexShader{EShLangVertex};
         AddShader(program, vertexShader, vertexSource);
@@ -78,8 +76,12 @@ namespace Babylon
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
+        auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
+        auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         std::vector<uint32_t> spirvVS;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, spirvVS);
