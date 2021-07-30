@@ -1459,8 +1459,10 @@ namespace Babylon
         return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer, [](Napi::Env, FrameBuffer* frameBuffer) { delete frameBuffer; });
     }
 
-    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo&)
+    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
+        auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        frameBuffer->Dispose();
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)

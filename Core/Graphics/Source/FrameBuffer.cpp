@@ -37,10 +37,7 @@ namespace Babylon
 
     FrameBuffer::~FrameBuffer()
     {
-        if (bgfx::isValid(m_handle))
-        {
-            bgfx::destroy(m_handle);
-        }
+        Dispose();
     }
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
@@ -61,6 +58,15 @@ namespace Babylon
     bool FrameBuffer::DefaultBackBuffer() const
     {
         return m_defaultBackBuffer;
+    }
+
+    void FrameBuffer::Dispose()
+    {
+        if (bgfx::isValid(m_handle))
+        {
+            bgfx::destroy(m_handle);
+        }
+        m_handle = BGFX_INVALID_HANDLE;
     }
 
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
