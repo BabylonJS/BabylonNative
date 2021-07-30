@@ -37,7 +37,7 @@ namespace Babylon
 
     FrameBuffer::~FrameBuffer()
     {
-        assert(!bgfx::isValid(m_handle));
+        Dispose();
     }
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
