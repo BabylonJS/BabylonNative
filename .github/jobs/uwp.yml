@@ -19,10 +19,10 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
     variables:
-      ${{ if eq(parameters.napiType, 'jsi') }}
+      ${{ if eq(parameters.napiType, 'jsi') }}:
         napiSuffix: '_jsi'
         jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
-      ${{ if ne(parameters.napiType, 'jsi') }}
+      ${{ if ne(parameters.napiType, 'jsi') }}:
         napiSuffix: ''
         jsEngineDefine: ''
       
