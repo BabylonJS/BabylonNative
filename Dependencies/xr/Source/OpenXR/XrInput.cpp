@@ -2,7 +2,7 @@
 #define NOMINMAX // avoid including macro max definitions in favor of limit max definitions
 #endif
 
-#include "Input.h"
+#include "XrInput.h"
 #include "XR.h"
 
 namespace xr 

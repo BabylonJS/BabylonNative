@@ -34,8 +34,8 @@ else()
         "Source/OpenXR/XrSupportedExtensions.h"
         "Source/OpenXR/SceneUnderstanding.h"
         "Source/OpenXR/SceneUnderstanding.cpp"
-        "Source/OpenXR/Input.h"
-        "Source/OpenXR/Input.cpp")
+        "Source/OpenXR/XrInput.h"
+        "Source/OpenXR/XrInput.cpp")
 endif()
 
 add_library(xr ${SOURCES})

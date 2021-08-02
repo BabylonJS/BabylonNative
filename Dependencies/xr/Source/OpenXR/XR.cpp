@@ -4,11 +4,11 @@
 #include "XrSupportedExtensions.h"
 #include "XrRegistry.h"
 #include "SceneUnderstanding.h"
+#include "XrInput.h"
 
 #include <assert.h>
 #include <optional>
 #include <arcana/threading/task.h>
-#include <Input.h>
 
 namespace xr
 {
