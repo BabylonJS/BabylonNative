@@ -1,7 +1,10 @@
 parameters:
-  name: ''
-  vmImage: ''
-  platform: ''
+- name: name
+  type: string
+- name: vmImage
+  type: string
+- name: platform
+  type: string
 - name: napiType
   type: string
   default: direct
