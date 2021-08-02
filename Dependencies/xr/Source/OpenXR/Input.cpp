@@ -85,7 +85,7 @@ namespace xr
         }
     }
 
-    struct Input::Impl
+    struct XrInput::Impl
     {
         struct
         {
@@ -857,26 +857,26 @@ namespace xr
         }
     };
 
-    Input::Input()
+    XrInput::XrInput()
         : m_impl{std::make_unique<Impl>()}
     { }
 
-    Input::~Input()
+    XrInput::~XrInput()
     {
         m_impl.reset();
     }
 
-    void Input::Initialize(const InitOptions& options) const
+    void XrInput::Initialize(const InitOptions& options) const
     {
         m_impl->Initialize(options);
     }
 
-    void Input::UpdateFrame(const UpdateFrameArgs& args) const
+    void XrInput::UpdateFrame(const UpdateFrameArgs& args) const
     {
         m_impl->UpdateFrame(args);
     }
 
-    void Input::RefreshInputSources(
+    void XrInput::RefreshInputSources(
         const XrInstance instance, 
         const XrSession session, 
         std::vector<System::Session::Frame::InputSource>& activeInputSources) const

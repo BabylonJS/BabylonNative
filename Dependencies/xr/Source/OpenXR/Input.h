@@ -5,7 +5,7 @@
 
 namespace xr 
 {
-    struct Input
+    struct XrInput
     {
     public:
         struct InitOptions
@@ -28,8 +28,8 @@ namespace xr
             std::optional<System::Session::Frame::Space>& eyeTrackerSpace;
         };
 
-        Input();
-        ~Input();
+        XrInput();
+        ~XrInput();
         void Initialize(const InitOptions& args) const;
         void UpdateFrame(const UpdateFrameArgs& args) const;
         void RefreshInputSources(

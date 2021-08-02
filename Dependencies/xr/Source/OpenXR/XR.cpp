@@ -318,7 +318,7 @@ namespace xr
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
-        const Input InputManager;
+        const XrInput InputManager;
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -522,7 +522,7 @@ namespace xr
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
             // TODO: Moving the xrGetSystemProperties call into its own function might make this make more sense.
-            const Input::InitOptions inputInitOptions = {
+            const XrInput::InitOptions inputInitOptions {
                 HmdImpl.Context.Instance(),
                 HmdImpl.Context.Session(),
                 *HmdImpl.Context.Extensions(),
@@ -1040,7 +1040,7 @@ namespace xr
             };
             sceneUnderstanding.UpdateFrame(suUpdateArgs);
 
-            const Input::UpdateFrameArgs inputUpdateArgs
+            const XrInput::UpdateFrameArgs inputUpdateArgs
             {
                 m_impl->sessionImpl.HmdImpl.Context.Instance(),
                 m_impl->sessionImpl.HmdImpl.Context.Session(),
