@@ -93,7 +93,7 @@ const initializeSubmodulesMostRecentBabylonNative = async () => {
   }
   else
   {
-    exec('git submodule update --init --recursive *', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
+    exec('git submodule update --init --recursive', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
   }
 
   exec('git status');
