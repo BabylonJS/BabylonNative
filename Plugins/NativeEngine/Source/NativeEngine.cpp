@@ -1193,13 +1193,13 @@ namespace Babylon
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::TypedArray>();
-        const auto generateMips = info[2].As<Napi::Boolean>().Value();
-        const auto invertY = info[3].As<Napi::Boolean>().Value();
-        const auto srgb = info[4].As<Napi::Boolean>().Value();
-        const auto onSuccess = info[5].As<Napi::Function>();
-        const auto onError = info[6].As<Napi::Function>();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::TypedArray>()};
+        const auto generateMips{info[2].As<Napi::Boolean>().Value()};
+        const auto invertY{info[3].As<Napi::Boolean>().Value()};
+        const auto srgb{info[4].As<Napi::Boolean>().Value()};
+        const auto onSuccess{info[5].As<Napi::Function>()};
+        const auto onError{info[6].As<Napi::Function>()};
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
@@ -1274,13 +1274,13 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::Array>();
-        const auto generateMips = info[2].As<Napi::Boolean>().Value();
-        const auto invertY = info[3].As<Napi::Boolean>().Value();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::Array>()};
+        const auto generateMips{info[2].As<Napi::Boolean>().Value()};
+        const auto invertY{info[3].As<Napi::Boolean>().Value()};
         const auto srgb{info[4].As<Napi::Boolean>().Value()};
-        const auto onSuccess = info[5].As<Napi::Function>();
-        const auto onError = info[6].As<Napi::Function>();
+        const auto onSuccess{info[5].As<Napi::Function>()};
+        const auto onError{info[6].As<Napi::Function>()};
 
         std::array<Napi::Reference<Napi::TypedArray>, 6> dataRefs;
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
@@ -1314,12 +1314,12 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::Array>();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::Array>()};
         const auto invertY{info[2].As<Napi::Boolean>().Value()};
         const auto srgb{info[3].As<Napi::Boolean>().Value()};
-        const auto onSuccess = info[4].As<Napi::Function>();
-        const auto onError = info[5].As<Napi::Function>();
+        const auto onSuccess{info[4].As<Napi::Function>()};
+        const auto onError{info[5].As<Napi::Function>()};
 
         const auto numMips{static_cast<size_t>(data.Length())};
         std::vector<Napi::Reference<Napi::TypedArray>> dataRefs(6 * numMips);
