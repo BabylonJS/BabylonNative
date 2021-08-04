@@ -59,11 +59,6 @@
             "referenceImage": "KernelBlur.png"
         },
         {
-            "title": "Instanced Bones",
-            "playgroundId": "#2YLJ1L#2",
-            "referenceImage": "instancedBones.png"
-        },
-        {
             "title": "GLTF Mesh Primitive Attribute",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveAttribute, __page__, 0, __disableSRGBBuffers__, 0",
