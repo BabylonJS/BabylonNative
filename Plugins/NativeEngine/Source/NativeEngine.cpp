@@ -1652,7 +1652,7 @@ namespace Babylon
             throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
         }
 
-        bimg::ImageContainer* image{ParseImage(m_allocator, {static_cast<uint8_t*>(data.Data()), static_cast<uint32_t>(data.ByteLength())})};
+        bimg::ImageContainer* image{ParseImage(m_allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()))};
 
         Napi::Object imageBitmap{Napi::Object::New(env)};
         Napi::Uint8Array buffer{Napi::Uint8Array::New(env, image->m_size)};
