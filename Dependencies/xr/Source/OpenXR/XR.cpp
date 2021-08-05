@@ -4,6 +4,7 @@
 #include "XrSupportedExtensions.h"
 #include "XrRegistry.h"
 #include "SceneUnderstanding.h"
+#include "XrInput.h"
 
 #include <assert.h>
 #include <optional>
@@ -312,126 +313,12 @@ namespace xr
 
         struct
         {
-            static constexpr char* DEFAULT_XR_ACTION_SET_NAME{ "default_xr_action_set" };
-            static constexpr char* DEFAULT_XR_ACTION_SET_LOCALIZED_NAME{ "Default XR Action Set" };
-            XrActionSet ActionSet{};
-
-            static constexpr std::array<const char*, 2> CONTROLLER_SUBACTION_PATH_PREFIXES
-            {
-                "/user/hand/left",
-                "/user/hand/right"
-            };
-            std::array<XrPath, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerSubactionPaths{};
-
-            static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_NAME{ "controller_get_pose_action" };
-            static constexpr char* CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME{ "Controller Pose" };
-            static constexpr char* CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX{ "/input/grip/pose" };
-            XrAction ControllerGetGripPoseAction{};
-            std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGripPoseSpaces{};
-
-            static constexpr char* CONTROLLER_GET_AIM_POSE_ACTION_NAME{ "controller_get_aim_action" };
-            static constexpr char* CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME{ "Controller Aim" };
-            static constexpr char* CONTROLLER_GET_AIM_POSE_PATH_SUFFIX{ "/input/aim/pose" };
-            XrAction ControllerGetAimPoseAction{};
-            std::array<XrSpace, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerAimPoseSpaces{};
-
-            static constexpr char* DEFAULT_GET_SELECT_CLICK_ACTION_NAME{ "default_get_select_action" };
-            static constexpr char* DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME{ "Default Select" };
-            static constexpr char* DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX{ "/input/select/click" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> DefaultGetSelectValueAction{};
-
-            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME{ "controller_get_trigger_action" };
-            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME{ "Controller Trigger" };
-            static constexpr char* CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX{ "/input/trigger/value" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTriggerValueAction{};
-
-            static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME{ "controller_get_squeeze_action" };
-            static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME{ "Controller Squeeze" };
-            static constexpr char* CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX{ "/input/squeeze/click" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetSqueezeClickAction{};
-
-            static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME{ "controller_get_trackpad_axes_action" };
-            static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME{ "Controller Trackpad Axes" };
-            static constexpr char* CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX{ "/input/trackpad" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTrackpadAxesAction{};
-
-            static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME{ "controller_get_trackpad_click_action" };
-            static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME{ "Controller Trackpad Click" };
-            static constexpr char* CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX{ "/input/trackpad/click" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTrackpadClickAction{};
-
-            static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME{ "controller_get_trackpad_touch_action" };
-            static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME{ "Controller Trackpad Touch" };
-            static constexpr char* CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX{ "/input/trackpad/touch" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetTrackpadTouchAction{};
-
-            static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME{ "controller_get_thumbstick_axes_action" };
-            static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME{ "Controller Thumbstick Axes" };
-            static constexpr char* CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX{ "/input/thumbstick" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetThumbstickAxesAction{};
-
-            static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME{ "controller_get_thumbstick_click_action" };
-            static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME{ "Controller Thumbstick Click" };
-            static constexpr char* CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX{ "/input/thumbstick/click" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> ControllerGetThumbstickClickAction{};
-
-            static constexpr char* HAND_GET_SELECT_ACTION_NAME{ "hand_get_select_action" };
-            static constexpr char* HAND_GET_SELECT_ACTION_LOCALIZED_NAME{ "Hand Select" };
-            static constexpr char* HAND_GET_SELECT_PATH_SUFFIX{ "/input/select/value" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> HandGetSelectAction{};
-
-            static constexpr char* HAND_GET_SQUEEZE_ACTION_NAME{ "hand_get_squeeze_action" };
-            static constexpr char* HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME{ "Hand Squeeze" };
-            static constexpr char* HAND_GET_SQUEEZE_PATH_SUFFIX{ "/input/squeeze/value" };
-            std::array<XrAction, CONTROLLER_SUBACTION_PATH_PREFIXES.size()> HandGetSqueezeAction{};
-
-            static constexpr char* DEFAULT_XR_INTERACTION_PROFILE{ "/interaction_profiles/khr/simple_controller" };
-            static constexpr char* MICROSOFT_XR_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/motion_controller" };
-            static constexpr char* MICROSOFT_HAND_INTERACTION_PROFILE{ "/interaction_profiles/microsoft/hand_interaction" };
-            XrPath DefaultXRInteractionPath{};
-            XrPath MicrosoftXRInteractionPath{};
-            XrPath MicrosoftHandInteractionPath{};
-
-            std::vector<Frame::InputSource> ActiveInputSources{};
+            std::vector<System::Session::Frame::InputSource> ActiveInputSources{};
+            std::optional<System::Session::Frame::Space> EyeTrackerSpace{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
-        struct
-        {
-            // default buttons on a device
-            static constexpr uint32_t TRIGGER_BUTTON = 0;
-            static constexpr uint32_t SQUEEZE_BUTTON = 1;
-            static constexpr uint32_t TRACKPAD_BUTTON = 2;
-            static constexpr uint32_t THUMBSTICK_BUTTON = 3;
-
-            // optional, hardware-specific buttons
-            static constexpr uint32_t CUSTOM_HARDWARE_BUTTON = 4;
-
-            static constexpr uint32_t TRACKPAD_X_AXIS = 0;
-            static constexpr uint32_t TRACKPAD_Y_AXIS = 1;
-            static constexpr uint32_t THUMBSTICK_X_AXIS = 2;
-            static constexpr uint32_t THUMBSTICK_Y_AXIS = 3;
-        } ControllerInfo;
-
-        struct HandInfo
-        {
-            XrHandEXT Hand{};
-            XrHandTrackerEXT HandTracker{};
-
-            XrHandJointLocationEXT JointLocations[XR_HAND_JOINT_COUNT_EXT]{};
-            XrHandJointLocationsEXT Locations{XR_TYPE_HAND_JOINT_LOCATIONS_EXT, nullptr, false, XR_HAND_JOINT_COUNT_EXT, JointLocations};
-
-            // WebXR specs do not include joint 0, the palm joint, but OpenXR does
-            static constexpr uint32_t UNUSED_HAND_JOINT_OFFSET{ 1 };
-        };
-        
-        struct
-        {
-            std::array<HandInfo, 2> HandsInfo{};
-
-            XrBool32 SupportsArticulatedHandTracking{ false };
-            XrBool32 HandTrackersInitialized{ false };
-        } HandData;
+        const XrInput InputManager;
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
@@ -470,21 +357,10 @@ namespace xr
             XrCheck(xrCreateReferenceSpace(sessionHandle.Get(), &spaceCreateInfo, sceneSpaceHandle.Put()));
 
             InitializeRenderResources(instance, systemId);
-            InitializeActionResources(instance);
         }
 
         ~Impl()
         {
-            if (HandData.HandTrackersInitialized)
-            {
-                for (const HandInfo& handInfo : HandData.HandsInfo)
-                {
-                    XrCheck(HmdImpl.Context.Extensions()->xrDestroyHandTrackerEXT(handInfo.HandTracker));
-                }
-
-                HandData.HandTrackersInitialized = false;
-            }
-
             // Reset OpenXR Context to release session handle and exit immersive mode
             XrRegistry::Reset();
         }
@@ -512,14 +388,14 @@ namespace xr
         void PopulateSwapchains(ViewConfigurationState& viewState)
         {
             const auto& session = HmdImpl.Context.Session();
-            assert(viewState.Views.size() > 0);
+            const auto viewCount = static_cast<uint32_t>(viewState.Views.size());
+            assert(viewCount > 0);
 
             // Select color and depth swapchain pixel formats
             SwapchainFormat colorSwapchainFormat;
             SwapchainFormat depthSwapchainFormat;
             SelectSwapchainPixelFormats(colorSwapchainFormat, depthSwapchainFormat);
 
-            const auto viewCount = static_cast<uint32_t>(viewState.Views.size());
             auto& renderResource = RenderResources.ResourceMap[viewState.Type];
             
             // All of the view config views should have the same recommended sizes,
@@ -629,8 +505,6 @@ namespace xr
         }
 
     private:
-        static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
-
         struct OpenXRAnchorSpace
         {
             xr::SpatialAnchorHandle Anchor;
@@ -642,13 +516,20 @@ namespace xr
         void InitializeRenderResources(XrInstance instance, XrSystemId systemId)
         {
             // Read graphics properties for preferred swapchain length and logging, and hand tracking availability.
-            XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties{ XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
+            XrSystemEyeGazeInteractionPropertiesEXT eyeTrackingSystemProperties{ XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT};
+            XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties{ XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT, &eyeTrackingSystemProperties };
             XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES, &handTrackingSystemProperties };
             XrCheck(xrGetSystemProperties(instance, systemId, &systemProperties));
 
-            // Initialize the hand resources
-            HandData.SupportsArticulatedHandTracking = handTrackingSystemProperties.supportsHandTracking && HmdImpl.Context.Extensions()->HandTrackingSupported;
-            InitializeHandResources();
+            // TODO: Moving the xrGetSystemProperties call into its own function might make this make more sense.
+            const XrInput::InitOptions inputInitOptions {
+                HmdImpl.Context.Instance(),
+                HmdImpl.Context.Session(),
+                *HmdImpl.Context.Extensions(),
+                handTrackingSystemProperties,
+                eyeTrackingSystemProperties
+            };
+            InputManager.Initialize(inputInitOptions);
 
             const XrViewConfigurationType primaryType = HmdImpl.PrimaryViewConfigurationType;
             auto& primaryRenderResource = RenderResources.ResourceMap[primaryType];
@@ -660,302 +541,6 @@ namespace xr
 
             // Create the swapchains for the primary view configuration type. Secondary view configuration type swapchains will be populated once activated.
             PopulateSwapchains(primaryRenderResource.ViewState);
-        }
-
-        void InitializeHandResources()
-        {
-            if (!HandData.SupportsArticulatedHandTracking || HandData.HandTrackersInitialized)
-            {
-                return;
-            }
-
-            const auto& session = HmdImpl.Context.Session();
-            constexpr std::array<XrHandEXT, 2> HANDEDNESS_EXT{XR_HAND_LEFT_EXT, XR_HAND_RIGHT_EXT};
-            XrHandTrackerCreateInfoEXT trackerCreateInfo{XR_TYPE_HAND_TRACKER_CREATE_INFO_EXT};
-            trackerCreateInfo.handJointSet = XR_HAND_JOINT_SET_DEFAULT_EXT;
-
-            for (size_t i = 0; i < HandData.HandsInfo.size(); i++)
-            {
-                // Create the hand trackers
-                HandData.HandsInfo[i].Hand = HANDEDNESS_EXT[i];
-                trackerCreateInfo.hand = HANDEDNESS_EXT[i];
-                XrCheck(HmdImpl.Context.Extensions()->xrCreateHandTrackerEXT(session, &trackerCreateInfo, &HandData.HandsInfo[i].HandTracker));
-            }
-
-            HandData.HandTrackersInitialized = true;
-        }
-
-        void CreateControllerActionAndBinding(
-            XrActionType controllerActionType,
-            char* controllerActionName,
-            char* controllerLocalizedActionName,
-            const char* controllerActionSuffix,
-            XrAction* controllerAction,
-            std::vector<XrActionSuggestedBinding> &bindings,
-            XrInstance instance,
-            const size_t idx)
-        {
-
-            XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
-            actionInfo.actionType = controllerActionType;
-            std::string controllerActionNameSuffixed{ controllerActionName + std::to_string(idx) };
-            std::string controllerLocalizedActionNameSuffixed{ controllerLocalizedActionName + std::to_string(idx) };
-
-            strcpy_s(actionInfo.actionName, controllerActionNameSuffixed.data());
-            strcpy_s(actionInfo.localizedActionName, controllerLocalizedActionNameSuffixed.data());
-            actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
-            actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
-            XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, controllerAction));
-
-            // Create suggested binding
-            std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
-            path.append(controllerActionSuffix);
-            bindings.push_back({*controllerAction});
-            XrCheck(xrStringToPath(instance, path.data(), &bindings.back().binding));
-        }
-
-        void InitializeActionResources(XrInstance instance)
-        {
-            const auto& session = HmdImpl.Context.Session();
-
-            // Create action set
-            XrActionSetCreateInfo actionSetInfo{ XR_TYPE_ACTION_SET_CREATE_INFO };
-            std::strcpy(actionSetInfo.actionSetName, ActionResources.DEFAULT_XR_ACTION_SET_NAME);
-            std::strcpy(actionSetInfo.localizedActionSetName, ActionResources.DEFAULT_XR_ACTION_SET_LOCALIZED_NAME);
-            XrCheck(xrCreateActionSet(instance, &actionSetInfo, &ActionResources.ActionSet));
-
-            // Cache paths for subactions
-            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
-            {
-                XrCheck(xrStringToPath(instance, ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx], &ActionResources.ControllerSubactionPaths[idx]));
-            }
-
-            // Cache paths for interaction profiles.
-            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &ActionResources.DefaultXRInteractionPath));
-            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &ActionResources.MicrosoftXRInteractionPath));
-            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_HAND_INTERACTION_PROFILE, &ActionResources.MicrosoftHandInteractionPath));
-
-            std::vector<XrActionSuggestedBinding> defaultBindings{};
-            std::vector<XrActionSuggestedBinding> microsoftControllerBindings{};
-            std::vector<XrActionSuggestedBinding> microsoftHandBindings{};
-
-            // Create controller get grip pose action, suggested bindings, and spaces
-            {
-                XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
-                actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-                strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_NAME);
-                strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_GRIP_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
-                actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
-                XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetGripPoseAction));
-                // For each controller subaction
-                for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
-                {
-                    // Create suggested binding
-                    std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
-                    path.append(ActionResources.CONTROLLER_GET_GRIP_POSE_PATH_SUFFIX);
-
-                    defaultBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
-                    XrCheck(xrStringToPath(instance, path.data(), &defaultBindings.back().binding));
-
-                    microsoftControllerBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
-                    XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
-
-                    if (HmdImpl.Context.Extensions()->HandInteractionSupported)
-                    {
-                        microsoftHandBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
-                        XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
-                    }
-
-                    // Create subaction space
-                    XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
-                    actionSpaceCreateInfo.action = ActionResources.ControllerGetGripPoseAction;
-                    actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
-                    actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
-                    XrCheck(xrCreateActionSpace(session, &actionSpaceCreateInfo, &ActionResources.ControllerGripPoseSpaces[idx]));
-                }
-            }
-
-            // Create controller get aim pose action, suggested bindings, and spaces
-            {
-                XrActionCreateInfo actionInfo{ XR_TYPE_ACTION_CREATE_INFO };
-                actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-                strcpy_s(actionInfo.actionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_NAME);
-                strcpy_s(actionInfo.localizedActionName, ActionResources.CONTROLLER_GET_AIM_POSE_ACTION_LOCALIZED_NAME);
-                actionInfo.countSubactionPaths = static_cast<uint32_t>(ActionResources.ControllerSubactionPaths.size());
-                actionInfo.subactionPaths = ActionResources.ControllerSubactionPaths.data();
-                XrCheck(xrCreateAction(ActionResources.ActionSet, &actionInfo, &ActionResources.ControllerGetAimPoseAction));
-                // For each controller subaction
-                for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
-                {
-                    // Create suggested binding
-                    std::string path{ ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES[idx] };
-                    path.append(ActionResources.CONTROLLER_GET_AIM_POSE_PATH_SUFFIX);
-
-                    defaultBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
-                    XrCheck(xrStringToPath(instance, path.data(), &defaultBindings.back().binding));
-                    
-                    microsoftControllerBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
-                    XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
-
-                    if (HmdImpl.Context.Extensions()->HandInteractionSupported)
-                    {
-                        microsoftHandBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
-                        XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
-                    }
-
-                    // Create subaction space
-                    XrActionSpaceCreateInfo actionSpaceCreateInfo{ XR_TYPE_ACTION_SPACE_CREATE_INFO };
-                    actionSpaceCreateInfo.action = ActionResources.ControllerGetAimPoseAction;
-                    actionSpaceCreateInfo.poseInActionSpace = IDENTITY_TRANSFORM;
-                    actionSpaceCreateInfo.subactionPath = ActionResources.ControllerSubactionPaths[idx];
-                    XrCheck(xrCreateActionSpace(session, &actionSpaceCreateInfo, &ActionResources.ControllerAimPoseSpaces[idx]));
-                }
-            }
-
-            for (size_t idx = 0; idx < ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size(); ++idx)
-            {
-                // Create default action and suggested bindings for select
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_NAME,
-                    ActionResources.DEFAULT_GET_SELECT_CLICK_ACTION_LOCALIZED_NAME,
-                    ActionResources.DEFAULT_GET_SELECT_CLICK_PATH_SUFFIX,
-                    &ActionResources.DefaultGetSelectValueAction[idx],
-                    defaultBindings,
-                    instance,
-                    idx);
-
-                // Create controller get trigger value action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_SQUEEZE_CLICK_PATH_SUFFIX,
-                    &ActionResources.ControllerGetSqueezeClickAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                // Create controller get trigger value action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_FLOAT_INPUT, 
-                    ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_TRIGGER_VALUE_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_TRIGGER_VALUE_PATH_SUFFIX,
-                    &ActionResources.ControllerGetTriggerValueAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                // Create controller get trackpad axes action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_VECTOR2F_INPUT, 
-                    ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_TRACKPAD_AXES_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_TRACKPAD_AXES_PATH_SUFFIX,
-                    &ActionResources.ControllerGetTrackpadAxesAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                // Create controller get trackpad click action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_TRACKPAD_CLICK_PATH_SUFFIX,
-                    &ActionResources.ControllerGetTrackpadClickAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                // Create controller get trackpad touch action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_TRACKPAD_TOUCH_PATH_SUFFIX,
-                    &ActionResources.ControllerGetTrackpadTouchAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                // Create controller get thumbstick axes action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_VECTOR2F_INPUT, 
-                    ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_THUMBSTICK_AXES_PATH_SUFFIX,
-                    &ActionResources.ControllerGetThumbstickAxesAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                // Create controller get thumbstick click action and suggested bindings
-                CreateControllerActionAndBinding(
-                    XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                    ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_NAME,
-                    ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_ACTION_LOCALIZED_NAME,
-                    ActionResources.CONTROLLER_GET_THUMBSTICK_CLICK_PATH_SUFFIX,
-                    &ActionResources.ControllerGetThumbstickClickAction[idx],
-                    microsoftControllerBindings,
-                    instance,
-                    idx);
-
-                if (HmdImpl.Context.Extensions()->HandInteractionSupported)
-                {
-                    // Create action and suggested bindings specific to hands
-                    CreateControllerActionAndBinding(
-                        XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                        ActionResources.HAND_GET_SELECT_ACTION_NAME,
-                        ActionResources.HAND_GET_SELECT_ACTION_LOCALIZED_NAME,
-                        ActionResources.HAND_GET_SELECT_PATH_SUFFIX,
-                        &ActionResources.HandGetSelectAction[idx],
-                        microsoftHandBindings,
-                        instance,
-                        idx);
-
-                    CreateControllerActionAndBinding(
-                        XR_ACTION_TYPE_BOOLEAN_INPUT, 
-                        ActionResources.HAND_GET_SQUEEZE_ACTION_NAME,
-                        ActionResources.HAND_GET_SQUEEZE_ACTION_LOCALIZED_NAME,
-                        ActionResources.HAND_GET_SQUEEZE_PATH_SUFFIX,
-                        &ActionResources.HandGetSqueezeAction[idx],
-                        microsoftHandBindings,
-                        instance,
-                        idx);
-                }
-            }
-
-            // Provide default suggested bindings to instance
-            XrInteractionProfileSuggestedBinding suggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.DEFAULT_XR_INTERACTION_PROFILE, &suggestedBindings.interactionProfile));
-            suggestedBindings.suggestedBindings = defaultBindings.data();
-            suggestedBindings.countSuggestedBindings = (uint32_t)defaultBindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &suggestedBindings));
-
-            // Provide Microsoft controller suggested binding to instance
-            XrInteractionProfileSuggestedBinding microsoftControllerSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-            XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_XR_INTERACTION_PROFILE, &microsoftControllerSuggestedBindings.interactionProfile));
-            microsoftControllerSuggestedBindings.suggestedBindings = microsoftControllerBindings.data();
-            microsoftControllerSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
-            XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftControllerSuggestedBindings));
-
-            if (HmdImpl.Context.Extensions()->HandInteractionSupported)
-            {
-                // Provide Microsoft hand suggested binding to instance
-                XrInteractionProfileSuggestedBinding microsoftHandSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-                XrCheck(xrStringToPath(instance, ActionResources.MICROSOFT_HAND_INTERACTION_PROFILE, &microsoftHandSuggestedBindings.interactionProfile));
-                microsoftHandSuggestedBindings.suggestedBindings = microsoftHandBindings.data();
-                microsoftHandSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftHandBindings.size();
-                XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftHandSuggestedBindings));
-            }
-
-            XrSessionActionSetsAttachInfo attachInfo{ XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
-            attachInfo.countActionSets = 1;
-            attachInfo.actionSets = &ActionResources.ActionSet;
-            XrCheck(xrAttachSessionActionSets(session, &attachInfo));
         }
 
         void PopulateSwapchain(XrSession session,
@@ -989,7 +574,8 @@ namespace xr
             {
                 XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT
             };
-            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported)
+            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported && 
+                viewConfigType == XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT)
             {
                 secondaryViewConfigCreateInfo.viewConfigurationType = viewConfigType;
                 swapchainCreateInfo.next = &secondaryViewConfigCreateInfo;
@@ -997,10 +583,10 @@ namespace xr
 
             XrCheck(xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain.Handle));
 
-            uint32_t chainLength;
-            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, 0, &chainLength, nullptr));
-            swapchain.Images.resize(chainLength, { SWAPCHAIN_IMAGE_TYPE_ENUM });
-            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &chainLength,
+            uint32_t imageCount{ 0 };
+            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, 0, &imageCount, nullptr));
+            swapchain.Images.resize(imageCount, { SWAPCHAIN_IMAGE_TYPE_ENUM });
+            XrCheck(xrEnumerateSwapchainImages(swapchain.Handle, static_cast<uint32_t>(swapchain.Images.size()), &imageCount,
                 reinterpret_cast<XrSwapchainImageBaseHeader*>(swapchain.Images.data())));
         }
 
@@ -1059,18 +645,18 @@ namespace xr
                 XrSessionBeginInfo sessionBeginInfo{ XR_TYPE_SESSION_BEGIN_INFO };
                 sessionBeginInfo.primaryViewConfigurationType = HmdImpl.PrimaryViewConfigurationType;
 
-                XrSecondaryViewConfigurationSessionBeginInfoMSFT secondaryViewConfigInfo
+                XrSecondaryViewConfigurationSessionBeginInfoMSFT secondaryViewConfigSessionBeginInfo
                 {
                     XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SESSION_BEGIN_INFO_MSFT
                 };
-
+                const auto& supportedSecondaryViewConfigTypes = HmdImpl.SupportedSecondaryViewConfigurationTypes;
                 if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported &&
                     HmdImpl.Context.Extensions()->FirstPersonObserverSupported &&
-                    HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+                    supportedSecondaryViewConfigTypes.size() > 0)
                 {
-                    secondaryViewConfigInfo.viewConfigurationCount = static_cast<uint32_t>(HmdImpl.SupportedSecondaryViewConfigurationTypes.size());
-                    secondaryViewConfigInfo.enabledViewConfigurationTypes = HmdImpl.SupportedSecondaryViewConfigurationTypes.data();
-                    InsertExtensionStruct(sessionBeginInfo, secondaryViewConfigInfo);
+                    secondaryViewConfigSessionBeginInfo.viewConfigurationCount = static_cast<uint32_t>(supportedSecondaryViewConfigTypes.size());
+                    secondaryViewConfigSessionBeginInfo.enabledViewConfigurationTypes = supportedSecondaryViewConfigTypes.data();
+                    InsertExtensionStruct(sessionBeginInfo, secondaryViewConfigSessionBeginInfo);
                 }
 
                 XrCheck(xrBeginSession(session, &sessionBeginInfo));
@@ -1119,30 +705,10 @@ namespace xr
                     ProcessSessionState(exitRenderLoop, requestRestart);
                     break;
                 case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-                    // Refresh all input sources, as babylon.JS performs different setup depending on which interaction profile is used
-                    ActionResources.ActiveInputSources.clear();
-                    ActionResources.ActiveInputSources.resize(ActionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size());
-
-                    for (size_t idx = 0; idx < ActionResources.ActiveInputSources.size(); ++idx)
-                    {
-                        XrInteractionProfileState state{XR_TYPE_INTERACTION_PROFILE_STATE};
-                        const auto& instance = HmdImpl.Context.Instance();
-                        auto& inputSource = ActionResources.ActiveInputSources[idx];
-
-                        XrCheck(xrGetCurrentInteractionProfile(HmdImpl.Context.Session(), ActionResources.ControllerSubactionPaths[idx], &state));
-
-                        if (state.interactionProfile == XR_NULL_PATH)
-                        {
-                            inputSource.InteractionProfileName = "";
-                            continue;
-                        }
-
-                        uint32_t count;
-                        XrCheck(xrPathToString(instance, state.interactionProfile, 0, &count, nullptr));
-                        inputSource.InteractionProfileName.resize(count);
-                        XrCheck(xrPathToString(instance, state.interactionProfile, count, &count, inputSource.InteractionProfileName.data()));
-                    }
-
+                    InputManager.RefreshInputSources(
+                        HmdImpl.Context.Instance(), 
+                        HmdImpl.Context.Session(), 
+                        ActionResources.ActiveInputSources);
                     break;
                 case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
                 default:
@@ -1331,86 +897,12 @@ namespace xr
             depthInfoView.subImage.imageRect = imageRect;
             depthInfoView.subImage.imageArrayIndex = imageArrayIndex;
         }
-
-        // Returns true if the action is supported on the current input
-        bool TryUpdateControllerFloatAction(XrAction controllerAction, XrSession session, float& currentFloatState)
-        {
-            // query input action state
-            XrActionStateFloat floatActionState{XR_TYPE_ACTION_STATE_FLOAT};
-            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-            getInfo.action = controllerAction;
-            XrCheck(xrGetActionStateFloat(session, &getInfo, &floatActionState));
-            if (!floatActionState.isActive)
-            {
-                return false;
-            }
-
-            if (floatActionState.changedSinceLastSync)
-            {
-                currentFloatState = floatActionState.currentState;
-            }
-
-            return true;
-        }
-
-        // Returns true if the action is supported on the current input
-        bool TryUpdateControllerBooleanAction(XrAction controllerAction, XrSession session, bool& currentBooleanState)
-        {
-            // query input action state
-            XrActionStateBoolean booleanActionState{XR_TYPE_ACTION_STATE_BOOLEAN};
-            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-            getInfo.action = controllerAction;
-            XrCheck(xrGetActionStateBoolean(session, &getInfo, &booleanActionState));
-            if (!booleanActionState.isActive)
-            {
-                return false;
-            }
-
-            if (booleanActionState.changedSinceLastSync)
-            {
-               currentBooleanState = booleanActionState.currentState;
-            }
-
-            return true;
-        }
-        
-        // Returns true if the action is supported on the current input
-        bool TryUpdateControllerVector2fAction(XrAction controllerAction, XrSession session, float& currentXState, float& currentYState)
-        {
-            // query input action state
-            XrActionStateVector2f vector2fActionState{XR_TYPE_ACTION_STATE_VECTOR2F};
-            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-            getInfo.action = controllerAction;
-            XrCheck(xrGetActionStateVector2f(session, &getInfo, &vector2fActionState));
-            if (!vector2fActionState.isActive)
-            {
-                return false;
-            }
-
-            if (vector2fActionState.changedSinceLastSync)
-            {
-                currentXState = vector2fActionState.currentState.x;
-                currentYState = vector2fActionState.currentState.y;
-            }
-
-            return true;
-        }
-
-        void UpdatePoseData(xr::Pose& targetPose, XrPosef& sourcePose)
-        {
-            targetPose.Position.X = sourcePose.position.x;
-            targetPose.Position.Y = sourcePose.position.y;
-            targetPose.Position.Z = sourcePose.position.z;
-            targetPose.Orientation.X = sourcePose.orientation.x;
-            targetPose.Orientation.Y = sourcePose.orientation.y;
-            targetPose.Orientation.Z = sourcePose.orientation.z;
-            targetPose.Orientation.W = sourcePose.orientation.w;
-        }
     };
 
     System::Session::Frame::Frame(Session::Impl& sessionImpl)
         : Views{ sessionImpl.RenderResources.ActiveFrameViews }
         , InputSources{ sessionImpl.ActionResources.ActiveInputSources }
+        , EyeTrackerSpace{ sessionImpl.ActionResources.EyeTrackerSpace }
         , FeaturePointCloud{ sessionImpl.ActionResources.FeaturePointCloud } // NYI
         , UpdatedSceneObjects{}
         , RemovedSceneObjects{}
@@ -1436,18 +928,12 @@ namespace xr
         XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
         XrFrameState frameState{ XR_TYPE_FRAME_STATE };
 
-        XrSecondaryViewConfigurationFrameStateMSFT secondaryViewConfigFrameState{XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_STATE_MSFT};
-        std::vector<XrSecondaryViewConfigurationStateMSFT> secondaryViewConfigStates;
-        if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+        const auto& supportedSecondaryViewConfigTypes = m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes;
+        const auto secondaryViewConfigCount = supportedSecondaryViewConfigTypes.size();
+        std::vector<XrSecondaryViewConfigurationStateMSFT> secondaryViewConfigStates(secondaryViewConfigCount, { XR_TYPE_SECONDARY_VIEW_CONFIGURATION_STATE_MSFT });
+        XrSecondaryViewConfigurationFrameStateMSFT secondaryViewConfigFrameState{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_STATE_MSFT };
+        if (secondaryViewConfigCount > 0)
         {
-            uint32_t viewCount = 0;
-            for (const auto& viewConfigurationType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
-            {
-                const auto& viewState = renderResources.ResourceMap.at(viewConfigurationType).ViewState;
-                viewCount += static_cast<uint32_t>(viewState.Views.size());
-            }
-
-            secondaryViewConfigStates.resize(viewCount, { XR_TYPE_SECONDARY_VIEW_CONFIGURATION_STATE_MSFT });
             secondaryViewConfigFrameState.viewConfigurationCount = (uint32_t)secondaryViewConfigStates.size();
             secondaryViewConfigFrameState.viewConfigurationStates = secondaryViewConfigStates.data();
             InsertExtensionStruct(frameState, secondaryViewConfigFrameState);
@@ -1460,30 +946,29 @@ namespace xr
         XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
         XrCheck(xrBeginFrame(session, &frameBeginInfo));
 
-        if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+        for (const auto& secondaryViewConfigState : secondaryViewConfigStates)
         {
-            for (const auto& secondaryViewConfigState : secondaryViewConfigStates)
+            auto& renderResource = renderResources.ResourceMap[secondaryViewConfigState.viewConfigurationType];
+            auto& viewState = renderResource.ViewState;
+            viewState.Active = secondaryViewConfigState.active;
+            const auto& colorSwapchainHandle = renderResource.ColorSwapchain.Handle;
+            if (viewState.Active)
             {
-                auto& renderResource = renderResources.ResourceMap[secondaryViewConfigState.viewConfigurationType];
-                auto& viewState = renderResource.ViewState;
-                viewState.Active = secondaryViewConfigState.active;
-                if (viewState.Active)
+                std::vector<XrViewConfigurationView> viewConfigViews = EnumerateViewConfigurationViews(
+                    sessionImpl.HmdImpl.Context.Instance(),
+                    sessionImpl.HmdImpl.Context.SystemId(),
+                    secondaryViewConfigState.viewConfigurationType);
+
+                if (IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews) ||
+                    colorSwapchainHandle == XR_NULL_HANDLE)
                 {
-                    std::vector<XrViewConfigurationView> viewConfigViews = EnumerateViewConfigurationViews(
-                        sessionImpl.HmdImpl.Context.Instance(),
-                        sessionImpl.HmdImpl.Context.SystemId(),
-                        secondaryViewConfigState.viewConfigurationType);
-                    
-                    if (IsRecommendedSwapchainSizeChanged(viewState.ViewConfigViews, viewConfigViews))
-                    {
-                        viewState.ViewConfigViews = std::move(viewConfigViews);
-                        sessionImpl.PopulateSwapchains(viewState);
-                    }
+                    viewState.ViewConfigViews = std::move(viewConfigViews);
+                    sessionImpl.PopulateSwapchains(viewState);
                 }
-                else
-                {
-                    sessionImpl.CleanupSwapchains(viewState);
-                }
+            }
+            else if(colorSwapchainHandle != XR_NULL_HANDLE)
+            {
+                sessionImpl.CleanupSwapchains(viewState);
             }
         }
 
@@ -1501,17 +986,14 @@ namespace xr
             totalViewCount += primaryViewCount;
 
             uint32_t secondaryViewCount = 0;
-            if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+            for (const auto& viewConfigType : supportedSecondaryViewConfigTypes)
             {
-                for (const auto& viewConfigType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
+                const auto& viewState = renderResources.ResourceMap[viewConfigType].ViewState;
+                if (viewState.Active)
                 {
-                    const auto& viewState = renderResources.ResourceMap[viewConfigType].ViewState;
-                    if (viewState.Active)
-                    {
-                        uint32_t tempViewCount = 0;
-                        m_impl->LocateViews(viewConfigType, tempViewCount);
-                        secondaryViewCount += tempViewCount;
-                    }
+                    uint32_t tempViewCount = 0;
+                    m_impl->LocateViews(viewConfigType, tempViewCount);
+                    secondaryViewCount += tempViewCount;
                 }
             }
 
@@ -1525,29 +1007,26 @@ namespace xr
                 Views.begin(), Views.begin() + primaryViewCount,
                 depthSupported, false);            
 
-            if (sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0)
+            int viewStartIdx = primaryViewCount;
+            for (const auto& viewConfigType : supportedSecondaryViewConfigTypes)
             {
-                int viewStartIdx = primaryViewCount;
-                for (const auto& viewConfigType : sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes)
+                auto& secondaryRenderResource = renderResources.ResourceMap.at(viewConfigType);
+                ViewConfigurationState& viewConfigurationState = secondaryRenderResource.ViewState;
+                if (viewConfigurationState.Active)
                 {
-                    auto& secondaryRenderResource = renderResources.ResourceMap.at(viewConfigType);
-                    ViewConfigurationState& viewConfigurationState = secondaryRenderResource.ViewState;
-                    if (viewConfigurationState.Active)
-                    {
-                        const uint32_t viewCount = static_cast<uint32_t>(viewConfigurationState.Views.size());
+                    const uint32_t viewCount = static_cast<uint32_t>(viewConfigurationState.Views.size());
 
-                        m_impl->PopulateViewConfigurationState(
-                            primaryRenderResource, 
-                            Views.begin() + viewStartIdx, Views.begin() + viewStartIdx + viewCount,
-                            depthSupported, true); 
+                    m_impl->PopulateViewConfigurationState(
+                        secondaryRenderResource, 
+                        Views.begin() + viewStartIdx, Views.begin() + viewStartIdx + viewCount,
+                        depthSupported, true); 
 
-                        viewStartIdx += viewCount;
-                    }
+                    viewStartIdx += viewCount;
                 }
             }
 
-            const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
-            SceneUnderstanding::UpdateFrameArgs args
+            const auto& sceneUnderstanding = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
+            SceneUnderstanding::UpdateFrameArgs suUpdateArgs
             {
                 sceneSpace,
                 extensions,
@@ -1559,205 +1038,19 @@ namespace xr
                 UpdatedMeshes,
                 RemovedMeshes
             };
-            su.UpdateFrame(args);
+            sceneUnderstanding.UpdateFrame(suUpdateArgs);
 
-            // Locate all the things.
-            auto& actionResources = m_impl->sessionImpl.ActionResources;
-
-            std::vector<XrActiveActionSet> activeActionSets = { { actionResources.ActionSet, XR_NULL_PATH } };
-            XrActionsSyncInfo syncInfo{ XR_TYPE_ACTIONS_SYNC_INFO };
-            syncInfo.countActiveActionSets = (uint32_t)activeActionSets.size();
-            syncInfo.activeActionSets = activeActionSets.data();
-            XrCheck(xrSyncActions(session, &syncInfo));
-
-            InputSources.resize(actionResources.CONTROLLER_SUBACTION_PATH_PREFIXES.size());
-            for (size_t idx = 0; idx < InputSources.size(); ++idx)
+            const XrInput::UpdateFrameArgs inputUpdateArgs
             {
-                auto& inputSource = InputSources[idx];
-
-                // Reset the tracked flags
-                inputSource.TrackedThisFrame = false;
-                inputSource.GamepadTrackedThisFrame = false;
-                inputSource.HandTrackedThisFrame = false;
-                inputSource.JointsTrackedThisFrame = false;
-
-                // Get interaction data based on input profile. It is safe to hold off on populating input
-                // source data until we get an interaction profile changed event (and know what the source is)
-                if (!inputSource.InteractionProfileName.empty())
-                {
-                    // Get grip space
-                    bool gripSpaceTracked = false;
-                    {
-                        XrSpace space = actionResources.ControllerGripPoseSpaces[idx];
-                        XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
-                        XrCheck(xrLocateSpace(space, sceneSpace, displayTime, &location));
-
-                        constexpr XrSpaceLocationFlags RequiredFlags =
-                            XR_SPACE_LOCATION_POSITION_VALID_BIT |
-                            XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
-                            XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
-                            XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
-
-                        gripSpaceTracked = (location.locationFlags & RequiredFlags) == RequiredFlags;
-                        if (gripSpaceTracked)
-                        {
-                            inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                            m_impl->UpdatePoseData(inputSource.GripSpace.Pose, location.pose);
-                        }
-                    }
-
-                    // Get aim space
-                    bool aimSpaceTracked = false;
-                    {
-                        XrSpace space = actionResources.ControllerAimPoseSpaces[idx];
-                        XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
-                        XrCheck(xrLocateSpace(space, sceneSpace, displayTime, &location));
-
-                        constexpr XrSpaceLocationFlags RequiredFlags =
-                            XR_SPACE_LOCATION_POSITION_VALID_BIT |
-                            XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
-                            XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
-                            XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
-
-                        aimSpaceTracked = (location.locationFlags & RequiredFlags) == RequiredFlags;
-                        if (aimSpaceTracked)
-                        {
-                            inputSource.Handedness = static_cast<InputSource::HandednessEnum>(idx);
-                            m_impl->UpdatePoseData(inputSource.AimSpace.Pose, location.pose);
-                        }
-                    }
-
-                    inputSource.TrackedThisFrame = aimSpaceTracked && gripSpaceTracked;
-
-                    XrPath interactionProfilePath;
-                    XrCheck(xrStringToPath(m_impl->sessionImpl.HmdImpl.Context.Instance(), inputSource.InteractionProfileName.data(), &interactionProfilePath));
-
-                    if (interactionProfilePath == actionResources.MicrosoftXRInteractionPath)
-                    {
-                        // Get gamepad data 
-                        const auto& controllerInfo = sessionImpl.ControllerInfo;
-                        auto& gamepadObject = inputSource.GamepadObject;
-
-                        gamepadObject.Axes.resize(DEFAULT_CONTROLLER_AXES_COUNT);
-                        gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT);
-
-                        // Update gamepad data
-                        if ((m_impl->TryUpdateControllerFloatAction(actionResources.ControllerGetTriggerValueAction[idx], session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value)) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetSqueezeClickAction[idx], session, gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed)) &&
-                            (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetTrackpadAxesAction[idx], session, gamepadObject.Axes[controllerInfo.TRACKPAD_X_AXIS], gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS])) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadClickAction[idx], session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed)) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetTrackpadTouchAction[idx], session, gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Touched)) &&
-                            (m_impl->TryUpdateControllerVector2fAction(actionResources.ControllerGetThumbstickAxesAction[idx], session, gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS], gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS])) &&
-                            (m_impl->TryUpdateControllerBooleanAction(actionResources.ControllerGetThumbstickClickAction[idx], session, gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed)))
-                        {
-                            // map the openxr values to populate other states of a button and axes that webxr expects
-                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value == 1);
-                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value > 0);
-                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-                            gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.SQUEEZE_BUTTON].Pressed);
-                            gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS] = -(gamepadObject.Axes[controllerInfo.TRACKPAD_Y_AXIS]);
-                            gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRACKPAD_BUTTON].Pressed);
-                            gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] = -(gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS]);
-                            gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Pressed);
-                            gamepadObject.Buttons[controllerInfo.THUMBSTICK_BUTTON].Touched = (gamepadObject.Axes[controllerInfo.THUMBSTICK_X_AXIS] != 0 || gamepadObject.Axes[controllerInfo.THUMBSTICK_Y_AXIS] != 0);
-
-                            // Only signal that gamepad data is available if the actions were available
-                            inputSource.GamepadTrackedThisFrame = true;
-                        }
-                    }
-                    else if (interactionProfilePath == actionResources.MicrosoftHandInteractionPath)
-                    {
-                        // Get hand interaction data
-                        if (sessionImpl.HmdImpl.Context.Extensions()->HandInteractionSupported)
-                        {
-                            const auto& controllerInfo = sessionImpl.ControllerInfo;
-                            auto& gamepadObject = inputSource.GamepadObject;
-
-                            // Hands use a controller-specific 5th button, but have no axes
-                            gamepadObject.Axes.resize(0);
-                            gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT + 1);
-
-                            // Get interaction data
-                            if ((m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSelectAction[idx], session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)) &&
-                                (m_impl->TryUpdateControllerBooleanAction(actionResources.HandGetSqueezeAction[idx], session, gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed)))
-                            {
-                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                                gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                                gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed);
-                                gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.CUSTOM_HARDWARE_BUTTON].Pressed);
-
-                                inputSource.HandTrackedThisFrame = true;
-                            }
-                        }
-
-                        // Get hand joint data
-                        if (sessionImpl.HandData.HandTrackersInitialized)
-                        {
-
-                            XrHandJointsLocateInfoEXT jointLocateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT};
-                            jointLocateInfo.baseSpace = sceneSpace;
-                            jointLocateInfo.time = displayTime;
-
-                            auto handInfo = sessionImpl.HandData.HandsInfo[idx];
-                            XrCheck(sessionImpl.HmdImpl.Context.Extensions()->xrLocateHandJointsEXT(handInfo.HandTracker, &jointLocateInfo, &handInfo.Locations));
-                
-                            inputSource.JointsTrackedThisFrame = handInfo.Locations.isActive;
-                    
-                            // Set up the handJoints vector, skipping the palm joint as webXR doesn't support it
-                            uint32_t JointCountWithoutPalm = handInfo.Locations.jointCount - handInfo.UNUSED_HAND_JOINT_OFFSET;
-
-                            // xrLocateHandJointsEXT will always return the full joint set (or an error), so jointCount should never change
-                            // We have to wait until here to initialize the vector though, as we don't "know" the number of joints until an input report comes in
-                            if (inputSource.HandJoints.size() != JointCountWithoutPalm)
-                            {
-                                inputSource.HandJoints = std::vector<JointSpace>(JointCountWithoutPalm);
-                            }
-                
-                            // Set the joints to tracked, and populate the fields. Otherwise, set joints to untracked
-                            if (inputSource.JointsTrackedThisFrame)
-                            {
-                                constexpr XrSpaceLocationFlags RequiredFlags =
-                                    XR_SPACE_LOCATION_POSITION_VALID_BIT |
-                                    XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
-                                    XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
-                                    XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
-
-                                for (uint32_t i = 0; i < JointCountWithoutPalm; i++)
-                                {
-                                    auto joint = handInfo.JointLocations[i + handInfo.UNUSED_HAND_JOINT_OFFSET];
-
-                                    inputSource.HandJoints[i].PoseRadius = joint.radius;
-                                    inputSource.HandJoints[i].PoseTracked = (joint.locationFlags & RequiredFlags) == RequiredFlags;
-                                    m_impl->UpdatePoseData(inputSource.HandJoints[i].Pose, joint.pose);
-                                }
-                            }
-                            else
-                            {
-                                for (auto& joint : inputSource.HandJoints)
-                                {
-                                    joint.PoseTracked = false;
-                                }
-                            }
-                        }
-                    }
-                    else if (interactionProfilePath == actionResources.DefaultXRInteractionPath)
-                    {
-                        const auto& controllerInfo = sessionImpl.ControllerInfo;
-                        auto& gamepadObject = inputSource.GamepadObject;
-
-                        // Set up the default number of axes/buttons, despite not populating them
-                        gamepadObject.Axes.resize(DEFAULT_CONTROLLER_AXES_COUNT);
-                        gamepadObject.Buttons.resize(DEFAULT_CONTROLLER_BUTTONS_COUNT);
-
-                        // Get interaction data for select
-                        if ((m_impl->TryUpdateControllerBooleanAction(actionResources.DefaultGetSelectValueAction[idx], session, gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed)))
-                        {
-                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Value = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                            gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Touched = (gamepadObject.Buttons[controllerInfo.TRIGGER_BUTTON].Pressed);
-                        }
-                    }
-                }
-            }
+                m_impl->sessionImpl.HmdImpl.Context.Instance(),
+                m_impl->sessionImpl.HmdImpl.Context.Session(),
+                m_impl->sessionImpl.HmdImpl.Context.Space(),
+                m_impl->sessionImpl.HmdImpl.Context.DisplayTime(),
+                *m_impl->sessionImpl.HmdImpl.Context.Extensions(),
+                InputSources,
+                EyeTrackerSpace
+            };
+            sessionImpl.InputManager.UpdateFrame(inputUpdateArgs);
         }
     }
 
@@ -1772,7 +1065,6 @@ namespace xr
             return;
         }
 
-        std::vector<XrCompositionLayerProjection> layers{};
         const auto& context = m_impl->sessionImpl.HmdImpl.Context;
         const auto& session = context.Session();
         const auto& sceneSpace = context.Space();
@@ -1783,18 +1075,19 @@ namespace xr
         frameEndInfo.displayTime = displayTime;
         frameEndInfo.environmentBlendMode = m_impl->sessionImpl.HmdImpl.ViewProperties.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType).BlendMode;
 
-        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo
-        {
-            XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT
-        };
-        std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
-
         // Chain secondary view configuration layers data to endFrameInfo
-        if (extensions->SecondaryViewConfigurationSupported &&
-            m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes.size() > 0) {
-            for (auto& secondaryViewConfigType : m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes) {
-                auto& secondaryViewConfig = m_impl->sessionImpl.RenderResources.ResourceMap.at(secondaryViewConfigType).ViewState;
-                if (secondaryViewConfig.Active) {
+        const auto& supportedSecondaryViewConfigTypes = m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes;
+        std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
+        XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT };
+        if (extensions->SecondaryViewConfigurationSupported && supportedSecondaryViewConfigTypes.size() > 0) 
+        {
+            activeSecondaryViewConfigLayerInfos.reserve(supportedSecondaryViewConfigTypes.size());
+            const auto& resourceMap = m_impl->sessionImpl.RenderResources.ResourceMap;
+            for (auto& secondaryViewConfigType : supportedSecondaryViewConfigTypes) 
+            {
+                const auto& secondaryViewConfig = resourceMap.at(secondaryViewConfigType).ViewState;
+                if (secondaryViewConfig.Active) 
+                {
                     activeSecondaryViewConfigLayerInfos.emplace_back(
                         XrSecondaryViewConfigurationLayerInfoMSFT
                         {
@@ -1806,12 +1099,17 @@ namespace xr
                 }
             }
 
-            if (activeSecondaryViewConfigLayerInfos.size() > 0) {
-                frameEndSecondaryViewConfigInfo.viewConfigurationCount = (uint32_t)activeSecondaryViewConfigLayerInfos.size();
+            if (activeSecondaryViewConfigLayerInfos.size() > 0) 
+            {
+                frameEndSecondaryViewConfigInfo.viewConfigurationCount = static_cast<uint32_t>(activeSecondaryViewConfigLayerInfos.size());
                 frameEndSecondaryViewConfigInfo.viewConfigurationLayersInfo = activeSecondaryViewConfigLayerInfos.data();
                 xr::InsertExtensionStruct(frameEndInfo, frameEndSecondaryViewConfigInfo);
             }
         }
+
+        // Allocate the layer structs up here so that they're still alive for the xrEndFrame call.
+        XrCompositionLayerProjection primaryLayer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+        std::vector<XrCompositionLayerProjection> secondaryLayers(activeSecondaryViewConfigLayerInfos.size(), { XR_TYPE_COMPOSITION_LAYER_PROJECTION });
 
         if (m_impl->shouldRender)
         {
@@ -1819,7 +1117,7 @@ namespace xr
 
             XrSwapchainImageReleaseInfo releaseInfo{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 
-            for (const auto& [type, renderResource] : renderResources.ResourceMap)
+            for (const auto& [viewConfigType, renderResource] : renderResources.ResourceMap)
             {
                 const auto& colorSwapchain = renderResource.ColorSwapchain;
                 const auto& depthSwapchain = renderResource.DepthSwapchain;
@@ -1835,13 +1133,9 @@ namespace xr
                 }
             }
 
-            layers.resize(1 + activeSecondaryViewConfigLayerInfos.size());
-
             // Inform the runtime to consider alpha channel during composition
             // The primary display on Hololens has additive environment blend mode. It will ignore alpha channel.
             // But mixed reality capture has alpha blend mode display and use alpha channel to blend content to environment.
-            layers[0] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-            auto& primaryLayer = layers[0];
             primaryLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
             primaryLayer.space = sceneSpace;
             const auto& primaryRenderResource = renderResources.ResourceMap.at(m_impl->sessionImpl.HmdImpl.PrimaryViewConfigurationType);
@@ -1850,21 +1144,22 @@ namespace xr
             auto layersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&primaryLayer);
             frameEndInfo.layerCount = 1;
             frameEndInfo.layers = &layersPtr;
-                    
-            if (extensions->SecondaryViewConfigurationSupported &&
-                activeSecondaryViewConfigLayerInfos.size() > 0) {
 
-                for (size_t i = 0; i < activeSecondaryViewConfigLayerInfos.size(); i++) {
-                    XrSecondaryViewConfigurationLayerInfoMSFT& secondaryViewLayerInfo = activeSecondaryViewConfigLayerInfos.at(i);
-                    layers[i + 1] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-                    XrCompositionLayerProjection& secondaryViewLayer = layers.at(i + 1);
+            if (extensions->SecondaryViewConfigurationSupported &&
+                activeSecondaryViewConfigLayerInfos.size() > 0) 
+            {
+                for (size_t i = 0; i < activeSecondaryViewConfigLayerInfos.size(); i++) 
+                {
+                    auto& secondaryViewLayerInfo = activeSecondaryViewConfigLayerInfos.at(i);
+                    auto& secondaryViewLayer = secondaryLayers.at(i);
+                    const auto& secondaryRenderResource = renderResources.ResourceMap.at(secondaryViewLayerInfo.viewConfigurationType);
+                    const auto secondaryLayersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&secondaryViewLayer);
+
                     secondaryViewLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
                     secondaryViewLayer.space = sceneSpace;
-                    const auto& secondaryRenderResource = renderResources.ResourceMap.at(secondaryViewLayerInfo.viewConfigurationType);
                     secondaryViewLayer.viewCount = static_cast<uint32_t>(secondaryRenderResource.ProjectionLayerViews.size());
                     secondaryViewLayer.views = secondaryRenderResource.ProjectionLayerViews.data();
                     secondaryViewLayerInfo.layerCount = 1;
-                    XrCompositionLayerBaseHeader* secondaryLayersPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(&secondaryViewLayer);
                     secondaryViewLayerInfo.layers = &secondaryLayersPtr;
                 }
             }

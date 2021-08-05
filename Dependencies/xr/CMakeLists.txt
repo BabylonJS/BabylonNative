@@ -11,6 +11,7 @@ if (ANDROID)
         "Source/ARCore/XR.cpp")
 elseif (IOS)
     set(SOURCES ${SOURCES}
+        "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
 else()
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
@@ -32,7 +33,9 @@ else()
         "Source/OpenXR/XrRegistry.h"
         "Source/OpenXR/XrSupportedExtensions.h"
         "Source/OpenXR/SceneUnderstanding.h"
-        "Source/OpenXR/SceneUnderstanding.cpp")
+        "Source/OpenXR/SceneUnderstanding.cpp"
+        "Source/OpenXR/XrInput.h"
+        "Source/OpenXR/XrInput.cpp")
 endif()
 
 add_library(xr ${SOURCES})

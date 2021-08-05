@@ -184,6 +184,7 @@ namespace xr
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
+        std::optional<Frame::Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -450,6 +451,7 @@ namespace xr
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
                 auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
                 auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+                auto disableStencilTransaction{ GLTransactions::SetCapability(GL_STENCIL_TEST, false) };
 
                 glUseProgram(cameraShaderProgramId);
 
@@ -499,6 +501,7 @@ namespace xr
                 auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
                 auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
                 auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
+                auto disableStencilTransaction{ GLTransactions::SetCapability(GL_STENCIL_TEST, false) };
 
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
                 glUseProgram(babylonShaderProgramId);
@@ -1054,6 +1057,7 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , EyeTrackerSpace{ sessionImpl.EyeTrackerSpace }
         , UpdatedSceneObjects{}
         , RemovedSceneObjects{}
         , UpdatedPlanes{}

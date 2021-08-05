@@ -15,6 +15,7 @@ set(SOURCES
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
+    "Source/PerFrameValue.h"
     "Source/ResourceLimits.cpp"
     "Source/ResourceLimits.h"
     "Source/ShaderCompiler.h"
