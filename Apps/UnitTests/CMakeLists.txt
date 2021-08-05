@@ -3,22 +3,42 @@ if((NOT WIN32) OR WINDOWS_STORE)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  # Specify the commit you depend on and update it regularly.
-  URL https://github.com/google/googletest/archive/23ef29555ef4789f555f1ba8c51b4c52975f0907.zip
-)
-# Downloads the google test source and binaries and places them in in /build/<platform>/_deps
-FetchContent_MakeAvailable(googletest)
+set(SCRIPTS
+    "Scripts/tests.js")
 
-add_executable(UnitTests "UnitTests.cpp")
+set(BABYLON_SCRIPTS
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
+    "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs/babylon.max.js.map"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/babylonjs-gui/babylon.gui.js.map")
+
+add_executable(UnitTests ${SCRIPTS} ${BABYLON_SCRIPTS} "UnitTests.cpp")
 
 target_link_libraries(UnitTests
-    gtest_main
-    UrlLib)
+    UrlLib
+    AppRuntime
+    XMLHttpRequest
+    NativeEngine
+    ScriptLoader
+    Console
+    Window
+    )
 
 add_test(NAME UnitTests COMMAND UnitTests)
 
+foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS})
+    get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
+    add_custom_command(
+        OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+        COMMENT "Copying ${SCRIPT_NAME}"
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
+endforeach()
+
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
-set_property(TARGET gtest gtest_main gmock gmock_main PROPERTY FOLDER "Dependencies/GoogleTest")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
