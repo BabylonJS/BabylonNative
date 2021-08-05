@@ -4,6 +4,7 @@ This project provides Babylon Native integration into React Native.
 
 [![](https://github.com/BabylonJS/BabylonReactNative/workflows/Publish%20Package/badge.svg)](https://github.com/BabylonJS/BabylonReactNative/actions?query=workflow%3A%22Publish+Package%22)
 [![npm version](https://badge.fury.io/js/%40babylonjs%2Freact-native.svg)](https://badge.fury.io/js/%40babylonjs%2Freact-native)
+[![BabylonNative master branch update](https://github.com/BabylonJS/BabylonReactNative/actions/workflows/bn_master_commit.yml/badge.svg)](https://github.com/BabylonJS/BabylonReactNative/actions/workflows/bn_master_commit.yml)
 
 ## Current Status
 
