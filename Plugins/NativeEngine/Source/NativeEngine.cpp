@@ -227,13 +227,13 @@ namespace Babylon
 
         void CreateBlitTexture(TextureData* texture)
         {
-            if (texture->Flags & BGFX_TEXTURE_BLIT_DST)
+            if (texture->CreationFlags & BGFX_TEXTURE_BLIT_DST)
             {
                 return;
             }
             bgfx::destroy(texture->Handle);
             texture->Handle = bgfx::createTexture2D((uint16_t)texture->Width, (uint16_t)texture->Height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST);
-            texture->Flags |= BGFX_TEXTURE_BLIT_DST;
+            texture->CreationFlags |= BGFX_TEXTURE_BLIT_DST;
         }
     }
 
