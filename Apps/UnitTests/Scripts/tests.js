@@ -18,7 +18,7 @@ function BabylonReporter(runner) {
 mocha.setup({ ui: "bdd", reporter: BabylonReporter });
 
 function createRequest(method, url) {
-    return new Promise( (resolve, reject) => {
+    return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open(method, url);
         xhr.addEventListener("loadend", () => resolve(xhr));
@@ -46,6 +46,6 @@ describe("XMLHTTPRequest", function () {
 });
 
 
-mocha.run( failures => {
+mocha.run(failures => {
     // TODO: set exit code if any tests failed
 });
