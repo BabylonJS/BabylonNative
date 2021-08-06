@@ -7,14 +7,8 @@ set(SCRIPTS
     "Scripts/tests.js")
 
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
     "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
-    "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js.map")
+    "../node_modules/babylonjs/babylon.max.js.map")
 
 add_executable(UnitTests ${SCRIPTS} ${BABYLON_SCRIPTS} "UnitTests.cpp")
 
@@ -25,8 +19,7 @@ target_link_libraries(UnitTests
     NativeEngine
     ScriptLoader
     Console
-    Window
-    )
+    Window)
 
 add_test(NAME UnitTests COMMAND UnitTests)
 
