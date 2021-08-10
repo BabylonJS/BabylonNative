@@ -66,8 +66,8 @@ namespace Babylon
         }
 
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
-        std::unordered_map<std::string, UniformInfo> VertexUniformInfos{};
-        std::unordered_map<std::string, UniformInfo> FragmentUniformInfos{};
+        std::unordered_map<std::string, uint32_t> VertexUniformInfos{};
+        std::unordered_map<std::string, uint32_t> FragmentUniformInfos{};
 
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
 
@@ -272,7 +272,9 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
+        ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<VertexArray> m_vertexArrays{};
+
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
