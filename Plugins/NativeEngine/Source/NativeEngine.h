@@ -137,8 +137,9 @@ namespace Babylon
         {
             m_resources.erase(resourceHandle);
         }
+
     private:
-        uint32_t m_nextResourceId{};
+        uint32_t m_nextResourceId{1};
         std::unordered_map<uint32_t, T> m_resources{};
     };
 
@@ -273,6 +274,7 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         ResourceTable<UniformInfo> m_uniformInfos{};
+        ResourceTable<TextureData> m_textures{};
         ResourceTable<VertexArray> m_vertexArrays{};
 
         const VertexArray* m_boundVertexArray{};

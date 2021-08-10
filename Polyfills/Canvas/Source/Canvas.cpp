@@ -116,6 +116,7 @@ namespace Babylon::Polyfills::Internal
         textureData->OwnsHandle = false;
         textureData->Width = m_width;
         textureData->Height = m_height;
+        // TODO
         return Napi::External<TextureData>::New(info.Env(), textureData, [](Napi::Env, TextureData* data) { delete data; });
     }
 

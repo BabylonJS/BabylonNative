@@ -1123,12 +1123,12 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
-        return Napi::External<TextureData>::New(info.Env(), new TextureData());
+        return Napi::Value::From(info.Env(), m_textures.Add({}));
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         const auto data = info[1].As<Napi::TypedArray>();
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
         auto invertY = info[3].As<Napi::Boolean>().Value();
@@ -1187,8 +1187,8 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
     {
-        const auto textureDestination = info[0].As<Napi::External<TextureData>>().Data();
-        const auto textureSource = info[1].As<Napi::External<TextureData>>().Data();
+        const auto textureDestination = &m_textures.Get(info[0].ToNumber().Uint32Value());
+        const auto textureSource = &m_textures.Get(info[1].ToNumber().Uint32Value());
         const auto handleSource{textureSource->Handle};
         // Make sure destination texture is valid for BLIT and is not created from static datas.
         CreateBlitTexture(textureDestination);
@@ -1217,7 +1217,7 @@ namespace Babylon
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto texture{&m_textures.Get(info[0].ToNumber().Uint32Value())};
         const auto data{info[1].As<Napi::TypedArray>()};
         const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
         const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
@@ -1253,7 +1253,7 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         const auto data = info[1].As<Napi::Array>();
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
         const auto onSuccess = info[3].As<Napi::Function>();
@@ -1298,7 +1298,7 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         const auto data = info[1].As<Napi::Array>();
         const auto onSuccess = info[2].As<Napi::Function>();
         const auto onError = info[3].As<Napi::Function>();
@@ -1341,19 +1341,19 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetTextureWidth(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         return Napi::Value::From(info.Env(), texture->Width);
     }
 
     Napi::Value NativeEngine::GetTextureHeight(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         return Napi::Value::From(info.Env(), texture->Height);
     }
 
     void NativeEngine::SetTextureSampling(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         auto filter = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
 
         texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
@@ -1370,7 +1370,7 @@ namespace Babylon
 
     void NativeEngine::SetTextureWrapMode(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         auto addressModeU = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
         auto addressModeV = static_cast<uint32_t>(info[2].As<Napi::Number>().Uint32Value());
         auto addressModeW = static_cast<uint32_t>(info[3].As<Napi::Number>().Uint32Value());
@@ -1385,7 +1385,7 @@ namespace Babylon
 
     void NativeEngine::SetTextureAnisotropicLevel(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         const auto value = info[1].As<Napi::Number>().Uint32Value();
 
         texture->AnisotropicLevel = static_cast<uint8_t>(value);
@@ -1403,7 +1403,7 @@ namespace Babylon
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-        const auto texture = info[1].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[1].ToNumber().Uint32Value());
 
         encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture->Handle, texture->Flags);
     }
@@ -1413,14 +1413,14 @@ namespace Babylon
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         m_graphicsImpl.RemoveTexture(texture->Handle);
         delete texture;
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
-        TextureData* texture = info[0].As<Napi::External<TextureData>>().Data();
+        const auto texture = &m_textures.Get(info[0].ToNumber().Uint32Value());
         uint16_t width{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
         uint16_t height{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
         bgfx::TextureFormat::Enum format{static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value())};
