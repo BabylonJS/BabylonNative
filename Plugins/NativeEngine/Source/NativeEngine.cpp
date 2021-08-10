@@ -72,81 +72,138 @@ namespace Babylon
             return static_cast<bgfx::TextureFormat::Enum>(format);
         }
 
-        void FlipY(bimg::ImageContainer* image)
+        using TransformFn = void (*)(const uint8_t*, uint8_t*);
+        void TransformImage(const bimg::ImageContainer* src, bimg::ImageContainer* dst, TransformFn transformFn)
         {
-            uint8_t* bytes = static_cast<uint8_t*>(image->m_data);
-            uint32_t rowCount = image->m_height;
-            uint32_t rowPitch = image->m_size / image->m_height;
+            const uint8_t* srcData{static_cast<const uint8_t*>(src->m_data)};
+            const uint8_t srcBytesPerPixel{static_cast<uint8_t>(bimg::getBitsPerPixel(src->m_format) >> 3)};
+            const uint8_t* srcDataEnd{srcData + src->m_size};
 
-            std::vector<uint8_t> buffer(rowPitch);
+            uint8_t* dstData{static_cast<uint8_t*>(dst->m_data)};
+            const uint8_t dstBytesPerPixel{static_cast<uint8_t>(bimg::getBitsPerPixel(dst->m_format) >> 3)};
+            const uint8_t* dstDataEnd{dstData + dst->m_size};
 
-            for (size_t row = 0; row < rowCount / 2; row++)
+            while (srcData < srcDataEnd && dstData < dstDataEnd)
             {
-                auto frontPtr = bytes + (row * rowPitch);
-                auto backPtr = bytes + ((rowCount - row - 1) * rowPitch);
-
-                std::memcpy(buffer.data(), frontPtr, rowPitch);
-                std::memcpy(frontPtr, backPtr, rowPitch);
-                std::memcpy(backPtr, buffer.data(), rowPitch);
+                transformFn(srcData, dstData);
+                srcData += srcBytesPerPixel;
+                dstData += dstBytesPerPixel;
             }
         }
 
-        void GenerateMips(bx::AllocatorI* allocator, bimg::ImageContainer** image)
+        bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
-            bimg::ImageContainer* input = *image;
-
-            bimg::ImageContainer* output = bimg::imageGenerateMips(allocator, *input);
-            if (output == nullptr)
+            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
+            if (image == nullptr)
             {
-                bimg::TextureFormat::Enum format = input->m_format;
-                bimg::ImageContainer* rgba = bimg::imageConvert(allocator, bimg::TextureFormat::RGBA8, *input, false);
-                bimg::imageFree(input);
-                bimg::ImageContainer* mips = bimg::imageGenerateMips(allocator, *rgba);
-                bimg::imageFree(rgba);
-                output = bimg::imageConvert(allocator, format, *mips);
-                bimg::imageFree(mips);
-            }
-            else
-            {
-                bimg::imageFree(input);
+                throw std::runtime_error{"Failed to parse image."};
             }
 
-            *image = output;
+            if (image->m_format == bimg::TextureFormat::R8 ||
+                image->m_format == bimg::TextureFormat::RG8)
+            {
+                static const TransformFn UnpackR8{[](const uint8_t* src, uint8_t* dst) { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = 1; }};
+                static const TransformFn UnpackRG8{[](const uint8_t* src, uint8_t* dst) { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = src[1]; }};
+
+                // bimg loads grayscale textures with and without alpha as R8 and RG8 respectively.
+                // Unpack to RGB and RGBA such that RGB is the grayscale and the A is the alpha.
+                bimg::ImageContainer* oldImage{image};
+                image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), 1, 1, false, false);
+                TransformImage(oldImage, image, image->m_format == bimg::TextureFormat::R8 ? UnpackR8 : UnpackRG8);
+                bimg::imageFree(oldImage);
+            }
+
+            return image;
         }
 
-        void CreateTextureFromImage(TextureData* texture, bimg::ImageContainer* image)
+        bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
-            auto releaseFn = [](void* /*ptr*/, void* userData) {
+            assert(
+                image->m_format == bimg::TextureFormat::RGB8 ||
+                image->m_format == bimg::TextureFormat::RGBA8 ||
+                image->m_format == bimg::TextureFormat::RGBA16 ||
+                image->m_format == bimg::TextureFormat::RGBA32F);
+
+            assert(image->m_depth == 1);
+            assert(image->m_numLayers == 1);
+            assert(image->m_numMips == 1);
+            assert(image->m_cubeMap == false);
+
+            if (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)
+            {
+                uint8_t* bytes{static_cast<uint8_t*>(image->m_data)};
+                const uint32_t rowCount{image->m_height};
+                const uint32_t rowPitch{image->m_size / image->m_height};
+
+                std::vector<uint8_t> buffer(rowPitch);
+                for (size_t row = 0; row < rowCount / 2; row++)
+                {
+                    uint8_t* frontPtr{bytes + (row * rowPitch)};
+                    uint8_t* backPtr{bytes + ((rowCount - row - 1) * rowPitch)};
+
+                    std::memcpy(buffer.data(), frontPtr, rowPitch);
+                    std::memcpy(frontPtr, backPtr, rowPitch);
+                    std::memcpy(backPtr, buffer.data(), rowPitch);
+                }
+            }
+
+            if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
+            {
+                bimg::ImageContainer* oldImage{image};
+                image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
+                bimg::imageFree(oldImage);
+
+                assert(bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB));
+            }
+
+            if (generateMips)
+            {
+                if (image->m_format == bimg::TextureFormat::RGB8)
+                {
+                    bimg::ImageContainer* oldImage{image};
+                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
+                    bimg::imageFree(oldImage);
+                }
+                else if (image->m_format == bimg::TextureFormat::RGBA16)
+                {
+                    bimg::ImageContainer* oldImage{image};
+                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false);
+                    bimg::imageFree(oldImage);
+                }
+
+                bimg::ImageContainer* oldImage{image};
+                image = bimg::imageGenerateMips(&allocator, *image);
+                bimg::imageFree(oldImage);
+            }
+
+            assert(image != nullptr);
+            return image;
+        }
+
+        void CreateTextureFromImage(TextureData* texture, bimg::ImageContainer* image, bool srgb)
+        {
+            uint64_t flags{(srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE) | BGFX_SAMPLER_NONE};
+
+            auto releaseFn{[](void* /*ptr*/, void* userData) {
                 bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
-            };
+            }};
+            const bgfx::Memory* mem{bgfx::makeRef(image->m_data, image->m_size, releaseFn, image)};
 
-            auto mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
-
-            texture->Handle = bgfx::createTexture2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
+            texture->Handle = bgfx::createTexture2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags, mem);
             texture->Width = image->m_width;
             texture->Height = image->m_height;
         }
 
-        void CreateBlitTexture(TextureData* texture)
+        void CreateCubeTextureFromImages(TextureData* texture, std::vector<bimg::ImageContainer*>& images, bool hasMips, bool srgb)
         {
-            if (texture->Flags & BGFX_TEXTURE_BLIT_DST)
-            {
-                return;
-            }
-            bgfx::destroy(texture->Handle);
-            texture->Handle = bgfx::createTexture2D((uint16_t)texture->Width, (uint16_t)texture->Height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST);
-            texture->Flags |= BGFX_TEXTURE_BLIT_DST;
-        }
+            const bimg::ImageContainer* firstImage{images.front()};
+            assert(firstImage->m_width == firstImage->m_height);
+            uint32_t width{firstImage->m_width};
+            bgfx::TextureFormat::Enum format{Cast(firstImage->m_format)};
+            uint64_t flags{(srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE) | BGFX_SAMPLER_NONE};
 
-        void CreateCubeTextureFromImages(TextureData* texture, const std::vector<bimg::ImageContainer*>& images, bool hasMips)
-        {
-            const bimg::ImageContainer* firstImage = images.front();
-            uint32_t width = firstImage->m_width;
-            uint32_t height = firstImage->m_height;
-            bgfx::TextureFormat::Enum format = Cast(firstImage->m_format);
-
-            uint32_t totalSize = 0;
-            for (auto image : images)
+            uint32_t totalSize{0};
+            for (bimg::ImageContainer* image : images)
             {
                 totalSize += image->m_size;
             }
@@ -161,9 +218,22 @@ namespace Babylon
                 bimg::imageFree(image);
             }
 
-            texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, mem);
+            images.clear();
+
+            texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(width), hasMips, 1, format, flags, mem);
             texture->Width = width;
-            texture->Height = height;
+            texture->Height = width;
+        }
+
+        void CreateBlitTexture(TextureData* texture)
+        {
+            if (texture->CreationFlags & BGFX_TEXTURE_BLIT_DST)
+            {
+                return;
+            }
+            bgfx::destroy(texture->Handle);
+            texture->Handle = bgfx::createTexture2D((uint16_t)texture->Width, (uint16_t)texture->Height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST);
+            texture->CreationFlags |= BGFX_TEXTURE_BLIT_DST;
         }
     }
 
@@ -1123,50 +1193,21 @@ namespace Babylon
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::TypedArray>();
-        const auto generateMips = info[2].As<Napi::Boolean>().Value();
-        auto invertY = info[3].As<Napi::Boolean>().Value();
-        const auto onSuccess = info[4].As<Napi::Function>();
-        const auto onError = info[5].As<Napi::Function>();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::TypedArray>()};
+        const auto generateMips{info[2].As<Napi::Boolean>().Value()};
+        const auto invertY{info[3].As<Napi::Boolean>().Value()};
+        const auto srgb{info[4].As<Napi::Boolean>().Value()};
+        const auto onSuccess{info[5].As<Napi::Function>()};
+        const auto onError{info[6].As<Napi::Function>()};
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
-        if (!bgfx::getCaps()->originBottomLeft)
-        {
-            invertY = !invertY;
-        }
-
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, dataSpan, generateMips, invertY, texture, cancellationSource{m_cancellationSource}]() {
-                bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
-                if (image == nullptr)
-                {
-                    throw std::runtime_error("Unable to decode image."); // exception will be forwarded to JS
-                }
-
-                if (image->m_format == bimg::TextureFormat::R8)
-                {
-                    // Images with only 1 channel are interpreted as luminance texture with RGB containing the same value as R and alpha as 255
-                    // To emulate this behavior, the format is switched to alpha8 and converted to RGB8 when packing and unpacking take care of
-                    // component swizzling.
-                    image->m_format = bimg::TextureFormat::A8;
-                    bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGB8, *image, false);
-                    bimg::imageFree(image);
-                    image = rgba;
-                }
-
-                if (invertY)
-                {
-                    FlipY(image);
-                }
-
-                if (generateMips)
-                {
-                    GenerateMips(&m_allocator, &image);
-                }
-
-                CreateTextureFromImage(texture, image);
+            [this, dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
+                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
+                CreateTextureFromImage(texture, image, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
@@ -1218,7 +1259,7 @@ namespace Babylon
         const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value())};
         const auto generateMips{info[5].As<Napi::Boolean>().Value()};
-        auto invertY{info[6].As<Napi::Boolean>().Value()};
+        const auto invertY{info[6].As<Napi::Boolean>().Value()};
 
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
@@ -1227,32 +1268,19 @@ namespace Babylon
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
-
-        if (!bgfx::getCaps()->originBottomLeft)
-        {
-            invertY = !invertY;
-        }
-
-        if (invertY)
-        {
-            FlipY(image);
-        }
-
-        if (generateMips)
-        {
-            GenerateMips(&m_allocator, &image);
-        }
-
-        CreateTextureFromImage(texture, image);
+        image = PrepareImage(m_allocator, image, invertY, false, generateMips);
+        CreateTextureFromImage(texture, image, false);
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::Array>();
-        const auto generateMips = info[2].As<Napi::Boolean>().Value();
-        const auto onSuccess = info[3].As<Napi::Function>();
-        const auto onError = info[4].As<Napi::Function>();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::Array>()};
+        const auto generateMips{info[2].As<Napi::Boolean>().Value()};
+        const auto invertY{info[3].As<Napi::Boolean>().Value()};
+        const auto srgb{info[4].As<Napi::Boolean>().Value()};
+        const auto onSuccess{info[5].As<Napi::Function>()};
+        const auto onError{info[6].As<Napi::Function>()};
 
         std::array<Napi::Reference<Napi::TypedArray>, 6> dataRefs;
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
@@ -1261,23 +1289,16 @@ namespace Babylon
             const auto typedArray{data[face].As<Napi::TypedArray>()};
             const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, generateMips]() {
-                bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
-                // if texture is R8, it needs to be converted as luminance (r=g=b=luminance and alpha = 1)
-                // see what's done in loadTexture
-                // keeping an assert here until we find some assets to test.
-                assert(image->m_format != bimg::TextureFormat::R8);
-                if (generateMips)
-                {
-                    GenerateMips(&m_allocator, &image);
-                }
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, generateMips, srgb]() {
+                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
+                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
                 return image;
             });
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, generateMips, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
-                CreateCubeTextureFromImages(texture, images, generateMips);
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, hasMips{generateMips}, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+                CreateCubeTextureFromImages(texture, images, hasMips, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
@@ -1293,10 +1314,12 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        const auto data = info[1].As<Napi::Array>();
-        const auto onSuccess = info[2].As<Napi::Function>();
-        const auto onError = info[3].As<Napi::Function>();
+        const auto texture{info[0].As<Napi::External<TextureData>>().Data()};
+        const auto data{info[1].As<Napi::Array>()};
+        const auto invertY{info[2].As<Napi::Boolean>().Value()};
+        const auto srgb{info[3].As<Napi::Boolean>().Value()};
+        const auto onSuccess{info[4].As<Napi::Function>()};
+        const auto onError{info[5].As<Napi::Function>()};
 
         const auto numMips{static_cast<size_t>(data.Length())};
         std::vector<Napi::Reference<Napi::TypedArray>> dataRefs(6 * numMips);
@@ -1309,18 +1332,17 @@ namespace Babylon
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, cancellationSource{m_cancellationSource}]() {
-                    bimg::ImageContainer* image = bimg::imageParse(&m_allocator, dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
-                    assert(image->m_format != bimg::TextureFormat::R8);
-                    FlipY(image);
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, srgb]() {
+                    bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
+                    image = PrepareImage(m_allocator, image, invertY, srgb, false);
                     return image;
                 });
             }
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
-                CreateCubeTextureFromImages(texture, images, true);
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+                CreateCubeTextureFromImages(texture, images, true, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
@@ -1617,33 +1639,31 @@ namespace Babylon
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
     {
         const Napi::Env env{info.Env()};
+
         if (!info[0].IsArrayBuffer())
         {
             throw Napi::Error::New(env, "CreateImageBitmap parameter is not an array buffer.");
         }
 
-        const auto data = info[0].As<Napi::ArrayBuffer>();
+        const auto data{info[0].As<Napi::ArrayBuffer>()};
+
         if (!data.ByteLength())
         {
             throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
         }
 
-        bimg::ImageContainer* image = bimg::imageParse(&m_allocator, data.Data(), static_cast<uint32_t>(data.ByteLength()));
-        if (image == nullptr)
-        {
-            throw Napi::Error::New(env, "Unable to decode image in createImageBitmap function.");
-        }
+        bimg::ImageContainer* image{ParseImage(m_allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()))};
 
-        Napi::Object imageBitmap = Napi::Object::New(env);
-        auto buffer = Napi::Uint8Array::New(env, image->m_size);
-        memcpy(buffer.Data(), image->m_data, image->m_size);
+        Napi::Object imageBitmap{Napi::Object::New(env)};
+        Napi::Uint8Array buffer{Napi::Uint8Array::New(env, image->m_size)};
+        std::memcpy(buffer.Data(), image->m_data, image->m_size);
 
         imageBitmap.Set("data", buffer);
-        imageBitmap.Set("width", Napi::Number::New(env, image->m_width).As<Napi::Value>());
-        imageBitmap.Set("height", Napi::Number::New(env, image->m_height).As<Napi::Value>());
-        imageBitmap.Set("depth", Napi::Number::New(env, image->m_depth).As<Napi::Value>());
-        imageBitmap.Set("numLayers", Napi::Number::New(env, image->m_numLayers).As<Napi::Value>());
-        imageBitmap.Set("format", Napi::Number::New(env, image->m_format).As<Napi::Value>());
+        imageBitmap.Set("width", Napi::Value::From(env, image->m_width));
+        imageBitmap.Set("height", Napi::Value::From(env, image->m_height));
+        imageBitmap.Set("depth", Napi::Value::From(env, image->m_depth));
+        imageBitmap.Set("numLayers", Napi::Value::From(env, image->m_numLayers));
+        imageBitmap.Set("format", Napi::Value::From(env, static_cast<uint32_t>(image->m_format)));
 
         bimg::imageFree(image);
         return std::move(imageBitmap);
@@ -1691,7 +1711,7 @@ namespace Babylon
         }
         else
         {
-            memcpy(outputData.Data(), image->m_data, image->m_size);
+            std::memcpy(outputData.Data(), image->m_data, image->m_size);
         }
         bimg::imageFree(image);
         return Napi::Value::From(env, outputData);
