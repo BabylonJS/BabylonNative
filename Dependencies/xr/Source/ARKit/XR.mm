@@ -707,7 +707,6 @@ namespace xr {
 
             // Create a pipeline state for drawing the camera texture to the render target texture.
             {
-
                 MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
                 pipelineStateDescriptor.label = @"XR Camera Pipeline";
                 pipelineStateDescriptor.vertexFunction = vertexFunction;

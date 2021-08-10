@@ -117,6 +117,33 @@ namespace Babylon
         std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
     };
 
+    template<typename T>
+    class ResourceTable final {
+    public:
+        uint32_t Add(T&& resource)
+        {
+            const uint32_t resourceHandle{m_nextResourceId};
+            m_resources.insert({resourceHandle, std::forward(resource)});
+            m_nextResourceId++;
+            return resourceHandle;
+        }
+
+        T& Get(uint32_t resourceHandle)
+        {
+            return m_resources.at(resourceHandle);
+        }
+
+        T& Remove(uint32_t resourceHandle)
+        {
+            T& resource{Get(resourceHandle)};
+            m_resources.erase(resourceHandle);
+            return resource;
+        }
+    private:
+        uint32_t m_nextResourceId{};
+        std::unordered_map<uint32_t, T> m_resources{};
+    };
+
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
@@ -186,6 +213,8 @@ namespace Babylon
         void SetTextureWrapMode(const Napi::CallbackInfo& info);
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
         void SetTexture(const Napi::CallbackInfo& info);
+        void SetTexture2(const Napi::CallbackInfo& info);
+        void SetTexture3(const Napi::CallbackInfo& info);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         void DeleteFrameBuffer(const Napi::CallbackInfo& info);
@@ -245,6 +274,9 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
+        size_t m_nextVertexArrayHandle{0};
+        std::unordered_map<size_t, std::unique_ptr<VertexArray>> m_vertexArrays{};
+//        ResourceTable<std::unique_ptr<VertexArray>> m_vertexArrays{};
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};

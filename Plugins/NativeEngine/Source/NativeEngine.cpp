@@ -27,6 +27,8 @@ namespace Babylon
 {
     namespace
     {
+        void SetTexture4(const Napi::CallbackInfo&) {}
+
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -449,6 +451,8 @@ namespace Babylon
                 InstanceMethod("setTextureWrapMode", &NativeEngine::SetTextureWrapMode),
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 InstanceMethod("setTexture", &NativeEngine::SetTexture),
+                InstanceMethod("setTexture2", &NativeEngine::SetTexture2),
+                InstanceMethod("setTexture3", &NativeEngine::SetTexture3),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
                 InstanceMethod("deleteFrameBuffer", &NativeEngine::DeleteFrameBuffer),
@@ -560,6 +564,8 @@ namespace Babylon
         // clang-format on
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
+
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set("setTexture4", Napi::Function::New(env, SetTexture4, "setTexture4"));
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
@@ -609,20 +615,22 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
     {
-        return Napi::External<VertexArray>::New(info.Env(), new VertexArray{});
+        const auto nativeHandle = m_nextVertexArrayHandle;
+        m_vertexArrays.insert({nativeHandle, std::make_unique<VertexArray>()});
+        m_nextVertexArrayHandle++;
+        return Napi::Value::From(info.Env(), nativeHandle);
     }
 
     void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
     {
-        auto vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        m_vertexArrays.erase(static_cast<size_t>(info[0].ToNumber().Int64Value()));
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
-        delete vertexArray;
     }
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
-        const VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
+        const VertexArray& vertexArray = *(m_vertexArrays.at(static_cast<size_t>(info[0].ToNumber().Int64Value())));
         m_boundVertexArray = &vertexArray;
     }
 
@@ -644,7 +652,7 @@ namespace Babylon
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
+        VertexArray& vertexArray = *(m_vertexArrays.at(static_cast<size_t>(info[0].ToNumber().Int64Value())));
         const IndexBufferData* indexBufferData = info[1].As<Napi::External<IndexBufferData>>().Data();
 
         vertexArray.indexBuffer.Data = indexBufferData;
@@ -676,7 +684,7 @@ namespace Babylon
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
+        VertexArray& vertexArray = *(m_vertexArrays.at(static_cast<size_t>(info[0].ToNumber().Int64Value())));
         VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
 
         const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
@@ -1402,6 +1410,9 @@ namespace Babylon
 
         encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle, texture->Flags);
     }
+
+    void NativeEngine::SetTexture2(const Napi::CallbackInfo&) {}
+    void NativeEngine::SetTexture3(const Napi::CallbackInfo&) {}
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
