@@ -1077,6 +1077,12 @@ namespace Babylon
 
     void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
     {
+//        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+//        const auto matricesArray = info[1].As<Napi::ArrayBuffer>();
+//        const auto elementLength = info[2].As<Napi::Number>().Uint32Value();
+//
+//        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(static_cast<float*>(matricesArray.Data()), elementLength), elementLength >> 4);
+
         const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
         const auto matricesArray = info[1].As<Napi::Float32Array>();
 
