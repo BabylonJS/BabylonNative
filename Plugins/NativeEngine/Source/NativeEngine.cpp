@@ -615,22 +615,19 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
     {
-        const auto nativeHandle = m_nextVertexArrayHandle;
-        m_vertexArrays.insert({nativeHandle, std::make_unique<VertexArray>()});
-        m_nextVertexArrayHandle++;
-        return Napi::Value::From(info.Env(), nativeHandle);
+        return Napi::Value::From(info.Env(), m_vertexArrays.Add({}));
     }
 
     void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
     {
-        m_vertexArrays.erase(static_cast<size_t>(info[0].ToNumber().Int64Value()));
+        m_vertexArrays.Remove(info[0].ToNumber().Uint32Value());
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
     }
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
-        const VertexArray& vertexArray = *(m_vertexArrays.at(static_cast<size_t>(info[0].ToNumber().Int64Value())));
+        const VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
         m_boundVertexArray = &vertexArray;
     }
 
@@ -652,7 +649,7 @@ namespace Babylon
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = *(m_vertexArrays.at(static_cast<size_t>(info[0].ToNumber().Int64Value())));
+        VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
         const IndexBufferData* indexBufferData = info[1].As<Napi::External<IndexBufferData>>().Data();
 
         vertexArray.indexBuffer.Data = indexBufferData;
@@ -684,7 +681,7 @@ namespace Babylon
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = *(m_vertexArrays.at(static_cast<size_t>(info[0].ToNumber().Int64Value())));
+        VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
         VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
 
         const uint32_t location = info[2].As<Napi::Number>().Uint32Value();

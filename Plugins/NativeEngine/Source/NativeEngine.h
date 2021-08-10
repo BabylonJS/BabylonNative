@@ -123,7 +123,7 @@ namespace Babylon
         uint32_t Add(T&& resource)
         {
             const uint32_t resourceHandle{m_nextResourceId};
-            m_resources.insert({resourceHandle, std::forward(resource)});
+            m_resources.insert({resourceHandle, std::forward<T>(resource)});
             m_nextResourceId++;
             return resourceHandle;
         }
@@ -133,11 +133,9 @@ namespace Babylon
             return m_resources.at(resourceHandle);
         }
 
-        T& Remove(uint32_t resourceHandle)
+        void Remove(uint32_t resourceHandle)
         {
-            T& resource{Get(resourceHandle)};
             m_resources.erase(resourceHandle);
-            return resource;
         }
     private:
         uint32_t m_nextResourceId{};
@@ -274,9 +272,7 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        size_t m_nextVertexArrayHandle{0};
-        std::unordered_map<size_t, std::unique_ptr<VertexArray>> m_vertexArrays{};
-//        ResourceTable<std::unique_ptr<VertexArray>> m_vertexArrays{};
+        ResourceTable<VertexArray> m_vertexArrays{};
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
