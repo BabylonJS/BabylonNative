@@ -2,6 +2,7 @@
 #include <map>
 #include <algorithm>
 #include <assert.h>
+#include <sstream>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "nanovg/nanovg.h"
@@ -650,15 +651,37 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{ "invalid argument" };
         }
 
-        const auto fontName = value.ToString();
-        if (m_fonts.find(fontName) == m_fonts.end())
+        // Default font id, and font size values.
+        // TODO: Determine better way of signaling to user that font specified is invalid.
+        m_currentFontId = -1;
+        int fontSize = 16;
+
+        // Parse user specified font style to set font ID and font size if specified.
+        std::istringstream fontOptionsStream(value.ToString());
+        std::string fontOption;
+        while (std::getline(fontOptionsStream, fontOption, ' '))
         {
-            // TODO: determine better way of signaling to user that the font specified was invalid
-            m_currentFontId = -1;
-            return;
+            // If the current font option matches a font name, then set the target font name.
+            if (m_fonts.find(fontOption) != m_fonts.end())
+            {
+                m_currentFontId = m_fonts.at(fontOption);
+            }
+            // Check if this option is setting the font size in pixels
+            else if (fontOption.size() >= 3 && fontOption.substr(fontOption.size() - 2, 2).compare("px") == 0)
+            {
+                try
+                {
+                    fontSize = std::stoi(fontOption.substr(0, fontOption.size() - 2));
+                }
+                catch(std::invalid_argument)
+                {
+                    /* no-op keep default size */
+                }
+            }
         }
 
-        m_currentFontId = m_fonts.at(fontName);
+        // Set font size on the current context.
+        nvgFontSize(m_nvg, fontSize);
     }
 
     Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo&)
