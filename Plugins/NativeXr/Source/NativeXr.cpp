@@ -698,6 +698,7 @@ namespace Babylon
 
                             auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
                             auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
+                            // TODO (ryantrem) the frame buffer should be getting deleted by JS (via NativeEngine.deleteTexture), so is this double deleting?
                             auto jsFrameBuffer{Napi::External<FrameBuffer>::New(m_env, frameBuffer, [](Napi::Env, FrameBuffer* data) { delete data; })};
                             viewConfig.JsTextures[frameBuffer] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
                         }
