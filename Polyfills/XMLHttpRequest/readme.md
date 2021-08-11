@@ -8,8 +8,8 @@ We do not support `onload`-style event listeners. Instead, you should listen to 
 
 ## Local files
 Unlike the web, XMLHttpRequest supports loading local files using two schemes:
-* `file://` allows you to load from an absolute path
-*  `app://` allows you to load from a relative path, either the current program or package depending on platform
+* `file:///` allows you to load from an absolute path
+* `app:///` allows you to load from a relative path, either the current program or package depending on platform
 
 
 
