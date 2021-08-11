@@ -276,6 +276,7 @@ namespace Babylon
         ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<TextureData> m_textures{};
         ResourceTable<VertexArray> m_vertexArrays{};
+        ResourceTable<IndexBufferData*> m_indexBuffers{};
 
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;

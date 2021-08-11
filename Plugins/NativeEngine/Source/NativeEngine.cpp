@@ -638,26 +638,27 @@ namespace Babylon
 
         const uint16_t flags = data.TypedArrayType() == napi_typedarray_type::napi_uint16_array ? 0 : BGFX_BUFFER_INDEX32;
 
-        return Napi::External<IndexBufferData>::New(info.Env(), new IndexBufferData(data, flags, dynamic));
+        return Napi::Value::From(info.Env(), m_indexBuffers.Add(new IndexBufferData(data, flags, dynamic)));
     }
 
     void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& info)
     {
-        IndexBufferData* indexBufferData = info[0].As<Napi::External<IndexBufferData>>().Data();
+        const IndexBufferData* indexBufferData = m_indexBuffers.Get(info[1].ToNumber().Uint32Value());
+        m_indexBuffers.Remove(info[0].ToNumber().Uint32Value());
         delete indexBufferData;
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
         VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
-        const IndexBufferData* indexBufferData = info[1].As<Napi::External<IndexBufferData>>().Data();
+        const IndexBufferData* indexBufferData = m_indexBuffers.Get(info[1].ToNumber().Uint32Value());
 
         vertexArray.indexBuffer.Data = indexBufferData;
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
-        IndexBufferData& indexBufferData = *(info[0].As<Napi::External<IndexBufferData>>().Data());
+        IndexBufferData& indexBufferData = *m_indexBuffers.Get(info[0].ToNumber().Uint32Value());
 
         const Napi::TypedArray data = info[1].As<Napi::TypedArray>();
         const uint32_t startingIdx = info[2].As<Napi::Number>().Uint32Value();
