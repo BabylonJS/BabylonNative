@@ -27,7 +27,57 @@
 
 namespace Babylon
 {
-    struct TextureData final
+    template<typename T>
+    class ResourceTable final
+    {
+    public:
+        uint32_t Add(T&& resource)
+        {
+            const uint32_t resourceHandle{m_nextResourceId};
+            m_resources.insert({resourceHandle, std::forward<T>(resource)});
+            m_nextResourceId++;
+            return resourceHandle;
+        }
+
+        T& Get(uint32_t resourceHandle)
+        {
+            return m_resources.at(resourceHandle);
+        }
+
+        void Remove(uint32_t resourceHandle)
+        {
+            m_resources.erase(resourceHandle);
+        }
+
+    private:
+        uint32_t m_nextResourceId{1};
+        std::unordered_map<uint32_t, T> m_resources{};
+    };
+
+    template<class T, class... Args>
+    struct NativeResource
+    {
+    public:
+        static T& Get(uint32_t handle)
+        {
+            return s_resources.Get(handle);
+        }
+
+        static uint32_t Create(Args&&... args)
+        {
+            return s_resources.Add({std::forward<Args>(args)...});
+        }
+        
+        static void Delete(uint32_t handle)
+        {
+            s_resources.Remove(handle);
+        }
+
+    private:
+        inline static ResourceTable<T> s_resources{};
+    };
+
+    struct TextureData final : public NativeResource<TextureData>
     {
         ~TextureData()
         {
@@ -115,32 +165,6 @@ namespace Babylon
         };
 
         std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
-    };
-
-    template<typename T>
-    class ResourceTable final {
-    public:
-        uint32_t Add(T&& resource)
-        {
-            const uint32_t resourceHandle{m_nextResourceId};
-            m_resources.insert({resourceHandle, std::forward<T>(resource)});
-            m_nextResourceId++;
-            return resourceHandle;
-        }
-
-        T& Get(uint32_t resourceHandle)
-        {
-            return m_resources.at(resourceHandle);
-        }
-
-        void Remove(uint32_t resourceHandle)
-        {
-            m_resources.erase(resourceHandle);
-        }
-
-    private:
-        uint32_t m_nextResourceId{1};
-        std::unordered_map<uint32_t, T> m_resources{};
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
@@ -274,7 +298,6 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         ResourceTable<UniformInfo> m_uniformInfos{};
-        ResourceTable<TextureData> m_textures{};
         ResourceTable<VertexArray> m_vertexArrays{};
         ResourceTable<IndexBufferData*> m_indexBuffers{};
 
