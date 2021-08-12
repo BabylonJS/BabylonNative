@@ -1,5 +1,5 @@
 # Console
-Implements parts of [`console`](https://developer.mozilla.org/en-US/docs/Web/API/console). Provides a way to output debug messages from Javascript into C++.
+Implements parts of [`console`](https://developer.mozilla.org/en-US/docs/Web/API/console). Provides a way to output debug messages from JavaScript into C++.
 
 Currently supports:
 * `log()`
