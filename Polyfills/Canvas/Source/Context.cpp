@@ -2,6 +2,7 @@
 #include <map>
 #include <algorithm>
 #include <assert.h>
+#include <regex>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "nanovg/nanovg.h"
@@ -650,15 +651,35 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{ "invalid argument" };
         }
 
-        const auto fontName = value.ToString();
-        if (m_fonts.find(fontName) == m_fonts.end())
+        const std::string fontOptions = value.ToString();
+
+        // Default font id, and font size values.
+        // TODO: Determine better way of signaling to user that font specified is invalid.
+        m_currentFontId = -1;
+        int fontSize = 16;
+
+        // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
+        const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
+        std::smatch fontStyleMatch;
+
+        // Perform the actual regex_match.
+        if (std::regex_match(fontOptions, fontStyleMatch, fontStyleRegex))
         {
-            // TODO: determine better way of signaling to user that the font specified was invalid
-            m_currentFontId = -1;
-            return;
+            // Check if font size was specified.
+            if (fontStyleMatch[3].matched)
+            {
+                fontSize = std::stoi(fontStyleMatch[3]);
+            }
+
+            // Check if the specified font family name is valid, and if so assign the current font id.
+            if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
+            {
+                m_currentFontId = m_fonts.at(fontStyleMatch[4]);
+            }
         }
 
-        m_currentFontId = m_fonts.at(fontName);
+        // Set font size on the current context.
+        nvgFontSize(m_nvg, fontSize);
     }
 
     Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo&)
