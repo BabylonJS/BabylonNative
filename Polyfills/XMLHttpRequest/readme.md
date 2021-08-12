@@ -1,5 +1,5 @@
 # XMLHttpRequest
-Minimal implementation of XMLHttpRequest required to support the Babylon.js SceneLoader. Under the hood, XMLHttpRequest is implemented using various platform-specific APIs in the UrlLib dependency.
+Minimal implementation of XMLHttpRequest required to support the Babylon.js RequestFile method. Under the hood, XMLHttpRequest is implemented using various platform-specific APIs in the UrlLib dependency.
 
 ## Event listening
 We do not support `onload`-style event listeners. Instead, you should listen to events using `addEventListener`. At the moment, we only support the following events:
