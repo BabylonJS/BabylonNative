@@ -651,42 +651,31 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{ "invalid argument" };
         }
 
+        const std::string fontOptions = value.ToString();
+
         // Default font id, and font size values.
         // TODO: Determine better way of signaling to user that font specified is invalid.
         m_currentFontId = -1;
         int fontSize = 16;
 
-        // Parse user specified font style to set font ID and font size if specified.
-        const auto fontOptions = value.ToString().Utf8Value();
+        // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
+        const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
+        std::smatch fontStyleMatch;
 
-        // Generate regex string for identifying font name by looping over keys in the font map.
-        std::string fontNameSearchString{"\\b("};
-        for (std::map<std::string, int>::iterator iter = m_fonts.begin(); iter != m_fonts.end(); ++iter)
+        // Perform the actual regex_match.
+        if (std::regex_match(fontOptions, fontStyleMatch, fontStyleRegex))
         {
-            if (iter != m_fonts.begin())
+            // Check if font size was specified.
+            if (fontStyleMatch[3].matched)
             {
-                fontNameSearchString.append("|");
+                fontSize = std::stoi(fontStyleMatch[3]);
             }
 
-            fontNameSearchString.append(iter->first);
-        }
-        fontNameSearchString.append(")\\b");
-
-        // Perform the actual regex search to identify the first font name in the list of font options if any are present.
-        std::regex fontNameRegex(fontNameSearchString);
-        std::smatch fontNameMatch;
-        if (std::regex_search(fontOptions, fontNameMatch, fontNameRegex))
-        {
-            // Grab font id from font map.
-            m_currentFontId = m_fonts.at(fontNameMatch[0]);
-        }
-
-        // Regex for identifying font size. Checking for a whole word that contains a number followed by px.
-        const std::regex fontSizeRegex("\\b[0-9]+(px)\\b", std::regex::icase);
-        std::smatch fontSizeMatch;
-        if (std::regex_search(fontOptions, fontSizeMatch, fontSizeRegex))
-        {
-            fontSize = std::stoi(fontSizeMatch[0]);
+            // Check if the specified font family name is valid, and if so assign the current font id.
+            if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
+            {
+                m_currentFontId = m_fonts.at(fontStyleMatch[4]);
+            }
         }
 
         // Set font size on the current context.
