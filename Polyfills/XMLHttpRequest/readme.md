@@ -11,8 +11,6 @@ Unlike the web, XMLHttpRequest supports loading local files using two schemes:
 * `file:///` allows you to load from an absolute path
 * `app:///` allows you to load from a relative path, either the current program or package depending on platform
 
-
-
 ## Other things to be aware of:
 * Only `GET` requests are currently supported
 * For `readyState`, we only support `UNSENT`, `OPENED`, and `DONE`
