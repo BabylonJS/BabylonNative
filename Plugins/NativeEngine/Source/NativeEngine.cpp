@@ -450,7 +450,7 @@ namespace Babylon
                 InstanceMethod("setTextureSampling", &NativeEngine::SetTextureSampling),
                 InstanceMethod("setTextureWrapMode", &NativeEngine::SetTextureWrapMode),
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
-                InstanceMethod("setTexture", &NativeEngine::SetTexture),
+                //InstanceMethod("setTexture", &NativeEngine::SetTexture),
                 InstanceMethod("setTexture2", &NativeEngine::SetTexture2),
                 InstanceMethod("setTexture3", &NativeEngine::SetTexture3),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
@@ -566,6 +566,7 @@ namespace Babylon
                 InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
 
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
+                InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture)))
             });
         // clang-format on
 
@@ -1416,14 +1417,27 @@ namespace Babylon
         }
     }
 
-    void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
+//    {
+//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+//
+//        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+//        const auto texture = &TextureData::Get(info[1].ToNumber().Uint32Value());
+//
+//        encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture->Handle, texture->Flags);
+//    }
+
+    void NativeEngine::SetTexture(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-        const auto texture = &TextureData::Get(info[1].ToNumber().Uint32Value());
+        const auto uniformHandle{decoder.DecodeCommandArgAsUInt32()};
+        const auto textureHandle{decoder.DecodeCommandArgAsUInt32()};
 
-        encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture->Handle, texture->Flags);
+        const auto& uniformInfo{m_uniformInfos.Get(uniformHandle)};
+        const auto& texture{TextureData::Get(textureHandle)};
+
+        encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture.Handle, texture.Flags);
     }
 
     void NativeEngine::SetTexture2(const Napi::CallbackInfo&) {}
