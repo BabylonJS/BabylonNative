@@ -67,7 +67,7 @@ namespace Babylon
         {
             return s_resources.Add({std::forward<Args>(args)...});
         }
-        
+
         static void Delete(uint32_t handle)
         {
             s_resources.Remove(handle);
@@ -167,6 +167,61 @@ namespace Babylon
         std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
     };
 
+    class CommandBufferDecoder final
+    {
+    public:
+        using UInt8Buffer = gsl::span<const uint8_t>;
+        using UInt32Buffer = gsl::span<const uint32_t>;
+        using Float32Buffer = gsl::span<const float>;
+
+        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Float32Buffer float32ArgBuffer) :
+            m_commandBuffer{commandBuffer},
+            m_uint32ArgBuffer{uint32ArgBuffer},
+            m_float32ArgBuffer{float32ArgBuffer}
+        {
+        }
+
+        bool TryDecodeCommand(uint8_t& command)
+        {
+            if (m_commandBufferIndex >= m_commandBuffer.size())
+            {
+                return false;
+            }
+
+            command = m_commandBuffer[m_commandBufferIndex++];
+            return true;
+        }
+
+        uint32_t DecodeCommandArgAsUInt32()
+        {
+            return m_uint32ArgBuffer[m_uint32ArgBufferIndex++];
+        }
+
+        UInt32Buffer DecodeCommandArgAsUInt32s(UInt32Buffer::index_type count)
+        {
+            return m_uint32ArgBuffer.subspan((m_uint32ArgBufferIndex += count) - count, count);
+        }
+
+        float DecodeCommandArgAsFloat32()
+        {
+            return m_float32ArgBuffer[m_float32ArgBufferIndex++];
+        }
+
+        Float32Buffer DecodeCommandArgAsFloat32s(Float32Buffer::index_type count)
+        {
+            return m_float32ArgBuffer.subspan((m_float32ArgBufferIndex += count) - count, count);
+        }
+
+    private:
+        UInt8Buffer::index_type m_commandBufferIndex{};
+        UInt32Buffer::index_type m_uint32ArgBufferIndex{};
+        Float32Buffer::index_type m_float32ArgBufferIndex{};
+
+        UInt8Buffer m_commandBuffer;
+        UInt32Buffer m_uint32ArgBuffer;
+        Float32Buffer m_float32ArgBuffer;
+    };
+
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
@@ -217,7 +272,8 @@ namespace Babylon
         void SetFloatArray2(const Napi::CallbackInfo& info);
         void SetFloatArray3(const Napi::CallbackInfo& info);
         void SetFloatArray4(const Napi::CallbackInfo& info);
-        void SetMatrices(const Napi::CallbackInfo& info);
+        //void SetMatrices(const Napi::CallbackInfo& info);
+        void SetMatrices(CommandBufferDecoder& decoder);
         void SetMatrix3x3(const Napi::CallbackInfo& info);
         void SetMatrix2x2(const Napi::CallbackInfo& info);
         void SetFloat(const Napi::CallbackInfo& info);
@@ -255,6 +311,7 @@ namespace Babylon
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(const Napi::CallbackInfo& info);
+        void SubmitCommandBuffer(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);

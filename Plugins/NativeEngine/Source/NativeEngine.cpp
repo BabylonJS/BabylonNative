@@ -65,6 +65,11 @@ namespace Babylon
             constexpr uint64_t SCREENMODE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
         }
 
+        namespace Command
+        {
+            constexpr uint32_t SetMatrices = 1;
+        }
+
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGB8) == bgfx::TextureFormat::RGB8);
@@ -432,7 +437,7 @@ namespace Babylon
                 InstanceMethod("setFloatArray2", &NativeEngine::SetFloatArray2),
                 InstanceMethod("setFloatArray3", &NativeEngine::SetFloatArray3),
                 InstanceMethod("setFloatArray4", &NativeEngine::SetFloatArray4),
-                InstanceMethod("setMatrices", &NativeEngine::SetMatrices),
+                //InstanceMethod("setMatrices", &NativeEngine::SetMatrices),
                 InstanceMethod("setMatrix3x3", &NativeEngine::SetMatrix3x3),
                 InstanceMethod("setMatrix2x2", &NativeEngine::SetMatrix2x2),
                 InstanceMethod("setFloat", &NativeEngine::SetFloat),
@@ -470,6 +475,7 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setStencil", &NativeEngine::SetStencil),
+                InstanceMethod("submitCommandBuffer", &NativeEngine::SubmitCommandBuffer),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -560,6 +566,8 @@ namespace Babylon
                 InstanceValue("STENCIL_OP_PASS_Z_DECR", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_DECR)),
                 InstanceValue("STENCIL_OP_PASS_Z_DECRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_DECRSAT)),
                 InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
+
+                InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, Command::SetMatrices)),
             });
         // clang-format on
 
@@ -643,7 +651,7 @@ namespace Babylon
 
     void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const IndexBufferData* indexBufferData = m_indexBuffers.Get(info[1].ToNumber().Uint32Value());
+        const IndexBufferData* indexBufferData = m_indexBuffers.Get(info[0].ToNumber().Uint32Value());
         m_indexBuffers.Remove(info[0].ToNumber().Uint32Value());
         delete indexBufferData;
     }
@@ -1076,21 +1084,32 @@ namespace Babylon
         SetTypeArrayN<4, Napi::Float32Array>(info);
     }
 
-    void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
-    {
-//        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-//        const auto matricesArray = info[1].As<Napi::ArrayBuffer>();
-//        const auto elementLength = info[2].As<Napi::Number>().Uint32Value();
+//    void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
+//    {
+////        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+////        const auto matricesArray = info[1].As<Napi::ArrayBuffer>();
+////        const auto elementLength = info[2].As<Napi::Number>().Uint32Value();
+////
+////        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(static_cast<float*>(matricesArray.Data()), elementLength), elementLength >> 4);
 //
-//        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(static_cast<float*>(matricesArray.Data()), elementLength), elementLength >> 4);
+//        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+//        const auto matricesArray = info[1].As<Napi::Float32Array>();
+//
+//        const size_t elementLength = matricesArray.ElementLength();
+//        assert(elementLength % 16 == 0);
+//
+//        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
+//    }
 
-        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-        const auto matricesArray = info[1].As<Napi::Float32Array>();
+    void NativeEngine::SetMatrices(CommandBufferDecoder& decoder)
+    {
+        auto uniformHandle{decoder.DecodeCommandArgAsUInt32()};
+        auto length{decoder.DecodeCommandArgAsUInt32()};
+        auto matrices{decoder.DecodeCommandArgAsFloat32s(length)};
 
-        const size_t elementLength = matricesArray.ElementLength();
-        assert(elementLength % 16 == 0);
+        assert(length % 16 == 0);
 
-        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
+        m_currentProgram->SetUniform(m_uniformInfos.Get(uniformHandle).Handle, matrices, length / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1751,6 +1770,33 @@ namespace Babylon
         }
         m_stencilState |= func;
         m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
+    }
+
+    void NativeEngine::SubmitCommandBuffer(const Napi::CallbackInfo& info)
+    {
+        const auto commandCount{info[0].ToNumber().Uint32Value()};
+        const auto commandBuffer{info[1].As<Napi::Uint8Array>()};
+        const auto uint32Buffer{info[2].As<Napi::Uint32Array>()};
+        const auto float32Buffer{info[3].As<Napi::Float32Array>()};
+
+        CommandBufferDecoder commandBufferDecoder{
+            gsl::make_span(commandBuffer.Data(), commandCount),
+            gsl::make_span(uint32Buffer.Data(), uint32Buffer.ElementLength()),
+            gsl::make_span(float32Buffer.Data(), float32Buffer.ElementLength())
+        };
+
+        uint8_t command{};
+        while (commandBufferDecoder.TryDecodeCommand(command))
+        {
+            switch (command)
+            {
+                case Command::SetMatrices:
+                {
+                    SetMatrices(commandBufferDecoder);
+                    break;
+                }
+            }
+        }
     }
 
     void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)
