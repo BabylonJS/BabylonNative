@@ -470,6 +470,9 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setStencil", &NativeEngine::SetStencil),
+                InstanceMethod("setCommandBuffer", &NativeEngine::SetCommandBuffer),
+                InstanceMethod("setCommandUint32Buffer", &NativeEngine::SetCommandUint32Buffer),
+                InstanceMethod("setCommandFloat32Buffer", &NativeEngine::SetCommandFloat32Buffer),
                 InstanceMethod("submitCommandBuffer", &NativeEngine::SubmitCommandBuffer),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
@@ -1761,17 +1764,29 @@ namespace Babylon
         m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
     }
 
+    void NativeEngine::SetCommandBuffer(const Napi::CallbackInfo& info)
+    {
+        m_commandBuffer = Napi::Persistent(info[0].As<Napi::Uint8Array>());
+    }
+
+    void NativeEngine::SetCommandUint32Buffer(const Napi::CallbackInfo& info)
+    {
+        m_commandUint32Buffer = Napi::Persistent(info[0].As<Napi::Uint32Array>());
+    }
+
+    void NativeEngine::SetCommandFloat32Buffer(const Napi::CallbackInfo& info)
+    {
+        m_commandFloat32Buffer = Napi::Persistent(info[0].As<Napi::Float32Array>());
+    }
+
     void NativeEngine::SubmitCommandBuffer(const Napi::CallbackInfo& info)
     {
         const auto commandCount{info[0].ToNumber().Uint32Value()};
-        const auto commandBuffer{info[1].As<Napi::Uint8Array>()};
-        const auto uint32Buffer{info[2].As<Napi::Uint32Array>()};
-        const auto float32Buffer{info[3].As<Napi::Float32Array>()};
 
         CommandBufferDecoder commandBufferDecoder{
-            gsl::make_span(commandBuffer.Data(), commandCount),
-            gsl::make_span(uint32Buffer.Data(), uint32Buffer.ElementLength()),
-            gsl::make_span(float32Buffer.Data(), float32Buffer.ElementLength())
+            gsl::make_span(m_commandBuffer.Value().Data(), commandCount),
+            gsl::make_span(m_commandUint32Buffer.Value().Data(), m_commandUint32Buffer.Value().ElementLength()),
+            gsl::make_span(m_commandFloat32Buffer.Value().Data(), m_commandFloat32Buffer.Value().ElementLength())
         };
 
         uint8_t command{};

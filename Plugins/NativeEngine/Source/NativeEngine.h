@@ -311,6 +311,9 @@ namespace Babylon
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(const Napi::CallbackInfo& info);
+        void SetCommandBuffer(const Napi::CallbackInfo& info);
+        void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
+        void SetCommandFloat32Buffer(const Napi::CallbackInfo& info);
         void SubmitCommandBuffer(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
@@ -354,7 +357,11 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
+        Napi::Reference<Napi::Uint8Array> m_commandBuffer{};
+        Napi::Reference<Napi::Uint32Array> m_commandUint32Buffer{};
+        Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
+
         ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<VertexArray> m_vertexArrays{};
         ResourceTable<IndexBufferData*> m_indexBuffers{};
