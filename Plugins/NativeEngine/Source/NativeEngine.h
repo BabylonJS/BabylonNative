@@ -354,6 +354,7 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
+        inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
         ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<VertexArray> m_vertexArrays{};
         ResourceTable<IndexBufferData*> m_indexBuffers{};

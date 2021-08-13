@@ -65,11 +65,6 @@ namespace Babylon
             constexpr uint64_t SCREENMODE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
         }
 
-        namespace Command
-        {
-            constexpr uint32_t SetMatrices = 1;
-        }
-
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGB8) == bgfx::TextureFormat::RGB8);
@@ -567,7 +562,7 @@ namespace Babylon
                 InstanceValue("STENCIL_OP_PASS_Z_DECRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_DECRSAT)),
                 InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
 
-                InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, Command::SetMatrices)),
+                InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
             });
         // clang-format on
 
@@ -1086,12 +1081,6 @@ namespace Babylon
 
 //    void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
 //    {
-////        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-////        const auto matricesArray = info[1].As<Napi::ArrayBuffer>();
-////        const auto elementLength = info[2].As<Napi::Number>().Uint32Value();
-////
-////        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(static_cast<float*>(matricesArray.Data()), elementLength), elementLength >> 4);
-//
 //        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
 //        const auto matricesArray = info[1].As<Napi::Float32Array>();
 //
@@ -1788,14 +1777,7 @@ namespace Babylon
         uint8_t command{};
         while (commandBufferDecoder.TryDecodeCommand(command))
         {
-            switch (command)
-            {
-                case Command::SetMatrices:
-                {
-                    SetMatrices(commandBufferDecoder);
-                    break;
-                }
-            }
+            std::invoke(s_commandTable.Get(command), this, commandBufferDecoder);
         }
     }
 
