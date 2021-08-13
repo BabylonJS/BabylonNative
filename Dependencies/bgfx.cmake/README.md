@@ -2,6 +2,8 @@ bgfx.cmake
 ===================
 [![Build Status](https://github.com/bkaradzic/bgfx.cmake/workflows/Release/badge.svg)](https://github.com/bkaradzic/bgfx.cmake/workflows/Release/badge.svg)
 
+**NOTE: This port only made to be used as C++ library, some features (such as bindings, examples) might not work! Please use original repo with GENie instead.**
+
 This repo contains a bunch of cmake files that can be used to build bgfx with CMake.
 
 Building
