@@ -182,13 +182,34 @@ namespace Babylon
         }
     }
 
+    IndexBufferData::IndexBufferData(IndexBufferData&& other)
+    {
+        m_handle = other.m_handle;
+
+        constexpr auto nonDynamic = [](auto& handle) {
+            // TODO: Fix this const cast
+            const_cast<bgfx::IndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
+        };
+        constexpr auto dynamic = [](auto& handle) {
+            // TODO: Fix this const cast
+            const_cast<bgfx::DynamicIndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
+        };
+        other.DoForHandleTypes(nonDynamic, dynamic);
+    }
+
     IndexBufferData::~IndexBufferData()
     {
         constexpr auto nonDynamic = [](auto handle) {
-            bgfx::destroy(handle);
+            if (handle.idx != bgfx::kInvalidHandle)
+            {
+                bgfx::destroy(handle);
+            }
         };
         constexpr auto dynamic = [](auto handle) {
-            bgfx::destroy(handle);
+            if (handle.idx != bgfx::kInvalidHandle)
+            {
+                bgfx::destroy(handle);
+            }
         };
         DoForHandleTypes(nonDynamic, dynamic);
     }

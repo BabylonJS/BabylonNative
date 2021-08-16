@@ -31,10 +31,10 @@ namespace Babylon
     class ResourceTable final
     {
     public:
-        uint32_t Add(T&& resource)
+        uint32_t Add(T resource)
         {
             const uint32_t resourceHandle{m_nextResourceId};
-            m_resources.insert({resourceHandle, std::forward<T>(resource)});
+            m_resources.insert({resourceHandle, std::move(resource)});
             m_nextResourceId++;
             return resourceHandle;
         }
@@ -138,7 +138,39 @@ namespace Babylon
         }
     };
 
-    class IndexBufferData;
+    template<typename Handle1T, typename Handle2T>
+    class VariantHandleHolder
+    {
+    public:
+        std::variant<Handle1T, Handle2T> m_handle{};
+
+        template<typename NonDynamicCallableT, typename DynamicCallableT>
+        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
+        {
+            if (auto handle = std::get_if<Handle1T>(&m_handle))
+            {
+                nonDynamicCallable(*handle);
+            }
+            else
+            {
+                dynamicCallable(std::get<Handle2T>(m_handle));
+            }
+        }
+    };
+
+    class IndexBufferData final : private VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
+    {
+    public:
+        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
+        IndexBufferData(IndexBufferData&& other);
+        IndexBufferData(const IndexBufferData& other) = delete;
+        IndexBufferData& operator=(IndexBufferData&& other) = delete;
+        IndexBufferData& operator=(const IndexBufferData& other) = delete;
+        ~IndexBufferData();
+        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
+        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
+    };
+
     class VertexBufferData;
 
     struct VertexArray final
@@ -166,35 +198,6 @@ namespace Babylon
         };
 
         std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
-    };
-
-    template<typename Handle1T, typename Handle2T>
-    class VariantHandleHolder
-    {
-    public:
-        std::variant<Handle1T, Handle2T> m_handle{};
-
-        template<typename NonDynamicCallableT, typename DynamicCallableT>
-        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
-        {
-            if (auto handle = std::get_if<Handle1T>(&m_handle))
-            {
-                nonDynamicCallable(*handle);
-            }
-            else
-            {
-                dynamicCallable(std::get<Handle2T>(m_handle));
-            }
-        }
-    };
-
-    class IndexBufferData final : private VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
-    {
-    public:
-        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
-        ~IndexBufferData();
-        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
-        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
     };
 
     class CommandBufferDecoder final
