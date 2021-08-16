@@ -109,13 +109,13 @@ task copyFiles {
     copy
     {
         from '../../../node_modules/babylonjs-loaders'
-        include "babylon.loaders.js"
+        include "babylonjs.loaders.js"
         into 'src/main/assets/Scripts'
     }
     copy
     {
         from '../../../node_modules/babylonjs-materials'
-        include "babylon.materials.js"
+        include "babylonjs.materials.js"
         into 'src/main/assets/Scripts'
     }
     copy
