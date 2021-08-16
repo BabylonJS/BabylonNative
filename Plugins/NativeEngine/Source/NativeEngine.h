@@ -54,7 +54,7 @@ namespace Babylon
         std::unordered_map<uint32_t, T> m_resources{};
     };
 
-    template<class T, class... Args>
+    template<typename T>
     struct NativeResource
     {
     public:
@@ -63,6 +63,7 @@ namespace Babylon
             return s_resources.Get(handle);
         }
 
+        template<typename... Args>
         static uint32_t Create(Args&&... args)
         {
             return s_resources.Add({std::forward<Args>(args)...});
@@ -165,6 +166,35 @@ namespace Babylon
         };
 
         std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
+    };
+
+    template<typename Handle1T, typename Handle2T>
+    class VariantHandleHolder
+    {
+    public:
+        std::variant<Handle1T, Handle2T> m_handle{};
+
+        template<typename NonDynamicCallableT, typename DynamicCallableT>
+        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
+        {
+            if (auto handle = std::get_if<Handle1T>(&m_handle))
+            {
+                nonDynamicCallable(*handle);
+            }
+            else
+            {
+                dynamicCallable(std::get<Handle2T>(m_handle));
+            }
+        }
+    };
+
+    class IndexBufferData final : private VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
+    {
+    public:
+        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
+        ~IndexBufferData();
+        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
+        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
     };
 
     class CommandBufferDecoder final
@@ -365,7 +395,7 @@ namespace Babylon
 
         ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<VertexArray> m_vertexArrays{};
-        ResourceTable<IndexBufferData*> m_indexBuffers{};
+        ResourceTable<IndexBufferData> m_indexBuffers{};
 
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;

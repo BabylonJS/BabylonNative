@@ -169,77 +169,53 @@ namespace Babylon
         }
     }
 
-    template<typename Handle1T, typename Handle2T>
-    class VariantHandleHolder
+    IndexBufferData::IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic)
     {
-    public:
-        std::variant<Handle1T, Handle2T> m_handle{};
-
-        template<typename NonDynamicCallableT, typename DynamicCallableT>
-        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
+        const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
+        if (!dynamic)
         {
-            if (auto handle = std::get_if<Handle1T>(&m_handle))
-            {
-                nonDynamicCallable(*handle);
-            }
-            else
-            {
-                dynamicCallable(std::get<Handle2T>(m_handle));
-            }
+            m_handle = bgfx::createIndexBuffer(memory, flags);
         }
-    };
+        else
+        {
+            m_handle = bgfx::createDynamicIndexBuffer(memory, flags);
+        }
+    }
 
-    class IndexBufferData final : private VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
+    IndexBufferData::~IndexBufferData()
     {
-    public:
-        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic)
-        {
-            const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
-            if (!dynamic)
-            {
-                m_handle = bgfx::createIndexBuffer(memory, flags);
-            }
-            else
-            {
-                m_handle = bgfx::createDynamicIndexBuffer(memory, flags);
-            }
-        }
+        constexpr auto nonDynamic = [](auto handle) {
+            bgfx::destroy(handle);
+        };
+        constexpr auto dynamic = [](auto handle) {
+            bgfx::destroy(handle);
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
 
-        ~IndexBufferData()
-        {
-            constexpr auto nonDynamic = [](auto handle) {
-                bgfx::destroy(handle);
-            };
-            constexpr auto dynamic = [](auto handle) {
-                bgfx::destroy(handle);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
+    void IndexBufferData::Update(Napi::Env env, const Napi::TypedArray &bytes, uint32_t startingIdx)
+    {
+        const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
 
-        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx)
-        {
-            const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
+        auto nonDynamic = [env](auto) {
+            throw Napi::Error::New(env, "Cannot update a non-dynamic index buffer.");
+        };
+        const auto dynamic = [memory, startingIdx](auto handle) {
+            bgfx::update(handle, startingIdx, memory);
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
 
-            auto nonDynamic = [env](auto) {
-                throw Napi::Error::New(env, "Cannot update a non-dynamic index buffer.");
-            };
-            const auto dynamic = [memory, startingIdx](auto handle) {
-                bgfx::update(handle, startingIdx, memory);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const
-        {
-            const auto nonDynamic = [&encoder, firstIndex, numIndices](auto handle) {
-                encoder->setIndexBuffer(handle, firstIndex, numIndices);
-            };
-            const auto dynamic = [&encoder, firstIndex, numIndices](auto handle) {
-                encoder->setIndexBuffer(handle, firstIndex, numIndices);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-    };
+    void IndexBufferData::SetBgfxIndexBuffer(bgfx::Encoder *encoder, uint32_t firstIndex, uint32_t numIndices) const
+    {
+        const auto nonDynamic = [&encoder, firstIndex, numIndices](auto handle) {
+            encoder->setIndexBuffer(handle, firstIndex, numIndices);
+        };
+        const auto dynamic = [&encoder, firstIndex, numIndices](auto handle) {
+            encoder->setIndexBuffer(handle, firstIndex, numIndices);
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
 
     class VertexBufferData final : VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>
     {
@@ -645,27 +621,25 @@ namespace Babylon
 
         const uint16_t flags = data.TypedArrayType() == napi_typedarray_type::napi_uint16_array ? 0 : BGFX_BUFFER_INDEX32;
 
-        return Napi::Value::From(info.Env(), m_indexBuffers.Add(new IndexBufferData(data, flags, dynamic)));
+        return Napi::Value::From(info.Env(), m_indexBuffers.Add({data, flags, dynamic}));
     }
 
     void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const IndexBufferData* indexBufferData = m_indexBuffers.Get(info[0].ToNumber().Uint32Value());
         m_indexBuffers.Remove(info[0].ToNumber().Uint32Value());
-        delete indexBufferData;
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
         VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
-        const IndexBufferData* indexBufferData = m_indexBuffers.Get(info[1].ToNumber().Uint32Value());
+        const IndexBufferData& indexBufferData = m_indexBuffers.Get(info[1].ToNumber().Uint32Value());
 
-        vertexArray.indexBuffer.Data = indexBufferData;
+        vertexArray.indexBuffer.Data = &indexBufferData;
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
-        IndexBufferData& indexBufferData = *m_indexBuffers.Get(info[0].ToNumber().Uint32Value());
+        IndexBufferData& indexBufferData = m_indexBuffers.Get(info[0].ToNumber().Uint32Value());
 
         const Napi::TypedArray data = info[1].As<Napi::TypedArray>();
         const uint32_t startingIdx = info[2].As<Napi::Number>().Uint32Value();
