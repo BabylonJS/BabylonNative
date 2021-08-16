@@ -178,7 +178,7 @@ namespace Babylon
         std::variant<Handle1T, Handle2T> m_handle{};
     };
 
-    class IndexBufferData final : protected VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
+    class IndexBufferData final : protected VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>, public NativeResource<IndexBufferData>
     {
     public:
         IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
@@ -415,7 +415,6 @@ namespace Babylon
 
         ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<VertexArray> m_vertexArrays{};
-        ResourceTable<IndexBufferData> m_indexBuffers{};
 
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
