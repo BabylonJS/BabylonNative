@@ -141,8 +141,26 @@ namespace Babylon
     template<typename Handle1T, typename Handle2T>
     class VariantHandleHolder
     {
-    public:
-        std::variant<Handle1T, Handle2T> m_handle{};
+    protected:
+        VariantHandleHolder() = default;
+        VariantHandleHolder(VariantHandleHolder<Handle1T, Handle2T>&& other)
+        {
+            m_handle = other.m_handle;
+
+            constexpr auto nonDynamic = [](auto& handle) {
+                // TODO: Fix this const cast
+                const_cast<bgfx::IndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
+            };
+            constexpr auto dynamic = [](auto& handle) {
+                // TODO: Fix this const cast
+                const_cast<bgfx::DynamicIndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
+            };
+            other.DoForHandleTypes(nonDynamic, dynamic);
+        }
+
+        VariantHandleHolder(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
+        VariantHandleHolder<Handle1T, Handle2T>& operator=(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
+        VariantHandleHolder<Handle1T, Handle2T>& operator=(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
 
         template<typename NonDynamicCallableT, typename DynamicCallableT>
         void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
@@ -156,16 +174,15 @@ namespace Babylon
                 dynamicCallable(std::get<Handle2T>(m_handle));
             }
         }
+
+        std::variant<Handle1T, Handle2T> m_handle{};
     };
 
-    class IndexBufferData final : private VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
+    class IndexBufferData final : protected VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
     {
     public:
         IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
-        IndexBufferData(IndexBufferData&& other);
-        IndexBufferData(const IndexBufferData& other) = delete;
-        IndexBufferData& operator=(IndexBufferData&& other) = delete;
-        IndexBufferData& operator=(const IndexBufferData& other) = delete;
+        IndexBufferData(IndexBufferData&& other) = default;
         ~IndexBufferData();
         void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
         void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;

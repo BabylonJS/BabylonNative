@@ -182,21 +182,6 @@ namespace Babylon
         }
     }
 
-    IndexBufferData::IndexBufferData(IndexBufferData&& other)
-    {
-        m_handle = other.m_handle;
-
-        constexpr auto nonDynamic = [](auto& handle) {
-            // TODO: Fix this const cast
-            const_cast<bgfx::IndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
-        };
-        constexpr auto dynamic = [](auto& handle) {
-            // TODO: Fix this const cast
-            const_cast<bgfx::DynamicIndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
-        };
-        other.DoForHandleTypes(nonDynamic, dynamic);
-    }
-
     IndexBufferData::~IndexBufferData()
     {
         constexpr auto nonDynamic = [](auto handle) {
@@ -238,7 +223,7 @@ namespace Babylon
         DoForHandleTypes(nonDynamic, dynamic);
     }
 
-    class VertexBufferData final : VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>
+    class VertexBufferData final : protected VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>
     {
     public:
         VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
