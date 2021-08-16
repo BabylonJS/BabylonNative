@@ -45,10 +45,6 @@ namespace Babylon::ShaderCompilerCommon
 
     void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, uint8_t>& stages)
     {
-#if APIOpenGL
-        uint8_t stage{0};
-#endif
-
         for (const spirv_cross::Resource& sampler : samplers)
         {
             AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
@@ -61,8 +57,9 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, static_cast<uint16_t>(0));
 
 #if APIOpenGL
-            (void)compiler;
-            stages[sampler.name] = stage++;
+            BX_UNUSED(compiler);
+            const auto stage{static_cast<uint8_t>(stages.size())};
+            stages[sampler.name] = stage;
 #else
             stages[sampler.name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
@@ -157,28 +154,30 @@ namespace Babylon::ShaderCompilerCommon
     {
         ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
 
-        constexpr uint8_t BGFX_SHADER_BIN_VERSION = 6;
+        constexpr uint8_t BGFX_SHADER_BIN_VERSION{6};
 
         // These hashes are generated internally by BGFX's custom shader compilation pipeline,
         // which we don't have access to.  Fortunately, however, they aren't used for anything
         // crucial; they just have to match.
-        constexpr uint32_t vertexOutputsHash = 0xBAD1DEA;
-        constexpr uint32_t fragmentInputsHash = vertexOutputsHash;
+        constexpr uint32_t vertexOutputsHash{0xBAD1DEA};
+        constexpr uint32_t fragmentInputsHash{vertexOutputsHash};
 
         // Vertex Shader
         {
             std::vector<uint8_t>& vertexBytes{bgfxShaderInfo.VertexBytes};
 
-            const auto& compiler = *vertexShaderInfo.Compiler;
-            const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-            auto uniformsInfo = CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler);
+            const auto& compiler{*vertexShaderInfo.Compiler};
+            const spirv_cross::ShaderResources resources{compiler.get_shader_resources()};
+            auto uniformsInfo{CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler)};
 #if __APPLE__
             // with metal, we bind images and not samplers
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
+            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{resources.separate_images};
+#elif APIOpenGL
+            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
 #endif
-            size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
+            size_t numUniforms{uniformsInfo.Uniforms.size() + samplers.size()};
 
             AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
             AppendBytes(vertexBytes, vertexOutputsHash);
@@ -186,7 +185,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.VertexUniformStages);
+            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
 
             AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
             AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
@@ -227,7 +226,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.FragmentUniformStages);
+            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
 
             AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
             AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
