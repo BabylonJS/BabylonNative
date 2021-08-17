@@ -21,7 +21,6 @@
 
 #include <assert.h>
 
-#include <arcana/containers/weak_table.h>
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
 
@@ -34,7 +33,8 @@ namespace Babylon
         uint32_t Add(T resource)
         {
             const uint32_t resourceHandle{m_nextResourceId};
-            m_resources.insert({resourceHandle, std::move(resource)});
+            //m_resources.insert({resourceHandle, std::move(resource)});
+            m_resources.emplace(resourceHandle, std::move(resource));
             m_nextResourceId++;
             return resourceHandle;
         }
@@ -108,10 +108,10 @@ namespace Babylon
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
     };
 
-    struct ProgramData final
+    struct ProgramData final : public NativeResource<ProgramData>
     {
         ProgramData() = default;
-        ProgramData(const ProgramData&) = delete;
+        //ProgramData(const ProgramData&) = delete;
         ProgramData(ProgramData&&) = delete;
 
         ~ProgramData()
@@ -398,7 +398,7 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler{};
 
         ProgramData* m_currentProgram{nullptr};
-        arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
+        std::unordered_set<uint32_t> m_programDataCollection{};
 
         JsRuntime& m_runtime;
         GraphicsImpl& m_graphicsImpl;

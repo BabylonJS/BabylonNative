@@ -579,6 +579,10 @@ namespace Babylon
         // TODO: clean up bound vertex array
 
         // This collection contains bgfx data, so it must be cleared before bgfx::shutdown is called.
+        for (uint8_t handle : m_programDataCollection)
+        {
+            ProgramData::Delete(handle);
+        }
         m_programDataCollection.clear();
     }
 
@@ -776,7 +780,10 @@ namespace Babylon
         const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
         const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
-        std::unique_ptr<ProgramData> programData{std::make_unique<ProgramData>()};
+        //uint32_t programDataHandle{ProgramData::Create()};
+        uint32_t programDataHandle{0};
+        ProgramData::Create();
+        ProgramData& programData{ProgramData::Get(programDataHandle)};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
 
         try
@@ -803,22 +810,22 @@ namespace Babylon
         }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos);
-        programData->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+        InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData.VertexUniformInfos);
+        programData.VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos);
+        InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData.FragmentUniformInfos);
 
-        programData->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        auto* rawProgramData = programData.get();
-        auto ticket = m_programDataCollection.insert(std::move(programData));
-        auto finalizer = [ticket = std::move(ticket)](Napi::Env, ProgramData*) {};
-        return Napi::External<ProgramData>::New(info.Env(), rawProgramData, std::move(finalizer));
+        programData.Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+        m_programDataCollection.insert(programDataHandle);
+        return Napi::Value::From(info.Env(), programDataHandle);
     }
+
+    // TODO: Add a DeleteProgram, maybe called from NativeEngine._releaseEffect (on the JS side)?
 
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)
     {
-        const auto program = info[0].As<Napi::External<ProgramData>>().Data();
+        const auto& program = ProgramData::Get(info[0].ToNumber().Uint32Value());
         const auto names = info[1].As<Napi::Array>();
 
         auto length = names.Length();
@@ -827,14 +834,14 @@ namespace Babylon
         {
             const auto name = names[index].IsString() ? names[index].As<Napi::String>().Utf8Value() : "";
 
-            auto vertexFound = program->VertexUniformInfos.find(name);
-            auto fragmentFound = program->FragmentUniformInfos.find(name);
+            auto vertexFound = program.VertexUniformInfos.find(name);
+            auto fragmentFound = program.FragmentUniformInfos.find(name);
 
-            if (vertexFound != program->VertexUniformInfos.end())
+            if (vertexFound != program.VertexUniformInfos.end())
             {
                 uniforms[index] = Napi::Value::From(info.Env(), vertexFound->second);
             }
-            else if (fragmentFound != program->FragmentUniformInfos.end())
+            else if (fragmentFound != program.FragmentUniformInfos.end())
             {
                 uniforms[index] = Napi::Value::From(info.Env(), fragmentFound->second);
             }
@@ -849,10 +856,10 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetAttributes(const Napi::CallbackInfo& info)
     {
-        const auto program = info[0].As<Napi::External<ProgramData>>().Data();
+        const auto& program = ProgramData::Get(info[0].ToNumber().Uint32Value());
         const auto names = info[1].As<Napi::Array>();
 
-        const auto& attributeLocations = program->VertexAttributeLocations;
+        const auto& attributeLocations = program.VertexAttributeLocations;
 
         auto length = names.Length();
         auto attributes = Napi::Array::New(info.Env(), length);
@@ -869,8 +876,8 @@ namespace Babylon
 
     void NativeEngine::SetProgram(const Napi::CallbackInfo& info)
     {
-        auto program = info[0].As<Napi::External<ProgramData>>().Data();
-        m_currentProgram = program;
+        auto& program = ProgramData::Get(info[0].ToNumber().Uint32Value());
+        m_currentProgram = &program;
     }
 
     void NativeEngine::SetState(const Napi::CallbackInfo& info)
