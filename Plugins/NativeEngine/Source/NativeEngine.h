@@ -155,11 +155,11 @@ namespace Babylon
 
             constexpr auto nonDynamic = [](auto& handle) {
                 // TODO: Fix this const cast
-                const_cast<bgfx::IndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
+                const_cast<Handle1T&>(handle).idx = bgfx::kInvalidHandle;
             };
             constexpr auto dynamic = [](auto& handle) {
                 // TODO: Fix this const cast
-                const_cast<bgfx::DynamicIndexBufferHandle&>(handle).idx = bgfx::kInvalidHandle;
+                const_cast<Handle2T&>(handle).idx = bgfx::kInvalidHandle;
             };
             other.DoForHandleTypes(nonDynamic, dynamic);
         }
@@ -194,7 +194,21 @@ namespace Babylon
         void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
     };
 
-    class VertexBufferData;
+    class VertexBufferData final : protected VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>, public NativeResource<VertexBufferData>
+    {
+    public:
+        VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic);
+        VertexBufferData(VertexBufferData&& other) = default;
+        ~VertexBufferData();
+        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
+        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
+        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout);
+        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength);
+        void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const;
+
+    private:
+        std::vector<uint8_t> m_bytes{};
+    };
 
     struct VertexArray final : public NativeResource<VertexArray>
     {

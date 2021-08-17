@@ -223,151 +223,144 @@ namespace Babylon
         DoForHandleTypes(nonDynamic, dynamic);
     }
 
-    class VertexBufferData final : protected VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>
+    VertexBufferData::VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
+        : m_bytes{bytes.Data(), bytes.Data() + bytes.ByteLength()}
     {
-    public:
-        VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
-            : m_bytes{bytes.Data(), bytes.Data() + bytes.ByteLength()}
+        if (!dynamic)
         {
-            if (!dynamic)
+            m_handle = bgfx::VertexBufferHandle{bgfx::kInvalidHandle};
+        }
+        else
+        {
+            m_handle = bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
+        }
+    }
+
+    VertexBufferData::~VertexBufferData()
+    {
+        constexpr auto nonDynamic = [](auto handle) {
+            if (handle.idx != bgfx::kInvalidHandle)
             {
-                m_handle = bgfx::VertexBufferHandle{bgfx::kInvalidHandle};
+                bgfx::destroy(handle);
+            }
+        };
+        constexpr auto dynamic = [](auto handle) {
+            if (handle.idx != bgfx::kInvalidHandle)
+            {
+                bgfx::destroy(handle);
+            }
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
+
+    template<typename sourceType> void VertexBufferData::PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
+    {
+        const size_t count = m_bytes.size() / byteStride;
+        const size_t destinationSize = count * numElements * sizeof(float);
+        if (destinationSize != m_bytes.size()) // ensure both vectors have different size
+        {
+            std::vector<uint8_t> bytes(destinationSize);
+            float* destination = reinterpret_cast<float*>(bytes.data());
+            for (size_t i = 0; i < count; i++)
+            {
+                sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteOffset + byteStride * i);
+                for (size_t element = 0; element < numElements; element++)
+                {
+                    *destination++ = static_cast<float>(*source++);
+                }
+            }
+            m_bytes = std::move(bytes);
+        }
+    }
+
+    void VertexBufferData::PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
+    {
+        switch (attribType)
+        {
+        case bgfx::AttribType::Int8:
+            PromoteToFloats<int8_t>(numElements, byteOffset, byteStride);
+            break;
+        case bgfx::AttribType::Uint8:
+            PromoteToFloats<uint8_t>(numElements, byteOffset, byteStride);
+            break;
+        case bgfx::AttribType::Int16:
+            PromoteToFloats<int16_t>(numElements, byteOffset, byteStride);
+            break;
+        case bgfx::AttribType::Uint16:
+            PromoteToFloats<uint16_t>(numElements, byteOffset, byteStride);
+            break;
+        case bgfx::AttribType::Uint10: // is supported by any format ?
+        default:
+            throw std::runtime_error("Unable to promote vertex stream to a float array.");
+        }
+    }
+
+    void VertexBufferData::EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
+    {
+        const auto nonDynamic = [&layout, this](auto handle) {
+            if (handle.idx != bgfx::kInvalidHandle)
+            {
+                return;
+            }
+
+            const bgfx::Memory* memory = bgfx::makeRef(
+                m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
+                    auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
+                    bytes->clear();
+                },
+                &m_bytes);
+
+            m_handle = bgfx::createVertexBuffer(memory, layout);
+        };
+        const auto dynamic = [&layout, this](auto handle) {
+            if (handle.idx != bgfx::kInvalidHandle)
+            {
+                return;
+            }
+
+            const bgfx::Memory* memory = bgfx::makeRef(
+                m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
+                    auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
+                    bytes->clear();
+                },
+                &m_bytes);
+
+            m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
+
+    void VertexBufferData::Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
+    {
+        auto nonDynamic = [env](auto) {
+            throw Napi::Error::New(env, "Cannot update non-dynamic vertex buffer.");
+        };
+        const auto dynamic = [&bytes, offset, byteLength, this](auto handle) {
+            if (handle.idx == bgfx::kInvalidHandle)
+            {
+                // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
+                m_bytes = {bytes.Data() + offset, bytes.Data() + offset + byteLength};
             }
             else
             {
-                m_handle = bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
+                // Buffer was already created, do a real update operation.
+                const bgfx::Memory* memory = bgfx::copy(bytes.Data() + offset, byteLength);
+                bgfx::update(handle, 0, memory);
             }
-        }
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
 
-        ~VertexBufferData()
-        {
-            constexpr auto nonDynamic = [](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    bgfx::destroy(handle);
-                }
-            };
-            constexpr auto dynamic = [](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    bgfx::destroy(handle);
-                }
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
-        {
-            const size_t count = m_bytes.size() / byteStride;
-            const size_t destinationSize = count * numElements * sizeof(float);
-            if (destinationSize != m_bytes.size()) // ensure both vectors have different size
-            {
-                std::vector<uint8_t> bytes(destinationSize);
-                float* destination = reinterpret_cast<float*>(bytes.data());
-                for (size_t i = 0; i < count; i++)
-                {
-                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteOffset + byteStride * i);
-                    for (size_t element = 0; element < numElements; element++)
-                    {
-                        *destination++ = static_cast<float>(*source++);
-                    }
-                }
-                m_bytes = std::move(bytes);
-            }
-        }
-
-        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
-        {
-            switch (attribType)
-            {
-            case bgfx::AttribType::Int8:
-                PromoteToFloats<int8_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Uint8:
-                PromoteToFloats<uint8_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Int16:
-                PromoteToFloats<int16_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Uint16:
-                PromoteToFloats<uint16_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Uint10: // is supported by any format ?
-            default:
-                throw std::runtime_error("Unable to promote vertex stream to a float array.");
-            }
-        }
-
-        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
-        {
-            const auto nonDynamic = [&layout, this](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    return;
-                }
-
-                const bgfx::Memory* memory = bgfx::makeRef(
-                    m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
-                        auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-                        bytes->clear();
-                    },
-                    &m_bytes);
-
-                m_handle = bgfx::createVertexBuffer(memory, layout);
-            };
-            const auto dynamic = [&layout, this](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    return;
-                }
-
-                const bgfx::Memory* memory = bgfx::makeRef(
-                    m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
-                        auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-                        bytes->clear();
-                    },
-                    &m_bytes);
-
-                m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
-        {
-            auto nonDynamic = [env](auto) {
-                throw Napi::Error::New(env, "Cannot update non-dynamic vertex buffer.");
-            };
-            const auto dynamic = [&bytes, offset, byteLength, this](auto handle) {
-                if (handle.idx == bgfx::kInvalidHandle)
-                {
-                    // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
-                    m_bytes = {bytes.Data() + offset, bytes.Data() + offset + byteLength};
-                }
-                else
-                {
-                    // Buffer was already created, do a real update operation.
-                    const bgfx::Memory* memory = bgfx::copy(bytes.Data() + offset, byteLength);
-                    bgfx::update(handle, 0, memory);
-                }
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const
-        {
-            const auto nonDynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
-                encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
-            };
-            const auto dynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
-                encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-    private:
-        std::vector<uint8_t> m_bytes{};
-    };
+    void VertexBufferData::SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const
+    {
+        const auto nonDynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
+            encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
+        };
+        const auto dynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
+            encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
+        };
+        DoForHandleTypes(nonDynamic, dynamic);
+    }
 
     void NativeEngine::Initialize(Napi::Env env)
     {
@@ -658,19 +651,18 @@ namespace Babylon
         const Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
         const bool dynamic = info[1].As<Napi::Boolean>().Value();
 
-        return Napi::External<VertexBufferData>::New(info.Env(), new VertexBufferData(data, dynamic));
+        return Napi::Value::From(info.Env(), VertexBufferData::Create(data, dynamic));
     }
 
     void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& info)
     {
-        auto* vertexBufferData = info[0].As<Napi::External<VertexBufferData>>().Data();
-        delete vertexBufferData;
+        VertexBufferData::Delete(info[0].ToNumber().Uint32Value());
     }
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
         VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
-        VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
+        VertexBufferData& vertexBufferData = VertexBufferData::Get(info[1].ToNumber().Uint32Value());
 
         const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
         const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value();
@@ -699,7 +691,7 @@ namespace Babylon
         {
             vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float);
             vertexLayout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
-            vertexBufferData->PromoteToFloats(attribType, numElements, byteOffset, byteStride);
+            vertexBufferData.PromoteToFloats(attribType, numElements, byteOffset, byteStride);
         }
         else
         {
@@ -709,15 +701,15 @@ namespace Babylon
         }
 
         vertexLayout.end();
-        vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
+        vertexBufferData.EnsureFinalized(info.Env(), vertexLayout);
 
         // Second parameter is first vertex. byteOffset and byteStride are both using original values (without float promotion)
-        vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
+        vertexArray.VertexBuffers[location] = {&vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexBufferData& vertexBufferData = *(info[0].As<Napi::External<VertexBufferData>>().Data());
+        VertexBufferData& vertexBufferData = VertexBufferData::Get(info[0].ToNumber().Uint32Value());
         const Napi::Uint8Array data = info[1].As<Napi::Uint8Array>();
         const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
 
