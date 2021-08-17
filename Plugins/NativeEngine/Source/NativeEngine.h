@@ -196,7 +196,7 @@ namespace Babylon
 
     class VertexBufferData;
 
-    struct VertexArray final
+    struct VertexArray final : public NativeResource<VertexArray>
     {
         ~VertexArray()
         {
@@ -418,8 +418,6 @@ namespace Babylon
         Napi::Reference<Napi::Uint32Array> m_commandUint32Buffer{};
         Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
-
-        ResourceTable<VertexArray> m_vertexArrays{};
 
         const VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;

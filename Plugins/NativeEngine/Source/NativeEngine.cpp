@@ -604,19 +604,19 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_vertexArrays.Add({}));
+        return Napi::Value::From(info.Env(), VertexArray::Create());
     }
 
     void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
     {
-        m_vertexArrays.Remove(info[0].ToNumber().Uint32Value());
+        VertexArray::Delete(info[0].ToNumber().Uint32Value());
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
     }
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
-        const VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
+        const VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
         m_boundVertexArray = &vertexArray;
     }
 
@@ -637,7 +637,7 @@ namespace Babylon
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
+        VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
         const IndexBufferData& indexBufferData = IndexBufferData::Get(info[1].ToNumber().Uint32Value());
 
         vertexArray.indexBuffer.Data = &indexBufferData;
@@ -669,7 +669,7 @@ namespace Babylon
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = m_vertexArrays.Get(info[0].ToNumber().Uint32Value());
+        VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
         VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
 
         const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
