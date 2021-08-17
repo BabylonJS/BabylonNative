@@ -796,7 +796,7 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), ex.what());
         }
 
-        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, uint32_t>& uniformInfos, ResourceTable<UniformInfo>& uniformInfoTable) {
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, uint32_t>& uniformInfos) {
             auto numUniforms = bgfx::getShaderUniforms(shader);
             std::vector<bgfx::UniformHandle> uniforms{numUniforms};
             bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
@@ -806,16 +806,16 @@ namespace Babylon
                 bgfx::UniformInfo info{};
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
-                uniformInfos[info.name] = uniformInfoTable.Add({itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]});
+                uniformInfos[info.name] = UniformInfo::Create(itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]);
             }
         }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos, m_uniformInfos);
+        InitUniformInfos(vertexShader, shaderInfo.VertexUniformStages, programData->VertexUniformInfos);
         programData->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos, m_uniformInfos);
+        InitUniformInfos(fragmentShader, shaderInfo.FragmentUniformStages, programData->FragmentUniformInfos);
 
         programData->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         auto* rawProgramData = programData.get();
@@ -950,7 +950,7 @@ namespace Babylon
 
     void NativeEngine::SetInt(const Napi::CallbackInfo& info)
     {
-        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
         const auto value = info[1].As<Napi::Number>().FloatValue();
         m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
@@ -958,7 +958,7 @@ namespace Babylon
     template<int size, typename arrayType>
     void NativeEngine::SetTypeArrayN(const Napi::CallbackInfo& info)
     {
-        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
         const auto array = info[1].As<arrayType>();
 
         size_t elementLength = array.ElementLength();
@@ -981,7 +981,7 @@ namespace Babylon
     template<int size>
     void NativeEngine::SetFloatN(const Napi::CallbackInfo& info)
     {
-        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
         const float values[] = {
             info[1].As<Napi::Number>().FloatValue(),
             (size > 1) ? info[2].As<Napi::Number>().FloatValue() : 0.f,
@@ -995,7 +995,7 @@ namespace Babylon
     template<int size>
     void NativeEngine::SetMatrixN(const Napi::CallbackInfo& info)
     {
-        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
+        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
         const auto matrix = info[1].As<Napi::Float32Array>();
 
         const size_t elementLength = matrix.ElementLength();
@@ -1082,7 +1082,7 @@ namespace Babylon
 
         assert(length % 16 == 0);
 
-        m_currentProgram->SetUniform(m_uniformInfos.Get(uniformHandle).Handle, matrices, length / 16);
+        m_currentProgram->SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1414,7 +1414,7 @@ namespace Babylon
         const auto uniformHandle{decoder.DecodeCommandArgAsUInt32()};
         const auto textureHandle{decoder.DecodeCommandArgAsUInt32()};
 
-        const auto& uniformInfo{m_uniformInfos.Get(uniformHandle)};
+        const auto& uniformInfo{UniformInfo::Get(uniformHandle)};
         const auto& texture{TextureData::Get(textureHandle)};
 
         encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture.Handle, texture.Flags);

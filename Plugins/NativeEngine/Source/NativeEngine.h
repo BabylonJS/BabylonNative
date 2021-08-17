@@ -96,8 +96,14 @@ namespace Babylon
         uint8_t AnisotropicLevel{0};
     };
 
-    struct UniformInfo final
+    struct UniformInfo final : public NativeResource<UniformInfo>
     {
+        UniformInfo(uint8_t stage, bgfx::UniformHandle handle) :
+            Stage{stage},
+            Handle{handle}
+        {
+        }
+
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
     };
@@ -413,7 +419,6 @@ namespace Babylon
         Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
 
-        ResourceTable<UniformInfo> m_uniformInfos{};
         ResourceTable<VertexArray> m_vertexArrays{};
 
         const VertexArray* m_boundVertexArray{};
