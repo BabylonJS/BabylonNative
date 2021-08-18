@@ -1471,34 +1471,32 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
-        return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer);
+        return Napi::Value::From(info.Env(), FrameBuffer::Create(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer));
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
-        auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
-        delete frameBuffer;
+        FrameBuffer::Delete(info[0].ToNumber().Uint32Value());
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        auto& frameBuffer{FrameBuffer::Get(info[0].ToNumber().Uint32Value())};
         auto* encoder = GetUpdateToken().GetEncoder();
 
         m_boundFrameBuffer->Unbind(*encoder);
-        m_boundFrameBuffer = frameBuffer;
+        m_boundFrameBuffer = &frameBuffer;
         m_boundFrameBuffer->Bind(*encoder);
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
     void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
+        const auto& frameBuffer{FrameBuffer::Get(info[0].ToNumber().Uint32Value())};
         auto* encoder = GetUpdateToken().GetEncoder();
 
-        assert(frameBuffer == m_boundFrameBuffer);
+        assert(&frameBuffer == m_boundFrameBuffer);
         UNUSED(frameBuffer);
 
         m_boundFrameBuffer->Unbind(*encoder);
