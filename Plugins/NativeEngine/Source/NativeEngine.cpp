@@ -389,7 +389,7 @@ namespace Babylon
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
                 InstanceMethod("setProgram", &NativeEngine::SetProgram),
-                InstanceMethod("setState", &NativeEngine::SetState),
+                //InstanceMethod("setState", &NativeEngine::SetState),
                 InstanceMethod("setZOffset", &NativeEngine::SetZOffset),
                 InstanceMethod("getZOffset", &NativeEngine::GetZOffset),
                 InstanceMethod("setDepthTest", &NativeEngine::SetDepthTest),
@@ -542,7 +542,8 @@ namespace Babylon
 
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
-                InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray)))
+                InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
+                InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState)))
             });
         // clang-format on
 
@@ -884,11 +885,30 @@ namespace Babylon
         m_currentProgram = info[0].ToNumber().Uint32Value();
     }
 
-    void NativeEngine::SetState(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetState(const Napi::CallbackInfo& info)
+//    {
+//        const auto culling = info[0].As<Napi::Boolean>().Value();
+//        const auto cullBackFaces = info[2].As<Napi::Boolean>().Value();
+//        const auto reverseSide = info[3].As<Napi::Boolean>().Value();
+//
+//        m_engineState &= ~(BGFX_STATE_CULL_MASK | BGFX_STATE_FRONT_CCW);
+//        m_engineState |= reverseSide ? 0 : BGFX_STATE_FRONT_CCW;
+//
+//        if (culling)
+//        {
+//            m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CCW : BGFX_STATE_CULL_CW;
+//        }
+//        // TODO: zOffset
+//        //const auto zOffset = info[1].As<Napi::Number>().FloatValue();
+//    }
+
+    void NativeEngine::SetState(CommandBufferDecoder& decoder)
     {
-        const auto culling = info[0].As<Napi::Boolean>().Value();
-        const auto cullBackFaces = info[2].As<Napi::Boolean>().Value();
-        const auto reverseSide = info[3].As<Napi::Boolean>().Value();
+        const bool culling = decoder.DecodeCommandArgAsUInt32();
+        // TODO: zOffset
+        /*const float zOffset =*/ decoder.DecodeCommandArgAsFloat32();
+        const bool cullBackFaces = decoder.DecodeCommandArgAsUInt32();
+        const bool reverseSide = decoder.DecodeCommandArgAsUInt32();
 
         m_engineState &= ~(BGFX_STATE_CULL_MASK | BGFX_STATE_FRONT_CCW);
         m_engineState |= reverseSide ? 0 : BGFX_STATE_FRONT_CCW;
@@ -897,8 +917,6 @@ namespace Babylon
         {
             m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CCW : BGFX_STATE_CULL_CW;
         }
-        // TODO: zOffset
-        //const auto zOffset = info[1].As<Napi::Number>().FloatValue();
     }
 
     void NativeEngine::SetZOffset(const Napi::CallbackInfo& /*info*/)
