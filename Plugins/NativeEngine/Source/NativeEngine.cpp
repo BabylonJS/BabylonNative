@@ -780,9 +780,7 @@ namespace Babylon
         const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
         const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
-        //uint32_t programDataHandle{ProgramData::Create()};
-        uint32_t programDataHandle{0};
-        ProgramData::Create();
+        uint32_t programDataHandle{ProgramData::Create()};
         ProgramData& programData{ProgramData::Get(programDataHandle)};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
 
@@ -876,8 +874,7 @@ namespace Babylon
 
     void NativeEngine::SetProgram(const Napi::CallbackInfo& info)
     {
-        auto& program = ProgramData::Get(info[0].ToNumber().Uint32Value());
-        m_currentProgram = &program;
+        m_currentProgram = info[0].ToNumber().Uint32Value();
     }
 
     void NativeEngine::SetState(const Napi::CallbackInfo& info)
@@ -951,7 +948,7 @@ namespace Babylon
     {
         const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
         const auto value = info[1].As<Napi::Number>().FloatValue();
-        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
+        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
 
     template<int size, typename arrayType>
@@ -974,7 +971,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        m_currentProgram->SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
+        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
     }
 
     template<int size>
@@ -988,7 +985,7 @@ namespace Babylon
             (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
         };
 
-        m_currentProgram->SetUniform(uniformInfo.Handle, values);
+        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, values);
     }
 
     template<int size>
@@ -1014,11 +1011,11 @@ namespace Babylon
                 }
             }
 
-            m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(matrixValues.data(), 16));
+            ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrixValues.data(), 16));
         }
         else
         {
-            m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(matrix.Data(), elementLength));
+            ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrix.Data(), elementLength));
         }
     }
 
@@ -1081,7 +1078,7 @@ namespace Babylon
 
         assert(length % 16 == 0);
 
-        m_currentProgram->SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
+        ProgramData::Get(m_currentProgram).SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
     }
 
     void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
@@ -1833,7 +1830,9 @@ namespace Babylon
             }
         }
 
-        for (const auto& it : m_currentProgram->Uniforms)
+        const auto& currentProgram{ProgramData::Get(m_currentProgram)};
+
+        for (const auto& it : currentProgram.Uniforms)
         {
             const ProgramData::UniformValue& value = it.second;
             encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
@@ -1853,7 +1852,7 @@ namespace Babylon
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except bindings since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, currentProgram.Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     GraphicsImpl::UpdateToken& NativeEngine::GetUpdateToken()

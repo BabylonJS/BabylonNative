@@ -33,8 +33,7 @@ namespace Babylon
         uint32_t Add(T resource)
         {
             const uint32_t resourceHandle{m_nextResourceId};
-            //m_resources.insert({resourceHandle, std::move(resource)});
-            m_resources.emplace(resourceHandle, std::move(resource));
+            m_resources.insert({resourceHandle, std::move(resource)});
             m_nextResourceId++;
             return resourceHandle;
         }
@@ -111,8 +110,16 @@ namespace Babylon
     struct ProgramData final : public NativeResource<ProgramData>
     {
         ProgramData() = default;
-        //ProgramData(const ProgramData&) = delete;
-        ProgramData(ProgramData&&) = delete;
+        ProgramData(const ProgramData&) = delete;
+        ProgramData(ProgramData&& other) :
+            VertexAttributeLocations{std::move(other.VertexAttributeLocations)},
+            VertexUniformInfos{std::move(other.VertexUniformInfos)},
+            FragmentUniformInfos{std::move(other.FragmentUniformInfos)},
+            Handle{other.Handle},
+            Uniforms{std::move(other.Uniforms)}
+        {
+            other.Handle.idx = bgfx::kInvalidHandle;
+        };
 
         ~ProgramData()
         {
@@ -397,7 +404,7 @@ namespace Babylon
 
         ShaderCompiler m_shaderCompiler{};
 
-        ProgramData* m_currentProgram{nullptr};
+        uint32_t m_currentProgram{};
         std::unordered_set<uint32_t> m_programDataCollection{};
 
         JsRuntime& m_runtime;
