@@ -1472,13 +1472,14 @@ namespace Babylon
         texture->OwnsHandle = false;
 
         auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
-        return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer, [](Napi::Env, FrameBuffer* frameBuffer) { delete frameBuffer; });
+        return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer);
     }
 
+    // TODO: This doesn't get called when an Engine instance is disposed.
     void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
     {
         auto frameBuffer{info[0].As<Napi::External<FrameBuffer>>().Data()};
-        frameBuffer->Dispose();
+        delete frameBuffer;
     }
 
     void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
