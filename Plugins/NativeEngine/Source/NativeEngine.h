@@ -305,10 +305,14 @@ namespace Babylon
         void SetMatrices(CommandBufferDecoder& decoder);
         void SetMatrix3x3(const Napi::CallbackInfo& info);
         void SetMatrix2x2(const Napi::CallbackInfo& info);
-        void SetFloat(const Napi::CallbackInfo& info);
-        void SetFloat2(const Napi::CallbackInfo& info);
-        void SetFloat3(const Napi::CallbackInfo& info);
-        void SetFloat4(const Napi::CallbackInfo& info);
+        //void SetFloat(const Napi::CallbackInfo& info);
+        //void SetFloat2(const Napi::CallbackInfo& info);
+        //void SetFloat3(const Napi::CallbackInfo& info);
+        //void SetFloat4(const Napi::CallbackInfo& info);
+        void SetFloat(CommandBufferDecoder& decoder);
+        void SetFloat2(CommandBufferDecoder& decoder);
+        void SetFloat3(CommandBufferDecoder& decoder);
+        void SetFloat4(CommandBufferDecoder& decoder);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(const Napi::CallbackInfo& info);
@@ -377,7 +381,8 @@ namespace Babylon
         void SetTypeArrayN(const Napi::CallbackInfo& info);
 
         template<int size>
-        void SetFloatN(const Napi::CallbackInfo& info);
+        //void SetFloatN(const Napi::CallbackInfo& info);
+        void SetFloatN(CommandBufferDecoder& decoder);
 
         template<int size>
         void SetMatrixN(const Napi::CallbackInfo& info);

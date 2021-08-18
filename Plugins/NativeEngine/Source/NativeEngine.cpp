@@ -410,10 +410,10 @@ namespace Babylon
                 //InstanceMethod("setMatrices", &NativeEngine::SetMatrices),
                 InstanceMethod("setMatrix3x3", &NativeEngine::SetMatrix3x3),
                 InstanceMethod("setMatrix2x2", &NativeEngine::SetMatrix2x2),
-                InstanceMethod("setFloat", &NativeEngine::SetFloat),
-                InstanceMethod("setFloat2", &NativeEngine::SetFloat2),
-                InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
-                InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
+//                InstanceMethod("setFloat", &NativeEngine::SetFloat),
+//                InstanceMethod("setFloat2", &NativeEngine::SetFloat2),
+//                InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
+//                InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
@@ -543,7 +543,11 @@ namespace Babylon
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
-                InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState)))
+                InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
+                InstanceValue("COMMAND_SETFLOAT", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat))),
+                InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
+                InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
+                InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
             });
         // clang-format on
 
@@ -999,15 +1003,29 @@ namespace Babylon
         ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
     }
 
+//    template<int size>
+//    void NativeEngine::SetFloatN(const Napi::CallbackInfo& info)
+//    {
+//        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
+//        const float values[] = {
+//            info[1].As<Napi::Number>().FloatValue(),
+//            (size > 1) ? info[2].As<Napi::Number>().FloatValue() : 0.f,
+//            (size > 2) ? info[3].As<Napi::Number>().FloatValue() : 0.f,
+//            (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
+//        };
+//
+//        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, values);
+//    }
+
     template<int size>
-    void NativeEngine::SetFloatN(const Napi::CallbackInfo& info)
+    void NativeEngine::SetFloatN(CommandBufferDecoder& decoder)
     {
-        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
+        const auto& uniformInfo = UniformInfo::Get(decoder.DecodeCommandArgAsUInt32());
         const float values[] = {
-            info[1].As<Napi::Number>().FloatValue(),
-            (size > 1) ? info[2].As<Napi::Number>().FloatValue() : 0.f,
-            (size > 2) ? info[3].As<Napi::Number>().FloatValue() : 0.f,
-            (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
+            decoder.DecodeCommandArgAsFloat32(),
+            (size > 1) ? decoder.DecodeCommandArgAsFloat32() : 0.f,
+            (size > 2) ? decoder.DecodeCommandArgAsFloat32() : 0.f,
+            (size > 3) ? decoder.DecodeCommandArgAsFloat32() : 0.f,
         };
 
         ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, values);
@@ -1121,24 +1139,44 @@ namespace Babylon
         SetMatrixN<4>(info);
     }
 
-    void NativeEngine::SetFloat(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetFloat(const Napi::CallbackInfo& info)
+//    {
+//        SetFloatN<1>(info);
+//    }
+//
+//    void NativeEngine::SetFloat2(const Napi::CallbackInfo& info)
+//    {
+//        SetFloatN<2>(info);
+//    }
+//
+//    void NativeEngine::SetFloat3(const Napi::CallbackInfo& info)
+//    {
+//        SetFloatN<3>(info);
+//    }
+//
+//    void NativeEngine::SetFloat4(const Napi::CallbackInfo& info)
+//    {
+//        SetFloatN<4>(info);
+//    }
+
+    void NativeEngine::SetFloat(CommandBufferDecoder& decoder)
     {
-        SetFloatN<1>(info);
+        SetFloatN<1>(decoder);
     }
 
-    void NativeEngine::SetFloat2(const Napi::CallbackInfo& info)
+    void NativeEngine::SetFloat2(CommandBufferDecoder& decoder)
     {
-        SetFloatN<2>(info);
+        SetFloatN<2>(decoder);
     }
 
-    void NativeEngine::SetFloat3(const Napi::CallbackInfo& info)
+    void NativeEngine::SetFloat3(CommandBufferDecoder& decoder)
     {
-        SetFloatN<3>(info);
+        SetFloatN<3>(decoder);
     }
 
-    void NativeEngine::SetFloat4(const Napi::CallbackInfo& info)
+    void NativeEngine::SetFloat4(CommandBufferDecoder& decoder)
     {
-        SetFloatN<4>(info);
+        SetFloatN<4>(decoder);
     }
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
