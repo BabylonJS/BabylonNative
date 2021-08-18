@@ -24,10 +24,10 @@ namespace Babylon
         {
             std::vector<uint8_t> VertexBytes{};
             std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
-            std::unordered_map<std::string, uint8_t> VertexUniformStages{};
 
             std::vector<uint8_t> FragmentBytes{};
-            std::unordered_map<std::string, uint8_t> FragmentUniformStages{};
+
+            std::unordered_map<std::string, uint8_t> UniformStages{};
         };
 
         BgfxShaderInfo Compile(std::string_view vertexSource, std::string_view fragmentSource);
