@@ -376,7 +376,7 @@ namespace Babylon
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
                 InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
-                InstanceMethod("bindVertexArray", &NativeEngine::BindVertexArray),
+                //InstanceMethod("bindVertexArray", &NativeEngine::BindVertexArray),
                 InstanceMethod("createIndexBuffer", &NativeEngine::CreateIndexBuffer),
                 InstanceMethod("deleteIndexBuffer", &NativeEngine::DeleteIndexBuffer),
                 InstanceMethod("recordIndexBuffer", &NativeEngine::RecordIndexBuffer),
@@ -541,7 +541,8 @@ namespace Babylon
                 InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
 
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
-                InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture)))
+                InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
+                InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray)))
             });
         // clang-format on
 
@@ -611,9 +612,15 @@ namespace Babylon
         //assert(vertexArray != m_boundVertexArray);
     }
 
-    void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
+//    void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
+//    {
+//        const VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
+//        m_boundVertexArray = &vertexArray;
+//    }
+
+    void NativeEngine::BindVertexArray(CommandBufferDecoder& decoder)
     {
-        const VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
+        const VertexArray& vertexArray = VertexArray::Get(decoder.DecodeCommandArgAsUInt32());
         m_boundVertexArray = &vertexArray;
     }
 

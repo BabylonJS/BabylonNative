@@ -268,7 +268,8 @@ namespace Babylon
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(const Napi::CallbackInfo& info);
-        void BindVertexArray(const Napi::CallbackInfo& info);
+        //void BindVertexArray(const Napi::CallbackInfo& info);
+        void BindVertexArray(CommandBufferDecoder& decoder);
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
         void DeleteIndexBuffer(const Napi::CallbackInfo& info);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
