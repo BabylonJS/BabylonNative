@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <unordered_map>
 
 namespace Babylon
@@ -37,13 +38,13 @@ namespace Babylon
     public:
         static T& Get(uint32_t handle)
         {
-            return s_resources.Get(handle);
+            return *s_resources.Get(handle);
         }
 
         template<typename... Args>
         static uint32_t Create(Args&&... args)
         {
-            return s_resources.Add({std::forward<Args>(args)...});
+            return s_resources.Add(std::make_unique<T>(std::forward<Args>(args)...));
         }
 
         static void Delete(uint32_t handle)
@@ -52,6 +53,6 @@ namespace Babylon
         }
 
     private:
-        inline static ResourceTable<T> s_resources{};
+        inline static ResourceTable<std::unique_ptr<T>> s_resources{};
     };
 }
