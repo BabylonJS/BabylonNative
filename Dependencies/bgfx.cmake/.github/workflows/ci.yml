@@ -37,6 +37,7 @@ jobs:
           submodules: recursive  
       - name: Install Linux dependencies
         run: |
+          sudo apt-get update
           sudo apt install -y libgl1-mesa-dev
         if: matrix.os == 'ubuntu-latest'
 
