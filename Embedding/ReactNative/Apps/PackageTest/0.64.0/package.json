@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
-    "@babylonjs/core": "^5.0.0-alpha.30",
+    "@babylonjs/core": "^5.0.0-alpha.37",
     "@babylonjs/react-native": "file:../../../Package/Assembled/babylonjs-react-native-0.0.1.tgz",
     "@babylonjs/react-native-windows": "file:../../../Package/Assembled-Windows/babylonjs-react-native-windows-0.0.1.tgz",
     "react": "^17.0.1",

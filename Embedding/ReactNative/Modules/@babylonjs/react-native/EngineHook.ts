@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
-import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4 } from '@babylonjs/core';
+import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4, RenderTargetTexture, ThinEngine } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
 import './VersionValidation';
 import * as base64 from 'base-64';
@@ -79,6 +79,18 @@ if (Platform.OS === "android" || Platform.OS === "ios") {
             scene.onBeforeRenderObservable.remove(beforeRenderObserver);
         });
         return sessionManager;
+    };
+
+    // TODO: https://github.com/BabylonJS/BabylonNative/issues/871
+    // Workaround to skip clearing render target texture back buffer for XR RTTs.
+    const originalCreateRenderTargetTexture: (...args: any[]) => RenderTargetTexture = (WebXRSessionManager.prototype as any)._createRenderTargetTexture;
+    (WebXRSessionManager.prototype as any)._createRenderTargetTexture = function (...args: any[]): RenderTargetTexture {
+        const renderTargetTexture = originalCreateRenderTargetTexture.apply(this, args);
+        renderTargetTexture.onClearObservable.add((engine: ThinEngine) => {
+            engine.clear(renderTargetTexture.clearColor, false, true, true);
+        });
+
+        return renderTargetTexture;
     };
 } else if (Platform.OS === "windows") {
     const originalEnterXRAsync: (...args: any[]) => Promise<WebXRSessionManager> = WebXRExperienceHelper.prototype.enterXRAsync;
