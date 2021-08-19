@@ -347,7 +347,8 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
-        void SetStencil(const Napi::CallbackInfo& info);
+        //void SetStencil(const Napi::CallbackInfo& info);
+        void SetStencil(CommandBufferDecoder& decoder);
         void SetCommandBuffer(const Napi::CallbackInfo& info);
         void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
         void SetCommandFloat32Buffer(const Napi::CallbackInfo& info);
