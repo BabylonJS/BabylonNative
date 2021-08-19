@@ -34,17 +34,49 @@ describe("XMLHTTPRequest", function () {
         const xhr = await createRequest("GET", "https://babylonjs.com");
         expect(xhr.readyState).to.equal(4);
     })
-    it("should have status=200 for a valid page", async function () {
+    it("should have status=200 for a file that exists", async function () {
         const xhr = await createRequest("GET", "https://babylonjs.com");
         expect(xhr.status).to.equal(200);
     })
-    it("should have status=404 for a page that does not exist", async function () {
+    it("should have status=404 for a file that does not exist", async function () {
         const xhr = await createRequest("GET", "https://babylonjs.com/invalid");
         expect(xhr.status).to.equal(404);
     })
-
+    it("should throw something when opening //", async function () {
+        function openDoubleSlash() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "//");
+            xhr.send();
+        }
+        expect(openDoubleSlash).to.throw("Could not parse URL scheme");
+    })
+    it("should throw something when opening a url with no protocol", function () {
+        function openNoProtocol() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "noprotocol.glb");
+            xhr.send();
+        }
+        expect(openNoProtocol).to.throw("Could not parse URL scheme");
+    })
+    it("should open a local file", async function () {
+        const xhr = await createRequest("GET", "app:///Scripts/tests.js");
+        expect(xhr).to.have.property('readyState', 4);
+        expect(xhr).to.have.property('status', 200);
+        expect(xhr).to.have.property('responseText').with.lengthOf.above(0);
+    })
 });
-
+describe("RequestFile", function () {
+    this.timeout(0);
+    it("should throw when requesting a URL with no protocol", function () {
+        function RequestFile() {
+            BABYLON.FileTools.RequestFile(
+                "noprotocol.gltf",
+                () => {},
+            );
+        }
+        expect(RequestFile).to.throw();
+    })
+})
 
 mocha.run(failures => {
     // TODO: set exit code if any tests failed

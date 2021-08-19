@@ -178,25 +178,34 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
-        m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
-        SetReadyState(ReadyState::Opened);
+        try
+        {
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
+            SetReadyState(ReadyState::Opened);
+        }
+        catch (...)
+        {
+            // If we have a parse error, catch and rethrow to JavaScript
+            Napi::Error::New(info.Env(), "Could not parse URL scheme").ThrowAsJavaScriptException();
+        }
     }
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
             {
-                throw Napi::Error::New(env, result.error());
-            }
+                if (result.has_error())
+                {
+                    Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                }
 
-            SetReadyState(ReadyState::Done);
-            RaiseEvent(EventType::LoadEnd);
+                SetReadyState(ReadyState::Done);
+                RaiseEvent(EventType::LoadEnd);
 
-            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
-            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-            m_eventHandlerRefs.clear();
-        });
+                // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+                // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+                m_eventHandlerRefs.clear();
+            });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)

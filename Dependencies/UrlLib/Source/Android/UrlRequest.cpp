@@ -46,6 +46,9 @@ namespace UrlLib
         {
             m_method = method;
             m_url = std::move(url);
+            Uri uri{Uri::Parse(m_url.data())};
+            m_urlScheme = uri.getScheme();
+            m_urlPath = uri.getPath();
         }
 
         UrlResponseType ResponseType() const
@@ -64,11 +67,9 @@ namespace UrlLib
             {
                 try
                 {
-                    Uri uri{Uri::Parse(m_url.data())};
-                    String scheme{uri.getScheme()};
-                    if (scheme != nullptr && (std::string)scheme == "app")
+                    if (m_urlScheme == "app")
                     {
-                        std::string path{std::string{uri.getPath()}.substr(1)};
+                        std::string path{m_urlPath.substr(1)};
                         AAssetManager* assetsManager{GetAppContext().getAssets()};
 
                         switch (m_responseType)
@@ -178,6 +179,8 @@ namespace UrlLib
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
         std::string m_url{};
+        std::string m_urlScheme{};
+        std::string m_urlPath{};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};
         std::string m_responseString{};
