@@ -433,7 +433,7 @@ namespace Babylon
                 InstanceMethod("deleteFrameBuffer", &NativeEngine::DeleteFrameBuffer),
                 InstanceMethod("bindFrameBuffer", &NativeEngine::BindFrameBuffer),
                 InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
-                InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
+                //InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
                 InstanceMethod("draw", &NativeEngine::Draw),
                 InstanceMethod("clear", &NativeEngine::Clear),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
@@ -548,7 +548,8 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
                 InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
-                InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode)))
+                InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode))),
+                InstanceValue("COMMAND_DRAWINDEXED", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DrawIndexed)))
             });
         // clang-format on
 
@@ -1583,13 +1584,41 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
-    void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
+//    void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
+//    {
+//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+//
+//        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+//        const auto indexStart = info[1].As<Napi::Number>().Int32Value();
+//        const auto indexCount = info[2].As<Napi::Number>().Int32Value();
+//
+//        if (m_boundVertexArray != nullptr)
+//        {
+//            const auto indexBufferData{m_boundVertexArray->indexBuffer.Data};
+//            if (indexBufferData != nullptr)
+//            {
+//                indexBufferData->SetBgfxIndexBuffer(encoder, indexStart, indexCount);
+//            }
+//
+//            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
+//            for (const auto& vertexBufferPair : vertexBuffers)
+//            {
+//                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
+//                const auto& vertexBuffer{vertexBufferPair.second};
+//                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex, std::numeric_limits<uint32_t>::max(), vertexBuffer.VertexLayoutHandle);
+//            }
+//        }
+//
+//        Draw(encoder, fillMode);
+//    }
+
+    void NativeEngine::DrawIndexed(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto indexStart = info[1].As<Napi::Number>().Int32Value();
-        const auto indexCount = info[2].As<Napi::Number>().Int32Value();
+        const auto fillMode = decoder.DecodeCommandArgAsUInt32();
+        const auto indexStart = decoder.DecodeCommandArgAsUInt32();
+        const auto indexCount = decoder.DecodeCommandArgAsUInt32();
 
         if (m_boundVertexArray != nullptr)
         {
