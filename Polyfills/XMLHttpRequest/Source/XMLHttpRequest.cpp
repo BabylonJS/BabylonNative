@@ -192,6 +192,11 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
+        if (m_readyState != ReadyState::Opened)
+        {
+            Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent").ThrowAsJavaScriptException();
+            return;
+        }
         m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
             {
                 if (result.has_error())

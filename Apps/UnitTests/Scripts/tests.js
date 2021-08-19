@@ -48,7 +48,7 @@ describe("XMLHTTPRequest", function () {
             xhr.open("GET", "//");
             xhr.send();
         }
-        expect(openDoubleSlash).to.throw("Could not parse URL scheme");
+        expect(openDoubleSlash).to.throw();
     })
     it("should throw something when opening a url with no protocol", function () {
         function openNoProtocol() {
@@ -56,7 +56,14 @@ describe("XMLHTTPRequest", function () {
             xhr.open("GET", "noprotocol.glb");
             xhr.send();
         }
-        expect(openNoProtocol).to.throw("Could not parse URL scheme");
+        expect(openNoProtocol).to.throw();
+    })
+    it("should throw something when sending before opening", function () {
+        function sendWithoutOpening() {
+            const xhr = new XMLHttpRequest();
+            xhr.send();
+        }
+        expect(sendWithoutOpening).to.throw();
     })
     it("should open a local file", async function () {
         const xhr = await createRequest("GET", "app:///Scripts/tests.js");
