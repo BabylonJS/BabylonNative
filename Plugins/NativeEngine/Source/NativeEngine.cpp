@@ -423,7 +423,7 @@ namespace Babylon
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("setTextureSampling", &NativeEngine::SetTextureSampling),
-                InstanceMethod("setTextureWrapMode", &NativeEngine::SetTextureWrapMode),
+                //InstanceMethod("setTextureWrapMode", &NativeEngine::SetTextureWrapMode),
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 //InstanceMethod("setTexture", &NativeEngine::SetTexture),
                 InstanceMethod("setTexture2", &NativeEngine::SetTexture2),
@@ -548,6 +548,7 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
                 InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
+                InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode)))
             });
         // clang-format on
 
@@ -1426,19 +1427,34 @@ namespace Babylon
         }
     }
 
-    void NativeEngine::SetTextureWrapMode(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetTextureWrapMode(const Napi::CallbackInfo& info)
+//    {
+//        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
+//        auto addressModeU = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
+//        auto addressModeV = static_cast<uint32_t>(info[2].As<Napi::Number>().Uint32Value());
+//        auto addressModeW = static_cast<uint32_t>(info[3].As<Napi::Number>().Uint32Value());
+//
+//        uint32_t addressMode = addressModeU +
+//            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+//            (addressModeW << BGFX_SAMPLER_W_SHIFT);
+//
+//        texture->Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
+//        texture->Flags |= addressMode;
+//    }
+
+    void NativeEngine::SetTextureWrapMode(CommandBufferDecoder& decoder)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
-        auto addressModeU = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
-        auto addressModeV = static_cast<uint32_t>(info[2].As<Napi::Number>().Uint32Value());
-        auto addressModeW = static_cast<uint32_t>(info[3].As<Napi::Number>().Uint32Value());
+        auto& texture = TextureData::Get(decoder.DecodeCommandArgAsUInt32());
+        auto addressModeU = decoder.DecodeCommandArgAsUInt32();
+        auto addressModeV = decoder.DecodeCommandArgAsUInt32();
+        auto addressModeW = decoder.DecodeCommandArgAsUInt32();
 
         uint32_t addressMode = addressModeU +
             (addressModeV << BGFX_SAMPLER_V_SHIFT) +
             (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
-        texture->Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
-        texture->Flags |= addressMode;
+        texture.Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
+        texture.Flags |= addressMode;
     }
 
     void NativeEngine::SetTextureAnisotropicLevel(const Napi::CallbackInfo& info)

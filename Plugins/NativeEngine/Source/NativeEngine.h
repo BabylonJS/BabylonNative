@@ -322,7 +322,8 @@ namespace Babylon
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
         void SetTextureSampling(const Napi::CallbackInfo& info);
-        void SetTextureWrapMode(const Napi::CallbackInfo& info);
+        //void SetTextureWrapMode(const Napi::CallbackInfo& info);
+        void SetTextureWrapMode(CommandBufferDecoder& decoder);
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
         //void SetTexture(const Napi::CallbackInfo& info);
         void SetTexture(CommandBufferDecoder& decoder);
