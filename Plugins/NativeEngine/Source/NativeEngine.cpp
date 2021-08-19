@@ -435,7 +435,7 @@ namespace Babylon
                 InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
                 //InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
                 InstanceMethod("draw", &NativeEngine::Draw),
-                InstanceMethod("clear", &NativeEngine::Clear),
+                //InstanceMethod("clear", &NativeEngine::Clear),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
@@ -549,7 +549,8 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
                 InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
                 InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode))),
-                InstanceValue("COMMAND_DRAWINDEXED", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DrawIndexed)))
+                InstanceValue("COMMAND_DRAWINDEXED", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DrawIndexed))),
+                InstanceValue("COMMAND_CLEAR", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Clear)))
             });
         // clang-format on
 
@@ -1662,41 +1663,82 @@ namespace Babylon
         Draw(encoder, fillMode);
     }
 
-    void NativeEngine::Clear(const Napi::CallbackInfo& info)
+//    void NativeEngine::Clear(const Napi::CallbackInfo& info)
+//    {
+//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+//
+//        uint16_t flags{0};
+//        uint32_t rgba{0x000000ff};
+//        float depth{1.0f};
+//        uint8_t stencil{0};
+//
+//        if (!info[0].IsUndefined())
+//        {
+//            const auto color{info[0].As<Napi::Object>()};
+//            const auto r = color.Get("r");
+//            const auto g = color.Get("g");
+//            const auto b = color.Get("b");
+//            const auto a = color.Get("a");
+//
+//            rgba =
+//                (static_cast<uint8_t>(r.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 24) +
+//                (static_cast<uint8_t>(g.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 16) +
+//                (static_cast<uint8_t>(b.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 8) +
+//                static_cast<uint8_t>((a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue()) * std::numeric_limits<uint8_t>::max());
+//
+//            flags |= BGFX_CLEAR_COLOR;
+//        }
+//
+//        if (!info[1].IsUndefined() && m_boundFrameBuffer->HasDepth())
+//        {
+//            depth = info[1].As<Napi::Number>().FloatValue();
+//            flags |= BGFX_CLEAR_DEPTH;
+//        }
+//
+//        if (!info[2].IsUndefined() && m_boundFrameBuffer->HasStencil())
+//        {
+//            stencil = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
+//            flags |= BGFX_CLEAR_STENCIL;
+//        }
+//
+//        GetBoundFrameBuffer(*encoder).Clear(*encoder, flags, rgba, depth, stencil);
+//    }
+
+    void NativeEngine::Clear(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
-        float depth{1.0f};
-        uint8_t stencil{0};
 
-        if (!info[0].IsUndefined())
+        const bool shouldClearColor{static_cast<bool>(decoder.DecodeCommandArgAsUInt32())};
+        const float r{decoder.DecodeCommandArgAsFloat32()};
+        const float g{decoder.DecodeCommandArgAsFloat32()};
+        const float b{decoder.DecodeCommandArgAsFloat32()};
+        const float a{decoder.DecodeCommandArgAsFloat32()};
+        const bool shouldClearDepth{static_cast<bool>(decoder.DecodeCommandArgAsUInt32())};
+        const float depth{decoder.DecodeCommandArgAsFloat32()};
+        const bool shouldClearStencil{static_cast<bool>(decoder.DecodeCommandArgAsUInt32())};
+        const uint32_t stencil{decoder.DecodeCommandArgAsUInt32()};
+
+        if (shouldClearColor)
         {
-            const auto color{info[0].As<Napi::Object>()};
-            const auto r = color.Get("r");
-            const auto g = color.Get("g");
-            const auto b = color.Get("b");
-            const auto a = color.Get("a");
-
             rgba =
-                (static_cast<uint8_t>(r.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 24) +
-                (static_cast<uint8_t>(g.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 16) +
-                (static_cast<uint8_t>(b.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 8) +
-                static_cast<uint8_t>((a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue()) * std::numeric_limits<uint8_t>::max());
+                (static_cast<uint8_t>(r * std::numeric_limits<uint8_t>::max()) << 24) +
+                (static_cast<uint8_t>(g * std::numeric_limits<uint8_t>::max()) << 16) +
+                (static_cast<uint8_t>(b * std::numeric_limits<uint8_t>::max()) << 8) +
+                static_cast<uint8_t>(a * std::numeric_limits<uint8_t>::max());
 
             flags |= BGFX_CLEAR_COLOR;
         }
 
-        if (!info[1].IsUndefined() && m_boundFrameBuffer->HasDepth())
+        if (shouldClearDepth && m_boundFrameBuffer->HasDepth())
         {
-            depth = info[1].As<Napi::Number>().FloatValue();
             flags |= BGFX_CLEAR_DEPTH;
         }
 
-        if (!info[2].IsUndefined() && m_boundFrameBuffer->HasStencil())
+        if (shouldClearStencil && m_boundFrameBuffer->HasStencil())
         {
-            stencil = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
             flags |= BGFX_CLEAR_STENCIL;
         }
 
