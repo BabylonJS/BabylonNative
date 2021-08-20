@@ -283,11 +283,13 @@ namespace Babylon
         //void BindVertexArray(const Napi::CallbackInfo& info);
         void BindVertexArray(CommandBufferDecoder& decoder);
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
-        void DeleteIndexBuffer(const Napi::CallbackInfo& info);
+        //void DeleteIndexBuffer(const Napi::CallbackInfo& info);
+        void DeleteIndexBuffer(CommandBufferDecoder& decoder);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
-        void DeleteVertexBuffer(const Napi::CallbackInfo& info);
+        //void DeleteVertexBuffer(const Napi::CallbackInfo& info);
+        void DeleteVertexBuffer(CommandBufferDecoder& decoder);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);

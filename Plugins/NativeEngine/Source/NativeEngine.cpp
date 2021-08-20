@@ -378,11 +378,11 @@ namespace Babylon
                 //InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
                 //InstanceMethod("bindVertexArray", &NativeEngine::BindVertexArray),
                 InstanceMethod("createIndexBuffer", &NativeEngine::CreateIndexBuffer),
-                InstanceMethod("deleteIndexBuffer", &NativeEngine::DeleteIndexBuffer),
+                //InstanceMethod("deleteIndexBuffer", &NativeEngine::DeleteIndexBuffer),
                 InstanceMethod("recordIndexBuffer", &NativeEngine::RecordIndexBuffer),
                 InstanceMethod("updateDynamicIndexBuffer", &NativeEngine::UpdateDynamicIndexBuffer),
                 InstanceMethod("createVertexBuffer", &NativeEngine::CreateVertexBuffer),
-                InstanceMethod("deleteVertexBuffer", &NativeEngine::DeleteVertexBuffer),
+                //InstanceMethod("deleteVertexBuffer", &NativeEngine::DeleteVertexBuffer),
                 InstanceMethod("recordVertexBuffer", &NativeEngine::RecordVertexBuffer),
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
@@ -541,6 +541,8 @@ namespace Babylon
                 InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
 
                 InstanceValue("COMMAND_DELETEVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexArray))),
+                InstanceValue("COMMAND_DELETEINDEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteIndexBuffer))),
+                InstanceValue("COMMAND_DELETEVERTEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexBuffer))),
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
@@ -651,9 +653,14 @@ namespace Babylon
         return Napi::Value::From(info.Env(), IndexBufferData::Create(data, flags, dynamic));
     }
 
-    void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& /*info*/)
+//    void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& /*info*/)
+//    {
+//        //IndexBufferData::Delete(info[0].ToNumber().Uint32Value());
+//    }
+
+    void NativeEngine::DeleteIndexBuffer(CommandBufferDecoder& decoder)
     {
-        //IndexBufferData::Delete(info[0].ToNumber().Uint32Value());
+        IndexBufferData::Delete(decoder.DecodeCommandArgAsUInt32());
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
@@ -682,9 +689,14 @@ namespace Babylon
         return Napi::Value::From(info.Env(), VertexBufferData::Create(data, dynamic));
     }
 
-    void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& /*info*/)
+//    void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& /*info*/)
+//    {
+//        //VertexBufferData::Delete(info[0].ToNumber().Uint32Value());
+//    }
+
+    void NativeEngine::DeleteVertexBuffer(CommandBufferDecoder& decoder)
     {
-        //VertexBufferData::Delete(info[0].ToNumber().Uint32Value());
+        VertexBufferData::Delete(decoder.DecodeCommandArgAsUInt32());
     }
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
