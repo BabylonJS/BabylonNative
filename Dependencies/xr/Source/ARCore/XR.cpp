@@ -465,7 +465,7 @@ namespace xr
                 glClearStencil(0);
                 glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-                // Only write colors the background camera texture
+                // Only write colors to blit the background camera texture
                 glDepthMask(GL_FALSE);
                 glStencilMask(0);
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
