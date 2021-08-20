@@ -25,6 +25,8 @@
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
 
+//#include <Foundation/Foundation.h>
+
 namespace Babylon
 {
     struct TextureData final : public NativeResource<TextureData>
@@ -216,27 +218,36 @@ namespace Babylon
             }
 
             command = m_commandBuffer[m_commandBufferIndex++];
+            //NSLog(@"COMMAND BUFFER: Decode command: %u", command);
             return true;
         }
 
         uint32_t DecodeCommandArgAsUInt32()
         {
-            return m_uint32ArgBuffer[m_uint32ArgBufferIndex++];
+            auto ret = m_uint32ArgBuffer[m_uint32ArgBufferIndex++];
+            //NSLog(@"COMMAND BUFFER:   Decode uint32: %u", ret);
+            return ret;
         }
 
         UInt32Buffer DecodeCommandArgAsUInt32s(UInt32Buffer::index_type count)
         {
-            return m_uint32ArgBuffer.subspan((m_uint32ArgBufferIndex += count) - count, count);
+            auto ret = m_uint32ArgBuffer.subspan((m_uint32ArgBufferIndex += count) - count, count);
+            //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
+            return ret;
         }
 
         float DecodeCommandArgAsFloat32()
         {
-            return m_float32ArgBuffer[m_float32ArgBufferIndex++];
+            auto ret = m_float32ArgBuffer[m_float32ArgBufferIndex++];
+            //NSLog(@"COMMAND BUFFER:   Decode float32: %f", ret);
+            return ret;
         }
 
         Float32Buffer DecodeCommandArgAsFloat32s(Float32Buffer::index_type count)
         {
-            return m_float32ArgBuffer.subspan((m_float32ArgBufferIndex += count) - count, count);
+            auto ret = m_float32ArgBuffer.subspan((m_float32ArgBufferIndex += count) - count, count);
+            //NSLog(@"COMMAND BUFFER:   Decode float32s: %u", static_cast<uint32_t>(ret.size()));
+            return ret;
         }
 
     private:

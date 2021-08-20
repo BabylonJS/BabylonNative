@@ -643,9 +643,9 @@ namespace Babylon
         return Napi::Value::From(info.Env(), IndexBufferData::Create(data, flags, dynamic));
     }
 
-    void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& /*info*/)
     {
-        IndexBufferData::Delete(info[0].ToNumber().Uint32Value());
+        //IndexBufferData::Delete(info[0].ToNumber().Uint32Value());
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
@@ -674,9 +674,9 @@ namespace Babylon
         return Napi::Value::From(info.Env(), VertexBufferData::Create(data, dynamic));
     }
 
-    void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& /*info*/)
     {
-        VertexBufferData::Delete(info[0].ToNumber().Uint32Value());
+        //VertexBufferData::Delete(info[0].ToNumber().Uint32Value());
     }
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
