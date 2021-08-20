@@ -375,7 +375,7 @@ namespace Babylon
                 InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
-                InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
+                //InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
                 //InstanceMethod("bindVertexArray", &NativeEngine::BindVertexArray),
                 InstanceMethod("createIndexBuffer", &NativeEngine::CreateIndexBuffer),
                 InstanceMethod("deleteIndexBuffer", &NativeEngine::DeleteIndexBuffer),
@@ -540,6 +540,7 @@ namespace Babylon
                 InstanceValue("STENCIL_OP_PASS_Z_DECRSAT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_DECRSAT)),
                 InstanceValue("STENCIL_OP_PASS_Z_INVERT", Napi::Number::From(env, BGFX_STENCIL_OP_PASS_Z_INVERT)),
 
+                InstanceValue("COMMAND_DELETEVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexArray))),
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
@@ -614,9 +615,16 @@ namespace Babylon
         return Napi::Value::From(info.Env(), VertexArray::Create());
     }
 
-    void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
+//    void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
+//    {
+//        VertexArray::Delete(info[0].ToNumber().Uint32Value());
+//        // TODO: should we clear the m_boundVertexArray if it gets deleted?
+//        //assert(vertexArray != m_boundVertexArray);
+//    }
+
+    void NativeEngine::DeleteVertexArray(CommandBufferDecoder& decoder)
     {
-        VertexArray::Delete(info[0].ToNumber().Uint32Value());
+        VertexArray::Delete(decoder.DecodeCommandArgAsUInt32());
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
     }
