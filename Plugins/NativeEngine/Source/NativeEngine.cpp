@@ -592,7 +592,7 @@ namespace Babylon
         // TODO: clean up bound vertex array
 
         // This collection contains bgfx data, so it must be cleared before bgfx::shutdown is called.
-        for (uint8_t handle : m_programDataCollection)
+        for (const auto handle : m_programDataCollection)
         {
             ProgramData::Delete(handle);
         }
@@ -1740,7 +1740,7 @@ namespace Babylon
         const bool shouldClearDepth{static_cast<bool>(decoder.DecodeCommandArgAsUInt32())};
         const float depth{decoder.DecodeCommandArgAsFloat32()};
         const bool shouldClearStencil{static_cast<bool>(decoder.DecodeCommandArgAsUInt32())};
-        const uint32_t stencil{decoder.DecodeCommandArgAsUInt32()};
+        const uint8_t stencil{static_cast<uint8_t>(decoder.DecodeCommandArgAsUInt32())};
 
         if (shouldClearColor)
         {
