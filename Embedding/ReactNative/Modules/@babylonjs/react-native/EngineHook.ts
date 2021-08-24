@@ -87,7 +87,7 @@ if (Platform.OS === "android" || Platform.OS === "ios") {
     (WebXRSessionManager.prototype as any)._createRenderTargetTexture = function (...args: any[]): RenderTargetTexture {
         const renderTargetTexture = originalCreateRenderTargetTexture.apply(this, args);
         renderTargetTexture.onClearObservable.add((engine: ThinEngine) => {
-            engine.clear(renderTargetTexture.clearColor, false, true, true);
+            // do nothing
         });
 
         return renderTargetTexture;
