@@ -447,9 +447,6 @@ namespace Babylon
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 //InstanceMethod("setStencil", &NativeEngine::SetStencil),
                 InstanceMethod("setCommandBuffer", &NativeEngine::SetCommandBuffer),
-                InstanceMethod("setCommandUint32Buffer", &NativeEngine::SetCommandUint32Buffer),
-                InstanceMethod("setCommandInt32Buffer", &NativeEngine::SetCommandInt32Buffer),
-                InstanceMethod("setCommandFloat32Buffer", &NativeEngine::SetCommandFloat32Buffer),
                 InstanceMethod("submitCommandBuffer", &NativeEngine::SubmitCommandBuffer),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
@@ -1962,33 +1959,18 @@ namespace Babylon
 
     void NativeEngine::SetCommandBuffer(const Napi::CallbackInfo& info)
     {
-        m_commandBuffer = Napi::Persistent(info[0].As<Napi::Uint8Array>());
-    }
-
-    void NativeEngine::SetCommandUint32Buffer(const Napi::CallbackInfo& info)
-    {
-        m_commandUint32Buffer = Napi::Persistent(info[0].As<Napi::Uint32Array>());
-    }
-
-    void NativeEngine::SetCommandInt32Buffer(const Napi::CallbackInfo& info)
-    {
-        m_commandInt32Buffer = Napi::Persistent(info[0].As<Napi::Int32Array>());
-    }
-
-    void NativeEngine::SetCommandFloat32Buffer(const Napi::CallbackInfo& info)
-    {
-        m_commandFloat32Buffer = Napi::Persistent(info[0].As<Napi::Float32Array>());
+        m_commandBuffer = Napi::Persistent(info[0].As<Napi::ArrayBuffer>());
     }
 
     void NativeEngine::SubmitCommandBuffer(const Napi::CallbackInfo& info)
     {
-        const auto commandCount{info[0].ToNumber().Uint32Value()};
+        const auto byteCount{info[0].ToNumber().Uint32Value()};
 
         CommandBufferDecoder commandBufferDecoder{
-            gsl::make_span(m_commandBuffer.Value().Data(), commandCount),
-            gsl::make_span(m_commandUint32Buffer.Value().Data(), m_commandUint32Buffer.Value().ElementLength()),
-            gsl::make_span(m_commandInt32Buffer.Value().Data(), m_commandInt32Buffer.Value().ElementLength()),
-            gsl::make_span(m_commandFloat32Buffer.Value().Data(), m_commandFloat32Buffer.Value().ElementLength())
+            gsl::make_span(reinterpret_cast<const uint8_t*>(m_commandBuffer.Value().Data()), byteCount),
+            gsl::make_span(reinterpret_cast<const uint32_t*>(m_commandBuffer.Value().Data()), byteCount >> 2),
+            gsl::make_span(reinterpret_cast<const int32_t*>(m_commandBuffer.Value().Data()), byteCount >> 2),
+            gsl::make_span(reinterpret_cast<const float*>(m_commandBuffer.Value().Data()), byteCount >> 2),
         };
 
         uint8_t command{};

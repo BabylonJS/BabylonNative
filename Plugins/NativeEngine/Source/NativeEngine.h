@@ -220,51 +220,54 @@ namespace Babylon
                 return false;
             }
 
-            command = m_commandBuffer[m_commandBufferIndex++];
+            command = m_commandBuffer[m_commandBufferIndex];
+            m_commandBufferIndex += 4;
             //NSLog(@"COMMAND BUFFER: Decode command: %u", command);
             return true;
         }
 
         uint32_t DecodeCommandArgAsUInt32()
         {
-            auto ret = m_uint32ArgBuffer[m_uint32ArgBufferIndex++];
+            auto ret = m_uint32ArgBuffer[m_commandBufferIndex >> 2];
+            m_commandBufferIndex += 4;
             //NSLog(@"COMMAND BUFFER:   Decode uint32: %u", ret);
             return ret;
         }
 
         UInt32Buffer DecodeCommandArgAsUInt32s(UInt32Buffer::index_type count)
         {
-            auto ret = m_uint32ArgBuffer.subspan((m_uint32ArgBufferIndex += count) - count, count);
+            auto ret = m_uint32ArgBuffer.subspan(m_commandBufferIndex >> 2, count);
+            m_commandBufferIndex += 4 * count;
             //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
         Int32Buffer DecodeCommandArgAsInt32s(UInt32Buffer::index_type count)
         {
-            auto ret = m_int32ArgBuffer.subspan((m_int32ArgBufferIndex += count) - count, count);
+            auto ret = m_int32ArgBuffer.subspan(m_commandBufferIndex >> 2, count);
+            m_commandBufferIndex += 4 * count;
             //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
         float DecodeCommandArgAsFloat32()
         {
-            auto ret = m_float32ArgBuffer[m_float32ArgBufferIndex++];
+            auto ret = m_float32ArgBuffer[m_commandBufferIndex >> 2];
+            m_commandBufferIndex += 4;
             //NSLog(@"COMMAND BUFFER:   Decode float32: %f", ret);
             return ret;
         }
 
         Float32Buffer DecodeCommandArgAsFloat32s(Float32Buffer::index_type count)
         {
-            auto ret = m_float32ArgBuffer.subspan((m_float32ArgBufferIndex += count) - count, count);
+            auto ret = m_float32ArgBuffer.subspan(m_commandBufferIndex >> 2, count);
+            m_commandBufferIndex += 4 * count;
             //NSLog(@"COMMAND BUFFER:   Decode float32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
     private:
-        UInt8Buffer::index_type m_commandBufferIndex{};
-        UInt32Buffer::index_type m_uint32ArgBufferIndex{};
-        Int32Buffer::index_type m_int32ArgBufferIndex{};
-        Float32Buffer::index_type m_float32ArgBufferIndex{};
+        ptrdiff_t m_commandBufferIndex{0};
 
         UInt8Buffer m_commandBuffer;
         UInt32Buffer m_uint32ArgBuffer;
@@ -377,9 +380,6 @@ namespace Babylon
         //void SetStencil(const Napi::CallbackInfo& info);
         void SetStencil(CommandBufferDecoder& decoder);
         void SetCommandBuffer(const Napi::CallbackInfo& info);
-        void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
-        void SetCommandInt32Buffer(const Napi::CallbackInfo& info);
-        void SetCommandFloat32Buffer(const Napi::CallbackInfo& info);
         void SubmitCommandBuffer(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
 
@@ -430,10 +430,7 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        Napi::Reference<Napi::Uint8Array> m_commandBuffer{};
-        Napi::Reference<Napi::Uint32Array> m_commandUint32Buffer{};
-        Napi::Reference<Napi::Int32Array> m_commandInt32Buffer{};
-        Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
+        Napi::Reference<Napi::ArrayBuffer> m_commandBuffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
 
         const VertexArray* m_boundVertexArray{};
