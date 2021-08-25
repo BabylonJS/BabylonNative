@@ -161,7 +161,7 @@ namespace Babylon
         ~VertexBufferData();
         template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
         void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
-        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout);
+        void EnsureFinalized(const bgfx::VertexLayout& layout);
         void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength);
         void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const;
 
@@ -201,11 +201,14 @@ namespace Babylon
     public:
         using UInt8Buffer = gsl::span<const uint8_t>;
         using UInt32Buffer = gsl::span<const uint32_t>;
+        using Int32Buffer = gsl::span<const int32_t>;
         using Float32Buffer = gsl::span<const float>;
 
-        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Float32Buffer float32ArgBuffer) :
+        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Int32Buffer int32ArgBuffer, Float32Buffer float32ArgBuffer)
+            :
             m_commandBuffer{commandBuffer},
-            m_uint32ArgBuffer{uint32ArgBuffer},
+            m_uint32ArgBuffer{uint32ArgBuffer}, 
+            m_int32ArgBuffer{int32ArgBuffer},
             m_float32ArgBuffer{float32ArgBuffer}
         {
         }
@@ -236,6 +239,13 @@ namespace Babylon
             return ret;
         }
 
+        Int32Buffer DecodeCommandArgAsInt32s(UInt32Buffer::index_type count)
+        {
+            auto ret = m_int32ArgBuffer.subspan((m_int32ArgBufferIndex += count) - count, count);
+            //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
+            return ret;
+        }
+
         float DecodeCommandArgAsFloat32()
         {
             auto ret = m_float32ArgBuffer[m_float32ArgBufferIndex++];
@@ -253,10 +263,12 @@ namespace Babylon
     private:
         UInt8Buffer::index_type m_commandBufferIndex{};
         UInt32Buffer::index_type m_uint32ArgBufferIndex{};
+        Int32Buffer::index_type m_int32ArgBufferIndex{};
         Float32Buffer::index_type m_float32ArgBufferIndex{};
 
         UInt8Buffer m_commandBuffer;
         UInt32Buffer m_uint32ArgBuffer;
+        Int32Buffer m_int32ArgBuffer;
         Float32Buffer m_float32ArgBuffer;
     };
 
@@ -285,17 +297,18 @@ namespace Babylon
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
         //void DeleteIndexBuffer(const Napi::CallbackInfo& info);
         void DeleteIndexBuffer(CommandBufferDecoder& decoder);
-        void RecordIndexBuffer(const Napi::CallbackInfo& info);
+        //void RecordIndexBuffer(const Napi::CallbackInfo& info);
+        void RecordIndexBuffer(CommandBufferDecoder& decoder);
         void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
         //void DeleteVertexBuffer(const Napi::CallbackInfo& info);
         void DeleteVertexBuffer(CommandBufferDecoder& decoder);
-        void RecordVertexBuffer(const Napi::CallbackInfo& info);
+        void RecordVertexBuffer(CommandBufferDecoder& decoder);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
-        void SetProgram(const Napi::CallbackInfo& info);
+        void SetProgram(CommandBufferDecoder& decoder);
         //void SetState(const Napi::CallbackInfo& info);
         void SetState(CommandBufferDecoder& decoder);
         void SetZOffset(const Napi::CallbackInfo& info);
@@ -305,20 +318,20 @@ namespace Babylon
         void SetDepthWrite(const Napi::CallbackInfo& info);
         void SetColorWrite(const Napi::CallbackInfo& info);
         void SetBlendMode(const Napi::CallbackInfo& info);
-        void SetMatrix(const Napi::CallbackInfo& info);
-        void SetInt(const Napi::CallbackInfo& info);
-        void SetIntArray(const Napi::CallbackInfo& info);
-        void SetIntArray2(const Napi::CallbackInfo& info);
-        void SetIntArray3(const Napi::CallbackInfo& info);
-        void SetIntArray4(const Napi::CallbackInfo& info);
-        void SetFloatArray(const Napi::CallbackInfo& info);
-        void SetFloatArray2(const Napi::CallbackInfo& info);
-        void SetFloatArray3(const Napi::CallbackInfo& info);
-        void SetFloatArray4(const Napi::CallbackInfo& info);
+        void SetMatrix(CommandBufferDecoder& decoder);
+        void SetInt(CommandBufferDecoder& decoder);
+        void SetIntArray(CommandBufferDecoder& decoder);
+        void SetIntArray2(CommandBufferDecoder& decoder);
+        void SetIntArray3(CommandBufferDecoder& decoder);
+        void SetIntArray4(CommandBufferDecoder& decoder);
+        void SetFloatArray(CommandBufferDecoder& decoder);
+        void SetFloatArray2(CommandBufferDecoder& decoder);
+        void SetFloatArray3(CommandBufferDecoder& decoder);
+        void SetFloatArray4(CommandBufferDecoder& decoder);
         //void SetMatrices(const Napi::CallbackInfo& info);
         void SetMatrices(CommandBufferDecoder& decoder);
-        void SetMatrix3x3(const Napi::CallbackInfo& info);
-        void SetMatrix2x2(const Napi::CallbackInfo& info);
+        void SetMatrix3x3(CommandBufferDecoder& decoder);
+        void SetMatrix2x2(CommandBufferDecoder& decoder);
         //void SetFloat(const Napi::CallbackInfo& info);
         //void SetFloat2(const Napi::CallbackInfo& info);
         //void SetFloat3(const Napi::CallbackInfo& info);
@@ -365,6 +378,7 @@ namespace Babylon
         void SetStencil(CommandBufferDecoder& decoder);
         void SetCommandBuffer(const Napi::CallbackInfo& info);
         void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
+        void SetCommandInt32Buffer(const Napi::CallbackInfo& info);
         void SetCommandFloat32Buffer(const Napi::CallbackInfo& info);
         void SubmitCommandBuffer(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
@@ -395,15 +409,21 @@ namespace Babylon
         uint64_t m_engineState{BGFX_STATE_DEFAULT};
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
-        template<int size, typename arrayType>
-        void SetTypeArrayN(const Napi::CallbackInfo& info);
+        template<size_t size, typename arrayType>
+        void SetTypeArrayN(const UniformInfo& uniformInfo, const size_t elementLength, const arrayType& array);
 
-        template<int size>
+        template<size_t size>
+        void SetIntArrayN(CommandBufferDecoder& decoder);
+
+        template<size_t size>
+        void SetFloatArrayN(CommandBufferDecoder& decoder);
+
+        template<size_t size>
         //void SetFloatN(const Napi::CallbackInfo& info);
         void SetFloatN(CommandBufferDecoder& decoder);
 
-        template<int size>
-        void SetMatrixN(const Napi::CallbackInfo& info);
+        template<size_t size>
+        void SetMatrixN(CommandBufferDecoder& decoder);
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
@@ -412,6 +432,7 @@ namespace Babylon
 
         Napi::Reference<Napi::Uint8Array> m_commandBuffer{};
         Napi::Reference<Napi::Uint32Array> m_commandUint32Buffer{};
+        Napi::Reference<Napi::Int32Array> m_commandInt32Buffer{};
         Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
 
