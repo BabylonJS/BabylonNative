@@ -149,7 +149,7 @@ namespace Babylon
         IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
         IndexBufferData(IndexBufferData&& other) = default;
         ~IndexBufferData();
-        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
+        void Update(const uint8_t* data, const uint32_t byteLength, const uint32_t offset);
         void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
     };
 
@@ -162,7 +162,7 @@ namespace Babylon
         template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
         void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
         void EnsureFinalized(const bgfx::VertexLayout& layout);
-        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength);
+        void Update(const uint8_t* data, const uint32_t byteLength, const uint32_t offset);
         void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const;
 
     private:
@@ -317,12 +317,12 @@ namespace Babylon
         void DeleteIndexBuffer(CommandBufferDecoder& decoder);
         //void RecordIndexBuffer(const Napi::CallbackInfo& info);
         void RecordIndexBuffer(CommandBufferDecoder& decoder);
-        void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
+        void UpdateDynamicIndexBuffer(CommandBufferDecoder& decoder);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
         //void DeleteVertexBuffer(const Napi::CallbackInfo& info);
         void DeleteVertexBuffer(CommandBufferDecoder& decoder);
         void RecordVertexBuffer(CommandBufferDecoder& decoder);
-        void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
+        void UpdateDynamicVertexBuffer(CommandBufferDecoder& decoder);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
@@ -331,11 +331,10 @@ namespace Babylon
         void SetState(CommandBufferDecoder& decoder);
         void SetZOffset(const Napi::CallbackInfo& info);
         Napi::Value GetZOffset(const Napi::CallbackInfo& info);
-        void SetDepthTest(const Napi::CallbackInfo& info);
-        Napi::Value GetDepthWrite(const Napi::CallbackInfo& info);
-        void SetDepthWrite(const Napi::CallbackInfo& info);
-        void SetColorWrite(const Napi::CallbackInfo& info);
-        void SetBlendMode(const Napi::CallbackInfo& info);
+        void SetDepthTest(CommandBufferDecoder& decoder);
+        void SetDepthWrite(CommandBufferDecoder& decoder);
+        void SetColorWrite(CommandBufferDecoder& decoder);
+        void SetBlendMode(CommandBufferDecoder& decoder);
         void SetMatrix(CommandBufferDecoder& decoder);
         void SetInt(CommandBufferDecoder& decoder);
         void SetIntArray(CommandBufferDecoder& decoder);
@@ -366,27 +365,27 @@ namespace Babylon
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
-        void SetTextureSampling(const Napi::CallbackInfo& info);
+        void SetTextureSampling(CommandBufferDecoder& decoder);
         //void SetTextureWrapMode(const Napi::CallbackInfo& info);
         void SetTextureWrapMode(CommandBufferDecoder& decoder);
-        void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
+        void SetTextureAnisotropicLevel(CommandBufferDecoder& decoder);
         //void SetTexture(const Napi::CallbackInfo& info);
         void SetTexture(CommandBufferDecoder& decoder);
         void SetTexture2(const Napi::CallbackInfo& info);
         void SetTexture3(const Napi::CallbackInfo& info);
-        void DeleteTexture(const Napi::CallbackInfo& info);
+        void DeleteTexture(CommandBufferDecoder& decoder);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
-        void DeleteFrameBuffer(const Napi::CallbackInfo& info);
-        void BindFrameBuffer(const Napi::CallbackInfo& info);
-        void UnbindFrameBuffer(const Napi::CallbackInfo& info);
+        void DeleteFrameBuffer(CommandBufferDecoder& decoder);
+        void BindFrameBuffer(CommandBufferDecoder& decoder);
+        void UnbindFrameBuffer(CommandBufferDecoder& decoder);
         //void DrawIndexed(const Napi::CallbackInfo& info);
         void DrawIndexed(CommandBufferDecoder& decoder);
-        void Draw(const Napi::CallbackInfo& info);
+        void Draw(CommandBufferDecoder& decoder);
         //void Clear(const Napi::CallbackInfo& info);
         void Clear(CommandBufferDecoder& decoder);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
-        void SetViewPort(const Napi::CallbackInfo& info);
+        void SetViewPort(CommandBufferDecoder& decoder);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
