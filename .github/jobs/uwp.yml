@@ -1,14 +1,31 @@
 parameters:
-  name: ''
-  vmImage: ''
-  platform: ''
+- name: name
+  type: string
+- name: vmImage
+  type: string
+- name: platform
+  type: string
+- name: napiType
+  type: string
+  default: direct
+  values:
+  - direct
+  - jsi
 
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
-      
+    variables:
+      ${{ if eq(parameters.napiType, 'jsi') }}:
+        napiSuffix: '_JSI'
+        jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
+      ${{ if ne(parameters.napiType, 'jsi') }}:
+        napiSuffix: ''
+        jsEngineDefine: ''
+      solutionName: 'UWP_${{ parameters.platform }}${{variables.napiSuffix}}'
+
     steps:
     - script: |
         git submodule update --init --recursive
@@ -21,15 +38,15 @@ jobs:
       displayName: 'Install Babylon.js NPM packages'
 
     - script: |
-        mkdir buildUWP_${{ parameters.platform }}
-        cd buildUWP_${{ parameters.platform }}
-        cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A ${{ parameters.platform }}
-      displayName: 'Generate UWP_${{ parameters.platform }} solution'
+        mkdir build${{ variables.solutionName }}
+        cd build${{ variables.solutionName }}
+        cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }}
+      displayName: 'Generate ${{ variables.solutionName }} solution'
   
     - task: VSBuild@1
       inputs:
-        solution: 'buildUWP_${{ parameters.platform }}/BabylonNative.sln'
+        solution: 'build${{ variables.solutionName }}/BabylonNative.sln'
         maximumCpuCount: true
         configuration: 'RelWithDebInfo'
         msbuildArgs: '/p:AppxPackageSigningEnabled=false'
-      displayName: 'Build UWP_${{ parameters.platform }}'
+      displayName: 'Build ${{ variables.solutionName }}'

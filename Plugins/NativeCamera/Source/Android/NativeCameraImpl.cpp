@@ -309,7 +309,7 @@ namespace Babylon::Plugins
         glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_cameraOESTextureId);
-        auto bindSamplerTransaction{ android::OpenGLHelpers::GLTransactions::BindSampler(GL_TEXTURE0, 0) };
+        glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0);
 
         // Draw the quad
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);

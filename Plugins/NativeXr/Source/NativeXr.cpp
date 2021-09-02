@@ -2524,6 +2524,8 @@ namespace Babylon
             static constexpr auto JS_EVENT_NAME_SQUEEZE = "squeeze";
             static constexpr auto JS_EVENT_NAME_SQUEEZE_START = "squeezestart";
             static constexpr auto JS_EVENT_NAME_SQUEEZE_END = "squeezeend";
+            static constexpr auto JS_EVENT_NAME_EYE_TRACKING_START = "eyetrackingstart";
+            static constexpr auto JS_EVENT_NAME_EYE_TRACKING_END = "eyetrackingend";
 
         public:
             static void Initialize(Napi::Env env)
@@ -2638,6 +2640,7 @@ namespace Babylon
 
             Napi::Reference<Napi::Array> m_jsInputSources{};
             std::map<xr::System::Session::Frame::InputSource::Identifier, Napi::ObjectReference> m_idToInputSource{};
+            Napi::ObjectReference m_jsEyeTrackedSource{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
@@ -2687,8 +2690,38 @@ namespace Babylon
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
+                
+            void ProcessEyeInputSource(const xr::System::Session::Frame& frame, Napi::Env env)
+            {
+                if (frame.EyeTrackerSpace.has_value() && m_jsEyeTrackedSource.IsEmpty())
+                {
+                    m_jsEyeTrackedSource = Napi::Persistent(Napi::Object::New(env));
+                    m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
 
-            void ProcessInputSources(const xr::System::Session::Frame& frame, Napi::Env env)
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                    {
+                        if (name == JS_EVENT_NAME_EYE_TRACKING_START)
+                        {
+                            Napi::Object obj = m_jsEyeTrackedSource.Value();
+                            callback.Call({obj});
+                        }
+                    }
+                }
+                else if (!frame.EyeTrackerSpace.has_value() && !m_jsEyeTrackedSource.IsEmpty())
+                {
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                    {
+                        if (name == JS_EVENT_NAME_EYE_TRACKING_END)
+                        {
+                            callback.Call({});
+                        }
+                    }
+
+                    m_jsEyeTrackedSource.Reset();
+                }
+            }
+
+            void ProcessControllerInputSources(const xr::System::Session::Frame& frame, Napi::Env env)
             {
                 // Figure out the new state.
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
@@ -2700,6 +2733,7 @@ namespace Babylon
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeStarts{};
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
 
+                // Process the controller-based input sources
                 for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
@@ -2840,7 +2874,8 @@ namespace Babylon
                 Napi::Function callback{info[0].As<Napi::Function>()};
 
                 m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](const auto& frame) {
-                    ProcessInputSources(frame, Env());
+                    ProcessEyeInputSource(frame, Env());
+                    ProcessControllerInputSources(frame, Env());
 
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 

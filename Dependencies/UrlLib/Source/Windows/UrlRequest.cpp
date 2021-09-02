@@ -168,10 +168,14 @@ namespace UrlLib
 
         gsl::span<const std::byte> ResponseBuffer() const
         {
-            std::byte* bytes;
-            auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
-            winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
-            return {bytes, gsl::narrow_cast<std::ptrdiff_t>(m_responseBuffer.Length())};
+            if (m_responseBuffer)
+            {
+                std::byte* bytes;
+                auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
+                winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
+                return {bytes, gsl::narrow_cast<std::ptrdiff_t>(m_responseBuffer.Length())};
+            }
+            return {};
         }
 
     private:

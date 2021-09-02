@@ -26,6 +26,7 @@ add_subdirectory(bgfx.cmake)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MULTITHREADED=1)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=32)
+target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_BLIT_EMULATION=1)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_COMMAND_BUFFER_SIZE=12582912)
 if(APPLE)
     # no Vulkan on Apple but Metal

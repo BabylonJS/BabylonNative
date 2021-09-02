@@ -184,6 +184,7 @@ namespace xr
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
+        std::optional<Frame::Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -220,7 +221,7 @@ namespace xr
                 glDeleteTextures(1, &cameraTextureId);
                 glDeleteProgram(cameraShaderProgramId);
                 glDeleteProgram(babylonShaderProgramId);
-                glDeleteFramebuffers(1, &clearFrameBufferId);
+                glDeleteFramebuffers(1, &cameraFrameBufferId);
 
                 DestroyDisplayResources();
             }
@@ -278,7 +279,7 @@ namespace xr
             }
 
             // Create a frame buffer used for clearing the color texture
-            glGenFramebuffers(1, &clearFrameBufferId);
+            glGenFramebuffers(1, &cameraFrameBufferId);
 
             // Create the ARCore ArFrame (this gets reused each time we query for the latest frame)
             ArFrame_create(xrContext->Session, &xrContext->Frame);
@@ -410,8 +411,8 @@ namespace xr
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
 
-                // Bind the color and depth texture to the clear color frame buffer
-                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
+                // Bind the color and depth texture to the camera frame buffer
+                glBindFramebuffer(GL_FRAMEBUFFER, cameraFrameBufferId);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)), 0);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].DepthTexturePointer)), 0);
             }
@@ -439,19 +440,37 @@ namespace xr
 
             ArCamera_release(camera);
 
-            // Draw the camera texture to the Babylon render texture, but only if the session has started providing AR frames.
+            // Draw the camera texture to the Babylon render texture, but only if the session has started providing AR frames
             int64_t frameTimestamp{};
             ArFrame_getTimestamp(xrContext->Session, xrContext->Frame, &frameTimestamp);
             if (frameTimestamp)
             {
-                // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
-                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(clearFrameBufferId) };
-                auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
-                auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
-                auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
-                auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
-                auto disableStencilTransaction{ GLTransactions::SetCapability(GL_STENCIL_TEST, false) };
+                // Bind the frame buffer
+                glBindFramebuffer(GL_FRAMEBUFFER, cameraFrameBufferId);
 
+                // Set the viewport to the whole frame buffer
+                glViewport(0, 0, width, height);
+
+                // Disable unnecessary capabilities
+                glDisable(GL_SCISSOR_TEST);
+                glDisable(GL_STENCIL_TEST);
+                glDisable(GL_BLEND);
+                glDisable(GL_DEPTH_TEST);
+                glDisable(GL_CULL_FACE);
+
+                // Clear the depth and stencil
+                glDepthMask(GL_TRUE);
+                glStencilMask(1);
+                glClearDepthf(1.0);
+                glClearStencil(0);
+                glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+                // Only write colors to blit the background camera texture
+                glDepthMask(GL_FALSE);
+                glStencilMask(0);
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+                // Use the custom shader
                 glUseProgram(cameraShaderProgramId);
 
                 // Configure the quad vertex positions
@@ -463,7 +482,7 @@ namespace xr
                 glUniform1i(cameraTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
+                glBindSampler(GetTextureUnit(GL_TEXTURE0), 0);
 
                 // Configure the camera frame UVs
                 auto cameraFrameUVsUniformLocation{ glGetUniformLocation(cameraShaderProgramId, "cameraFrameUVs") };
@@ -471,8 +490,6 @@ namespace xr
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
-
-                glUseProgram(0);
             }
 
             return std::make_unique<Session::Frame>(*this);
@@ -495,14 +512,25 @@ namespace xr
             {
                 auto surfaceTransaction{ GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), surface.get(), surface.get(), context) };
 
-                auto bindFrameBufferTransaction{ GLTransactions::BindFrameBuffer(0) };
-                auto cullFaceTransaction{ GLTransactions::SetCapability(GL_CULL_FACE, false) };
-                auto depthTestTransaction{ GLTransactions::SetCapability(GL_DEPTH_TEST, false) };
-                auto blendTransaction{ GLTransactions::SetCapability(GL_BLEND, false) };
-                auto depthMaskTransaction{ GLTransactions::DepthMask(GL_FALSE) };
-                auto disableStencilTransaction{ GLTransactions::SetCapability(GL_STENCIL_TEST, false) };
+                // Bind the frame buffer
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+                // Set the viewport to the whole surface
                 glViewport(0, 0, ActiveFrameViews[0].ColorTextureSize.Width, ActiveFrameViews[0].ColorTextureSize.Height);
+
+                // Disable unnecessary capabilities
+                glDisable(GL_SCISSOR_TEST);
+                glDisable(GL_STENCIL_TEST);
+                glDisable(GL_BLEND);
+                glDisable(GL_DEPTH_TEST);
+                glDisable(GL_CULL_FACE);
+
+                // Only write colors to blit to the screen
+                glDepthMask(GL_FALSE);
+                glStencilMask(0);
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+                // Use the custom shader
                 glUseProgram(babylonShaderProgramId);
 
                 // Configure the quad vertex positions
@@ -513,9 +541,9 @@ namespace xr
                 auto babylonTextureUniformLocation{ glGetUniformLocation(babylonShaderProgramId, "babylonTexture") };
                 glUniform1i(babylonTextureUniformLocation, GetTextureUnit(GL_TEXTURE0));
                 glActiveTexture(GL_TEXTURE0);
-                auto babylonTextureId{ (GLuint)(size_t)ActiveFrameViews[0].ColorTexturePointer };
+                auto babylonTextureId{ static_cast<GLuint>(reinterpret_cast<uintptr_t>(ActiveFrameViews[0].ColorTexturePointer)) };
                 glBindTexture(GL_TEXTURE_2D, babylonTextureId);
-                auto bindSamplerTransaction{ GLTransactions::BindSampler(GL_TEXTURE0, 0) };
+                glBindSampler(GetTextureUnit(GL_TEXTURE0), 0);
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
@@ -524,8 +552,6 @@ namespace xr
                 // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
                 //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
                 eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
-
-                glUseProgram(0);
             }
         }
 
@@ -918,7 +944,7 @@ namespace xr
         GLuint cameraShaderProgramId{};
         GLuint babylonShaderProgramId{};
         GLuint cameraTextureId{};
-        GLuint clearFrameBufferId{};
+        GLuint cameraFrameBufferId{};
 
         ArPose* cameraPose{};
         ArPose* tempPose{};
@@ -1056,6 +1082,7 @@ namespace xr
         : Views{ sessionImpl.ActiveFrameViews }
         , InputSources{ sessionImpl.InputSources }
         , FeaturePointCloud{ sessionImpl.FeaturePointCloud }
+        , EyeTrackerSpace{ sessionImpl.EyeTrackerSpace }
         , UpdatedSceneObjects{}
         , RemovedSceneObjects{}
         , UpdatedPlanes{}

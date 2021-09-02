@@ -8,7 +8,7 @@
 #include <vector>
 #include <optional>
 
-// Copied from js_native_api.h
+// Copied from js_native_api_types.h (https://git.io/J8aI5)
 typedef enum {
   napi_default = 0,
   napi_writable = 1 << 0,
@@ -39,6 +39,9 @@ typedef enum {
   napi_uint32_array,
   napi_float32_array,
   napi_float64_array,
+  // JSI doesn't support bigint.
+  // napi_bigint64_array,
+  // napi_biguint64_array,
 } napi_typedarray_type;
 
 struct napi_env__ {

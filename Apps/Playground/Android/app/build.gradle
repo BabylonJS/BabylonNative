@@ -54,9 +54,11 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled = false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'),
-                          'proguard-rules.pro'
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
 
@@ -109,13 +111,13 @@ task copyFiles {
     copy
     {
         from '../../../node_modules/babylonjs-loaders'
-        include "babylon.loaders.js"
+        include "babylonjs.loaders.js"
         into 'src/main/assets/Scripts'
     }
     copy
     {
         from '../../../node_modules/babylonjs-materials'
-        include "babylon.materials.js"
+        include "babylonjs.materials.js"
         into 'src/main/assets/Scripts'
     }
     copy
