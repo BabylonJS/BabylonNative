@@ -1,3 +1,4 @@
+#include <Windows.h>
 #include <bx/math.h>
 #include <map>
 #include <algorithm>
@@ -88,7 +89,6 @@ namespace Babylon::Polyfills::Internal
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }
-        BeginFrame();
     }
 
     Context::~Context()
@@ -106,6 +106,10 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_nvg)
         {
+            for(auto& image : m_nvgImageIndices)
+            {
+                nvgDeleteImage(m_nvg, image.second);
+            }
             nvgDelete(m_nvg);
             m_nvg = nullptr;
         }
@@ -327,19 +331,11 @@ namespace Babylon::Polyfills::Internal
         if (!m_dirty)
         {
             m_dirty = true;
-            EndFrame();
+            DeferredFlushFrame();
         }
     }
 
-    void Context::BeginFrame()
-    {
-        const auto width = m_canvas->GetWidth();
-        const auto height = m_canvas->GetHeight();
-
-        nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-    }
-
-    void Context::EndFrame()
+    void Context::DeferredFlushFrame()
     {
         // on some systems (Ubuntu), the framebuffer contains garbage.
         // Unlike other systems where it's cleared.
@@ -356,10 +352,13 @@ namespace Babylon::Polyfills::Internal
                     frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
                 }
                 frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
+                const auto width = m_canvas->GetWidth();
+                const auto height = m_canvas->GetHeight();
+
+                nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);
                 frameBuffer.Unbind(*encoder);
-                BeginFrame();
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
@@ -387,14 +386,86 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    void Context::DrawImage(const Napi::CallbackInfo&)
+    void Context::DrawImage(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(info[0].As<Napi::Object>());
+
+        int imageIndex{-1};
+        const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
+        if (nvgImageIter == m_nvgImageIndices.end())
+        {
+            imageIndex = canvasImage->CreateNVGImageForContext(m_nvg);
+            m_nvgImageIndices.insert(std::make_pair(canvasImage, imageIndex));
+        }
+        else
+        {
+            imageIndex = nvgImageIter->second;
+        }
+        assert(imageIndex != -1);
+
+        if (info.Length() == 3)
+        {
+            const auto dx = info[1].As<Napi::Number>().Int32Value();
+            const auto dy = info[2].As<Napi::Number>().Int32Value();
+            const auto width = static_cast<float>(canvasImage->GetWidth());
+            const auto height = static_cast<float>(canvasImage->GetHeight());
+
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, 0.f, 0.f, width, height, 0.f, imageIndex, 1.f);
+            nvgBeginPath(m_nvg);
+            nvgRect(m_nvg, dx, dy, width, height);
+            nvgFillPaint(m_nvg, imagePaint);
+            nvgFill(m_nvg);
+            SetDirty();
+        } 
+        else if (info.Length() == 5)
+        {
+            const auto dx = info[1].As<Napi::Number>().Int32Value();
+            const auto dy = info[2].As<Napi::Number>().Int32Value();
+            const auto dWidth = info[3].As<Napi::Number>().Uint32Value();
+            const auto dHeight = info[4].As<Napi::Number>().Uint32Value();
+
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
+            nvgBeginPath(m_nvg);
+            nvgRect(m_nvg, dx, dy, dWidth, dHeight);
+            nvgFillPaint(m_nvg, imagePaint);
+            nvgFill(m_nvg);
+            SetDirty();
+        }
+        else if (info.Length() == 9)
+        {
+            const auto sx = info[1].As<Napi::Number>().Int32Value();
+            const auto sy = info[2].As<Napi::Number>().Int32Value();
+            auto sWidth = info[3].As<Napi::Number>().Uint32Value();
+            auto sHeight = info[4].As<Napi::Number>().Uint32Value();
+            const auto dx = info[5].As<Napi::Number>().Int32Value();
+            const auto dy = info[6].As<Napi::Number>().Int32Value();
+            auto dWidth = info[7].As<Napi::Number>().Uint32Value();
+            auto dHeight = info[8].As<Napi::Number>().Uint32Value();
+            const auto width = static_cast<float>(canvasImage->GetWidth());
+            const auto height = static_cast<float>(canvasImage->GetHeight());
+
+
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
+            nvgBeginPath(m_nvg);
+            nvgRect(m_nvg, dx, dy, dWidth, dHeight);
+            nvgFillPaint(m_nvg, imagePaint);
+            nvgFill(m_nvg);
+            SetDirty();
+        }
+        else
+        {
+            throw std::runtime_error{"Invalid number of parameters for DrawImage"};
+        }
     }
 
-    Napi::Value Context::GetImageData(const Napi::CallbackInfo&)
+    Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        //const auto sx = info[0].As<Napi::Number>().Uint32Value();
+        //const auto sy = info[1].As<Napi::Number>().Uint32Value();
+        const auto sw = info[2].As<Napi::Number>().Uint32Value();
+        const auto sh = info[3].As<Napi::Number>().Uint32Value();
+
+        return ImageData::CreateInstance(info.Env(), this, sw, sh);
     }
 
     void Context::SetLineDash(const Napi::CallbackInfo&)

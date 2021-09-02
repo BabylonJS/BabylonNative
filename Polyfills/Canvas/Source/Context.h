@@ -73,8 +73,7 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         void SetDirty();
-        void BeginFrame();
-        void EndFrame();
+        void DeferredFlushFrame();
 
         NativeCanvas* m_canvas;
         NVGcontext* m_nvg;
@@ -91,6 +90,7 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
+        std::map<const NativeCanvasImage*, int> m_nvgImageIndices;
         friend class Canvas;
     };
 
