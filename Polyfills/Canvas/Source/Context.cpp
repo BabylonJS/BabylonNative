@@ -1,4 +1,3 @@
-#include <Windows.h>
 #include <bx/math.h>
 #include <map>
 #include <algorithm>
