@@ -435,15 +435,14 @@ namespace Babylon::Polyfills::Internal
         {
             const auto sx = info[1].As<Napi::Number>().Int32Value();
             const auto sy = info[2].As<Napi::Number>().Int32Value();
-            auto sWidth = info[3].As<Napi::Number>().Uint32Value();
-            auto sHeight = info[4].As<Napi::Number>().Uint32Value();
+            const auto sWidth = info[3].As<Napi::Number>().Uint32Value();
+            const auto sHeight = info[4].As<Napi::Number>().Uint32Value();
             const auto dx = info[5].As<Napi::Number>().Int32Value();
             const auto dy = info[6].As<Napi::Number>().Int32Value();
-            auto dWidth = info[7].As<Napi::Number>().Uint32Value();
-            auto dHeight = info[8].As<Napi::Number>().Uint32Value();
+            const auto dWidth = info[7].As<Napi::Number>().Uint32Value();
+            const auto dHeight = info[8].As<Napi::Number>().Uint32Value();
             const auto width = static_cast<float>(canvasImage->GetWidth());
             const auto height = static_cast<float>(canvasImage->GetHeight());
-
 
             NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
             nvgBeginPath(m_nvg);
