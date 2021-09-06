@@ -705,18 +705,37 @@ namespace xr {
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
-            // Configure a pipeline descriptor that is used to create a pipeline state.
-            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-            pipelineStateDescriptor.label = @"XR Pipeline";
-            pipelineStateDescriptor.vertexFunction = vertexFunction;
-            pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+            // Create a pipeline state for drawing the camera texture to the render target texture.
+            {
 
-            // build pipeline
-            NSError* error;
-            pipelineState = [metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-            if (!pipelineState) {
-                NSLog(@"Failed to create pipeline state: %@", error);
+                MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+                pipelineStateDescriptor.label = @"XR Camera Pipeline";
+                pipelineStateDescriptor.vertexFunction = vertexFunction;
+                pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+                pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+                pipelineStateDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+                pipelineStateDescriptor.stencilAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+
+                NSError* error;
+                cameraPipelineState = [metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+                if (!cameraPipelineState) {
+                    NSLog(@"Failed to create camera pipeline state: %@", error);
+                }
+            }
+
+            // Create a pipeline state for drawing the final composited texture to the screen.
+            {
+                MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+                pipelineStateDescriptor.label = @"XR Screen Pipeline";
+                pipelineStateDescriptor.vertexFunction = vertexFunction;
+                pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+                pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+
+                NSError* error;
+                screenPipelineState = [metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+                if (!screenPipelineState) {
+                    NSLog(@"Failed to create screen pipeline state: %@", error);
+                }
             }
 
             commandQueue = [metalDevice newCommandQueue];
@@ -853,7 +872,7 @@ namespace xr {
 
             // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
             id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-            commandBuffer.label = @"DrawCameraToBabylonTextureCommandBuffer";
+            commandBuffer.label = @"XRCameraCommandBuffer";
             MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
             id<MTLTexture> cameraTextureY = nil;
@@ -865,16 +884,27 @@ namespace xr {
 
             @try {
                 if(renderPassDescriptor != nil) {
-                    // Attach the color texture, on which we'll draw the camera texture.
+                    // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
                     renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                    // Attach the depth texture, which should be cleared on load.
+                    renderPassDescriptor.depthAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                    renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+
+                    // Attach the stencil texture, which should be cleared on load.
+                    renderPassDescriptor.stencilAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                    renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
 
                     // Create and end the render encoder.
                     id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"DrawCameraToBabylonTextureEncoder";
+                    renderEncoder.label = @"XRCameraEncoder";
 
                     // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:pipelineState];
+                    [renderEncoder setRenderPipelineState:cameraPipelineState];
 
                     // Set the vertex data.
                     [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
@@ -915,7 +945,7 @@ namespace xr {
             if (metalLayer) {
                 // Create a new command buffer for each render pass to the current drawable.
                 id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"XRDisplayCommandBuffer";
+                commandBuffer.label = @"XRScreenCommandBuffer";
 
                 id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -926,13 +956,13 @@ namespace xr {
 
                     // Create a render command encoder.
                     id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"XRDisplayEncoder";
+                    renderEncoder.label = @"XRScreenEncoder";
 
                     // Set the region of the drawable to draw into.
                     [renderEncoder setViewport:(MTLViewport){0.0, 0.0, static_cast<double>(viewportSize.x), static_cast<double>(viewportSize.y), 0.0, 1.0 }];
 
                     // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:pipelineState];
+                    [renderEncoder setRenderPipelineState:screenPipelineState];
 
                     // Set the vertex data.
                     [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
@@ -1317,7 +1347,8 @@ namespace xr {
         CAMetalLayer* metalLayer{};
 #pragma clang diagnostic pop
         SessionDelegate* sessionDelegate{};
-        id<MTLRenderPipelineState> pipelineState{};
+        id<MTLRenderPipelineState> cameraPipelineState{};
+        id<MTLRenderPipelineState> screenPipelineState{};
         vector_uint2 viewportSize{};
         id<MTLCommandQueue> commandQueue;
         std::vector<ARAnchor*> nativeAnchors{};

@@ -2193,9 +2193,8 @@ ObjectWrap<T>::DefineClass(napi_env env,
       }));
     } else if (p.staticMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
-          [env, method{p.staticMethod}, data{p.data}](jsi::Runtime& /*rt*/, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            (*method)({env, thisVal, args, count, nullptr, data});
-            return {};
+          [env, method{p.staticMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            return {rt, (*method)({env, thisVal, args, count, nullptr, data})};
       }));
     } else if (p.staticGetter != nullptr || p.staticSetter != nullptr) {
       if (p.staticGetter != nullptr)

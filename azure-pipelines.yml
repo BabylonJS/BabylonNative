@@ -63,6 +63,13 @@ jobs:
       vmImage: 'windows-latest'
       platform: x64
 
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_JSI
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: jsi
+
 # UWP
   - template: .github/jobs/uwp.yml
     parameters:
@@ -81,6 +88,13 @@ jobs:
       name: UWP_arm64
       vmImage: 'windows-latest'
       platform: arm64
+
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64_JSI
+      vmImage: 'windows-latest'
+      platform: arm64
+      napiType: jsi
 
 # Ubuntu/Linux
   - template: .github/jobs/linux.yml
@@ -139,10 +153,3 @@ jobs:
       name: Android_MacOS_V8
       vmImage: 'macOS-10.14'
       JSEngine: v8android
-
-# napi-jsi
-  - template: .github/jobs/uwp_napijsi.yml
-    parameters:
-      name: UWP_napi_jsi_x64
-      vmImage: 'windows-latest'
-      platform: x64

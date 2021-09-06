@@ -1,14 +1,31 @@
 parameters:
-  name: ''
-  vmImage: ''
-  platform: ''
+- name: name
+  type: string
+- name: vmImage
+  type: string
+- name: platform
+  type: string
+- name: napiType
+  type: string
+  default: direct
+  values:
+  - direct
+  - jsi
   
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
-      
+    variables:
+      ${{ if eq(parameters.napiType, 'jsi') }}:
+        napiSuffix: '_JSI'
+        jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
+      ${{ if ne(parameters.napiType, 'jsi') }}:
+        napiSuffix: ''
+        jsEngineDefine: ''
+      solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
+
     steps:
       - script: |
           git submodule update --init --recursive
@@ -21,17 +38,17 @@ jobs:
         displayName: 'Install Babylon.js NPM packages'
 
       - script: |
-          mkdir buildWin32_${{ parameters.platform }}
-          cd buildWin32_${{ parameters.platform }}
-          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
-        displayName: 'Generate Win32 ${{ parameters.platform }} solution'
+          mkdir build${{ variables.solutionName }}
+          cd build${{ variables.solutionName }}
+          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
+        displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1
         inputs:
-          solution: 'buildWin32_${{ parameters.platform }}/BabylonNative.sln'
+          solution: 'build${{ variables.solutionName }}/BabylonNative.sln'
           maximumCpuCount: true
           configuration: 'RelWithDebInfo'
-        displayName: 'Build WIN32_${{ parameters.platform }}'
+        displayName: 'Build ${{ variables.solutionName }}'
     
       - script: |
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
@@ -41,28 +58,28 @@ jobs:
         displayName: 'Enable Crash Dumps'
     
       - script: |
-          cd buildWin32_${{ parameters.platform }}\Apps\ValidationTests
+          cd build${{ variables.solutionName }}\Apps\ValidationTests
           cd RelWithDebInfo
           ValidationTests
         displayName: 'Validation Tests'
     
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: 'Win32_${{ parameters.platform }} Rendered Pictures'
-          pathtoPublish: 'buildWin32_${{ parameters.platform }}/Apps/ValidationTests/Results'
-        displayName: 'Publish Tests Win32_${{ parameters.platform }} Results'
+          artifactName: '${{ variables.solutionName }} Rendered Pictures'
+          pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Results'
+        displayName: 'Publish Tests ${{ variables.solutionName }} Results'
         condition: succeeded()
     
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: 'Win32_${{ parameters.platform }} Error Pictures'
-          pathtoPublish: 'buildWin32_${{ parameters.platform }}/Apps/ValidationTests/Errors'
-        displayName: 'Publish Tests Win32_${{ parameters.platform }} Errors'
+          artifactName: '${{ variables.solutionName }} Error Pictures'
+          pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Errors'
+        displayName: 'Publish Tests ${{ variables.solutionName }} Errors'
         condition: failed()
     
       - task: CopyFiles@2
         inputs:
-          sourceFolder: 'buildWin32_${{ parameters.platform }}/Apps/ValidationTests/RelWithDebInfo'
+          sourceFolder: 'build${{ variables.solutionName }}/Apps/ValidationTests/RelWithDebInfo'
           contents: ValidationTests.*
           targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
           cleanTargetFolder: false
@@ -71,7 +88,7 @@ jobs:
     
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: 'Win32_${{ parameters.platform }} Crash Dumps'
+          artifactName: '${{ variables.solutionName }} Crash Dumps'
           pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
-        displayName: 'Publish Tests Win32_${{ parameters.platform }} Dumps'
+        displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
         condition: failed()
