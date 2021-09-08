@@ -1964,9 +1964,11 @@ namespace Babylon
 
     void NativeEngine::SubmitCommandBuffer(const Napi::CallbackInfo& info)
     {
-        const auto byteCount{info[0].ToNumber().Uint32Value()};
+        const auto commandCount{info[0].ToNumber().Uint32Value()};
+        const auto byteCount{info[1].ToNumber().Uint32Value()};
 
         CommandBufferDecoder commandBufferDecoder{
+            commandCount,
             gsl::make_span(reinterpret_cast<const uint8_t*>(m_commandBuffer.Value().Data()), byteCount),
             gsl::make_span(reinterpret_cast<const uint32_t*>(m_commandBuffer.Value().Data()), byteCount >> 2),
             gsl::make_span(reinterpret_cast<const int32_t*>(m_commandBuffer.Value().Data()), byteCount >> 2),

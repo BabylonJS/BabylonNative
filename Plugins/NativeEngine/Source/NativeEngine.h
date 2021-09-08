@@ -204,8 +204,13 @@ namespace Babylon
         using Int32Buffer = gsl::span<const int32_t>;
         using Float32Buffer = gsl::span<const float>;
 
-        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Int32Buffer int32ArgBuffer, Float32Buffer float32ArgBuffer)
-            :
+        CommandBufferDecoder(
+            const uint32_t commandCount,
+            UInt8Buffer commandBuffer, 
+            UInt32Buffer uint32ArgBuffer, 
+            Int32Buffer int32ArgBuffer, 
+            Float32Buffer float32ArgBuffer)
+            : m_commandsLeft{commandCount},
             m_commandBuffer{commandBuffer},
             m_uint32ArgBuffer{uint32ArgBuffer}, 
             m_int32ArgBuffer{int32ArgBuffer},
@@ -215,59 +220,69 @@ namespace Babylon
 
         bool TryDecodeCommand(uint8_t& command)
         {
-            if (m_commandBufferIndex >= m_commandBuffer.size())
+            if (m_commandsLeft == 0)
             {
                 return false;
             }
 
-            command = m_commandBuffer[m_commandBufferIndex];
-            m_commandBufferIndex += 4;
-            //NSLog(@"COMMAND BUFFER: Decode command: %u", command);
+            command = m_commandBuffer[m_commandIndex];
+            m_commandIndex++;
+
+            if (m_commandIndex % 4 == 0)
+            {
+                m_commandIndex = m_argumentIndex * 4;
+                m_argumentIndex++;
+            }
+
+            // NSLog(@"COMMAND BUFFER: Decode command: %u", command);
+            m_commandsLeft--;
             return true;
         }
 
         uint32_t DecodeCommandArgAsUInt32()
         {
-            auto ret = m_uint32ArgBuffer[m_commandBufferIndex >> 2];
-            m_commandBufferIndex += 4;
+            auto ret = m_uint32ArgBuffer[m_argumentIndex];
+            m_argumentIndex++;
             //NSLog(@"COMMAND BUFFER:   Decode uint32: %u", ret);
             return ret;
         }
 
         UInt32Buffer DecodeCommandArgAsUInt32s(UInt32Buffer::index_type count)
         {
-            auto ret = m_uint32ArgBuffer.subspan(m_commandBufferIndex >> 2, count);
-            m_commandBufferIndex += 4 * count;
+            auto ret = m_uint32ArgBuffer.subspan(m_argumentIndex, count);
+            m_argumentIndex += count;
             //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
         Int32Buffer DecodeCommandArgAsInt32s(UInt32Buffer::index_type count)
         {
-            auto ret = m_int32ArgBuffer.subspan(m_commandBufferIndex >> 2, count);
-            m_commandBufferIndex += 4 * count;
+            auto ret = m_int32ArgBuffer.subspan(m_argumentIndex, count);
+            m_argumentIndex += count;
             //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
         float DecodeCommandArgAsFloat32()
         {
-            auto ret = m_float32ArgBuffer[m_commandBufferIndex >> 2];
-            m_commandBufferIndex += 4;
+            auto ret = m_float32ArgBuffer[m_argumentIndex];
+            m_argumentIndex++;
             //NSLog(@"COMMAND BUFFER:   Decode float32: %f", ret);
             return ret;
         }
 
         Float32Buffer DecodeCommandArgAsFloat32s(Float32Buffer::index_type count)
         {
-            auto ret = m_float32ArgBuffer.subspan(m_commandBufferIndex >> 2, count);
-            m_commandBufferIndex += 4 * count;
+            auto ret = m_float32ArgBuffer.subspan(m_argumentIndex, count);
+            m_argumentIndex += count;
             //NSLog(@"COMMAND BUFFER:   Decode float32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
     private:
-        ptrdiff_t m_commandBufferIndex{0};
+        uint32_t m_commandsLeft;
+        ptrdiff_t m_commandIndex{0};
+        ptrdiff_t m_argumentIndex{1};
 
         UInt8Buffer m_commandBuffer;
         UInt32Buffer m_uint32ArgBuffer;
