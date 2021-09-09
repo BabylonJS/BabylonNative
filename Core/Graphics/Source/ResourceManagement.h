@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <unordered_map>
 
 namespace Babylon
@@ -11,9 +12,17 @@ namespace Babylon
     public:
         uint32_t Add(T resource)
         {
-            const uint32_t resourceHandle{m_nextResourceId};
+            const auto resourceHandle{m_freeHandles.empty() ? (m_nextResourceId++) : m_freeHandles.back()};
+            if (!m_freeHandles.empty())
+            {
+                m_freeHandles.pop_back();
+            }
+            if (resourceHandle == 0)
+            {
+                throw std::runtime_error{"ResourceTable handle overflow."};
+            }
+
             m_resources.insert({resourceHandle, std::move(resource)});
-            m_nextResourceId++;
             return resourceHandle;
         }
 
@@ -25,11 +34,13 @@ namespace Babylon
         void Remove(uint32_t resourceHandle)
         {
             m_resources.erase(resourceHandle);
+            m_freeHandles.push_back(resourceHandle);
         }
 
     private:
         uint32_t m_nextResourceId{1};
         std::unordered_map<uint32_t, T> m_resources{};
+        std::vector<uint32_t> m_freeHandles{};
     };
 
     template<typename T>
