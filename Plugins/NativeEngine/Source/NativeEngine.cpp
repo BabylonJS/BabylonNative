@@ -1056,9 +1056,9 @@ namespace Babylon
             std::array<float, 16> matrixValues{};
 
             size_t index = 0;
-            for (int line = 0; line < size; line++)
+            for (size_t line = 0; line < size; line++)
             {
-                for (int col = 0; col < size; col++)
+                for (size_t col = 0; col < size; col++)
                 {
                     matrixValues[line * 4 + col] = matrix[index++];
                 }
