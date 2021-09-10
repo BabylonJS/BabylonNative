@@ -16,11 +16,12 @@ std::unique_ptr<Babylon::Graphics> graphics{};
 
 int run()
 {
-   Babylon::ContextConfiguration graphicsConfig{};
-   graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    Babylon::ContextConfiguration graphicsConfig{};
+    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
 
     runtime = std::make_unique<Babylon::AppRuntime>();
-    runtime->Dispatch([](Napi::Env env) {
+    runtime->Dispatch([](Napi::Env env)
+    {
         graphics->AddToJavaScript(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -28,7 +29,7 @@ int run()
             printf("%s", message);
             fflush(stdout);
         });
-       Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
     });
     Babylon::ScriptLoader loader{*runtime};

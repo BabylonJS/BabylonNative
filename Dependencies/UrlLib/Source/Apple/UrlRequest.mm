@@ -26,9 +26,12 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            m_url = std::move(url);
-            NSString* urlString = [[NSString stringWithUTF8String:m_url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
+            NSString* urlString = [[NSString stringWithUTF8String:url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
             m_nsURL = {[NSURL URLWithString:urlString]};
+            if (!m_nsURL || !m_nsURL.scheme)
+            {
+                throw std::runtime_error{"URL does not have a valid scheme"};
+            }
             NSString* scheme{m_nsURL.scheme};
             if ([scheme isEqual:@"app"])
             {
@@ -40,10 +43,6 @@ namespace UrlLib
                 }
                 m_nsURL = [NSURL fileURLWithPath:path];
             }
-            if (!m_nsURL || !m_nsURL.scheme) {
-                throw std::runtime_error{"URL does not have a valid scheme"};
-            }
-
         }
 
         UrlResponseType ResponseType() const
