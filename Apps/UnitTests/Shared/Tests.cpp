@@ -1,4 +1,3 @@
-#pragma once
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/task.h>
 #include <future>
@@ -15,10 +14,10 @@
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 
-int main()
+int run()
 {
-    Babylon::ContextConfiguration graphicsConfig{};
-    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+   Babylon::ContextConfiguration graphicsConfig{};
+   graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
 
     runtime = std::make_unique<Babylon::AppRuntime>();
     runtime->Dispatch([](Napi::Env env) {
@@ -29,7 +28,7 @@ int main()
             printf("%s", message);
             fflush(stdout);
         });
-        Babylon::Polyfills::Window::Initialize(env);
+       Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
     });
     Babylon::ScriptLoader loader{*runtime};

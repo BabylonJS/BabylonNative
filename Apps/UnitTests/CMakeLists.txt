@@ -1,5 +1,5 @@
 # Build only on Win32, not on UWP
-if((NOT WIN32) OR WINDOWS_STORE)
+if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS)))
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
@@ -10,7 +10,17 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs/babylon.max.js.map")
 
-add_executable(UnitTests ${SCRIPTS} ${BABYLON_SCRIPTS} "UnitTests.cpp")
+set(TEST_APP "Shared/UnitTests.cpp")
+
+set(ADDITIONAL_LIBRARIES "")
+
+if(APPLE)
+    find_library(JSCORE_LIBRARY JavaScriptCore)
+    set(ADDITIONAL_LIBRARIES ${JSCORE_LIBRARY})
+    set(TEST_APP "Apple/UnitTests.mm")
+endif()
+
+add_executable(UnitTests ${SCRIPTS} ${BABYLON_SCRIPTS} ${TEST_APP})
 
 target_link_libraries(UnitTests
     UrlLib
@@ -19,7 +29,8 @@ target_link_libraries(UnitTests
     NativeEngine
     ScriptLoader
     Console
-    Window)
+    Window
+    ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)
 

@@ -50,10 +50,10 @@ describe("XMLHTTPRequest", function () {
         }
         expect(openDoubleSlash).to.throw();
     })
-    it("should throw something when opening a url with no protocol", function () {
+    it("should throw something when opening a url with no scheme", function () {
         function openNoProtocol() {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "noprotocol.glb");
+            xhr.open("GET", "noscheme.glb");
             xhr.send();
         }
         expect(openNoProtocol).to.throw();
