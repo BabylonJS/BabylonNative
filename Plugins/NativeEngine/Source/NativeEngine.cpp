@@ -397,7 +397,7 @@ namespace Babylon
                 InstanceMethod("setDepthWrite", &NativeEngine::SetDepthWrite),
                 InstanceMethod("setColorWrite", &NativeEngine::SetColorWrite),
                 InstanceMethod("setBlendMode", &NativeEngine::SetBlendMode),
-                InstanceMethod("setMatrix", &NativeEngine::SetMatrix),
+                //InstanceMethod("setMatrix", &NativeEngine::SetMatrix),
                 InstanceMethod("setInt", &NativeEngine::SetInt),
                 InstanceMethod("setIntArray", &NativeEngine::SetIntArray),
                 InstanceMethod("setIntArray2", &NativeEngine::SetIntArray2),
@@ -408,8 +408,8 @@ namespace Babylon
                 InstanceMethod("setFloatArray3", &NativeEngine::SetFloatArray3),
                 InstanceMethod("setFloatArray4", &NativeEngine::SetFloatArray4),
                 //InstanceMethod("setMatrices", &NativeEngine::SetMatrices),
-                InstanceMethod("setMatrix3x3", &NativeEngine::SetMatrix3x3),
-                InstanceMethod("setMatrix2x2", &NativeEngine::SetMatrix2x2),
+                //InstanceMethod("setMatrix3x3", &NativeEngine::SetMatrix3x3),
+                //InstanceMethod("setMatrix2x2", &NativeEngine::SetMatrix2x2),
 //                InstanceMethod("setFloat", &NativeEngine::SetFloat),
 //                InstanceMethod("setFloat2", &NativeEngine::SetFloat2),
 //                InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
@@ -544,6 +544,9 @@ namespace Babylon
                 InstanceValue("COMMAND_DELETEINDEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteIndexBuffer))),
                 InstanceValue("COMMAND_DELETEVERTEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexBuffer))),
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
+                InstanceValue("COMMAND_SETMATRIX", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix))),
+                InstanceValue("COMMAND_SETMATRIX3X3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix3x3))),
+                InstanceValue("COMMAND_SETMATRIX2X2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix2x2))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
@@ -1056,19 +1059,18 @@ namespace Babylon
     }
 
     template<int size>
-    void NativeEngine::SetMatrixN(const Napi::CallbackInfo& info)
+    void NativeEngine::SetMatrixN(CommandBufferDecoder& decoder)
     {
-        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
-        const auto matrix = info[1].As<Napi::Float32Array>();
+        const auto& uniformInfo{UniformInfo::Get(decoder.DecodeCommandArgAsUInt32())};
+        const auto elementLength{decoder.DecodeCommandArgAsUInt32()};
+        const auto matrix{decoder.DecodeCommandArgAsFloat32s(elementLength)};
 
-        const size_t elementLength = matrix.ElementLength();
         assert(elementLength == size * size);
         (void)elementLength;
 
         if constexpr (size < 4)
         {
             std::array<float, 16> matrixValues{};
-
             size_t index = 0;
             for (int line = 0; line < size; line++)
             {
@@ -1077,12 +1079,11 @@ namespace Babylon
                     matrixValues[line * 4 + col] = matrix[index++];
                 }
             }
-
             ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrixValues.data(), 16));
         }
         else
         {
-            ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrix.Data(), elementLength));
+            ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrix.data(), elementLength));
         }
     }
 
@@ -1148,19 +1149,34 @@ namespace Babylon
         ProgramData::Get(m_currentProgram).SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
     }
 
-    void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
+//    {
+//        SetMatrixN<2>(info);
+//    }
+//
+//    void NativeEngine::SetMatrix3x3(const Napi::CallbackInfo& info)
+//    {
+//        SetMatrixN<3>(info);
+//    }
+//
+//    void NativeEngine::SetMatrix(const Napi::CallbackInfo& info)
+//    {
+//        SetMatrixN<4>(info);
+//    }
+
+    void NativeEngine::SetMatrix2x2(CommandBufferDecoder& decoder)
     {
-        SetMatrixN<2>(info);
+        SetMatrixN<2>(decoder);
     }
 
-    void NativeEngine::SetMatrix3x3(const Napi::CallbackInfo& info)
+    void NativeEngine::SetMatrix3x3(CommandBufferDecoder& decoder)
     {
-        SetMatrixN<3>(info);
+        SetMatrixN<3>(decoder);
     }
 
-    void NativeEngine::SetMatrix(const Napi::CallbackInfo& info)
+    void NativeEngine::SetMatrix(CommandBufferDecoder& decoder)
     {
-        SetMatrixN<4>(info);
+        SetMatrixN<4>(decoder);
     }
 
 //    void NativeEngine::SetFloat(const Napi::CallbackInfo& info)

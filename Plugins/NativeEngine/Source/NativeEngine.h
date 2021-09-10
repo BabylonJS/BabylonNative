@@ -305,7 +305,8 @@ namespace Babylon
         void SetDepthWrite(const Napi::CallbackInfo& info);
         void SetColorWrite(const Napi::CallbackInfo& info);
         void SetBlendMode(const Napi::CallbackInfo& info);
-        void SetMatrix(const Napi::CallbackInfo& info);
+        //void SetMatrix(const Napi::CallbackInfo& info);
+        void SetMatrix(CommandBufferDecoder& decoder);
         void SetInt(const Napi::CallbackInfo& info);
         void SetIntArray(const Napi::CallbackInfo& info);
         void SetIntArray2(const Napi::CallbackInfo& info);
@@ -317,8 +318,10 @@ namespace Babylon
         void SetFloatArray4(const Napi::CallbackInfo& info);
         //void SetMatrices(const Napi::CallbackInfo& info);
         void SetMatrices(CommandBufferDecoder& decoder);
-        void SetMatrix3x3(const Napi::CallbackInfo& info);
-        void SetMatrix2x2(const Napi::CallbackInfo& info);
+//        void SetMatrix3x3(const Napi::CallbackInfo& info);
+//        void SetMatrix2x2(const Napi::CallbackInfo& info);
+        void SetMatrix3x3(CommandBufferDecoder& decoder);
+        void SetMatrix2x2(CommandBufferDecoder& decoder);
         //void SetFloat(const Napi::CallbackInfo& info);
         //void SetFloat2(const Napi::CallbackInfo& info);
         //void SetFloat3(const Napi::CallbackInfo& info);
@@ -403,7 +406,8 @@ namespace Babylon
         void SetFloatN(CommandBufferDecoder& decoder);
 
         template<int size>
-        void SetMatrixN(const Napi::CallbackInfo& info);
+        //void SetMatrixN(const Napi::CallbackInfo& info);
+        void SetMatrixN(CommandBufferDecoder& decoder);
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
