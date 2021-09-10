@@ -434,7 +434,7 @@ namespace Babylon
                 InstanceMethod("bindFrameBuffer", &NativeEngine::BindFrameBuffer),
                 InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
                 //InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
-                InstanceMethod("draw", &NativeEngine::Draw),
+                //InstanceMethod("draw", &NativeEngine::Draw),
                 //InstanceMethod("clear", &NativeEngine::Clear),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
@@ -567,6 +567,7 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
                 InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode))),
                 InstanceValue("COMMAND_DRAWINDEXED", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DrawIndexed))),
+                InstanceValue("COMMAND_DRAW", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Draw))),
                 InstanceValue("COMMAND_CLEAR", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Clear))),
                 InstanceValue("COMMAND_SETSTENCIL", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetStencil)))
             });
@@ -1777,13 +1778,35 @@ namespace Babylon
         Draw(encoder, fillMode);
     }
 
-    void NativeEngine::Draw(const Napi::CallbackInfo& info)
+//    void NativeEngine::Draw(const Napi::CallbackInfo& info)
+//    {
+//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+//
+//        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
+//        const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
+//        const auto verticesCount = info[2].As<Napi::Number>().Int32Value();
+//
+//        if (m_boundVertexArray != nullptr)
+//        {
+//            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
+//            for (const auto& vertexBufferPair : vertexBuffers)
+//            {
+//                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
+//                const auto& vertexBuffer = vertexBufferPair.second;
+//                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex + verticesStart, verticesCount, vertexBuffer.VertexLayoutHandle);
+//            }
+//        }
+//
+//        Draw(encoder, fillMode);
+//    }
+
+    void NativeEngine::Draw(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
-        const auto verticesCount = info[2].As<Napi::Number>().Int32Value();
+        const auto fillMode = decoder.DecodeCommandArgAsUInt32();
+        const auto verticesStart = decoder.DecodeCommandArgAsUInt32();
+        const auto verticesCount = decoder.DecodeCommandArgAsUInt32();
 
         if (m_boundVertexArray != nullptr)
         {

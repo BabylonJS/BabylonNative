@@ -381,7 +381,8 @@ namespace Babylon
         void UnbindFrameBuffer(const Napi::CallbackInfo& info);
         //void DrawIndexed(const Napi::CallbackInfo& info);
         void DrawIndexed(CommandBufferDecoder& decoder);
-        void Draw(const Napi::CallbackInfo& info);
+        //void Draw(const Napi::CallbackInfo& info);
+        void Draw(CommandBufferDecoder& decoder);
         //void Clear(const Napi::CallbackInfo& info);
         void Clear(CommandBufferDecoder& decoder);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
