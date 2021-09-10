@@ -398,7 +398,7 @@ namespace Babylon
                 InstanceMethod("setColorWrite", &NativeEngine::SetColorWrite),
                 InstanceMethod("setBlendMode", &NativeEngine::SetBlendMode),
                 //InstanceMethod("setMatrix", &NativeEngine::SetMatrix),
-                InstanceMethod("setInt", &NativeEngine::SetInt),
+                //InstanceMethod("setInt", &NativeEngine::SetInt),
                 InstanceMethod("setIntArray", &NativeEngine::SetIntArray),
                 InstanceMethod("setIntArray2", &NativeEngine::SetIntArray2),
                 InstanceMethod("setIntArray3", &NativeEngine::SetIntArray3),
@@ -447,6 +447,7 @@ namespace Babylon
                 //InstanceMethod("setStencil", &NativeEngine::SetStencil),
                 InstanceMethod("setCommandBuffer", &NativeEngine::SetCommandBuffer),
                 InstanceMethod("setCommandUint32Buffer", &NativeEngine::SetCommandUint32Buffer),
+                InstanceMethod("setCommandInt32Buffer", &NativeEngine::SetCommandInt32Buffer),
                 InstanceMethod("setCommandFloat32Buffer", &NativeEngine::SetCommandFloat32Buffer),
                 InstanceMethod("submitCommandBuffer", &NativeEngine::SubmitCommandBuffer),
 
@@ -547,6 +548,7 @@ namespace Babylon
                 InstanceValue("COMMAND_SETMATRIX", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix))),
                 InstanceValue("COMMAND_SETMATRIX3X3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix3x3))),
                 InstanceValue("COMMAND_SETMATRIX2X2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix2x2))),
+                InstanceValue("COMMAND_SETINT", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetInt))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
@@ -1000,10 +1002,17 @@ namespace Babylon
         m_engineState |= blendMode;
     }
 
-    void NativeEngine::SetInt(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetInt(const Napi::CallbackInfo& info)
+//    {
+//        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
+//        const auto value = info[1].As<Napi::Number>().FloatValue();
+//        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
+//    }
+
+    void NativeEngine::SetInt(CommandBufferDecoder& decoder)
     {
-        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
-        const auto value = info[1].As<Napi::Number>().FloatValue();
+        const auto& uniformInfo{UniformInfo::Get(decoder.DecodeCommandArgAsUInt32())};
+        const auto value{static_cast<float>(decoder.DecodeCommandArgAsInt32())};
         ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
 
@@ -1977,6 +1986,11 @@ namespace Babylon
         m_commandUint32Buffer = Napi::Persistent(info[0].As<Napi::Uint32Array>());
     }
 
+    void NativeEngine::SetCommandInt32Buffer(const Napi::CallbackInfo& info)
+    {
+        m_commandInt32Buffer = Napi::Persistent(info[0].As<Napi::Int32Array>());
+    }
+
     void NativeEngine::SetCommandFloat32Buffer(const Napi::CallbackInfo& info)
     {
         m_commandFloat32Buffer = Napi::Persistent(info[0].As<Napi::Float32Array>());
@@ -1989,6 +2003,7 @@ namespace Babylon
         CommandBufferDecoder commandBufferDecoder{
             gsl::make_span(m_commandBuffer.Value().Data(), commandCount),
             gsl::make_span(m_commandUint32Buffer.Value().Data(), m_commandUint32Buffer.Value().ElementLength()),
+            gsl::make_span(m_commandInt32Buffer.Value().Data(), m_commandInt32Buffer.Value().ElementLength()),
             gsl::make_span(m_commandFloat32Buffer.Value().Data(), m_commandFloat32Buffer.Value().ElementLength())
         };
 

@@ -201,11 +201,13 @@ namespace Babylon
     public:
         using UInt8Buffer = gsl::span<const uint8_t>;
         using UInt32Buffer = gsl::span<const uint32_t>;
+        using Int32Buffer = gsl::span<const int32_t>;
         using Float32Buffer = gsl::span<const float>;
 
-        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Float32Buffer float32ArgBuffer) :
+        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Int32Buffer int32ArgBuffer, Float32Buffer float32ArgBuffer) :
             m_commandBuffer{commandBuffer},
             m_uint32ArgBuffer{uint32ArgBuffer},
+            m_int32ArgBuffer{int32ArgBuffer},
             m_float32ArgBuffer{float32ArgBuffer}
         {
         }
@@ -236,6 +238,20 @@ namespace Babylon
             return ret;
         }
 
+        int32_t DecodeCommandArgAsInt32()
+        {
+            auto ret = m_int32ArgBuffer[m_int32ArgBufferIndex++];
+            //NSLog(@"COMMAND BUFFER:   Decode uint32: %u", ret);
+            return ret;
+        }
+
+        Int32Buffer DecodeCommandArgAsInt32s(UInt32Buffer::index_type count)
+        {
+            auto ret = m_int32ArgBuffer.subspan((m_int32ArgBufferIndex += count) - count, count);
+            //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
+            return ret;
+        }
+
         float DecodeCommandArgAsFloat32()
         {
             auto ret = m_float32ArgBuffer[m_float32ArgBufferIndex++];
@@ -253,10 +269,12 @@ namespace Babylon
     private:
         UInt8Buffer::index_type m_commandBufferIndex{};
         UInt32Buffer::index_type m_uint32ArgBufferIndex{};
+        Int32Buffer::index_type m_int32ArgBufferIndex{};
         Float32Buffer::index_type m_float32ArgBufferIndex{};
 
         UInt8Buffer m_commandBuffer;
         UInt32Buffer m_uint32ArgBuffer;
+        Int32Buffer m_int32ArgBuffer;
         Float32Buffer m_float32ArgBuffer;
     };
 
@@ -307,7 +325,8 @@ namespace Babylon
         void SetBlendMode(const Napi::CallbackInfo& info);
         //void SetMatrix(const Napi::CallbackInfo& info);
         void SetMatrix(CommandBufferDecoder& decoder);
-        void SetInt(const Napi::CallbackInfo& info);
+        //void SetInt(const Napi::CallbackInfo& info);
+        void SetInt(CommandBufferDecoder& decoder);
         void SetIntArray(const Napi::CallbackInfo& info);
         void SetIntArray2(const Napi::CallbackInfo& info);
         void SetIntArray3(const Napi::CallbackInfo& info);
@@ -368,6 +387,7 @@ namespace Babylon
         void SetStencil(CommandBufferDecoder& decoder);
         void SetCommandBuffer(const Napi::CallbackInfo& info);
         void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
+        void SetCommandInt32Buffer(const Napi::CallbackInfo& info);
         void SetCommandFloat32Buffer(const Napi::CallbackInfo& info);
         void SubmitCommandBuffer(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
@@ -416,6 +436,7 @@ namespace Babylon
 
         Napi::Reference<Napi::Uint8Array> m_commandBuffer{};
         Napi::Reference<Napi::Uint32Array> m_commandUint32Buffer{};
+        Napi::Reference<Napi::Int32Array> m_commandInt32Buffer{};
         Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
 
