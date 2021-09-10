@@ -399,14 +399,14 @@ namespace Babylon
                 InstanceMethod("setBlendMode", &NativeEngine::SetBlendMode),
                 //InstanceMethod("setMatrix", &NativeEngine::SetMatrix),
                 //InstanceMethod("setInt", &NativeEngine::SetInt),
-                InstanceMethod("setIntArray", &NativeEngine::SetIntArray),
-                InstanceMethod("setIntArray2", &NativeEngine::SetIntArray2),
-                InstanceMethod("setIntArray3", &NativeEngine::SetIntArray3),
-                InstanceMethod("setIntArray4", &NativeEngine::SetIntArray4),
-                InstanceMethod("setFloatArray", &NativeEngine::SetFloatArray),
-                InstanceMethod("setFloatArray2", &NativeEngine::SetFloatArray2),
-                InstanceMethod("setFloatArray3", &NativeEngine::SetFloatArray3),
-                InstanceMethod("setFloatArray4", &NativeEngine::SetFloatArray4),
+//                InstanceMethod("setIntArray", &NativeEngine::SetIntArray),
+//                InstanceMethod("setIntArray2", &NativeEngine::SetIntArray2),
+//                InstanceMethod("setIntArray3", &NativeEngine::SetIntArray3),
+//                InstanceMethod("setIntArray4", &NativeEngine::SetIntArray4),
+//                InstanceMethod("setFloatArray", &NativeEngine::SetFloatArray),
+//                InstanceMethod("setFloatArray2", &NativeEngine::SetFloatArray2),
+//                InstanceMethod("setFloatArray3", &NativeEngine::SetFloatArray3),
+//                InstanceMethod("setFloatArray4", &NativeEngine::SetFloatArray4),
                 //InstanceMethod("setMatrices", &NativeEngine::SetMatrices),
                 //InstanceMethod("setMatrix3x3", &NativeEngine::SetMatrix3x3),
                 //InstanceMethod("setMatrix2x2", &NativeEngine::SetMatrix2x2),
@@ -549,6 +549,14 @@ namespace Babylon
                 InstanceValue("COMMAND_SETMATRIX3X3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix3x3))),
                 InstanceValue("COMMAND_SETMATRIX2X2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix2x2))),
                 InstanceValue("COMMAND_SETINT", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetInt))),
+                InstanceValue("COMMAND_SETINTARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetIntArray))),
+                InstanceValue("COMMAND_SETINTARRAY2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetIntArray2))),
+                InstanceValue("COMMAND_SETINTARRAY3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetIntArray3))),
+                InstanceValue("COMMAND_SETINTARRAY4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetIntArray4))),
+                InstanceValue("COMMAND_SETFLOATARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray))),
+                InstanceValue("COMMAND_SETFLOATARRAY2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray2))),
+                InstanceValue("COMMAND_SETFLOATARRAY3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray3))),
+                InstanceValue("COMMAND_SETFLOATARRAY4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray4))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
@@ -1016,16 +1024,34 @@ namespace Babylon
         ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
 
+//    template<int size, typename arrayType>
+//    void NativeEngine::SetTypeArrayN(const Napi::CallbackInfo& info)
+//    {
+//        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
+//        const auto array = info[1].As<arrayType>();
+//
+//        size_t elementLength = array.ElementLength();
+//
+//        m_scratch.clear();
+//        for (size_t index = 0; index < elementLength; index += size)
+//        {
+//            const float values[] = {
+//                static_cast<float>(array[index]),
+//                (size > 1) ? static_cast<float>(array[index + 1]) : 0.f,
+//                (size > 2) ? static_cast<float>(array[index + 2]) : 0.f,
+//                (size > 3) ? static_cast<float>(array[index + 3]) : 0.f,
+//            };
+//            m_scratch.insert(m_scratch.end(), values, values + 4);
+//        }
+//
+//        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
+//    }
+
     template<int size, typename arrayType>
-    void NativeEngine::SetTypeArrayN(const Napi::CallbackInfo& info)
+    void NativeEngine::SetTypeArrayN(const UniformInfo& uniformInfo, const uint32_t elementLength, const arrayType& array)
     {
-        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
-        const auto array = info[1].As<arrayType>();
-
-        size_t elementLength = array.ElementLength();
-
         m_scratch.clear();
-        for (size_t index = 0; index < elementLength; index += size)
+        for (uint32_t index = 0; index < elementLength; index += size)
         {
             const float values[] = {
                 static_cast<float>(array[index]),
@@ -1096,44 +1122,102 @@ namespace Babylon
         }
     }
 
-    void NativeEngine::SetIntArray(const Napi::CallbackInfo& info)
+    template<int size>
+    void NativeEngine::SetIntArrayN(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<1, Napi::Int32Array>(info);
+        const auto& uniformInfo{UniformInfo::Get(decoder.DecodeCommandArgAsUInt32())};
+        const auto elementLength{decoder.DecodeCommandArgAsUInt32()};
+        const auto array{decoder.DecodeCommandArgAsInt32s(elementLength)};
+        SetTypeArrayN<size>(uniformInfo, elementLength, array);
     }
 
-    void NativeEngine::SetIntArray2(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetIntArray(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<1, Napi::Int32Array>(info);
+//    }
+//
+//    void NativeEngine::SetIntArray2(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<2, Napi::Int32Array>(info);
+//    }
+//
+//    void NativeEngine::SetIntArray3(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<3, Napi::Int32Array>(info);
+//    }
+//
+//    void NativeEngine::SetIntArray4(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<4, Napi::Int32Array>(info);
+//    }
+
+    void NativeEngine::SetIntArray(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<2, Napi::Int32Array>(info);
+        SetIntArrayN<1>(decoder);
     }
 
-    void NativeEngine::SetIntArray3(const Napi::CallbackInfo& info)
+    void NativeEngine::SetIntArray2(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<3, Napi::Int32Array>(info);
+        SetIntArrayN<2>(decoder);
     }
 
-    void NativeEngine::SetIntArray4(const Napi::CallbackInfo& info)
+    void NativeEngine::SetIntArray3(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<4, Napi::Int32Array>(info);
+        SetIntArrayN<3>(decoder);
     }
 
-    void NativeEngine::SetFloatArray(const Napi::CallbackInfo& info)
+    void NativeEngine::SetIntArray4(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<1, Napi::Float32Array>(info);
+        SetIntArrayN<4>(decoder);
     }
 
-    void NativeEngine::SetFloatArray2(const Napi::CallbackInfo& info)
+    template<int size>
+    void NativeEngine::SetFloatArrayN(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<2, Napi::Float32Array>(info);
+        const auto& uniformInfo{UniformInfo::Get(decoder.DecodeCommandArgAsUInt32())};
+        const auto elementLength{decoder.DecodeCommandArgAsUInt32()};
+        const auto array{decoder.DecodeCommandArgAsFloat32s(elementLength)};
+        SetTypeArrayN<size>(uniformInfo, elementLength, array);
     }
 
-    void NativeEngine::SetFloatArray3(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetFloatArray(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<1, Napi::Float32Array>(info);
+//    }
+//
+//    void NativeEngine::SetFloatArray2(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<2, Napi::Float32Array>(info);
+//    }
+//
+//    void NativeEngine::SetFloatArray3(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<3, Napi::Float32Array>(info);
+//    }
+//
+//    void NativeEngine::SetFloatArray4(const Napi::CallbackInfo& info)
+//    {
+//        SetTypeArrayN<4, Napi::Float32Array>(info);
+//    }
+
+    void NativeEngine::SetFloatArray(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<3, Napi::Float32Array>(info);
+        SetFloatArrayN<1>(decoder);
     }
 
-    void NativeEngine::SetFloatArray4(const Napi::CallbackInfo& info)
+    void NativeEngine::SetFloatArray2(CommandBufferDecoder& decoder)
     {
-        SetTypeArrayN<4, Napi::Float32Array>(info);
+        SetFloatArrayN<2>(decoder);
+    }
+
+    void NativeEngine::SetFloatArray3(CommandBufferDecoder& decoder)
+    {
+        SetFloatArrayN<3>(decoder);
+    }
+
+    void NativeEngine::SetFloatArray4(CommandBufferDecoder& decoder)
+    {
+        SetFloatArrayN<4>(decoder);
     }
 
 //    void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)

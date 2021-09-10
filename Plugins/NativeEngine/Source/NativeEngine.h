@@ -327,14 +327,22 @@ namespace Babylon
         void SetMatrix(CommandBufferDecoder& decoder);
         //void SetInt(const Napi::CallbackInfo& info);
         void SetInt(CommandBufferDecoder& decoder);
-        void SetIntArray(const Napi::CallbackInfo& info);
-        void SetIntArray2(const Napi::CallbackInfo& info);
-        void SetIntArray3(const Napi::CallbackInfo& info);
-        void SetIntArray4(const Napi::CallbackInfo& info);
-        void SetFloatArray(const Napi::CallbackInfo& info);
-        void SetFloatArray2(const Napi::CallbackInfo& info);
-        void SetFloatArray3(const Napi::CallbackInfo& info);
-        void SetFloatArray4(const Napi::CallbackInfo& info);
+//        void SetIntArray(const Napi::CallbackInfo& info);
+//        void SetIntArray2(const Napi::CallbackInfo& info);
+//        void SetIntArray3(const Napi::CallbackInfo& info);
+//        void SetIntArray4(const Napi::CallbackInfo& info);
+        void SetIntArray(CommandBufferDecoder& decoder);
+        void SetIntArray2(CommandBufferDecoder& decoder);
+        void SetIntArray3(CommandBufferDecoder& decoder);
+        void SetIntArray4(CommandBufferDecoder& decoder);
+//        void SetFloatArray(const Napi::CallbackInfo& info);
+//        void SetFloatArray2(const Napi::CallbackInfo& info);
+//        void SetFloatArray3(const Napi::CallbackInfo& info);
+//        void SetFloatArray4(const Napi::CallbackInfo& info);
+        void SetFloatArray(CommandBufferDecoder& decoder);
+        void SetFloatArray2(CommandBufferDecoder& decoder);
+        void SetFloatArray3(CommandBufferDecoder& decoder);
+        void SetFloatArray4(CommandBufferDecoder& decoder);
         //void SetMatrices(const Napi::CallbackInfo& info);
         void SetMatrices(CommandBufferDecoder& decoder);
 //        void SetMatrix3x3(const Napi::CallbackInfo& info);
@@ -419,7 +427,13 @@ namespace Babylon
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
         template<int size, typename arrayType>
-        void SetTypeArrayN(const Napi::CallbackInfo& info);
+        void SetTypeArrayN(const UniformInfo& uniformInfo, const uint32_t elementLength, const arrayType& array);
+
+        template<int size>
+        void SetIntArrayN(CommandBufferDecoder& decoder);
+
+        template<int size>
+        void SetFloatArrayN(CommandBufferDecoder& decoder);
 
         template<int size>
         //void SetFloatN(const Napi::CallbackInfo& info);
