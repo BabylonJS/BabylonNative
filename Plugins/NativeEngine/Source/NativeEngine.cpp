@@ -388,7 +388,7 @@ namespace Babylon
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
-                InstanceMethod("setProgram", &NativeEngine::SetProgram),
+                //InstanceMethod("setProgram", &NativeEngine::SetProgram),
                 //InstanceMethod("setState", &NativeEngine::SetState),
                 InstanceMethod("setZOffset", &NativeEngine::SetZOffset),
                 InstanceMethod("getZOffset", &NativeEngine::GetZOffset),
@@ -544,6 +544,7 @@ namespace Babylon
                 InstanceValue("COMMAND_DELETEVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexArray))),
                 InstanceValue("COMMAND_DELETEINDEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteIndexBuffer))),
                 InstanceValue("COMMAND_DELETEVERTEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexBuffer))),
+                InstanceValue("COMMAND_SETPROGRAM", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetProgram))),
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
                 InstanceValue("COMMAND_SETMATRIX", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix))),
                 InstanceValue("COMMAND_SETMATRIX3X3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix3x3))),
@@ -921,9 +922,14 @@ namespace Babylon
         return std::move(attributes);
     }
 
-    void NativeEngine::SetProgram(const Napi::CallbackInfo& info)
+//    void NativeEngine::SetProgram(const Napi::CallbackInfo& info)
+//    {
+//        m_currentProgram = info[0].ToNumber().Uint32Value();
+//    }
+
+    void NativeEngine::SetProgram(CommandBufferDecoder& decoder)
     {
-        m_currentProgram = info[0].ToNumber().Uint32Value();
+        m_currentProgram = decoder.DecodeCommandArgAsUInt32();
     }
 
 //    void NativeEngine::SetState(const Napi::CallbackInfo& info)
