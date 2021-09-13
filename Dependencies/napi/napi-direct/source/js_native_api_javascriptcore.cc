@@ -272,6 +272,12 @@ namespace {
       cbinfo.data = info->_data;
 
       napi_value result = info->_cb(info->_env, &cbinfo);
+
+      if (info->_env->last_exception != nullptr) {
+        *exception = info->_env->last_exception;
+        info->_env->last_exception = nullptr;
+      }
+
       return ToJSObject(info->_env, result);
     }
 
@@ -354,6 +360,12 @@ namespace {
       cbinfo.data = info->_data;
 
       napi_value result = info->_cb(info->_env, &cbinfo);
+
+      if (info->_env->last_exception != nullptr) {
+        *exception = info->_env->last_exception;
+        info->_env->last_exception = nullptr;
+      }
+
       return ToJSValue(result);
     }
 
@@ -1421,17 +1433,9 @@ napi_status napi_get_global(napi_env env, napi_value* result) {
 
 napi_status napi_throw(napi_env env, napi_value error) {
   CHECK_ENV(env);
-
-  static JSValueRef error_value{};
-  error_value = ToJSValue(error);
-  JSObjectRef throw_func{JSObjectMakeFunctionWithCallback(env->context, nullptr,
-    [](JSContextRef, JSObjectRef, JSObjectRef, size_t, const JSValueRef[], JSValueRef* exception) -> JSValueRef {
-      *exception = error_value;
-      return nullptr;
-    })};
-    
-  JSObjectCallAsFunction(env->context, throw_func, nullptr, 0, nullptr, nullptr);
-  return napi_clear_last_error(env);
+  napi_status status{napi_set_exception(env, ToJSValue(error))};
+  assert(status == napi_pending_exception);
+  return napi_ok;
 }
 
 napi_status napi_throw_error(napi_env env,
@@ -1937,7 +1941,7 @@ napi_status napi_is_exception_pending(napi_env env, bool* result) {
   CHECK_ARG(env, result);
 
   *result = (env->last_exception != nullptr);
-  return napi_clear_last_error(env);
+  return napi_ok;
 }
 
 napi_status napi_get_and_clear_last_exception(napi_env env,
