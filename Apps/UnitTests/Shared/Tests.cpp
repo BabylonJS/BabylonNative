@@ -25,7 +25,8 @@ int run()
         graphics->AddToJavaScript(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
+        {
             printf("%s", message);
             fflush(stdout);
         });
