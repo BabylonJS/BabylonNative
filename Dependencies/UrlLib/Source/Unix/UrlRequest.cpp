@@ -229,8 +229,9 @@ namespace UrlLib
                                 long codep;
                                 curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &codep);
 
+                                request->m_statusCode = static_cast<UrlStatusCode>(codep);
                                 // codep 0 for file access
-                                if (codep == 0 || codep == 200) 
+                                if (codep == 0) 
                                 {
                                     request->m_statusCode = UrlStatusCode::Ok;
                                 }
