@@ -186,7 +186,7 @@ namespace Babylon::Polyfills::Internal
         catch (...)
         {
             // If we have a parse error, catch and rethrow to JavaScript
-            Napi::Error::New(info.Env(), "Could not parse URL scheme").ThrowAsJavaScriptException();
+            throw Napi::Error::New(info.Env(), "Could not parse URL scheme");
         }
     }
 
