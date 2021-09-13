@@ -37,9 +37,10 @@ int run()
     loader.Eval("window.clearTimeout = () => {};", ""); // TODO: implement clear timeout, required for Mocha timeouts to work correctly
     loader.Eval("location = {href: ''};", "");          // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("https://unpkg.com/chai/chai.js");
-    loader.LoadScript("https://unpkg.com/mocha/mocha.js");
+    loader.LoadScript("app:///Scripts/chai.js");
+    loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
     // TODO: add mechanism to wait until an exit code is received from tests.js
     std::this_thread::sleep_for(std::chrono::seconds(1000000));
+    return 0;
 }
