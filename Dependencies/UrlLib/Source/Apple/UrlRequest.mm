@@ -39,7 +39,6 @@ namespace UrlLib
                 if (path == nil)
                 {
                     throw std::runtime_error{"Local path is invalid"};
-
                 }
                 m_nsURL = [NSURL fileURLWithPath:path];
             }

@@ -34,7 +34,6 @@ namespace UrlLib
             }
             if (m_curl)
             {
-
                 // Curl can't parse URL starting with app://
                 // doing it manually instead
                 const auto appSchema = "app://";
