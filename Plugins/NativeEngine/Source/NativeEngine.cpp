@@ -1329,30 +1329,30 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetTextureWidth(const Napi::CallbackInfo& info)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
-        return Napi::Value::From(info.Env(), texture->Width);
+        const auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
+        return Napi::Value::From(info.Env(), texture.Width);
     }
 
     Napi::Value NativeEngine::GetTextureHeight(const Napi::CallbackInfo& info)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
-        return Napi::Value::From(info.Env(), texture->Height);
+        const auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
+        return Napi::Value::From(info.Env(), texture.Height);
     }
 
     void NativeEngine::SetTextureSampling(const Napi::CallbackInfo& info)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
+        auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
         auto filter = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
 
-        texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
+        texture.Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
 
-        if (texture->AnisotropicLevel > 1)
+        if (texture.AnisotropicLevel > 1)
         {
-            texture->Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+            texture.Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
         }
         else
         {
-            texture->Flags |= filter;
+            texture.Flags |= filter;
         }
     }
 
@@ -1373,16 +1373,16 @@ namespace Babylon
 
     void NativeEngine::SetTextureAnisotropicLevel(const Napi::CallbackInfo& info)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
+        auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
         const auto value = info[1].As<Napi::Number>().Uint32Value();
 
-        texture->AnisotropicLevel = static_cast<uint8_t>(value);
+        texture.AnisotropicLevel = static_cast<uint8_t>(value);
 
         // if Anisotropic is set to 0 after being >1, then set texture flags back to linear
-        texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
+        texture.Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
         if (value)
         {
-            texture->Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+            texture.Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
         }
     }
 
@@ -1401,13 +1401,13 @@ namespace Babylon
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
-        m_graphicsImpl.RemoveTexture(texture->Handle);
+        const auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
+        m_graphicsImpl.RemoveTexture(texture.Handle);
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
+        auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
         uint16_t width{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
         uint16_t height{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
         bgfx::TextureFormat::Enum format{static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value())};
@@ -1447,8 +1447,8 @@ namespace Babylon
             frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
         }
 
-        texture->Handle = bgfx::getTexture(frameBufferHandle);
-        texture->OwnsHandle = false;
+        texture.Handle = bgfx::getTexture(frameBufferHandle);
+        texture.OwnsHandle = false;
 
         return Napi::Value::From(info.Env(), FrameBuffer::Create(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer));
     }
