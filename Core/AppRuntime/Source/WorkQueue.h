@@ -19,17 +19,19 @@ namespace Babylon
         template<typename CallableT>
         void Append(CallableT callable)
         {
-            std::scoped_lock lock{m_appendMutex};
-            m_task = m_task.then(m_dispatcher, m_cancelSource, [this, callable = std::move(callable)]() mutable noexcept {
-                try
-                {
-                    callable(m_env.value());
-                }
-                catch (...)
-                {
-                    m_unhandledExceptionHandler(std::current_exception());
-                }
-            });
+            if constexpr (std::is_copy_constructible<CallableT>::value)
+            {
+                m_dispatcher.queue([this, callable = std::move(callable)]() {
+                    Invoke(callable);
+                });
+            }
+            else
+            {
+                m_dispatcher.queue([this, callablePtr{new CallableT(std::move(callable))}]() {
+                    auto callableScopeGuard = gsl::finally([callablePtr]() { delete callablePtr; });
+                    Invoke(*callablePtr);
+                });
+            }
         }
 
         void Suspend();
@@ -37,14 +39,24 @@ namespace Babylon
         void Run(Napi::Env);
 
     private:
-        std::optional<Napi::Env> m_env{};
+        template<typename CallableT>
+        void Invoke(CallableT& callable)
+        {
+            try
+            {
+                callable(m_env.value());
+            }
+            catch (...)
+            {
+                m_unhandledExceptionHandler(std::current_exception());
+            }
+        }
 
-        std::mutex m_appendMutex{};
+        std::optional<Napi::Env> m_env{};
 
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
 
         arcana::cancellation_source m_cancelSource{};
-        arcana::task<void, std::error_code> m_task = arcana::task_from_result<std::error_code>();
         arcana::manual_dispatcher<128> m_dispatcher{};
 
         std::thread m_thread;
