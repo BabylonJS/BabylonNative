@@ -62,16 +62,10 @@ namespace Babylon
     struct ProgramData final : public NativeResource<ProgramData>
     {
         ProgramData() = default;
+        ProgramData(ProgramData&& other) = delete;
         ProgramData(const ProgramData&) = delete;
-        ProgramData(ProgramData&& other) :
-            VertexAttributeLocations{std::move(other.VertexAttributeLocations)},
-            VertexUniformInfos{std::move(other.VertexUniformInfos)},
-            FragmentUniformInfos{std::move(other.FragmentUniformInfos)},
-            Handle{other.Handle},
-            Uniforms{std::move(other.Uniforms)}
-        {
-            other.Handle.idx = bgfx::kInvalidHandle;
-        };
+        ProgramData& operator=(ProgramData&& other) = delete;
+        ProgramData& operator=(const ProgramData& other) = delete;
 
         ~ProgramData()
         {
@@ -108,21 +102,7 @@ namespace Babylon
     {
     protected:
         VariantHandleHolder() = default;
-        VariantHandleHolder(VariantHandleHolder<Handle1T, Handle2T>&& other)
-        {
-            m_handle = other.m_handle;
-
-            constexpr auto nonDynamic = [](auto& handle) {
-                // TODO: Fix this const cast
-                const_cast<Handle1T&>(handle).idx = bgfx::kInvalidHandle;
-            };
-            constexpr auto dynamic = [](auto& handle) {
-                // TODO: Fix this const cast
-                const_cast<Handle2T&>(handle).idx = bgfx::kInvalidHandle;
-            };
-            other.DoForHandleTypes(nonDynamic, dynamic);
-        }
-
+        VariantHandleHolder(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
         VariantHandleHolder(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
         VariantHandleHolder<Handle1T, Handle2T>& operator=(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
         VariantHandleHolder<Handle1T, Handle2T>& operator=(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
@@ -147,7 +127,6 @@ namespace Babylon
     {
     public:
         IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
-        IndexBufferData(IndexBufferData&& other) = default;
         ~IndexBufferData();
         void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
         void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
@@ -157,7 +136,6 @@ namespace Babylon
     {
     public:
         VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic);
-        VertexBufferData(VertexBufferData&& other) = default;
         ~VertexBufferData();
         template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
         void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
@@ -296,26 +274,20 @@ namespace Babylon
         void Dispose(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
-        //void DeleteVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(CommandBufferDecoder& decoder);
-        //void BindVertexArray(const Napi::CallbackInfo& info);
         void BindVertexArray(CommandBufferDecoder& decoder);
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
-        //void DeleteIndexBuffer(const Napi::CallbackInfo& info);
         void DeleteIndexBuffer(CommandBufferDecoder& decoder);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
-        //void DeleteVertexBuffer(const Napi::CallbackInfo& info);
         void DeleteVertexBuffer(CommandBufferDecoder& decoder);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
-        //void SetProgram(const Napi::CallbackInfo& info);
         void SetProgram(CommandBufferDecoder& decoder);
-        //void SetState(const Napi::CallbackInfo& info);
         void SetState(CommandBufferDecoder& decoder);
         void SetZOffset(const Napi::CallbackInfo& info);
         Napi::Value GetZOffset(const Napi::CallbackInfo& info);
@@ -324,36 +296,19 @@ namespace Babylon
         void SetDepthWrite(const Napi::CallbackInfo& info);
         void SetColorWrite(const Napi::CallbackInfo& info);
         void SetBlendMode(const Napi::CallbackInfo& info);
-        //void SetMatrix(const Napi::CallbackInfo& info);
         void SetMatrix(CommandBufferDecoder& decoder);
-        //void SetInt(const Napi::CallbackInfo& info);
         void SetInt(CommandBufferDecoder& decoder);
-//        void SetIntArray(const Napi::CallbackInfo& info);
-//        void SetIntArray2(const Napi::CallbackInfo& info);
-//        void SetIntArray3(const Napi::CallbackInfo& info);
-//        void SetIntArray4(const Napi::CallbackInfo& info);
         void SetIntArray(CommandBufferDecoder& decoder);
         void SetIntArray2(CommandBufferDecoder& decoder);
         void SetIntArray3(CommandBufferDecoder& decoder);
         void SetIntArray4(CommandBufferDecoder& decoder);
-//        void SetFloatArray(const Napi::CallbackInfo& info);
-//        void SetFloatArray2(const Napi::CallbackInfo& info);
-//        void SetFloatArray3(const Napi::CallbackInfo& info);
-//        void SetFloatArray4(const Napi::CallbackInfo& info);
         void SetFloatArray(CommandBufferDecoder& decoder);
         void SetFloatArray2(CommandBufferDecoder& decoder);
         void SetFloatArray3(CommandBufferDecoder& decoder);
         void SetFloatArray4(CommandBufferDecoder& decoder);
-        //void SetMatrices(const Napi::CallbackInfo& info);
         void SetMatrices(CommandBufferDecoder& decoder);
-//        void SetMatrix3x3(const Napi::CallbackInfo& info);
-//        void SetMatrix2x2(const Napi::CallbackInfo& info);
         void SetMatrix3x3(CommandBufferDecoder& decoder);
         void SetMatrix2x2(CommandBufferDecoder& decoder);
-        //void SetFloat(const Napi::CallbackInfo& info);
-        //void SetFloat2(const Napi::CallbackInfo& info);
-        //void SetFloat3(const Napi::CallbackInfo& info);
-        //void SetFloat4(const Napi::CallbackInfo& info);
         void SetFloat(CommandBufferDecoder& decoder);
         void SetFloat2(CommandBufferDecoder& decoder);
         void SetFloat3(CommandBufferDecoder& decoder);
@@ -367,23 +322,16 @@ namespace Babylon
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
         void SetTextureSampling(const Napi::CallbackInfo& info);
-        //void SetTextureWrapMode(const Napi::CallbackInfo& info);
         void SetTextureWrapMode(CommandBufferDecoder& decoder);
         void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
-        //void SetTexture(const Napi::CallbackInfo& info);
         void SetTexture(CommandBufferDecoder& decoder);
-        void SetTexture2(const Napi::CallbackInfo& info);
-        void SetTexture3(const Napi::CallbackInfo& info);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         void DeleteFrameBuffer(const Napi::CallbackInfo& info);
         void BindFrameBuffer(const Napi::CallbackInfo& info);
         void UnbindFrameBuffer(const Napi::CallbackInfo& info);
-        //void DrawIndexed(const Napi::CallbackInfo& info);
         void DrawIndexed(CommandBufferDecoder& decoder);
-        //void Draw(const Napi::CallbackInfo& info);
         void Draw(CommandBufferDecoder& decoder);
-        //void Clear(const Napi::CallbackInfo& info);
         void Clear(CommandBufferDecoder& decoder);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
@@ -393,7 +341,6 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
-        //void SetStencil(const Napi::CallbackInfo& info);
         void SetStencil(CommandBufferDecoder& decoder);
         void SetCommandBuffer(const Napi::CallbackInfo& info);
         void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
@@ -438,11 +385,9 @@ namespace Babylon
         void SetFloatArrayN(CommandBufferDecoder& decoder);
 
         template<int size>
-        //void SetFloatN(const Napi::CallbackInfo& info);
         void SetFloatN(CommandBufferDecoder& decoder);
 
         template<int size>
-        //void SetMatrixN(const Napi::CallbackInfo& info);
         void SetMatrixN(CommandBufferDecoder& decoder);
 
         // Scratch vector used for data alignment.

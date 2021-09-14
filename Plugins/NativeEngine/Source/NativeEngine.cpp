@@ -27,8 +27,6 @@ namespace Babylon
 {
     namespace
     {
-        void SetTexture4(const Napi::CallbackInfo&) {}
-
         namespace TextureSampling
         {
             constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
@@ -375,21 +373,15 @@ namespace Babylon
                 InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
-                //InstanceMethod("deleteVertexArray", &NativeEngine::DeleteVertexArray),
-                //InstanceMethod("bindVertexArray", &NativeEngine::BindVertexArray),
                 InstanceMethod("createIndexBuffer", &NativeEngine::CreateIndexBuffer),
-                //InstanceMethod("deleteIndexBuffer", &NativeEngine::DeleteIndexBuffer),
                 InstanceMethod("recordIndexBuffer", &NativeEngine::RecordIndexBuffer),
                 InstanceMethod("updateDynamicIndexBuffer", &NativeEngine::UpdateDynamicIndexBuffer),
                 InstanceMethod("createVertexBuffer", &NativeEngine::CreateVertexBuffer),
-                //InstanceMethod("deleteVertexBuffer", &NativeEngine::DeleteVertexBuffer),
                 InstanceMethod("recordVertexBuffer", &NativeEngine::RecordVertexBuffer),
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
-                //InstanceMethod("setProgram", &NativeEngine::SetProgram),
-                //InstanceMethod("setState", &NativeEngine::SetState),
                 InstanceMethod("setZOffset", &NativeEngine::SetZOffset),
                 InstanceMethod("getZOffset", &NativeEngine::GetZOffset),
                 InstanceMethod("setDepthTest", &NativeEngine::SetDepthTest),
@@ -397,23 +389,6 @@ namespace Babylon
                 InstanceMethod("setDepthWrite", &NativeEngine::SetDepthWrite),
                 InstanceMethod("setColorWrite", &NativeEngine::SetColorWrite),
                 InstanceMethod("setBlendMode", &NativeEngine::SetBlendMode),
-                //InstanceMethod("setMatrix", &NativeEngine::SetMatrix),
-                //InstanceMethod("setInt", &NativeEngine::SetInt),
-//                InstanceMethod("setIntArray", &NativeEngine::SetIntArray),
-//                InstanceMethod("setIntArray2", &NativeEngine::SetIntArray2),
-//                InstanceMethod("setIntArray3", &NativeEngine::SetIntArray3),
-//                InstanceMethod("setIntArray4", &NativeEngine::SetIntArray4),
-//                InstanceMethod("setFloatArray", &NativeEngine::SetFloatArray),
-//                InstanceMethod("setFloatArray2", &NativeEngine::SetFloatArray2),
-//                InstanceMethod("setFloatArray3", &NativeEngine::SetFloatArray3),
-//                InstanceMethod("setFloatArray4", &NativeEngine::SetFloatArray4),
-                //InstanceMethod("setMatrices", &NativeEngine::SetMatrices),
-                //InstanceMethod("setMatrix3x3", &NativeEngine::SetMatrix3x3),
-                //InstanceMethod("setMatrix2x2", &NativeEngine::SetMatrix2x2),
-//                InstanceMethod("setFloat", &NativeEngine::SetFloat),
-//                InstanceMethod("setFloat2", &NativeEngine::SetFloat2),
-//                InstanceMethod("setFloat3", &NativeEngine::SetFloat3),
-//                InstanceMethod("setFloat4", &NativeEngine::SetFloat4),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
@@ -423,19 +398,12 @@ namespace Babylon
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("setTextureSampling", &NativeEngine::SetTextureSampling),
-                //InstanceMethod("setTextureWrapMode", &NativeEngine::SetTextureWrapMode),
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
-                //InstanceMethod("setTexture", &NativeEngine::SetTexture),
-                InstanceMethod("setTexture2", &NativeEngine::SetTexture2),
-                InstanceMethod("setTexture3", &NativeEngine::SetTexture3),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
                 InstanceMethod("deleteFrameBuffer", &NativeEngine::DeleteFrameBuffer),
                 InstanceMethod("bindFrameBuffer", &NativeEngine::BindFrameBuffer),
                 InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
-                //InstanceMethod("drawIndexed", &NativeEngine::DrawIndexed),
-                //InstanceMethod("draw", &NativeEngine::Draw),
-                //InstanceMethod("clear", &NativeEngine::Clear),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
@@ -444,7 +412,6 @@ namespace Babylon
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
-                //InstanceMethod("setStencil", &NativeEngine::SetStencil),
                 InstanceMethod("setCommandBuffer", &NativeEngine::SetCommandBuffer),
                 InstanceMethod("setCommandUint32Buffer", &NativeEngine::SetCommandUint32Buffer),
                 InstanceMethod("setCommandInt32Buffer", &NativeEngine::SetCommandInt32Buffer),
@@ -574,8 +541,6 @@ namespace Babylon
         // clang-format on
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
-
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set("setTexture4", Napi::Function::New(env, SetTexture4, "setTexture4"));
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
@@ -632,25 +597,12 @@ namespace Babylon
         return Napi::Value::From(info.Env(), VertexArray::Create());
     }
 
-//    void NativeEngine::DeleteVertexArray(const Napi::CallbackInfo& info)
-//    {
-//        VertexArray::Delete(info[0].ToNumber().Uint32Value());
-//        // TODO: should we clear the m_boundVertexArray if it gets deleted?
-//        //assert(vertexArray != m_boundVertexArray);
-//    }
-
     void NativeEngine::DeleteVertexArray(CommandBufferDecoder& decoder)
     {
         VertexArray::Delete(decoder.DecodeCommandArgAsUInt32());
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
     }
-
-//    void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
-//    {
-//        const VertexArray& vertexArray = VertexArray::Get(info[0].ToNumber().Uint32Value());
-//        m_boundVertexArray = &vertexArray;
-//    }
 
     void NativeEngine::BindVertexArray(CommandBufferDecoder& decoder)
     {
@@ -667,11 +619,6 @@ namespace Babylon
 
         return Napi::Value::From(info.Env(), IndexBufferData::Create(data, flags, dynamic));
     }
-
-//    void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& /*info*/)
-//    {
-//        //IndexBufferData::Delete(info[0].ToNumber().Uint32Value());
-//    }
 
     void NativeEngine::DeleteIndexBuffer(CommandBufferDecoder& decoder)
     {
@@ -703,11 +650,6 @@ namespace Babylon
 
         return Napi::Value::From(info.Env(), VertexBufferData::Create(data, dynamic));
     }
-
-//    void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& /*info*/)
-//    {
-//        //VertexBufferData::Delete(info[0].ToNumber().Uint32Value());
-//    }
 
     void NativeEngine::DeleteVertexBuffer(CommandBufferDecoder& decoder)
     {
@@ -923,32 +865,10 @@ namespace Babylon
         return std::move(attributes);
     }
 
-//    void NativeEngine::SetProgram(const Napi::CallbackInfo& info)
-//    {
-//        m_currentProgram = info[0].ToNumber().Uint32Value();
-//    }
-
     void NativeEngine::SetProgram(CommandBufferDecoder& decoder)
     {
         m_currentProgram = decoder.DecodeCommandArgAsUInt32();
     }
-
-//    void NativeEngine::SetState(const Napi::CallbackInfo& info)
-//    {
-//        const auto culling = info[0].As<Napi::Boolean>().Value();
-//        const auto cullBackFaces = info[2].As<Napi::Boolean>().Value();
-//        const auto reverseSide = info[3].As<Napi::Boolean>().Value();
-//
-//        m_engineState &= ~(BGFX_STATE_CULL_MASK | BGFX_STATE_FRONT_CCW);
-//        m_engineState |= reverseSide ? 0 : BGFX_STATE_FRONT_CCW;
-//
-//        if (culling)
-//        {
-//            m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CCW : BGFX_STATE_CULL_CW;
-//        }
-//        // TODO: zOffset
-//        //const auto zOffset = info[1].As<Napi::Number>().FloatValue();
-//    }
 
     void NativeEngine::SetState(CommandBufferDecoder& decoder)
     {
@@ -1017,42 +937,12 @@ namespace Babylon
         m_engineState |= blendMode;
     }
 
-//    void NativeEngine::SetInt(const Napi::CallbackInfo& info)
-//    {
-//        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
-//        const auto value = info[1].As<Napi::Number>().FloatValue();
-//        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
-//    }
-
     void NativeEngine::SetInt(CommandBufferDecoder& decoder)
     {
         const auto& uniformInfo{UniformInfo::Get(decoder.DecodeCommandArgAsUInt32())};
         const auto value{static_cast<float>(decoder.DecodeCommandArgAsInt32())};
         ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
-
-//    template<int size, typename arrayType>
-//    void NativeEngine::SetTypeArrayN(const Napi::CallbackInfo& info)
-//    {
-//        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
-//        const auto array = info[1].As<arrayType>();
-//
-//        size_t elementLength = array.ElementLength();
-//
-//        m_scratch.clear();
-//        for (size_t index = 0; index < elementLength; index += size)
-//        {
-//            const float values[] = {
-//                static_cast<float>(array[index]),
-//                (size > 1) ? static_cast<float>(array[index + 1]) : 0.f,
-//                (size > 2) ? static_cast<float>(array[index + 2]) : 0.f,
-//                (size > 3) ? static_cast<float>(array[index + 3]) : 0.f,
-//            };
-//            m_scratch.insert(m_scratch.end(), values, values + 4);
-//        }
-//
-//        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
-//    }
 
     template<int size, typename arrayType>
     void NativeEngine::SetTypeArrayN(const UniformInfo& uniformInfo, const uint32_t elementLength, const arrayType& array)
@@ -1071,20 +961,6 @@ namespace Babylon
 
         ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
     }
-
-//    template<int size>
-//    void NativeEngine::SetFloatN(const Napi::CallbackInfo& info)
-//    {
-//        const auto& uniformInfo = UniformInfo::Get(info[0].ToNumber().Uint32Value());
-//        const float values[] = {
-//            info[1].As<Napi::Number>().FloatValue(),
-//            (size > 1) ? info[2].As<Napi::Number>().FloatValue() : 0.f,
-//            (size > 2) ? info[3].As<Napi::Number>().FloatValue() : 0.f,
-//            (size > 3) ? info[4].As<Napi::Number>().FloatValue() : 0.f,
-//        };
-//
-//        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, values);
-//    }
 
     template<int size>
     void NativeEngine::SetFloatN(CommandBufferDecoder& decoder)
@@ -1138,26 +1014,6 @@ namespace Babylon
         SetTypeArrayN<size>(uniformInfo, elementLength, array);
     }
 
-//    void NativeEngine::SetIntArray(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<1, Napi::Int32Array>(info);
-//    }
-//
-//    void NativeEngine::SetIntArray2(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<2, Napi::Int32Array>(info);
-//    }
-//
-//    void NativeEngine::SetIntArray3(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<3, Napi::Int32Array>(info);
-//    }
-//
-//    void NativeEngine::SetIntArray4(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<4, Napi::Int32Array>(info);
-//    }
-
     void NativeEngine::SetIntArray(CommandBufferDecoder& decoder)
     {
         SetIntArrayN<1>(decoder);
@@ -1187,26 +1043,6 @@ namespace Babylon
         SetTypeArrayN<size>(uniformInfo, elementLength, array);
     }
 
-//    void NativeEngine::SetFloatArray(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<1, Napi::Float32Array>(info);
-//    }
-//
-//    void NativeEngine::SetFloatArray2(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<2, Napi::Float32Array>(info);
-//    }
-//
-//    void NativeEngine::SetFloatArray3(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<3, Napi::Float32Array>(info);
-//    }
-//
-//    void NativeEngine::SetFloatArray4(const Napi::CallbackInfo& info)
-//    {
-//        SetTypeArrayN<4, Napi::Float32Array>(info);
-//    }
-
     void NativeEngine::SetFloatArray(CommandBufferDecoder& decoder)
     {
         SetFloatArrayN<1>(decoder);
@@ -1227,17 +1063,6 @@ namespace Babylon
         SetFloatArrayN<4>(decoder);
     }
 
-//    void NativeEngine::SetMatrices(const Napi::CallbackInfo& info)
-//    {
-//        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-//        const auto matricesArray = info[1].As<Napi::Float32Array>();
-//
-//        const size_t elementLength = matricesArray.ElementLength();
-//        assert(elementLength % 16 == 0);
-//
-//        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::span(matricesArray.Data(), elementLength), elementLength / 16);
-//    }
-
     void NativeEngine::SetMatrices(CommandBufferDecoder& decoder)
     {
         auto uniformHandle{decoder.DecodeCommandArgAsUInt32()};
@@ -1248,21 +1073,6 @@ namespace Babylon
 
         ProgramData::Get(m_currentProgram).SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
     }
-
-//    void NativeEngine::SetMatrix2x2(const Napi::CallbackInfo& info)
-//    {
-//        SetMatrixN<2>(info);
-//    }
-//
-//    void NativeEngine::SetMatrix3x3(const Napi::CallbackInfo& info)
-//    {
-//        SetMatrixN<3>(info);
-//    }
-//
-//    void NativeEngine::SetMatrix(const Napi::CallbackInfo& info)
-//    {
-//        SetMatrixN<4>(info);
-//    }
 
     void NativeEngine::SetMatrix2x2(CommandBufferDecoder& decoder)
     {
@@ -1278,26 +1088,6 @@ namespace Babylon
     {
         SetMatrixN<4>(decoder);
     }
-
-//    void NativeEngine::SetFloat(const Napi::CallbackInfo& info)
-//    {
-//        SetFloatN<1>(info);
-//    }
-//
-//    void NativeEngine::SetFloat2(const Napi::CallbackInfo& info)
-//    {
-//        SetFloatN<2>(info);
-//    }
-//
-//    void NativeEngine::SetFloat3(const Napi::CallbackInfo& info)
-//    {
-//        SetFloatN<3>(info);
-//    }
-//
-//    void NativeEngine::SetFloat4(const Napi::CallbackInfo& info)
-//    {
-//        SetFloatN<4>(info);
-//    }
 
     void NativeEngine::SetFloat(CommandBufferDecoder& decoder)
     {
@@ -1566,21 +1356,6 @@ namespace Babylon
         }
     }
 
-//    void NativeEngine::SetTextureWrapMode(const Napi::CallbackInfo& info)
-//    {
-//        const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
-//        auto addressModeU = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
-//        auto addressModeV = static_cast<uint32_t>(info[2].As<Napi::Number>().Uint32Value());
-//        auto addressModeW = static_cast<uint32_t>(info[3].As<Napi::Number>().Uint32Value());
-//
-//        uint32_t addressMode = addressModeU +
-//            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
-//            (addressModeW << BGFX_SAMPLER_W_SHIFT);
-//
-//        texture->Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
-//        texture->Flags |= addressMode;
-//    }
-
     void NativeEngine::SetTextureWrapMode(CommandBufferDecoder& decoder)
     {
         auto& texture = TextureData::Get(decoder.DecodeCommandArgAsUInt32());
@@ -1611,16 +1386,6 @@ namespace Babylon
         }
     }
 
-//    void NativeEngine::SetTexture(const Napi::CallbackInfo& info)
-//    {
-//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-//
-//        const auto& uniformInfo = m_uniformInfos.Get(info[0].ToNumber().Uint32Value());
-//        const auto texture = &TextureData::Get(info[1].ToNumber().Uint32Value());
-//
-//        encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture->Handle, texture->Flags);
-//    }
-
     void NativeEngine::SetTexture(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1634,14 +1399,10 @@ namespace Babylon
         encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture.Handle, texture.Flags);
     }
 
-    void NativeEngine::SetTexture2(const Napi::CallbackInfo&) {}
-    void NativeEngine::SetTexture3(const Napi::CallbackInfo&) {}
-
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = &TextureData::Get(info[0].ToNumber().Uint32Value());
         m_graphicsImpl.RemoveTexture(texture->Handle);
-//        delete texture;
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
@@ -1722,34 +1483,6 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
-//    void NativeEngine::DrawIndexed(const Napi::CallbackInfo& info)
-//    {
-//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-//
-//        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-//        const auto indexStart = info[1].As<Napi::Number>().Int32Value();
-//        const auto indexCount = info[2].As<Napi::Number>().Int32Value();
-//
-//        if (m_boundVertexArray != nullptr)
-//        {
-//            const auto indexBufferData{m_boundVertexArray->indexBuffer.Data};
-//            if (indexBufferData != nullptr)
-//            {
-//                indexBufferData->SetBgfxIndexBuffer(encoder, indexStart, indexCount);
-//            }
-//
-//            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
-//            for (const auto& vertexBufferPair : vertexBuffers)
-//            {
-//                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
-//                const auto& vertexBuffer{vertexBufferPair.second};
-//                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex, std::numeric_limits<uint32_t>::max(), vertexBuffer.VertexLayoutHandle);
-//            }
-//        }
-//
-//        Draw(encoder, fillMode);
-//    }
-
     void NativeEngine::DrawIndexed(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1778,28 +1511,6 @@ namespace Babylon
         Draw(encoder, fillMode);
     }
 
-//    void NativeEngine::Draw(const Napi::CallbackInfo& info)
-//    {
-//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-//
-//        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-//        const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
-//        const auto verticesCount = info[2].As<Napi::Number>().Int32Value();
-//
-//        if (m_boundVertexArray != nullptr)
-//        {
-//            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
-//            for (const auto& vertexBufferPair : vertexBuffers)
-//            {
-//                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
-//                const auto& vertexBuffer = vertexBufferPair.second;
-//                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex + verticesStart, verticesCount, vertexBuffer.VertexLayoutHandle);
-//            }
-//        }
-//
-//        Draw(encoder, fillMode);
-//    }
-
     void NativeEngine::Draw(CommandBufferDecoder& decoder)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1821,47 +1532,6 @@ namespace Babylon
 
         Draw(encoder, fillMode);
     }
-
-//    void NativeEngine::Clear(const Napi::CallbackInfo& info)
-//    {
-//        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-//
-//        uint16_t flags{0};
-//        uint32_t rgba{0x000000ff};
-//        float depth{1.0f};
-//        uint8_t stencil{0};
-//
-//        if (!info[0].IsUndefined())
-//        {
-//            const auto color{info[0].As<Napi::Object>()};
-//            const auto r = color.Get("r");
-//            const auto g = color.Get("g");
-//            const auto b = color.Get("b");
-//            const auto a = color.Get("a");
-//
-//            rgba =
-//                (static_cast<uint8_t>(r.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 24) +
-//                (static_cast<uint8_t>(g.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 16) +
-//                (static_cast<uint8_t>(b.As<Napi::Number>().FloatValue() * std::numeric_limits<uint8_t>::max()) << 8) +
-//                static_cast<uint8_t>((a.IsUndefined() ? 1.f : a.As<Napi::Number>().FloatValue()) * std::numeric_limits<uint8_t>::max());
-//
-//            flags |= BGFX_CLEAR_COLOR;
-//        }
-//
-//        if (!info[1].IsUndefined() && m_boundFrameBuffer->HasDepth())
-//        {
-//            depth = info[1].As<Napi::Number>().FloatValue();
-//            flags |= BGFX_CLEAR_DEPTH;
-//        }
-//
-//        if (!info[2].IsUndefined() && m_boundFrameBuffer->HasStencil())
-//        {
-//            stencil = static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value());
-//            flags |= BGFX_CLEAR_STENCIL;
-//        }
-//
-//        GetBoundFrameBuffer(*encoder).Clear(*encoder, flags, rgba, depth, stencil);
-//    }
 
     void NativeEngine::Clear(CommandBufferDecoder& decoder)
     {
@@ -2034,33 +1704,6 @@ namespace Babylon
             });
         });
     }
-
-//    void NativeEngine::SetStencil(const Napi::CallbackInfo& info)
-//    {
-//        const auto writeMask{info[0].As<Napi::Number>().Uint32Value()};
-//        const auto stencilOpFail{info[1].As<Napi::Number>().Uint32Value()};
-//        const auto depthOpFail{info[2].As<Napi::Number>().Uint32Value()};
-//        const auto depthOpPass{info[3].As<Napi::Number>().Uint32Value()};
-//        const auto func{info[4].As<Napi::Number>().Uint32Value()};
-//        const auto ref{info[5].As<Napi::Number>().Uint32Value()};
-//
-//        m_stencilState = BGFX_STENCIL_FUNC_RMASK(0xFF); //  always 0xFF
-//        m_stencilState |= stencilOpFail;
-//        m_stencilState |= depthOpFail;
-//        // bgfx write mask is always 0xFF, to not change stencil value when writemask is 0
-//        // its value is kept unchanged.
-//        // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L2874
-//        if (writeMask == 0)
-//        {
-//            m_stencilState |= BGFX_STENCIL_OP_PASS_Z_KEEP;
-//        }
-//        else
-//        {
-//            m_stencilState |= depthOpPass;
-//        }
-//        m_stencilState |= func;
-//        m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
-//    }
 
     void NativeEngine::SetStencil(CommandBufferDecoder& decoder)
     {
