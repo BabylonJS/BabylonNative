@@ -867,7 +867,7 @@ namespace Babylon
 
     void NativeEngine::SetProgram(CommandBufferDecoder& decoder)
     {
-        m_currentProgram = decoder.DecodeCommandArgAsUInt32();
+        m_currentProgram = &ProgramData::Get(decoder.DecodeCommandArgAsUInt32());
     }
 
     void NativeEngine::SetState(CommandBufferDecoder& decoder)
@@ -941,7 +941,7 @@ namespace Babylon
     {
         const auto& uniformInfo{UniformInfo::Get(decoder.DecodeCommandArgAsUInt32())};
         const auto value{static_cast<float>(decoder.DecodeCommandArgAsInt32())};
-        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
+        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
 
     template<int size, typename arrayType>
@@ -959,7 +959,7 @@ namespace Babylon
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
 
-        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
+        m_currentProgram->SetUniform(uniformInfo.Handle, m_scratch, elementLength / size);
     }
 
     template<int size>
@@ -973,7 +973,7 @@ namespace Babylon
             (size > 3) ? decoder.DecodeCommandArgAsFloat32() : 0.f,
         };
 
-        ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, values);
+        m_currentProgram->SetUniform(uniformInfo.Handle, values);
     }
 
     template<int size>
@@ -997,11 +997,11 @@ namespace Babylon
                     matrixValues[line * 4 + col] = matrix[index++];
                 }
             }
-            ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrixValues.data(), 16));
+            m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(matrixValues.data(), 16));
         }
         else
         {
-            ProgramData::Get(m_currentProgram).SetUniform(uniformInfo.Handle, gsl::make_span(matrix.data(), elementLength));
+            m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(matrix.data(), elementLength));
         }
     }
 
@@ -1071,7 +1071,7 @@ namespace Babylon
 
         assert(length % 16 == 0);
 
-        ProgramData::Get(m_currentProgram).SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
+        m_currentProgram->SetUniform(UniformInfo::Get(uniformHandle).Handle, matrices, length / 16);
     }
 
     void NativeEngine::SetMatrix2x2(CommandBufferDecoder& decoder)
@@ -1814,9 +1814,7 @@ namespace Babylon
             }
         }
 
-        const auto& currentProgram{ProgramData::Get(m_currentProgram)};
-
-        for (const auto& it : currentProgram.Uniforms)
+        for (const auto& it : m_currentProgram->Uniforms)
         {
             const ProgramData::UniformValue& value = it.second;
             encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
@@ -1836,7 +1834,7 @@ namespace Babylon
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except bindings since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, currentProgram.Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     GraphicsImpl::UpdateToken& NativeEngine::GetUpdateToken()

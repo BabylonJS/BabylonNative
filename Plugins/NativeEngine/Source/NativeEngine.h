@@ -358,7 +358,7 @@ namespace Babylon
 
         ShaderCompiler m_shaderCompiler{};
 
-        uint32_t m_currentProgram{};
+        ProgramData* m_currentProgram{nullptr};
         std::unordered_set<uint32_t> m_programDataCollection{};
 
         JsRuntime& m_runtime;
