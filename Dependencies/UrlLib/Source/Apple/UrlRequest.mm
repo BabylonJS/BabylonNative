@@ -38,7 +38,7 @@ namespace UrlLib
                 NSString* path{[[NSBundle mainBundle] pathForResource:m_nsURL.path ofType:nil]};
                 if (path == nil)
                 {
-                    throw std::runtime_error{"Local path is invalid"};
+                    throw std::runtime_error{"No file exists at local path"};
                 }
                 m_nsURL = [NSURL fileURLWithPath:path];
             }
