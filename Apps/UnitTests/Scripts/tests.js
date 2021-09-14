@@ -11,7 +11,7 @@ function BabylonReporter(runner) {
     });
 
     runner.on("end", () => {
-        console.log(`Total passed: ${stats.passes}/${stats.tests} tests`);
+        console.log(`Tests passed: ${stats.passes}/${stats.tests}`);
     });
 }
 
