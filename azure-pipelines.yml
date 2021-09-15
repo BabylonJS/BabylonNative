@@ -23,11 +23,11 @@ jobs:
 #       xCodeVersion: 11.3.1
 #       deploymentTarget: 12
 
-#   - template: .github/jobs/macos.yml
-#     parameters:
-#       name: MacOS_Xcode12
-#       vmImage: 'macOS-10.15'
-#       xCodeVersion: 12.4
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode12
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
 
 #   - template: .github/jobs/ios.yml
 #     parameters:
@@ -113,21 +113,21 @@ jobs:
       CXX: g++-9
       JSEngine: JavaScriptCore
 
-#   - template: .github/jobs/linux.yml
-#     parameters:
-#       name: Ubuntu_GCC9_V8
-#       vmImage: 'ubuntu-latest'
-#       CC: gcc-9
-#       CXX: g++-9
-#       JSEngine: V8
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC9_V8
+      vmImage: 'ubuntu-latest'
+      CC: gcc-9
+      CXX: g++-9
+      JSEngine: V8
 
-#   - template: .github/jobs/linux.yml
-#     parameters:
-#       name: Ubuntu_GCC10_V8
-#       vmImage: 'ubuntu-latest'
-#       CC: gcc-10
-#       CXX: g++-10
-#       JSEngine: V8
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC10_V8
+      vmImage: 'ubuntu-latest'
+      CC: gcc-10
+      CXX: g++-10
+      JSEngine: V8
 
 # # Android
 #   - template: .github/jobs/android.yml
