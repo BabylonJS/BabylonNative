@@ -9,8 +9,33 @@ on:
     branches: [ master ]
 
 jobs:
-  job:
+
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    outputs:
+      revision: ${{ steps.version.outputs.revision }}
+      sha: ${{ steps.version.outputs.sha }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - id: version
+        run: |
+          API_VERSION=$(grep -Eo "BGFX_API_VERSION UINT32_C\([0-9]+\)" bgfx/include/bgfx/defines.h | grep -Eo "[0-9]+" | tail -1)
+          REVISION=$(cd bgfx && git rev-list HEAD --count)
+          SHA=$(cd bgfx && git rev-parse HEAD)
+          SHA7="${GITHUB_SHA::7}"
+          TAG="v1.${API_VERSION}.${REVISION}-${SHA7}"
+          echo "::set-output name=revision::${REVISION}"
+          echo "::set-output name=sha::${SHA}"
+          echo "::set-output name=tag::${TAG}"
+
+  build:
     name: ${{ matrix.os }}
+    needs: [ version ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -18,6 +43,7 @@ jobs:
         include:
           - os: windows-latest
           - os: ubuntu-latest
+          - os: macos-latest
 
     env:
       # Indicates the CMake build directory where project files and binaries are being produced.
@@ -27,23 +53,29 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          submodules: recursive  
+          submodules: recursive
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
           sudo apt install -y libgl1-mesa-dev
         if: matrix.os == 'ubuntu-latest'
-
       # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
       - uses: lukka/get-cmake@latest
 
       # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
       - uses: ilammy/msvc-dev-cmd@v1
 
+      # Update version
+      - name: Update version.h
+        run: |
+          sed "s/ BGFX_REV_NUMBER .*/ BGFX_REV_NUMBER ${{ needs.version.outputs.revision }}/g" bgfx/src/version.h > version.tmp && mv version.tmp bgfx/src/version.h
+          sed "s/ BGFX_REV_SHA1 .*/ BGFX_REV_SHA1 \"${{ needs.version.outputs.sha }}\"/g" bgfx/src/version.h > version.tmp && mv version.tmp bgfx/src/version.h
+        shell: bash
+
       # Run CMake to generate project files
       - name: Generate project files
         run: |
-          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -DCMAKE_INSTALL_PREFIX="${{ env.CMAKE_INSTALL_DIR }}" -DCMAKE_DEBUG_POSTFIX=d -DBGFX_BUILD_EXAMPLES=OFF -DBGFX_BUILD_TOOLS=ON -DBGFX_INSTALL=ON
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -DCMAKE_INSTALL_PREFIX="${{ env.CMAKE_INSTALL_DIR }}" -DCMAKE_DEBUG_POSTFIX=d -DBGFX_BUILD_EXAMPLES=OFF -DBGFX_BUILD_TOOLS=ON -DBGFX_INSTALL=ON -DBGFX_AMALGAMATED=ON
       # Build the install targets
       - name: Build
         run: |
@@ -53,3 +85,17 @@ jobs:
         with:
           name: ${{ matrix.os }}
           path: ${{ github.workspace }}/install/
+
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    needs: [ version, build ]
+    if: github.repository == 'bkaradzic/bgfx.cmake' && github.event_name == 'push'
+    steps:
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          release_name: ${{ needs.version.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
