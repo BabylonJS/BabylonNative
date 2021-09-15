@@ -416,6 +416,7 @@ namespace Babylon
                 InstanceMethod("setCommandUint32Buffer", &NativeEngine::SetCommandUint32Buffer),
                 InstanceMethod("setCommandInt32Buffer", &NativeEngine::SetCommandInt32Buffer),
                 InstanceMethod("setCommandFloat32Buffer", &NativeEngine::SetCommandFloat32Buffer),
+                InstanceMethod("setCommandValidationBuffer", &NativeEngine::SetCommandValidationBuffer),
                 InstanceMethod("submitCommandBuffer", &NativeEngine::SubmitCommandBuffer),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
@@ -536,7 +537,12 @@ namespace Babylon
                 InstanceValue("COMMAND_DRAWINDEXED", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DrawIndexed))),
                 InstanceValue("COMMAND_DRAW", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Draw))),
                 InstanceValue("COMMAND_CLEAR", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Clear))),
-                InstanceValue("COMMAND_SETSTENCIL", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetStencil)))
+                InstanceValue("COMMAND_SETSTENCIL", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetStencil))),
+
+                InstanceValue("COMMAND_VALIDATION_COMMAND", Napi::Number::From(env, CommandBufferDecoder::COMMAND_VALIDATION_COMMAND)),
+                InstanceValue("COMMAND_VALIDATION_UINT32", Napi::Number::From(env, CommandBufferDecoder::COMMAND_VALIDATION_UINT32)),
+                InstanceValue("COMMAND_VALIDATION_INT32", Napi::Number::From(env, CommandBufferDecoder::COMMAND_VALIDATION_INT32)),
+                InstanceValue("COMMAND_VALIDATION_FLOAT", Napi::Number::From(env, CommandBufferDecoder::COMMAND_VALIDATION_FLOAT))
             });
         // clang-format on
 
@@ -1752,15 +1758,26 @@ namespace Babylon
         m_commandFloat32Buffer = Napi::Persistent(info[0].As<Napi::Float32Array>());
     }
 
+    void NativeEngine::SetCommandValidationBuffer(const Napi::CallbackInfo& info)
+    {
+        m_commandValidationBuffer = Napi::Persistent(info[0].As<Napi::Uint8Array>());
+    }
+
     void NativeEngine::SubmitCommandBuffer(const Napi::CallbackInfo& info)
     {
         const auto commandCount{info[0].ToNumber().Uint32Value()};
+
+        std::optional<CommandBufferDecoder::UInt8Buffer> validationBuffer{};
+        if (m_commandValidationBuffer) {
+            validationBuffer = gsl::make_span(m_commandValidationBuffer.Value().Data(), m_commandValidationBuffer.Value().ElementLength());
+        }
 
         CommandBufferDecoder commandBufferDecoder{
             gsl::make_span(m_commandBuffer.Value().Data(), commandCount),
             gsl::make_span(m_commandUint32Buffer.Value().Data(), m_commandUint32Buffer.Value().ElementLength()),
             gsl::make_span(m_commandInt32Buffer.Value().Data(), m_commandInt32Buffer.Value().ElementLength()),
-            gsl::make_span(m_commandFloat32Buffer.Value().Data(), m_commandFloat32Buffer.Value().ElementLength())
+            gsl::make_span(m_commandFloat32Buffer.Value().Data(), m_commandFloat32Buffer.Value().ElementLength()),
+            validationBuffer
         };
 
         uint8_t command{};
