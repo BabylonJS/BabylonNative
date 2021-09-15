@@ -65,3 +65,8 @@ jobs:
       displayName: 'Publish Tests ${{ parameters.name }} Errors'
       condition: failed()
 
+   - script: |
+       sleep 3
+       cd build/Apps/UnitTests
+       ./UnitTests
+     displayName: 'Unit Tests'
