@@ -63,6 +63,6 @@ jobs:
       displayName: 'Build UnitTests macOS'
 
    - script: |
-       cd build/Apps/UnitTests
+       cd buildmacOS/Apps/UnitTests
        ./UnitTests
      displayName: 'Run UnitTests MacOS'
