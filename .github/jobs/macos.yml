@@ -62,7 +62,7 @@ jobs:
         configuration: RelWithDebInfo
       displayName: 'Build UnitTests macOS'
 
-   - script: |
-       cd buildmacOS/Apps/UnitTests
-       ./UnitTests
-     displayName: 'Run UnitTests MacOS'
+    - script: |
+        cd build/Apps/UnitTests
+        ./UnitTests
+      displayName: 'Run UnitTests MacOS'
