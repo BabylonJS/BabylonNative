@@ -382,10 +382,6 @@ namespace Babylon
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
-                InstanceMethod("getDepthWrite", &NativeEngine::GetDepthWrite),
-                InstanceMethod("setDepthWrite", &NativeEngine::SetDepthWrite),
-                InstanceMethod("setColorWrite", &NativeEngine::SetColorWrite),
-                InstanceMethod("setBlendMode", &NativeEngine::SetBlendMode),
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
@@ -525,6 +521,9 @@ namespace Babylon
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
                 InstanceValue("COMMAND_SETZOFFSET", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetZOffset))),
                 InstanceValue("COMMAND_SETDEPTHTEST", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetDepthTest))),
+                InstanceValue("COMMAND_SETDEPTHWRITE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetDepthWrite))),
+                InstanceValue("COMMAND_SETCOLORWRITE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetColorWrite))),
+                InstanceValue("COMMAND_SETBLENDMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetBlendMode))),
                 InstanceValue("COMMAND_SETFLOAT", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat))),
                 InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
@@ -907,30 +906,25 @@ namespace Babylon
         m_engineState |= depthTest;
     }
 
-    Napi::Value NativeEngine::GetDepthWrite(const Napi::CallbackInfo& info)
+    void NativeEngine::SetDepthWrite(CommandBufferDecoder& decoder)
     {
-        return Napi::Value::From(info.Env(), !!(m_engineState & BGFX_STATE_WRITE_Z));
-    }
-
-    void NativeEngine::SetDepthWrite(const Napi::CallbackInfo& info)
-    {
-        const auto enable = info[0].As<Napi::Boolean>().Value();
+        const auto enable = static_cast<bool>(decoder.DecodeCommandArgAsUInt32());
 
         m_engineState &= ~BGFX_STATE_WRITE_Z;
         m_engineState |= enable ? BGFX_STATE_WRITE_Z : 0;
     }
 
-    void NativeEngine::SetColorWrite(const Napi::CallbackInfo& info)
+    void NativeEngine::SetColorWrite(CommandBufferDecoder& decoder)
     {
-        const auto enable = info[0].As<Napi::Boolean>().Value();
+        const auto enable = static_cast<bool>(decoder.DecodeCommandArgAsUInt32());
 
         m_engineState &= ~(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
         m_engineState |= enable ? (BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A) : 0;
     }
 
-    void NativeEngine::SetBlendMode(const Napi::CallbackInfo& info)
+    void NativeEngine::SetBlendMode(CommandBufferDecoder& decoder)
     {
-        const auto blendMode = info[0].As<Napi::Number>().Int64Value();
+        const auto blendMode = decoder.DecodeCommandArgAsUInt32();
 
         m_engineState &= ~BGFX_STATE_BLEND_MASK;
         m_engineState |= blendMode;
