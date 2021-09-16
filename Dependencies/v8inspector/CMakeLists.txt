@@ -5,8 +5,8 @@ target_include_directories(asio INTERFACE "Dependencies/asio/asio/include")
 # ------------------------------ llhttp ------------------------------
 # Install node to use npm
 set(NODE_VERSION "v14.15.5")
-set_win32_arch()
-set(NODE_DIST "node-${NODE_VERSION}-win-${WIN32_ARCH}")
+set_cpu_PLatform_arch()
+set(NODE_DIST "node-${NODE_VERSION}-${PLATFORM_ARCH}-${CPU_ARCH}")
 set(NODE_PATH "${CMAKE_BINARY_DIR}/node")
 set(NODE_ZIP "${NODE_PATH}/node.zip")
 set(NPM_CMD "${NODE_PATH}/${NODE_DIST}/npm.cmd")

@@ -56,12 +56,12 @@ if(NOT TARGET javascript_engine)
     add_library(javascript_engine INTERFACE)
     if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         if(WIN32)
-            set_win32_arch()        
+            set_cpu_PLatform_arch()
             set(V8_VERSION "8.4.371.15")
-            install_v8_nuget(${V8_VERSION} ${WIN32_ARCH} ${CMAKE_VS_PLATFORM_TOOLSET})
+            install_v8_nuget(${V8_VERSION} ${CPU_ARCH} ${CMAKE_VS_PLATFORM_TOOLSET})
             target_link_to_dependencies(javascript_engine INTERFACE v8)
 
-            if (WIN32_ARCH STREQUAL "x64")
+            if (CPU_ARCH STREQUAL "x64")
                 # Enable V8 Pointer Compression
                 # https://v8.dev/blog/pointer-compression
                 # https://stackoverflow.com/q/62921373
