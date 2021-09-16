@@ -15,7 +15,7 @@
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 
-std::promise<int> exitCode;
+std::promise<int32_t> exitCode;
 
 static inline constexpr const char* JS_FUNCTION_NAME{ "SetExitCode" };
 void SetExitCode(const Napi::CallbackInfo& info)
@@ -57,6 +57,9 @@ int run()
     loader.LoadScript("app:///Scripts/chai.js");
     loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
-    // Wait until tests.js has set the exit code, then exit
-    return exitCode.get_future().get();
+    
+    auto code{exitCode.get_future().get()};
+    runtime.reset();
+    graphics.reset();
+    return code;
 }
