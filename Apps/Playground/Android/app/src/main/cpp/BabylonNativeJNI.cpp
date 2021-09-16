@@ -16,6 +16,7 @@
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
+#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -27,6 +28,7 @@ namespace
     std::unique_ptr<Babylon::Graphics> g_graphics{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
+    std::unique_ptr<Babylon::Plugins::ChromeDevTools> g_chromeDevTools{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
     std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
     bool g_isXrActive{};
@@ -47,6 +49,7 @@ extern "C"
             g_graphics->FinishRenderingCurrentFrame();
         }
 
+        g_chromeDevTools.reset();
         g_nativeXr.reset();
         g_scriptLoader.reset();
         g_inputBuffer.reset();
@@ -116,6 +119,12 @@ extern "C"
                 Babylon::Polyfills::Canvas::Initialize(env);
 
                 InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
+
+                g_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
+                if (g_chromeDevTools->SupportsInspector())
+                {
+                    g_chromeDevTools->StartInspector(5643, "BabylonNative Playground");
+                }
             });
 
             g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);
