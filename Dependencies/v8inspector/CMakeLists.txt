@@ -5,7 +5,7 @@ target_include_directories(asio INTERFACE "Dependencies/asio/asio/include")
 # ------------------------------ llhttp ------------------------------
 # Install node to use npm
 set(NODE_VERSION "v14.15.5")
-set_cpu_PLatform_arch()
+set_cpu_pLatform_arch()
 set(NODE_DIST "node-${NODE_VERSION}-${PLATFORM_ARCH}-${CPU_ARCH}")
 set(NODE_PATH "${CMAKE_BINARY_DIR}/node")
 if (PLATFORM_ARCH STREQUAL "darwin" OR PLATFORM_ARCH STREQUAL "linux")
@@ -49,7 +49,7 @@ set(LLHTTP_SOURCES
     "Dependencies/llhttp/build/c/llhttp.c"
     "Dependencies/llhttp/src/native/api.c"
     "Dependencies/llhttp/src/native/http.c")
-add_library(llhttp OBJECT ${LLHTTP_SOURCES})
+add_library(llhttp ${LLHTTP_SOURCES})
 target_include_directories(llhttp PUBLIC "Dependencies/llhttp/build")
 target_include_directories(llhttp PUBLIC "Dependencies/llhttp/src/native")
 source_group(TREE ${LLHTTP_DIR} FILES ${LLHTTP_SOURCES})
@@ -82,3 +82,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 target_link_to_dependencies(v8inspector PRIVATE asio)
 target_link_to_dependencies(v8inspector PRIVATE llhttp)
 target_link_to_dependencies(v8inspector PRIVATE javascript_engine)
+disable_warnings(v8inspector)

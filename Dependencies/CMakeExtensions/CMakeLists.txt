@@ -111,7 +111,7 @@ function(disable_warnings target)
 endfunction()
 
 # Sets CPU_ARCH and PLATFORM_ARCH variables in the calling scope.
-function(set_cpu_PLatform_arch)
+function(set_cpu_pLatform_arch)
     if(${CMAKE_CXX_COMPILER} MATCHES "x86/cl.exe$")
         set(CPU_ARCH "x86" PARENT_SCOPE)
         set(PLATFORM_ARCH "win" PARENT_SCOPE)
