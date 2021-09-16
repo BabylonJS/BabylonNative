@@ -390,8 +390,6 @@ namespace Babylon
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
-                InstanceMethod("setTextureSampling", &NativeEngine::SetTextureSampling),
-                InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
@@ -516,6 +514,9 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOATARRAY2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray2))),
                 InstanceValue("COMMAND_SETFLOATARRAY3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray3))),
                 InstanceValue("COMMAND_SETFLOATARRAY4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloatArray4))),
+                InstanceValue("COMMAND_SETTEXTURESAMPLING", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureSampling))),
+                InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode))),
+                InstanceValue("COMMAND_SETTEXTUREANISOTROPICLEVEL", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureAnisotropicLevel))),
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
@@ -528,7 +529,6 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
                 InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
-                InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode))),
                 InstanceValue("COMMAND_BINDFRAMEBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindFrameBuffer))),
                 InstanceValue("COMMAND_UNBINDFRAMEBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::UnbindFrameBuffer))),
                 InstanceValue("COMMAND_DELETEFRAMEBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteFrameBuffer))),
@@ -1332,10 +1332,10 @@ namespace Babylon
         return Napi::Value::From(info.Env(), texture.Height);
     }
 
-    void NativeEngine::SetTextureSampling(const Napi::CallbackInfo& info)
+    void NativeEngine::SetTextureSampling(CommandBufferDecoder& decoder)
     {
-        auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
-        auto filter = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
+        auto& texture = TextureData::Get(decoder.DecodeCommandArgAsUInt32());
+        const auto filter = decoder.DecodeCommandArgAsUInt32();
 
         texture.Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
 
@@ -1364,10 +1364,10 @@ namespace Babylon
         texture.Flags |= addressMode;
     }
 
-    void NativeEngine::SetTextureAnisotropicLevel(const Napi::CallbackInfo& info)
+    void NativeEngine::SetTextureAnisotropicLevel(CommandBufferDecoder& decoder)
     {
-        auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
-        const auto value = info[1].As<Napi::Number>().Uint32Value();
+        auto& texture = TextureData::Get(decoder.DecodeCommandArgAsUInt32());
+        const auto value = decoder.DecodeCommandArgAsUInt32();
 
         texture.AnisotropicLevel = static_cast<uint8_t>(value);
 

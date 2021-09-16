@@ -378,9 +378,9 @@ namespace Babylon
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
-        void SetTextureSampling(const Napi::CallbackInfo& info); //
+        void SetTextureSampling(CommandBufferDecoder& decoder);
         void SetTextureWrapMode(CommandBufferDecoder& decoder);
-        void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info); //
+        void SetTextureAnisotropicLevel(CommandBufferDecoder& decoder);
         void SetTexture(CommandBufferDecoder& decoder);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
