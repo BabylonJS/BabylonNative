@@ -50,25 +50,25 @@ jobs:
 #       xCodeVersion: 12.4
 #       deploymentTarget: 14
 
-# # WIN32
-#   - template: .github/jobs/win32.yml
-#     parameters:
-#       name: Win32_x86
-#       vmImage: 'windows-latest'
-#       platform: win32
+# WIN32
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x86
+      vmImage: 'windows-latest'
+      platform: win32
   
-#   - template: .github/jobs/win32.yml
-#     parameters:
-#       name: Win32_x64
-#       vmImage: 'windows-latest'
-#       platform: x64
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64
+      vmImage: 'windows-latest'
+      platform: x64
 
-#   - template: .github/jobs/win32.yml
-#     parameters:
-#       name: Win32_x64_JSI
-#       vmImage: 'windows-latest'
-#       platform: x64
-#       napiType: jsi
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_JSI
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: jsi
 
 # # UWP
 #   - template: .github/jobs/uwp.yml
