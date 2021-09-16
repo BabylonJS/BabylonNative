@@ -50,48 +50,48 @@ jobs:
           configuration: 'RelWithDebInfo'
         displayName: 'Build ${{ variables.solutionName }}'
     
-      # - script: |
-      #     reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
-      #     reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
-      #     reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
-      #     reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
-      #   displayName: 'Enable Crash Dumps'
+      - script: |
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpType /t REG_DWORD /d 2
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpCount /t REG_DWORD /d 1
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ValidationTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+        displayName: 'Enable Crash Dumps'
     
-      # - script: |
-      #     cd build${{ variables.solutionName }}\Apps\ValidationTests
-      #     cd RelWithDebInfo
-      #     ValidationTests
-      #   displayName: 'Validation Tests'
+      - script: |
+          cd build${{ variables.solutionName }}\Apps\ValidationTests
+          cd RelWithDebInfo
+          ValidationTests
+        displayName: 'Validation Tests'
     
-      # - task: PublishBuildArtifacts@1
-      #   inputs:
-      #     artifactName: '${{ variables.solutionName }} Rendered Pictures'
-      #     pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Results'
-      #   displayName: 'Publish Tests ${{ variables.solutionName }} Results'
-      #   condition: succeeded()
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: '${{ variables.solutionName }} Rendered Pictures'
+          pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Results'
+        displayName: 'Publish Tests ${{ variables.solutionName }} Results'
+        condition: succeeded()
     
-      # - task: PublishBuildArtifacts@1
-      #   inputs:
-      #     artifactName: '${{ variables.solutionName }} Error Pictures'
-      #     pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Errors'
-      #   displayName: 'Publish Tests ${{ variables.solutionName }} Errors'
-      #   condition: failed()
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: '${{ variables.solutionName }} Error Pictures'
+          pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Errors'
+        displayName: 'Publish Tests ${{ variables.solutionName }} Errors'
+        condition: failed()
     
-      # - task: CopyFiles@2
-      #   inputs:
-      #     sourceFolder: 'build${{ variables.solutionName }}/Apps/ValidationTests/RelWithDebInfo'
-      #     contents: ValidationTests.*
-      #     targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
-      #     cleanTargetFolder: false
-      #   displayName: 'Stage test app exe/pdb for publishing'
-      #   condition: failed()
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: 'build${{ variables.solutionName }}/Apps/ValidationTests/RelWithDebInfo'
+          contents: ValidationTests.*
+          targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+          cleanTargetFolder: false
+        displayName: 'Stage test app exe/pdb for publishing'
+        condition: failed()
     
-      # - task: PublishBuildArtifacts@1
-      #   inputs:
-      #     artifactName: '${{ variables.solutionName }} Crash Dumps'
-      #     pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
-      #   displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
-      #   condition: failed()
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: '${{ variables.solutionName }} Crash Dumps'
+          pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
+        displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
+        condition: failed()
 
       - script: |
           cd build${{ variables.solutionName }}\Apps\UnitTests
