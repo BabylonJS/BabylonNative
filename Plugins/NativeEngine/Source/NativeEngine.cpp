@@ -382,8 +382,6 @@ namespace Babylon
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
-                InstanceMethod("setZOffset", &NativeEngine::SetZOffset),
-                InstanceMethod("getZOffset", &NativeEngine::GetZOffset),
                 InstanceMethod("setDepthTest", &NativeEngine::SetDepthTest),
                 InstanceMethod("getDepthWrite", &NativeEngine::GetDepthWrite),
                 InstanceMethod("setDepthWrite", &NativeEngine::SetDepthWrite),
@@ -526,6 +524,7 @@ namespace Babylon
                 InstanceValue("COMMAND_SETTEXTURE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTexture))),
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
+                InstanceValue("COMMAND_SETZOFFSET", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetZOffset))),
                 InstanceValue("COMMAND_SETFLOAT", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat))),
                 InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
@@ -893,17 +892,11 @@ namespace Babylon
         }
     }
 
-    void NativeEngine::SetZOffset(const Napi::CallbackInfo& /*info*/)
+    void NativeEngine::SetZOffset(CommandBufferDecoder& decoder)
     {
-        //const auto zOffset = info[0].As<Napi::Number>().FloatValue();
+        /*const auto zOffset =*/ decoder.DecodeCommandArgAsFloat32();
 
         // STUB: Stub.
-    }
-
-    Napi::Value NativeEngine::GetZOffset(const Napi::CallbackInfo& /*info*/)
-    {
-        // STUB: Stub.
-        return {};
     }
 
     void NativeEngine::SetDepthTest(const Napi::CallbackInfo& info)

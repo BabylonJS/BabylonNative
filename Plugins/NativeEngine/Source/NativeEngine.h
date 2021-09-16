@@ -284,7 +284,7 @@ namespace Babylon
         Float32Buffer m_float32ArgBuffer;
         std::optional<UInt8Buffer> m_validationBuffer;
 
-        void ValidateDecodeOperation(uint8_t decodeOperation)
+        void ValidateDecodeOperation(const uint8_t decodeOperation)
         {
             if (m_validationBuffer)
             {
@@ -298,7 +298,7 @@ namespace Babylon
             }
         }
 
-        static std::string ConvertOperationCodeToString(uint8_t operationCode)
+        static std::string ConvertOperationCodeToString(const uint8_t operationCode)
         {
             switch(operationCode)
             {
@@ -348,13 +348,12 @@ namespace Babylon
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
         void SetProgram(CommandBufferDecoder& decoder);
         void SetState(CommandBufferDecoder& decoder);
-        void SetZOffset(const Napi::CallbackInfo& info);
-        Napi::Value GetZOffset(const Napi::CallbackInfo& info);
-        void SetDepthTest(const Napi::CallbackInfo& info);
-        Napi::Value GetDepthWrite(const Napi::CallbackInfo& info);
-        void SetDepthWrite(const Napi::CallbackInfo& info);
-        void SetColorWrite(const Napi::CallbackInfo& info);
-        void SetBlendMode(const Napi::CallbackInfo& info);
+        void SetZOffset(CommandBufferDecoder& decoder);
+        void SetDepthTest(const Napi::CallbackInfo& info); //
+        Napi::Value GetDepthWrite(const Napi::CallbackInfo& info); //
+        void SetDepthWrite(const Napi::CallbackInfo& info); //
+        void SetColorWrite(const Napi::CallbackInfo& info); //
+        void SetBlendMode(const Napi::CallbackInfo& info); //
         void SetMatrix(CommandBufferDecoder& decoder);
         void SetInt(CommandBufferDecoder& decoder);
         void SetIntArray(CommandBufferDecoder& decoder);
@@ -380,9 +379,9 @@ namespace Babylon
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
-        void SetTextureSampling(const Napi::CallbackInfo& info);
+        void SetTextureSampling(const Napi::CallbackInfo& info); //
         void SetTextureWrapMode(CommandBufferDecoder& decoder);
-        void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
+        void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info); //
         void SetTexture(CommandBufferDecoder& decoder);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
