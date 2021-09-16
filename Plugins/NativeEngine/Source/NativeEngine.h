@@ -349,7 +349,7 @@ namespace Babylon
         void SetProgram(CommandBufferDecoder& decoder);
         void SetState(CommandBufferDecoder& decoder);
         void SetZOffset(CommandBufferDecoder& decoder);
-        void SetDepthTest(const Napi::CallbackInfo& info); //
+        void SetDepthTest(CommandBufferDecoder& decoder);
         Napi::Value GetDepthWrite(const Napi::CallbackInfo& info); //
         void SetDepthWrite(const Napi::CallbackInfo& info); //
         void SetColorWrite(const Napi::CallbackInfo& info); //
