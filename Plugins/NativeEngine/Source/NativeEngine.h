@@ -386,9 +386,9 @@ namespace Babylon
         void SetTexture(CommandBufferDecoder& decoder);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
-        void DeleteFrameBuffer(const Napi::CallbackInfo& info);
-        void BindFrameBuffer(const Napi::CallbackInfo& info);
-        void UnbindFrameBuffer(const Napi::CallbackInfo& info);
+        void DeleteFrameBuffer(CommandBufferDecoder& decoder);
+        void BindFrameBuffer(CommandBufferDecoder& decoder);
+        void UnbindFrameBuffer(CommandBufferDecoder& decoder);
         void DrawIndexed(CommandBufferDecoder& decoder);
         void Draw(CommandBufferDecoder& decoder);
         void Clear(CommandBufferDecoder& decoder);

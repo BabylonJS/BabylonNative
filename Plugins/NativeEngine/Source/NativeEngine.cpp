@@ -401,9 +401,6 @@ namespace Babylon
                 InstanceMethod("setTextureAnisotropicLevel", &NativeEngine::SetTextureAnisotropicLevel),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
-                InstanceMethod("deleteFrameBuffer", &NativeEngine::DeleteFrameBuffer),
-                InstanceMethod("bindFrameBuffer", &NativeEngine::BindFrameBuffer),
-                InstanceMethod("unbindFrameBuffer", &NativeEngine::UnbindFrameBuffer),
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
@@ -534,6 +531,9 @@ namespace Babylon
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
                 InstanceValue("COMMAND_SETFLOAT4", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat4))),
                 InstanceValue("COMMAND_SETTEXTUREWRAPMODE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetTextureWrapMode))),
+                InstanceValue("COMMAND_BINDFRAMEBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindFrameBuffer))),
+                InstanceValue("COMMAND_UNBINDFRAMEBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::UnbindFrameBuffer))),
+                InstanceValue("COMMAND_DELETEFRAMEBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteFrameBuffer))),
                 InstanceValue("COMMAND_DRAWINDEXED", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DrawIndexed))),
                 InstanceValue("COMMAND_DRAW", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Draw))),
                 InstanceValue("COMMAND_CLEAR", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::Clear))),
@@ -1460,14 +1460,14 @@ namespace Babylon
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.
-    void NativeEngine::DeleteFrameBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteFrameBuffer(CommandBufferDecoder& decoder)
     {
-        FrameBuffer::Delete(info[0].ToNumber().Uint32Value());
+        FrameBuffer::Delete(decoder.DecodeCommandArgAsUInt32());
     }
 
-    void NativeEngine::BindFrameBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::BindFrameBuffer(CommandBufferDecoder& decoder)
     {
-        auto& frameBuffer{FrameBuffer::Get(info[0].ToNumber().Uint32Value())};
+        auto& frameBuffer{FrameBuffer::Get(decoder.DecodeCommandArgAsUInt32())};
         auto* encoder = GetUpdateToken().GetEncoder();
 
         m_boundFrameBuffer->Unbind(*encoder);
@@ -1476,9 +1476,9 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
-    void NativeEngine::UnbindFrameBuffer(const Napi::CallbackInfo& info)
+    void NativeEngine::UnbindFrameBuffer(CommandBufferDecoder& decoder)
     {
-        const auto& frameBuffer{FrameBuffer::Get(info[0].ToNumber().Uint32Value())};
+        const auto& frameBuffer{FrameBuffer::Get(decoder.DecodeCommandArgAsUInt32())};
         auto* encoder = GetUpdateToken().GetEncoder();
 
         assert(&frameBuffer == m_boundFrameBuffer);
