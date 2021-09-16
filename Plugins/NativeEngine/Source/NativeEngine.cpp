@@ -382,7 +382,6 @@ namespace Babylon
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
-                InstanceMethod("setDepthTest", &NativeEngine::SetDepthTest),
                 InstanceMethod("getDepthWrite", &NativeEngine::GetDepthWrite),
                 InstanceMethod("setDepthWrite", &NativeEngine::SetDepthWrite),
                 InstanceMethod("setColorWrite", &NativeEngine::SetColorWrite),
@@ -525,6 +524,7 @@ namespace Babylon
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
                 InstanceValue("COMMAND_SETZOFFSET", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetZOffset))),
+                InstanceValue("COMMAND_SETDEPTHTEST", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetDepthTest))),
                 InstanceValue("COMMAND_SETFLOAT", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat))),
                 InstanceValue("COMMAND_SETFLOAT2", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat2))),
                 InstanceValue("COMMAND_SETFLOAT3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetFloat3))),
@@ -899,9 +899,9 @@ namespace Babylon
         // STUB: Stub.
     }
 
-    void NativeEngine::SetDepthTest(const Napi::CallbackInfo& info)
+    void NativeEngine::SetDepthTest(CommandBufferDecoder& decoder)
     {
-        const auto depthTest = info[0].As<Napi::Number>().Uint32Value();
+        const auto depthTest = decoder.DecodeCommandArgAsUInt32();
 
         m_engineState &= ~BGFX_STATE_DEPTH_TEST_MASK;
         m_engineState |= depthTest;
