@@ -47,7 +47,7 @@ int run()
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
         
-        env.Global().Set(Napi::String::New(env, JS_FUNCTION_NAME), Napi::Function::New(env, SetExitCode));
+        env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode));
     });
     Babylon::ScriptLoader loader{*runtime};
     loader.Eval("global = {};", ""); // Required for Chai.js as we do not have global in Babylon Native

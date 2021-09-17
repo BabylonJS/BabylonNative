@@ -35,14 +35,14 @@ jobs:
         cmake .. -GXcode
       displayName: 'Generate macOS solution'
 
-    # - task: Xcode@5
-    #   inputs:
-    #     xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-    #     scheme: 'Playground'
-    #     sdk: 'macosx'
-    #     useXcpretty: false
-    #     configuration: RelWithDebInfo
-    #   displayName: 'Build Playground macOS'
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+        scheme: 'Playground'
+        sdk: 'macosx'
+        useXcpretty: false
+        configuration: RelWithDebInfo
+      displayName: 'Build Playground macOS'
 
     - task: Xcode@5
       inputs:
