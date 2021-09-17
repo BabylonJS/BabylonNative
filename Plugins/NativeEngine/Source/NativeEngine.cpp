@@ -501,6 +501,7 @@ namespace Babylon
                 InstanceValue("COMMAND_DELETEINDEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteIndexBuffer))),
                 InstanceValue("COMMAND_DELETEVERTEXBUFFER", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteVertexBuffer))),
                 InstanceValue("COMMAND_SETPROGRAM", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetProgram))),
+                InstanceValue("COMMAND_DELETEPROGRAM", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::DeleteProgram))),
                 InstanceValue("COMMAND_SETMATRICES", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrices))),
                 InstanceValue("COMMAND_SETMATRIX", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix))),
                 InstanceValue("COMMAND_SETMATRIX3X3", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetMatrix3x3))),
@@ -816,8 +817,6 @@ namespace Babylon
         return Napi::Value::From(info.Env(), programDataHandle);
     }
 
-    // TODO: Add a DeleteProgram, maybe called from NativeEngine._releaseEffect (on the JS side)?
-
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)
     {
         const auto& program = ProgramData::Get(info[0].ToNumber().Uint32Value());
@@ -889,6 +888,13 @@ namespace Babylon
         {
             m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CCW : BGFX_STATE_CULL_CW;
         }
+    }
+
+    void NativeEngine::DeleteProgram(CommandBufferDecoder& decoder)
+    {
+        const uint32_t programDataHandle{decoder.DecodeCommandArgAsUInt32()};
+        ProgramData::Delete(programDataHandle);
+        m_programDataCollection.erase(programDataHandle);
     }
 
     void NativeEngine::SetZOffset(CommandBufferDecoder& decoder)

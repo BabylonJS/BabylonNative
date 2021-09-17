@@ -347,6 +347,7 @@ namespace Babylon
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
         void SetProgram(CommandBufferDecoder& decoder);
+        void DeleteProgram(CommandBufferDecoder& decoder);
         void SetState(CommandBufferDecoder& decoder);
         void SetZOffset(CommandBufferDecoder& decoder);
         void SetDepthTest(CommandBufferDecoder& decoder);
