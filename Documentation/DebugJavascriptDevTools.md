@@ -31,3 +31,16 @@ Once you have the DevTools window open, you can use it in the same way as if you
 For more information, see this documentation from Google on [how to debug JavaScript using Chrome DevTools](https://developer.chrome.com/docs/devtools/javascript/).
 
 ![DevTools window](Images/DevTools/devtools-breakpoint.png)
+
+## Debugging on Android
+
+There are some subtilities when debugging on Android. First, `app://` scheme is not supported by the dev tools. Favor loading from an HTTP server running on your workstation and update the requests URL in your code.
+By default, Android apps don't support unsecured HTTP requests. Change the manifest to allow it by adding:
+```
+<application 
+...
+android:usesCleartextTraffic="true"
+...
+</application>
+```
+Or make the requests to point to a secured server.
