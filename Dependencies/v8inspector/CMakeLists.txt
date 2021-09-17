@@ -47,6 +47,7 @@ if (NOT EXISTS "${LLHTTP_DIR}/build")
     if (NOT ${NPM_RUN_BUILD_ERROR} STREQUAL "")
         message(FATAL_ERROR "Problem with llhttp generation:\n${NPM_CI_ERROR}\n${NPM_RUN_BUILD_ERROR}")
     endif()
+    message(STATUS "llhttp library generation done")
 endif()
 
 set(LLHTTP_SOURCES

@@ -9,7 +9,62 @@ variables:
   value: 3.19.6
   
 jobs:
+# Apple
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode11
+      vmImage: 'macOS-10.14'
+      xCodeVersion: 11.3.1
 
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode11
+      vmImage: 'macOS-10.14'
+      xCodeVersion: 11.3.1
+      deploymentTarget: 12
+      
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64
+      vmImage: 'windows-latest'
+      platform: x64
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_JSI
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: jsi
+      
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64
+      vmImage: 'windows-latest'
+      platform: arm64
+
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64_JSI
+      vmImage: 'windows-latest'
+      platform: arm64
+      napiType: jsi
+      
+# Ubuntu/Linux
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_Clang9_V8
+      vmImage: 'ubuntu-latest'
+      CC: clang-9
+      CXX: clang++-9
+      JSEngine: V8
+
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC9_JSC
+      vmImage: 'ubuntu-latest'
+      CC: gcc-9
+      CXX: g++-9
+      JSEngine: JavaScriptCore
 # Android
   - template: .github/jobs/android.yml
     parameters:
