@@ -1,5 +1,5 @@
-# BabylonNative Script Debugging on Win32
-You can use Chromium DevTools to debug your JavaScript while running a Win32 BabylonNative application (x86/x64) with the V8 JavaScript engine.
+# BabylonNative Script Debugging on Win32 and Android
+You can use Chromium DevTools to debug your JavaScript while running a Win32 BabylonNative application (x86/x64) or Android with the V8 JavaScript engine.
 
 ## Set up BabylonNative to Use V8
 When running CMake, be sure to specify the following flag in order to use V8 as the underlying JavaScript engine (overriding default behavior, which on Windows is to use the Chakra engine):
@@ -11,6 +11,8 @@ mkdir Build
 cd Build
 cmake -A Win32 -D NAPI_JAVASCRIPT_ENGINE=V8 ..
 ```
+
+for Android, simply open the Playground project with AndroidStudio. V8 is the default JS engine for this platform.
 
 ## Add the Remote Target URL
 Depending on which Chromium-based browser you're using (Edge or Chrome), navigate to `edge://inspect` or `chrome://inspect`.
