@@ -24,7 +24,7 @@ endif()
 
 add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP})
 
-target_link_libraries(UnitTests
+target_link_to_dependencies(UnitTests
     UrlLib
     AppRuntime
     XMLHttpRequest
