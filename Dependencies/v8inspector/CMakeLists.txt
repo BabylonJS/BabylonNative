@@ -17,7 +17,7 @@ set(NODE_ARCHIVE "${NODE_PATH}/node.${ARCHIVE_EXT}")
 if (PLATFORM_ARCH STREQUAL "win")
     set(NPM_CMD "${NODE_PATH}/${NODE_DIST}/npm.cmd")
 else()
-    set(NPM_CMD "${NODE_PATH}/${NODE_DIST}/npm")
+    set(NPM_CMD "${NODE_PATH}/${NODE_DIST}/bin/npm")
 endif()
 
 if(NOT EXISTS ${NPM_CMD})
