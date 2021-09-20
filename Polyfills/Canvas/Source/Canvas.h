@@ -40,6 +40,7 @@ namespace Babylon::Polyfills::Internal
         Babylon::GraphicsImpl& m_graphicsImpl;
 
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
+        uint32_t m_textureHandle{0};
         bool m_dirty{};
     };
 }

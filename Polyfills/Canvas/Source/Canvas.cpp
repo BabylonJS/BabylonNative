@@ -103,6 +103,13 @@ namespace Babylon::Polyfills::Internal
             assert(handle.idx != bgfx::kInvalidHandle);
             m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
+
+            if (m_textureHandle != 0)
+            {
+                TextureData::Delete(m_textureHandle);
+                m_textureHandle = 0;
+            }
+
             return true;
         }
         return false;
@@ -110,19 +117,31 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
+        if (m_textureHandle == 0)
+        {
+            m_textureHandle = TextureData::Create();
+        }
+
+        auto& textureData{TextureData::Get(m_textureHandle)};
+
         assert(m_frameBuffer->Handle().idx != bgfx::kInvalidHandle);
-        const auto textureData = new TextureData();
-        textureData->Handle = bgfx::getTexture(m_frameBuffer->Handle());
-        textureData->OwnsHandle = false;
-        textureData->Width = m_width;
-        textureData->Height = m_height;
-        // TODO (ryantrem)
-        return Napi::External<TextureData>::New(info.Env(), textureData, [](Napi::Env, TextureData* data) { delete data; });
+        textureData.Handle = bgfx::getTexture(m_frameBuffer->Handle());
+        textureData.OwnsHandle = false;
+        textureData.Width = m_width;
+        textureData.Height = m_height;
+
+        return Napi::Value::From(info.Env(), m_textureHandle);
     }
 
     void NativeCanvas::Dispose()
     {
         m_frameBuffer.reset();
+
+        if (m_textureHandle != 0)
+        {
+            TextureData::Delete(m_textureHandle);
+            m_textureHandle = 0;
+        }
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
