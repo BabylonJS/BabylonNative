@@ -146,7 +146,6 @@ namespace UrlLib
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
-        std::string m_url{};
         NSURL* m_nsURL{};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};

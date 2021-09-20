@@ -62,8 +62,7 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            m_url = std::move(url);
-            m_URI = Foundation::Uri{winrt::to_hstring(m_url)};
+            m_uri = Foundation::Uri{winrt::to_hstring(url)};
         }
 
         UrlResponseType ResponseType() const
@@ -80,19 +79,19 @@ namespace UrlLib
         {
             try
             {
-                if (m_URI.SchemeName() == L"app")
+                if (m_uri.SchemeName() == L"app")
                 {
                     return arcana::create_task<std::exception_ptr>(Storage::StorageFolder::GetFolderFromPathAsync(GetInstalledLocation()))
-                        .then(arcana::inline_scheduler, m_cancellationSource, [this, m_URI{std::move(m_URI)}](Storage::StorageFolder folder) {
-                            return arcana::create_task<std::exception_ptr>(folder.GetFileAsync(GetLocalPath(m_URI)));
+                        .then(arcana::inline_scheduler, m_cancellationSource, [this, m_uri{m_uri}](Storage::StorageFolder folder) {
+                            return arcana::create_task<std::exception_ptr>(folder.GetFileAsync(GetLocalPath(m_uri)));
                         })
                         .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::StorageFile file) {
                             return LoadFileAsync(file);
                         });
                 }
-                else if (m_URI.SchemeName() == L"file")
+                else if (m_uri.SchemeName() == L"file")
                 {
-                    return arcana::create_task<std::exception_ptr>(Storage::StorageFile::GetFileFromPathAsync(GetLocalPath(m_URI)))
+                    return arcana::create_task<std::exception_ptr>(Storage::StorageFile::GetFileFromPathAsync(GetLocalPath(m_uri)))
                         .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::StorageFile file) {
                             return LoadFileAsync(file);
                         });
@@ -100,7 +99,7 @@ namespace UrlLib
                 else
                 {
                     Web::Http::HttpRequestMessage requestMessage;
-                    requestMessage.RequestUri(m_URI);
+                    requestMessage.RequestUri(m_uri);
                     requestMessage.Method(ConvertHttpMethod(m_method));
 
                     Web::Http::HttpClient client;
@@ -209,8 +208,7 @@ namespace UrlLib
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
-        std::string m_url{};
-        Foundation::Uri m_URI{nullptr};
+        Foundation::Uri m_uri{nullptr};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};
         std::string m_responseString{};
