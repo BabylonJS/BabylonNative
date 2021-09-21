@@ -186,7 +186,11 @@ namespace Babylon::Polyfills::Internal
         catch (const std::exception& e)
         {
             // If we have a parse error, catch and rethrow to JavaScript
-            throw Napi::Error::New(info.Env(), "Could not parse URL scheme: " + std::string{e.what()});
+            throw Napi::Error::New(info.Env(), "Error parsing URL scheme: " + std::string{e.what()});
+        }
+        catch (...)
+        {
+            throw Napi::Error::New(info.Env(), "Unknown error parsing URL scheme");
         }
     }
 
