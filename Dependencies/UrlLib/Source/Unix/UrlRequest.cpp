@@ -24,7 +24,6 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            auto URL{std::move(url)};
             if (m_curl)
             {
                 curl_easy_reset(m_curl);
@@ -37,7 +36,7 @@ namespace UrlLib
                 // Curl can't parse URL starting with app://
                 // doing it manually instead
                 const auto appSchema = "app://";
-                if (URL.find(appSchema) == 0)
+                if (url.find(appSchema) == 0)
                 {
                     char exe[1024];
                     int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
@@ -47,7 +46,7 @@ namespace UrlLib
                     }
                     exe[ret] = 0;
 
-                    std::string patchedURL = URL;
+                    std::string patchedURL = url;
                     const auto baseURL = std::string("file://") + std::filesystem::path{exe}.parent_path().generic_string();
                     patchedURL.replace(0, strlen(appSchema), baseURL);
 
@@ -63,7 +62,7 @@ namespace UrlLib
                     CURLUcode rc;
                     CURLU* url = curl_url();
                     auto urlScopeGuard = gsl::finally([url] { curl_url_cleanup(url); });
-                    rc = curl_url_set(url, CURLUPART_URL, URL.c_str(), 0);
+                    rc = curl_url_set(url, CURLUPART_URL, url.c_str(), 0);
                     if (rc != CURLUE_OK)
                     {
                         throw std::runtime_error{"CURL: Unable to build URL."};
@@ -106,7 +105,7 @@ namespace UrlLib
                     }
                     else
                     {
-                        curl_easy_setopt(m_curl, CURLOPT_URL, URL.c_str());
+                        curl_easy_setopt(m_curl, CURLOPT_URL, url.c_str());
                     }
                 }
             }

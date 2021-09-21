@@ -46,14 +46,7 @@ namespace UrlLib
         {
             m_method = method;
             Uri uri{Uri::Parse(std::move(url).data())};
-            if ((std:: string) uri.getScheme() == "app")
-            {
-                m_schemeIsApp = true;
-            }
-            else
-            {
-                m_schemeIsApp = false;
-            }
+            m_schemeIsApp = ((std::string)uri.getScheme() == "app");
             m_urlOrAppPath = uri.getPath();
         }
 
@@ -184,8 +177,8 @@ namespace UrlLib
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
-        bool m_schemeIsApp;
-        std::string m_urlOrAppPath;
+        bool m_schemeIsApp{};
+        std::string m_urlOrAppPath{};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};
         std::string m_responseString{};
