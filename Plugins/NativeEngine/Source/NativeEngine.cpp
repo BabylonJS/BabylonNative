@@ -35,7 +35,7 @@ namespace Babylon
             constexpr uint32_t SAMPLER_MIN_LINEAR = 0;
             constexpr uint32_t SAMPLER_MIP_POINT = BGFX_SAMPLER_MIP_POINT;
             constexpr uint32_t SAMPLER_MIP_LINEAR = 0;
-            constexpr uint32_t SAMPLER_MIP_IGNORE = 0; // HACK: bgfx has no support for ignoring mips
+            constexpr uint32_t SAMPLER_MIP_IGNORE = BGFX_SAMPLER_MIP_POINT; // HACK: bgfx has no support for ignoring mips
 
             // clang-format off
             // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                     MIN                         MIP
@@ -1470,6 +1470,10 @@ namespace Babylon
         if ((texture->Flags & BGFX_SAMPLER_MIN_POINT) == 0 && (texture->Flags & BGFX_SAMPLER_MAG_POINT) == 0 && value > 1)
         {
             texture->Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+
+            // There is a bug in bgfx that causes the samplers to do the wrong thing in DirectX.
+            // Remove this once https://github.com/bkaradzic/bgfx/pull/2609 is merged.
+            texture->Flags &= ~BGFX_SAMPLER_MIP_MASK;
         }
     }
 
