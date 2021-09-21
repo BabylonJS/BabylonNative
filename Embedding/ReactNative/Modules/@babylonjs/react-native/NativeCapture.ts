@@ -11,7 +11,7 @@ export type CapturedFrame = {
 export type CaptureCallback = (capture: CapturedFrame) => void;
 
 declare class NativeCapture {
-  public constructor(frameBuffer?: unknown | undefined);
+  public constructor(frameBuffer: unknown);
   public addCallback(onCaptureCallback: CaptureCallback): void;
   public dispose(): void;
 };
@@ -21,7 +21,8 @@ export class CaptureSession {
 
     public constructor(camera: Camera | undefined, onCaptureCallback: CaptureCallback) {
         console.warn(`CaptureSession is experimental and likely to change significantly.`);
-        this.nativeCapture = new NativeCapture(camera?.outputRenderTarget?.getInternalTexture()?._framebuffer);
+        // HACK: There is no exposed way to access the frame buffer from render target texture
+        this.nativeCapture = new NativeCapture((camera?.outputRenderTarget?.renderTarget as any)?._framebuffer);
         this.nativeCapture.addCallback(onCaptureCallback);
     }
 
