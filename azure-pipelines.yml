@@ -142,14 +142,14 @@ jobs:
       vmImage: 'ubuntu-latest'
       JSEngine: v8android
       
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_MacOS_JSC
-      vmImage: 'macOS-10.14'
-      JSEngine: jsc
-      
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_MacOS_V8
-      vmImage: 'macOS-10.14'
-      JSEngine: v8android
+#  - template: .github/jobs/android.yml
+#    parameters:
+#      name: Android_MacOS_JSC
+#      vmImage: 'macOS-10.14'
+#      JSEngine: jsc
+#      
+#  - template: .github/jobs/android.yml
+#    parameters:
+#      name: Android_MacOS_V8
+#      vmImage: 'macOS-10.14'
+#      JSEngine: v8android
