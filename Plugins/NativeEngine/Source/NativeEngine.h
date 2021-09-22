@@ -80,8 +80,7 @@ namespace Babylon
         }
 
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
-        std::unordered_map<std::string, ResourceTable<UniformInfo>::handle> VertexUniformInfos{};
-        std::unordered_map<std::string, ResourceTable<UniformInfo>::handle> FragmentUniformInfos{};
+        std::unordered_map<std::string, ResourceTable<UniformInfo>::handle> UniformInfos{};
 
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
 

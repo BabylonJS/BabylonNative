@@ -28,7 +28,7 @@ namespace Babylon::ShaderCompilerTraversers
         /// by several of the traversers in this file.
         /// @param nameToReplacement Map from symbol names to the node which should replace that symbol.
         /// @param symbolToParent Vector of symbols to be replaced along with their parents in the AST.
-        void makeReplacements(
+        void MakeReplacements(
             std::map<std::string, TIntermTyped*> nameToReplacement,
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent)
         {
@@ -94,7 +94,7 @@ namespace Babylon::ShaderCompilerTraversers
         /// which is a special part of the AST used to enumerate symbols for linking.
         /// @param path The path to the element in question.
         /// @returns True if path is for a linker object, false otherwise.
-        bool isLinkerObject(const TIntermSequence& path)
+        bool IsLinkerObject(const TIntermSequence& path)
         {
             auto* agg = path.size() > 1 ? path[1]->getAsAggregate() : nullptr;
             return agg && agg->getOp() == EOpLinkerObjects;
@@ -137,7 +137,7 @@ namespace Babylon::ShaderCompilerTraversers
                     // section of the AST must be fundamentally changed to represent the fact that the
                     // new struct exists and that many things that were previously independent linker
                     // objects are now just a part of the new struct.
-                    if (isLinkerObject(this->path))
+                    if (IsLinkerObject(this->path))
                     {
                         m_uniformNameToSymbol[symbol->getName().c_str()] = symbol;
                     }
@@ -264,7 +264,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                 // Replace all remaining occurrances of the affected symbols with the new
                 // operations retrieving them from the struct.
-                makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
+                MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
             std::map<std::string, TIntermSymbol*> m_uniformNameToSymbol{};
@@ -371,7 +371,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                     // Because we modified the original symbol, we don't need to do anything to linker objects.
                     // The only further work we need to do is to handle reshaping.
-                    if (!isLinkerObject(this->path))
+                    if (!IsLinkerObject(this->path))
                     {
                         // Reshaping (or, perhaps more commonly, swizzling) must be explicitly done on certain
                         // platforms to resolve discrepancies between the size of the data provided by the new
@@ -453,7 +453,7 @@ namespace Babylon::ShaderCompilerTraversers
                     // Limit this cache to linker objects because we know they will comprehensively
                     // include varyings and will list each only once, making this map as predictable
                     // as possible.
-                    if (isLinkerObject(this->path))
+                    if (IsLinkerObject(this->path))
                     {
                         m_varyingNameToSymbol[symbol->getName().c_str()] = symbol;
                     }
@@ -584,7 +584,7 @@ namespace Babylon::ShaderCompilerTraversers
                     replacementToOriginalName[newName] = name;
                 }
 
-                makeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
+                MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 # if !(__APPLE__ || APIOpenGL)
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
@@ -595,8 +595,9 @@ namespace Babylon::ShaderCompilerTraversers
         };
 
         /// <summary>
-        /// Split sampler symbols into separate sampler and texture symbols. This is
-        /// required for DirectX, OpenGL, and Metal.
+        /// Split sampler symbols into separate sampler and texture symbols and assign bindings.
+        /// This is required for DirectX and Metal. Note that bgfx expects sequential bindings
+        /// for samplers across both vertex and fragment shaders.
         /// </summary>
         class SamplerSplitterTraverser final : TIntermTraverser
         {
@@ -609,7 +610,7 @@ namespace Babylon::ShaderCompilerTraversers
                     // later proccessing. Note that we treat linker object replacement
                     // differently in this traverser, so we don't add linker object symbols
                     // to the m_symbolsToParents cache.
-                    if (isLinkerObject(this->path))
+                    if (IsLinkerObject(this->path))
                     {
                         m_samplerNameToSymbol[symbol->getName().c_str()] = symbol;
                     }
@@ -622,12 +623,13 @@ namespace Babylon::ShaderCompilerTraversers
 
             static void Traverse(TProgram& program, IdGenerator& ids)
             {
-                Traverse(program.getIntermediate(EShLangVertex), ids);
-                Traverse(program.getIntermediate(EShLangFragment), ids);
+                unsigned int layoutBinding{0};
+                Traverse(program.getIntermediate(EShLangVertex), ids, layoutBinding);
+                Traverse(program.getIntermediate(EShLangFragment), ids, layoutBinding);
             }
 
         private:
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, unsigned int& layoutBinding)
             {
                 SamplerSplitterTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -639,7 +641,6 @@ namespace Babylon::ShaderCompilerTraversers
                 std::map<std::string, std::pair<TIntermSymbol*, TIntermSymbol*>> nameToNewTextureAndSampler{};
 
                 // Create all the new replacers.
-                unsigned int layoutBinding = 0;
                 for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
                 {
                     // For each name and symbol, create a replacer.
@@ -725,7 +726,7 @@ namespace Babylon::ShaderCompilerTraversers
                     }
                 }
 
-                makeReplacements(nameToReplacement, traverser.m_symbolsToParents);
+                MakeReplacements(nameToReplacement, traverser.m_symbolsToParents);
             }
 
             std::map<std::string, TIntermSymbol*> m_samplerNameToSymbol{};
