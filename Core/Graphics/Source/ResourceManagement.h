@@ -1,23 +1,25 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <unordered_map>
 
 namespace Babylon
 {
+    namespace
+    {
+        static inline constexpr uint64_t JAVASCRIPT_MAX_SAFE_INTEGER = 9007199254740991; // (2 ^ 53) - 1
+    }
+
     template<typename T>
     class ResourceTable final
     {
     public:
-        uint32_t Add(T resource)
+        using handle = uint64_t;
+
+        handle Add(T resource)
         {
-            const auto resourceHandle{m_freeHandles.empty() ? (m_nextResourceId++) : m_freeHandles.back()};
-            if (!m_freeHandles.empty())
-            {
-                m_freeHandles.pop_back();
-            }
-            if (resourceHandle == 0)
+            const auto resourceHandle{m_nextResourceId++};
+            if (resourceHandle > JAVASCRIPT_MAX_SAFE_INTEGER)
             {
                 throw std::runtime_error{"ResourceTable handle overflow."};
             }
@@ -26,39 +28,39 @@ namespace Babylon
             return resourceHandle;
         }
 
-        T& Get(uint32_t resourceHandle)
+        T& Get(handle resourceHandle)
         {
             return m_resources.at(resourceHandle);
         }
 
-        void Remove(uint32_t resourceHandle)
+        void Remove(handle resourceHandle)
         {
             m_resources.erase(resourceHandle);
-            m_freeHandles.push_back(resourceHandle);
         }
 
     private:
-        uint32_t m_nextResourceId{1};
-        std::unordered_map<uint32_t, T> m_resources{};
-        std::vector<uint32_t> m_freeHandles{};
+        handle m_nextResourceId{1};
+        std::unordered_map<handle, T> m_resources{};
     };
 
     template<typename T>
     struct NativeResource
     {
     public:
-        static T& Get(uint32_t handle)
+        using resource_table_handle = typename ResourceTable<T>::handle;
+
+        static T& Get(resource_table_handle handle)
         {
             return *s_resources.Get(handle);
         }
 
         template<typename... Args>
-        static uint32_t Create(Args&&... args)
+        static resource_table_handle Create(Args&&... args)
         {
             return s_resources.Add(std::make_unique<T>(std::forward<Args>(args)...));
         }
 
-        static void Delete(uint32_t handle)
+        static void Delete(resource_table_handle handle)
         {
             s_resources.Remove(handle);
         }
