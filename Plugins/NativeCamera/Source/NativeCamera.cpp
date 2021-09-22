@@ -4,6 +4,7 @@
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
+#include <ResourceManagement.h>
 #include <vector>
 #include <algorithm>
 
@@ -12,7 +13,7 @@ namespace Babylon
     namespace Plugins
     {
         // Move this struct to Graphics
-        struct TextureData final
+        struct TextureData final : public NativeResource<TextureData>
         {
             ~TextureData()
             {

@@ -287,7 +287,7 @@ namespace Babylon
         Float32Buffer m_float32ArgBuffer;
         std::optional<UInt8Buffer> m_validationBuffer;
 
-        void ValidateDecodeOperation(const uint8_t decodeOperation)
+        void ValidateDecodeOperation(const size_t decodeOperation)
         {
             if (m_validationBuffer)
             {
@@ -301,7 +301,7 @@ namespace Babylon
             }
         }
 
-        static std::string ConvertOperationCodeToString(const uint8_t operationCode)
+        static std::string ConvertOperationCodeToString(const size_t operationCode)
         {
             switch(operationCode)
             {
