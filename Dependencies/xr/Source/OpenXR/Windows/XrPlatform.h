@@ -59,6 +59,8 @@ namespace xr
         }
     }
 
+    static constexpr XrPosef IDENTITY_TRANSFORM{ XrQuaternionf{ 0.f, 0.f, 0.f, 1.f }, XrVector3f{ 0.f, 0.f, 0.f } };
+
     constexpr auto SWAPCHAIN_IMAGE_TYPE_ENUM{ XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR };
 
     constexpr std::array<const char*, 1> REQUIRED_EXTENSIONS
