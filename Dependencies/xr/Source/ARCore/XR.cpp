@@ -343,13 +343,8 @@ namespace xr
             // For some reason, ARCore destroys the surface when it's bound and activity changes.
             // To not make ARCore aware of our surface, simply don't bind it.
             {
-                EGLDisplay previousDisplay{ eglGetDisplay(EGL_DEFAULT_DISPLAY) };
-                EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
-                EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
-                EGLContext previousContext{ eglGetCurrentContext() };
-                eglMakeCurrent(previousDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, previousContext);
+                auto surfaceTransaction{GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_NO_SURFACE, EGL_NO_SURFACE, eglGetCurrentContext())};
                 ArSession_update(xrContext->Session, xrContext->Frame);
-                eglMakeCurrent(previousDisplay, previousDrawSurface, previousReadSurface, previousContext);
             }
 
             ArCamera* camera{};
