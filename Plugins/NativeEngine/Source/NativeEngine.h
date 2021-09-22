@@ -80,8 +80,8 @@ namespace Babylon
         }
 
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
-        std::unordered_map<std::string, uint32_t> VertexUniformInfos{};
-        std::unordered_map<std::string, uint32_t> FragmentUniformInfos{};
+        std::unordered_map<std::string, ResourceTable<UniformInfo>::handle> VertexUniformInfos{};
+        std::unordered_map<std::string, ResourceTable<UniformInfo>::handle> FragmentUniformInfos{};
 
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
 
@@ -421,7 +421,7 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler{};
 
         ProgramData* m_currentProgram{nullptr};
-        std::unordered_set<uint32_t> m_programDataCollection{};
+        std::unordered_set<ResourceTable<ProgramData>::handle> m_programDataCollection{};
 
         JsRuntime& m_runtime;
         GraphicsImpl& m_graphicsImpl;

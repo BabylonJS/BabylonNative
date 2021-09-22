@@ -411,8 +411,8 @@ namespace Babylon
                 void* ColorTexturePointer{nullptr};
                 void* DepthTexturePointer{nullptr};
                 xr::Size ViewTextureSize{};
-                std::vector<uint32_t> FrameBuffers{};
-                std::map<uint32_t, Napi::ObjectReference> JsTextures{};
+                std::vector<ResourceTable<FrameBuffer>::handle> FrameBuffers{};
+                std::map<ResourceTable<FrameBuffer>::handle, Napi::ObjectReference> JsTextures{};
                 bool Initialized{false};
             };
 

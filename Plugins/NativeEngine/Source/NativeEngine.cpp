@@ -848,7 +848,7 @@ namespace Babylon
         const std::string vertexSource{info[0].As<Napi::String>().Utf8Value()};
         const std::string fragmentSource{info[1].As<Napi::String>().Utf8Value()};
 
-        uint32_t programDataHandle{ProgramData::Create()};
+        const auto programDataHandle{ProgramData::Create()};
         ProgramData& programData{ProgramData::Get(programDataHandle)};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
 
@@ -861,7 +861,7 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), ex.what());
         }
 
-        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, uint32_t>& uniformInfos) {
+        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, ResourceTable<UniformInfo>::handle>& uniformInfos) {
             auto numUniforms = bgfx::getShaderUniforms(shader);
             std::vector<bgfx::UniformHandle> uniforms{numUniforms};
             bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
