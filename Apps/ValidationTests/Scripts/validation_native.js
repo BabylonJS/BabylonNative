@@ -266,7 +266,7 @@ function runTest(index, done) {
     console.log(testInfo);
     TestUtils.setTitle(testInfo);
 
-    seed = 100000;
+    seed = 1;
 
     let onLoadFileError = function(request, exception) {
         console.error("Failed to retrieve " + url + ".", exception);
