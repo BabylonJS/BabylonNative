@@ -25,7 +25,8 @@ configurations { natives }
 
 android {
     compileSdkVersion 28
-    packagingOptions { doNotStrip "**/*/*.so" }
+    packagingOptions { doNotStrip "**.so" }
+    doNotStrip "**.so"
     defaultConfig {
         applicationId 'com.android.babylonnative.playground'
         minSdkVersion "${platformVersion}"
