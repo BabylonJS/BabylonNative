@@ -30,7 +30,6 @@ jobs:
         npm install
         cd ../../ValidationTests/Android
         npm install
-        unset ANDROID_NDK_HOME
       displayName: 'Install JS engine NPMs'
 
     - task: Gradle@2
@@ -40,7 +39,7 @@ jobs:
           gradleOptions: '-Xmx1536m'
           options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only'
           publishJUnitResults: false
-          tasks: 'assembleRelease'
+          tasks: 'assembleDebug'
       displayName: 'Build Playground ${{ parameters.JSEngine }}'
 
     - task: Gradle@2
@@ -50,5 +49,5 @@ jobs:
           gradleOptions: '-Xmx1536m'
           options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only'
           publishJUnitResults: false
-          tasks: 'assembleRelease'
+          tasks: 'assembleDebug'
       displayName: 'Build ValidationTests ${{ parameters.JSEngine }}'
