@@ -7,7 +7,7 @@ pr:
 variables:
 - name: CMAKE_VERSION
   value: 3.19.6
-- name: NDKVersion
+- name: NDK_VERSION
   value: 22.1.7171670
 
 jobs:
