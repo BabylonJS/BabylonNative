@@ -37,7 +37,7 @@ jobs:
           workingDirectory: 'Apps/Playground/Android'
           gradleWrapperFile: 'Apps/Playground/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDKVersion=18.1.5063045'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDKVersion=22.1.7171670'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build Playground ${{ parameters.JSEngine }}'
