@@ -9,7 +9,7 @@ variables:
   value: 3.19.6
 - name: NDKVersion
   value: 22.1.7171670
-  
+
 jobs:
 # Apple
   - template: .github/jobs/macos.yml
