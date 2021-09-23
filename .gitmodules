@@ -31,6 +31,3 @@
 [submodule "Dependencies/llhttp"]
 	path = Dependencies/v8inspector/Dependencies/llhttp
 	url = https://github.com/nodejs/llhttp
-[submodule "Dependencies/stb"]
-	path = Dependencies/stb
-	url = https://github.com/nothings/stb.git
