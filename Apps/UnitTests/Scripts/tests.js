@@ -38,6 +38,14 @@ describe("XMLHTTPRequest", function () {
         const xhr = await createRequest("GET", "https://babylonjs.com");
         expect(xhr.status).to.equal(200);
     })
+    it("should load URLs with escaped spaces", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic%20plane.glb");
+        expect(xhr.status).to.equal(200);
+    })
+    it("should load URLs with unescaped spaces", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic plane.glb");
+        expect(xhr.status).to.equal(200);
+    })
     it("should have status=404 for a file that does not exist", async function () {
         const xhr = await createRequest("GET", "https://babylonjs.com/invalid");
         expect(xhr.status).to.equal(404);
