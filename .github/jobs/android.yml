@@ -3,7 +3,8 @@ parameters:
   vmImage: ''
   JSEngine: ''
   macOSCodename: ''
-  
+  NDKVersion: ''
+
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 45
@@ -37,7 +38,7 @@ jobs:
           workingDirectory: 'Apps/Playground/Android'
           gradleWrapperFile: 'Apps/Playground/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDKVersion=22.1.7171670'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDKVersion=${{ parameters.NDKVersion }}'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build Playground ${{ parameters.JSEngine }}'
@@ -47,7 +48,7 @@ jobs:
           workingDirectory: 'Apps/ValidationTests/Android'
           gradleWrapperFile: 'Apps/ValidationTests/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDKVersion=${{ parameters.NDKVersion }}'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build ValidationTests ${{ parameters.JSEngine }}'
