@@ -30,6 +30,7 @@ jobs:
         npm install
         cd ../../ValidationTests/Android
         npm install
+        sdkmanager --list
       displayName: 'Install JS engine NPMs'
 
     - task: Gradle@2
@@ -37,7 +38,7 @@ jobs:
           workingDirectory: 'Apps/Playground/Android'
           gradleWrapperFile: 'Apps/Playground/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDKPath=/Users/runner/Library/Android/sdk/ndk/18.1.5063045'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build Playground ${{ parameters.JSEngine }}'
