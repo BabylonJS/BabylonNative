@@ -49,9 +49,9 @@ android {
             } else {
                 abiFilters "arm64-v8a", "armeabi-v7a", "x86"
             }
-            if (project.hasProperty("NDKPath")) {
-                def NDKPath = project.property("NDKPath")
-                ndkPath "${NDKPath}"
+            if (project.hasProperty("NDKVersion")) {
+                def NDKVersion = project.property("NDKVersion")
+                ndkVersion  "${NDKVersion}"
             }
         }
     }
