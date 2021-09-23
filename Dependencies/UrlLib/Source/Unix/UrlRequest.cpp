@@ -60,16 +60,16 @@ namespace UrlLib
                     // So, escaping only path part of the URL for every URL but file scheme.
 
                     CURLUcode rc;
-                    CURLU* cURL_url = curl_url();
-                    auto urlScopeGuard = gsl::finally([cURL_url] { curl_url_cleanup(cURL_url); });
-                    rc = curl_url_set(cURL_url, CURLUPART_URL, url.c_str(), 0);
+                    CURLU* urlObject = curl_url();
+                    auto urlScopeGuard = gsl::finally([urlObject] { curl_url_cleanup(urlObject); });
+                    rc = curl_url_set(urlObject, CURLUPART_URL, url.c_str(), 0);
                     if (rc != CURLUE_OK)
                     {
                         throw std::runtime_error{"CURL: Unable to build URL."};
                     }
 
                     char* scheme;
-                    rc = curl_url_get(cURL_url, CURLUPART_SCHEME, &scheme, 0);
+                    rc = curl_url_get(urlObject, CURLUPART_SCHEME, &scheme, 0);
                     if (rc != CURLUE_OK)
                     {
                         throw std::runtime_error{"CURL: Unable to get URL scheme."};
@@ -79,7 +79,7 @@ namespace UrlLib
                     if (strcmp(scheme, "file"))
                     {
                         char* path;
-                        rc = curl_url_get(cURL_url, CURLUPART_PATH, &path, 0);
+                        rc = curl_url_get(urlObject, CURLUPART_PATH, &path, 0);
                         if (rc != CURLUE_OK)
                         {
                             throw std::runtime_error{"CURL: Unable to get URL path."};
@@ -87,14 +87,14 @@ namespace UrlLib
                         auto pathScopeGuard = gsl::finally([path] { curl_free(path); });
                         char* pathEscaped = curl_easy_escape(m_curl, path, 0);
                         auto pathEscapedScopeGuard = gsl::finally([pathEscaped] { curl_free(pathEscaped); });
-                        rc = curl_url_set(cURL_url, CURLUPART_PATH, pathEscaped, 0);
+                        rc = curl_url_set(urlObject, CURLUPART_PATH, pathEscaped, 0);
                         if (rc != CURLUE_OK)
                         {
                             throw std::runtime_error{"CURL: Unable to set URL path."};
                         }
 
                         char* urlEscaped;
-                        rc = curl_url_get(cURL_url, CURLUPART_URL, &urlEscaped, 0);
+                        rc = curl_url_get(urlObject, CURLUPART_URL, &urlEscaped, 0);
                         if (rc != CURLUE_OK)
                         {
                             throw std::runtime_error{"CURL: Unable to get URL string."};
