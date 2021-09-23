@@ -186,7 +186,7 @@ namespace Babylon::Polyfills::Internal
         catch (const std::exception& e)
         {
             // If we have a parse error, catch and rethrow to JavaScript
-            throw Napi::Error::New(info.Env(), "Error parsing URL scheme: " + std::string{e.what()});
+            throw Napi::Error::New(info.Env(), std::string{"Error parsing URL scheme: "} + e.what());
         }
         catch (...)
         {
@@ -201,20 +201,20 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
             return;
         }
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+            if (result.has_error())
             {
-                if (result.has_error())
-                {
-                    throw Napi::Error::New(env, result.error());
-                }
+                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                return;
+            }
 
-                SetReadyState(ReadyState::Done);
-                RaiseEvent(EventType::LoadEnd);
+            SetReadyState(ReadyState::Done);
+            RaiseEvent(EventType::LoadEnd);
 
-                // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
-                // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-                m_eventHandlerRefs.clear();
-            });
+            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+            m_eventHandlerRefs.clear();
+        });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)

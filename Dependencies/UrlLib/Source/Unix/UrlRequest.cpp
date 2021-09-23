@@ -24,7 +24,6 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            auto URL{std::move(url)};
             if (m_curl)
             {
                 curl_easy_reset(m_curl);
@@ -37,7 +36,7 @@ namespace UrlLib
                 // Curl can't parse URL starting with app://
                 // doing it manually instead
                 const auto appSchema = "app://";
-                if (URL.find(appSchema) == 0)
+                if (url.find(appSchema) == 0)
                 {
                     char exe[1024];
                     int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
@@ -47,7 +46,7 @@ namespace UrlLib
                     }
                     exe[ret] = 0;
 
-                    std::string patchedURL = URL;
+                    std::string patchedURL = url;
                     const auto baseURL = std::string("file://") + std::filesystem::path{exe}.parent_path().generic_string();
                     patchedURL.replace(0, strlen(appSchema), baseURL);
 
@@ -61,16 +60,16 @@ namespace UrlLib
                     // So, escaping only path part of the URL for every URL but file scheme.
 
                     CURLUcode rc;
-                    CURLU* url = curl_url();
-                    auto urlScopeGuard = gsl::finally([url] { curl_url_cleanup(url); });
-                    rc = curl_url_set(url, CURLUPART_URL, URL.c_str(), 0);
+                    CURLU* cURL_url = curl_url();
+                    auto urlScopeGuard = gsl::finally([cURL_url] { curl_url_cleanup(cURL_url); });
+                    rc = curl_url_set(cURL_url, CURLUPART_URL, url.c_str(), 0);
                     if (rc != CURLUE_OK)
                     {
                         throw std::runtime_error{"CURL: Unable to build URL."};
                     }
 
                     char* scheme;
-                    rc = curl_url_get(url, CURLUPART_SCHEME, &scheme, 0);
+                    rc = curl_url_get(cURL_url, CURLUPART_SCHEME, &scheme, 0);
                     if (rc != CURLUE_OK)
                     {
                         throw std::runtime_error{"CURL: Unable to get URL scheme."};
@@ -80,7 +79,7 @@ namespace UrlLib
                     if (strcmp(scheme, "file"))
                     {
                         char* path;
-                        rc = curl_url_get(url, CURLUPART_PATH, &path, 0);
+                        rc = curl_url_get(cURL_url, CURLUPART_PATH, &path, 0);
                         if (rc != CURLUE_OK)
                         {
                             throw std::runtime_error{"CURL: Unable to get URL path."};
@@ -88,14 +87,14 @@ namespace UrlLib
                         auto pathScopeGuard = gsl::finally([path] { curl_free(path); });
                         char* pathEscaped = curl_easy_escape(m_curl, path, 0);
                         auto pathEscapedScopeGuard = gsl::finally([pathEscaped] { curl_free(pathEscaped); });
-                        rc = curl_url_set(url, CURLUPART_PATH, pathEscaped, 0);
+                        rc = curl_url_set(cURL_url, CURLUPART_PATH, pathEscaped, 0);
                         if (rc != CURLUE_OK)
                         {
                             throw std::runtime_error{"CURL: Unable to set URL path."};
                         }
 
                         char* urlEscaped;
-                        rc = curl_url_get(url, CURLUPART_URL, &urlEscaped, 0);
+                        rc = curl_url_get(cURL_url, CURLUPART_URL, &urlEscaped, 0);
                         if (rc != CURLUE_OK)
                         {
                             throw std::runtime_error{"CURL: Unable to get URL string."};
@@ -106,7 +105,7 @@ namespace UrlLib
                     }
                     else
                     {
-                        curl_easy_setopt(m_curl, CURLOPT_URL, URL.c_str());
+                        curl_easy_setopt(m_curl, CURLOPT_URL, url.c_str());
                     }
                 }
             }
