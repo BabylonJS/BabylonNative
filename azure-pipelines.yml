@@ -63,6 +63,13 @@ jobs:
       vmImage: 'windows-latest'
       platform: x64
 
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_JSI
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: jsi
+
 # UWP
   - template: .github/jobs/uwp.yml
     parameters:
@@ -84,7 +91,7 @@ jobs:
 
   - template: .github/jobs/uwp.yml
     parameters:
-      name: UWP_arm64_jsi
+      name: UWP_arm64_JSI
       vmImage: 'windows-latest'
       platform: arm64
       napiType: jsi
