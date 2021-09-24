@@ -29,22 +29,28 @@ namespace Babylon
     {
         namespace TextureSampling
         {
-            constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
+            constexpr uint32_t SAMPLER_MAG_POINT = BGFX_SAMPLER_MAG_POINT;
+            constexpr uint32_t SAMPLER_MAG_LINEAR = 0;
+            constexpr uint32_t SAMPLER_MIN_POINT = BGFX_SAMPLER_MIN_POINT;
+            constexpr uint32_t SAMPLER_MIN_LINEAR = 0;
+            constexpr uint32_t SAMPLER_MIP_POINT = BGFX_SAMPLER_MIP_POINT;
+            constexpr uint32_t SAMPLER_MIP_LINEAR = 0;
+            constexpr uint32_t SAMPLER_MIP_IGNORE = BGFX_SAMPLER_MIP_POINT; // HACK: bgfx has no support for ignoring mips
 
             // clang-format off
-            // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                         MIN                         MIP
-            constexpr uint32_t NEAREST_NEAREST =                BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_LINEAR =                  BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_LINEAR_MIPLINEAR =        BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t NEAREST_NEAREST_MIPNEAREST =     BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t NEAREST_LINEAR_MIPNEAREST =      BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t NEAREST_LINEAR_MIPLINEAR =       BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t NEAREST_LINEAR =                 BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t NEAREST_NEAREST_MIPLINEAR =      BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_NEAREST_MIPNEAREST =      BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t LINEAR_NEAREST_MIPLINEAR =       BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_LINEAR_MIPNEAREST =       BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t LINEAR_NEAREST =                 BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
+            // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                     MIN                         MIP
+            constexpr uint32_t NEAREST_NEAREST =                SAMPLER_MAG_POINT   |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_IGNORE    ;
+            constexpr uint32_t LINEAR_LINEAR =                  SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_IGNORE    ;
+            constexpr uint32_t LINEAR_LINEAR_MIPLINEAR =        SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t NEAREST_NEAREST_MIPNEAREST =     SAMPLER_MAG_POINT   |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t NEAREST_LINEAR_MIPNEAREST =      SAMPLER_MAG_POINT   |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t NEAREST_LINEAR_MIPLINEAR =       SAMPLER_MAG_POINT   |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t NEAREST_LINEAR =                 SAMPLER_MAG_POINT   |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_IGNORE    ;
+            constexpr uint32_t NEAREST_NEAREST_MIPLINEAR =      SAMPLER_MAG_POINT   |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t LINEAR_NEAREST_MIPNEAREST =      SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t LINEAR_NEAREST_MIPLINEAR =       SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t LINEAR_LINEAR_MIPNEAREST =       SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t LINEAR_NEAREST =                 SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_IGNORE    ;
             // clang-format on
         }
 
@@ -651,6 +657,7 @@ namespace Babylon
                 InstanceValue("COMMAND_BINDVERTEXARRAY", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::BindVertexArray))),
                 InstanceValue("COMMAND_SETSTATE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetState))),
                 InstanceValue("COMMAND_SETZOFFSET", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetZOffset))),
+                InstanceValue("COMMAND_SETZOFFSETUNITS", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetZOffsetUnits))),
                 InstanceValue("COMMAND_SETDEPTHTEST", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetDepthTest))),
                 InstanceValue("COMMAND_SETDEPTHWRITE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetDepthWrite))),
                 InstanceValue("COMMAND_SETCOLORWRITE", Napi::Number::From(env, s_commandTable.Add(&NativeEngine::SetColorWrite))),
@@ -1000,8 +1007,9 @@ namespace Babylon
     void NativeEngine::SetState(CommandBufferDecoder& decoder)
     {
         const bool culling = decoder.DecodeCommandArgAsUInt32();
-        // TODO: zOffset
+        // TODO: zOffset/zOffsetUnits
         /*const float zOffset =*/ decoder.DecodeCommandArgAsFloat32();
+        /*const float zOffsetUnits =*/decoder.DecodeCommandArgAsFloat32();
         const bool cullBackFaces = decoder.DecodeCommandArgAsUInt32();
         const bool reverseSide = decoder.DecodeCommandArgAsUInt32();
 
@@ -1024,6 +1032,13 @@ namespace Babylon
     void NativeEngine::SetZOffset(CommandBufferDecoder& decoder)
     {
         /*const auto zOffset =*/ decoder.DecodeCommandArgAsFloat32();
+
+        // STUB: Stub.
+    }
+
+    void NativeEngine::SetZOffsetUnits(CommandBufferDecoder& decoder)
+    {
+        /*const auto zOffsetUnits =*/ decoder.DecodeCommandArgAsFloat32();
 
         // STUB: Stub.
     }
@@ -1417,17 +1432,15 @@ namespace Babylon
     void NativeEngine::SetTextureSampling(CommandBufferDecoder& decoder)
     {
         auto& texture = TextureData::Get(decoder.DecodeCommandArgAsUInt32());
-        const auto filter = decoder.DecodeCommandArgAsUInt32();
+        const auto value = decoder.DecodeCommandArgAsUInt32();
 
-        texture.Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
+        texture.Flags &= ~(BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+        texture.Flags |= value;
 
-        if (texture.AnisotropicLevel > 1)
+        // Disable anisotropy if either min/mag are point.
+        if ((texture.Flags & BGFX_SAMPLER_MIN_POINT) != 0 || (texture.Flags & BGFX_SAMPLER_MAG_POINT) != 0)
         {
-            texture.Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-        }
-        else
-        {
-            texture.Flags |= filter;
+            texture.Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
         }
     }
 
@@ -1451,13 +1464,17 @@ namespace Babylon
         auto& texture = TextureData::Get(decoder.DecodeCommandArgAsUInt32());
         const auto value = decoder.DecodeCommandArgAsUInt32();
 
-        texture.AnisotropicLevel = static_cast<uint8_t>(value);
+        texture.Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
 
-        // if Anisotropic is set to 0 after being >1, then set texture flags back to linear
-        texture.Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
-        if (value)
+        // Enable anisotropy only if neither min/mag are point.
+        // Note that bgfx currently only supports no anisotropy or max anisotropy.
+        if ((texture.Flags & BGFX_SAMPLER_MIN_POINT) == 0 && (texture.Flags & BGFX_SAMPLER_MAG_POINT) == 0 && value > 1)
         {
             texture.Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+
+            // There is a bug in bgfx that causes the samplers to do the wrong thing in DirectX.
+            // Remove this once https://github.com/bkaradzic/bgfx/pull/2609 is merged.
+            texture.Flags &= ~BGFX_SAMPLER_MIP_MASK;
         }
     }
 

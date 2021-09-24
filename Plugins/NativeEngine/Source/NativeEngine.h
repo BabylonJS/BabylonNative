@@ -45,10 +45,10 @@ namespace Babylon
         uint32_t Width{0};
         uint32_t Height{0};
         uint32_t Flags{0};
+
         // CreationFlags contains flags used at texture creation
         // regarding BLIT support and READBACK
         uint64_t CreationFlags{0};
-        uint8_t AnisotropicLevel{0};
     };
 
     struct UniformInfo final : public NativeResource<UniformInfo>
@@ -352,6 +352,7 @@ namespace Babylon
         void DeleteProgram(CommandBufferDecoder& decoder);
         void SetState(CommandBufferDecoder& decoder);
         void SetZOffset(CommandBufferDecoder& decoder);
+        void SetZOffsetUnits(CommandBufferDecoder& decoder);
         void SetDepthTest(CommandBufferDecoder& decoder);
         void SetDepthWrite(CommandBufferDecoder& decoder);
         void SetColorWrite(CommandBufferDecoder& decoder);

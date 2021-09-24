@@ -1,29 +1,42 @@
 # Build only on Win32, not on UWP
-if((NOT WIN32) OR WINDOWS_STORE)
+if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(SCRIPTS
+set(LOCAL_SCRIPTS
     "Scripts/tests.js")
 
-set(BABYLON_SCRIPTS
+set(NPM_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map")
+    "../node_modules/babylonjs/babylon.max.js.map"
+    "../node_modules/chai/chai.js"
+    "../node_modules/mocha/mocha.js")
 
-add_executable(UnitTests ${SCRIPTS} ${BABYLON_SCRIPTS} "UnitTests.cpp")
+set(TEST_APP "Shared/UnitTests.cpp")
 
-target_link_libraries(UnitTests
+set(ADDITIONAL_LIBRARIES "")
+
+if(APPLE)
+    find_library(JSCORE_LIBRARY JavaScriptCore)
+    set(ADDITIONAL_LIBRARIES ${JSCORE_LIBRARY})
+    set(TEST_APP "Apple/UnitTests.mm")
+endif()
+
+add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP})
+
+target_link_to_dependencies(UnitTests
     UrlLib
     AppRuntime
     XMLHttpRequest
     NativeEngine
     ScriptLoader
     Console
-    Window)
+    Window
+    ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)
 
-foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS})
+foreach(SCRIPT ${LOCAL_SCRIPTS} ${NPM_SCRIPTS})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -33,5 +46,5 @@ foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS})
 endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${LOCAL_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${NPM_SCRIPTS})
