@@ -339,7 +339,13 @@ namespace xr
             shouldRestartSession = false;
 
             // Update the ArSession to get a new frame
-            ArSession_update(xrContext->Session, xrContext->Frame);
+            // ARCore needs a valid bound OpenGL context to do some offscreen rendering.
+            // For some reason, ARCore destroys the surface when it's bound and activity changes.
+            // To not make ARCore aware of our surface, simply don't bind it.
+            {
+                auto surfaceTransaction{GLTransactions::MakeCurrent(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_NO_SURFACE, EGL_NO_SURFACE, eglGetCurrentContext())};
+                ArSession_update(xrContext->Session, xrContext->Frame);
+            }
 
             ArCamera* camera{};
             ArFrame_acquireCamera(xrContext->Session, xrContext->Frame, &camera);
