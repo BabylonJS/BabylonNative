@@ -190,26 +190,39 @@ namespace Babylon
         static constexpr uint8_t COMMAND_VALIDATION_INT32{2};
         static constexpr uint8_t COMMAND_VALIDATION_FLOAT{3};
 
-        CommandBufferDecoder(UInt8Buffer commandBuffer, UInt32Buffer uint32ArgBuffer, Int32Buffer int32ArgBuffer, Float32Buffer float32ArgBuffer, std::optional<UInt8Buffer> validationBuffer) :
-            m_commandBuffer{commandBuffer},
-            m_uint32ArgBuffer{uint32ArgBuffer},
-            m_int32ArgBuffer{int32ArgBuffer},
-            m_float32ArgBuffer{float32ArgBuffer},
-            m_validationBuffer{validationBuffer}
+        CommandBufferDecoder(
+            const uint32_t commandCount,
+            const void* data,
+            const uint32_t byteCount, 
+            const std::optional<UInt8Buffer> validationBuffer) 
+            : m_commandCount{commandCount}
+            , m_commandBuffer{gsl::make_span(reinterpret_cast<const uint8_t*>(data), byteCount)}
+            , m_uint32ArgBuffer{gsl::make_span(reinterpret_cast<const uint32_t*>(data), byteCount / 4)}
+            , m_int32ArgBuffer{gsl::make_span(reinterpret_cast<const int32_t*>(data), byteCount / 4)}
+            , m_float32ArgBuffer{gsl::make_span(reinterpret_cast<const float*>(data), byteCount / 4)}
+            , m_validationBuffer{validationBuffer}
         {
         }
 
         bool TryDecodeCommand(uint8_t& command)
         {
-            if (m_commandBufferIndex >= m_commandBuffer.size())
+            if (m_commandCount == 0)
             {
                 return false;
             }
 
+            command = m_commandBuffer[m_commandIndex++];
+
             ValidateDecodeOperation(COMMAND_VALIDATION_COMMAND);
 
-            command = m_commandBuffer[m_commandBufferIndex++];
-            //NSLog(@"COMMAND BUFFER: Decode command: %u", command);
+            if (m_commandIndex % 4 == 0)
+            {
+                m_commandIndex = m_argumentIndex * 4;
+                m_argumentIndex++;
+            }
+
+            // NSLog(@"COMMAND BUFFER: Decode command: %u", command);
+            m_commandCount--;
             return true;
         }
 
@@ -218,7 +231,7 @@ namespace Babylon
             ValidateDecodeOperation(COMMAND_VALIDATION_UINT32);
             ValidateDecodeOperation(1);
 
-            auto ret = m_uint32ArgBuffer[m_uint32ArgBufferIndex++];
+            auto ret = m_uint32ArgBuffer[m_argumentIndex++];
             //NSLog(@"COMMAND BUFFER:   Decode uint32: %u", ret);
             return ret;
         }
@@ -228,7 +241,7 @@ namespace Babylon
             ValidateDecodeOperation(COMMAND_VALIDATION_UINT32);
             ValidateDecodeOperation(count);
 
-            auto ret = m_uint32ArgBuffer.subspan((m_uint32ArgBufferIndex += count) - count, count);
+            auto ret = m_uint32ArgBuffer.subspan((m_argumentIndex += count) - count, count);
             //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
@@ -238,7 +251,7 @@ namespace Babylon
             ValidateDecodeOperation(COMMAND_VALIDATION_INT32);
             ValidateDecodeOperation(1);
 
-            auto ret = m_int32ArgBuffer[m_int32ArgBufferIndex++];
+            auto ret = m_int32ArgBuffer[m_argumentIndex++];
             //NSLog(@"COMMAND BUFFER:   Decode uint32: %u", ret);
             return ret;
         }
@@ -248,7 +261,7 @@ namespace Babylon
             ValidateDecodeOperation(COMMAND_VALIDATION_INT32);
             ValidateDecodeOperation(count);
 
-            auto ret = m_int32ArgBuffer.subspan((m_int32ArgBufferIndex += count) - count, count);
+            auto ret = m_int32ArgBuffer.subspan((m_argumentIndex += count) - count, count);
             //NSLog(@"COMMAND BUFFER:   Decode uint32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
@@ -258,7 +271,7 @@ namespace Babylon
             ValidateDecodeOperation(COMMAND_VALIDATION_FLOAT);
             ValidateDecodeOperation(1);
 
-            auto ret = m_float32ArgBuffer[m_float32ArgBufferIndex++];
+            auto ret = m_float32ArgBuffer[m_argumentIndex++];
             //NSLog(@"COMMAND BUFFER:   Decode float32: %f", ret);
             return ret;
         }
@@ -268,17 +281,17 @@ namespace Babylon
             ValidateDecodeOperation(COMMAND_VALIDATION_FLOAT);
             ValidateDecodeOperation(count);
 
-            auto ret = m_float32ArgBuffer.subspan((m_float32ArgBufferIndex += count) - count, count);
+            auto ret = m_float32ArgBuffer.subspan((m_argumentIndex += count) - count, count);
             //NSLog(@"COMMAND BUFFER:   Decode float32s: %u", static_cast<uint32_t>(ret.size()));
             return ret;
         }
 
     private:
-        UInt8Buffer::index_type m_commandBufferIndex{};
-        UInt32Buffer::index_type m_uint32ArgBufferIndex{};
-        Int32Buffer::index_type m_int32ArgBufferIndex{};
-        Float32Buffer::index_type m_float32ArgBufferIndex{};
-        UInt8Buffer::index_type m_validationBufferIndex{};
+        uint32_t m_commandCount;
+
+        UInt8Buffer::index_type m_commandIndex{0};
+        ptrdiff_t m_argumentIndex{1};
+        UInt8Buffer::index_type m_validationBufferIndex{0};
 
         UInt8Buffer m_commandBuffer;
         UInt32Buffer m_uint32ArgBuffer;
@@ -404,9 +417,6 @@ namespace Babylon
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(CommandBufferDecoder& decoder);
         void SetCommandBuffer(const Napi::CallbackInfo& info);
-        void SetCommandUint32Buffer(const Napi::CallbackInfo& info);
-        void SetCommandInt32Buffer(const Napi::CallbackInfo& info);
-        void SetCommandFloat32Buffer(const Napi::CallbackInfo& info);
         void SetCommandValidationBuffer(const Napi::CallbackInfo& info);
         void SubmitCommandBuffer(const Napi::CallbackInfo& info);
         void Draw(bgfx::Encoder* encoder, int fillMode);
@@ -457,11 +467,8 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        Napi::Reference<Napi::Uint8Array> m_commandBuffer{};
-        Napi::Reference<Napi::Uint32Array> m_commandUint32Buffer{};
-        Napi::Reference<Napi::Int32Array> m_commandInt32Buffer{};
-        Napi::Reference<Napi::Float32Array> m_commandFloat32Buffer{};
-        Napi::Reference<Napi::Uint8Array> m_commandValidationBuffer{};
+        Napi::Reference<Napi::ArrayBuffer> m_commandBuffer{};
+        Napi::Reference<Napi::ArrayBuffer> m_commandValidationBuffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
 
         const VertexArray* m_boundVertexArray{};

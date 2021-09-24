@@ -536,9 +536,6 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setCommandBuffer", &NativeEngine::SetCommandBuffer),
-                InstanceMethod("setCommandUint32Buffer", &NativeEngine::SetCommandUint32Buffer),
-                InstanceMethod("setCommandInt32Buffer", &NativeEngine::SetCommandInt32Buffer),
-                InstanceMethod("setCommandFloat32Buffer", &NativeEngine::SetCommandFloat32Buffer),
                 InstanceMethod("setCommandValidationBuffer", &NativeEngine::SetCommandValidationBuffer),
                 InstanceMethod("submitCommandBuffer", &NativeEngine::SubmitCommandBuffer),
 
@@ -1824,43 +1821,29 @@ namespace Babylon
 
     void NativeEngine::SetCommandBuffer(const Napi::CallbackInfo& info)
     {
-        m_commandBuffer = Napi::Persistent(info[0].As<Napi::Uint8Array>());
-    }
-
-    void NativeEngine::SetCommandUint32Buffer(const Napi::CallbackInfo& info)
-    {
-        m_commandUint32Buffer = Napi::Persistent(info[0].As<Napi::Uint32Array>());
-    }
-
-    void NativeEngine::SetCommandInt32Buffer(const Napi::CallbackInfo& info)
-    {
-        m_commandInt32Buffer = Napi::Persistent(info[0].As<Napi::Int32Array>());
-    }
-
-    void NativeEngine::SetCommandFloat32Buffer(const Napi::CallbackInfo& info)
-    {
-        m_commandFloat32Buffer = Napi::Persistent(info[0].As<Napi::Float32Array>());
+        m_commandBuffer = Napi::Persistent(info[0].As<Napi::ArrayBuffer>());
     }
 
     void NativeEngine::SetCommandValidationBuffer(const Napi::CallbackInfo& info)
     {
-        m_commandValidationBuffer = Napi::Persistent(info[0].As<Napi::Uint8Array>());
+        m_commandValidationBuffer = Napi::Persistent(info[0].As<Napi::ArrayBuffer>());
     }
 
     void NativeEngine::SubmitCommandBuffer(const Napi::CallbackInfo& info)
     {
         const auto commandCount{info[0].ToNumber().Uint32Value()};
+        const auto byteCount{info[1].ToNumber().Uint32Value()};
 
         std::optional<CommandBufferDecoder::UInt8Buffer> validationBuffer{};
         if (m_commandValidationBuffer) {
-            validationBuffer = gsl::make_span(m_commandValidationBuffer.Value().Data(), m_commandValidationBuffer.Value().ElementLength());
+            const auto buffer = m_commandValidationBuffer.Value();
+            validationBuffer = gsl::make_span(reinterpret_cast<const uint8_t*>(buffer.Data()), buffer.ByteLength());
         }
 
         CommandBufferDecoder commandBufferDecoder{
-            gsl::make_span(m_commandBuffer.Value().Data(), commandCount),
-            gsl::make_span(m_commandUint32Buffer.Value().Data(), m_commandUint32Buffer.Value().ElementLength()),
-            gsl::make_span(m_commandInt32Buffer.Value().Data(), m_commandInt32Buffer.Value().ElementLength()),
-            gsl::make_span(m_commandFloat32Buffer.Value().Data(), m_commandFloat32Buffer.Value().ElementLength()),
+            commandCount,
+            m_commandBuffer.Value().Data(),
+            byteCount,
             validationBuffer
         };
 
