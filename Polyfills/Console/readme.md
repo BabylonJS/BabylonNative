@@ -12,4 +12,3 @@ Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
     printf("%s", message);
     fflush(stdout);
 });
-```
