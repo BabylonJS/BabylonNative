@@ -26,7 +26,7 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            NSString* urlString = [[NSString stringWithUTF8String:url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
+            NSString* urlString = [NSString stringWithUTF8String:url.data()];
             m_nsURL = {[NSURL URLWithString:urlString]};
             if (!m_nsURL || !m_nsURL.scheme)
             {
