@@ -38,12 +38,16 @@ describe("XMLHTTPRequest", function () {
         const xhr = await createRequest("GET", "https://babylonjs.com");
         expect(xhr.status).to.equal(200);
     })
+    it("should load URL with no spaces", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic_plane.glb");
+        expect(xhr.status).to.equal(200);
+    })
     it("should load URLs with escaped spaces", async function () {
-        const xhr = await createRequest("GET", "https://powermrblobtest.blob.core.windows.net/modles/Airplane%20Galaxy.glb");
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic%20plane.glb");
         expect(xhr.status).to.equal(200);
     })
     it("should load URLs with unescaped spaces", async function () {
-        const xhr = await createRequest("GET", "https://powermrblobtest.blob.core.windows.net/modles/Airplane Galaxy.glb");
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic plane.glb");
         expect(xhr.status).to.equal(200);
     })
     it("should have status=404 for a file that does not exist", async function () {

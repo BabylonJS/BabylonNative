@@ -180,7 +180,13 @@ namespace Babylon::Polyfills::Internal
     {
         try
         {
-            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
+            auto inputURL{info[1].As<Napi::String>()};
+            auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({inputURL}).As<Napi::String>()};
+            auto encodedURL{inputURL};
+            if (inputURL.StrictEquals(decodedURL)) {
+                encodedURL = info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({inputURL}).As<Napi::String>();
+            }
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), encodedURL.Utf8Value());
             SetReadyState(ReadyState::Opened);
         }
         catch (const std::exception& e)
