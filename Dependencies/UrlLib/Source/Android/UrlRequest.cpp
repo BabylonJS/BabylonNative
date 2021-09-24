@@ -45,10 +45,17 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            m_url = std::move(url);
-            Uri uri{Uri::Parse(m_url.data())};
-            m_schemeIsApp = ((std::string)uri.getScheme() == "app");
-            m_urlOrAppPath = uri.getPath();
+            Uri uri{Uri::Parse(url.data())};
+            if ((std::string)uri.getScheme() == "app")
+            {
+                m_schemeIsApp = true;
+                m_appPathOrUrl = uri.getPath();
+            }
+            else
+            {
+                m_schemeIsApp = false;
+                m_appPathOrUrl = std::move(url);
+            }
         }
 
         UrlResponseType ResponseType() const
@@ -69,7 +76,7 @@ namespace UrlLib
                 {
                     if (m_schemeIsApp)
                     {
-                        std::string path{m_urlOrAppPath.substr(1)};
+                        std::string path{m_appPathOrUrl.substr(1)};
                         AAssetManager* assetsManager{GetAppContext().getAssets()};
 
                         switch (m_responseType)
@@ -94,7 +101,7 @@ namespace UrlLib
                     }
                     else
                     {
-                        URL url{m_url.data()};
+                        URL url{m_appPathOrUrl.data()};
 
                         URLConnection connection{url.OpenConnection()};
                         connection.Connect();
@@ -178,9 +185,8 @@ namespace UrlLib
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
-        std::string m_url{};
         bool m_schemeIsApp{};
-        std::string m_urlOrAppPath{};
+        std::string m_appPathOrUrl{};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};
         std::string m_responseString{};
