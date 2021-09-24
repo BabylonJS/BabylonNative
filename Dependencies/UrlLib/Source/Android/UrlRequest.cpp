@@ -45,7 +45,8 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            Uri uri{Uri::Parse(std::move(url).data())};
+            m_url = std::move(url);
+            Uri uri{Uri::Parse(m_url.data())};
             m_schemeIsApp = ((std::string)uri.getScheme() == "app");
             m_urlOrAppPath = uri.getPath();
         }
@@ -93,7 +94,7 @@ namespace UrlLib
                     }
                     else
                     {
-                        URL url{m_urlOrAppPath.data()};
+                        URL url{m_url.data()};
 
                         URLConnection connection{url.OpenConnection()};
                         connection.Connect();
@@ -177,6 +178,7 @@ namespace UrlLib
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
+        std::string m_url{};
         bool m_schemeIsApp{};
         std::string m_urlOrAppPath{};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
