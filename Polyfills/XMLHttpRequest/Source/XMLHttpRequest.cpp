@@ -183,7 +183,10 @@ namespace Babylon::Polyfills::Internal
             auto inputURL{info[1].As<Napi::String>()};
             auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({inputURL}).As<Napi::String>()};
             auto encodedURL{inputURL};
-            if (inputURL.StrictEquals(decodedURL)) {
+            // We need to percent encode the URL
+            // If decoding the URL changes something, it's already encoded - don't change anything
+            if (inputURL.StrictEquals(decodedURL))
+            {
                 encodedURL = info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({inputURL}).As<Napi::String>();
             }
             m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), encodedURL.Utf8Value());
