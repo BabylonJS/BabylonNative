@@ -178,16 +178,34 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
-        m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
-        SetReadyState(ReadyState::Opened);
+        try
+        {
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), info[1].As<Napi::String>().Utf8Value());
+            SetReadyState(ReadyState::Opened);
+        }
+        catch (const std::exception& e)
+        {
+            // If we have a parse error, catch and rethrow to JavaScript
+            throw Napi::Error::New(info.Env(), std::string{"Error parsing URL scheme: "} + e.what());
+        }
+        catch (...)
+        {
+            throw Napi::Error::New(info.Env(), "Unknown error parsing URL scheme");
+        }
     }
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
     {
+        if (m_readyState != ReadyState::Opened)
+        {
+            throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
+            return;
+        }
         m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
-                throw Napi::Error::New(env, result.error());
+                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                return;
             }
 
             SetReadyState(ReadyState::Done);

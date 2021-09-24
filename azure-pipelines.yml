@@ -7,7 +7,9 @@ pr:
 variables:
 - name: CMAKE_VERSION
   value: 3.19.6
-  
+- name: NDK_VERSION
+  value: 22.1.7171670
+
 jobs:
 # Apple
   - template: .github/jobs/macos.yml
@@ -134,15 +136,15 @@ jobs:
       name: Android_Ubuntu_V8
       vmImage: 'ubuntu-latest'
       JSEngine: v8android
-      
+
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_JSC
-      vmImage: 'macOS-10.14'
+      vmImage: 'macOS-10.15'
       JSEngine: jsc
       
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_V8
-      vmImage: 'macOS-10.14'
+      vmImage: 'macOS-10.15'
       JSEngine: v8android
