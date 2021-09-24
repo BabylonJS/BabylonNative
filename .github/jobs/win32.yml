@@ -92,3 +92,9 @@ jobs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
         displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
         condition: failed()
+
+      - script: |
+          cd build${{ variables.solutionName }}\Apps\UnitTests
+          cd RelWithDebInfo
+          UnitTests
+        displayName: 'Unit Tests'
