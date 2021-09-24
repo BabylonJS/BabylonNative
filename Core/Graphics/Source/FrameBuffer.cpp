@@ -47,12 +47,12 @@ namespace Babylon
 
     uint16_t FrameBuffer::Width() const
     {
-        return (m_width == 0 ? bgfx::getStats()->width : m_width);
+        return (m_width == 0 ? m_impl.GetWidth() : m_width);
     }
 
     uint16_t FrameBuffer::Height() const
     {
-        return (m_height == 0 ? bgfx::getStats()->height : m_height);
+        return (m_height == 0 ? m_impl.GetHeight() : m_height);
     }
 
     bool FrameBuffer::DefaultBackBuffer() const

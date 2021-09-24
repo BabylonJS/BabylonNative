@@ -69,6 +69,16 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
+    size_t GraphicsImpl::GetWidth() const
+    {
+        return m_state.Resolution.Width;
+    }
+
+    size_t GraphicsImpl::GetHeight() const
+    {
+        return m_state.Resolution.Height;
+    }
+
     void GraphicsImpl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
