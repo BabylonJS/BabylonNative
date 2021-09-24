@@ -30,6 +30,11 @@ jobs:
       run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js --create-dirs https://preview.babylonjs.com/gui/babylon.gui.js
     - name: Download babylon.gui.js.map
       run: curl.exe -o Apps/node_modules/babylonjs-gui/babylon.gui.js.map --create-dirs https://preview.babylonjs.com/gui/babylon.gui.js.map
+    - name: Download chai.js
+      run: curl.exe -o Apps/node_modules/chai/chai.js --create-dirs https://unpkg.com/chai/chai.js
+    - name: Download mocha.js
+      run: curl.exe -o Apps/node_modules/mocha/mocha.js --create-dirs https://unpkg.com/mocha/mocha.js
+    - name: Download mocha.js
     - name: View Apps\node_modules content
       run: Get-ChildItem -Path .\Apps\node_modules -Recurse
     - name: Make Solution
