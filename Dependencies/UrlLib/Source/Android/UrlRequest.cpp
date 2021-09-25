@@ -53,6 +53,7 @@ namespace UrlLib
             }
             else
             {
+                // Platform API can handle both http:// and file:// schemes
                 m_schemeIsApp = false;
                 m_appPathOrUrl = std::move(url);
             }
