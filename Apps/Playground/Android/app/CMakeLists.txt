@@ -67,6 +67,7 @@ target_link_libraries(BabylonNativeJNI
         XMLHttpRequest
         NativeCamera
         AndroidExtensions
+        ChromeDevTools
         )
 
 configure_file(

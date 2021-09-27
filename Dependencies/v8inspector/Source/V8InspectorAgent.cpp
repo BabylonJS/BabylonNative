@@ -597,6 +597,7 @@ namespace Babylon
                 }
                 else
                 {
+#ifdef WIN32
                     OutputDebugStringW(L"Warning: V8 inspector message dropped - ");
                     if (message.is8Bit())
                     {
@@ -607,6 +608,7 @@ namespace Babylon
                         OutputDebugStringW(reinterpret_cast<const wchar_t*>(message.characters16()));
                     }
                     OutputDebugStringW(L"\n");
+#endif
                 }
             }
         } while (!tasks.empty());
