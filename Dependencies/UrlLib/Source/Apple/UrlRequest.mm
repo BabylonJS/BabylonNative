@@ -16,6 +16,10 @@ namespace UrlLib
             {
                 [m_responseBuffer release];
             }
+            if (m_nsURL)
+            {
+                [m_nsURL release];
+            }
         }
 
         void Abort()
@@ -25,6 +29,10 @@ namespace UrlLib
 
         void Open(UrlMethod method, std::string url)
         {
+            if (m_nsURL)
+            {
+                [m_nsURL release];
+            }
             m_method = method;
             NSString* urlString = [[NSString stringWithUTF8String:url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
             m_nsURL = {[NSURL URLWithString:urlString]};
@@ -42,6 +50,7 @@ namespace UrlLib
                 }
                 m_nsURL = [NSURL fileURLWithPath:path];
             }
+            [m_nsURL retain]; // Don't let this be released automatically
         }
 
         UrlResponseType ResponseType() const
