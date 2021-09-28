@@ -18,7 +18,7 @@ namespace Babylon
         bool Equals(const ViewPort& other) const;
     };
 
-    class FrameBuffer : public NativeResource<FrameBuffer>
+    class FrameBuffer final : public NativeResource<FrameBuffer>
     {
     public:
         FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
