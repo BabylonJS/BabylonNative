@@ -86,7 +86,6 @@ namespace Babylon::Polyfills::Internal
         int m_currentFontId{ -1 };
 
         Babylon::GraphicsImpl& m_graphicsImpl;
-        Polyfills::Canvas::Impl& m_canvasImpl;
 
         bool m_dirty{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};

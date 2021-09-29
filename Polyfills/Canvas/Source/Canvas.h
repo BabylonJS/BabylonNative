@@ -18,11 +18,19 @@ namespace Babylon::Polyfills
 
         struct MonitoredResource
         {
-            virtual void FlushGraphicResources() = 0;
-        };
+            MonitoredResource(Canvas::Impl& impl) : m_impl(impl)
+            {
+                m_impl.AddMonitoredResource(this);
+            }
+            virtual ~MonitoredResource()
+            {
+                m_impl.RemoveMonitoredResource(this);
+            }
 
-        void AddMonitoredResource(MonitoredResource* monitoredResource);
-        void RemoveMonitoredResource(MonitoredResource* monitoredResource);
+            virtual void FlushGraphicResources() = 0;
+        private:
+            Canvas::Impl& m_impl;
+        };
 
     private:
         Napi::Env m_env;
@@ -30,6 +38,11 @@ namespace Babylon::Polyfills
         void AddToJavaScript(Napi::Env env);
 
         std::vector<MonitoredResource*> m_monitoredResources{};
+
+        void AddMonitoredResource(MonitoredResource* monitoredResource);
+        void RemoveMonitoredResource(MonitoredResource* monitoredResource);
+
+        friend struct MonitoredResource;
     };
 } // namespace
 
@@ -38,7 +51,7 @@ namespace Babylon::Polyfills::Internal
     class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
-        static void CreateInstance(Napi::Env env, std::shared_ptr<Polyfills::Canvas::Impl> nativeCanvas);
+        static void CreateInstance(Napi::Env env);
 
         explicit NativeCanvas(const Napi::CallbackInfo& info);
         virtual ~NativeCanvas();
@@ -67,7 +80,6 @@ namespace Babylon::Polyfills::Internal
         uint32_t m_height{1};
 
         Babylon::GraphicsImpl& m_graphicsImpl;
-        Polyfills::Canvas::Impl& m_canvasImpl;
 
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
         bool m_dirty{};

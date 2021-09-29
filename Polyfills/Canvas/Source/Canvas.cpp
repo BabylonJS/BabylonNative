@@ -17,7 +17,7 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
 
-    void NativeCanvas::CreateInstance(Napi::Env env, std::shared_ptr<Polyfills::Canvas::Impl> nativeCanvas)
+    void NativeCanvas::CreateInstance(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
@@ -39,14 +39,12 @@ namespace Babylon::Polyfills::Internal
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
         , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
-        , m_canvasImpl{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
+        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        m_canvasImpl.AddMonitoredResource(this);
     }
 
     NativeCanvas::~NativeCanvas()
     {
-        m_canvasImpl.RemoveMonitoredResource(this);
         Dispose();
     }
 
@@ -203,7 +201,7 @@ namespace Babylon::Polyfills
     {
         auto impl{std::make_shared<Canvas::Impl>(env)};
 
-        Internal::NativeCanvas::CreateInstance(env, impl);
+        Internal::NativeCanvas::CreateInstance(env);
         Internal::NativeCanvasImage::CreateInstance(env);
 
         return {impl};

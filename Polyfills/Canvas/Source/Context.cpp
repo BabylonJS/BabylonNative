@@ -84,11 +84,10 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
         , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
-        , m_canvasImpl{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
+        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        m_canvasImpl.AddMonitoredResource(this);
         for (auto& font : NativeCanvas::fontsInfos)
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
@@ -98,7 +97,6 @@ namespace Babylon::Polyfills::Internal
 
     Context::~Context()
     {
-        m_canvasImpl.RemoveMonitoredResource(this);
         Dispose();
         m_cancellationSource->cancel();
     }
