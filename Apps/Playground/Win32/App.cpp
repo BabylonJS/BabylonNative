@@ -85,6 +85,7 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
 
+        g_nativeCanvas.reset();
         chromeDevTools.reset();
         inputBuffer.reset();
         runtime.reset();

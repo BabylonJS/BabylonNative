@@ -33,6 +33,7 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
 
 // 600, 400 mandatory size for CI tests
 static const int TEST_WIDTH = 600;
@@ -52,6 +53,7 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
 
+        g_nativeCanvas.reset();
         runtime.reset();
         graphics.reset();
     }
@@ -82,7 +84,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            Babylon::Polyfills::Canvas::Initialize(env);
+            g_nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 
