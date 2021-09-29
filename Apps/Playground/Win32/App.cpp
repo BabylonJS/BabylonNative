@@ -33,6 +33,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
+std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
 bool minimized{false};
 
 // Forward declarations of functions included in this code module:
@@ -124,7 +125,7 @@ namespace
             Babylon::Polyfills::Window::Initialize(env);
 
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            Babylon::Polyfills::Canvas::Initialize(env);
+            g_nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 
