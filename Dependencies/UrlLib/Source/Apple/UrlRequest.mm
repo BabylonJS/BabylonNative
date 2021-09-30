@@ -1,7 +1,5 @@
 #if ! __has_feature(objc_arc)
-
 #error "ARC is off"
-
 #endif
 
 #include <UrlLib/UrlLib.h>
