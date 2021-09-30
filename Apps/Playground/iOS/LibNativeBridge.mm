@@ -10,6 +10,7 @@
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
+#import <Babylon/Polyfills/Console.h>
 #import <Shared/InputManager.h>
 
 #import <optional>
@@ -59,6 +60,10 @@ bool g_isXrActive{};
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Polyfills::Canvas::Initialize(env);
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
