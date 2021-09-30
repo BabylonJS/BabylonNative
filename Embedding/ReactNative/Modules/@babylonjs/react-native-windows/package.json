@@ -24,7 +24,7 @@
   "licenseFilename": "LICENSE",
   "readmeFilename": "README.md",
   "peerDependencies": {
-    "@babylonjs/core": "^5.0.0-alpha.44",
+    "@babylonjs/core": "^5.0.0-alpha.47",
     "@babylonjs/react-native":"version",
     "react": "^17.0.1",
     "react-native": "^0.64.0",

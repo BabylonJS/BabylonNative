@@ -14,8 +14,8 @@
     "iosCmake": "node scripts/tools.js iosCMake"
   },
   "dependencies": {
-    "@babylonjs/core": "^5.0.0-alpha.44",
-    "@babylonjs/loaders": "^5.0.0-alpha.44",
+    "@babylonjs/core": "^5.0.0-alpha.47",
+    "@babylonjs/loaders": "^5.0.0-alpha.47",
     "@babylonjs/react-native": "file:../../Modules/@babylonjs/react-native",
     "@babylonjs/react-native-windows": "file:../../Modules/@babylonjs/react-native-windows",
     "@react-native-community/slider": "4.0.0-rc.3",
