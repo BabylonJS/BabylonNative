@@ -562,6 +562,9 @@ namespace Babylon
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
+                InstanceMethod("setCommandDataStream", &NativeEngine::SetCommandDataStream),
+                InstanceMethod("setCommandValidationDataStream", &NativeEngine::SetCommandValidationDataStream),
+                InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 InstanceValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1824,12 +1827,14 @@ namespace Babylon
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
     {
-        m_commandStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(info[0].ToObject());
+        auto jsCommandStream = info[0].ToObject();
+        m_commandStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(jsCommandStream.Get("_nativeDataStream").As<Napi::Object>());
     }
 
     void NativeEngine::SetCommandValidationDataStream(const Napi::CallbackInfo& info)
     {
-        m_validationStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(info[0].ToObject());
+        auto jsCommandStream = info[0].ToObject();
+        m_validationStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(jsCommandStream.Get("_nativeDataStream").As<Napi::Object>());
     }
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo&)
