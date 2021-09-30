@@ -13,7 +13,7 @@ namespace Babylon::Polyfills
         Canvas(Canvas&&) = default;
         ~Canvas();
 
-        static Canvas Initialize(Napi::Env env);
+        [[nodiscard]] static Canvas Initialize(Napi::Env env);
 
         void FlushGraphicResources();
 

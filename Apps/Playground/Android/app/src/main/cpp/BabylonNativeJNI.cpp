@@ -31,6 +31,7 @@ namespace
     std::unique_ptr<Babylon::Plugins::ChromeDevTools> g_chromeDevTools{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
     std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
+    std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     bool g_isXrActive{};
 }
 
@@ -116,7 +117,7 @@ extern "C"
                 Babylon::Polyfills::Window::Initialize(env);
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-                Babylon::Polyfills::Canvas::Initialize(env);
+                nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
                 InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
 

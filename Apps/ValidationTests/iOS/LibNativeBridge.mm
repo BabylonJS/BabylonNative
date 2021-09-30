@@ -13,6 +13,7 @@
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 #import <Shared/TestUtils.h>
 
@@ -50,7 +51,7 @@ std::unique_ptr<Babylon::AppRuntime> runtime{};
     {
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Canvas::Initialize(env);
+        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
         graphics->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
