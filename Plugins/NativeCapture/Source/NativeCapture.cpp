@@ -4,6 +4,8 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
+#include <napi/napi_pointer.h>
+
 #include <arcana/containers/ticketed_collection.h>
 
 #include <vector>
@@ -173,7 +175,7 @@ namespace Babylon::Plugins::Internal
                 {
                     throw Napi::Error::New(info.Env(), "Argument passed to NativeCapture constructor must be a numeric handle for a FrameBuffer.");
                 }
-                auto& frameBuffer = FrameBuffer::Get(info[0].ToNumber().Uint32Value());
+                auto& frameBuffer = *info[0].As<Napi::Pointer<FrameBuffer>>().Get();
                 frameBufferHandle = frameBuffer.Handle();
             }
 

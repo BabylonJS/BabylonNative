@@ -21,6 +21,8 @@ if(NOT NAPI_JAVASCRIPT_ENGINE IN_LIST SUPPORTED_JAVASCRIPT_ENGINES)
     message(FATAL_ERROR "Unsupported engine: ${NAPI_JAVASCRIPT_ENGINE}")
 endif()
 
+add_subdirectory(napi-common)
+
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     add_subdirectory(napi-jsi)
 else()

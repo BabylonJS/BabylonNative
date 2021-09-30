@@ -12,6 +12,7 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
+    "Source/NativeDataStream.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"

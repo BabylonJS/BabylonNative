@@ -4,6 +4,11 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
+namespace Babylon
+{
+    struct TextureData;
+}
+
 namespace Babylon::Polyfills::Internal
 {
     class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>
@@ -40,7 +45,7 @@ namespace Babylon::Polyfills::Internal
         Babylon::GraphicsImpl& m_graphicsImpl;
 
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
-        uint32_t m_textureHandle{0};
+        TextureData* m_textureData;
         bool m_dirty{};
     };
 }

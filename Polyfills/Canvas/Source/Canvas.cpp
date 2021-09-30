@@ -7,6 +7,7 @@
 #include <sstream>
 #include <assert.h>
 #include <NativeEngine.h>
+#include <napi/napi_pointer.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -104,10 +105,11 @@ namespace Babylon::Polyfills::Internal
             m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
 
-            if (m_textureHandle != 0)
+            if (m_textureData != nullptr)
             {
-                TextureData::Delete(m_textureHandle);
-                m_textureHandle = 0;
+                // TODO REFACTOR
+                //m_textureData->Dispose();
+                m_textureData = nullptr;
             }
 
             return true;
@@ -117,12 +119,12 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
-        if (m_textureHandle == 0)
+        if (m_textureData == nullptr)
         {
-            m_textureHandle = TextureData::Create();
+            m_textureData = new TextureData();
         }
 
-        auto& textureData{TextureData::Get(m_textureHandle)};
+        auto& textureData{*m_textureData};
 
         assert(m_frameBuffer->Handle().idx != bgfx::kInvalidHandle);
         textureData.Handle = bgfx::getTexture(m_frameBuffer->Handle());
@@ -130,17 +132,17 @@ namespace Babylon::Polyfills::Internal
         textureData.Width = m_width;
         textureData.Height = m_height;
 
-        return Napi::Value::From(info.Env(), m_textureHandle);
+        return Napi::Pointer<TextureData>::Create(info.Env(), m_textureData);
     }
 
     void NativeCanvas::Dispose()
     {
         m_frameBuffer.reset();
 
-        if (m_textureHandle != 0)
+        if (m_textureData != nullptr)
         {
-            TextureData::Delete(m_textureHandle);
-            m_textureHandle = 0;
+            // TODO REFACTOR
+            //m_textureData->Dispose();
         }
     }
 
