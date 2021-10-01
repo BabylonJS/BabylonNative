@@ -563,7 +563,6 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setCommandDataStream", &NativeEngine::SetCommandDataStream),
-                InstanceMethod("setCommandValidationDataStream", &NativeEngine::SetCommandValidationDataStream),
                 InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
 
                 InstanceValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
@@ -717,7 +716,6 @@ namespace Babylon
         , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
         , m_boundFrameBufferNeedsRebinding{m_graphicsImpl, *m_cancellationSource, true}
-        // TODO REFACTOR: , m_commandStream{Napi::ObjectWrap<NativeDataStream>::Unwrap(info[0].ToObject())}
     {
     }
 
@@ -1828,14 +1826,9 @@ namespace Babylon
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
     {
+        // TODO: This should be moved to the constructor once multi-update is available.
         auto jsCommandStream = info[0].ToObject();
         m_commandStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(jsCommandStream.Get("_nativeDataStream").As<Napi::Object>());
-    }
-
-    void NativeEngine::SetCommandValidationDataStream(const Napi::CallbackInfo& info)
-    {
-        auto jsCommandStream = info[0].ToObject();
-        m_validationStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(jsCommandStream.Get("_nativeDataStream").As<Napi::Object>());
     }
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo&)

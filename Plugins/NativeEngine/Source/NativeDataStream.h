@@ -13,7 +13,7 @@ namespace Babylon
         static constexpr auto JS_CLASS_NAME = "_NativeDataStream";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "NativeDataStream";
 
-        static constexpr auto VALIDATION_ENABLED = true;
+        static constexpr auto VALIDATION_ENABLED = false;
 
         enum class ValidationType : uint32_t
         {

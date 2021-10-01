@@ -37,6 +37,7 @@ namespace Babylon
             if (OwnsHandle && bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
+                OwnsHandle = false;
             }
         }
 
@@ -290,7 +291,6 @@ namespace Babylon
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
-        void SetCommandValidationDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, int fillMode);
 
@@ -344,7 +344,7 @@ namespace Babylon
         FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
+        // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
-        NativeDataStream* m_validationStream{};
     };
 }

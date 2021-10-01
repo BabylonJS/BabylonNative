@@ -105,11 +105,9 @@ namespace Babylon::Polyfills::Internal
             m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
 
-            if (m_textureData != nullptr)
+            if (m_textureData)
             {
-                // TODO REFACTOR
-                //m_textureData->Dispose();
-                m_textureData = nullptr;
+                m_textureData.reset();
             }
 
             return true;
@@ -119,9 +117,9 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
-        if (m_textureData == nullptr)
+        if (!m_textureData)
         {
-            m_textureData = new TextureData();
+            m_textureData = std::make_unique<TextureData>();
         }
 
         auto& textureData{*m_textureData};
@@ -132,18 +130,13 @@ namespace Babylon::Polyfills::Internal
         textureData.Width = m_width;
         textureData.Height = m_height;
 
-        return Napi::Pointer<TextureData>::Create(info.Env(), m_textureData);
+        return Napi::Pointer<TextureData>::Create(info.Env(), m_textureData.get());
     }
 
     void NativeCanvas::Dispose()
     {
         m_frameBuffer.reset();
-
-        if (m_textureData != nullptr)
-        {
-            // TODO REFACTOR
-            //m_textureData->Dispose();
-        }
+        m_textureData.reset();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)

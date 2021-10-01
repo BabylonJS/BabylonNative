@@ -4,6 +4,8 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
+#include <optional>
+
 namespace Babylon
 {
     struct TextureData;
@@ -45,7 +47,7 @@ namespace Babylon::Polyfills::Internal
         Babylon::GraphicsImpl& m_graphicsImpl;
 
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
-        TextureData* m_textureData;
+        std::unique_ptr<TextureData> m_textureData{};
         bool m_dirty{};
     };
 }
