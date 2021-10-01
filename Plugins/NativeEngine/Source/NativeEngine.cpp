@@ -1021,6 +1021,7 @@ namespace Babylon
         const bool culling = data.ReadUint32();
         // TODO: zOffset
         /*const float zOffset =*/ data.ReadFloat32();
+        /*const float zOffsetUnits =*/ data.ReadFloat32();
         const bool cullBackFaces = data.ReadUint32();
         const bool reverseSide = data.ReadUint32();
 
@@ -1839,6 +1840,7 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo&)
     {
+        GetUpdateToken();
         auto reader{m_commandStream->GetReader()};
         while (reader.CanRead())
         {
