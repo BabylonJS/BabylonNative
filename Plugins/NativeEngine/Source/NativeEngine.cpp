@@ -1840,7 +1840,6 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo&)
     {
-        GetUpdateToken();
         auto reader{m_commandStream->GetReader()};
         while (reader.CanRead())
         {
