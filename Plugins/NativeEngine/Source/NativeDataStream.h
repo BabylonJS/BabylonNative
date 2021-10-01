@@ -24,7 +24,7 @@ namespace Babylon
             Uint32Array,
             Int32Array,
             Float32Array,
-            NativeHandle,
+            NativeData,
             Boolean,
         };
 
@@ -92,12 +92,18 @@ namespace Babylon
                 return ReadArray<float>();
             }
 
-            template<typename PointerT>
-            PointerT ReadPointer()
+            template<typename T>
+            T ReadNativeData()
             {
-                Validate<ValidationType::NativeHandle>(*this);
+                Validate<ValidationType::NativeData>(*this);
                 const auto data = ReadUint32Array();
-                return *reinterpret_cast<PointerT*>(data.data());
+                return *reinterpret_cast<T*>(data.data());
+            }
+
+            template<typename T, class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+            auto ReadPointer()
+            {
+                return ReadNativeData<typename std::conditional<std::is_member_pointer<T>::value, T, T*>::type>();
             }
 
         private:
@@ -146,34 +152,6 @@ namespace Babylon
             }
         };
 
-        static std::initializer_list<Napi::ClassPropertyDescriptor<NativeDataStream>> GetProperties(Napi::Env env)
-        {
-            if constexpr (VALIDATION_ENABLED)
-            {
-                return
-                {
-                    InstanceMethod("writeBytes", &NativeDataStream::WriteBytes),
-
-                    StaticValue("VALIDATION_UINT_8", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint8))),
-                    StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32))),
-                    StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32))),
-                    StaticValue("VALIDATION_FLOAT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32))),
-                    StaticValue("VALIDATION_UINT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32Array))),
-                    StaticValue("VALIDATION_INT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32Array))),
-                    StaticValue("VALIDATION_FLOAT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32Array))),
-                    StaticValue("VALIDATION_NATIVE_HANDLE", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::NativeHandle))),
-                    StaticValue("VALIDATION_BOOLEAN", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Boolean))),
-                };
-            }
-            else
-            {
-                return
-                {
-                    InstanceMethod("writeBytes", &NativeDataStream::WriteBytes)
-                };
-            }
-        }
-
         static void Initialize(Napi::Env env)
         {
             Napi::HandleScope scope{env};
@@ -192,7 +170,7 @@ namespace Babylon
                         StaticValue("VALIDATION_UINT_32_ARRAY", Napi::Number::From(env, static_cast<int>(ValidationType::Uint32Array))),
                         StaticValue("VALIDATION_INT_32_ARRAY", Napi::Number::From(env, static_cast<int>(ValidationType::Int32Array))),
                         StaticValue("VALIDATION_FLOAT_32_ARRAY", Napi::Number::From(env, static_cast<int>(ValidationType::Float32Array))),
-                        StaticValue("VALIDATION_NATIVE_HANDLE", Napi::Number::From(env, static_cast<int>(ValidationType::NativeHandle))),
+                        StaticValue("VALIDATION_NATIVE_DATA", Napi::Number::From(env, static_cast<int>(ValidationType::NativeData))),
                         StaticValue("VALIDATION_BOOLEAN", Napi::Number::From(env, static_cast<int>(ValidationType::Boolean))),
                     });
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);

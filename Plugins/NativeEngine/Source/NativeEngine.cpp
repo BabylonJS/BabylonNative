@@ -750,14 +750,14 @@ namespace Babylon
 
     void NativeEngine::DeleteVertexArray(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<VertexArray*>()->Dispose();
+        data.ReadPointer<VertexArray>()->Dispose();
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray); */
     }
 
     void NativeEngine::BindVertexArray(NativeDataStream::Reader& data)
     {
-        m_boundVertexArray = data.ReadPointer<VertexArray*>();
+        m_boundVertexArray = data.ReadPointer<VertexArray>();
     }
 
     Napi::Value NativeEngine::CreateIndexBuffer(const Napi::CallbackInfo& info)
@@ -773,7 +773,7 @@ namespace Babylon
 
     void NativeEngine::DeleteIndexBuffer(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<IndexBufferData*>()->Dispose();
+        data.ReadPointer<IndexBufferData>()->Dispose();
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
@@ -805,7 +805,7 @@ namespace Babylon
 
     void NativeEngine::DeleteVertexBuffer(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<VertexBufferData*>()->Dispose();
+        data.ReadPointer<VertexBufferData>()->Dispose();
     }
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
@@ -1011,7 +1011,7 @@ namespace Babylon
 
     void NativeEngine::SetProgram(NativeDataStream::Reader& data)
     {
-        m_currentProgram = data.ReadPointer<ProgramData*>();
+        m_currentProgram = data.ReadPointer<ProgramData>();
     }
 
     void NativeEngine::SetState(NativeDataStream::Reader& data)
@@ -1034,7 +1034,7 @@ namespace Babylon
 
     void NativeEngine::DeleteProgram(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<ProgramData*>()->Dispose();
+        data.ReadPointer<ProgramData>()->Dispose();
     }
 
     void NativeEngine::SetZOffset(NativeDataStream::Reader& data)
@@ -1085,7 +1085,7 @@ namespace Babylon
     
     void NativeEngine::SetInt(NativeDataStream::Reader& data)
     {
-        const auto& uniformInfo{*data.ReadPointer<UniformInfo*>()};
+        const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
         const auto value{static_cast<float>(data.ReadInt32())};
         m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
     }
@@ -1111,7 +1111,7 @@ namespace Babylon
     template<int size>
     void NativeEngine::SetFloatN(NativeDataStream::Reader& data)
     {
-        const auto& uniformInfo = *data.ReadPointer<UniformInfo*>();
+        const auto& uniformInfo = *data.ReadPointer<UniformInfo>();
         const float values[] = {
             data.ReadFloat32(),
             (size > 1) ? data.ReadFloat32() : 0.f,
@@ -1125,7 +1125,7 @@ namespace Babylon
     template<int size>
     void NativeEngine::SetMatrixN(NativeDataStream::Reader& data)
     {
-        const auto& uniformInfo{*data.ReadPointer<UniformInfo*>()};
+        const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
         const auto matrix{data.ReadFloat32Array()};
 
         assert(matrix.size() == size * size);
@@ -1152,7 +1152,7 @@ namespace Babylon
     template<int size>
     void NativeEngine::SetIntArrayN(NativeDataStream::Reader& data)
     {
-        const auto& uniformInfo{*data.ReadPointer<UniformInfo*>()};
+        const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
         const auto array{data.ReadInt32Array()};
         SetTypeArrayN<size>(uniformInfo, static_cast<uint32_t>(array.size()), array);
     }
@@ -1180,7 +1180,7 @@ namespace Babylon
     template<int size>
     void NativeEngine::SetFloatArrayN(NativeDataStream::Reader& data)
     {
-        const auto& uniformInfo{*data.ReadPointer<UniformInfo*>()};
+        const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
         const auto array{data.ReadFloat32Array()};
         SetTypeArrayN<size>(uniformInfo, static_cast<uint32_t>(array.size()), array);
     }
@@ -1207,7 +1207,7 @@ namespace Babylon
 
     void NativeEngine::SetMatrices(NativeDataStream::Reader& data)
     {
-        auto& uniform{*data.ReadPointer<UniformInfo*>()};
+        auto& uniform{*data.ReadPointer<UniformInfo>()};
         auto matrices{data.ReadFloat32Array()};
 
         assert(matrices.size() % 16 == 0);
@@ -1435,7 +1435,7 @@ namespace Babylon
 
     void NativeEngine::SetTextureSampling(NativeDataStream::Reader& data)
     {
-        auto& texture = *data.ReadPointer<TextureData*>();
+        auto& texture = *data.ReadPointer<TextureData>();
         const auto value = data.ReadUint32();
 
         texture.Flags &= ~(BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
@@ -1450,7 +1450,7 @@ namespace Babylon
 
     void NativeEngine::SetTextureWrapMode(NativeDataStream::Reader& data)
     {
-        auto& texture = *data.ReadPointer<TextureData*>();
+        auto& texture = *data.ReadPointer<TextureData>();
         auto addressModeU = data.ReadUint32();
         auto addressModeV = data.ReadUint32();
         auto addressModeW = data.ReadUint32();
@@ -1465,7 +1465,7 @@ namespace Babylon
 
     void NativeEngine::SetTextureAnisotropicLevel(NativeDataStream::Reader& data)
     {
-        auto& texture = *data.ReadPointer<TextureData*>();
+        auto& texture = *data.ReadPointer<TextureData>();
         const auto value = data.ReadUint32();
 
         texture.Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
@@ -1486,8 +1486,8 @@ namespace Babylon
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto& uniformInfo{*data.ReadPointer<UniformInfo*>()};
-        const auto& texture{*data.ReadPointer<TextureData*>()};
+        const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
+        const auto& texture{*data.ReadPointer<TextureData>()};
 
         encoder->setTexture(uniformInfo.Stage, uniformInfo.Handle, texture.Handle, texture.Flags);
     }
@@ -1550,12 +1550,12 @@ namespace Babylon
     // TODO: This doesn't get called when an Engine instance is disposed.
     void NativeEngine::DeleteFrameBuffer(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<FrameBuffer*>()->Dispose();
+        data.ReadPointer<FrameBuffer>()->Dispose();
     }
 
     void NativeEngine::BindFrameBuffer(NativeDataStream::Reader& data)
     {
-        auto& frameBuffer{*data.ReadPointer<FrameBuffer*>()};
+        auto& frameBuffer{*data.ReadPointer<FrameBuffer>()};
         auto* encoder = GetUpdateToken().GetEncoder();
 
         m_boundFrameBuffer->Unbind(*encoder);
@@ -1566,7 +1566,7 @@ namespace Babylon
 
     void NativeEngine::UnbindFrameBuffer(NativeDataStream::Reader& data)
     {
-        const auto& frameBuffer{*data.ReadPointer<FrameBuffer*>()};
+        const auto& frameBuffer{*data.ReadPointer<FrameBuffer>()};
         auto* encoder = GetUpdateToken().GetEncoder();
 
         assert(&frameBuffer == m_boundFrameBuffer);
