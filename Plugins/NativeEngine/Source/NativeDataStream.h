@@ -143,8 +143,7 @@ namespace Babylon
 
             void ByteAlign()
             {
-                // TODO: Put back byte alignment when we're doing things more efficiently in TS.
-                size_t remainder = m_position % 4 > 0;
+                size_t remainder = m_position % 4;
                 if (remainder > 0)
                 {
                     m_position += (4 - remainder);
