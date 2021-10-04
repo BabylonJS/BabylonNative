@@ -162,6 +162,7 @@ namespace Babylon
                     {
                         InstanceMethod("writeBytes", &NativeDataStream::WriteBytes),
 
+                        StaticValue("VALIDATION_ENABLED", Napi::Boolean::From(env, VALIDATION_ENABLED)),
                         StaticValue("VALIDATION_UINT_8", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint8))),
                         StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32))),
                         StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32))),
