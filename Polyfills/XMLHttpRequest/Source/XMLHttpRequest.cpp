@@ -3,6 +3,29 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <sstream>
 
+bool IsHexChar(const char& c)
+{
+    return ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'));
+}
+
+std::string EncodePercent(const std::string& input)
+{
+    std::ostringstream encoded;
+    for (auto i = input.begin(), e = input.end(); i != e; ++i)
+    {
+        encoded << *i;
+        if (*i == '%')
+        {
+            if (std::distance(i, e) >= 2 && !(IsHexChar(*(i + 1)) && IsHexChar(*(i + 2))))
+            {
+                // If a percent character is not followed by two hex characters, we should encode it
+                encoded << "25";
+            }
+        }
+    }
+    return encoded.str();
+}
+
 namespace Babylon::Polyfills::Internal
 {
     namespace
@@ -187,8 +210,11 @@ namespace Babylon::Polyfills::Internal
             // Decode the input URL to get a completely unencoded URL
             auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
             // Re-encode the URL to make sure that every illegal character is encoded
-            auto encodedURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
-            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), encodedURL.Utf8Value());
+            auto finalURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
+            // Below lines are purely for debugging the CI, will be removed
+            std::printf("%s\n", finalURL.Utf8Value().c_str());
+            fflush(stdout);
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), finalURL.Utf8Value());
             SetReadyState(ReadyState::Opened);
         }
         catch (const std::exception& e)
@@ -252,27 +278,4 @@ namespace Babylon::Polyfills::XMLHttpRequest
     {
         Internal::XMLHttpRequest::Initialize(env);
     }
-}
-
-bool IsHexChar(const char& c)
-{
-    return ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'));
-}
-
-std::string EncodePercent(const std::string& input)
-{
-    std::ostringstream encoded;
-    for (auto i = input.begin(), e = input.end(); i != e; ++i)
-    {
-        encoded << *i;
-        if (*i == '%')
-        {
-            if (std::distance(i, e) >= 2 && !(IsHexChar(*(i + 1)) && IsHexChar(*(i + 2))))
-            {
-                // If a percent character is not followed by two hex characters, we should encode it
-                encoded << "25";
-            }
-        }
-    }
-    return encoded.str();
 }
