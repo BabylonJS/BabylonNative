@@ -3,11 +3,11 @@ function BabylonReporter(runner) {
     const stats = runner.stats;
 
     runner.on("pass", test => {
-        console.log(`Passed: ${test.fullTitle()}`);
+        console.log(`Passed: ${test.fullTitle()} (${test.duration}ms)`);
     });
 
     runner.on("fail", (test, err) => {
-        console.log(`Failed: ${test.fullTitle()} with error: ${err.message}`);
+        console.log(`Failed: ${test.fullTitle()} with error: ${err.message} (${test.duration}ms)`);
     });
 
     runner.on("end", () => {
