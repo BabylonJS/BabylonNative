@@ -814,7 +814,8 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("pointerId", &PointerEvent::GetPointerId, nullptr)
+                        InstanceAccessor("pointerId", &PointerEvent::GetPointerId, nullptr),
+                        InstanceAccessor("pointerType", &PointerEvent::GetPointerType, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -823,6 +824,11 @@ namespace Babylon
             Napi::Value GetPointerId(const Napi::CallbackInfo& info)
             {
                 return Napi::Value::From(info.Env(), m_pointerId);
+            }
+
+            Napi::Value GetPointerType(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_pointerType);
             }
 
             static Napi::Object New(const Napi::CallbackInfo& info)
@@ -835,10 +841,12 @@ namespace Babylon
             {
                 Napi::Object params = info[1].As<Napi::Object>();
                 m_pointerId = params.Get("pointerId").As<Napi::Number>().Int32Value();
+                m_pointerType = params.Get("pointerType").As<Napi::String>().Utf8Value();
             }
 
         private:
             int32_t m_pointerId;
+            std::string m_pointerType;
         };
 
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
