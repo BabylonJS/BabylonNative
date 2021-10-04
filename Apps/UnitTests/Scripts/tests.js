@@ -38,16 +38,20 @@ describe("XMLHTTPRequest", function () {
         const xhr = await createRequest("GET", "https://babylonjs.com");
         expect(xhr.status).to.equal(200);
     })
-    it("should load URL with no spaces", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic_plane.glb");
+    it("should load unescaped URLs", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/στρογγυλεμένος % κύβος.glb");
         expect(xhr.status).to.equal(200);
     })
-    it("should load URLs with escaped spaces", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic%20plane.glb");
+    it("should load partially unescaped URLs", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/στρογγυλεμένος%20%%20κύβος.glb");
         expect(xhr.status).to.equal(200);
     })
-    it("should load URLs with unescaped spaces", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/aerobatic plane.glb");
+    it("should load escaped URLs", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/%CF%83%CF%84%CF%81%CE%BF%CE%B3%CE%B3%CF%85%CE%BB%CE%B5%CE%BC%CE%AD%CE%BD%CE%BF%CF%82%20%25%20%CE%BA%CF%8D%CE%B2%CE%BF%CF%82.glb");
+        expect(xhr.status).to.equal(200);
+    })
+    it("should load URLs with unescaped %s", async function () {
+        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/%CF%83%CF%84%CF%81%CE%BF%CE%B3%CE%B3%CF%85%CE%BB%CE%B5%CE%BC%CE%AD%CE%BD%CE%BF%CF%82%20%%20%CE%BA%CF%8D%CE%B2%CE%BF%CF%82.glb");
         expect(xhr.status).to.equal(200);
     })
     it("should have status=404 for a file that does not exist", async function () {

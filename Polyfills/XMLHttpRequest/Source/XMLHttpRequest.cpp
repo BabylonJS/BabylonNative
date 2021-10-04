@@ -1,6 +1,7 @@
 #include "XMLHttpRequest.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <sstream>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -181,14 +182,12 @@ namespace Babylon::Polyfills::Internal
         try
         {
             auto inputURL{info[1].As<Napi::String>()};
-            auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({inputURL}).As<Napi::String>()};
-            auto encodedURL{inputURL};
-            // We need to percent encode the URL
-            // If decoding the URL changes something, it's already encoded - don't change anything
-            if (inputURL.StrictEquals(decodedURL))
-            {
-                encodedURL = info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({inputURL}).As<Napi::String>();
-            }
+            // If the input URL contains any true % characters, encode them as %25
+            auto encodedPercentURL{Napi::String::New(info.Env(), EncodePercent(inputURL.Utf8Value()))};
+            // Decode the input URL to get a completely unencoded URL
+            auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
+            // Re-encode the URL to make sure that every illegal character is encoded
+            auto encodedURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
             m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), encodedURL.Utf8Value());
             SetReadyState(ReadyState::Opened);
         }
@@ -210,20 +209,21 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
             return;
         }
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
             {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-                return;
-            }
+                if (result.has_error())
+                {
+                    Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                    return;
+                }
 
-            SetReadyState(ReadyState::Done);
-            RaiseEvent(EventType::LoadEnd);
+                SetReadyState(ReadyState::Done);
+                RaiseEvent(EventType::LoadEnd);
 
-            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
-            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-            m_eventHandlerRefs.clear();
-        });
+                // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+                // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+                m_eventHandlerRefs.clear();
+            });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
@@ -252,4 +252,27 @@ namespace Babylon::Polyfills::XMLHttpRequest
     {
         Internal::XMLHttpRequest::Initialize(env);
     }
+}
+
+bool IsHexChar(const char& c)
+{
+    return ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'));
+}
+
+std::string EncodePercent(const std::string& input)
+{
+    std::ostringstream encoded;
+    for (auto i = input.begin(), e = input.end(); i != e; ++i)
+    {
+        encoded << *i;
+        if (*i == '%')
+        {
+            if (std::distance(i, e) >= 2 && !(IsHexChar(*(i + 1)) && IsHexChar(*(i + 2))))
+            {
+                // If a percent character is not followed by two hex characters, we should encode it
+                encoded << "25";
+            }
+        }
+    }
+    return encoded.str();
 }

@@ -46,3 +46,6 @@ namespace Babylon::Polyfills::Internal
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs;
     };
 }
+
+bool IsHexChar(const char& c);
+std::string EncodePercent(const std::string& input);
