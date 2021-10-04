@@ -163,15 +163,15 @@ namespace Babylon
                     {
                         InstanceMethod("writeBytes", &NativeDataStream::WriteBytes),
 
-                        StaticValue("VALIDATION_UINT_8", Napi::Number::From(env, static_cast<int>(ValidationType::Uint8))),
-                        StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<int>(ValidationType::Uint32))),
-                        StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<int>(ValidationType::Int32))),
-                        StaticValue("VALIDATION_FLOAT_32", Napi::Number::From(env, static_cast<int>(ValidationType::Float32))),
-                        StaticValue("VALIDATION_UINT_32_ARRAY", Napi::Number::From(env, static_cast<int>(ValidationType::Uint32Array))),
-                        StaticValue("VALIDATION_INT_32_ARRAY", Napi::Number::From(env, static_cast<int>(ValidationType::Int32Array))),
-                        StaticValue("VALIDATION_FLOAT_32_ARRAY", Napi::Number::From(env, static_cast<int>(ValidationType::Float32Array))),
-                        StaticValue("VALIDATION_NATIVE_DATA", Napi::Number::From(env, static_cast<int>(ValidationType::NativeData))),
-                        StaticValue("VALIDATION_BOOLEAN", Napi::Number::From(env, static_cast<int>(ValidationType::Boolean))),
+                        StaticValue("VALIDATION_UINT_8", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint8))),
+                        StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32))),
+                        StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32))),
+                        StaticValue("VALIDATION_FLOAT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32))),
+                        StaticValue("VALIDATION_UINT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32Array))),
+                        StaticValue("VALIDATION_INT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32Array))),
+                        StaticValue("VALIDATION_FLOAT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32Array))),
+                        StaticValue("VALIDATION_NATIVE_DATA", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::NativeData))),
+                        StaticValue("VALIDATION_BOOLEAN", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Boolean))),
                     });
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
             }
