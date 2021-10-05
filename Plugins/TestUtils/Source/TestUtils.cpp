@@ -2,13 +2,9 @@
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-
-
 #include <bimg/decode.h>
 #include <bimg/encode.h>
-
-
-
+#include <bx/file.h>
 #include <functional>
 #include <sstream>
 #include <Babylon/JsRuntime.h>
@@ -63,13 +59,5 @@ namespace Babylon::Plugins::Internal
         memcpy(data.Data(), ptr, imageData->m_Image->m_size);
 
         return Napi::Value::From(info.Env(), data);
-    }
-}
-
-namespace Babylon::Plugins::TestUtils
-{
-    void Initialize(Napi::Env env, WindowType nativeWindowPtr)
-    {
-        Internal::TestUtils::CreateInstance(env, nativeWindowPtr);
     }
 }

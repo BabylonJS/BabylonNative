@@ -4,22 +4,23 @@
 #pragma warning( disable : 4324 ) // 'bx::DirectoryReader': structure was padded due to alignment specifier
 #endif
 
-#include <bx/file.h>
+#include <bx/allocator.h>
 #include <bimg/bimg.h>
-#include <Babylon/Graphics.h>
 
 namespace Babylon::Plugins::Internal
 {
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
+        class ImplData;
+
         static inline constexpr const char* JS_INSTANCE_NAME{ "TestUtils" };
 
         using ParentT = Napi::ObjectWrap<TestUtils>;
 
-        static void CreateInstance(Napi::Env env, WindowType nativeWindowPtr)
+        static void CreateInstance(Napi::Env env, std::shared_ptr<ImplData> implData)
         {
-            _nativeWindowPtr = nativeWindowPtr;
+            implData = std::move(implData);
             Napi::HandleScope scope{ env };
 
             Napi::Function func = ParentT::DefineClass(
@@ -45,7 +46,7 @@ namespace Babylon::Plugins::Internal
     private:
         static inline Napi::FunctionReference constructor{};
 
-        inline static WindowType _nativeWindowPtr{};
+        inline static std::shared_ptr<ImplData> m_implData;
         inline static bx::DefaultAllocator allocator{};
 
         void Exit(const Napi::CallbackInfo& info);

@@ -1,16 +1,10 @@
-#include "TestUtils.h"
+// NOMINMAX to prevent compilation errors with bgfx
+#include <Windows.h>
 #include <winrt/Windows.ApplicationModel.h>
-
 #include <winrt/windows.ui.core.h>
+#include "TestUtils.h"
 
-using namespace Windows::ApplicationModel;
-using namespace Windows::ApplicationModel::Core;
-using namespace Windows::ApplicationModel::Activation;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Input;
-using namespace Windows::System;
-using namespace Windows::Foundation;
-using namespace Windows::Graphics::Display;
+using namespace winrt::Windows;
 
 namespace Babylon::Plugins::Internal
 {
@@ -31,10 +25,18 @@ namespace Babylon::Plugins::Internal
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
     {
-        using namespace Windows::Storage;
-        StorageFolder^ localFolder = ApplicationData::Current->LocalFolder;
+        Storage::StorageFolder^ localFolder = Storage::ApplicationData::Current->LocalFolder;
         std::wstring wpath = localFolder->Path->Data();
-        std::string path{winrt::to_string(wpath)};
+        std::string path{ winrt::to_string(wpath) };
         return Napi::Value::From(info.Env(), path);
+    }
+}
+
+namespace Babylon::Plugins::TestUtils
+{
+    void Initialize(Napi::Env env, WindowType nativeWindowPtr)
+    {
+        auto implData{std::make_shared<Internal::TestUtils::ImplData>(nativeWindowPtr)};
+        Internal::TestUtils::CreateInstance(env, implData);
     }
 }

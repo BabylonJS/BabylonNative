@@ -17,15 +17,16 @@ namespace Babylon::Plugins::Internal
 {
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
+        auto window = (Window)m_implData->m_nativeWindowPtr;
         const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
         Plugins::TestUtils::errorCode = exitCode;
         Display* display = XOpenDisplay(NULL);
         XClientMessageEvent dummyEvent;
         memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
         dummyEvent.type = ClientMessage;
-        dummyEvent.window = (Window)_nativeWindowPtr;
+        dummyEvent.window = window;
         dummyEvent.format = 32;
-        XSendEvent(display, (Window)_nativeWindowPtr, 0, 0, (XEvent*)&dummyEvent);
+        XSendEvent(display, window, 0, 0, (XEvent*)&dummyEvent);
         XFlush(display);
     }
 
@@ -37,7 +38,8 @@ namespace Babylon::Plugins::Internal
     {
         const auto title = info[0].As<Napi::String>().Utf8Value();
         Display* display = XOpenDisplay(NULL);
-        XStoreName(display, (Window)_nativeWindowPtr, title.c_str());
+        auto window = (Window)m_implData->m_nativeWindowPtr;
+        XStoreName(display, window, title.c_str());
     }
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
@@ -52,5 +54,14 @@ namespace Babylon::Plugins::Internal
 
         auto path = std::filesystem::path{exe}.parent_path().generic_string();
         return Napi::Value::From(info.Env(), path);
+    }
+}
+
+namespace Babylon::Plugins::TestUtils
+{
+    void Initialize(Napi::Env env, WindowType nativeWindowPtr)
+    {
+        auto implData{std::make_shared<Internal::TestUtils::ImplData>(nativeWindowPtr)};
+        Internal::TestUtils::CreateInstance(env, implData);
     }
 }

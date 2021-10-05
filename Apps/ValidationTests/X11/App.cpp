@@ -81,7 +81,7 @@ namespace
                 fflush(stdout);
             });
 
-            Babylon::Plugins::TestUtils::Initialize(env, (env, (void*)(uintptr_t)window);
+            Babylon::Plugins::TestUtils::Initialize(env, (void*)(uintptr_t)window);
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
