@@ -32,7 +32,6 @@ if(APPLE)
     # no Vulkan on Apple but Metal
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_VULKAN=0)
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_METAL=1)
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_WAIT_FOR_FLIP=1)
 elseif(ANDROID)
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGLES=30)
     target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION=1)
