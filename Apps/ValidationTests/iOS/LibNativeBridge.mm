@@ -14,7 +14,7 @@
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 
-#import <Shared/TestUtils.h>
+#import<Babylon/Plugins/TestUtils.h>
 
 @implementation LibNativeBridge
 
