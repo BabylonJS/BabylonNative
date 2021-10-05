@@ -2,7 +2,11 @@ set(SOURCES "Include/Babylon/Plugins/TestUtils.h"
             "Source/TestUtils.h"
             "Source/TestUtils.cpp")
 
-set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/TestUtils.cpp")
+if(APPLE)
+    set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/TestUtils.mm")
+else()
+    set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/TestUtils.cpp")
+endif()
 
 add_library(TestUtils ${SOURCES})
 warnings_as_errors(TestUtils)

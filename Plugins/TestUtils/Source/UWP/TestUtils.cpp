@@ -1,4 +1,5 @@
 #include "TestUtils.h"
+#include <winrt/windows.ui.core.h>
 
 namespace Babylon::Plugins::Internal
 {

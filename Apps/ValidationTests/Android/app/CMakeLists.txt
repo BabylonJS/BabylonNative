@@ -44,8 +44,6 @@ add_subdirectory(${BABYLON_NATIVE_VALIDATIONTESTS_DIR}/../../ ${BABYLON_NATIVE_V
 add_library(BabylonNativeJNI SHARED
             src/main/cpp/BabylonNativeJNI.cpp)
 
-target_include_directories(BabylonNativeJNI)
-
 add_definitions(-DANDROID_STL=c++_shared)
 
 target_link_libraries(BabylonNativeJNI
