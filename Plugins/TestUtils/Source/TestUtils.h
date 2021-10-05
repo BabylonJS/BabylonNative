@@ -20,7 +20,7 @@ namespace Babylon::Plugins::Internal
 
         static void CreateInstance(Napi::Env env, std::shared_ptr<ImplData> implData)
         {
-            implData = std::move(implData);
+            m_implData = std::move(implData);
             Napi::HandleScope scope{ env };
 
             Napi::Function func = ParentT::DefineClass(

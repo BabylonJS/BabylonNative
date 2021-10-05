@@ -1,8 +1,8 @@
-// NOMINMAX to prevent compilation errors with bgfx
+#include "TestUtilsImplData.h"
 #include <Windows.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/windows.ui.core.h>
-#include "TestUtils.h"
+
 
 using namespace winrt::Windows;
 
