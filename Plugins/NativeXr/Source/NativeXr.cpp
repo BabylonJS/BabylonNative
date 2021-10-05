@@ -502,7 +502,7 @@ namespace Babylon
                         throw std::runtime_error{"Failed to initialize xr system."};
                     }
 
-                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, bgfx::getInternalData()->commandQueue, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
                         .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
