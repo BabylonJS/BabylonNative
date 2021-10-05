@@ -1,10 +1,19 @@
 #import <Cocoa/Cocoa.h>
+#import "TestUtilsImplData.h"
 #import "TestUtils.h"
+
+// can't externalize variable with ObjC++. Using a function instead.
+int errorCode{};
+int GetExitCode()
+{
+    return errorCode;
+}
 
 namespace Babylon::Plugins::Internal
 {
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
+        errorCode = info[0].As<Napi::Number>().Int32Value();
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
         dispatch_async(dispatch_get_main_queue(), ^{
             if (graphics)
@@ -39,7 +48,7 @@ namespace Babylon::Plugins::Internal
     {
     }
 
-    Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& /*info*/)
+    Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
     {
         std::string path = getenv("HOME");
         return Napi::Value::From(info.Env(), path);
