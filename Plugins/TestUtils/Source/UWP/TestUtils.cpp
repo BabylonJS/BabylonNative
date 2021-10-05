@@ -1,5 +1,16 @@
 #include "TestUtils.h"
+#include <winrt/Windows.ApplicationModel.h>
+
 #include <winrt/windows.ui.core.h>
+
+using namespace Windows::ApplicationModel;
+using namespace Windows::ApplicationModel::Core;
+using namespace Windows::ApplicationModel::Activation;
+using namespace Windows::UI::Core;
+using namespace Windows::UI::Input;
+using namespace Windows::System;
+using namespace Windows::Foundation;
+using namespace Windows::Graphics::Display;
 
 namespace Babylon::Plugins::Internal
 {

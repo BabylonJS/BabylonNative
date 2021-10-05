@@ -15,10 +15,10 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <TestUtils.h>
 
 namespace
 {
@@ -103,7 +103,7 @@ extern "C"
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                Babylon::TestUtils::CreateInstance(env, window);
+                 Babylon::Plugins::TestUtils::CreateIInitializenstance(env, window);
             });
 
             g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);

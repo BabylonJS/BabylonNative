@@ -35,5 +35,15 @@ namespace Babylon::Plugins::Internal
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
     {
+        char exe[1024];
+        int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
+        if(ret == -1)
+        {
+            throw Napi::Error::New(info.Env(), "Unable to get executable location");
+        }
+        exe[ret] = 0;
+
+        auto path = std::filesystem::path{exe}.parent_path().generic_string();
+        return Napi::Value::From(info.Env(), path);
     }
 }
