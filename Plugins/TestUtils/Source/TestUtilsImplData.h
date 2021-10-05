@@ -7,7 +7,7 @@ namespace Babylon::Plugins::Internal
     class TestUtils::ImplData final : public std::enable_shared_from_this<TestUtils::ImplData>
     {
     public:
-        TestUtils::ImplData(WindowType nativeWindowPtr) 
+        TestUtils::ImplData(WindowType nativeWindowPtr)
             : m_nativeWindowPtr{nativeWindowPtr}
         {
         }
