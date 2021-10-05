@@ -141,9 +141,9 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
                 <Image style={{flex: 1}} source={{uri: snapshotData }} />
               </View>
             }
-            <EngineView camera={camera} onInitialized={onInitialized} />
+            <EngineView camera={camera} onInitialized={onInitialized} displayFrameRate={true} />
             <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} step={0.01} value={defaultScale} onValueChange={setScale} />
-            <Text style={{fontSize: 12, color: 'yellow',  position: 'absolute', margin: 10}}>{trackingStateToString(trackingState)}</Text>
+            <Text style={{color: 'yellow',  position: 'absolute', margin: 3}}>{trackingStateToString(trackingState)}</Text>
           </View>
         }
         { toggleView &&

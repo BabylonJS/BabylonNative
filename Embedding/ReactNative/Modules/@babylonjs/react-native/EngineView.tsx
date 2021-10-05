@@ -1,6 +1,6 @@
 import React, { Component, FunctionComponent, SyntheticEvent, useCallback, useEffect, useState, useRef } from 'react';
 import { requireNativeComponent, ViewProps, AppState, AppStateStatus, View, Text, findNodeHandle, UIManager } from 'react-native';
-import { Camera } from '@babylonjs/core';
+import { Camera, SceneInstrumentation } from '@babylonjs/core';
 import { ensureInitialized } from './BabylonModule';
 import { ReactNativeEngine } from './ReactNativeEngine';
 
@@ -25,10 +25,16 @@ export interface EngineViewCallbacks {
     takeSnapshot: () => Promise<string>;
 }
 
+interface SceneStats {
+    frameRate: number,
+    frameTime: number,
+}
+
 export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineViewProps) => {
     const [initialized, setInitialized] = useState<boolean>();
     const [appState, setAppState] = useState(AppState.currentState);
-    const [fps, setFps] = useState<number>();
+    //const [fps, setFps] = useState<number>();
+    const [sceneStats, setSceneStats] = useState<SceneStats>();
     const engineViewRef = useRef<Component<NativeEngineViewProps>>(null);
     const snapshotPromise = useRef<{ promise: Promise<string>, resolve: (data: string) => void }>();
 
@@ -74,21 +80,27 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
 
     useEffect(() => {
         if (props.camera && (props.displayFrameRate ?? __DEV__)) {
-            const engine = props.camera.getScene().getEngine() as ReactNativeEngine;
+            const scene = props.camera.getScene();
+            const engine = scene.getEngine() as ReactNativeEngine;
 
             if (!engine.isDisposed) {
-                setFps(engine.getFps());
+                setSceneStats({frameRate: 0, frameTime: 0});
+
+                const sceneInstrumentation = new SceneInstrumentation(scene);
+                sceneInstrumentation.captureFrameTime = true;
+
                 const timerHandle = setInterval(() => {
-                    setFps(engine.getFps());
+                    setSceneStats({frameRate: engine.getFps(), frameTime: sceneInstrumentation.frameTimeCounter.lastSecAverage});
                 }, 1000);
 
                 return () => {
                     clearInterval(timerHandle);
+                    setSceneStats(undefined);
+                    sceneInstrumentation.dispose();
                 };
             }
         }
 
-        setFps(undefined);
         return undefined;
     }, [props.camera, props.displayFrameRate]);
 
@@ -137,7 +149,14 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
         return (
             <View style={[{ flex: 1 }, props.style, { overflow: "hidden" }]}>
                 { initialized && <NativeEngineView ref={engineViewRef} style={{ flex: 1 }} onSnapshotDataReturned={snapshotDataReturnedHandler} /> }
-                { fps && <Text style={{ color: 'yellow', position: 'absolute', margin: 10, right: 0, top: 0 }}>FPS: {Math.round(fps)}</Text> }
+                { sceneStats !== undefined &&
+                <View style={{ backgroundColor: '#00000040', opacity: 1, position: 'absolute', right: 0, left: 0, top: 0, flexDirection: 'row-reverse' }}>
+                    <Text style={{ color: 'yellow', alignSelf: 'flex-end', margin: 3, fontVariant: ['tabular-nums'] }}>FPS: {sceneStats.frameRate.toFixed(0)}</Text>
+                    {/* Frame time seems wonky... it goes down when manipulating the scaling slider in the Playground app. Investigate this before showing it so we don't show data that can't be trusted. */}
+                    {/* <Text style={{ color: 'yellow', alignSelf: 'flex-end', margin: 3, fontVariant: ['tabular-nums'] }}> | </Text>
+                    <Text style={{ color: 'yellow', alignSelf: 'flex-end', margin: 3, fontVariant: ['tabular-nums'] }}>Frame Time: {sceneStats.frameTime.toFixed(1)}ms</Text> */}
+                </View>
+                }
             </View>
         );
     } else {
