@@ -1,4 +1,5 @@
-#include "TestUtils.h"
+#import <Cocoa/Cocoa.h>
+#import "TestUtils.h"
 
 namespace Babylon::Plugins::Internal
 {
