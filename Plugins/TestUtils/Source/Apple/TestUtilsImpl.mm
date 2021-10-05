@@ -1,6 +1,5 @@
-#import <Cocoa/Cocoa.h>
 #import "TestUtilsImplData.h"
-#import "TestUtils.h"
+#import <Cocoa/Cocoa.h>
 
 // can't externalize variable with ObjC++. Using a function instead.
 int errorCode{};

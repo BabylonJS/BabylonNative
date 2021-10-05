@@ -1,4 +1,4 @@
-#include "TestUtils.h"
+#include "TestUtilsImplData.h"
 #define XK_MISCELLANY
 #define XK_LATIN1
 #include <X11/keysymdef.h>
