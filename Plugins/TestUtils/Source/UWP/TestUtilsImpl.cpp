@@ -25,9 +25,10 @@ namespace Babylon::Plugins::Internal
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
     {
-        Storage::StorageFolder^ localFolder = Storage::ApplicationData::Current->LocalFolder;
+        using namespace Windows::Storage;
+        StorageFolder^ localFolder = ApplicationData::Current->LocalFolder;
         std::wstring wpath = localFolder->Path->Data();
-        std::string path{ winrt::to_string(wpath) };
+        std::string path{winrt::to_string(wpath)};
         return Napi::Value::From(info.Env(), path);
     }
 }
