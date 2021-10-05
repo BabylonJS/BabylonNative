@@ -1233,7 +1233,7 @@ namespace xr
         {
             // Next check for camera permissions, and request if not already granted.
             return android::Permissions::CheckCameraPermissionAsync();
-        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, windowProvider{ std::move(windowProvider) }]()
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, commandQueue, windowProvider{ std::move(windowProvider) }]()
         {
             // Finally if the previous two tasks succeed, start the AR session.
             return std::make_shared<System::Session>(system, graphicsDevice, commandQueue, windowProvider);
