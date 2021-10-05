@@ -39,7 +39,7 @@ namespace Babylon::Plugins::Internal
     {
     }
 
-    Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
+    Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& /*info*/)
     {
         std::string path = getenv("HOME");
         return Napi::Value::From(info.Env(), path);

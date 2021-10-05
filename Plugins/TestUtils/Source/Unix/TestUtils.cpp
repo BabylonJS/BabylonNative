@@ -5,6 +5,8 @@
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
 #include <X11/Xutil.h>
 #include <unistd.h> // syscall
+#undef None
+#include <filesystem>
 
 namespace Babylon::Plugins::TestUtils
 {
