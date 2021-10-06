@@ -60,6 +60,22 @@ function CreateInputHandling(scene) {
 
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
+/*
+var HTMLVideoElement = {};
+document = {
+    createElement(type) {
+        if (type == "video") {
+            return null;
+        }
+        return undefined;
+    }
+}
+*/
+
+BABYLON.VideoTexture.prototype._getVideo = function (src) {
+    console.log("get video", src);
+    return {};
+}
 
 CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
@@ -80,6 +96,8 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
+
+    var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://playground.babylonjs.com/textures/babylonjs.mp4", scene);
 
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;

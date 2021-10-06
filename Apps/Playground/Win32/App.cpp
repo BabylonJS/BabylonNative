@@ -18,6 +18,7 @@
 #include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
+#include <Babylon/Plugins/NativeVideo.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -134,6 +135,9 @@ namespace
 
             // Initialize Camera 
             Babylon::Plugins::Camera::Initialize(env);
+
+            // video
+            Babylon::Plugins::Video::Initialize(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);

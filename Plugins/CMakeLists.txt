@@ -22,3 +22,6 @@ add_subdirectory(NativeOptimizations)
 
 # Add TestUtils
 add_subdirectory(TestUtils)
+
+# Add NativeVideo
+add_subdirectory(NativeVideo)
