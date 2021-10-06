@@ -103,7 +103,7 @@ extern "C"
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-                 Babylon::Plugins::TestUtils::Initialize(env, window);
+                Babylon::Plugins::TestUtils::Initialize(env, window);
             });
 
             g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);
