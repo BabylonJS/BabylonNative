@@ -207,16 +207,11 @@ namespace Babylon::Polyfills::Internal
             // printfs for debugging CI, will be removed
             auto inputURL{info[1].As<Napi::String>()};
             // If the input URL contains any true % characters, encode them as %25
-            std::printf("%s\n", inputURL.Utf8Value().c_str());
             auto encodedPercentURL{Napi::String::New(info.Env(), EncodePercent(inputURL.Utf8Value()))};
-            std::printf("%s\n", encodedPercentURL.Utf8Value().c_str());
             // Decode the input URL to get a completely unencoded URL
             auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
-            std::printf("%s\n", decodedURL.As<Napi::String>().Utf8Value().c_str());
             // Re-encode the URL to make sure that every illegal character is encoded
             auto finalURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
-            std::printf("%s\n", finalURL.Utf8Value().c_str());
-            fflush(stdout);
             m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), finalURL.Utf8Value());
             SetReadyState(ReadyState::Opened);
         }
