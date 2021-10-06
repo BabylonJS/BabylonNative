@@ -14,12 +14,6 @@ namespace Babylon::Plugins::Internal
         errorCode = info[0].As<Napi::Number>().Int32Value();
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (graphics)
-            {
-                graphics->FinishRenderingCurrentFrame();
-            }
-            runtime.reset();
-            graphics.reset();
             UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests"
                                             message:(errorCode == 0)?@"Success!":@"Errors: Check logs!"
                                             preferredStyle:UIAlertControllerStyleAlert];
