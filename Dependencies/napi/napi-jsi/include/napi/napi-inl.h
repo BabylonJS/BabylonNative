@@ -805,7 +805,15 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     void* externalData,
                                     size_t byteLength,
                                     Finalizer finalizeCallback) {
-  return New(env, externalData, byteLength, finalizeCallback, nullptr);
+  ArrayBuffer arrayBuffer{ New(env, externalData, byteLength) };
+  jsi::Value& arrayBufferValue{ static_cast<jsi::Value&>(arrayBuffer) };
+
+  jsi::Value oldPrototype{ env->get_prototype_of_func.call(env->rt, arrayBufferValue) };
+  jsi::Value newPrototype{ jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizer<void, Finalizer>>(env, externalData, std::forward<Finalizer>(finalizeCallback))) };
+  env->set_prototype_of_func.call(env->rt, newPrototype, oldPrototype);
+  env->set_prototype_of_func.call(env->rt, arrayBufferValue, newPrototype);
+  
+  return arrayBuffer;
 }
 
 template <typename Finalizer, typename Hint>
@@ -814,12 +822,15 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     size_t byteLength,
                                     Finalizer finalizeCallback,
                                     Hint* finalizeHint) {
-  (void)env;
-  (void)externalData;
-  (void)byteLength;
-  (void)finalizeCallback;
-  (void)finalizeHint;
-  throw std::runtime_error{"TODO"};
+  ArrayBuffer arrayBuffer{ New(env, externalData, byteLength) };
+  jsi::Value& arrayBufferValue{ static_cast<jsi::Value&>(arrayBuffer) };
+
+  jsi::Value oldPrototype{ env->get_prototype_of_func.call(env->rt, arrayBufferValue) };
+  jsi::Value newPrototype{ jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizerAndHint<void, Finalizer, Hint>>(env, externalData, std::forward<Finalizer>(finalizeCallback), finalizeHint)) };
+  env->set_prototype_of_func.call(env->rt, newPrototype, oldPrototype);
+  env->set_prototype_of_func.call(env->rt, arrayBufferValue, newPrototype);
+
+  return arrayBuffer;
 }
 
 inline ArrayBuffer::ArrayBuffer() {
@@ -1565,7 +1576,7 @@ inline Reference<T>& Reference<T>::operator =(Reference<T>&& other) {
 template <typename T>
 inline bool Reference<T>::operator ==(const Reference<T> &other) const {
   HandleScope scope{_env};
-  return this->Value().StrictEquals(other.Value());
+  return Value().StrictEquals(other.Value());
 }
 
 template <typename T>

@@ -33,7 +33,7 @@ namespace Babylon
         {
             if constexpr (VALIDATION_ENABLED)
             {
-                uint32_t value{reader.Read<uint32_t>()};
+                uint32_t value{reader.template Read<uint32_t>()};
                 if (value != static_cast<uint32_t>(T))
                 {
                     throw std::runtime_error{"Data stream validation error: data type mismatch."};
@@ -187,7 +187,7 @@ namespace Babylon
             }
         }
 
-        NativeDataStream::NativeDataStream(const Napi::CallbackInfo& info)
+        NativeDataStream(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<NativeDataStream>(info)
             , m_requestFlushCallback{Napi::Persistent(info[0].As<Napi::Function>())}
         {
