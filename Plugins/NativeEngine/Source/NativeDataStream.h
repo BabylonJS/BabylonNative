@@ -29,7 +29,7 @@ namespace Babylon
         };
 
         template<ValidationType T, typename ReaderT>
-        static void Validate(ReaderT& reader)
+        static inline void Validate(ReaderT& reader)
         {
             if constexpr (VALIDATION_ENABLED)
             {

@@ -752,7 +752,7 @@ namespace Babylon
     {
         data.ReadPointer<VertexArray>()->Dispose();
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
-        //assert(vertexArray != m_boundVertexArray); */
+        //assert(vertexArray != m_boundVertexArray);
     }
 
     void NativeEngine::BindVertexArray(NativeDataStream::Reader& data)
