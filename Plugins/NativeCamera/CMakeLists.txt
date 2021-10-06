@@ -31,6 +31,7 @@ endif()
 target_link_to_dependencies(NativeCamera
     PUBLIC JsRuntime
     PRIVATE GraphicsInternal
+    PRIVATE napi_extensions
     PRIVATE ${EXTENSIONS})
 
 set_property(TARGET NativeCamera PROPERTY FOLDER Plugins)

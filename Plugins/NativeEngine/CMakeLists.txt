@@ -40,7 +40,8 @@ target_link_to_dependencies(NativeEngine
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE GraphicsInternal)
+    PRIVATE GraphicsInternal
+    PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
 
 if(APPLE)
@@ -70,4 +71,5 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE glslang
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
-    INTERFACE GraphicsInternal)
+    INTERFACE GraphicsInternal
+    INTERFACE napi_extensions)

@@ -69,8 +69,8 @@ namespace Napi
         }
 
         template<typename EnvT, typename ValueT>
-        Pointer(EnvT env, ValueT value)
-            : m_pointer{*reinterpret_cast<T**>(Napi::Value(env, value).As<Uint32Array>().Data())}
+        Pointer(EnvT&& env, ValueT&& value)
+            : m_pointer{*reinterpret_cast<T**>(Napi::Value(std::forward<EnvT>(env), std::forward<ValueT>(value)).As<Uint32Array>().Data())}
         {
         }
 

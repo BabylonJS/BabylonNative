@@ -21,12 +21,12 @@ if(NOT NAPI_JAVASCRIPT_ENGINE IN_LIST SUPPORTED_JAVASCRIPT_ENGINES)
     message(FATAL_ERROR "Unsupported engine: ${NAPI_JAVASCRIPT_ENGINE}")
 endif()
 
-add_subdirectory(napi-common)
-
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    add_subdirectory(napi-jsi)
+add_subdirectory(napi-jsi)
 else()
-    add_subdirectory(napi-direct)
+add_subdirectory(napi-direct)
 endif()
+
+add_subdirectory(napi-extensions)
 
 add_on_linked_as_dependency_cmake_file(napi "${CMAKE_CURRENT_SOURCE_DIR}/OnLinkedAsDependency.cmake")

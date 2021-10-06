@@ -1,6 +1,7 @@
 STRING(TOLOWER ${NAPI_JAVASCRIPT_ENGINE} ENGINE_FILE_POSTFIX)
 
 set(SOURCES
+    "include/napi/env.h"
     "include/napi/js_native_api.h"
     "include/napi/js_native_api_types.h"
     "include/napi/napi.h"
@@ -12,7 +13,6 @@ set(SOURCES
     "source/js_native_api_${ENGINE_FILE_POSTFIX}_internals.h")
 
 add_library(napi ${SOURCES})
-target_link_libraries(napi PUBLIC napi_common)
 
 target_compile_definitions(napi PRIVATE NOMINMAX)
 target_compile_definitions(napi PRIVATE _CRT_SECURE_NO_WARNINGS)

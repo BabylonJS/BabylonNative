@@ -1,10 +1,10 @@
 set(SOURCES
+    "include/napi/env.h"
     "include/napi/napi.h"
     "include/napi/napi-inl.h"
     "source/env.cc")
 
 add_library(napi ${SOURCES})
-target_link_libraries(napi PUBLIC napi_common)
 
 if(NOT TARGET jsi)
     if(WIN32)

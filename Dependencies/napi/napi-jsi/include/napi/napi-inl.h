@@ -225,7 +225,7 @@ inline bool Value::IsExternal() const {
 
 template <typename T>
 inline T Value::As() const {
-  return T(_env, {_env->rt, _value});
+  return T(_env, jsi::Value{_env->rt, _value});
 }
 
 inline Boolean Value::ToBoolean() const {

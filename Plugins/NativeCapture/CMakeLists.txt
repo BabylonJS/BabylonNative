@@ -10,7 +10,8 @@ target_include_directories(NativeCapture PRIVATE "Include/Babylon/Plugins")
 
 target_link_to_dependencies(NativeCapture
     PUBLIC JsRuntime
-    PRIVATE GraphicsInternal)
+    PRIVATE GraphicsInternal
+    PRIVATE napi_extensions)
 
 set_property(TARGET NativeCapture PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
