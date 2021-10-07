@@ -6,8 +6,6 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include <strsafe.h>
-
 
 namespace {
 constexpr UINT CP_LATIN1 = 28591;
