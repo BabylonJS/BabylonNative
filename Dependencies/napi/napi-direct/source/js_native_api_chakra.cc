@@ -6,7 +6,6 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include <strsafe.h>
 
 
 namespace {
