@@ -9,13 +9,28 @@ namespace Babylon
     class VertexArray final
     {
     public:
-        void RecordIndexBuffer(IndexBuffer& indexBuffer);
-        void RecordVertexBuffer(VertexBuffer& vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized);
+        ~VertexArray();
+
+        void RecordIndexBuffer(IndexBuffer* indexBuffer);
+        void RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized);
         void SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
         void SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices);
 
     private:
-        IndexBuffer* m_indexBuffer{};
-        std::vector<VertexBuffer*> m_vertexBuffers;
+        struct IndexBufferRecord
+        {
+            IndexBuffer* Buffer{};
+        };
+
+        IndexBufferRecord m_indexBufferRecord;
+
+        struct VertexBufferRecord
+        {
+            VertexBuffer* Buffer{};
+            uint32_t Offset{};
+            bgfx::VertexLayoutHandle LayoutHandle{};
+        };
+
+        std::map<bgfx::Attrib::Enum, VertexBufferRecord> m_vertexBufferRecords;
     };
 }

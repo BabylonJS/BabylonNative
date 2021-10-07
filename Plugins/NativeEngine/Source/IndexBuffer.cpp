@@ -46,8 +46,13 @@ namespace Babylon
         }
     }
 
-    void IndexBuffer::Record()
+    void IndexBuffer::Create()
     {
+        if (bgfx::isValid(m_handle))
+        {
+            return;
+        }
+
         auto releaseFn = [](void*, void* userData)
         {
             auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
@@ -58,12 +63,10 @@ namespace Babylon
 
         if (m_dynamic)
         {
-            assert(!bgfx::isValid(m_dynamicHandle));
             m_dynamicHandle = bgfx::createDynamicIndexBuffer(memory, m_flags);
         }
         else
         {
-            assert(!bgfx::isValid(m_handle));
             m_handle = bgfx::createIndexBuffer(memory, m_flags);
         }
     }

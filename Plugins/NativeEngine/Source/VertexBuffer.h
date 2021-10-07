@@ -13,16 +13,13 @@ namespace Babylon
         ~VertexBuffer();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes);
-        void Record(uint32_t index, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized);
-        void Set(bgfx::Encoder* encoder, uint32_t vertexStart, uint32_t vertexCount);
+        void Create();
+        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
+        void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle);
 
     private:
         std::vector<uint8_t> m_bytes{};
         bool m_dynamic{};
-
-        bgfx::Attrib::Enum m_attrib{};
-        uint32_t m_vertexOffset{};
-        bgfx::VertexLayoutHandle m_layoutHandle{bgfx::kInvalidHandle};
 
         union
         {

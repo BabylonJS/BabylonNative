@@ -13,7 +13,7 @@ namespace Babylon
         ~IndexBuffer();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes, uint32_t startIndex);
-        void Record();
+        void Create();
         void Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
 
     private:

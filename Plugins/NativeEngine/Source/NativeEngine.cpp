@@ -332,6 +332,9 @@ namespace Babylon
             env,
             JS_CLASS_NAME,
             {
+                // This must match the version in nativeEngine.ts
+                StaticValue("ProtocolVersion", Napi::Number::From(env, 1)),
+
                 InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
@@ -583,21 +586,21 @@ namespace Babylon
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray{*(info[0].As<Napi::External<VertexArray>>().Data())};
-        IndexBuffer& indexBuffer{*(info[1].As<Napi::External<IndexBuffer>>().Data())};
+        VertexArray* vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        IndexBuffer* indexBuffer{info[1].As<Napi::External<IndexBuffer>>().Data()};
 
-        vertexArray.RecordIndexBuffer(indexBuffer);
+        vertexArray->RecordIndexBuffer(indexBuffer);
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
-        IndexBuffer& indexBuffer{*(info[0].As<Napi::External<IndexBuffer>>().Data())};
+        IndexBuffer* indexBuffer{info[0].As<Napi::External<IndexBuffer>>().Data()};
         const Napi::ArrayBuffer bytes{info[1].As<Napi::ArrayBuffer>()};
         const uint32_t byteOffset{info[2].As<Napi::Number>().Uint32Value()};
         const uint32_t byteLength{info[3].As<Napi::Number>().Uint32Value()};
         const uint32_t startingIndex{info[4].As<Napi::Number>().Uint32Value()};
 
-        indexBuffer.Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), startingIndex);
+        indexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), startingIndex);
     }
 
     Napi::Value NativeEngine::CreateVertexBuffer(const Napi::CallbackInfo& info)
@@ -618,8 +621,8 @@ namespace Babylon
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray{*(info[0].As<Napi::External<VertexArray>>().Data())};
-        VertexBuffer& vertexBuffer{*(info[1].As<Napi::External<VertexBuffer>>().Data())};
+        VertexArray* vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        VertexBuffer* vertexBuffer{info[1].As<Napi::External<VertexBuffer>>().Data()};
         const uint32_t location{info[2].As<Napi::Number>().Uint32Value()};
         const uint32_t byteOffset{info[3].As<Napi::Number>().Uint32Value()};
         const uint32_t byteStride{info[4].As<Napi::Number>().Uint32Value()};
@@ -627,17 +630,17 @@ namespace Babylon
         const uint32_t type{info[6].As<Napi::Number>().Uint32Value()};
         const bool normalized{info[7].As<Napi::Boolean>().Value()};
 
-        vertexArray.RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized);
+        vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized);
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexBuffer& vertexBuffer{*(info[0].As<Napi::External<VertexBuffer>>().Data())};
+        VertexBuffer* vertexBuffer{info[0].As<Napi::External<VertexBuffer>>().Data()};
         const Napi::ArrayBuffer bytes{info[1].As<Napi::ArrayBuffer>()};
         const uint32_t byteOffset{info[2].As<Napi::Number>().Uint32Value()};
         const uint32_t byteLength{info[3].As<Napi::Number>().Uint32Value()};
 
-        vertexBuffer.Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength));
+        vertexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength));
     }
 
     // Change VS output coordinate system

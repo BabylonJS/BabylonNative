@@ -23,37 +23,16 @@ namespace
         }
     }
 
-    void PromoteToFloats(std::vector<uint8_t>& bytes, bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
+    bgfx::VertexLayout CreateDefaultVertexLayout()
     {
-        switch (attribType)
-        {
-            case bgfx::AttribType::Int8:
-            {
-                PromoteToFloats<int8_t>(bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Uint8:
-            {
-                PromoteToFloats<uint8_t>(bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Int16:
-            {
-                PromoteToFloats<int16_t>(bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Uint16:
-            {
-                PromoteToFloats<uint16_t>(bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Uint10: // is supported by any format ?
-            default:
-            {
-                throw std::runtime_error("Unable to promote vertex stream to a float array.");
-            }
-        }
+        bgfx::VertexLayout layout{};
+        layout.begin();
+        layout.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float);
+        layout.end();
+        return layout;
     }
+
+    static bgfx::VertexLayout DefaultVertexLayout{CreateDefaultVertexLayout()};
 }
 
 namespace Babylon
@@ -66,11 +45,6 @@ namespace Babylon
 
     VertexBuffer::~VertexBuffer()
     {
-        if (bgfx::isValid(m_layoutHandle))
-        {
-            bgfx::destroy(m_layoutHandle);
-        }
-
         if (m_dynamic)
         {
             if (bgfx::isValid(m_dynamicHandle))
@@ -106,43 +80,12 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::Record(uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized)
+    void VertexBuffer::Create()
     {
-        m_attrib = static_cast<bgfx::Attrib::Enum>(location);
-        m_vertexOffset = byteOffset / byteStride;
-
-        bgfx::AttribType::Enum attribType{static_cast<bgfx::AttribType::Enum>(type)};
-
-        bgfx::VertexLayout layout{};
-
-        layout.begin();
-
-        // clang-format off
-        const bool promoteToFloats = !normalized
-            && (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 ||
-                bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 ||
-                bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan)
-            && (attribType == bgfx::AttribType::Int8 ||
-                attribType == bgfx::AttribType::Uint8 ||
-                attribType == bgfx::AttribType::Uint10 ||
-                attribType == bgfx::AttribType::Int16 ||
-                attribType == bgfx::AttribType::Uint16);
-        // clang-format on
-
-        if (promoteToFloats)
+        if (bgfx::isValid(m_handle))
         {
-            layout.add(m_attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float);
-            layout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
-            PromoteToFloats(m_bytes, attribType, numElements, byteOffset, byteStride);
+            return;
         }
-        else
-        {
-            layout.add(m_attrib, static_cast<uint8_t>(numElements), attribType, normalized);
-            layout.m_stride = static_cast<uint16_t>(byteStride);
-            layout.m_offset[m_attrib] = static_cast<uint16_t>(byteOffset % byteStride);
-        }
-
-        layout.end();
 
         auto releaseFn = [](void*, void* userData)
         {
@@ -154,29 +97,55 @@ namespace Babylon
 
         if (m_dynamic)
         {
-            assert(!bgfx::isValid(m_dynamicHandle));
-            m_dynamicHandle = bgfx::createDynamicVertexBuffer(memory, layout);
+            m_dynamicHandle = bgfx::createDynamicVertexBuffer(memory, DefaultVertexLayout);
         }
         else
         {
-            assert(!bgfx::isValid(m_handle));
-            m_handle = bgfx::createVertexBuffer(memory, layout);
+            m_handle = bgfx::createVertexBuffer(memory, DefaultVertexLayout);
         };
-
-        m_layoutHandle = bgfx::createVertexLayout(layout);
     }
 
-    void VertexBuffer::Set(bgfx::Encoder* encoder, uint32_t vertexStart, uint32_t numVertices)
+    void VertexBuffer::PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
     {
-        uint8_t stream{static_cast<uint8_t>(m_attrib)};
+        switch (attribType)
+        {
+            case bgfx::AttribType::Int8:
+            {
+                ::PromoteToFloats<int8_t>(m_bytes, numElements, byteOffset, byteStride);
+                break;
+            }
+            case bgfx::AttribType::Uint8:
+            {
+                ::PromoteToFloats<uint8_t>(m_bytes, numElements, byteOffset, byteStride);
+                break;
+            }
+            case bgfx::AttribType::Int16:
+            {
+                ::PromoteToFloats<int16_t>(m_bytes, numElements, byteOffset, byteStride);
+                break;
+            }
+            case bgfx::AttribType::Uint16:
+            {
+                ::PromoteToFloats<uint16_t>(m_bytes, numElements, byteOffset, byteStride);
+                break;
+            }
+            case bgfx::AttribType::Uint10: // is supported by any format ?
+            default:
+            {
+                throw std::runtime_error("Unable to promote vertex stream to a float array.");
+            }
+        }
+    }
 
+    void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle)
+    {
         if (m_dynamic)
         {
-            encoder->setVertexBuffer(stream, m_dynamicHandle, m_vertexOffset + vertexStart, numVertices, m_layoutHandle);
+            encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
         }
         else
         {
-            encoder->setVertexBuffer(stream, m_handle, m_vertexOffset + vertexStart, numVertices, m_layoutHandle);
+            encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
         }
     }
 }
