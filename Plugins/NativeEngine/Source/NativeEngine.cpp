@@ -537,8 +537,8 @@ namespace Babylon
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray{*(info[0].As<Napi::External<VertexArray>>().Data())};
-        m_boundVertexArray = &vertexArray;
+        VertexArray* vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        m_boundVertexArray = vertexArray;
     }
 
     Napi::Value NativeEngine::CreateIndexBuffer(const Napi::CallbackInfo& info)
