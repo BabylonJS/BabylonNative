@@ -33,6 +33,9 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
+                    ParentT::InstanceMethod("getStats", &TestUtils::GetStats),
+                    ParentT::InstanceMethod("writeString", &TestUtils::WriteString),
+                    ParentT::InstanceMethod("readString", &TestUtils::ReadString),
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
@@ -57,6 +60,9 @@ namespace Babylon::Plugins::Internal
         void WritePNG(const Napi::CallbackInfo& info);
         Napi::Value DecodeImage(const Napi::CallbackInfo& info);
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
+        Napi::Value GetStats(const Napi::CallbackInfo& info);
+        void WriteString(const Napi::CallbackInfo& info);
+        Napi::Value ReadString(const Napi::CallbackInfo& info);
 
         struct Image
         {

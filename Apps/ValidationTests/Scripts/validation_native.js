@@ -14,7 +14,21 @@ Math.random = function () {
     return x - Math.floor(x);
 }
 
-function compare(test, renderData, referenceImage, threshold, errorRatio) {
+function compareStats(refStats, currentStats) {
+    var keysToCompare = ["numDraw", "numCompute", "numBlit", "numDynamicIndexBuffers", "numDynamicVertexBuffers", "numFrameBuffers",
+        "numIndexBuffers", "numOcclusionQueries", "numPrograms", "numShaders", "numTextures", "numUniforms", "numVertexBuffers", "numVertexLayouts",
+        "textureMemoryUsed", "rtMemoryUsed", "transientVbUsed", "transientIbUsed", "numViews"];
+    let error = false;
+    keysToCompare.forEach(element => {
+        if (currentStats[element] > refStats[element]) {
+            console.log("Error on resources for ", element, " : got ", currentStats[element], " instead of", refStats[element]);
+            error = true;
+        }
+    });
+    return error;
+}
+
+function compare(test, renderData, referenceImage, threshold, errorRatio, refStats) {
     var size = renderData.length;
     var referenceData = TestUtils.getImageData(referenceImage);
     var differencesCount = 0;
@@ -42,6 +56,8 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
 
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
+    error |= compareStats(refStats, TestUtils.getStats());
+
     if (error) {
         TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
     }
@@ -52,11 +68,15 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
 }
 
 function saveRenderedResult(test, renderData) {
-    TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
+    var imageName = TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage;
+    var profileName = imageName.replace(".png", ".json");
+    
+    TestUtils.writePNG(renderData, testWidth, testHeight, imageName);
+    TestUtils.writeString(profileName, JSON.stringify(TestUtils.getStats()));
     return false; // no error
 }
 
-function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
+function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction, refStats) {
     /*var canvasImageData =*/ engine._native.getFrameBufferData(function (screenshot) { 
         var testRes = true;
         // Visual check
@@ -64,7 +84,7 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
 
             var defaultErrorRatio = 2.5
 
-            if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
+            if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio, refStats)) {
                 testRes = false;
                 console.log('failed');
             } else {
@@ -81,7 +101,7 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
     });
 }
 
-function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction) {
+function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction, refStats) {
     currentScene.useConstantAnimationDeltaTime = true;
     var renderCount = test.renderCount || 1;
 
@@ -96,7 +116,7 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
 
                 if (renderCount === 0) {
                     engine.stopRenderLoop();
-                    evaluate(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);
+                    evaluate(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction, refStats);
                 }
             }
             catch (e) {
@@ -107,11 +127,11 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
     });
 }
 
-function loadPlayground(test, done, index, referenceImage, compareFunction) {
+function loadPlayground(test, done, index, referenceImage, compareFunction, refStats) {
     if (test.sceneFolder) {
         BABYLON.SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene) {
             currentScene = newScene;
-            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction, refStats);
         },
             null,
             function (loadedScene, msg) {
@@ -175,14 +195,14 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
                             // Handle if createScene returns a promise
                             currentScene.then(function (scene) {
                                 currentScene = scene;
-                                processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+                                processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction, refStats);
                             }).catch(function (e) {
                                 console.error(e);
                                 onError();
                             })
                         } else {
                             // Handle if createScene returns a scene
-                            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+                            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction, refStats);
                         }
 
                     }
@@ -237,7 +257,7 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
                     }
 
                     currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
-                    processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);
+                    processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction, refStats);
                 }
                 catch (e) {
                     console.error(e);
@@ -267,26 +287,38 @@ function runTest(index, done) {
     TestUtils.setTitle(testInfo);
 
     seed = 1;
+    var referenceImage;
 
     let onLoadFileError = function(request, exception) {
         console.error("Failed to retrieve " + url + ".", exception);
         done(false);
     };
+
+    var onloadedRef = function (data, responseURL) {
+        if (typeof (data) !== "string") {
+            throw new Error("Can't get string for statistics.");
+        }
+
+        loadPlayground(test, done, index, referenceImage, compare, JSON.parse(data));
+    }
+
+
     var onload = function(data, responseURL) {
         if (typeof (data) === "string") {
             throw new Error("Decode Image from string data not yet implemented.");
         }
 
-        var referenceImage = TestUtils.decodeImage(data);
-        loadPlayground(test, done, index, referenceImage, compare);
-        
+        referenceImage = TestUtils.decodeImage(data);
+
+        const profileName = ("app:///Reference/" + test.referenceImage).replace(".png", ".json");
+        BABYLON.Tools.LoadFile(profileName, onloadedRef, undefined, undefined, /*useArrayBuffer*/false, onLoadFileError);
     };
 
     if (generateReferences) {
         loadPlayground(test, done, index, undefined, saveRenderedResult);
     } else {
         // run test and image comparison
-        const url = "app:///ReferenceImages/" + test.referenceImage;
+        const url = "app:///Reference/" + test.referenceImage;
         BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
     }
 }

@@ -2,7 +2,7 @@ if((NOT UNIX AND NOT WIN32 AND NOT APPLE) OR ANDROID)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
+FILE(GLOB REFERENCE_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "Reference/*")
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
@@ -38,7 +38,7 @@ if(WINDOWS_STORE)
         "UWP/App.h")
     set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(ValidationTests WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(ValidationTests WIN32 ${REFERENCE_FILES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 elseif(WIN32)
     set(SOURCES
         "Win32/App.cpp"
@@ -50,7 +50,7 @@ elseif(WIN32)
         "Win32/targetver.h")
     set(ADDITIONAL_LIBRARIES PRIVATE NativeXr)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(ValidationTests WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
+    add_executable(ValidationTests WIN32 ${REFERENCE_FILES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES})
 elseif(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -66,7 +66,7 @@ elseif(APPLE)
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
-        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
+        set_source_files_properties(${REFERENCE_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION "Reference")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -78,16 +78,16 @@ elseif(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
-        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
+        set_source_files_properties(${REFERENCE_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Reference")
      endif()
      set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JSCORE_LIBRARY})
      set(RESOURCE_FILES ${STORYBOARD})
-     add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES} ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES})
+     add_executable(ValidationTests ${SOURCES} ${RESOURCE_FILES} ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_FILES})
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
-    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${REFERENCE_IMAGES})
+    add_executable(ValidationTests ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${REFERENCE_FILES})
 endif()
 
 warnings_as_errors(ValidationTests)
@@ -160,9 +160,9 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${REFERENCE_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
-    set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
+    set_property(SOURCE ${REFERENCE_FILES} PROPERTY VS_DEPLOYMENT_LOCATION "Reference")
 else()
     foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
@@ -173,13 +173,13 @@ else()
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
     endforeach()
 
-    foreach(IMAGE ${REFERENCE_IMAGES})
-        get_filename_component(IMAGE_NAME "${IMAGE}" NAME)
+    foreach(REFFILE ${REFERENCE_FILES})
+        get_filename_component(REFFILE_NAME "${REFFILE}" NAME)
         add_custom_command(
-            OUTPUT "${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
-            COMMENT "Copying ${IMAGE_NAME}"
-            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
+            OUTPUT "${CMAKE_CFG_INTDIR}/Reference/${REFFILE_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${REFFILE}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Reference/${REFFILE_NAME}"
+            COMMENT "Copying ${REFFILE_NAME}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${REFFILE}")
     endforeach()
 endif()
 
@@ -188,7 +188,7 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Results")
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Errors")
 
 set_property(TARGET ValidationTests PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages PREFIX ReferenceImages FILES ${REFERENCE_IMAGES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Reference PREFIX Reference FILES ${REFERENCE_FILES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
