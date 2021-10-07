@@ -96,11 +96,9 @@ std::string utf16toUTF8(const uint16_t* utf16String, size_t utf16StringLen) noex
   return utf8String;
 }
 
-std::wstring Utf8ToUtf16(const char* utf8, size_t utf8Len)
+std::basic_string<char16_t> Utf8ToUtf16(const char* utf8, size_t utf8Len)
 {
-  std::wstring utf16{};
-
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
   return converter.from_bytes(utf8, utf8 + (utf8Len - 1));
 }
 
@@ -118,7 +116,7 @@ std::string StringViewToUtf8(const v8_inspector::StringView& view)
 std::unique_ptr<v8_inspector::StringBuffer> Utf8ToStringView(
     const std::string& message)
 {
-    std::wstring wstr =
+    auto wstr =
         Babylon::utils::Utf8ToUtf16(message.data(), message.length() + 1);
     v8_inspector::StringView view(
         reinterpret_cast<const uint16_t*>(wstr.c_str()), wstr.length());

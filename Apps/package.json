@@ -3,11 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "babylonjs": "5.0.0-alpha.44",
-    "babylonjs-gui": "5.0.0-alpha.44",
-    "babylonjs-loaders": "5.0.0-alpha.44",
-    "babylonjs-materials": "5.0.0-alpha.44",
+    "babylonjs": "5.0.0-alpha.50",
+    "babylonjs-gui": "5.0.0-alpha.50",
+    "babylonjs-loaders": "5.0.0-alpha.50",
+    "babylonjs-materials": "5.0.0-alpha.50",
     "jsc-android": "^241213.1.0",
-    "v8-android": "^7.8.2"
+    "v8-android": "^7.8.2",
+    "chai": "^4.3.4",
+    "mocha": "^9.1.1"
   }
 }

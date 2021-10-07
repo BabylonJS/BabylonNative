@@ -4,6 +4,7 @@
 #include "FrameBuffer.h"
 #include "PerFrameValue.h"
 #include "ShaderCompiler.h"
+#include "VertexArray.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
@@ -42,10 +43,10 @@ namespace Babylon
         uint32_t Width{0};
         uint32_t Height{0};
         uint32_t Flags{0};
+
         // CreationFlags contains flags used at texture creation
         // regarding BLIT support and READBACK
         uint64_t CreationFlags{0};
-        uint8_t AnisotropicLevel{0};
     };
 
     struct UniformInfo final
@@ -87,36 +88,6 @@ namespace Babylon
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
-    };
-
-    class IndexBufferData;
-    class VertexBufferData;
-
-    struct VertexArray final
-    {
-        ~VertexArray()
-        {
-            for (auto& vertexBufferPair : VertexBuffers)
-            {
-                bgfx::destroy(vertexBufferPair.second.VertexLayoutHandle);
-            }
-        }
-
-        struct IndexBuffer
-        {
-            const IndexBufferData* Data{};
-        };
-
-        IndexBuffer indexBuffer{};
-
-        struct VertexBuffer
-        {
-            const VertexBufferData* Data{};
-            uint32_t StartVertex{};
-            bgfx::VertexLayoutHandle VertexLayoutHandle{};
-        };
-
-        std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
     };
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
@@ -205,7 +176,7 @@ namespace Babylon
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(const Napi::CallbackInfo& info);
-        void Draw(bgfx::Encoder* encoder, int fillMode);
+        void Draw(bgfx::Encoder* encoder, uint32_t fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
@@ -247,7 +218,7 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        const VertexArray* m_boundVertexArray{};
+        VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;

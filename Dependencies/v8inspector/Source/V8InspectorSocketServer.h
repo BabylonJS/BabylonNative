@@ -82,8 +82,8 @@ namespace Babylon
         //  return server_sockets_.empty() && connected_sessions_.empty();
         //}
 
-        static void InspectorSocketServer::SocketConnectedCallback(std::shared_ptr<tcp_connection> connection, void* callbackData_);
-        static void InspectorSocketServer::SocketClosedCallback(void* callbackData_);
+        static void SocketConnectedCallback(std::shared_ptr<tcp_connection> connection, void* callbackData_);
+        static void SocketClosedCallback(void* callbackData_);
 
     private:
         static void CloseServerSocket(ServerSocket*);

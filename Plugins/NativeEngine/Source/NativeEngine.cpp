@@ -18,33 +18,34 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
-#include <queue>
-#include <regex>
-#include <sstream>
-#include <variant>
-
 namespace Babylon
 {
     namespace
     {
         namespace TextureSampling
         {
-            constexpr uint32_t BGFX_SAMPLER_DEFAULT = 0;
+            constexpr uint32_t SAMPLER_MAG_POINT = BGFX_SAMPLER_MAG_POINT;
+            constexpr uint32_t SAMPLER_MAG_LINEAR = 0;
+            constexpr uint32_t SAMPLER_MIN_POINT = BGFX_SAMPLER_MIN_POINT;
+            constexpr uint32_t SAMPLER_MIN_LINEAR = 0;
+            constexpr uint32_t SAMPLER_MIP_POINT = BGFX_SAMPLER_MIP_POINT;
+            constexpr uint32_t SAMPLER_MIP_LINEAR = 0;
+            constexpr uint32_t SAMPLER_MIP_IGNORE = BGFX_SAMPLER_MIP_POINT; // HACK: bgfx has no support for ignoring mips
 
             // clang-format off
-            // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                         MIN                         MIP
-            constexpr uint32_t NEAREST_NEAREST =                BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_LINEAR =                  BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_LINEAR_MIPLINEAR =        BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t NEAREST_NEAREST_MIPNEAREST =     BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t NEAREST_LINEAR_MIPNEAREST =      BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t NEAREST_LINEAR_MIPLINEAR =       BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t NEAREST_LINEAR =                 BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t NEAREST_NEAREST_MIPLINEAR =      BGFX_SAMPLER_MAG_POINT  |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_NEAREST_MIPNEAREST =      BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t LINEAR_NEAREST_MIPLINEAR =       BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
-            constexpr uint32_t LINEAR_LINEAR_MIPNEAREST =       BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIP_POINT  ;
-            constexpr uint32_t LINEAR_NEAREST =                 BGFX_SAMPLER_DEFAULT    |   BGFX_SAMPLER_MIN_POINT  |   BGFX_SAMPLER_DEFAULT    ;
+            // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                     MIN                         MIP
+            constexpr uint32_t NEAREST_NEAREST =                SAMPLER_MAG_POINT   |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_IGNORE    ;
+            constexpr uint32_t LINEAR_LINEAR =                  SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_IGNORE    ;
+            constexpr uint32_t LINEAR_LINEAR_MIPLINEAR =        SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t NEAREST_NEAREST_MIPNEAREST =     SAMPLER_MAG_POINT   |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t NEAREST_LINEAR_MIPNEAREST =      SAMPLER_MAG_POINT   |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t NEAREST_LINEAR_MIPLINEAR =       SAMPLER_MAG_POINT   |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t NEAREST_LINEAR =                 SAMPLER_MAG_POINT   |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_IGNORE    ;
+            constexpr uint32_t NEAREST_NEAREST_MIPLINEAR =      SAMPLER_MAG_POINT   |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t LINEAR_NEAREST_MIPNEAREST =      SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t LINEAR_NEAREST_MIPLINEAR =       SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_LINEAR    ;
+            constexpr uint32_t LINEAR_LINEAR_MIPNEAREST =       SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_LINEAR    |     SAMPLER_MIP_POINT     ;
+            constexpr uint32_t LINEAR_NEAREST =                 SAMPLER_MAG_LINEAR  |   SAMPLER_MIN_POINT     |     SAMPLER_MIP_IGNORE    ;
             // clang-format on
         }
 
@@ -296,224 +297,6 @@ namespace Babylon
         }
     }
 
-    template<typename Handle1T, typename Handle2T>
-    class VariantHandleHolder
-    {
-    public:
-        std::variant<Handle1T, Handle2T> m_handle{};
-
-        template<typename NonDynamicCallableT, typename DynamicCallableT>
-        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
-        {
-            if (auto handle = std::get_if<Handle1T>(&m_handle))
-            {
-                nonDynamicCallable(*handle);
-            }
-            else
-            {
-                dynamicCallable(std::get<Handle2T>(m_handle));
-            }
-        }
-    };
-
-    class IndexBufferData final : private VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
-    {
-    public:
-        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic)
-        {
-            const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
-            if (!dynamic)
-            {
-                m_handle = bgfx::createIndexBuffer(memory, flags);
-            }
-            else
-            {
-                m_handle = bgfx::createDynamicIndexBuffer(memory, flags);
-            }
-        }
-
-        ~IndexBufferData()
-        {
-            constexpr auto nonDynamic = [](auto handle) {
-                bgfx::destroy(handle);
-            };
-            constexpr auto dynamic = [](auto handle) {
-                bgfx::destroy(handle);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx)
-        {
-            const bgfx::Memory* memory = bgfx::copy(bytes.As<Napi::Uint8Array>().Data(), static_cast<uint32_t>(bytes.ByteLength()));
-
-            auto nonDynamic = [env](auto) {
-                throw Napi::Error::New(env, "Cannot update a non-dynamic index buffer.");
-            };
-            const auto dynamic = [memory, startingIdx](auto handle) {
-                bgfx::update(handle, startingIdx, memory);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const
-        {
-            const auto nonDynamic = [&encoder, firstIndex, numIndices](auto handle) {
-                encoder->setIndexBuffer(handle, firstIndex, numIndices);
-            };
-            const auto dynamic = [&encoder, firstIndex, numIndices](auto handle) {
-                encoder->setIndexBuffer(handle, firstIndex, numIndices);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-    };
-
-    class VertexBufferData final : VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>
-    {
-    public:
-        VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic)
-            : m_bytes{bytes.Data(), bytes.Data() + bytes.ByteLength()}
-        {
-            if (!dynamic)
-            {
-                m_handle = bgfx::VertexBufferHandle{bgfx::kInvalidHandle};
-            }
-            else
-            {
-                m_handle = bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
-            }
-        }
-
-        ~VertexBufferData()
-        {
-            constexpr auto nonDynamic = [](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    bgfx::destroy(handle);
-                }
-            };
-            constexpr auto dynamic = [](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    bgfx::destroy(handle);
-                }
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
-        {
-            const size_t count = m_bytes.size() / byteStride;
-            const size_t destinationSize = count * numElements * sizeof(float);
-            if (destinationSize != m_bytes.size()) // ensure both vectors have different size
-            {
-                std::vector<uint8_t> bytes(destinationSize);
-                float* destination = reinterpret_cast<float*>(bytes.data());
-                for (size_t i = 0; i < count; i++)
-                {
-                    sourceType* source = reinterpret_cast<sourceType*>(m_bytes.data() + byteOffset + byteStride * i);
-                    for (size_t element = 0; element < numElements; element++)
-                    {
-                        *destination++ = static_cast<float>(*source++);
-                    }
-                }
-                m_bytes = std::move(bytes);
-            }
-        }
-
-        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
-        {
-            switch (attribType)
-            {
-            case bgfx::AttribType::Int8:
-                PromoteToFloats<int8_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Uint8:
-                PromoteToFloats<uint8_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Int16:
-                PromoteToFloats<int16_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Uint16:
-                PromoteToFloats<uint16_t>(numElements, byteOffset, byteStride);
-                break;
-            case bgfx::AttribType::Uint10: // is supported by any format ?
-            default:
-                throw std::runtime_error("Unable to promote vertex stream to a float array.");
-            }
-        }
-
-        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout)
-        {
-            const auto nonDynamic = [&layout, this](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    return;
-                }
-
-                const bgfx::Memory* memory = bgfx::makeRef(
-                    m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
-                        auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-                        bytes->clear();
-                    },
-                    &m_bytes);
-
-                m_handle = bgfx::createVertexBuffer(memory, layout);
-            };
-            const auto dynamic = [&layout, this](auto handle) {
-                if (handle.idx != bgfx::kInvalidHandle)
-                {
-                    return;
-                }
-
-                const bgfx::Memory* memory = bgfx::makeRef(
-                    m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), [](void*, void* userData) {
-                        auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-                        bytes->clear();
-                    },
-                    &m_bytes);
-
-                m_handle = bgfx::createDynamicVertexBuffer(memory, layout);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength)
-        {
-            auto nonDynamic = [env](auto) {
-                throw Napi::Error::New(env, "Cannot update non-dynamic vertex buffer.");
-            };
-            const auto dynamic = [&bytes, offset, byteLength, this](auto handle) {
-                if (handle.idx == bgfx::kInvalidHandle)
-                {
-                    // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
-                    m_bytes = {bytes.Data() + offset, bytes.Data() + offset + byteLength};
-                }
-                else
-                {
-                    // Buffer was already created, do a real update operation.
-                    const bgfx::Memory* memory = bgfx::copy(bytes.Data() + offset, byteLength);
-                    bgfx::update(handle, 0, memory);
-                }
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-        void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const
-        {
-            const auto nonDynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
-                encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
-            };
-            const auto dynamic = [&encoder, index, startVertex, numVertices, layout](auto handle) {
-                encoder->setVertexBuffer(index, handle, startVertex, numVertices, layout);
-            };
-            DoForHandleTypes(nonDynamic, dynamic);
-        }
-
-    private:
-        std::vector<uint8_t> m_bytes{};
-    };
-
     void NativeEngine::Initialize(Napi::Env env)
     {
         // Initialize the JavaScript side.
@@ -524,6 +307,9 @@ namespace Babylon
             env,
             JS_CLASS_NAME,
             {
+                // This must match the version in nativeEngine.ts
+                StaticValue("ProtocolVersion", Napi::Number::From(env, 1)),
+
                 InstanceMethod("dispose", &NativeEngine::Dispose),
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
                 InstanceMethod("createVertexArray", &NativeEngine::CreateVertexArray),
@@ -751,119 +537,85 @@ namespace Babylon
 
     void NativeEngine::BindVertexArray(const Napi::CallbackInfo& info)
     {
-        const VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
-        m_boundVertexArray = &vertexArray;
+        VertexArray* vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        m_boundVertexArray = vertexArray;
     }
 
     Napi::Value NativeEngine::CreateIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const Napi::TypedArray data = info[0].As<Napi::TypedArray>();
-        const bool dynamic = info[1].As<Napi::Boolean>().Value();
+        const Napi::ArrayBuffer bytes{info[0].As<Napi::ArrayBuffer>()};
+        const uint32_t byteOffset{info[1].As<Napi::Number>().Uint32Value()};
+        const uint32_t byteLength{info[2].As<Napi::Number>().Uint32Value()};
+        const bool is32Bits{info[3].As<Napi::Boolean>().Value()};
+        const bool dynamic{info[4].As<Napi::Boolean>().Value()};
 
-        const uint16_t flags = data.TypedArrayType() == napi_typedarray_type::napi_uint16_array ? 0 : BGFX_BUFFER_INDEX32;
-
-        return Napi::External<IndexBufferData>::New(info.Env(), new IndexBufferData(data, flags, dynamic));
+        const uint16_t flags{static_cast<uint16_t>(is32Bits ? BGFX_BUFFER_INDEX32 : 0)};
+        return Napi::External<IndexBuffer>::New(info.Env(), new IndexBuffer{gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), flags, dynamic});
     }
 
     void NativeEngine::DeleteIndexBuffer(const Napi::CallbackInfo& info)
     {
-        IndexBufferData* indexBufferData = info[0].As<Napi::External<IndexBufferData>>().Data();
-        delete indexBufferData;
+        IndexBuffer* indexBuffer{info[0].As<Napi::External<IndexBuffer>>().Data()};
+        delete indexBuffer;
     }
 
     void NativeEngine::RecordIndexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
-        const IndexBufferData* indexBufferData = info[1].As<Napi::External<IndexBufferData>>().Data();
+        VertexArray* vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        IndexBuffer* indexBuffer{info[1].As<Napi::External<IndexBuffer>>().Data()};
 
-        vertexArray.indexBuffer.Data = indexBufferData;
+        vertexArray->RecordIndexBuffer(indexBuffer);
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
-        IndexBufferData& indexBufferData = *(info[0].As<Napi::External<IndexBufferData>>().Data());
+        IndexBuffer* indexBuffer{info[0].As<Napi::External<IndexBuffer>>().Data()};
+        const Napi::ArrayBuffer bytes{info[1].As<Napi::ArrayBuffer>()};
+        const uint32_t byteOffset{info[2].As<Napi::Number>().Uint32Value()};
+        const uint32_t byteLength{info[3].As<Napi::Number>().Uint32Value()};
+        const uint32_t startingIndex{info[4].As<Napi::Number>().Uint32Value()};
 
-        const Napi::TypedArray data = info[1].As<Napi::TypedArray>();
-        const uint32_t startingIdx = info[2].As<Napi::Number>().Uint32Value();
-
-        indexBufferData.Update(info.Env(), data, startingIdx);
+        indexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), startingIndex);
     }
 
     Napi::Value NativeEngine::CreateVertexBuffer(const Napi::CallbackInfo& info)
     {
-        const Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
-        const bool dynamic = info[1].As<Napi::Boolean>().Value();
+        const Napi::ArrayBuffer bytes{info[0].As<Napi::ArrayBuffer>()};
+        const uint32_t byteOffset{info[1].As<Napi::Number>().Uint32Value()};
+        const uint32_t byteLength{info[2].As<Napi::Number>().Uint32Value()};
+        const bool dynamic{info[3].As<Napi::Boolean>().Value()};
 
-        return Napi::External<VertexBufferData>::New(info.Env(), new VertexBufferData(data, dynamic));
+        return Napi::External<VertexBuffer>::New(info.Env(), new VertexBuffer(gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), dynamic));
     }
 
     void NativeEngine::DeleteVertexBuffer(const Napi::CallbackInfo& info)
     {
-        auto* vertexBufferData = info[0].As<Napi::External<VertexBufferData>>().Data();
-        delete vertexBufferData;
+        auto* vertexBuffer{info[0].As<Napi::External<VertexBuffer>>().Data()};
+        delete vertexBuffer;
     }
 
     void NativeEngine::RecordVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexArray& vertexArray = *(info[0].As<Napi::External<VertexArray>>().Data());
-        VertexBufferData* vertexBufferData = info[1].As<Napi::External<VertexBufferData>>().Data();
+        VertexArray* vertexArray{info[0].As<Napi::External<VertexArray>>().Data()};
+        VertexBuffer* vertexBuffer{info[1].As<Napi::External<VertexBuffer>>().Data()};
+        const uint32_t location{info[2].As<Napi::Number>().Uint32Value()};
+        const uint32_t byteOffset{info[3].As<Napi::Number>().Uint32Value()};
+        const uint32_t byteStride{info[4].As<Napi::Number>().Uint32Value()};
+        const uint32_t numElements{info[5].As<Napi::Number>().Uint32Value()};
+        const uint32_t type{info[6].As<Napi::Number>().Uint32Value()};
+        const bool normalized{info[7].As<Napi::Boolean>().Value()};
 
-        const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value();
-        const uint32_t byteStride = info[4].As<Napi::Number>().Uint32Value();
-        const uint32_t numElements = info[5].As<Napi::Number>().Uint32Value();
-        const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
-        const bool normalized = info[7].As<Napi::Boolean>().Value();
-
-        bgfx::VertexLayout vertexLayout{};
-        vertexLayout.begin();
-
-        const bgfx::Attrib::Enum attrib = static_cast<bgfx::Attrib::Enum>(location);
-        const bgfx::AttribType::Enum attribType = static_cast<bgfx::AttribType::Enum>(type);
-
-        const bool promoteToFloats = !normalized
-            && (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 ||
-                bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 ||
-                bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan)
-            && (attribType == bgfx::AttribType::Int8 ||
-                attribType == bgfx::AttribType::Uint8 ||
-                attribType == bgfx::AttribType::Uint10 ||
-                attribType == bgfx::AttribType::Int16 ||
-                attribType == bgfx::AttribType::Uint16);
-
-        if (promoteToFloats)
-        {
-            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float);
-            vertexLayout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
-            vertexBufferData->PromoteToFloats(attribType, numElements, byteOffset, byteStride);
-        }
-        else
-        {
-            vertexLayout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
-            vertexLayout.m_stride = static_cast<uint16_t>(byteStride);
-            vertexLayout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
-        }
-
-        vertexLayout.end();
-        vertexBufferData->EnsureFinalized(info.Env(), vertexLayout);
-
-        // Second parameter is first vertex. byteOffset and byteStride are both using original values (without float promotion)
-        vertexArray.VertexBuffers[location] = {vertexBufferData, byteOffset / byteStride, bgfx::createVertexLayout(vertexLayout)};
+        vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized);
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
     {
-        VertexBufferData& vertexBufferData = *(info[0].As<Napi::External<VertexBufferData>>().Data());
-        const Napi::Uint8Array data = info[1].As<Napi::Uint8Array>();
-        const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
+        VertexBuffer* vertexBuffer{info[0].As<Napi::External<VertexBuffer>>().Data()};
+        const Napi::ArrayBuffer bytes{info[1].As<Napi::ArrayBuffer>()};
+        const uint32_t byteOffset{info[2].As<Napi::Number>().Uint32Value()};
+        const uint32_t byteLength{info[3].As<Napi::Number>().Uint32Value()};
 
-        uint32_t byteLength = info[2].As<Napi::Number>().Uint32Value();
-        if (byteLength == 0)
-        {
-            byteLength = static_cast<uint32_t>(data.ByteLength());
-        }
-
-        vertexBufferData.Update(info.Env(), data, byteOffset, byteLength);
+        vertexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength));
     }
 
     // Change VS output coordinate system
@@ -1425,17 +1177,15 @@ namespace Babylon
     void NativeEngine::SetTextureSampling(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-        auto filter = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
+        const auto value = static_cast<uint32_t>(info[1].As<Napi::Number>().Uint32Value());
 
-        texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
+        texture->Flags &= ~(BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+        texture->Flags |= value;
 
-        if (texture->AnisotropicLevel > 1)
+        // Disable anisotropy if either min/mag are point.
+        if ((texture->Flags & BGFX_SAMPLER_MIN_POINT) != 0 || (texture->Flags & BGFX_SAMPLER_MAG_POINT) != 0)
         {
-            texture->Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-        }
-        else
-        {
-            texture->Flags |= filter;
+            texture->Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
         }
     }
 
@@ -1459,13 +1209,17 @@ namespace Babylon
         const auto texture = info[0].As<Napi::External<TextureData>>().Data();
         const auto value = info[1].As<Napi::Number>().Uint32Value();
 
-        texture->AnisotropicLevel = static_cast<uint8_t>(value);
+        texture->Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
 
-        // if Anisotropic is set to 0 after being >1, then set texture flags back to linear
-        texture->Flags &= ~(BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK | BGFX_SAMPLER_MIP_MASK);
-        if (value)
+        // Enable anisotropy only if neither min/mag are point.
+        // Note that bgfx currently only supports no anisotropy or max anisotropy.
+        if ((texture->Flags & BGFX_SAMPLER_MIN_POINT) == 0 && (texture->Flags & BGFX_SAMPLER_MAG_POINT) == 0 && value > 1)
         {
             texture->Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+
+            // There is a bug in bgfx that causes the samplers to do the wrong thing in DirectX.
+            // Remove this once https://github.com/bkaradzic/bgfx/pull/2609 is merged.
+            texture->Flags &= ~BGFX_SAMPLER_MIP_MASK;
         }
     }
 
@@ -1569,25 +1323,14 @@ namespace Babylon
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto indexStart = info[1].As<Napi::Number>().Int32Value();
-        const auto indexCount = info[2].As<Napi::Number>().Int32Value();
+        const auto fillMode = info[0].As<Napi::Number>().Uint32Value();
+        const auto indexStart = info[1].As<Napi::Number>().Uint32Value();
+        const auto indexCount = info[2].As<Napi::Number>().Uint32Value();
 
         if (m_boundVertexArray != nullptr)
         {
-            const auto indexBufferData{m_boundVertexArray->indexBuffer.Data};
-            if (indexBufferData != nullptr)
-            {
-                indexBufferData->SetBgfxIndexBuffer(encoder, indexStart, indexCount);
-            }
-
-            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
-            for (const auto& vertexBufferPair : vertexBuffers)
-            {
-                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
-                const auto& vertexBuffer{vertexBufferPair.second};
-                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex, std::numeric_limits<uint32_t>::max(), vertexBuffer.VertexLayoutHandle);
-            }
+            m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
         }
 
         Draw(encoder, fillMode);
@@ -1597,19 +1340,13 @@ namespace Babylon
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto fillMode = info[0].As<Napi::Number>().Int32Value();
-        const auto verticesStart = info[1].As<Napi::Number>().Int32Value();
-        const auto verticesCount = info[2].As<Napi::Number>().Int32Value();
+        const auto fillMode = info[0].As<Napi::Number>().Uint32Value();
+        const auto verticesStart = info[1].As<Napi::Number>().Uint32Value();
+        const auto verticesCount = info[2].As<Napi::Number>().Uint32Value();
 
         if (m_boundVertexArray != nullptr)
         {
-            const auto& vertexBuffers = m_boundVertexArray->VertexBuffers;
-            for (const auto& vertexBufferPair : vertexBuffers)
-            {
-                const auto index{static_cast<uint8_t>(vertexBufferPair.first)};
-                const auto& vertexBuffer = vertexBufferPair.second;
-                vertexBuffer.Data->SetAsBgfxVertexBuffer(encoder, index, vertexBuffer.StartVertex + verticesStart, verticesCount, vertexBuffer.VertexLayoutHandle);
-            }
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
         }
 
         Draw(encoder, fillMode);
@@ -1812,7 +1549,7 @@ namespace Babylon
         m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
     }
 
-    void NativeEngine::Draw(bgfx::Encoder* encoder, int fillMode)
+    void NativeEngine::Draw(bgfx::Encoder* encoder, uint32_t fillMode)
     {
         uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
