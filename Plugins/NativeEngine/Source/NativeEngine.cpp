@@ -18,11 +18,6 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
-#include <queue>
-#include <regex>
-#include <sstream>
-#include <variant>
-
 namespace Babylon
 {
     namespace
@@ -301,26 +296,6 @@ namespace Babylon
             texture->CreationFlags |= BGFX_TEXTURE_BLIT_DST;
         }
     }
-
-    template<typename Handle1T, typename Handle2T>
-    class VariantHandleHolder
-    {
-    public:
-        std::variant<Handle1T, Handle2T> m_handle{};
-
-        template<typename NonDynamicCallableT, typename DynamicCallableT>
-        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
-        {
-            if (auto handle = std::get_if<Handle1T>(&m_handle))
-            {
-                nonDynamicCallable(*handle);
-            }
-            else
-            {
-                dynamicCallable(std::get<Handle2T>(m_handle));
-            }
-        }
-    };
 
     void NativeEngine::Initialize(Napi::Env env)
     {
