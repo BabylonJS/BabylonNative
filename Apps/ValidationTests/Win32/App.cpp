@@ -52,8 +52,8 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
 
-        nativeCanvas.reset();
         runtime.reset();
+        nativeCanvas.reset();
         graphics.reset();
     }
 
