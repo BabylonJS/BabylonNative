@@ -13,6 +13,9 @@ namespace Babylon::Polyfills
         Canvas(Canvas&&) = default;
         ~Canvas();
 
+        // This instance must live as long as the JS Runtime.
+        // If JSRuntime is attached/detached (BabylonReactNative)
+        // Then this instance must live forever.
         [[nodiscard]] static Canvas Initialize(Napi::Env env);
 
         void FlushGraphicResources();
