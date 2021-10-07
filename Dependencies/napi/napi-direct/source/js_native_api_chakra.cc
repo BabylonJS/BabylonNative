@@ -7,7 +7,6 @@
 #include <string>
 #include <stdexcept>
 
-
 namespace {
 constexpr UINT CP_LATIN1 = 28591;
 
