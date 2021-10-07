@@ -15,7 +15,7 @@ Math.random = function () {
 }
 
 function compareStats(refStats, currentStats) {
-    var keysToCompare = ["numDraw", "numCompute", "numBlit", "numDynamicIndexBuffers", "numDynamicVertexBuffers", "numFrameBuffers",
+    var keysToCompare = ["numCompute", "numDynamicIndexBuffers", "numDynamicVertexBuffers", "numFrameBuffers",
         "numIndexBuffers", "numOcclusionQueries", "numPrograms", "numShaders", "numTextures", "numUniforms", "numVertexBuffers", "numVertexLayouts",
         "textureMemoryUsed", "rtMemoryUsed", "transientVbUsed", "transientIbUsed", "numViews"];
     let error = false;
