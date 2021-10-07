@@ -7,13 +7,12 @@
 #undef None
 #include <filesystem>
 
-#include <Shared/TestUtils.h>
-
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -83,7 +82,7 @@ namespace
                 fflush(stdout);
             });
 
-            Babylon::TestUtils::CreateInstance(env, (void*)(uintptr_t)window);
+            Babylon::Plugins::TestUtils::Initialize(env, (void*)(uintptr_t)window);
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -182,6 +181,7 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
     InitBabylon(window);
     UpdateWindowSize(width, height);
 
+    bool doExit{false};
     while (!doExit)
     {
         if (!XPending(display) && graphics)
@@ -218,5 +218,5 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
 
     XUnmapWindow(display, window);
     XDestroyWindow(display, window);
-    return errorCode;
+    return Babylon::Plugins::TestUtils::errorCode;
 }

@@ -11,14 +11,13 @@
 #include <filesystem>
 #include <algorithm>
 
-#include <Shared/TestUtils.h>
-
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -92,7 +91,7 @@ namespace
 
             Babylon::Plugins::NativeXr::Initialize(env);
 
-            Babylon::TestUtils::CreateInstance(env, hWnd);
+            Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
 
         Babylon::ScriptLoader loader{ *runtime };
@@ -230,7 +229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
-            PostQuitMessage(errorCode);
+            PostQuitMessage(Babylon::Plugins::TestUtils::errorCode);
             break;
         }
         default:

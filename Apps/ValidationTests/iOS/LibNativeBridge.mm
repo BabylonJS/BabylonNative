@@ -6,6 +6,7 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Plugins/TestUtils.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
@@ -14,8 +15,6 @@
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
-
-#import <Shared/TestUtils.h>
 
 @implementation LibNativeBridge
 
@@ -61,7 +60,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        Babylon::TestUtils::CreateInstance(env, nullptr);
+        Babylon::Plugins::TestUtils::Initialize(env, nullptr);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
