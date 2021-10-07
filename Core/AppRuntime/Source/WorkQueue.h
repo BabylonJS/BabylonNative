@@ -19,6 +19,8 @@ namespace Babylon
         template<typename CallableT>
         void Append(CallableT callable)
         {
+            // Manual dispatcher queueing requires a copyable CallableT, we use a shared pointer trick to make a 
+            // copyable callable if necessary.
             if constexpr (std::is_copy_constructible<CallableT>::value)
             {
                 m_dispatcher.queue([this, callable = std::move(callable)]() {
@@ -27,8 +29,7 @@ namespace Babylon
             }
             else
             {
-                m_dispatcher.queue([this, callablePtr{new CallableT(std::move(callable))}]() {
-                    auto callableScopeGuard = gsl::finally([callablePtr]() { delete callablePtr; });
+                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]() {
                     Invoke(*callablePtr);
                 });
             }
