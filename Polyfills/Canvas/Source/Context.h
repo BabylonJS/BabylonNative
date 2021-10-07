@@ -8,7 +8,7 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
-    class Context final : public Napi::ObjectWrap<Context>
+    class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
         static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
@@ -86,9 +86,12 @@ namespace Babylon::Polyfills::Internal
         int m_currentFontId{ -1 };
 
         Babylon::GraphicsImpl& m_graphicsImpl;
+
         bool m_dirty{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
+
+        void FlushGraphicResources() override;
 
         friend class Canvas;
     };
