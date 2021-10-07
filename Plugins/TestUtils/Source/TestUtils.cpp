@@ -136,7 +136,7 @@ namespace Babylon::Plugins::Internal
             auto size = reader.seek(0, bx::Whence::End);
             reader.seek(0, bx::Whence::Begin);
             
-            str.resize(size);
+            str.resize(static_cast<size_t>(size));
             reader.read(str.data(), static_cast<int32_t>(size), &err);
         }
         return Napi::Value::From(info.Env(), str);
