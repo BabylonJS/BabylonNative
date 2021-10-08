@@ -6,7 +6,7 @@ var justOnce;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
-var generateReferences = true;
+var generateReferences = false;
 // Random replacement
 var seed = 1;
 Math.random = function () {
