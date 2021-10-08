@@ -10,6 +10,7 @@
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
+#import <Babylon/Polyfills/Console.h>
 #import <Shared/InputManager.h>
 
 #import <optional>
@@ -18,6 +19,7 @@ std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
+std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool g_isXrActive{};
 
 @implementation LibNativeBridge
@@ -58,7 +60,11 @@ bool g_isXrActive{};
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        Babylon::Polyfills::Canvas::Initialize(env);
+        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 

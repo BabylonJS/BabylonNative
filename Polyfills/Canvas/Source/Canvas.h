@@ -4,9 +4,51 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
+
+namespace Babylon::Polyfills
+{
+    class Canvas::Impl final : public std::enable_shared_from_this<Canvas::Impl>
+    {
+    public:
+        explicit Impl(Napi::Env);
+
+        void FlushGraphicResources();
+
+        static Canvas::Impl& GetFromJavaScript(Napi::Env env);
+
+        struct MonitoredResource
+        {
+            MonitoredResource(Canvas::Impl& impl) : m_impl(impl)
+            {
+                m_impl.AddMonitoredResource(this);
+            }
+            virtual ~MonitoredResource()
+            {
+                m_impl.RemoveMonitoredResource(this);
+            }
+
+            virtual void FlushGraphicResources() = 0;
+        private:
+            Canvas::Impl& m_impl;
+        };
+
+    private:
+        Napi::Env m_env;
+
+        void AddToJavaScript(Napi::Env env);
+
+        std::vector<MonitoredResource*> m_monitoredResources{};
+
+        void AddMonitoredResource(MonitoredResource* monitoredResource);
+        void RemoveMonitoredResource(MonitoredResource* monitoredResource);
+
+        friend struct MonitoredResource;
+    };
+} // namespace
+
 namespace Babylon::Polyfills::Internal
 {
-    class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>
+    class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
         static void CreateInstance(Napi::Env env);
@@ -42,5 +84,7 @@ namespace Babylon::Polyfills::Internal
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
         uint32_t m_textureHandle{0};
         bool m_dirty{};
+
+        void FlushGraphicResources() override;
     };
 }

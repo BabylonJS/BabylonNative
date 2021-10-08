@@ -2,6 +2,7 @@
 
 #include "PerFrameValue.h"
 #include "ShaderCompiler.h"
+#include "VertexArray.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
@@ -98,83 +99,6 @@ namespace Babylon
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
-    };
-
-    template<typename Handle1T, typename Handle2T>
-    class VariantHandleHolder
-    {
-    protected:
-        VariantHandleHolder() = default;
-        VariantHandleHolder(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
-        VariantHandleHolder(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
-        VariantHandleHolder<Handle1T, Handle2T>& operator=(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
-        VariantHandleHolder<Handle1T, Handle2T>& operator=(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
-
-        template<typename NonDynamicCallableT, typename DynamicCallableT>
-        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
-        {
-            if (auto handle = std::get_if<Handle1T>(&m_handle))
-            {
-                nonDynamicCallable(*handle);
-            }
-            else
-            {
-                dynamicCallable(std::get<Handle2T>(m_handle));
-            }
-        }
-
-        std::variant<Handle1T, Handle2T> m_handle{};
-    };
-
-    class IndexBufferData final : protected VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>, public NativeResource<IndexBufferData>
-    {
-    public:
-        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
-        ~IndexBufferData();
-        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
-        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
-    };
-
-    class VertexBufferData final : protected VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>, public NativeResource<VertexBufferData>
-    {
-    public:
-        VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic);
-        ~VertexBufferData();
-        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
-        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
-        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout);
-        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength);
-        void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const;
-
-    private:
-        std::vector<uint8_t> m_bytes{};
-    };
-
-    struct VertexArray final : public NativeResource<VertexArray>
-    {
-        ~VertexArray()
-        {
-            for (auto& vertexBufferPair : VertexBuffers)
-            {
-                bgfx::destroy(vertexBufferPair.second.VertexLayoutHandle);
-            }
-        }
-
-        struct IndexBuffer
-        {
-            const IndexBufferData* Data{};
-        };
-
-        IndexBuffer indexBuffer{};
-
-        struct VertexBuffer
-        {
-            const VertexBufferData* Data{};
-            uint32_t StartVertex{};
-            bgfx::VertexLayoutHandle VertexLayoutHandle{};
-        };
-
-        std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
     };
 
     class CommandBufferDecoder final
@@ -419,7 +343,7 @@ namespace Babylon
         void SetCommandBuffer(const Napi::CallbackInfo& info);
         void SetCommandValidationBuffer(const Napi::CallbackInfo& info);
         void SubmitCommandBuffer(const Napi::CallbackInfo& info);
-        void Draw(bgfx::Encoder* encoder, int fillMode);
+        void Draw(bgfx::Encoder* encoder, uint32_t fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
@@ -471,7 +395,7 @@ namespace Babylon
         Napi::Reference<Napi::ArrayBuffer> m_commandValidationBuffer{};
         inline static ResourceTable<void(NativeEngine::*)(CommandBufferDecoder&)> s_commandTable{};
 
-        const VertexArray* m_boundVertexArray{};
+        VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;

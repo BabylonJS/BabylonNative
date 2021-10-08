@@ -86,6 +86,7 @@ namespace Babylon::Polyfills::Internal
         , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
+        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
         for (auto& font : NativeCanvas::fontsInfos)
         {
@@ -101,6 +102,11 @@ namespace Babylon::Polyfills::Internal
     }
 
     void Context::Dispose(const Napi::CallbackInfo&)
+    {
+        Dispose();
+    }
+
+    void Context::FlushGraphicResources()
     {
         Dispose();
     }

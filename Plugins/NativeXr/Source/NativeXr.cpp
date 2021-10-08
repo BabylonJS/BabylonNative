@@ -502,7 +502,7 @@ namespace Babylon
                         throw std::runtime_error{"Failed to initialize xr system."};
                     }
 
-                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, bgfx::getInternalData()->commandQueue, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
                         .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
@@ -816,16 +816,9 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {
-                        InstanceAccessor("pointerId", &PointerEvent::GetPointerId, nullptr)
-                    });
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            Napi::Value GetPointerId(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_pointerId);
             }
 
             static Napi::Object New(const Napi::CallbackInfo& info)
@@ -836,12 +829,11 @@ namespace Babylon
             PointerEvent(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<PointerEvent>{info}
             {
+                auto thisObject = info.This().As<Napi::Object>();
                 Napi::Object params = info[1].As<Napi::Object>();
-                m_pointerId = params.Get("pointerId").As<Napi::Number>().Int32Value();
+                thisObject.Set("pointerId", params.Get("pointerId"));
+                thisObject.Set("pointerType", params.Get("pointerType"));
             }
-
-        private:
-            int32_t m_pointerId;
         };
 
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
