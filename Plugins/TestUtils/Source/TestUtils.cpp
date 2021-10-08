@@ -61,50 +61,58 @@ namespace Babylon::Plugins::Internal
         return Napi::Value::From(info.Env(), data);
     }
 
-    Napi::Value TestUtils::GetStats(const Napi::CallbackInfo& info)
+    void TestUtils::GetStats(const Napi::CallbackInfo& info)
     {
-        auto* stats = bgfx::getStats();
         auto env = info.Env();
-        Napi::Object statObject = Napi::Object::New(env);
+        const auto callback{info[0].As<Napi::Function>()};
+        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
 
-        statObject.Set("cpuTimeFrame", Napi::Number::New(env, static_cast<double>(stats->cpuTimeFrame)).As<Napi::Value>());
-        statObject.Set("cpuTimeBegin", Napi::Number::New(env, static_cast<double>(stats->cpuTimeBegin)).As<Napi::Value>());
-        statObject.Set("cpuTimeEnd", Napi::Number::New(env, static_cast<double>(stats->cpuTimeEnd)).As<Napi::Value>());
-        statObject.Set("cpuTimerFreq", Napi::Number::New(env, static_cast<double>(stats->cpuTimerFreq)).As<Napi::Value>());
+        arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, env, callbackPtr{std::move(callbackPtr)}]() {
+            bgfx::Stats frameStats = *bgfx::getStats();
 
-        statObject.Set("gpuTimeBegin", Napi::Number::New(env, static_cast<double>(stats->gpuTimeBegin)).As<Napi::Value>());
-        statObject.Set("gpuTimeEnd", Napi::Number::New(env, static_cast<double>(stats->gpuTimeEnd)).As<Napi::Value>());
-        statObject.Set("gpuTimerFreq", Napi::Number::New(env, static_cast<double>(stats->gpuTimerFreq)).As<Napi::Value>());
+            return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [env, callbackPtr{std::move(callbackPtr)}, frameStats]() {
+                Napi::Object statObject = Napi::Object::New(env);
 
-        statObject.Set("waitRender", Napi::Number::New(env, static_cast<double>(stats->waitRender)).As<Napi::Value>());
-        statObject.Set("waitSubmit", Napi::Number::New(env, static_cast<double>(stats->waitSubmit)).As<Napi::Value>());
+                statObject.Set("cpuTimeFrame", Napi::Number::New(env, static_cast<double>(frameStats.cpuTimeFrame)).As<Napi::Value>());
+                statObject.Set("cpuTimeBegin", Napi::Number::New(env, static_cast<double>(frameStats.cpuTimeBegin)).As<Napi::Value>());
+                statObject.Set("cpuTimeEnd", Napi::Number::New(env, static_cast<double>(frameStats.cpuTimeEnd)).As<Napi::Value>());
+                statObject.Set("cpuTimerFreq", Napi::Number::New(env, static_cast<double>(frameStats.cpuTimerFreq)).As<Napi::Value>());
 
-        statObject.Set("numDraw", Napi::Number::New(env, stats->numDraw).As<Napi::Value>());
-        statObject.Set("numCompute", Napi::Number::New(env, stats->numCompute).As<Napi::Value>());
-        statObject.Set("numBlit", Napi::Number::New(env, stats->numBlit).As<Napi::Value>());
-        statObject.Set("maxGpuLatency", Napi::Number::New(env, stats->maxGpuLatency).As<Napi::Value>());
+                statObject.Set("gpuTimeBegin", Napi::Number::New(env, static_cast<double>(frameStats.gpuTimeBegin)).As<Napi::Value>());
+                statObject.Set("gpuTimeEnd", Napi::Number::New(env, static_cast<double>(frameStats.gpuTimeEnd)).As<Napi::Value>());
+                statObject.Set("gpuTimerFreq", Napi::Number::New(env, static_cast<double>(frameStats.gpuTimerFreq)).As<Napi::Value>());
 
-        statObject.Set("numDynamicIndexBuffers", Napi::Number::New(env, stats->numDynamicIndexBuffers).As<Napi::Value>());
-        statObject.Set("numDynamicVertexBuffers", Napi::Number::New(env, stats->numDynamicVertexBuffers).As<Napi::Value>());
-        statObject.Set("numFrameBuffers", Napi::Number::New(env, stats->numFrameBuffers).As<Napi::Value>());
-        statObject.Set("numIndexBuffers", Napi::Number::New(env, stats->numIndexBuffers).As<Napi::Value>());
-        statObject.Set("numOcclusionQueries", Napi::Number::New(env, stats->numOcclusionQueries).As<Napi::Value>());
-        statObject.Set("numPrograms", Napi::Number::New(env, stats->numPrograms).As<Napi::Value>());
-        statObject.Set("numShaders", Napi::Number::New(env, stats->numShaders).As<Napi::Value>());
-        statObject.Set("numTextures", Napi::Number::New(env, stats->numTextures).As<Napi::Value>());
-        statObject.Set("numUniforms", Napi::Number::New(env, stats->numUniforms).As<Napi::Value>());
-        statObject.Set("numVertexBuffers", Napi::Number::New(env, stats->numVertexBuffers).As<Napi::Value>());
-        statObject.Set("numVertexLayouts", Napi::Number::New(env, stats->numVertexLayouts).As<Napi::Value>());
+                statObject.Set("waitRender", Napi::Number::New(env, static_cast<double>(frameStats.waitRender)).As<Napi::Value>());
+                statObject.Set("waitSubmit", Napi::Number::New(env, static_cast<double>(frameStats.waitSubmit)).As<Napi::Value>());
 
-        statObject.Set("textureMemoryUsed", Napi::Number::New(env, static_cast<double>(stats->textureMemoryUsed)).As<Napi::Value>());
-        statObject.Set("rtMemoryUsed", Napi::Number::New(env, static_cast<double>(stats->rtMemoryUsed)).As<Napi::Value>());
-        statObject.Set("transientVbUsed", Napi::Number::New(env, stats->transientVbUsed).As<Napi::Value>());
-        statObject.Set("transientIbUsed", Napi::Number::New(env, stats->transientIbUsed).As<Napi::Value>());
-        statObject.Set("gpuMemoryMax", Napi::Number::New(env, static_cast<double>(stats->gpuMemoryMax)).As<Napi::Value>());
-        statObject.Set("gpuMemoryUsed", Napi::Number::New(env, static_cast<double>(stats->gpuMemoryUsed)).As<Napi::Value>());
-        statObject.Set("numViews", Napi::Number::New(env, stats->numViews).As<Napi::Value>());
-        
-        return statObject;
+                statObject.Set("numDraw", Napi::Number::New(env, frameStats.numDraw).As<Napi::Value>());
+                statObject.Set("numCompute", Napi::Number::New(env, frameStats.numCompute).As<Napi::Value>());
+                statObject.Set("numBlit", Napi::Number::New(env, frameStats.numBlit).As<Napi::Value>());
+                statObject.Set("maxGpuLatency", Napi::Number::New(env, frameStats.maxGpuLatency).As<Napi::Value>());
+
+                statObject.Set("numDynamicIndexBuffers", Napi::Number::New(env, frameStats.numDynamicIndexBuffers).As<Napi::Value>());
+                statObject.Set("numDynamicVertexBuffers", Napi::Number::New(env, frameStats.numDynamicVertexBuffers).As<Napi::Value>());
+                statObject.Set("numFrameBuffers", Napi::Number::New(env, frameStats.numFrameBuffers).As<Napi::Value>());
+                statObject.Set("numIndexBuffers", Napi::Number::New(env, frameStats.numIndexBuffers).As<Napi::Value>());
+                statObject.Set("numOcclusionQueries", Napi::Number::New(env, frameStats.numOcclusionQueries).As<Napi::Value>());
+                statObject.Set("numPrograms", Napi::Number::New(env, frameStats.numPrograms).As<Napi::Value>());
+                statObject.Set("numShaders", Napi::Number::New(env, frameStats.numShaders).As<Napi::Value>());
+                statObject.Set("numTextures", Napi::Number::New(env, frameStats.numTextures).As<Napi::Value>());
+                statObject.Set("numUniforms", Napi::Number::New(env, frameStats.numUniforms).As<Napi::Value>());
+                statObject.Set("numVertexBuffers", Napi::Number::New(env, frameStats.numVertexBuffers).As<Napi::Value>());
+                statObject.Set("numVertexLayouts", Napi::Number::New(env, frameStats.numVertexLayouts).As<Napi::Value>());
+
+                statObject.Set("textureMemoryUsed", Napi::Number::New(env, static_cast<double>(frameStats.textureMemoryUsed)).As<Napi::Value>());
+                statObject.Set("rtMemoryUsed", Napi::Number::New(env, static_cast<double>(frameStats.rtMemoryUsed)).As<Napi::Value>());
+                statObject.Set("transientVbUsed", Napi::Number::New(env, frameStats.transientVbUsed).As<Napi::Value>());
+                statObject.Set("transientIbUsed", Napi::Number::New(env, frameStats.transientIbUsed).As<Napi::Value>());
+                statObject.Set("gpuMemoryMax", Napi::Number::New(env, static_cast<double>(frameStats.gpuMemoryMax)).As<Napi::Value>());
+                statObject.Set("gpuMemoryUsed", Napi::Number::New(env, static_cast<double>(frameStats.gpuMemoryUsed)).As<Napi::Value>());
+                statObject.Set("numViews", Napi::Number::New(env, frameStats.numViews).As<Napi::Value>());
+
+                callbackPtr->Value().Call({ statObject });
+            });
+        });
     }
 
     void TestUtils::WriteString(const Napi::CallbackInfo& info)

@@ -7,6 +7,9 @@
 #include <bx/allocator.h>
 #include <bimg/bimg.h>
 
+#include <GraphicsImpl.h>
+#include <Babylon/JsRuntimeScheduler.h>
+
 namespace Babylon::Plugins::Internal
 {
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
@@ -43,6 +46,8 @@ namespace Babylon::Plugins::Internal
 
         explicit TestUtils(const Napi::CallbackInfo& info)
             : ParentT{ info }
+            , m_graphicsImpl{ GraphicsImpl::GetFromJavaScript(info.Env()) }
+            , m_runtimeScheduler{ Babylon::JsRuntime::GetFromJavaScript(info.Env()) }
         {
         }
 
@@ -60,9 +65,12 @@ namespace Babylon::Plugins::Internal
         void WritePNG(const Napi::CallbackInfo& info);
         Napi::Value DecodeImage(const Napi::CallbackInfo& info);
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
-        Napi::Value GetStats(const Napi::CallbackInfo& info);
+        void GetStats(const Napi::CallbackInfo& info);
         void WriteString(const Napi::CallbackInfo& info);
         Napi::Value ReadString(const Napi::CallbackInfo& info);
+
+        GraphicsImpl& m_graphicsImpl;
+        JsRuntimeScheduler m_runtimeScheduler;
 
         struct Image
         {

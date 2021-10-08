@@ -28,7 +28,7 @@ function compareStats(refStats, currentStats) {
     return error;
 }
 
-function compare(test, renderData, referenceImage, threshold, errorRatio, refStats) {
+function compare(test, renderData, referenceImage, threshold, errorRatio, refStats, currentStats) {
     var size = renderData.length;
     var referenceData = TestUtils.getImageData(referenceImage);
     var differencesCount = 0;
@@ -56,7 +56,7 @@ function compare(test, renderData, referenceImage, threshold, errorRatio, refSta
 
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
-    error |= compareStats(refStats, TestUtils.getStats());
+    error |= compareStats(refStats, currentStats);
 
     if (error) {
         TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
@@ -67,37 +67,40 @@ function compare(test, renderData, referenceImage, threshold, errorRatio, refSta
     return error;
 }
 
-function saveRenderedResult(test, renderData) {
+function saveRenderedResult(test, renderData, referenceImage, threshold, errorRatio, refStats, currentStats) {
     var imageName = TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage;
     var profileName = imageName.replace(".png", ".json");
     
     TestUtils.writePNG(renderData, testWidth, testHeight, imageName);
-    TestUtils.writeString(profileName, JSON.stringify(TestUtils.getStats()));
+    TestUtils.writeString(profileName, JSON.stringify(currentStats));
     return false; // no error
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction, refStats) {
-    /*var canvasImageData =*/ engine._native.getFrameBufferData(function (screenshot) { 
-        var testRes = true;
-        // Visual check
-        if (!test.onlyVisual) {
+    /*var canvasImageData =*/ 
+    TestUtils.getStats(function (currentStats) {
+        engine._native.getFrameBufferData(function (screenshot) {
+            var testRes = true;
+            // Visual check
+            if (!test.onlyVisual) {
 
-            var defaultErrorRatio = 2.5
+                var defaultErrorRatio = 2.5
 
-            if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio, refStats)) {
-                testRes = false;
-                console.log('failed');
-            } else {
-                testRes = true;
-                console.log('validated');
+                if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio, refStats, currentStats)) {
+                    testRes = false;
+                    console.log('failed');
+                } else {
+                    testRes = true;
+                    console.log('validated');
+                }
             }
-        }
 
-        currentScene.dispose();
-        currentScene = null;
-        engine.setHardwareScalingLevel(1);
+            currentScene.dispose();
+            currentScene = null;
+            engine.setHardwareScalingLevel(1);
 
-        done(testRes);
+            done(testRes);
+        });
     });
 }
 
@@ -298,10 +301,8 @@ function runTest(index, done) {
         if (typeof (data) !== "string") {
             throw new Error("Can't get string for statistics.");
         }
-
         loadPlayground(test, done, index, referenceImage, compare, JSON.parse(data));
     }
-
 
     var onload = function(data, responseURL) {
         if (typeof (data) === "string") {
