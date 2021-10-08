@@ -12,6 +12,8 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
+    "Source/IndexBuffer.cpp"
+    "Source/IndexBuffer.h"
     "Source/NativeDataStream.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
@@ -24,7 +26,11 @@ set(SOURCES
     "Source/ShaderCompilerCommon.cpp"
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h"
-    "Source/ShaderCompiler${GRAPHICS_API}.cpp")
+    "Source/ShaderCompiler${GRAPHICS_API}.cpp"
+    "Source/VertexArray.cpp"
+    "Source/VertexArray.h"
+    "Source/VertexBuffer.cpp"
+    "Source/VertexBuffer.h")
 
 add_library(NativeEngine ${SOURCES})
 

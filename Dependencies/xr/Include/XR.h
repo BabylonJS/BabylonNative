@@ -329,12 +329,12 @@ namespace xr
                 std::unique_ptr<Impl> m_impl{};
             };
 
-            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider);
+            static arcana::task<std::shared_ptr<Session>, std::exception_ptr> CreateAsync(System& system, void* graphicsDevice, void* commandQueue, std::function<void*()> windowProvider);
             ~Session();
 
             // Do not use, call CreateAsync instead. Kept public to keep compatibility with make_shared.
             // Move to private when changing to unique_ptr.
-            Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider);
+            Session(System& system, void* graphicsDevice, void* commandQueue, std::function<void*()> windowProvider);
 
             std::unique_ptr<Frame> GetNextFrame(bool& shouldEndSession, bool& shouldRestartSession, std::function<arcana::task<void, std::exception_ptr>(void*)> deletedTextureAsyncCallback = [](void*){ return arcana::task_from_result<std::exception_ptr>(); });
             void RequestEndSession();

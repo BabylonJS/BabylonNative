@@ -9,9 +9,14 @@
 #include <NativeEngine.h>
 #include <napi/napi_pointer.h>
 
+namespace
+{
+    constexpr auto JS_CANVAS_NAME = "_CanvasImpl";
+}
+
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
+    static constexpr auto JS_CONSTRUCTOR_NAME = "Canvas";
 
     void NativeCanvas::CreateInstance(Napi::Env env)
     {
@@ -22,9 +27,9 @@ namespace Babylon::Polyfills::Internal
             JS_CONSTRUCTOR_NAME,
             {
                 StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
-                InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
+                InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
             });
@@ -34,11 +39,17 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
-        , m_graphicsImpl{ Babylon::GraphicsImpl::GetFromJavaScript(info.Env()) }
+        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
+        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
     }
 
     NativeCanvas::~NativeCanvas()
+    {
+        Dispose();
+    }
+
+    void NativeCanvas::FlushGraphicResources()
     {
         Dispose();
     }
@@ -145,11 +156,74 @@ namespace Babylon::Polyfills::Internal
     }
 }
 
-namespace Babylon::Polyfills::Canvas
+namespace Babylon::Polyfills
 {
-    void Initialize(Napi::Env env)
+    Canvas::Impl::Impl(Napi::Env env)
+        : m_env{env}
     {
+        AddToJavaScript(env);
+    }
+
+    void Canvas::Impl::AddToJavaScript(Napi::Env env)
+    {
+        JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Set(JS_CANVAS_NAME, Napi::External<Canvas::Impl>::New(env, this));
+    }
+
+    Canvas::Impl& Canvas::Impl::GetFromJavaScript(Napi::Env env)
+    {
+        return *JsRuntime::NativeObject::GetFromJavaScript(env)
+            .Get(JS_CANVAS_NAME)
+            .As<Napi::External<Canvas::Impl>>()
+            .Data();
+    }
+
+    void Canvas::Impl::AddMonitoredResource(MonitoredResource* monitoredResource)
+    {
+        if (std::find(m_monitoredResources.begin(), m_monitoredResources.end(), monitoredResource) == m_monitoredResources.end())
+        {
+            m_monitoredResources.push_back(monitoredResource);
+        }
+    }
+
+    void Canvas::Impl::RemoveMonitoredResource(MonitoredResource* monitoredResource)
+    {
+        auto iter = std::find(m_monitoredResources.begin(), m_monitoredResources.end(), monitoredResource);
+        if (iter != m_monitoredResources.end())
+        {
+            m_monitoredResources.erase(iter);
+        }
+    }
+
+    void Canvas::Impl::FlushGraphicResources()
+    {
+        for(auto monitoredResource : m_monitoredResources)
+        {
+            monitoredResource->FlushGraphicResources();
+        }
+    }
+
+    Canvas::Canvas(std::shared_ptr<Impl> impl)
+        : m_impl{std::move(impl)}
+    {
+    }
+
+    Canvas::~Canvas()
+    {
+    }
+
+    Canvas Canvas::Initialize(Napi::Env env)
+    {
+        auto impl{std::make_shared<Canvas::Impl>(env)};
+
         Internal::NativeCanvas::CreateInstance(env);
         Internal::NativeCanvasImage::CreateInstance(env);
+
+        return {impl};
+    }
+
+    void Canvas::FlushGraphicResources()
+    {
+        m_impl->FlushGraphicResources();
     }
 }

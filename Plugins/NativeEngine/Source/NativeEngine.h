@@ -3,6 +3,7 @@
 #include "NativeDataStream.h"
 #include "PerFrameValue.h"
 #include "ShaderCompiler.h"
+#include "VertexArray.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
@@ -108,106 +109,10 @@ namespace Babylon
         }
     };
 
-    template<typename Handle1T, typename Handle2T>
-    class VariantHandleHolder
-    {
-    protected:
-        VariantHandleHolder() = default;
-        VariantHandleHolder(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
-        VariantHandleHolder(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
-        VariantHandleHolder<Handle1T, Handle2T>& operator=(VariantHandleHolder<Handle1T, Handle2T>&& other) = delete;
-        VariantHandleHolder<Handle1T, Handle2T>& operator=(const VariantHandleHolder<Handle1T, Handle2T>& other) = delete;
-
-        template<typename NonDynamicCallableT, typename DynamicCallableT>
-        void DoForHandleTypes(NonDynamicCallableT& nonDynamicCallable, DynamicCallableT& dynamicCallable) const
-        {
-            if (auto handle = std::get_if<Handle1T>(&m_handle))
-            {
-                nonDynamicCallable(*handle);
-            }
-            else
-            {
-                dynamicCallable(std::get<Handle2T>(m_handle));
-            }
-        }
-
-        std::variant<Handle1T, Handle2T> m_handle{};
-    };
-
-    class IndexBufferData final : protected VariantHandleHolder<bgfx::IndexBufferHandle, bgfx::DynamicIndexBufferHandle>
-    {
-    public:
-        IndexBufferData(const Napi::TypedArray& bytes, uint16_t flags, bool dynamic);
-        ~IndexBufferData();
-        void Update(Napi::Env env, const Napi::TypedArray& bytes, uint32_t startingIdx);
-        void SetBgfxIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices) const;
-        void Dispose();
-
-    private:
-        bool m_disposed{false};
-    };
-
-    class VertexBufferData final : protected VariantHandleHolder<bgfx::VertexBufferHandle, bgfx::DynamicVertexBufferHandle>
-    {
-    public:
-        VertexBufferData(const Napi::Uint8Array& bytes, bool dynamic);
-        ~VertexBufferData();
-        template<typename sourceType> void PromoteToFloats(uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
-        void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
-        void EnsureFinalized(Napi::Env /*env*/, const bgfx::VertexLayout& layout);
-        void Update(Napi::Env env, const Napi::Uint8Array& bytes, uint32_t offset, uint32_t byteLength);
-        void SetAsBgfxVertexBuffer(bgfx::Encoder* encoder, uint8_t index, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout) const;
-        void Dispose();
-
-    private:
-        std::vector<uint8_t> m_bytes{};
-        bool m_disposed{false};
-    };
-
-    struct VertexArray final
-    {
-        ~VertexArray()
-        {
-            Dispose();
-        }
-
-        void Dispose()
-        {
-            if (Disposed)
-            {
-                return;
-            }
-
-            for (auto& vertexBufferPair : VertexBuffers)
-            {
-                bgfx::destroy(vertexBufferPair.second.VertexLayoutHandle);
-            }
-            VertexBuffers.clear();
-            Disposed = true;
-        }
-
-        struct IndexBuffer
-        {
-            const IndexBufferData* Data{};
-        };
-
-        IndexBuffer indexBuffer{};
-
-        struct VertexBuffer
-        {
-            const VertexBufferData* Data{};
-            uint32_t StartVertex{};
-            bgfx::VertexLayoutHandle VertexLayoutHandle{};
-        };
-
-        std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
-        bool Disposed{false};
-    };
-
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
-        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
+        static constexpr auto JS_CONSTRUCTOR_NAME = "Engine";
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
@@ -292,7 +197,7 @@ namespace Babylon
         void SetStencil(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
-        void DrawInternal(bgfx::Encoder* encoder, int fillMode);
+        void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
@@ -339,7 +244,7 @@ namespace Babylon
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        const VertexArray* m_boundVertexArray{};
+        VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;

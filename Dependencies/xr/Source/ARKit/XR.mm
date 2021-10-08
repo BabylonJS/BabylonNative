@@ -675,10 +675,11 @@ namespace xr {
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool FeaturePointCloudEnabled{ false };
 
-        Impl(System::Impl& systemImpl, void* graphicsContext, std::function<void*()> windowProvider)
+        Impl(System::Impl& systemImpl, void* graphicsContext, void* commandQueue, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
             , getXRView{ [windowProvider{ std::move(windowProvider) }] { return (__bridge MTKView*)windowProvider(); } }
-            , metalDevice{ (__bridge id<MTLDevice>)graphicsContext } {
+            , metalDevice{ (__bridge id<MTLDevice>)graphicsContext }
+            , commandQueue{ (__bridge id<MTLCommandQueue>)commandQueue } {
 
             // Create the ARSession enable plane detection, include scene reconstruction mesh if supported, and disable lighting estimation.
             SystemImpl.XrContext->Session = [ARSession new];
@@ -736,8 +737,6 @@ namespace xr {
                     NSLog(@"Failed to create screen pipeline state: %@", error);
                 }
             }
-
-            commandQueue = [metalDevice newCommandQueue];
         }
 
         ~Impl() {
@@ -920,7 +919,6 @@ namespace xr {
 
                 // Finalize rendering here & push the command buffer to the GPU.
                 [commandBuffer commit];
-                [commandBuffer waitUntilCompleted];
             }
             @finally {
                 if (cameraTextureY != nil) {
@@ -1601,15 +1599,15 @@ namespace xr {
         return "ARKit";
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider) {
-        auto session = std::make_shared<System::Session>(system, graphicsDevice, std::move(windowProvider));
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* commandQueue, std::function<void*()> windowProvider) {
+        auto session = std::make_shared<System::Session>(system, graphicsDevice, commandQueue, std::move(windowProvider));
         return session->m_impl->WhenReady().then(arcana::inline_scheduler, arcana::cancellation::none(), [session] {
             return session;
         });
     }
 
-    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
-        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, std::move(windowProvider)) } {}
+    System::Session::Session(System& system, void* graphicsDevice, void* commandQueue, std::function<void*()> windowProvider)
+        : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, commandQueue, std::move(windowProvider)) } {}
 
     System::Session::~Session() {
         // Free textures

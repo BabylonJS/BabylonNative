@@ -36,5 +36,11 @@ target_include_directories(UrlLib PRIVATE "Source")
 target_link_libraries(UrlLib
     PUBLIC arcana
     ${ADDITIONAL_LIBRARIES})
+    
+if(APPLE)
+    set_target_properties(UrlLib PROPERTIES
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+endif()
+
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

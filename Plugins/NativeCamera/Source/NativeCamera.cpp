@@ -34,7 +34,7 @@ namespace Babylon
         {
             static constexpr auto JS_NAVIGATOR_NAME = "navigator";
             static constexpr auto JS_CLASS_NAME = "_NativeCamera";
-            static constexpr auto JS_NATIVECAMERA_CONSTRUCTOR_NAME = "NativeCamera";
+            static constexpr auto JS_CONSTRUCTOR_NAME = "Camera";
 
         public:
 
@@ -50,7 +50,7 @@ namespace Babylon
                         NativeCamera::InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
                     });
 
-                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_NATIVECAMERA_CONSTRUCTOR_NAME, func);
+                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
 
                 // create or get global navigator object
                 Napi::Object global = env.Global();
