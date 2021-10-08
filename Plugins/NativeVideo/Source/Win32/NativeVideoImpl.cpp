@@ -11,14 +11,14 @@ namespace Babylon::Plugins
     {
     }
 
-    void Video::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
+    void Video::Impl::Open(const std::string& /*source*/)
     {
-        throw std::runtime_error{ "Not implemented for this platform." };
+        //throw std::runtime_error{ "Not implemented for this platform." };
     }
     
     void Video::Impl::UpdateTexture(bgfx::TextureHandle /*textureHandle*/)
     {
-        throw std::runtime_error{ "Not implemented for this platform." };
+        //throw std::runtime_error{ "Not implemented for this platform." };
     }
 
     void Video::Impl::Close()

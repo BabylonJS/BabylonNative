@@ -11,7 +11,7 @@ namespace Babylon::Plugins
     public:
         Impl(Napi::Env env);
         ~Impl();
-        void Open(uint32_t width, uint32_t height, bool frontCamera);
+        void Open(const std::string& source);
         void UpdateTexture(bgfx::TextureHandle textureHandle);
         void Close();
     };

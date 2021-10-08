@@ -73,8 +73,17 @@ document = {
 */
 
 BABYLON.VideoTexture.prototype._getVideo = function (src) {
+    var video = new NativeVideoStream();
+    video.src = src;
     console.log("get video", src);
-    return {};
+    return video;
+}
+
+engine.updateVideoTexture = function (texture, video, invertY) {
+    if (texture && texture._hardwareTexture) {
+        var webGLTexture = texture._hardwareTexture.underlyingResource;
+        video.updateVideoTexture(webGLTexture, invertY);
+    }
 }
 
 CreateBoxAsync().then(function () {

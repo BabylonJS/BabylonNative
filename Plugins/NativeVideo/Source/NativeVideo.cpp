@@ -5,6 +5,24 @@ namespace Babylon::Plugins
 {
     static constexpr auto JS_CLASS_NAME = "NativeVideoStream";
 
+    // Move this struct to Graphics
+    struct TextureData final
+    {
+        ~TextureData()
+        {
+            if (bgfx::isValid(Handle))
+            {
+                bgfx::destroy(Handle);
+            }
+        }
+
+        bgfx::TextureHandle Handle{ bgfx::kInvalidHandle };
+        uint32_t Width{ 0 };
+        uint32_t Height{ 0 };
+        uint32_t Flags{ 0 };
+        uint8_t AnisotropicLevel{ 0 };
+    };
+
     void NativeVideoStream::Initialize(Napi::Env& env, std::shared_ptr<Plugins::Video::Impl> nativeCameraImpl)
     {
         Napi::Function func = DefineClass(
@@ -22,23 +40,23 @@ namespace Babylon::Plugins
                 InstanceAccessor("isNative", &NativeVideoStream::IsNative, nullptr),
                 InstanceAccessor("readyState", &NativeVideoStream::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideoStream::GetHaveCurrentData, nullptr),
+                InstanceAccessor("src", &NativeVideoStream::GetSrc, &NativeVideoStream::SetSrc),
+                InstanceAccessor("dst", &NativeVideoStream::GetDst, &NativeVideoStream::SetDst),
+                InstanceMethod("updateVideoTexture", &NativeVideoStream::UpdateVideoTexture),
             });
 
         env.Global().Set(JS_CLASS_NAME, func);
 
-        NativeCameraImpl = nativeCameraImpl;
+        m_nativeCameraImpl = nativeCameraImpl;
     }
 
-    Napi::Object NativeVideoStream::New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera)
+    Napi::Object NativeVideoStream::New(const Napi::CallbackInfo& info)
     {
-        return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({ Napi::Value::From(info.Env(), width), Napi::Value::From(info.Env(), height), Napi::Value::From(info.Env(), frontCamera) });
+        return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
     }
 
     NativeVideoStream::NativeVideoStream(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeVideoStream>{ info }
-        , m_width{ info[0].As<Napi::Number>().Uint32Value() }
-        , m_height{ info[1].As<Napi::Number>().Uint32Value() }
-        , m_frontCamera{ info[2].As<Napi::Boolean>().Value() }
     {
     }
 
@@ -84,11 +102,6 @@ namespace Babylon::Plugins
     Napi::Value NativeVideoStream::GetHaveCurrentData(const Napi::CallbackInfo& /*info*/)
     {
         return Napi::Value::From(Env(), 1u);
-    }
-
-    void NativeVideoStream::UpdateTexture(bgfx::TextureHandle textureHandle)
-    {
-        NativeCameraImpl->UpdateTexture(textureHandle);
     }
 
     void NativeVideoStream::AddEventListener(const Napi::CallbackInfo& info)
@@ -140,20 +153,54 @@ namespace Babylon::Plugins
         }
     }
 
-    void NativeVideoStream::Play(const Napi::CallbackInfo& /*info*/)
+    Napi::Value NativeVideoStream::Play(const Napi::CallbackInfo& info)
     {
         if (!m_IsPlaying)
         {
             m_IsPlaying = true;
-            NativeCameraImpl->Open(m_width, m_height, m_frontCamera);
+            m_nativeCameraImpl->Open(m_src);
             RaiseEvent("playing");
         }
+
+        auto deferred = Napi::Promise::Deferred::New(info.Env());
+        return deferred.Promise();
     }
 
     void NativeVideoStream::Pause(const Napi::CallbackInfo& /*info*/)
     {
         m_IsPlaying = false;
-        NativeCameraImpl->Close();
+        m_nativeCameraImpl->Close();
+    }
+
+    void NativeVideoStream::UpdateVideoTexture(const Napi::CallbackInfo& info)
+    {
+        if (m_IsPlaying)
+        {
+            const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+            const auto invertY = info[1].As<Napi::Boolean>();
+
+            m_nativeCameraImpl->UpdateTexture(texture->Handle);
+        }
+    }
+
+    Napi::Value NativeVideoStream::GetSrc(const Napi::CallbackInfo& )
+    {
+        return Napi::Value::From(Env(), m_src);
+    }
+
+    void NativeVideoStream::SetSrc(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        m_src = value.As<Napi::String>();
+    }
+
+    Napi::Value NativeVideoStream::GetDst(const Napi::CallbackInfo& )
+    {
+        return Napi::Value::From(Env(), m_dst);
+    }
+
+    void NativeVideoStream::SetDst(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        m_dst = value.As<Napi::String>();
     }
 
 
