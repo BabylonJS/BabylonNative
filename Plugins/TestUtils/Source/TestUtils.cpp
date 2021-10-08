@@ -67,7 +67,7 @@ namespace Babylon::Plugins::Internal
         const auto callback{info[0].As<Napi::Function>()};
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
 
-        arcana::make_task(m_graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, env, callbackPtr{std::move(callbackPtr)}]() {
+        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), arcana::cancellation::none(), [this, env, callbackPtr{std::move(callbackPtr)}]() {
             bgfx::Stats frameStats = *bgfx::getStats();
 
             return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [env, callbackPtr{std::move(callbackPtr)}, frameStats]() {

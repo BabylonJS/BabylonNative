@@ -6,7 +6,7 @@ var justOnce;
 var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
-var generateReferences = false;
+var generateReferences = true;
 // Random replacement
 var seed = 1;
 Math.random = function () {
@@ -77,7 +77,6 @@ function saveRenderedResult(test, renderData, referenceImage, threshold, errorRa
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction, refStats) {
-    /*var canvasImageData =*/ 
     TestUtils.getStats(function (currentStats) {
         engine._native.getFrameBufferData(function (screenshot) {
             var testRes = true;
