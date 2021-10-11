@@ -22,17 +22,6 @@ namespace
             bytes.swap(newBytes);
         }
     }
-
-    bgfx::VertexLayout CreateDefaultVertexLayout()
-    {
-        bgfx::VertexLayout layout{};
-        layout.begin();
-        layout.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float);
-        layout.end();
-        return layout;
-    }
-
-    static bgfx::VertexLayout DefaultVertexLayout{CreateDefaultVertexLayout()};
 }
 
 namespace Babylon
@@ -80,10 +69,11 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::Create()
+    void VertexBuffer::Create(const bgfx::VertexLayout& layout)
     {
         if (bgfx::isValid(m_handle))
         {
+            // NOTE: This code is assuming that layout stride hasn't changed.
             return;
         }
 
@@ -97,11 +87,11 @@ namespace Babylon
 
         if (m_dynamic)
         {
-            m_dynamicHandle = bgfx::createDynamicVertexBuffer(memory, DefaultVertexLayout);
+            m_dynamicHandle = bgfx::createDynamicVertexBuffer(memory, layout);
         }
         else
         {
-            m_handle = bgfx::createVertexBuffer(memory, DefaultVertexLayout);
+            m_handle = bgfx::createVertexBuffer(memory, layout);
         };
     }
 

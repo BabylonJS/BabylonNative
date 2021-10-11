@@ -21,8 +21,6 @@ namespace Babylon
 
     void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized)
     {
-        vertexBuffer->Create();
-
         bgfx::VertexLayout layout{};
         layout.begin();
 
@@ -55,6 +53,8 @@ namespace Babylon
         }
 
         layout.end();
+
+        vertexBuffer->Create(layout);
 
         m_vertexBufferRecords[attrib] = {vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)};
     }
