@@ -7,6 +7,11 @@
 
 //NSURL* url;
 AVAssetReader* reader;
+
+size_t m_outputWidth;
+size_t m_outputHeight;
+
+
 struct NativeVideoProcessing
 {
     ~NativeVideoProcessing()
@@ -20,12 +25,21 @@ struct NativeVideoProcessing
     void startProcessing(std::string contentURL);
     void updateTexture(CMSampleBufferRef sampleBuffer);
     
+    void BeginOutput(size_t width, size_t height);
+    size_t m_outputWidth;
+    size_t m_outputHeight;
+    void PushFrame(uint8_t* frame);
+    void StopOutput();
+
+    AVAssetWriter* videoWriter;
+    AVAssetWriterInput* writerInput;
+    CMTime lastSampleTime;
+    
     CVMetalTextureCacheRef textureCache{};
     id <MTLTexture> textureBGRA{};
 
     // output
     CVPixelBufferRef newPixelBufferFromCGImage(CGImageRef image);
-    void OutputTest();
 };
 
 NativeVideoProcessing* processing;
@@ -37,8 +51,8 @@ CVPixelBufferRef NativeVideoProcessing::newPixelBufferFromCGImage(CGImageRef ima
         [NSNumber numberWithBool:YES], kCVPixelBufferCGBitmapContextCompatibilityKey,
         nil];
     CVPixelBufferRef pxbuffer = NULL;
-    /*CVReturn status = */CVPixelBufferCreate(kCFAllocatorDefault, 64/*frameSize.width*/,
-        64/*frameSize.height*/, kCVPixelFormatType_32ARGB, (CFDictionaryRef) options,
+    /*CVReturn status = */CVPixelBufferCreate(kCFAllocatorDefault, m_outputWidth/*frameSize.width*/,
+                                              m_outputHeight/*frameSize.height*/, kCVPixelFormatType_32ARGB, (CFDictionaryRef) options,
         &pxbuffer);
     //NSParameterAssert(status == kCVReturnSuccess && pxbuffer != NULL);
 
@@ -47,8 +61,8 @@ CVPixelBufferRef NativeVideoProcessing::newPixelBufferFromCGImage(CGImageRef ima
     //NSParameterAssert(pxdata != NULL);
 
     CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(pxdata, 64/*frameSize.width*/,
-        64/*frameSize.height*/, 8, 4*64/*frameSize.width*/, rgbColorSpace,
+    CGContextRef context = CGBitmapContextCreate(pxdata, m_outputWidth/*frameSize.width*/,
+                                                 m_outputHeight/*frameSize.height*/, 8, 4*m_outputWidth/*frameSize.width*/, rgbColorSpace,
         kCGImageAlphaNoneSkipFirst);
     //NSParameterAssert(context);
     //CGContextConcatCTM(context, frameTransform);
@@ -62,21 +76,23 @@ CVPixelBufferRef NativeVideoProcessing::newPixelBufferFromCGImage(CGImageRef ima
     return pxbuffer;
 }
 
-void NativeVideoProcessing::OutputTest()
+void NativeVideoProcessing::BeginOutput(size_t width, size_t height)
 {
+    m_outputWidth = width;
+    m_outputHeight = height;
     std::string contentURL = "file:///Users/cedricguillemet/output.mp4";
     NSString* urlString = [[NSString stringWithUTF8String:contentURL.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
                 NSURL* url{[NSURL URLWithString:urlString]};
     
     NSError *error = nil;
-    AVAssetWriter *videoWriter = [[AVAssetWriter alloc] initWithURL:url fileType:AVFileTypeMPEG4 error:&error];
+    /*AVAssetWriter * */videoWriter = [[AVAssetWriter alloc] initWithURL:url fileType:AVFileTypeMPEG4 error:&error];
 
     NSDictionary *videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
                                    AVVideoCodecTypeH264, AVVideoCodecKey,
-        [NSNumber numberWithInt:64], AVVideoWidthKey,
-        [NSNumber numberWithInt:64], AVVideoHeightKey,
+        [NSNumber numberWithInt:width], AVVideoWidthKey,
+        [NSNumber numberWithInt:height], AVVideoHeightKey,
         nil];
-    AVAssetWriterInput* writerInput = [[AVAssetWriterInput
+    /*AVAssetWriterInput* */writerInput = [[AVAssetWriterInput
         assetWriterInputWithMediaType:AVMediaTypeVideo
         outputSettings:videoSettings] retain]; //retain should be removed if ARC
 
@@ -88,11 +104,11 @@ void NativeVideoProcessing::OutputTest()
     [videoWriter startWriting];
     [videoWriter startSessionAtSourceTime:kCMTimeZero];
     
-    // push frames
-    
-    CMTime lastSampleTime = kCMTimeZero;
-    for (int i = 0;i<2;i++)
-    {
+    lastSampleTime = kCMTimeZero;
+}
+
+void NativeVideoProcessing::PushFrame(uint8_t* frame)
+{
         
         //const int width = 64;//CGImageGetWidth(frame);
         //const int height = 64;//CGImageGetHeight(frame);
@@ -104,20 +120,28 @@ void NativeVideoProcessing::OutputTest()
                 //kCVPixelFormatType_32BGRA, NULL, &pixelBuffer);
             //NSParameterAssert(status == kCVReturnSuccess && pixelBuffer != NULL);
 
-        UInt8 pixelData[64 * 64 * 3];
+        UInt8* pixelData = new UInt8[m_outputWidth * m_outputHeight * 3];
+        UInt8* pixelDataBase =pixelData;
+        for (size_t index = 0;index<m_outputWidth * m_outputHeight * 4; index += 4)
+        {
+            *pixelDataBase++ = frame[index];
+            *pixelDataBase++ = frame[index + 1];
+            *pixelDataBase++ = frame[index + 2];
+        }
+    
 
         // fill the raw pixel buffer with arbitrary gray color for test
 
-        for(size_t ui = 0; ui < 64 * 64 * 3; ui++)
-          pixelData[ui] = 210;
+        //for(size_t ui = 0; ui < 64 * 64 * 3; ui++)
+        //  pixelData[ui] = 210;
 
         CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
 
-        CFDataRef rgbData = CFDataCreate(NULL, pixelData, 64 * 64 * 3);
+        CFDataRef rgbData = CFDataCreate(NULL, pixelData, m_outputWidth * m_outputHeight * 3);
 
         CGDataProviderRef provider = CGDataProviderCreateWithCFData(rgbData);
 
-        CGImageRef rgbImageRef = CGImageCreate(64, 64, 8, 24, 64 * 3, colorspace, kCGBitmapByteOrderDefault, provider, NULL, true, kCGRenderingIntentDefault);
+        CGImageRef rgbImageRef = CGImageCreate(m_outputWidth, m_outputHeight, 8, 24, m_outputWidth * 3, colorspace, kCGBitmapByteOrderDefault, provider, NULL, true, kCGRenderingIntentDefault);
 
         
         
@@ -128,30 +152,26 @@ void NativeVideoProcessing::OutputTest()
         
         CVPixelBufferRef pixelBuffer = newPixelBufferFromCGImage(rgbImageRef);
         
-            // Sample timing info.
-            CMTime frameTime = CMTimeMake(1, 30);
-            CMTime currentTime = CMTimeAdd(lastSampleTime, frameTime);
-            CMSampleTimingInfo timing = {frameTime, currentTime, kCMTimeInvalid};
+        // Sample timing info.
+        CMTime frameTime = CMTimeMake(1, 30);
+        CMTime currentTime = CMTimeAdd(lastSampleTime, frameTime);
+        CMSampleTimingInfo timing = {frameTime, currentTime, kCMTimeInvalid};
 
-            OSStatus result = 0;
+        OSStatus result = 0;
 
-            // Sample format.
-            CMVideoFormatDescriptionRef videoInfo = NULL;
-            result = CMVideoFormatDescriptionCreateForImageBuffer(NULL,
-                 pixelBuffer, &videoInfo);
-            //NSParameterAssert(result == 0 && videoInfo != NULL);
+        // Sample format.
+        CMVideoFormatDescriptionRef videoInfo = NULL;
+        result = CMVideoFormatDescriptionCreateForImageBuffer(NULL, pixelBuffer, &videoInfo);
+        //NSParameterAssert(result == 0 && videoInfo != NULL);
 
-            // Create sample buffer.
-            CMSampleBufferRef sampleBuffer = NULL;
-            result = CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault,
-                pixelBuffer, true, NULL, NULL, videoInfo, &timing, &sampleBuffer);
-            //NSParameterAssert(result == 0 && sampleBuffer != NULL);
-
+        // Create sample buffer.
+        CMSampleBufferRef sampleBuffer = NULL;
+        result = CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, true, NULL, NULL, videoInfo, &timing, &sampleBuffer);
         
         //CVPixelBufferRef sampleBuffer = newPixelBufferFromCGImage(image);
         [writerInput appendSampleBuffer:sampleBuffer];
         
-        lastSampleTime = frameTime;
+        lastSampleTime = currentTime;
         
         
         
@@ -167,8 +187,11 @@ void NativeVideoProcessing::OutputTest()
         // use the created CGImage
 
         CGImageRelease(rgbImageRef);
+    delete [] pixelData;
     }
     
+void NativeVideoProcessing::StopOutput()
+{
     
     // finish everything
     [writerInput markAsFinished];
@@ -263,9 +286,6 @@ namespace Babylon::Plugins
         processing = new NativeVideoProcessing;
         processing->startProcessing(source);
         //throw std::runtime_error{ "Not implemented for this platform." };
-        
-        
-        processing->OutputTest();
     }
     
     void Video::Impl::UpdateTexture(bgfx::TextureHandle textureHandle)
@@ -276,6 +296,23 @@ namespace Babylon::Plugins
             bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(processing->textureBGRA));
         }
     }
+
+
+    void Video::Impl::AddFrame(uint8_t* data, size_t /*dataLength*/)
+    {
+        if (!processing)
+        {
+            processing = new NativeVideoProcessing;
+            processing->BeginOutput(1024, 1024);
+        }
+        processing->PushFrame(data);
+    }
+
+    void Video::Impl::Stop()
+    {
+        processing->StopOutput();
+    }
+
 
     void Video::Impl::Close()
     {

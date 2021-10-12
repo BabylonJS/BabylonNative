@@ -13,6 +13,9 @@ namespace Babylon::Plugins
         ~Impl();
         void Open(const std::string& source);
         void UpdateTexture(bgfx::TextureHandle textureHandle);
+        void AddFrame(uint8_t* data, size_t dataLength);
+        void Stop();
+
         void Close();
     };
 }

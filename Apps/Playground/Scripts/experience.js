@@ -106,6 +106,7 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
+/*
     //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://playground.babylonjs.com/textures/babylonjs.mp4", scene);
     //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://download.samplelib.com/mp4/sample-5s.mp4", scene);
     var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "file:///Users/cedricguillemet/babylonjs.mp4", scene);
@@ -133,6 +134,68 @@ CreateBoxAsync().then(function () {
         
         
         
+*/
+
+
+    var cameratgt = new BABYLON.FreeCamera("cameratgt", new BABYLON.Vector3(0, 2, -4), scene);
+    cameratgt.setTarget(BABYLON.Vector3.Zero());
+    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+    light.intensity = 1.7;
+
+    var renderTarget = new BABYLON.RenderTargetTexture("depth", 1024, scene, true);
+    scene.customRenderTargets.push(renderTarget);
+    renderTarget.activeCamera = cameratgt;
+    var gltf;
+    BABYLON.SceneLoader.LoadAssetContainer("https://assets.babylonjs.com/meshes/", "shoe_variants.glb", scene, function (container) {
+        gltf = container.meshes[1];
+        gltf.scaling = new BABYLON.Vector3(10, 10, 10);
+        renderTarget.renderList.push(gltf);
+    });
+
+    
+    var planeOpts = {
+        height: 5.4762,
+        width: 7.3967,
+        sideOrientation: BABYLON.Mesh.DOUBLESIDE
+    };
+    var ANote0Video = BABYLON.MeshBuilder.CreatePlane("plane", planeOpts, scene);
+    var ANote0VideoMat = new BABYLON.StandardMaterial("m", scene);
+    ANote0VideoMat.diffuseTexture = renderTarget;
+    ANote0VideoMat.roughness = 1;
+    //ANote0VideoMat.emissiveColor = renderTarget;//new BABYLON.Color3.White();
+    //ANote0VideoMat.disableLighting = true;
+    ANote0Video.material = ANote0VideoMat;
+
+    // capture
+    capture = new NativeCapture(renderTarget._renderTarget._framebuffer);
+
+    var captureCount = 0;
+    var videoOutput = new NativeVideoStream();
+    videoOutput.dst = "file://myoutput.mp4";
+    capture.addCallback((data) => {
+        if (captureCount < 200) {
+            videoOutput.videoWidth = data.width;
+            videoOutput.videoHeight = data.height;
+            console.log(captureCount, data.width, data.height, data.data.length);
+            videoOutput.addFrame(data.data);
+        } else if (captureCount == 200) {
+            console.log("Stopping");
+            videoOutput.stop();
+        }
+        captureCount++;
+    });
+
+    scene.onBeforeRenderObservable.add(() => {
+        if (gltf) {
+            gltf.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.FromEulerAngles(0, 0.01, 0));
+        }
+    });
+
+
+
+
+    //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://playground.babylonjs.com/textures/babylonjs.mp4", scene);
+
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);

@@ -37,6 +37,8 @@ namespace Babylon::Plugins
         Napi::Value GetDst(const Napi::CallbackInfo& info);
         void SetDst(const Napi::CallbackInfo&, const Napi::Value& value);
         void UpdateVideoTexture(const Napi::CallbackInfo& info);
+        void AddFrame(const Napi::CallbackInfo& info);
+        void Stop(const Napi::CallbackInfo& info);
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
         uint32_t m_width{};

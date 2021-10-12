@@ -8,7 +8,8 @@
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
 #import <Babylon/Plugins/NativeCamera.h>
-#include <Babylon/Plugins/NativeVideo.h>
+#import <Babylon/Plugins/NativeCapture.h>
+#import <Babylon/Plugins/NativeVideo.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
 #import <Shared/InputManager.h>
@@ -102,6 +103,8 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         });
         Babylon::Plugins::Camera::Initialize(env);
 
+        Babylon::Plugins::NativeCapture::Initialize(env);
+        
         // video
         Babylon::Plugins::Video::Initialize(env);
         
