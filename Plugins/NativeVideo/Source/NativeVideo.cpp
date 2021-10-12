@@ -177,7 +177,7 @@ namespace Babylon::Plugins
         if (m_IsPlaying)
         {
             const auto texture = info[0].As<Napi::External<TextureData>>().Data();
-            const auto invertY = info[1].As<Napi::Boolean>();
+            //const auto invertY = info[1].As<Napi::Boolean>();
 
             m_nativeCameraImpl->UpdateTexture(texture->Handle);
         }

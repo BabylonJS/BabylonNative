@@ -106,8 +106,33 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-    var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://playground.babylonjs.com/textures/babylonjs.mp4", scene);
-
+    //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://playground.babylonjs.com/textures/babylonjs.mp4", scene);
+    //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://download.samplelib.com/mp4/sample-5s.mp4", scene);
+    var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "file:///Users/cedricguillemet/babylonjs.mp4", scene);
+    //https://download.samplelib.com/mp4/sample-5s.mp4
+    
+    
+    var planeOpts = {
+                height: 5.4762,
+                width: 7.3967,
+                sideOrientation: BABYLON.Mesh.DOUBLESIDE
+        };
+    
+    var ANote0Video = BABYLON.MeshBuilder.CreatePlane("plane", planeOpts, scene);
+        //var vidPos = (new BABYLON.Vector3(0,0,0.1))
+        //ANote0Video.position = vidPos;
+        var ANote0VideoMat = new BABYLON.StandardMaterial("m", scene);
+        //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex","textures/babylonjs.mp4", scene);
+        ANote0VideoMat.diffuseTexture = ANote0VideoVidTex;
+        ANote0VideoMat.roughness = 1;
+        ANote0VideoMat.emissiveColor = new BABYLON.Color3.White();
+        ANote0Video.material = ANote0VideoMat;
+        
+        
+        
+        
+        
+        
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);

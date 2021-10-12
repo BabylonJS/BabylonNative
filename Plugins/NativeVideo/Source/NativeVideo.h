@@ -32,10 +32,10 @@ namespace Babylon::Plugins
         Napi::Value IsNative(const Napi::CallbackInfo&);
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
-        Napi::Value NativeVideoStream::GetSrc(const Napi::CallbackInfo& info);
-        void NativeVideoStream::SetSrc(const Napi::CallbackInfo&, const Napi::Value& value);
-        Napi::Value NativeVideoStream::GetDst(const Napi::CallbackInfo& info);
-        void NativeVideoStream::SetDst(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetSrc(const Napi::CallbackInfo& info);
+        void SetSrc(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetDst(const Napi::CallbackInfo& info);
+        void SetDst(const Napi::CallbackInfo&, const Napi::Value& value);
         void UpdateVideoTexture(const Napi::CallbackInfo& info);
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
