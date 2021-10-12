@@ -17,7 +17,6 @@ namespace Babylon
 
         enum class ValidationType : uint32_t
         {
-            Uint8,
             Uint32,
             Int32,
             Float32,
@@ -52,8 +51,8 @@ namespace Babylon
 
             bool CanRead() const
             {
-                assert(m_position <= static_cast<size_t>(m_bytes.size()));
-                return m_position < static_cast<size_t>(m_bytes.size());
+                assert(m_position <= static_cast<size_t>(m_buffer.size()));
+                return m_position < static_cast<size_t>(m_buffer.size());
             }
 
             uint32_t ReadUint32()
@@ -96,8 +95,10 @@ namespace Babylon
             T ReadNativeData()
             {
                 Validate<ValidationType::NativeData>(*this);
-                const auto data = ReadUint32Array();
-                return *reinterpret_cast<T*>(data.data());
+                static_assert(sizeof(T) % 4 == 0);
+                auto span = gsl::make_span(reinterpret_cast<uint32_t*>(m_buffer.data() + m_position), sizeof(T) / 4);
+                m_position += sizeof(T) / 4;
+                return *reinterpret_cast<T*>(span.data());
             }
 
             template<typename T, class = typename std::enable_if<!std::is_pointer<T>::value>::type>
@@ -107,15 +108,15 @@ namespace Babylon
             }
 
         private:
-            gsl::span<uint8_t> m_bytes{};
+            gsl::span<uint32_t> m_buffer{};
             size_t m_position{0};
             const gsl::final_action<std::function<void()>> m_scopeGuard;
 
             friend class NativeDataStream;
 
             template<typename CallableT>
-            Reader(gsl::span<uint8_t> bytes, CallableT&& callable)
-                : m_bytes{bytes}
+            Reader(gsl::span<uint32_t> buffer, CallableT&& callable)
+                : m_buffer{buffer}
                 , m_scopeGuard{std::forward<CallableT>(callable)}
             {
             }
@@ -123,31 +124,23 @@ namespace Babylon
             template<typename T>
             T Read()
             {
-                T t{*reinterpret_cast<T*>(m_bytes.data() + m_position)};
-                m_position += sizeof(T);
+                static_assert(sizeof(T) % 4 == 0);
+                T t{*reinterpret_cast<T*>(m_buffer.data() + m_position)};
+                m_position += sizeof(T) / 4;
                 return t;
             }
 
             template<typename T>
             gsl::span<T> ReadArray()
             {
-                // Arrays are byte aligned
-                ByteAlign();
-                // The first 32 bit number is a size
-                uint32_t size = Read<uint32_t>();
+                static_assert(sizeof(T) % 4 == 0);
 
-                auto span = gsl::make_span<T>(reinterpret_cast<T*>(m_bytes.data() + m_position), size);
-                m_position += size * sizeof(T);
+                // The first 32 bit number is a length
+                uint32_t length = Read<uint32_t>();
+
+                auto span = gsl::make_span<T>(reinterpret_cast<T*>(m_buffer.data() + m_position), length * (sizeof(T) / 4));
+                m_position += length;
                 return span;
-            }
-
-            void ByteAlign()
-            {
-                size_t remainder = m_position % 4;
-                if (remainder > 0)
-                {
-                    m_position += (4 - remainder);
-                }
             }
         };
 
@@ -160,10 +153,9 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceMethod("writeBytes", &NativeDataStream::WriteBytes),
+                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer),
 
                         StaticValue("VALIDATION_ENABLED", Napi::Boolean::From(env, VALIDATION_ENABLED)),
-                        StaticValue("VALIDATION_UINT_8", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint8))),
                         StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32))),
                         StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32))),
                         StaticValue("VALIDATION_FLOAT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32))),
@@ -181,7 +173,7 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceMethod("writeBytes", &NativeDataStream::WriteBytes)
+                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer)
                     });
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
             }
@@ -193,15 +185,15 @@ namespace Babylon
         {
         }
 
-        void WriteBytes(const Napi::CallbackInfo& info)
+        void WriteBuffer(const Napi::CallbackInfo& info)
         {
             assert(!m_locked); // Cannot write bytes while the stream is locked for reading.
 
             const auto& buffer = info[0].As<Napi::ArrayBuffer>();
-            const auto& byteLength = info[1].ToNumber().Uint32Value();
+            const auto& length = info[1].ToNumber().Uint32Value();
 
-            auto newBytes = gsl::make_span(reinterpret_cast<uint8_t*>(buffer.Data()), static_cast<ptrdiff_t>(byteLength));
-            m_bytes.insert(m_bytes.end(), newBytes.begin(), newBytes.end());
+            auto span = gsl::make_span(reinterpret_cast<uint32_t*>(buffer.Data()), static_cast<ptrdiff_t>(length));
+            m_buffer.insert(m_buffer.end(), span.begin(), span.end());
         }
 
         Reader GetReader()
@@ -209,14 +201,14 @@ namespace Babylon
             assert(!m_locked);
             m_requestFlushCallback.Call({});
             m_locked = true;
-            return {m_bytes, [this]() {
-                m_bytes.clear();
+            return {m_buffer, [this]() {
+                m_buffer.clear();
                 m_locked = false; 
             }};
         }
 
     private:
-        std::vector<uint8_t> m_bytes{};
+        std::vector<uint32_t> m_buffer{};
         Napi::FunctionReference m_requestFlushCallback{};
         bool m_locked{false};
     };

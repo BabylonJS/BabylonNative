@@ -7,16 +7,13 @@
 
 namespace Napi
 {
-    template<typename NativePointerT>
+    template<typename PointerT>
     struct PointerTraits
     {
         using RepresentationT = uint32_t;
-        using ArraySizeT = typename std::conditional<sizeof(NativePointerT) % sizeof(RepresentationT) == 0, 
-            std::integral_constant<size_t, sizeof(NativePointerT) / sizeof(RepresentationT)>, 
-            std::integral_constant<size_t, sizeof(NativePointerT) / sizeof(RepresentationT) + 1>>::type;
-        using ByteSizeT = std::integral_constant<size_t, sizeof(RepresentationT) * ArraySizeT{}>;
-        static inline constexpr size_t ArraySize{ArraySizeT{}};
-        static inline constexpr size_t ByteSize{ByteSizeT{}};
+        static_assert(sizeof(PointerT) % sizeof(RepresentationT) == 0);
+        static inline constexpr size_t ByteSize{sizeof(PointerT)};
+        static inline constexpr size_t ArraySize{sizeof(PointerT) / sizeof(RepresentationT)};
     };
 
     template<typename PointerT>
@@ -50,7 +47,7 @@ namespace Napi
             using PointerT = T*;
             auto arrayBuffer = Napi::ArrayBuffer::New(env, PointerTraits<PointerT>::ByteSize);
             std::memcpy(arrayBuffer.Data(), &pointer, sizeof(PointerT));
-            return Napi::Uint32Array::New(env, PointerTraits<PointerT>::ArraySize, arrayBuffer, 0).template As<Napi::Value>();
+            return Napi::Uint32Array::New(env, PointerTraits<PointerT>::ArraySize, arrayBuffer, 0);
         }
 
         template<typename CallableT>
@@ -65,7 +62,7 @@ namespace Napi
             };
             auto arrayBuffer = Napi::ArrayBuffer::New(env, new DataT, PointerTraits<PointerT>::ByteSize, std::move(finalizer));
             std::memcpy(arrayBuffer.Data(), &pointer, sizeof(PointerT));
-            return Napi::Uint32Array::New(env, PointerTraits<PointerT>::ArraySize, arrayBuffer, 0).template As<Napi::Value>();
+            return Napi::Uint32Array::New(env, PointerTraits<PointerT>::ArraySize, arrayBuffer, 0);
         }
 
         template<typename EnvT, typename ValueT>
@@ -79,7 +76,7 @@ namespace Napi
             return m_pointer;
         }
 
-        T& operator *() const
+        T& operator*() const
         {
             return *m_pointer;
         }
