@@ -43,6 +43,8 @@ namespace Babylon::Plugins
                 InstanceAccessor("src", &NativeVideoStream::GetSrc, &NativeVideoStream::SetSrc),
                 InstanceAccessor("dst", &NativeVideoStream::GetDst, &NativeVideoStream::SetDst),
                 InstanceMethod("updateVideoTexture", &NativeVideoStream::UpdateVideoTexture),
+                InstanceMethod("addFrame", &NativeVideoStream::AddFrame),
+                InstanceMethod("stop", &NativeVideoStream::Stop),
             });
 
         env.Global().Set(JS_CLASS_NAME, func);
@@ -203,6 +205,18 @@ namespace Babylon::Plugins
         m_dst = value.As<Napi::String>();
     }
 
+    void NativeVideoStream::AddFrame(const Napi::CallbackInfo& info)
+    {
+        auto data = info[0].As<Napi::ArrayBuffer>();
+        auto bytesPtr = static_cast<uint8_t*>(data.Data());
+        auto bytesLength = data.ByteLength();
+        m_nativeCameraImpl->AddFrame(bytesPtr, bytesLength);
+    }
+
+    void NativeVideoStream::Stop(const Napi::CallbackInfo& /*info*/)
+    {
+        m_nativeCameraImpl->Stop();
+    }
 
     Video::Video(std::shared_ptr<Impl> impl)
         : m_impl{ std::move(impl) }

@@ -1539,6 +1539,8 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
+        m_graphicsImpl.AddTexture(texture->Handle, width, height, generateMips, 1, format);
+
         auto* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::External<FrameBuffer>::New(info.Env(), frameBuffer, [](Napi::Env, FrameBuffer* frameBuffer) { delete frameBuffer; });
     }
