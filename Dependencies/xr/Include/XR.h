@@ -95,10 +95,15 @@ namespace xr
         Vector3f Direction;
     };
 
+    struct Space
+    {
+        Pose Pose;
+    };
+
     using NativeAnchorPtr = void*;
     struct Anchor
     {
-        Pose Pose{};
+        Space Space{};
         NativeAnchorPtr NativeAnchor{};
         bool IsValid{true};
     };
@@ -188,11 +193,6 @@ namespace xr
             class Frame
             {
             public:
-                struct Space
-                {
-                    Pose Pose;
-                };
-
                 struct JointSpace : Space
                 {
                     float PoseRadius{};

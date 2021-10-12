@@ -314,7 +314,7 @@ namespace xr
         struct
         {
             std::vector<System::Session::Frame::InputSource> ActiveInputSources{};
-            std::optional<System::Session::Frame::Space> EyeTrackerSpace{};
+            std::optional<Space> EyeTrackerSpace{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
@@ -492,7 +492,7 @@ namespace xr
 
             if (xr::math::Pose::IsPoseValid(spaceLocation)) 
             {
-                anchor.Pose = {
+                anchor.Space.Pose = {
                     spaceLocation.pose.position.x, spaceLocation.pose.position.y, spaceLocation.pose.position.z,
                     spaceLocation.pose.orientation.x, spaceLocation.pose.orientation.y, spaceLocation.pose.orientation.z, spaceLocation.pose.orientation.w 
                 };
