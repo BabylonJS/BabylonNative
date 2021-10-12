@@ -22,6 +22,7 @@ namespace Babylon
     {
         Dispatcher g_inlineDispatcher{ [](const std::function<void()>& func) { func(); } };
         std::unique_ptr<Graphics> g_graphics{};
+        std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
     }
 
     const uint32_t LEFT_MOUSE_BUTTON_ID{ NativeInput::LEFT_MOUSE_BUTTON_ID };
@@ -58,7 +59,7 @@ namespace Babylon
             Polyfills::XMLHttpRequest::Initialize(m_env);
 
             // Initialize Canvas polyfill for text support
-            Polyfills::Canvas::Initialize(m_env);
+            g_nativeCanvas = std::make_unique<Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(m_env));
         }
 
         ~ReactNativeModule() override
@@ -117,6 +118,7 @@ namespace Babylon
         {
             if (g_graphics)
             {
+                g_nativeCanvas->FlushGraphicResources();
                 g_graphics->DisableRendering();
 
                 m_jsDispatcher([this]()
