@@ -6,10 +6,10 @@
 
 namespace Babylon::Plugins
 {
-    class Camera::Impl final : public std::enable_shared_from_this<Camera::Impl>
+    class Video::Impl final : public std::enable_shared_from_this<Video::Impl>
     {
     public:
-        Impl(Napi::Env env, bool overrideCameraTexture);
+        Impl(Napi::Env env);
         ~Impl();
         void Open(const std::string& source);
         void UpdateTexture(bgfx::TextureHandle textureHandle);

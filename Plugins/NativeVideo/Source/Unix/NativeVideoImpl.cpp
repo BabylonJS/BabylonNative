@@ -3,11 +3,11 @@
 
 namespace Babylon::Plugins
 {
-    Camera::Impl::Impl(Napi::Env /*env*/, bool /*overrideCameraTexture*/)
+    Video::Impl::Impl(Napi::Env /*env*/)
     {
     }
 
-    Camera::Impl::~Impl()
+    Video::Impl::~Impl()
     {
     }
 
