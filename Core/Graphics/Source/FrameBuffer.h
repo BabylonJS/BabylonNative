@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ResourceManagement.h"
 #include <bgfx/bgfx.h>
 #include <optional>
 
@@ -18,7 +17,7 @@ namespace Babylon
         bool Equals(const ViewPort& other) const;
     };
 
-    class FrameBuffer final : public NativeResource<FrameBuffer>
+    class FrameBuffer final
     {
     public:
         FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
@@ -44,6 +43,8 @@ namespace Babylon
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
 
+        void Dispose();
+
     private:
 
         GraphicsImpl& m_impl;
@@ -57,5 +58,7 @@ namespace Babylon
         bgfx::ViewId m_viewId{};
         ViewPort m_viewPort{};
         bool m_hasViewIdBeenUsed{false};
+
+        bool m_disposed{false};
     };
 }

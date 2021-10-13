@@ -1,10 +1,10 @@
 #include <napi/napi.h>
+#include <napi/napi_pointer.h>
 #include <NativeCamera.h>
 #include "NativeVideo.h"
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
-#include <ResourceManagement.h>
 #include <vector>
 #include <algorithm>
 
@@ -13,7 +13,7 @@ namespace Babylon
     namespace Plugins
     {
         // Move this struct to Graphics
-        struct TextureData final : public NativeResource<TextureData>
+        struct TextureData final
         {
             ~TextureData()
             {
@@ -34,7 +34,7 @@ namespace Babylon
         {
             static constexpr auto JS_NAVIGATOR_NAME = "navigator";
             static constexpr auto JS_CLASS_NAME = "_NativeCamera";
-            static constexpr auto JS_NATIVECAMERA_CONSTRUCTOR_NAME = "NativeCamera";
+            static constexpr auto JS_CONSTRUCTOR_NAME = "Camera";
 
         public:
 
@@ -50,7 +50,7 @@ namespace Babylon
                         NativeCamera::InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
                     });
 
-                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_NATIVECAMERA_CONSTRUCTOR_NAME, func);
+                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
 
                 // create or get global navigator object
                 Napi::Object global = env.Global();
@@ -116,7 +116,7 @@ namespace Babylon
 
             void UpdateVideoTexture(const Napi::CallbackInfo& info)
             {
-                const auto& texture = TextureData::Get(info[0].ToNumber().Uint32Value());
+                const auto& texture = *info[0].As<Napi::Pointer<TextureData>>().Get();
                 auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
 
                 videoObject->UpdateTexture(texture.Handle);

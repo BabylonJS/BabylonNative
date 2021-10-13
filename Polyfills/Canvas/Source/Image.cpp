@@ -10,7 +10,7 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvasImage";
+    static constexpr auto JS_CONSTRUCTOR_NAME = "Image";
 
     void NativeCanvasImage::CreateInstance(Napi::Env env)
     {

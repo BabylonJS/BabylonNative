@@ -1,16 +1,17 @@
 #pragma once
 
-#include <ResourceManagement.h>
 #include "IndexBuffer.h"
 #include "VertexBuffer.h"
 #include <map>
 
 namespace Babylon
 {
-    class VertexArray final : public NativeResource<VertexArray>
+    class VertexArray final
     {
     public:
         ~VertexArray();
+
+        void Dispose();
 
         void RecordIndexBuffer(IndexBuffer* indexBuffer);
         void RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized);
@@ -23,7 +24,7 @@ namespace Babylon
             IndexBuffer* Buffer{};
         };
 
-        IndexBufferRecord m_indexBufferRecord;
+        IndexBufferRecord m_indexBufferRecord{};
 
         struct VertexBufferRecord
         {
@@ -32,6 +33,8 @@ namespace Babylon
             bgfx::VertexLayoutHandle LayoutHandle{};
         };
 
-        std::map<bgfx::Attrib::Enum, VertexBufferRecord> m_vertexBufferRecords;
+        std::map<bgfx::Attrib::Enum, VertexBufferRecord> m_vertexBufferRecords{};
+
+        bool m_disposed{};
     };
 }

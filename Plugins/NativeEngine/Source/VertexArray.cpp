@@ -5,10 +5,26 @@ namespace Babylon
 {
     VertexArray::~VertexArray()
     {
+        Dispose();
+    }
+
+    void VertexArray::Dispose()
+    {
+        if (m_disposed)
+        {
+            return;
+        }
+
+        m_indexBufferRecord.Buffer = nullptr;
+
         for (auto& pair : m_vertexBufferRecords)
         {
             bgfx::destroy(pair.second.LayoutHandle);
         }
+
+        m_vertexBufferRecords.clear();
+
+        m_disposed = true;
     }
 
     void VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)

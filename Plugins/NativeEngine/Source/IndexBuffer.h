@@ -1,17 +1,18 @@
 #pragma once
 
-#include <ResourceManagement.h>
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <gsl/gsl>
 
 namespace Babylon
 {
-    class IndexBuffer final : public NativeResource<IndexBuffer>
+    class IndexBuffer final
     {
     public:
         IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
         ~IndexBuffer();
+
+        void Dispose();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes, uint32_t startIndex);
         void CreateHandle();
@@ -27,5 +28,7 @@ namespace Babylon
             bgfx::IndexBufferHandle m_handle{bgfx::kInvalidHandle};
             bgfx::DynamicIndexBufferHandle m_dynamicHandle;
         };
+
+        bool m_disposed{};
     };
 }

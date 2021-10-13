@@ -14,6 +14,7 @@ set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/IndexBuffer.cpp"
     "Source/IndexBuffer.h"
+    "Source/NativeDataStream.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
@@ -29,8 +30,7 @@ set(SOURCES
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
-    "Source/VertexBuffer.h"
-    )
+    "Source/VertexBuffer.h")
 
 add_library(NativeEngine ${SOURCES})
 
@@ -46,7 +46,8 @@ target_link_to_dependencies(NativeEngine
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE GraphicsInternal)
+    PRIVATE GraphicsInternal
+    PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
 
 if(APPLE)
@@ -76,4 +77,5 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE glslang
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
-    INTERFACE GraphicsInternal)
+    INTERFACE GraphicsInternal
+    INTERFACE napi_extensions)

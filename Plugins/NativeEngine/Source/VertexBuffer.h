@@ -1,17 +1,18 @@
 #pragma once
 
-#include <ResourceManagement.h>
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <gsl/gsl>
 
 namespace Babylon
 {
-    class VertexBuffer final : public NativeResource<VertexBuffer>
+    class VertexBuffer final
     {
     public:
         VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic);
         ~VertexBuffer();
+
+        void Dispose();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes);
         void CreateHandle();
@@ -27,5 +28,7 @@ namespace Babylon
             bgfx::VertexBufferHandle m_handle{bgfx::kInvalidHandle};
             bgfx::DynamicVertexBufferHandle m_dynamicHandle;
         };
+
+        bool m_disposed{};
     };
 }
