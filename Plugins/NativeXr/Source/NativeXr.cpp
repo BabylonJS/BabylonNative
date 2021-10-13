@@ -955,6 +955,22 @@ namespace Babylon
                 std::memcpy(m_matrix.Value().Data(), CreateTransformMatrix(space, isViewSpace).data(), m_matrix.Value().ByteLength());
             }
 
+            void Update(const xr::Space& space, Napi::ArrayBuffer& outVectorData, Napi::ArrayBuffer& outMatrixData, bool isViewSpace)
+            {
+                float posAndOrientationData[8];
+                posAndOrientationData[0] = space.Pose.Position.X;
+                posAndOrientationData[1] = space.Pose.Position.Y;
+                posAndOrientationData[2] = space.Pose.Position.Z;
+                posAndOrientationData[3] = 1.f;
+                posAndOrientationData[4] = space.Pose.Orientation.X;
+                posAndOrientationData[5] = space.Pose.Orientation.Y;
+                posAndOrientationData[6] = space.Pose.Orientation.Z;
+                posAndOrientationData[7] = space.Pose.Orientation.W;
+
+                std::memcpy(outVectorData.Data(), posAndOrientationData, sizeof(float) * 8);
+                std::memcpy(outMatrixData.Data(), CreateTransformMatrix(space, isViewSpace).data(), sizeof(float) * 16);
+            }
+
             void Update(const xr::Pose& pose)
             {
                 xr::Space space{{pose}};
@@ -2145,23 +2161,20 @@ namespace Babylon
                 return m_jsXRViewerPose.Value();
             }
 
+            Napi::Value GetPoseData(const Napi::CallbackInfo& info)
+            {
+                const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
+                auto vectorBuffer = info[2].As<Napi::ArrayBuffer>();
+                auto matrixBuffer = info[3].As<Napi::ArrayBuffer>();
+                m_transform.Update(space, vectorBuffer, matrixBuffer, false);
+                return Napi::Boolean::From(info.Env(), true);
+            }
+
             Napi::Value GetPose(const Napi::CallbackInfo& info)
             {
-                if (info[0].IsExternal())
-                {
-                    const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
-                    m_transform.Update(space, false);
-                    return m_jsPose.Value();
-                }
-                else
-                {
-                    auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-                    assert(xrSpace != nullptr);
-                    Napi::Object napiPose = XRPose::New(info);
-                    XRPose* pose = XRPose::Unwrap(napiPose);
-                    pose->Update(xrSpace->GetTransform());
-                    return std::move(napiPose);
-                }
+                const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
+                m_transform.Update(space, false);
+                return m_jsPose.Value();
             }
 
             Napi::Value GetJointPose(const Napi::CallbackInfo& info)
