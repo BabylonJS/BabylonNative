@@ -11,7 +11,8 @@ namespace Babylon::Plugins
     public:
         Impl(Napi::Env env);
         ~Impl();
-        void Open(const std::string& source);
+        void Open(const std::string& contentURL, size_t width, size_t height);
+        void Open(const std::string& contentURL);
         void UpdateTexture(bgfx::TextureHandle textureHandle);
         void AddFrame(uint8_t* data, size_t dataLength);
         void Stop();
