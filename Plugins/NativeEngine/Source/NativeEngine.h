@@ -27,8 +27,6 @@
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
 
-// #include <Foundation/Foundation.h>
-
 namespace Babylon
 {
     struct TextureData final
