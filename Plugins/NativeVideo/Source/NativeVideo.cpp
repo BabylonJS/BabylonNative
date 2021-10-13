@@ -44,7 +44,7 @@ namespace Babylon::Plugins
                 InstanceAccessor("dst", &NativeVideoStream::GetDst, &NativeVideoStream::SetDst),
                 InstanceMethod("updateVideoTexture", &NativeVideoStream::UpdateVideoTexture),
                 InstanceMethod("addFrame", &NativeVideoStream::AddFrame),
-                InstanceMethod("stop", &NativeVideoStream::Stop),
+                InstanceMethod("close", &NativeVideoStream::Close),
             });
 
         env.Global().Set(JS_CLASS_NAME, func);
@@ -168,6 +168,14 @@ namespace Babylon::Plugins
         return deferred.Promise();
     }
 
+    void NativeVideoStream::Open(const Napi::CallbackInfo& /*info*/)
+    {
+        if (m_dst.length() && m_width && m_height)
+        {
+            m_nativeCameraImpl->Open(m_dst, m_width, m_height);
+        }
+    }
+
     void NativeVideoStream::Pause(const Napi::CallbackInfo& /*info*/)
     {
         m_IsPlaying = false;
@@ -213,9 +221,9 @@ namespace Babylon::Plugins
         m_nativeCameraImpl->AddFrame(bytesPtr, bytesLength);
     }
 
-    void NativeVideoStream::Stop(const Napi::CallbackInfo& /*info*/)
+    void NativeVideoStream::Close(const Napi::CallbackInfo& /*info*/)
     {
-        m_nativeCameraImpl->Stop();
+        m_nativeCameraImpl->Close();
     }
 
     Video::Video(std::shared_ptr<Impl> impl)

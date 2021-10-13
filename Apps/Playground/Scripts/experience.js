@@ -15,7 +15,7 @@ var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
-var cameraTexture = false;
+var cameraTexture = true;
 
 function CreateBoxAsync() {
     BABYLON.Mesh.CreateBox("box1", 0.2);
@@ -71,21 +71,22 @@ document = {
     }
 }
 */
-
+/*
 BABYLON.VideoTexture.prototype._getVideo = function (src) {
     var video = new NativeVideoStream();
     video.src = src;
     console.log("get video", src);
     return video;
 }
-
+*/
+/*
 engine.updateVideoTexture = function (texture, video, invertY) {
     if (texture && texture._hardwareTexture) {
         var webGLTexture = texture._hardwareTexture.underlyingResource;
         video.updateVideoTexture(webGLTexture, invertY);
     }
 }
-
+*/
 CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
@@ -136,7 +137,7 @@ CreateBoxAsync().then(function () {
         
 */
 
-
+/*
     var cameratgt = new BABYLON.FreeCamera("cameratgt", new BABYLON.Vector3(0, 2, -4), scene);
     cameratgt.setTarget(BABYLON.Vector3.Zero());
     var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
@@ -195,7 +196,7 @@ CreateBoxAsync().then(function () {
 
 
     //var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://playground.babylonjs.com/textures/babylonjs.mp4", scene);
-
+*/
     scene.createDefaultCamera(true);
     scene.activeCamera.alpha += Math.PI;
     CreateInputHandling(scene);

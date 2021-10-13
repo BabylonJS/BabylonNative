@@ -5,121 +5,96 @@
 #import "AVFoundation/AVFoundation.h"
 #include <string>
 
-//NSURL* url;
-AVAssetReader* reader;
-
-size_t m_outputWidth;
-size_t m_outputHeight;
-
-
-struct NativeVideoProcessing
+namespace Babylon::Plugins
 {
-    ~NativeVideoProcessing()
+    struct Video::Impl::ReaderProcessor
     {
-        if (textureCache)
+        ReaderProcessor(const std::string& contentURL);
+        ~ReaderProcessor()
         {
-            CVMetalTextureCacheFlush(textureCache, 0);
-            CFRelease(textureCache);
+            if (m_textureCache)
+            {
+                CVMetalTextureCacheFlush(m_textureCache, 0);
+                CFRelease(m_textureCache);
+            }
         }
+
+        void UpdateTexture(CMSampleBufferRef sampleBuffer);
+
+        AVAssetReader* m_reader;
+        CVMetalTextureCacheRef m_textureCache{};
+        id <MTLTexture> m_textureBGRA{};
+    };
+
+    struct Video::Impl::WriterProcessor
+    {
+        WriterProcessor(const std::string& contentURL, size_t width, size_t height);
+        ~WriterProcessor();
+
+        void PushFrame(uint8_t* frame);
+        void StopOutput();
+        CVPixelBufferRef NewPixelBufferFromCGImage(CGImageRef image);
+        size_t m_outputWidth;
+        size_t m_outputHeight;
+        AVAssetWriter* m_videoWriter;
+        AVAssetWriterInput* m_writerInput;
+        CMTime m_lastSampleTime;
+    };
+
+    CVPixelBufferRef Video::Impl::WriterProcessor::NewPixelBufferFromCGImage(CGImageRef image)
+    {
+        NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSNumber numberWithBool:YES], kCVPixelBufferCGImageCompatibilityKey,
+            [NSNumber numberWithBool:YES], kCVPixelBufferCGBitmapContextCompatibilityKey,
+            nil];
+        CVPixelBufferRef pxbuffer = NULL;
+        CVPixelBufferCreate(kCFAllocatorDefault, m_outputWidth, m_outputHeight, kCVPixelFormatType_32ARGB, (CFDictionaryRef) options, &pxbuffer);
+
+        CVPixelBufferLockBaseAddress(pxbuffer, 0);
+        void *pxdata = CVPixelBufferGetBaseAddress(pxbuffer);
+
+        CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();
+        CGContextRef context = CGBitmapContextCreate(pxdata, m_outputWidth, m_outputHeight, 8, 4 * m_outputWidth, rgbColorSpace,kCGImageAlphaNoneSkipFirst);
+        CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
+        CGColorSpaceRelease(rgbColorSpace);
+        CGContextRelease(context);
+
+        CVPixelBufferUnlockBaseAddress(pxbuffer, 0);
+
+        return pxbuffer;
     }
-    void startProcessing(std::string contentURL);
-    void updateTexture(CMSampleBufferRef sampleBuffer);
-    
-    void BeginOutput(size_t width, size_t height);
-    size_t m_outputWidth;
-    size_t m_outputHeight;
-    void PushFrame(uint8_t* frame);
-    void StopOutput();
 
-    AVAssetWriter* videoWriter;
-    AVAssetWriterInput* writerInput;
-    CMTime lastSampleTime;
-    
-    CVMetalTextureCacheRef textureCache{};
-    id <MTLTexture> textureBGRA{};
+    //std::string contentURL = "file:///Users/cedricguillemet/output.mp4";
+    Video::Impl::WriterProcessor::WriterProcessor(const std::string& contentURL, size_t width, size_t height)
+    {
+        m_outputWidth = width;
+        m_outputHeight = height;
 
-    // output
-    CVPixelBufferRef newPixelBufferFromCGImage(CGImageRef image);
-};
+        NSString* urlString = [[NSString stringWithUTF8String:contentURL.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
+        NSURL* url{[NSURL URLWithString:urlString]};
 
-NativeVideoProcessing* processing;
+        NSError *error = nil;
+        m_videoWriter = [[AVAssetWriter alloc] initWithURL:url fileType:AVFileTypeMPEG4 error:&error];
 
-CVPixelBufferRef NativeVideoProcessing::newPixelBufferFromCGImage(CGImageRef image)
-{
-    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
-        [NSNumber numberWithBool:YES], kCVPixelBufferCGImageCompatibilityKey,
-        [NSNumber numberWithBool:YES], kCVPixelBufferCGBitmapContextCompatibilityKey,
-        nil];
-    CVPixelBufferRef pxbuffer = NULL;
-    /*CVReturn status = */CVPixelBufferCreate(kCFAllocatorDefault, m_outputWidth/*frameSize.width*/,
-                                              m_outputHeight/*frameSize.height*/, kCVPixelFormatType_32ARGB, (CFDictionaryRef) options,
-        &pxbuffer);
-    //NSParameterAssert(status == kCVReturnSuccess && pxbuffer != NULL);
+        NSDictionary *videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
+                                       AVVideoCodecTypeH264, AVVideoCodecKey,
+                                       [NSNumber numberWithLongLong:width], AVVideoWidthKey,
+                                       [NSNumber numberWithLongLong:height], AVVideoHeightKey,
+                                       nil];
+        m_writerInput = [[AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:videoSettings] retain]; //retain should be removed if ARC
 
-    CVPixelBufferLockBaseAddress(pxbuffer, 0);
-    void *pxdata = CVPixelBufferGetBaseAddress(pxbuffer);
-    //NSParameterAssert(pxdata != NULL);
+        [m_videoWriter canAddInput:m_writerInput];
+        [m_videoWriter addInput:m_writerInput];
 
-    CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(pxdata, m_outputWidth/*frameSize.width*/,
-                                                 m_outputHeight/*frameSize.height*/, 8, 4*m_outputWidth/*frameSize.width*/, rgbColorSpace,
-        kCGImageAlphaNoneSkipFirst);
-    //NSParameterAssert(context);
-    //CGContextConcatCTM(context, frameTransform);
-    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image),
-        CGImageGetHeight(image)), image);
-    CGColorSpaceRelease(rgbColorSpace);
-    CGContextRelease(context);
-
-    CVPixelBufferUnlockBaseAddress(pxbuffer, 0);
-
-    return pxbuffer;
-}
-
-void NativeVideoProcessing::BeginOutput(size_t width, size_t height)
-{
-    m_outputWidth = width;
-    m_outputHeight = height;
-    std::string contentURL = "file:///Users/cedricguillemet/output.mp4";
-    NSString* urlString = [[NSString stringWithUTF8String:contentURL.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-                NSURL* url{[NSURL URLWithString:urlString]};
-    
-    NSError *error = nil;
-    /*AVAssetWriter * */videoWriter = [[AVAssetWriter alloc] initWithURL:url fileType:AVFileTypeMPEG4 error:&error];
-
-    NSDictionary *videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
-                                   AVVideoCodecTypeH264, AVVideoCodecKey,
-        [NSNumber numberWithLongLong:width], AVVideoWidthKey,
-        [NSNumber numberWithLongLong:height], AVVideoHeightKey,
-        nil];
-    /*AVAssetWriterInput* */writerInput = [[AVAssetWriterInput
-        assetWriterInputWithMediaType:AVMediaTypeVideo
-        outputSettings:videoSettings] retain]; //retain should be removed if ARC
-
-    [videoWriter canAddInput:writerInput];
-    [videoWriter addInput:writerInput];
-    
-    
-    // start writing
-    [videoWriter startWriting];
-    [videoWriter startSessionAtSourceTime:kCMTimeZero];
-    
-    lastSampleTime = kCMTimeZero;
-}
-
-void NativeVideoProcessing::PushFrame(uint8_t* frame)
-{
+        // start writing
+        [m_videoWriter startWriting];
+        [m_videoWriter startSessionAtSourceTime:kCMTimeZero];
         
-        //const int width = 64;//CGImageGetWidth(frame);
-        //const int height = 64;//CGImageGetHeight(frame);
+        m_lastSampleTime = kCMTimeZero;
+    }
 
-            // Create a dummy pixel buffer to try the encoding
-            // on something simple.
-            //CVPixelBufferRef pixelBuffer = NULL;
-            /*CVReturn status = */ //CVPixelBufferCreate(kCFAllocatorDefault, width, height,
-                //kCVPixelFormatType_32BGRA, NULL, &pixelBuffer);
-            //NSParameterAssert(status == kCVReturnSuccess && pixelBuffer != NULL);
-
+    void Video::Impl::WriterProcessor::PushFrame(uint8_t* frame)
+    {
         UInt8* pixelData = new UInt8[m_outputWidth * m_outputHeight * 3];
         UInt8* pixelDataBase =pixelData;
         for (size_t index = 0;index<m_outputWidth * m_outputHeight * 4; index += 4)
@@ -128,12 +103,6 @@ void NativeVideoProcessing::PushFrame(uint8_t* frame)
             *pixelDataBase++ = frame[index + 1];
             *pixelDataBase++ = frame[index + 2];
         }
-    
-
-        // fill the raw pixel buffer with arbitrary gray color for test
-
-        //for(size_t ui = 0; ui < 64 * 64 * 3; ui++)
-        //  pixelData[ui] = 210;
 
         CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
 
@@ -143,18 +112,11 @@ void NativeVideoProcessing::PushFrame(uint8_t* frame)
 
         CGImageRef rgbImageRef = CGImageCreate(m_outputWidth, m_outputHeight, 8, 24, m_outputWidth * 3, colorspace, kCGBitmapByteOrderDefault, provider, NULL, true, kCGRenderingIntentDefault);
 
-        
-        
-        
-        
-        
-        
-        
-        CVPixelBufferRef pixelBuffer = newPixelBufferFromCGImage(rgbImageRef);
+        CVPixelBufferRef pixelBuffer = NewPixelBufferFromCGImage(rgbImageRef);
         
         // Sample timing info.
         CMTime frameTime = CMTimeMake(1, 30);
-        CMTime currentTime = CMTimeAdd(lastSampleTime, frameTime);
+        CMTime currentTime = CMTimeAdd(m_lastSampleTime, frameTime);
         CMSampleTimingInfo timing = {frameTime, currentTime, kCMTimeInvalid};
 
         OSStatus result = 0;
@@ -162,116 +124,99 @@ void NativeVideoProcessing::PushFrame(uint8_t* frame)
         // Sample format.
         CMVideoFormatDescriptionRef videoInfo = NULL;
         result = CMVideoFormatDescriptionCreateForImageBuffer(NULL, pixelBuffer, &videoInfo);
-        //NSParameterAssert(result == 0 && videoInfo != NULL);
 
         // Create sample buffer.
         CMSampleBufferRef sampleBuffer = NULL;
         result = CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, true, NULL, NULL, videoInfo, &timing, &sampleBuffer);
+
+        [m_writerInput appendSampleBuffer:sampleBuffer];
         
-        //CVPixelBufferRef sampleBuffer = newPixelBufferFromCGImage(image);
-        [writerInput appendSampleBuffer:sampleBuffer];
-        
-        lastSampleTime = currentTime;
-        
-        
-        
-        
-        
-        
+        m_lastSampleTime = currentTime;
         CFRelease(rgbData);
 
         CGDataProviderRelease(provider);
 
         CGColorSpaceRelease(colorspace);
 
-        // use the created CGImage
-
         CGImageRelease(rgbImageRef);
-    delete [] pixelData;
+        delete [] pixelData;
     }
-    
-void NativeVideoProcessing::StopOutput()
-{
-    
-    // finish everything
-    [writerInput markAsFinished];
-    [videoWriter finishWritingWithCompletionHandler:^{
-        NSLog(@"Finished writing");
-    }];
-}
 
-
-void NativeVideoProcessing::updateTexture(CMSampleBufferRef sampleBuffer)
-{
-    CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-
-    id<MTLTexture> textureBGRA = nil;
-
-    size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
-    size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
-    MTLPixelFormat pixelFormat = MTLPixelFormatBGRA8Unorm;
-    
-    CVMetalTextureRef texture = NULL;
-    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, this->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture);
-    if(status == kCVReturnSuccess)
+    Video::Impl::WriterProcessor::~WriterProcessor()
     {
-        textureBGRA = CVMetalTextureGetTexture(texture);
-        CFRelease(texture);
+        [m_writerInput markAsFinished];
+        [m_videoWriter finishWritingWithCompletionHandler:^{
+            NSLog(@"Finished writing");
+        }];
     }
 
-    this->textureBGRA = textureBGRA;
-    if(textureBGRA != nil)
+    void Video::Impl::ReaderProcessor::UpdateTexture(CMSampleBufferRef sampleBuffer)
     {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            //implData->textureBGRA = textureBGRA;
-        });
-    }
-}
-void NativeVideoProcessing::startProcessing(std::string contentURL)
-{
-    auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
-    dispatch_sync(dispatch_get_main_queue(), ^{
+        CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+
+        id<MTLTexture> textureBGRA = nil;
+
+        size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
+        size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
+        MTLPixelFormat pixelFormat = MTLPixelFormatBGRA8Unorm;
         
-        CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &this->textureCache);
+        CVMetalTextureRef texture = NULL;
+        CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, this->m_textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture);
+        if(status == kCVReturnSuccess)
+        {
+            textureBGRA = CVMetalTextureGetTexture(texture);
+            CFRelease(texture);
+        }
+
+        this->m_textureBGRA = textureBGRA;
+        if(textureBGRA != nil)
+        {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                //implData->textureBGRA = textureBGRA;
+            });
+        }
+    }
+
+    Video::Impl::ReaderProcessor::ReaderProcessor(const std::string& contentURL)
+    {
+        auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            
+        CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &this->m_textureCache);
 
         NSString* urlString = [[NSString stringWithUTF8String:contentURL.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-                    NSURL* url{[NSURL URLWithString:urlString]};
-        
-        
+        NSURL* url{[NSURL URLWithString:urlString]};
         NSDictionary *inputOptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:AVURLAssetPreferPreciseDurationAndTimingKey];
             AVURLAsset *inputAsset = [[AVURLAsset alloc] initWithURL:url options:inputOptions];
-            
-            //GPUImageMovie __block *blockSelf = self;
+
+        //GPUImageMovie __block *blockSelf = self;
         NSError *error = nil;
         auto reader = [[AVAssetReader alloc] initWithAsset:inputAsset error:&error];
             NSArray* tracks = [inputAsset tracksWithMediaType:AVMediaTypeVideo];
         if ([tracks count] == 0)
-            {
-                NSLog(@"No track");
-            }
+        {
+            NSLog(@"No track");
+        }
         AVAssetTrack *videoTrack = [tracks objectAtIndex:0];
-        
+
         NSMutableDictionary *outputSettings = [NSMutableDictionary dictionary];
         [outputSettings setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
-        
+
         auto output = [[AVAssetReaderTrackOutput alloc] initWithTrack:videoTrack outputSettings:outputSettings];
         [reader addOutput:output];
-        
+
         if ([reader startReading])
         {
-        
             CMSampleBufferRef sampleBufferRef = [output copyNextSampleBuffer];
-            if (sampleBufferRef) {
+            if (sampleBufferRef)
+            {
                 NSLog(@"Has buffer");
-                updateTexture(sampleBufferRef);
+                UpdateTexture(sampleBufferRef);
             }
         }
+        });// sync
     }
-                  );// sync
-}
 
-namespace Babylon::Plugins
-{
     Video::Impl::Impl(Napi::Env /*env*/)
     {
     }
@@ -280,43 +225,37 @@ namespace Babylon::Plugins
     {
     }
 
-    void Video::Impl::Open(const std::string& source)
+    void Video::Impl::Open(const std::string& contentURL, size_t width, size_t height)
     {
-        //[[[NativeVideoProcessing alloc]init] startProcessing:source];
-        processing = new NativeVideoProcessing;
-        processing->startProcessing(source);
-        //throw std::runtime_error{ "Not implemented for this platform." };
+        m_writer = std::make_unique<WriterProcessor>(contentURL, width, height);
     }
-    
+
+    void Video::Impl::Open(const std::string& contentURL)
+    {
+        m_reader = std::make_unique<ReaderProcessor>(contentURL);
+    }
+
     void Video::Impl::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
         //throw std::runtime_error{ "Not implemented for this platform." };
-        if (processing->textureBGRA)
+        if (m_reader)
         {
-            bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(processing->textureBGRA));
+            bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_reader->m_textureBGRA));
         }
     }
-
 
     void Video::Impl::AddFrame(uint8_t* data, size_t /*dataLength*/)
     {
-        if (!processing)
+        if (m_writer)
         {
-            processing = new NativeVideoProcessing;
-            processing->BeginOutput(1024, 1024);
+            m_writer->PushFrame(data);
         }
-        processing->PushFrame(data);
     }
-
-    void Video::Impl::Stop()
-    {
-        processing->StopOutput();
-    }
-
 
     void Video::Impl::Close()
     {
-        throw std::runtime_error{ "Not implemented for this platform." };
+        m_writer.reset();
+        m_reader.reset();
     }
 }
  
