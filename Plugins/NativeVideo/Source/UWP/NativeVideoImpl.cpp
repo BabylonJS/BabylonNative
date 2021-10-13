@@ -1,4 +1,4 @@
-#include "NativeCameraImpl.h"
+#include "NativeVideoImpl.h"
 #include <napi/napi.h>
 
 namespace Babylon::Plugins
@@ -11,24 +11,27 @@ namespace Babylon::Plugins
     {
     }
 
-    void Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
+    void Video::Impl::Open(const std::string& /*source*/)
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+        //throw std::runtime_error{ "Not implemented for this platform." };
+    }
+    
+    void Video::Impl::UpdateTexture(bgfx::TextureHandle /*textureHandle*/)
+    {
+        //throw std::runtime_error{ "Not implemented for this platform." };
     }
 
-    void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
+    void Video::Impl::AddFrame(uint8_t* /*data*/, size_t /*dataLength*/)
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
 
-    void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/)
+    void Video::Impl::Stop()
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
 
-    void Camera::Impl::Close()
+    void Video::Impl::Close()
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+        throw std::runtime_error{ "Not implemented for this platform." };
     }
 }
  

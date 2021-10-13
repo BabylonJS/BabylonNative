@@ -89,8 +89,8 @@ void NativeVideoProcessing::BeginOutput(size_t width, size_t height)
 
     NSDictionary *videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
                                    AVVideoCodecTypeH264, AVVideoCodecKey,
-        [NSNumber numberWithInt:width], AVVideoWidthKey,
-        [NSNumber numberWithInt:height], AVVideoHeightKey,
+        [NSNumber numberWithLongLong:width], AVVideoWidthKey,
+        [NSNumber numberWithLongLong:height], AVVideoHeightKey,
         nil];
     /*AVAssetWriterInput* */writerInput = [[AVAssetWriterInput
         assetWriterInputWithMediaType:AVMediaTypeVideo

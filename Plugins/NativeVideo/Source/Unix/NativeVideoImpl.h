@@ -11,9 +11,10 @@ namespace Babylon::Plugins
     public:
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
-        void Open(uint32_t width, uint32_t height, bool frontCamera);
-        void SetTextureOverride(void* texturePtr);
-        void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        void Open(const std::string& source);
+        void UpdateTexture(bgfx::TextureHandle textureHandle);
+        void AddFrame(uint8_t* data, size_t dataLength);
+        void Stop();
         void Close();
     };
 }
