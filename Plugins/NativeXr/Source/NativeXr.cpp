@@ -1656,12 +1656,7 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {
-                        InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
-                        InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
-                        InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)
-                    });
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1673,58 +1668,46 @@ namespace Babylon
 
             XRPlane(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRPlane>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
+                , m_planeSpace{std::make_unique<xr::Space>()}
+                , m_jsPlaneSpace{Napi::External<xr::Space>::New(info.Env(), m_planeSpace.get())}
             {
             }
 
-            void SetLastUpdatedTime(uint32_t timestamp)
+            void UpdateNativePlane(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane, const Napi::Value& parentSceneObject)
+            {
+                m_jsThis.Set("parentSceneObject", parentSceneObject);
+                m_jsThis.Set("polygon", GetPolygon(env, plane));
+                m_planeSpace->Pose = plane.Center;
+            }
+
+            void SetLastUpdatedTime(const Napi::Env& env, uint32_t timestamp)
             {
                 m_lastUpdatedTimestamp = timestamp;
-            }
-
-            void SetNativePlaneId(xr::System::Session::Frame::Plane::Identifier planeID)
-            {
-                m_nativePlaneID = planeID;
-            }
-
-            void SetXRFrame(XRFrame* frame)
-            {
-                m_frame = frame;
+                m_jsThis.Set("lastChangedTime", Napi::Value::From(env, m_lastUpdatedTimestamp));
             }
 
         private:
-            xr::System::Session::Frame::Plane& GetPlane();
-
-            Napi::Value GetPlaneSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-                rigidTransform->Update(GetPlane().Center);
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return std::move(napiSpace);
-            }
-
-            Napi::Value GetPolygon(const Napi::CallbackInfo& info)
+            Napi::Value GetPolygon(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane)
             {
                 // Translate the polygon from a native array to a JS array.
-                auto& nativePlane = GetPlane();
-                auto polygonArray = Napi::Array::New(info.Env(), nativePlane.PolygonSize);
-                for (size_t i = 0; i < nativePlane.PolygonSize; i++)
+                auto polygonArray = Napi::Array::New(env, plane.PolygonSize);
+                for (size_t i = 0; i < plane.PolygonSize; i++)
                 {
-                    auto polygonPoint = Napi::Object::New(info.Env());
-                    if (nativePlane.PolygonFormat == xr::PolygonFormat::XZ)
+                    auto polygonPoint = Napi::Object::New(env);
+                    if (plane.PolygonFormat == xr::PolygonFormat::XZ)
                     {
                         size_t polygonIndex = 2 * i;
-                        polygonPoint.Set("x", nativePlane.Polygon[polygonIndex]);
+                        polygonPoint.Set("x", plane.Polygon[polygonIndex]);
                         polygonPoint.Set("y", 0);
-                        polygonPoint.Set("z", nativePlane.Polygon[polygonIndex + 1]);
+                        polygonPoint.Set("z", plane.Polygon[polygonIndex + 1]);
                     }
                     else
                     {
                         size_t polygonIndex = 3 * i;
-                        polygonPoint.Set("x", nativePlane.Polygon[polygonIndex]);
-                        polygonPoint.Set("y", nativePlane.Polygon[polygonIndex + 1]);
-                        polygonPoint.Set("z", nativePlane.Polygon[polygonIndex + 2]);
+                        polygonPoint.Set("x", plane.Polygon[polygonIndex]);
+                        polygonPoint.Set("y", plane.Polygon[polygonIndex + 1]);
+                        polygonPoint.Set("z", plane.Polygon[polygonIndex + 2]);
                     }
 
                     polygonArray.Set((int)i, polygonPoint);
@@ -1733,21 +1716,12 @@ namespace Babylon
                 return std::move(polygonArray);
             }
 
-            Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
-            }
-
-            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
+            Napi::ObjectReference m_jsThis{};
+            std::unique_ptr<xr::Space> m_planeSpace;
+            Napi::External<xr::Space> m_jsPlaneSpace;
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
-
-            // The underlying native plane.
-            xr::System::Session::Frame::Plane::Identifier m_nativePlaneID{};
-
-            // Pointer to the XRFrame object.
-            XRFrame* m_frame{};
         };
 
         class XRMesh : public Napi::ObjectWrap<XRMesh>
@@ -1762,14 +1736,7 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {
-                        InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
-                        InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
-                        InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
-                        InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
-                        InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
-                    });
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1781,7 +1748,13 @@ namespace Babylon
 
             XRMesh(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRMesh>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
+                , m_meshSpace{std::make_unique<xr::Space>()}
+                , m_jsMeshSpace{Napi::External<xr::Space>::New(info.Env(), m_meshSpace.get())}
             {
+                // OpenXR positions vertices within reference space, so "meshSpace" is identity with respect to WebXR's
+                // interpretation and our current implementation.
+                m_jsThis.Set("meshSpace", m_jsMeshSpace);
             }
 
             ~XRMesh()
@@ -1791,40 +1764,24 @@ namespace Babylon
                 m_jsNormals.Reset();
             }
 
-            void SetLastUpdatedTime(uint32_t timestamp)
+            void UpdateNativeMesh(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh, const Napi::Value& parentSceneObject)
+            {
+                m_jsThis.Set("parentSceneObject", parentSceneObject);
+                UpdatePositions(env, mesh);
+                UpdateIndices(env, mesh);
+                UpdateNormals(env, mesh);
+            }
+
+            void SetLastUpdatedTime(const Napi::Env& env, uint32_t timestamp)
             {
                 m_lastUpdatedTimestamp = timestamp;
-            }
-
-            void SetNativeMeshId(xr::System::Session::Frame::Mesh::Identifier meshID)
-            {
-                m_nativeMeshID = meshID;
-            }
-
-            void SetXRFrame(XRFrame* frame)
-            {
-                m_frame = frame;
+                m_jsThis.Set("lastChangedTime", Napi::Value::From(env, m_lastUpdatedTimestamp));
             }
 
         private:
-            xr::System::Session::Frame::Mesh& GetMesh();
-
-            Napi::Value GetMeshSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-
-                // TODO: update to not use identity pose as needed
-                rigidTransform->Update(xr::Pose{});
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return std::move(napiSpace);
-            }
-
-            Napi::Value GetPositions(const Napi::CallbackInfo& info)
+            void UpdatePositions(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh)
             {
                 // NOTE: WebXR reports positions as right-handed coordinates
-                const auto& mesh = GetMesh();
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 bool updateValues = false;
                 if (!m_jsPositions ||
@@ -1832,7 +1789,8 @@ namespace Babylon
                 {
                     m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
                     m_jsPositions.Reset();
-                    m_jsPositions = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsPositions));
+                    m_jsPositions = Napi::Persistent(Napi::Float32Array::New(env, m_numJsPositions));
+                    m_jsThis.Set("positions", m_jsPositions.Value());
                     updateValues = true;
                 }
                 else if (m_lastPositionsUpdatedTimestamp != m_lastUpdatedTimestamp)
@@ -1850,21 +1808,19 @@ namespace Babylon
                         m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Positions.at(n).Z;
                     }
                 }
-
-                return m_jsPositions.Value();
             }
 
-            Napi::Value GetIndices(const Napi::CallbackInfo& info)
+            void UpdateIndices(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh)
             {
                 // NOTE: WebXR reports indices in a counterclockwise winding order
                 assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
-                const auto& mesh = GetMesh();
                 if (!m_jsIndices ||
                     m_numJsIndices != mesh.Indices.size())
                 {
                     m_numJsIndices = mesh.Indices.size();
                     m_jsIndices.Reset();
-                    m_jsIndices = Napi::Persistent(Napi::Uint32Array::New(info.Env(), m_numJsIndices));
+                    m_jsIndices = Napi::Persistent(Napi::Uint32Array::New(env, m_numJsIndices));
+                    m_jsThis.Set("indices", m_jsIndices.Value());
                     memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
                     m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
@@ -1873,17 +1829,14 @@ namespace Babylon
                     memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
                     m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
-
-                return m_jsIndices.Value();
             }
 
-            Napi::Value GetNormals(const Napi::CallbackInfo& info)
+            void UpdateNormals(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh)
             {
                 // NOTE: WebXR reports normals as right-handed vectors
-                const auto& mesh = GetMesh();
                 if (!mesh.HasNormals)
                 {
-                    return info.Env().Undefined();
+                    return;
                 }
 
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
@@ -1892,7 +1845,8 @@ namespace Babylon
                 {
                     m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
                     m_jsNormals.Reset();
-                    m_jsNormals = Napi::Persistent(Napi::Float32Array::New(info.Env(), m_numJsNormals));
+                    m_jsNormals = Napi::Persistent(Napi::Float32Array::New(env, m_numJsNormals));
+                    m_jsThis.Set("normals", m_jsNormals.Value());
                     for (size_t n = 0; n < mesh.Normals.size(); n++)
                     {
                         m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
@@ -1911,16 +1865,7 @@ namespace Babylon
                     }
                     m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
                 }
-
-                return m_jsNormals.Value();
             }
-
-            Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
-            }
-
-            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
@@ -1935,11 +1880,9 @@ namespace Babylon
             size_t m_numJsNormals{0};
             Napi::Reference<Napi::Float32Array> m_jsNormals{};
 
-            // The underlying native mesh.
-            xr::System::Session::Frame::Mesh::Identifier m_nativeMeshID{};
-
-            // Pointer to the XRFrame object.
-            XRFrame* m_frame{};
+            Napi::ObjectReference m_jsThis{};
+            std::unique_ptr<xr::Space> m_meshSpace;
+            Napi::External<xr::Space> m_jsMeshSpace;
         };
 
         class XRHand : public Napi::ObjectWrap<XRHand>
@@ -2000,7 +1943,8 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                        InstanceMethod("getPose", &XRFrame::GetPose),
+                        InstanceMethod("getPoseData", &XRFrame::GetPoseData),
+                        // InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
@@ -2105,11 +2049,11 @@ namespace Babylon
                 return m_frame->GetMeshByID(meshID);
             }
 
-            Napi::Value GetJSSceneObjectFromID(const Napi::CallbackInfo& info, const xr::System::Session::Frame::SceneObject::Identifier objectID)
+            Napi::Value GetJSSceneObjectFromID(const Napi::Env& env, const xr::System::Session::Frame::SceneObject::Identifier objectID)
             {
                 if (objectID == xr::System::Session::Frame::SceneObject::INVALID_ID)
                 {
-                    return info.Env().Undefined();
+                    return env.Undefined();
                 }
 
                 assert(m_sceneObjects.count(objectID) > 0);
@@ -2362,8 +2306,9 @@ namespace Babylon
                     {
                         auto napiPlane = Napi::Persistent(XRPlane::New(env));
                         xrPlane = XRPlane::Unwrap(napiPlane.Value());
-                        xrPlane->SetNativePlaneId(planeID);
-                        xrPlane->SetXRFrame(this);
+                        const auto& nativePlane = GetPlaneFromID(planeID);
+                        const auto& parentSceneObject = GetJSSceneObjectFromID(env, nativePlane.ParentSceneObjectID);
+                        xrPlane->UpdateNativePlane(env, nativePlane, parentSceneObject);
                         m_trackedPlanes.insert({planeID, std::move(napiPlane)});
                     }
                     else
@@ -2371,7 +2316,7 @@ namespace Babylon
                         xrPlane = XRPlane::Unwrap(trackedPlaneIterator->second.Value());
                     }
 
-                    xrPlane->SetLastUpdatedTime(timestamp);
+                    xrPlane->SetLastUpdatedTime(env, timestamp);
                 }
 
                 // Next go over removed planes and remove them from our mapping.
@@ -2402,8 +2347,9 @@ namespace Babylon
                     {
                         auto napiMesh = Napi::Persistent(XRMesh::New(env));
                         xrMesh = XRMesh::Unwrap(napiMesh.Value());
-                        xrMesh->SetNativeMeshId(meshID);
-                        xrMesh->SetXRFrame(this);
+                        const auto& nativeMesh = GetMeshFromID(meshID);
+                        const auto& parentSceneObject = GetJSSceneObjectFromID(env, nativeMesh.ParentSceneObjectID);
+                        xrMesh->UpdateNativeMesh(env, nativeMesh, parentSceneObject);
                         m_trackedMeshes.insert({meshID, std::move(napiMesh)});
                     }
                     else
@@ -2411,7 +2357,7 @@ namespace Babylon
                         xrMesh = XRMesh::Unwrap(trackedMeshIterator->second.Value());
                     }
 
-                    xrMesh->SetLastUpdatedTime(timestamp);
+                    xrMesh->SetLastUpdatedTime(env, timestamp);
                 }
 
                 for (auto meshID : m_frame->RemovedMeshes)
@@ -2434,28 +2380,6 @@ namespace Babylon
         Napi::Value XRHitTestResult::CreateAnchor(const Napi::CallbackInfo& info)
         {
             return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
-        }
-
-        xr::System::Session::Frame::Plane& XRPlane::GetPlane()
-        {
-            return m_frame->GetPlaneFromID(m_nativePlaneID);
-        }
-
-        Napi::Value XRPlane::GetParentSceneObject(const Napi::CallbackInfo& info)
-        {
-            const auto& plane = GetPlane();
-            return m_frame->GetJSSceneObjectFromID(info, plane.ParentSceneObjectID);
-        }
-
-        xr::System::Session::Frame::Mesh& XRMesh::GetMesh()
-        {
-            return m_frame->GetMeshFromID(m_nativeMeshID);
-        }
-
-        Napi::Value XRMesh::GetParentSceneObject(const Napi::CallbackInfo& info)
-        {
-            const auto& mesh = GetMesh();
-            return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
