@@ -2,7 +2,7 @@
 
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
-#include <NativeCamera.h>
+#include <NativeVideo.h>
 
 namespace Babylon::Plugins
 {
