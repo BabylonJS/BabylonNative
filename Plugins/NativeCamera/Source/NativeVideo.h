@@ -23,7 +23,7 @@ namespace Babylon::Plugins
         void AddEventListener(const Napi::CallbackInfo& info);
         void RemoveEventListener(const Napi::CallbackInfo& info);
         void RaiseEvent(const char* eventType);
-        void Play(const Napi::CallbackInfo& info);
+        Napi::Value Play(const Napi::CallbackInfo& info);
         void Pause(const Napi::CallbackInfo& info);
         void SetVideoWidth(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value GetVideoWidth(const Napi::CallbackInfo& info);

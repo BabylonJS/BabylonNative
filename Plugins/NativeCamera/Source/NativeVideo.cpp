@@ -140,7 +140,7 @@ namespace Babylon::Plugins
         }
     }
 
-    void NativeVideo::Play(const Napi::CallbackInfo& /*info*/)
+    Napi::Value NativeVideo::Play(const Napi::CallbackInfo& info)
     {
         if (!m_IsPlaying)
         {
@@ -148,6 +148,9 @@ namespace Babylon::Plugins
             NativeCameraImpl->Open(m_width, m_height, m_frontCamera);
             RaiseEvent("playing");
         }
+
+        auto deferred = Napi::Promise::Deferred::New(info.Env());
+        return deferred.Promise();
     }
 
     void NativeVideo::Pause(const Napi::CallbackInfo& /*info*/)
