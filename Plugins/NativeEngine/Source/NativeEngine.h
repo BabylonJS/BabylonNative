@@ -22,7 +22,6 @@
 #include <gsl/gsl>
 
 #include <assert.h>
-#include <sstream>
 
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
