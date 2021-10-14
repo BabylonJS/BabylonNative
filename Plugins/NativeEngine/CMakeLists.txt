@@ -27,6 +27,8 @@ set(SOURCES
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h"
     "Source/ShaderCompiler${GRAPHICS_API}.cpp"
+    "Source/Texture.cpp"
+    "Source/Texture.h"
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"

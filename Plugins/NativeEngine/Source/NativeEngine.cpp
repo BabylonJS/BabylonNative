@@ -1,5 +1,7 @@
 #include "NativeEngine.h"
 #include "ShaderCompiler.h"
+#include "Texture.h"
+
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>

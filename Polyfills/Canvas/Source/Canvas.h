@@ -4,12 +4,8 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
-#include <optional>
-
-namespace Babylon
-{
-    struct TextureData;
-}
+// HACK: for TextureData
+#include <Texture.h>
 
 namespace Babylon::Polyfills
 {

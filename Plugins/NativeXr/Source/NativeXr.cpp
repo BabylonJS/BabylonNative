@@ -1,12 +1,15 @@
-#include "NativeXr.h"
+#include <Babylon/Plugins/NativeXr.h>
 
-#include "NativeEngine.h"
 #include <Babylon/JsRuntimeScheduler.h>
 
 #include <XR.h>
 
 #include <bx/bx.h>
 #include <bx/math.h>
+#include <bgfx/bgfx.h>
+
+#include <FrameBuffer.h>
+#include <GraphicsImpl.h>
 
 #include <algorithm>
 #include <set>

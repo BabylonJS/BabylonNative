@@ -3,10 +3,7 @@
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
-#include <functional>
-#include <sstream>
-#include <assert.h>
-#include <NativeEngine.h>
+#include <cassert>
 
 namespace Babylon::Polyfills::Internal
 {

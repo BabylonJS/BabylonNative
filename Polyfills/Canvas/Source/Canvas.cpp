@@ -1,13 +1,9 @@
-#include <bgfx/bgfx.h>
-#include <map>
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
-#include <functional>
-#include <sstream>
-#include <assert.h>
-#include <NativeEngine.h>
+#include <bgfx/bgfx.h>
 #include <napi/napi_pointer.h>
+#include <cassert>
 
 namespace
 {

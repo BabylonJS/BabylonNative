@@ -23,15 +23,15 @@ target_include_directories(Canvas PUBLIC "Include"
     PRIVATE "${BGFX_DIR}/examples/common"
     PRIVATE "${BGFX_DIR}/examples/common/nanovg")
 
-target_link_to_dependencies(Canvas PUBLIC napi
-    PUBLIC JsRuntime
-    INTERFACE Graphics
+target_link_to_dependencies(Canvas
+    PUBLIC napi
     PRIVATE bgfx
     PRIVATE bimg
     PRIVATE bx
+    PRIVATE JsRuntime
     PRIVATE GraphicsInternal
-    PRIVATE NativeEngine
-    PRIVATE NativeEngineInternal)
+    PRIVATE NativeEngineInternal
+    PRIVATE napi_extensions)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

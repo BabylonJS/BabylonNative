@@ -21,35 +21,11 @@
 
 #include <gsl/gsl>
 
-#include <assert.h>
-
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
 
 namespace Babylon
 {
-    struct TextureData final
-    {
-        ~TextureData()
-        {
-            if (OwnsHandle && bgfx::isValid(Handle))
-            {
-                bgfx::destroy(Handle);
-                OwnsHandle = false;
-            }
-        }
-
-        bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
-        bool OwnsHandle{true};
-        uint32_t Width{0};
-        uint32_t Height{0};
-        uint32_t Flags{0};
-
-        // CreationFlags contains flags used at texture creation
-        // regarding BLIT support and READBACK
-        uint64_t CreationFlags{0};
-    };
-
     struct UniformInfo final
     {
         UniformInfo(uint8_t stage, bgfx::UniformHandle handle) :
