@@ -5,15 +5,31 @@ namespace Babylon
 {
     VertexArray::~VertexArray()
     {
+        Dispose();
+    }
+
+    void VertexArray::Dispose()
+    {
+        if (m_disposed)
+        {
+            return;
+        }
+
+        m_indexBufferRecord.Buffer = nullptr;
+
         for (auto& pair : m_vertexBufferRecords)
         {
             bgfx::destroy(pair.second.LayoutHandle);
         }
+
+        m_vertexBufferRecords.clear();
+
+        m_disposed = true;
     }
 
     void VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
     {
-        indexBuffer->Create();
+        indexBuffer->CreateHandle();
 
         assert(m_indexBufferRecord.Buffer == nullptr);
         m_indexBufferRecord.Buffer = indexBuffer;
@@ -54,7 +70,7 @@ namespace Babylon
 
         layout.end();
 
-        vertexBuffer->Create(layout);
+        vertexBuffer->CreateHandle(layout);
 
         m_vertexBufferRecords[attrib] = {vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)};
     }

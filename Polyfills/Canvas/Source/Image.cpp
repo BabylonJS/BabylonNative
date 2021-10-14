@@ -3,14 +3,11 @@
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
-#include <functional>
-#include <sstream>
-#include <assert.h>
-#include <NativeEngine.h>
+#include <cassert>
 
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvasImage";
+    static constexpr auto JS_CONSTRUCTOR_NAME = "Image";
 
     void NativeCanvasImage::CreateInstance(Napi::Env env)
     {

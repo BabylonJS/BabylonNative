@@ -1,12 +1,9 @@
-#include <bgfx/bgfx.h>
-#include <map>
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
-#include <functional>
-#include <sstream>
-#include <assert.h>
-#include <NativeEngine.h>
+#include <bgfx/bgfx.h>
+#include <napi/napi_pointer.h>
+#include <cassert>
 
 namespace
 {
@@ -15,7 +12,7 @@ namespace
 
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "NativeCanvas";
+    static constexpr auto JS_CONSTRUCTOR_NAME = "Canvas";
 
     void NativeCanvas::CreateInstance(Napi::Env env)
     {
@@ -26,9 +23,9 @@ namespace Babylon::Polyfills::Internal
             JS_CONSTRUCTOR_NAME,
             {
                 StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
-                InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
+                InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
             });
@@ -114,6 +111,12 @@ namespace Babylon::Polyfills::Internal
             assert(handle.idx != bgfx::kInvalidHandle);
             m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
+
+            if (m_textureData)
+            {
+                m_textureData.reset();
+            }
+
             return true;
         }
         return false;
@@ -121,18 +124,26 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
+        if (!m_textureData)
+        {
+            m_textureData = std::make_unique<TextureData>();
+        }
+
+        auto& textureData{*m_textureData};
+
         assert(m_frameBuffer->Handle().idx != bgfx::kInvalidHandle);
-        const auto textureData = new TextureData();
-        textureData->Handle = bgfx::getTexture(m_frameBuffer->Handle());
-        textureData->OwnsHandle = false;
-        textureData->Width = m_width;
-        textureData->Height = m_height;
-        return Napi::External<TextureData>::New(info.Env(), textureData, [](Napi::Env, TextureData* data) { delete data; });
+        textureData.Handle = bgfx::getTexture(m_frameBuffer->Handle());
+        textureData.OwnsHandle = false;
+        textureData.Width = m_width;
+        textureData.Height = m_height;
+
+        return Napi::Pointer<TextureData>::Create(info.Env(), m_textureData.get());
     }
 
     void NativeCanvas::Dispose()
     {
         m_frameBuffer.reset();
+        m_textureData.reset();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
