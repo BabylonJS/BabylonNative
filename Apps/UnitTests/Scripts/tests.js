@@ -100,6 +100,24 @@ describe("RequestFile", function () {
         expect(RequestFile).to.throw();
     })
 })
+describe("NativeEngine", function() {
+    this.timeout(0);
+    it("should create an engine and scene", function() {
+        var engine = new BABYLON.NativeEngine();
+        var scene = new BABYLON.Scene(engine);
+        expect(scene.meshes.length, "meshes.length").to.equal(0);
+    })
+})
+describe("NativeCapture", function() {
+    this.timeout(0);
+    it("should capture a framebuffer", function() {
+        var engine = new BABYLON.NativeEngine();
+        var scene = new BABYLON.Scene(engine);
+        var renderTarget = new BABYLON.RenderTargetTexture("depth", 1024, scene, true);
+        capture = new NativeCapture(renderTarget._renderTarget._framebuffer);
+        expect(capture).to.exist;
+    })
+})
 
 mocha.run(failures => {
     // Test program will wait for code to be set before exiting

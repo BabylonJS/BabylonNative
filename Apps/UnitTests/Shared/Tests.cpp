@@ -7,6 +7,8 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeOptimizations.h>
+#include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/ScriptLoader.h>
 #include <chrono>
 #include <thread>
@@ -46,6 +48,8 @@ int run()
         });
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
+        Babylon::Plugins::NativeOptimizations::Initialize(env);
+        Babylon::Plugins::NativeCapture::Initialize(env);
         
         env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode, JS_FUNCTION_NAME));
     });
@@ -54,6 +58,7 @@ int run()
     loader.Eval("window.clearTimeout = () => {};", ""); // TODO: implement clear timeout, required for Mocha timeouts to work correctly
     loader.Eval("location = {href: ''};", "");          // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/chai.js");
     loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
