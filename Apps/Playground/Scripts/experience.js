@@ -131,7 +131,7 @@ var createTextPlane = function (text, scene) {
     console.log("O1");
     //Create dynamic texture
     var textureResolution = 512;
-    var textureGround = new BABYLON.DynamicTexture("dynamic texture", { width: 512, height: 256 }, scene);
+    var textureGround = new BABYLON.DynamicTexture("dynamic texture", { width: 1024, height: 512 }, scene);
     var textureContext = textureGround.getContext();
     textureGround.hasAlpha = true;
     console.log("O2");
@@ -140,8 +140,8 @@ var createTextPlane = function (text, scene) {
     plane.material = materialGround;
     console.log("O3");
     //Add text to dynamic texture
-    var font = "bold 44px monospace";
-    textureGround.drawText(text, 20, 135, font, "brown", "transparent", true, true);
+    var font = "bold 200px monospace";
+    textureGround.drawText(text, 10, 360, font, "brown", "transparent", true, true);
     //plane.visibility = 0.99;
     materialGround.alpha = 1;
     matInfo = materialGround;
@@ -160,7 +160,7 @@ var createTextPlane2 = function (scene) {
 
     //Create dynamic texture
     var textureResolution = 512;
-    var textureGround = new BABYLON.DynamicTexture("dynamic texture", { width: 512, height: 256 }, scene);
+    var textureGround = new BABYLON.DynamicTexture("dynamic texture", { width: 1024, height: 512 }, scene);
     var textureContext = textureGround.getContext();
     textureGround.hasAlpha = true;
     var materialGround = new BABYLON.StandardMaterial("Mat", scene);
@@ -168,11 +168,11 @@ var createTextPlane2 = function (scene) {
     plane.material = materialGround;
 
     //Add text to dynamic texture
-    var font = "bold 44px monospace";
-    textureGround.drawText("Rendered", 20, 50, font, "white", "black", true, true);
-    textureGround.drawText("Composited", 20, 100, font, "white", "transparent", true, true);
-    textureGround.drawText("Encoded", 20, 150, font, "white", "transparent", true, true);
-    textureGround.drawText("With BabylonNative", 20, 200, font, "white", "transparent", true, true);
+    var font = "bold 88px monospace";
+    textureGround.drawText("Rendered", 120, 100, font, "black", "white", true, true);
+    textureGround.drawText("Composited", 120, 200, font, "black", "transparent", true, true);
+    textureGround.drawText("Encoded", 120, 300, font, "black", "transparent", true, true);
+    textureGround.drawText("With BabylonNative", 120, 400, font, "black", "transparent", true, true);
     materialGround.alpha = 0.;
     matInfo = materialGround;
     return plane;
@@ -180,8 +180,8 @@ var createTextPlane2 = function (scene) {
 
 var createTextPlane3 = function (scene) {
     var planeOpts = {
-        height: 7.2,
-        width: 12.8,
+        height: 9.8,
+        width: 9.8,
         sideOrientation: BABYLON.Mesh.DOUBLESIDE
     };
     var plane = BABYLON.MeshBuilder.CreatePlane("plane", planeOpts, scene);
