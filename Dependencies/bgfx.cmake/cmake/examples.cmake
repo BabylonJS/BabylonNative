@@ -274,6 +274,7 @@ if( BGFX_BUILD_EXAMPLES )
 		43-denoise
 		44-sss
 		45-bokeh
+		46-fsr
 	)
 
 	foreach( EXAMPLE ${BGFX_EXAMPLES} )
