@@ -1944,12 +1944,11 @@ namespace Babylon
                     {
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
                         InstanceMethod("getPoseData", &XRFrame::GetPoseData),
-                        // InstanceMethod("getPose", &XRFrame::GetPose),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
-                        InstanceMethod("fillPoses", &XRFrame::FillPoses),
-                        InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
+                        InstanceMethod("fillJointPoseData", &XRFrame::FillJointPoseData),
+                        InstanceMethod("fillJointPoseRadiiData", &XRFrame::FillJointPoseRadiiData),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
                     });
 
@@ -1958,7 +1957,9 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                auto newNativeXRFrame = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("NativeXRFrame").As<Napi::Function>().New({}).As<Napi::Object>();
+                newNativeXRFrame.Set("_nativeImpl", info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({}));
+                return newNativeXRFrame;
             }
 
             XRFrame(const Napi::CallbackInfo& info)
@@ -2114,13 +2115,6 @@ namespace Babylon
                 return Napi::Boolean::From(info.Env(), true);
             }
 
-            Napi::Value GetPose(const Napi::CallbackInfo& info)
-            {
-                const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
-                m_transform.Update(space, false);
-                return m_jsPose.Value();
-            }
-
             Napi::Value GetJointPose(const Napi::CallbackInfo& info)
             {
                 assert(info[0].IsExternal());
@@ -2139,39 +2133,33 @@ namespace Babylon
                 }
             }
 
-            Napi::Value FillPoses(const Napi::CallbackInfo& info)
+            Napi::Value FillJointPoseData(const Napi::CallbackInfo& info)
             {
                 const auto spaces = info[0].As<Napi::Array>();
-                auto transforms = info[2].As<Napi::Float32Array>();
-                if (spaces.Length() != (transforms.ElementLength() >> 4))
-                {
-                    throw std::runtime_error{"Number of spaces doesn't match number of transforms * 16."};
-                }
+                const auto spaceCount = info[2].As<Napi::Number>().Uint32Value();
+                auto transforms = info[3].As<Napi::ArrayBuffer>();
+                auto transformsData = reinterpret_cast<std::array<float, 16>*>(transforms.Data());
 
-                for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
+                for (uint32_t spaceIdx = 0; spaceIdx < spaceCount; spaceIdx++)
                 {
                     const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
-                    const auto transformMatrix = CreateTransformMatrix(jointSpace, false);
-                    std::memcpy(transforms.Data() + (spaceIdx << 4), transformMatrix.data(), sizeof(float) << 4);
+                    transformsData[spaceIdx] = CreateTransformMatrix(jointSpace, false);
                 }
 
                 return Napi::Value::From(info.Env(), true);
             }
 
-            Napi::Value FillJointRadii(const Napi::CallbackInfo& info) 
+            Napi::Value FillJointPoseRadiiData(const Napi::CallbackInfo& info) 
             {
                 const auto spaces = info[0].As<Napi::Array>();
-                auto radii = info[1].As<Napi::Float32Array>();
-                if (spaces.Length() != radii.ElementLength()) 
-                {
-                    throw std::runtime_error{"Number of spaces doesn't match number of radii."};
-                }
+                const auto spaceCount = info[1].As<Napi::Number>().Uint32Value();
+                auto radii = info[2].As<Napi::ArrayBuffer>();
+                auto radiiData = reinterpret_cast<float*>(radii.Data());
 
-                for (uint32_t spaceIdx = 0; spaceIdx < spaces.Length(); spaceIdx++)
+                for (uint32_t spaceIdx = 0; spaceIdx < spaceCount; spaceIdx++)
                 {
                     const auto& jointSpace = *spaces[spaceIdx].As<Napi::External<xr::System::Session::Frame::JointSpace>>().Data();
-                    const auto jointRadius = jointSpace.PoseRadius;
-                    radii.Data()[spaceIdx] = jointRadius;
+                    radiiData[spaceIdx] = jointSpace.PoseRadius;
                 }
 
                 return Napi::Value::From(info.Env(), true);
@@ -2449,7 +2437,7 @@ namespace Babylon
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
-                , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
+                , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Get("_nativeImpl").As<Napi::Object>())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
                 // Currently only immersive VR and immersive AR are supported.
