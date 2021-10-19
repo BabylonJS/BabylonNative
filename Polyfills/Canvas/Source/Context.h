@@ -95,5 +95,4 @@ namespace Babylon::Polyfills::Internal
 
         friend class Canvas;
     };
-
 }

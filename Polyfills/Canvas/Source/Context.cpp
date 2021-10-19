@@ -1,7 +1,7 @@
 #include <bx/math.h>
 #include <map>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <regex>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

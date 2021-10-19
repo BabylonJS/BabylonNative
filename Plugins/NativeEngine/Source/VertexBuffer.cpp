@@ -34,20 +34,31 @@ namespace Babylon
 
     VertexBuffer::~VertexBuffer()
     {
-        if (m_dynamic)
+        Dispose();
+    }
+
+    void VertexBuffer::Dispose()
+    {
+        if (m_disposed)
         {
-            if (bgfx::isValid(m_dynamicHandle))
+            return;
+        }
+
+        if (bgfx::isValid(m_handle))
+        {
+            if (m_dynamic)
             {
                 bgfx::destroy(m_dynamicHandle);
             }
-        }
-        else
-        {
-            if (bgfx::isValid(m_handle))
+            else
             {
                 bgfx::destroy(m_handle);
             }
         }
+
+        m_bytes.clear();
+
+        m_disposed = true;
     }
 
     void VertexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes)
@@ -69,7 +80,7 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::Create(const bgfx::VertexLayout& layout)
+    void VertexBuffer::CreateHandle(const bgfx::VertexLayout& layout)
     {
         if (bgfx::isValid(m_handle))
         {
