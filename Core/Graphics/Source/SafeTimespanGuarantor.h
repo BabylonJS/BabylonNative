@@ -43,16 +43,19 @@ namespace Babylon
 
         using SafetyGuarantee = gsl::final_action<std::function<void()>>;
         SafetyGuarantee GetSafetyGuarantee();
+        void Lock();
+        void Unlock();
 
     private:
         enum class State
         {
             Open,
             Closing,
-            Closed
+            Closed,
+            Locked
         };
 
-        State m_state{State::Open};
+        State m_state{State::Closed};
         uint32_t m_count{};
         std::mutex m_mutex{};
         std::condition_variable m_condition_variable{};

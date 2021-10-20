@@ -158,7 +158,10 @@ namespace Babylon
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
-        // TODO: Ensure all update loops are closed.
+        for (auto& [key, value] : m_updates)
+        {
+            value.Lock();
+        }
 
         assert(m_renderThreadAffinity.check());
 
@@ -172,6 +175,11 @@ namespace Babylon
         Frame();
 
         m_afterRenderScheduler.tick(*m_cancellationSource);
+
+        for (auto& [key, value] : m_updates)
+        {
+            value.Unlock();
+        }
 
         m_rendering = false;
     }

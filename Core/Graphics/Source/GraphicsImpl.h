@@ -89,6 +89,16 @@ namespace Babylon
                 m_safeTimespanGuarantor.NonblockingEndSafeTimespan();
             }
 
+            void Lock()
+            {
+                m_safeTimespanGuarantor.Lock();
+            }
+
+            void Unlock()
+            {
+                m_safeTimespanGuarantor.Unlock();
+            }
+
         private:
             SafeTimespanGuarantor m_safeTimespanGuarantor{};
             GraphicsImpl& m_graphicsImpl;
