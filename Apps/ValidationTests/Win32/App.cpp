@@ -31,6 +31,7 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -49,11 +50,13 @@ namespace
     {
         if (graphics)
         {
+            update->End();
             graphics->FinishRenderingCurrentFrame();
         }
 
         runtime.reset();
         nativeCanvas.reset();
+        update.reset();
         graphics.reset();
     }
 
@@ -65,8 +68,10 @@ namespace
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+        update = std::make_unique<Babylon::Graphics::Update>(std::move(graphics->GetUpdate("update")));
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
+        update->Start();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
@@ -131,8 +136,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         if (graphics)
         {
+            update->End();
             graphics->FinishRenderingCurrentFrame();
             graphics->StartRenderingCurrentFrame();
+            update->Start();
         }
 
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT)

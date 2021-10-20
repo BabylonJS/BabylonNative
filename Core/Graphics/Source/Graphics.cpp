@@ -57,6 +57,22 @@ namespace Babylon
         m_impl->DisableRendering();
     }
 
+    Graphics::Update Graphics::GetUpdate(const char* updateName)
+    {
+        auto& update = m_impl->GetUpdate(updateName);
+        return {
+            [&update]
+            { 
+                update.Start();
+            },
+            [&update](std::function<void()> callback)
+            {
+                update.EndScheduler()(std::move(callback));
+                update.Stop();
+            }
+        };
+    }
+
     void Graphics::StartRenderingCurrentFrame()
     {
         m_impl->StartRenderingCurrentFrame();

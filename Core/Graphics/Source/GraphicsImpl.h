@@ -58,9 +58,14 @@ namespace Babylon
         class Update
         {
         public:
-            continuation_scheduler<>& Scheduler()
+            continuation_scheduler<>& BeginScheduler()
             {
                 return m_safeTimespanGuarantor.BeginScheduler();
+            }
+
+            continuation_scheduler<>& EndScheduler()
+            {
+                return m_safeTimespanGuarantor.EndScheduler();
             }
 
             UpdateToken GetUpdateToken()
@@ -74,9 +79,6 @@ namespace Babylon
             {
             }
 
-        private:
-            friend class GraphicsImpl;
-
             void Start()
             {
                 m_safeTimespanGuarantor.BeginSafeTimespan();
@@ -84,10 +86,10 @@ namespace Babylon
 
             void Stop()
             {
-                auto task = m_safeTimespanGuarantor.EndSafeTimespanAsync();
-                blocking_await(task);
+                m_safeTimespanGuarantor.NonblockingEndSafeTimespan();
             }
 
+        private:
             SafeTimespanGuarantor m_safeTimespanGuarantor{};
             GraphicsImpl& m_graphicsImpl;
         };

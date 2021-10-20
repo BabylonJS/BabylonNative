@@ -85,7 +85,7 @@ namespace Babylon
 
     continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return GetUpdate().Scheduler();
+        return GetUpdate().BeginScheduler();
     }
 
     continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
@@ -154,20 +154,18 @@ namespace Babylon
 
         // Update bgfx state if necessary.
         UpdateBgfxState();
-
-        GetUpdate().Start();
     }
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
+        // TODO: Ensure all update loops are closed.
+
         assert(m_renderThreadAffinity.check());
 
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
-
-        GetUpdate().Stop();
 
         Frame();
 
