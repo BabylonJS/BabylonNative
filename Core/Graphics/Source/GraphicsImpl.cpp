@@ -23,7 +23,6 @@ namespace Babylon
 
     GraphicsImpl::GraphicsImpl()
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
-        , m_update{*this}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -86,7 +85,7 @@ namespace Babylon
 
     continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return m_update.Scheduler();
+        return GetUpdate().Scheduler();
     }
 
     continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
@@ -156,7 +155,7 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
-        m_update.Start();
+        GetUpdate().Start();
     }
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
@@ -168,7 +167,7 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        m_update.Stop();
+        GetUpdate().Stop();
 
         Frame();
 
@@ -177,9 +176,17 @@ namespace Babylon
         m_rendering = false;
     }
 
-    GraphicsImpl::Update& GraphicsImpl::GetUpdate(const char*)
+    GraphicsImpl::Update& GraphicsImpl::GetUpdate(const char* updateName)
     {
-        return m_update;
+        std::scoped_lock lock{m_updateMutex};
+        std::string updateNameStr{updateName};
+        auto found = m_updates.find(updateNameStr);
+        if (found == m_updates.end())
+        {
+            m_updates.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(*this));
+            found = m_updates.find(updateNameStr);
+        }
+        return found->second;
     }
 
     void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)

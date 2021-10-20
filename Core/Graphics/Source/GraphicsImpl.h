@@ -68,13 +68,14 @@ namespace Babylon
                 return {m_graphicsImpl, m_safeTimespanGuarantor};
             }
 
-        private:
-            friend class GraphicsImpl;
-
+            // TODO: This should be hidden.
             Update(GraphicsImpl& graphicsImpl)
                 : m_graphicsImpl{graphicsImpl}
             {
             }
+
+        private:
+            friend class GraphicsImpl;
 
             void Start()
             {
@@ -194,6 +195,7 @@ namespace Babylon
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
 
-        Update m_update;
+        std::map<std::string, Update> m_updates{};
+        std::mutex m_updateMutex{};
     };
 }
