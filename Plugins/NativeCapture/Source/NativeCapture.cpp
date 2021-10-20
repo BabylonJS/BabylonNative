@@ -171,10 +171,6 @@ namespace Babylon::Plugins::Internal
             }
             else if (info.Length() > 0 && !info[0].IsNull() && !info[0].IsUndefined())
             {
-                if (!info[0].IsNumber())
-                {
-                    throw Napi::Error::New(info.Env(), "Argument passed to NativeCapture constructor must be a numeric handle for a FrameBuffer.");
-                }
                 auto& frameBuffer = *info[0].As<Napi::Pointer<FrameBuffer>>().Get();
                 frameBufferHandle = frameBuffer.Handle();
             }
