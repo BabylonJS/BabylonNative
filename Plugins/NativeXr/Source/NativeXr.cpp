@@ -2138,7 +2138,8 @@ namespace Babylon
                 const auto spaces = info[0].As<Napi::Array>();
                 const auto spaceCount = info[2].As<Napi::Number>().Uint32Value();
                 auto transforms = info[3].As<Napi::ArrayBuffer>();
-                auto transformsData = reinterpret_cast<std::array<float, 16>*>(transforms.Data());
+                auto byteOffset = info[4].As<Napi::Number>().Uint32Value();
+                auto transformsData = reinterpret_cast<std::array<float, 16>*>(reinterpret_cast<char*>(transforms.Data()) + byteOffset);
 
                 for (uint32_t spaceIdx = 0; spaceIdx < spaceCount; spaceIdx++)
                 {
@@ -2154,7 +2155,8 @@ namespace Babylon
                 const auto spaces = info[0].As<Napi::Array>();
                 const auto spaceCount = info[1].As<Napi::Number>().Uint32Value();
                 auto radii = info[2].As<Napi::ArrayBuffer>();
-                auto radiiData = reinterpret_cast<float*>(radii.Data());
+                auto byteOffset = info[3].As<Napi::Number>().Uint32Value();
+                auto radiiData = reinterpret_cast<float*>(reinterpret_cast<char*>(radii.Data()) + byteOffset);
 
                 for (uint32_t spaceIdx = 0; spaceIdx < spaceCount; spaceIdx++)
                 {
