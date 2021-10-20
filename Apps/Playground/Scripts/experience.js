@@ -57,14 +57,14 @@ function CreateInputHandling(scene) {
         priorY = y;
     });
 }
-
+var useRT = true;
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function () {
+//CreateBoxAsync().then(function () {
 //CreateSpheresAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
-//BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
+BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Suzanne/glTF/Suzanne.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf").then(function () {
@@ -91,6 +91,71 @@ CreateBoxAsync().then(function () {
     else {
         scene.createDefaultLight(true);
     }
+    /*
+    var renderTarget = new BABYLON.RenderTargetTexture("depth", 1024, scene, true);
+    capture = new NativeCapture(renderTarget._renderTarget._framebuffer);
+    ccapture.addCallback((data) => {
+        console.log(data.width);
+    });
+    */
+
+    var camera = new BABYLON.ArcRotateCamera("camera1", -1.077175598143289, 0.8614449090346448, 15, new BABYLON.Vector3(0, 0, 0), scene);
+    scene.activeCamera = camera;
+
+    var boom;
+    BABYLON.SceneLoader.LoadAssetContainer("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/", "FlightHelmet.gltf", scene, function (container) {
+    //BABYLON.SceneLoader.LoadAssetContainer("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/", "BoxTextured.gltf", scene, function (container) {
+        var meshes = container.meshes;
+        container.addAllToScene(scene);
+        boom = meshes[0];
+        boom.position.z = 0;
+        boom.position.x = 0;
+        boom.position.y = 0;
+        //boom.scaling = new BABYLON.Vector3(5, 5, 5);
+        boom.scaling.x *= 5;
+        boom.scaling.y *= 5;
+        boom.scaling.z *= 5;
+
+        // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+        var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+
+        // Default intensity is 1. Let's dim the light a small amount
+        light.intensity = 1.7;
+
+        // Our built-in 'ground' shape.
+        var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 1000, height: 1000 }, scene);
+        var gridMat = new BABYLON.GridMaterial("groundMaterial", scene);
+        gridMat.mainColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+        gridMat.lineColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+        ground.material = gridMat;
+
+        
+        // move everything to RT
+        if (useRT) {
+            var renderTarget = new BABYLON.RenderTargetTexture("depth", { width: 1920, height: 1080 }, scene, true);
+            scene.customRenderTargets.push(renderTarget);
+            renderTarget.activeCamera = camera;
+            var pplaneOpts = {
+                height: 5.4762,
+                width: 7.3967,
+                sideOrientation: BABYLON.Mesh.DOUBLESIDE
+            };
+            var CheckPlane = BABYLON.MeshBuilder.CreatePlane("plane", pplaneOpts, scene);
+            CheckPlane.position.y = 3;
+            CheckPlane.position.z = 1;
+            CheckPlane.position.x = -2;
+            var CheckPlaneMat = new BABYLON.StandardMaterial("m", scene);
+            CheckPlaneMat.diffuseTexture = renderTarget;
+            CheckPlaneMat.roughness = 1;
+            CheckPlane.material = CheckPlaneMat;
+
+            renderTarget.renderList.push(ground);
+            for (let im = 0; im < meshes.length; im++) {
+                renderTarget.renderList.push(meshes[im]);
+            }
+        }
+
+    }); // load asset
 
     if (cameraTexture) {
         var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);

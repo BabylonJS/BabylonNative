@@ -1022,7 +1022,11 @@ namespace Babylon
     {
         const auto texture = info[0].As<Napi::Pointer<TextureData>>().Get();
         const auto data = info[1].As<Napi::TypedArray>();
+#if _DEBUG
+        const auto generateMips = false;
+#else
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
+#endif
         const auto invertY = info[3].As<Napi::Boolean>().Value();
         const auto srgb = info[4].As<Napi::Boolean>().Value();
         const auto onSuccess = info[5].As<Napi::Function>();
@@ -1401,12 +1405,12 @@ namespace Babylon
             flags |= BGFX_CLEAR_COLOR;
         }
 
-        if (shouldClearDepth && m_boundFrameBuffer->HasDepth())
+        if (shouldClearDepth && (!m_boundFrameBuffer || m_boundFrameBuffer->HasDepth()))
         {
             flags |= BGFX_CLEAR_DEPTH;
         }
 
-        if (shouldClearStencil && m_boundFrameBuffer->HasStencil())
+        if (shouldClearStencil && (!m_boundFrameBuffer || m_boundFrameBuffer->HasStencil()))
         {
             flags |= BGFX_CLEAR_STENCIL;
         }
