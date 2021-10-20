@@ -169,7 +169,8 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        m_safeTimespanGuarantor.EndSafeTimespan();
+        auto endSafeTimespanTask = m_safeTimespanGuarantor.EndSafeTimespanAsync();
+        blocking_await(endSafeTimespanTask);
 
         Frame();
 

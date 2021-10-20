@@ -1,6 +1,7 @@
 set(SOURCES
     "Include/Shared/Babylon/Graphics.h"
     "Source/${BABYLON_NATIVE_PLATFORM}/Babylon/GraphicsPlatformImpl.h"
+    "Source/continuation_scheduler.h"
     "Source/BgfxCallback.cpp"
     "Source/BgfxCallback.h"
     "Source/FrameBuffer.cpp"
