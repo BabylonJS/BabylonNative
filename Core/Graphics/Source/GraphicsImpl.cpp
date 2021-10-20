@@ -85,7 +85,7 @@ namespace Babylon
 
     continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return GetUpdate().BeginScheduler();
+        return m_beforeRenderScheduler;
     }
 
     continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
@@ -167,9 +167,11 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
+        m_beforeRenderScheduler.tick(*m_cancellationSource);
+
         Frame();
 
-        m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+        m_afterRenderScheduler.tick(*m_cancellationSource);
 
         m_rendering = false;
     }

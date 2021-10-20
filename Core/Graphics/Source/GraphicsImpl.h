@@ -113,7 +113,7 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        Update& GetUpdate(const char* updateName = "update");
+        Update& GetUpdate(const char* updateName);
 
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
@@ -182,7 +182,8 @@ namespace Babylon
 
         BgfxCallback m_bgfxCallback;
 
-        tickable_continuation_scheduler<GraphicsImpl> m_afterRenderScheduler;
+        tickable_continuation_scheduler<GraphicsImpl> m_beforeRenderScheduler{};
+        tickable_continuation_scheduler<GraphicsImpl> m_afterRenderScheduler{};
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
