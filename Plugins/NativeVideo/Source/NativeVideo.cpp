@@ -44,6 +44,7 @@ namespace Babylon::Plugins
                 InstanceAccessor("dst", &NativeVideoStream::GetDst, &NativeVideoStream::SetDst),
                 InstanceMethod("updateVideoTexture", &NativeVideoStream::UpdateVideoTexture),
                 InstanceMethod("addFrame", &NativeVideoStream::AddFrame),
+                InstanceMethod("open", &NativeVideoStream::Open),
                 InstanceMethod("close", &NativeVideoStream::Close),
             });
 

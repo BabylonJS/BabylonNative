@@ -17,11 +17,15 @@ namespace Babylon::Plugins
                 CVMetalTextureCacheFlush(m_textureCache, 0);
                 CFRelease(m_textureCache);
             }
+            CFRelease(m_output);
+            CFRelease(m_reader);
         }
 
+        void ReadNewFrame();
         void UpdateTexture(CMSampleBufferRef sampleBuffer);
 
         AVAssetReader* m_reader;
+        AVAssetReaderTrackOutput* m_output;
         CVMetalTextureCacheRef m_textureCache{};
         id <MTLTexture> m_textureBGRA{};
     };
@@ -89,7 +93,7 @@ namespace Babylon::Plugins
         // start writing
         [m_videoWriter startWriting];
         [m_videoWriter startSessionAtSourceTime:kCMTimeZero];
-        
+
         m_lastSampleTime = kCMTimeZero;
     }
 
@@ -113,7 +117,7 @@ namespace Babylon::Plugins
         CGImageRef rgbImageRef = CGImageCreate(m_outputWidth, m_outputHeight, 8, 24, m_outputWidth * 3, colorspace, kCGBitmapByteOrderDefault, provider, NULL, true, kCGRenderingIntentDefault);
 
         CVPixelBufferRef pixelBuffer = NewPixelBufferFromCGImage(rgbImageRef);
-        
+
         // Sample timing info.
         CMTime frameTime = CMTimeMake(1, 30);
         CMTime currentTime = CMTimeAdd(m_lastSampleTime, frameTime);
@@ -130,7 +134,12 @@ namespace Babylon::Plugins
         result = CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, true, NULL, NULL, videoInfo, &timing, &sampleBuffer);
 
         [m_writerInput appendSampleBuffer:sampleBuffer];
-        
+
+        CFRelease(videoInfo);
+        CFRelease(sampleBuffer);
+
+        CVPixelBufferRelease(pixelBuffer);
+
         m_lastSampleTime = currentTime;
         CFRelease(rgbData);
 
@@ -148,6 +157,8 @@ namespace Babylon::Plugins
         [m_videoWriter finishWritingWithCompletionHandler:^{
             NSLog(@"Finished writing");
         }];
+        CFRelease(m_writerInput);
+        CFRelease(m_videoWriter);
     }
 
     void Video::Impl::ReaderProcessor::UpdateTexture(CMSampleBufferRef sampleBuffer)
@@ -169,19 +180,11 @@ namespace Babylon::Plugins
         }
 
         this->m_textureBGRA = textureBGRA;
-        if(textureBGRA != nil)
-        {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                //implData->textureBGRA = textureBGRA;
-            });
-        }
     }
 
     Video::Impl::ReaderProcessor::ReaderProcessor(const std::string& contentURL)
     {
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            
         CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &this->m_textureCache);
 
         NSString* urlString = [[NSString stringWithUTF8String:contentURL.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
@@ -202,19 +205,22 @@ namespace Babylon::Plugins
         NSMutableDictionary *outputSettings = [NSMutableDictionary dictionary];
         [outputSettings setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
 
-        auto output = [[AVAssetReaderTrackOutput alloc] initWithTrack:videoTrack outputSettings:outputSettings];
-        [reader addOutput:output];
+        m_output = [[AVAssetReaderTrackOutput alloc] initWithTrack:videoTrack outputSettings:outputSettings];
+        [reader addOutput:m_output];
 
         if ([reader startReading])
         {
-            CMSampleBufferRef sampleBufferRef = [output copyNextSampleBuffer];
-            if (sampleBufferRef)
-            {
-                NSLog(@"Has buffer");
-                UpdateTexture(sampleBufferRef);
-            }
+            ReadNewFrame();
         }
-        });// sync
+    }
+
+    void Video::Impl::ReaderProcessor::ReadNewFrame()
+    {
+        CMSampleBufferRef sampleBufferRef = [m_output copyNextSampleBuffer];
+        if (sampleBufferRef)
+        {
+            UpdateTexture(sampleBufferRef);
+        }
     }
 
     Video::Impl::Impl(Napi::Env /*env*/)
@@ -237,9 +243,9 @@ namespace Babylon::Plugins
 
     void Video::Impl::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
-        //throw std::runtime_error{ "Not implemented for this platform." };
         if (m_reader)
         {
+            m_reader->ReadNewFrame();
             bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_reader->m_textureBGRA));
         }
     }
