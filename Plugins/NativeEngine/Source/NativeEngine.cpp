@@ -1058,11 +1058,11 @@ namespace Babylon
         const auto handleDestination{ textureDestination->Handle };
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{ m_graphicsImpl.GetUpdate().GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
                 if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
                 {
-                    bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                    bgfx::Encoder* encoder = m_graphicsImpl.GetUpdate().GetUpdateToken().GetEncoder();
                     GetBoundFrameBuffer(*encoder).Blit(*encoder, handleDestination, 0, 0, handleSource);
                 }
                 else
@@ -1657,7 +1657,7 @@ namespace Babylon
     {
         if (!m_updateToken)
         {
-            m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
+            m_updateToken.emplace(m_graphicsImpl.GetUpdate().GetUpdateToken());
             m_runtime.Dispatch([this](auto) {
                 m_updateToken.reset();
             });
@@ -1692,7 +1692,7 @@ namespace Babylon
         m_requestAnimationFrameCallbacksScheduled = true;
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdate().GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 
                 auto callbacks{std::move(m_requestAnimationFrameCallbacks)};

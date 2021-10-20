@@ -10,9 +10,9 @@ namespace
 
 namespace Babylon
 {
-    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl)
+    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl, SafeTimespanGuarantor& guarantor)
         : m_graphicsImpl(graphicsImpl)
-        , m_guarantee{m_graphicsImpl.m_safeTimespanGuarantor.GetSafetyGuarantee()}
+        , m_guarantee{guarantor.GetSafetyGuarantee()}
     {
     }
 
@@ -23,6 +23,7 @@ namespace Babylon
 
     GraphicsImpl::GraphicsImpl()
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
+        , m_update{*this}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -83,12 +84,12 @@ namespace Babylon
                     .Data();
     }
 
-    GraphicsImpl::RenderScheduler& GraphicsImpl::BeforeRenderScheduler()
+    continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return m_beforeRenderScheduler;
+        return m_update.Scheduler();
     }
 
-    GraphicsImpl::RenderScheduler& GraphicsImpl::AfterRenderScheduler()
+    continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
     {
         return m_afterRenderScheduler;
     }
@@ -155,9 +156,7 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
-        m_safeTimespanGuarantor.BeginSafeTimespan();
-
-        m_beforeRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+        m_update.Start();
     }
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
@@ -169,8 +168,7 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        auto endSafeTimespanTask = m_safeTimespanGuarantor.EndSafeTimespanAsync();
-        blocking_await(endSafeTimespanTask);
+        m_update.Stop();
 
         Frame();
 
@@ -179,9 +177,9 @@ namespace Babylon
         m_rendering = false;
     }
 
-    GraphicsImpl::UpdateToken GraphicsImpl::GetUpdateToken()
+    GraphicsImpl::Update& GraphicsImpl::GetUpdate(const char*)
     {
-        return {*this};
+        return m_update;
     }
 
     void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)

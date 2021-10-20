@@ -2,18 +2,8 @@
 
 namespace Babylon
 {
-    SafeTimespanGuarantor::SafeTimespanGuarantor()
-        : m_affinity{std::this_thread::get_id()}
-    {
-    }
-
     void SafeTimespanGuarantor::BeginSafeTimespan()
     {
-        if (!m_affinity.check())
-        {
-            throw std::runtime_error{"BeginSafeTimespan must be called from the thread on which the SafeTimespanGuarantor was constructed."};
-        }
-
         {
             std::scoped_lock lock{m_mutex};
             m_state = State::Open;
@@ -27,11 +17,6 @@ namespace Babylon
 
     void SafeTimespanGuarantor::NonblockingEndSafeTimespan()
     {
-        if (!m_affinity.check())
-        {
-            throw std::runtime_error{ "EndSafeTimespan must be called from the thread on which the SafeTimespanGuarantor was constructed." };
-        }
-
         std::scoped_lock lock{m_mutex};
         if (m_count == 0)
         {

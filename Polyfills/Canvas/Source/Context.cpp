@@ -554,10 +554,10 @@ namespace Babylon::Polyfills::Internal
         bool needClear = m_canvas->UpdateRenderTarget();
 
         arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_graphicsImpl.GetUpdate().GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-                bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                bgfx::Encoder* encoder = m_graphicsImpl.GetUpdate().GetUpdateToken().GetEncoder();
                 frameBuffer.Bind(*encoder);
                 if (needClear)
                 {

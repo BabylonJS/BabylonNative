@@ -26,6 +26,8 @@ namespace Babylon
     class GraphicsImpl
     {
     public:
+        class Update;
+
         class UpdateToken final
         {
         public:
@@ -35,27 +37,12 @@ namespace Babylon
             bgfx::Encoder* GetEncoder();
 
         private:
-            friend class GraphicsImpl;
+            friend class Update;
 
-            UpdateToken(GraphicsImpl&);
+            UpdateToken(GraphicsImpl&, SafeTimespanGuarantor&);
 
             GraphicsImpl& m_graphicsImpl;
             SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
-        };
-
-        class RenderScheduler final
-        {
-        public:
-            template<typename CallableT>
-            void operator()(CallableT&& callable)
-            {
-                m_dispatcher(callable);
-            }
-
-        private:
-            friend GraphicsImpl;
-
-            arcana::manual_dispatcher<128> m_dispatcher;
         };
 
         struct TextureInfo final
@@ -68,6 +55,42 @@ namespace Babylon
             bgfx::TextureFormat::Enum Format{};
         };
 
+        class Update
+        {
+        public:
+            continuation_scheduler<>& Scheduler()
+            {
+                return m_safeTimespanGuarantor.BeginScheduler();
+            }
+
+            UpdateToken GetUpdateToken()
+            {
+                return {m_graphicsImpl, m_safeTimespanGuarantor};
+            }
+
+        private:
+            friend class GraphicsImpl;
+
+            Update(GraphicsImpl& graphicsImpl)
+                : m_graphicsImpl{graphicsImpl}
+            {
+            }
+
+            void Start()
+            {
+                m_safeTimespanGuarantor.BeginSafeTimespan();
+            }
+
+            void Stop()
+            {
+                auto task = m_safeTimespanGuarantor.EndSafeTimespanAsync();
+                blocking_await(task);
+            }
+
+            SafeTimespanGuarantor m_safeTimespanGuarantor{};
+            GraphicsImpl& m_graphicsImpl;
+        };
+
         GraphicsImpl();
         virtual ~GraphicsImpl();
 
@@ -78,8 +101,8 @@ namespace Babylon
         void AddToJavaScript(Napi::Env);
         static GraphicsImpl& GetFromJavaScript(Napi::Env);
 
-        RenderScheduler& BeforeRenderScheduler();
-        RenderScheduler& AfterRenderScheduler();
+        continuation_scheduler<>& BeforeRenderScheduler();
+        continuation_scheduler<>& AfterRenderScheduler();
 
         void EnableRendering();
         void DisableRendering();
@@ -87,7 +110,7 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        UpdateToken GetUpdateToken();
+        Update& GetUpdate(const char* updateName = "update");
 
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
@@ -156,10 +179,7 @@ namespace Babylon
 
         BgfxCallback m_bgfxCallback;
 
-        SafeTimespanGuarantor m_safeTimespanGuarantor{};
-
-        RenderScheduler m_beforeRenderScheduler;
-        RenderScheduler m_afterRenderScheduler;
+        tickable_continuation_scheduler<GraphicsImpl> m_afterRenderScheduler;
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
@@ -173,5 +193,7 @@ namespace Babylon
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
+
+        Update m_update;
     };
 }

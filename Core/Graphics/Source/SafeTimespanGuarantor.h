@@ -2,7 +2,6 @@
 
 #include "continuation_scheduler.h"
 
-#include <arcana/threading/affinity.h>
 #include <arcana/threading/task.h>
 
 #include <gsl/gsl>
@@ -28,8 +27,6 @@ namespace Babylon
     class SafeTimespanGuarantor
     {
     public:
-        SafeTimespanGuarantor();
-
         void BeginSafeTimespan();
         void NonblockingEndSafeTimespan();
         arcana::task<void, std::exception_ptr> EndSafeTimespanAsync();
@@ -55,7 +52,6 @@ namespace Babylon
             Closed
         };
 
-        arcana::affinity m_affinity{};
         State m_state{State::Open};
         uint32_t m_count{};
         std::mutex m_mutex{};
