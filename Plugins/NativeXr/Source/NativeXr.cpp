@@ -1964,13 +1964,13 @@ namespace Babylon
 
             XRFrame(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRFrame>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
                 , m_jsXRViewerPose{Napi::Persistent(XRViewerPose::New(info))}
                 , m_xrViewerPose{*XRViewerPose::Unwrap(m_jsXRViewerPose.Value())}
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
             {
                 m_jsPose.Set("transform", m_jsTransform.Value());
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
