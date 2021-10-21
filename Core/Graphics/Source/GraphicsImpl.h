@@ -26,6 +26,32 @@ namespace Babylon
     class GraphicsImpl
     {
     public:
+        /* ********** BEGIN UPWARD-FACING CONTRACT ********** */
+
+        GraphicsImpl();
+        virtual ~GraphicsImpl();
+
+        void UpdateWindow(const WindowConfiguration& config);
+        void UpdateContext(const ContextConfiguration& config);
+        void Resize(size_t width, size_t height);
+
+        void AddToJavaScript(Napi::Env);
+        static GraphicsImpl& GetFromJavaScript(Napi::Env);
+
+        void EnableRendering();
+        void DisableRendering();
+
+        void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
+
+        void StartRenderingCurrentFrame();
+        void FinishRenderingCurrentFrame();
+
+        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
+
+        /* ********** END UPWARD-FACING CONTRACT ********** */
+
+        /* ********** BEGIN DOWNWARD-FACING CONTRACT ********** */
+
         class Update;
 
         class UpdateToken final
@@ -43,16 +69,6 @@ namespace Babylon
 
             GraphicsImpl& m_graphicsImpl;
             SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
-        };
-
-        struct TextureInfo final
-        {
-        public:
-            uint16_t Width{};
-            uint16_t Height{};
-            bool HasMips{};
-            uint16_t NumLayers{};
-            bgfx::TextureFormat::Enum Format{};
         };
 
         class Update
@@ -81,35 +97,26 @@ namespace Babylon
             GraphicsImpl& m_graphicsImpl;
         };
 
-        GraphicsImpl();
-        virtual ~GraphicsImpl();
-
-        void UpdateWindow(const WindowConfiguration& config);
-        void UpdateContext(const ContextConfiguration& config);
-        void Resize(size_t width, size_t height);
-
-        void AddToJavaScript(Napi::Env);
-        static GraphicsImpl& GetFromJavaScript(Napi::Env);
+        // Deprecated
+        struct TextureInfo final
+        {
+        public:
+            uint16_t Width{};
+            uint16_t Height{};
+            bool HasMips{};
+            uint16_t NumLayers{};
+            bgfx::TextureFormat::Enum Format{};
+        };
 
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
 
-        void EnableRendering();
-        void DisableRendering();
-
-        void StartRenderingCurrentFrame();
-        void FinishRenderingCurrentFrame();
-
         Update GetUpdate(const char* updateName);
 
-        // For the upward-facing contract.
-        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
-
+        // Deprecated
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
-
-        void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
