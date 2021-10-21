@@ -17,6 +17,12 @@
 #include "NativeCameraImpl.h"
 #include <napi/napi.h>
 
+namespace
+{
+    // TODO: is there a way to sync texture use with bgfx?
+    static constexpr unsigned int TextureBufferCount = 4;
+}
+
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>{
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
 }
@@ -39,13 +45,23 @@ namespace Babylon::Plugins
                 CVMetalTextureCacheFlush(textureCache, 0);
                 CFRelease(textureCache);
             }
+            for (auto textureRef : texture)
+            {
+                if (textureRef)
+                {
+                    CFRelease(textureRef);
+                }
+            }
         }
-        
+
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
+        CVMetalTextureRef texture[TextureBufferCount]{};
         id <MTLTexture> textureBGRA{};
+        int textureFrontIndex{};
     };
+
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_graphicsImpl{GraphicsImpl::GetFromJavaScript(env)}
         , m_implData{std::make_unique<ImplData>()}
@@ -154,27 +170,28 @@ namespace Babylon::Plugins
 }
 
 - (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)__unused connection {
+    
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-
-    id<MTLTexture> textureBGRA = nil;
 
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
     MTLPixelFormat pixelFormat = MTLPixelFormatBGRA8Unorm;
-    
-    CVMetalTextureRef texture = NULL;
-    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture);
-    if(status == kCVReturnSuccess)
-    {
-        textureBGRA = CVMetalTextureGetTexture(texture);
-        CFRelease(texture);
-    }
 
-    if(textureBGRA != nil)
+    int back = (implData->textureFrontIndex+1) % TextureBufferCount;
+    int front = implData->textureFrontIndex % TextureBufferCount;
+    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &implData->texture[front]);
+    if (status == kCVReturnSuccess)
     {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            implData->textureBGRA = textureBGRA;
-        });
+        if(implData->texture[back])
+        {
+            CFRelease(implData->texture[back]);
+            implData->texture[back] = nullptr;
+        }
+        if (implData->texture[front])
+        {
+            implData->textureBGRA = CVMetalTextureGetTexture(implData->texture[front]);;
+            implData->textureFrontIndex++;
+        }
     }
 }
 
