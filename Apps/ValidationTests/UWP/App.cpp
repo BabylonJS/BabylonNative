@@ -199,7 +199,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     m_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    m_update = std::make_unique<Babylon::Graphics::Update>(std::move(m_graphics->GetUpdate("update")));
+    m_update = std::make_unique<Babylon::Graphics::Update>(m_graphics->GetUpdate("update"));
     m_graphics->StartRenderingCurrentFrame();
     m_update->Start();
 

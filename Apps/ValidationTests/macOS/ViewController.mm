@@ -82,7 +82,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Update>(std::move(graphics->GetUpdate("update")));
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
     graphics->StartRenderingCurrentFrame();
     update->Start();
 

@@ -49,7 +49,7 @@ bool g_isXrActive{};
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Update>(std::move(graphics->GetUpdate("update")));
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
     graphics->StartRenderingCurrentFrame();
     update->Start();
     runtime = std::make_unique<Babylon::AppRuntime>();

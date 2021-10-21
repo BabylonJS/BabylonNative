@@ -114,7 +114,7 @@ namespace
         graphicsConfig.Height = height;
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Update>(std::move(graphics->GetUpdate("update")));
+        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
         graphics->StartRenderingCurrentFrame();
         update->Start();
 

@@ -68,7 +68,7 @@ namespace
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Update>(std::move(graphics->GetUpdate("update")));
+        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
         update->Start();

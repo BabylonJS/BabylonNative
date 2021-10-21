@@ -84,7 +84,7 @@ extern "C"
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
             g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-            g_update = std::make_unique<Babylon::Graphics::Update>(std::move(graphics->GetUpdate("update")));
+            g_update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
             g_graphics->StartRenderingCurrentFrame();
             g_update->Start();
 
