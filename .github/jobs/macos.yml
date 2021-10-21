@@ -52,3 +52,17 @@ jobs:
         useXcpretty: false
         configuration: RelWithDebInfo
       displayName: 'Build ValidationTests macOS'
+
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+        scheme: 'UnitTests'
+        sdk: 'macosx'
+        useXcpretty: false
+        configuration: RelWithDebInfo
+      displayName: 'Build UnitTests macOS'
+
+    - script: |
+        cd buildmacOS/Apps/UnitTests/RelWithDebInfo
+        ./UnitTests
+      displayName: 'Run UnitTests MacOS'

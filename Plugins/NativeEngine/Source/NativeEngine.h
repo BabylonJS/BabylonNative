@@ -1,14 +1,16 @@
 #pragma once
 
-#include "BgfxCallback.h"
-#include "FrameBuffer.h"
+#include "NativeDataStream.h"
 #include "PerFrameValue.h"
 #include "ShaderCompiler.h"
+#include "VertexArray.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
 #include <GraphicsImpl.h>
+#include <BgfxCallback.h>
+#include <FrameBuffer.h>
 
 #include <napi/napi.h>
 
@@ -19,37 +21,19 @@
 
 #include <gsl/gsl>
 
-#include <assert.h>
-
-#include <arcana/containers/weak_table.h>
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
 
 namespace Babylon
 {
-    struct TextureData final
-    {
-        ~TextureData()
-        {
-            if (OwnsHandle && bgfx::isValid(Handle))
-            {
-                bgfx::destroy(Handle);
-            }
-        }
-
-        bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
-        bool OwnsHandle{true};
-        uint32_t Width{0};
-        uint32_t Height{0};
-        uint32_t Flags{0};
-        // CreationFlags contains flags used at texture creation
-        // regarding BLIT support and READBACK
-        uint64_t CreationFlags{0};
-        uint8_t AnisotropicLevel{0};
-    };
-
     struct UniformInfo final
     {
+        UniformInfo(uint8_t stage, bgfx::UniformHandle handle) :
+            Stage{stage},
+            Handle{handle}
+        {
+        }
+
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
     };
@@ -57,21 +41,30 @@ namespace Babylon
     struct ProgramData final
     {
         ProgramData() = default;
+        ProgramData(ProgramData&& other) = delete;
         ProgramData(const ProgramData&) = delete;
-        ProgramData(ProgramData&&) = delete;
+        ProgramData& operator=(ProgramData&& other) = delete;
+        ProgramData& operator=(const ProgramData& other) = delete;
 
         ~ProgramData()
         {
-            if (bgfx::isValid(Handle))
+            Dispose();
+        }
+
+        void Dispose()
+        {
+            if (!Disposed && bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
             }
+            Disposed = true;
         }
 
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
         std::unordered_map<std::string, UniformInfo> UniformInfos{};
 
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
+        bool Disposed{false};
 
         struct UniformValue
         {
@@ -89,40 +82,10 @@ namespace Babylon
         }
     };
 
-    class IndexBufferData;
-    class VertexBufferData;
-
-    struct VertexArray final
-    {
-        ~VertexArray()
-        {
-            for (auto& vertexBufferPair : VertexBuffers)
-            {
-                bgfx::destroy(vertexBufferPair.second.VertexLayoutHandle);
-            }
-        }
-
-        struct IndexBuffer
-        {
-            const IndexBufferData* Data{};
-        };
-
-        IndexBuffer indexBuffer{};
-
-        struct VertexBuffer
-        {
-            const VertexBufferData* Data{};
-            uint32_t StartVertex{};
-            bgfx::VertexLayoutHandle VertexLayoutHandle{};
-        };
-
-        std::unordered_map<uint32_t, VertexBuffer> VertexBuffers;
-    };
-
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
-        static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "Engine";
+        static constexpr auto JS_CONSTRUCTOR_NAME = "Engine";
 
     public:
         NativeEngine(const Napi::CallbackInfo& info);
@@ -137,45 +100,45 @@ namespace Babylon
         void Dispose(const Napi::CallbackInfo& info);
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
-        void DeleteVertexArray(const Napi::CallbackInfo& info);
-        void BindVertexArray(const Napi::CallbackInfo& info);
+        void DeleteVertexArray(NativeDataStream::Reader& data);
+        void BindVertexArray(NativeDataStream::Reader& data);
         Napi::Value CreateIndexBuffer(const Napi::CallbackInfo& info);
-        void DeleteIndexBuffer(const Napi::CallbackInfo& info);
+        void DeleteIndexBuffer(NativeDataStream::Reader& data);
         void RecordIndexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexBuffer(const Napi::CallbackInfo& info);
-        void DeleteVertexBuffer(const Napi::CallbackInfo& info);
+        void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
-        void SetProgram(const Napi::CallbackInfo& info);
-        void SetState(const Napi::CallbackInfo& info);
-        void SetZOffset(const Napi::CallbackInfo& info);
-        Napi::Value GetZOffset(const Napi::CallbackInfo& info);
-        void SetDepthTest(const Napi::CallbackInfo& info);
-        Napi::Value GetDepthWrite(const Napi::CallbackInfo& info);
-        void SetDepthWrite(const Napi::CallbackInfo& info);
-        void SetColorWrite(const Napi::CallbackInfo& info);
-        void SetBlendMode(const Napi::CallbackInfo& info);
-        void SetMatrix(const Napi::CallbackInfo& info);
-        void SetInt(const Napi::CallbackInfo& info);
-        void SetIntArray(const Napi::CallbackInfo& info);
-        void SetIntArray2(const Napi::CallbackInfo& info);
-        void SetIntArray3(const Napi::CallbackInfo& info);
-        void SetIntArray4(const Napi::CallbackInfo& info);
-        void SetFloatArray(const Napi::CallbackInfo& info);
-        void SetFloatArray2(const Napi::CallbackInfo& info);
-        void SetFloatArray3(const Napi::CallbackInfo& info);
-        void SetFloatArray4(const Napi::CallbackInfo& info);
-        void SetMatrices(const Napi::CallbackInfo& info);
-        void SetMatrix3x3(const Napi::CallbackInfo& info);
-        void SetMatrix2x2(const Napi::CallbackInfo& info);
-        void SetFloat(const Napi::CallbackInfo& info);
-        void SetFloat2(const Napi::CallbackInfo& info);
-        void SetFloat3(const Napi::CallbackInfo& info);
-        void SetFloat4(const Napi::CallbackInfo& info);
+        void SetProgram(NativeDataStream::Reader& data);
+        void DeleteProgram(NativeDataStream::Reader& data);
+        void SetState(NativeDataStream::Reader& data);
+        void SetZOffset(NativeDataStream::Reader& data);
+        void SetZOffsetUnits(NativeDataStream::Reader& data);
+        void SetDepthTest(NativeDataStream::Reader& data);
+        void SetDepthWrite(NativeDataStream::Reader& data);
+        void SetColorWrite(NativeDataStream::Reader& data);
+        void SetBlendMode(NativeDataStream::Reader& data);
+        void SetMatrix(NativeDataStream::Reader& data);
+        void SetInt(NativeDataStream::Reader& data);
+        void SetIntArray(NativeDataStream::Reader& data);
+        void SetIntArray2(NativeDataStream::Reader& data);
+        void SetIntArray3(NativeDataStream::Reader& data);
+        void SetIntArray4(NativeDataStream::Reader& data);
+        void SetFloatArray(NativeDataStream::Reader& data);
+        void SetFloatArray2(NativeDataStream::Reader& data);
+        void SetFloatArray3(NativeDataStream::Reader& data);
+        void SetFloatArray4(NativeDataStream::Reader& data);
+        void SetMatrices(NativeDataStream::Reader& data);
+        void SetMatrix3x3(NativeDataStream::Reader& data);
+        void SetMatrix2x2(NativeDataStream::Reader& data);
+        void SetFloat(NativeDataStream::Reader& data);
+        void SetFloat2(NativeDataStream::Reader& data);
+        void SetFloat3(NativeDataStream::Reader& data);
+        void SetFloat4(NativeDataStream::Reader& data);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(const Napi::CallbackInfo& info);
@@ -184,18 +147,18 @@ namespace Babylon
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
-        void SetTextureSampling(const Napi::CallbackInfo& info);
-        void SetTextureWrapMode(const Napi::CallbackInfo& info);
-        void SetTextureAnisotropicLevel(const Napi::CallbackInfo& info);
-        void SetTexture(const Napi::CallbackInfo& info);
+        void SetTextureSampling(NativeDataStream::Reader& data);
+        void SetTextureWrapMode(NativeDataStream::Reader& data);
+        void SetTextureAnisotropicLevel(NativeDataStream::Reader& data);
+        void SetTexture(NativeDataStream::Reader& data);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
-        void DeleteFrameBuffer(const Napi::CallbackInfo& info);
-        void BindFrameBuffer(const Napi::CallbackInfo& info);
-        void UnbindFrameBuffer(const Napi::CallbackInfo& info);
-        void DrawIndexed(const Napi::CallbackInfo& info);
-        void Draw(const Napi::CallbackInfo& info);
-        void Clear(const Napi::CallbackInfo& info);
+        void DeleteFrameBuffer(NativeDataStream::Reader& data);
+        void BindFrameBuffer(NativeDataStream::Reader& data);
+        void UnbindFrameBuffer(NativeDataStream::Reader& data);
+        void DrawIndexed(NativeDataStream::Reader& data);
+        void Draw(NativeDataStream::Reader& data);
+        void Clear(NativeDataStream::Reader& data);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         void SetViewPort(const Napi::CallbackInfo& info);
@@ -204,8 +167,10 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
-        void SetStencil(const Napi::CallbackInfo& info);
-        void Draw(bgfx::Encoder* encoder, int fillMode);
+        void SetStencil(NativeDataStream::Reader& data);
+        void SetCommandDataStream(const Napi::CallbackInfo& info);
+        void SubmitCommands(const Napi::CallbackInfo& info);
+        void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
@@ -217,7 +182,6 @@ namespace Babylon
         ShaderCompiler m_shaderCompiler{};
 
         ProgramData* m_currentProgram{nullptr};
-        arcana::weak_table<std::unique_ptr<ProgramData>> m_programDataCollection{};
 
         JsRuntime& m_runtime;
         GraphicsImpl& m_graphicsImpl;
@@ -234,22 +198,31 @@ namespace Babylon
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
         template<int size, typename arrayType>
-        void SetTypeArrayN(const Napi::CallbackInfo& info);
+        void SetTypeArrayN(const UniformInfo& uniformInfo, const uint32_t elementLength, const arrayType& array);
 
         template<int size>
-        void SetFloatN(const Napi::CallbackInfo& info);
+        void SetIntArrayN(NativeDataStream::Reader& data);
 
         template<int size>
-        void SetMatrixN(const Napi::CallbackInfo& info);
+        void SetFloatArrayN(NativeDataStream::Reader& data);
+
+        template<int size>
+        void SetFloatN(NativeDataStream::Reader& data);
+
+        template<int size>
+        void SetMatrixN(NativeDataStream::Reader& data);
 
         // Scratch vector used for data alignment.
         std::vector<float> m_scratch{};
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
-        const VertexArray* m_boundVertexArray{};
+        VertexArray* m_boundVertexArray{};
         FrameBuffer m_defaultFrameBuffer;
         FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
+
+        // TODO: This should be changed to a non-owning ref once multi-update is available.
+        NativeDataStream* m_commandStream{};
     };
 }

@@ -6,6 +6,7 @@
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
+#import <Babylon/Polyfills/Console.h>
 #import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
@@ -15,6 +16,7 @@
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 @interface EngineView : MTKView <MTKViewDelegate>
 
@@ -94,7 +96,12 @@ std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Canvas::Initialize(env);
+
+        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
+
         Babylon::Plugins::Camera::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);

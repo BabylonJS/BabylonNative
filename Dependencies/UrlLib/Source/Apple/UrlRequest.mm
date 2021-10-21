@@ -1,3 +1,7 @@
+#if ! __has_feature(objc_arc)
+#error "ARC is off"
+#endif
+
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -12,10 +16,6 @@ namespace UrlLib
         ~Impl()
         {
             Abort();
-            if (m_responseBuffer)
-            {
-                [m_responseBuffer release];
-            }
         }
 
         void Abort()
@@ -26,7 +26,23 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            m_url = std::move(url);
+            NSString* urlString = [NSString stringWithUTF8String:url.data()];
+            NSURL* nsURL{[NSURL URLWithString:urlString]};
+            if (!nsURL || !nsURL.scheme)
+            {
+                throw std::runtime_error{"URL does not have a valid scheme"};
+            }
+            NSString* scheme{nsURL.scheme};
+            if ([scheme isEqual:@"app"])
+            {
+                NSString* path{[[NSBundle mainBundle] pathForResource:nsURL.path ofType:nil]};
+                if (path == nil)
+                {
+                    throw std::runtime_error{"No file exists at local path"};
+                }
+                nsURL = [NSURL fileURLWithPath:path];
+            }
+            m_nsURL = nsURL; // Only store the URL if we didn't throw
         }
 
         UrlResponseType ResponseType() const
@@ -41,28 +57,13 @@ namespace UrlLib
 
         arcana::task<void, std::exception_ptr> SendAsync()
         {
-            // encode URL so characters like space are replaced by %20
-            NSString* urlString = [[NSString stringWithUTF8String:m_url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-            NSURL* url{[NSURL URLWithString:urlString]};
-            NSString* scheme{url.scheme};
-            if ([scheme isEqual:@"app"])
-            {
-                NSString* path{[[NSBundle mainBundle] pathForResource:url.path ofType:nil]};
-                if (path == nil)
-                {
-                    // Complete the task, but retain the default status code of 0 to indicate a client side error.
-                    return arcana::task_from_result<std::exception_ptr>();
-                }
-                url = [NSURL fileURLWithPath:path];
-            }
-
-            NSURLSession* session{[NSURLSession sharedSession]};
-            NSURLRequest* request{[NSURLRequest requestWithURL:url]};
-            if (url == nil)
+            if (m_nsURL == nil)
             {
                 // Complete the task, but retain the default status code of 0 to indicate a client side error.
                 return arcana::task_from_result<std::exception_ptr>();
             }
+            NSURLSession* session{[NSURLSession sharedSession]};
+            NSURLRequest* request{[NSURLRequest requestWithURL:m_nsURL]};
 
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
@@ -97,7 +98,6 @@ namespace UrlLib
                         }
                         case UrlResponseType::Buffer:
                         {
-                            [data retain];
                             m_responseBuffer = data;
                             break;
                         }
@@ -146,7 +146,7 @@ namespace UrlLib
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
-        std::string m_url{};
+        NSURL* m_nsURL{};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_responseUrl{};
         std::string m_responseString{};

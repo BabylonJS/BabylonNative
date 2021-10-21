@@ -46,6 +46,5 @@ namespace Babylon
         }
 
         m_dispatcher.clear();
-        m_task = arcana::task_from_result<std::error_code>();
     }
 }

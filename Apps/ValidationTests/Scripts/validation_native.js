@@ -57,7 +57,7 @@ function saveRenderedResult(test, renderData) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
-    /*var canvasImageData =*/ engine._native.getFrameBufferData(function (screenshot) { 
+    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) { 
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {
@@ -357,7 +357,7 @@ xhr.addEventListener("readystatechange", function() {
 
 
 BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-    _native.NativeCanvas.loadTTFAsync("droidsans", data).then(function () {
+    _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
         _native.RootUrl = "https://playground.babylonjs.com";
         console.log("Starting");
         TestUtils.setTitle("Starting Native Validation Tests");

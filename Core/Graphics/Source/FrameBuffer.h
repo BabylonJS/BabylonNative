@@ -17,7 +17,7 @@ namespace Babylon
         bool Equals(const ViewPort& other) const;
     };
 
-    class FrameBuffer
+    class FrameBuffer final
     {
     public:
         FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
@@ -31,8 +31,6 @@ namespace Babylon
         uint16_t Height() const;
         bool DefaultBackBuffer() const;
 
-        void Dispose();
-
         void Bind(bgfx::Encoder& encoder);
         void Unbind(bgfx::Encoder& encoder);
 
@@ -44,6 +42,8 @@ namespace Babylon
 
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
+
+        void Dispose();
 
     private:
 
@@ -58,5 +58,7 @@ namespace Babylon
         bgfx::ViewId m_viewId{};
         ViewPort m_viewPort{};
         bool m_hasViewIdBeenUsed{false};
+
+        bool m_disposed{false};
     };
 }
