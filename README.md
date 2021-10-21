@@ -85,14 +85,6 @@ Babylon Native makes extensive use of submodules to supply its dependencies.
 git clone --recursive https://github.com/BabylonJS/BabylonNative.git
 ```
 
-Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
-
-```
-cd <repo root>
-cd Apps
-npm install
-```
-
 Babylon Native's build system is based on CMake, which customarily uses a separate
 build directory. Build directory location is up to you, but we recommend just creating 
 a `Build` directory within your clone of the Babylon Native repository (Babylon 
@@ -311,14 +303,7 @@ An .apk that can be executed on your device or simulator is the output.
 
 First download the latest release of Ninja, extract the binary, and add it to your system path.
 
-Next install the Javascript engine dependencies. This is done by the Node.js npm package system.
-
-```
-cd Apps
-npm install
-```
-
-Babylon Native on Android supports two Javascript engines: V8 and JavaScriptCore. V8 is 
+Babylon Native on Android supports two JavaScript engines: V8 and JavaScriptCore. V8 is 
 used  by default if no engine is specified. To change the engine to JavaScriptCore, open 
 the file *Apps\Playground\Android\gradle.properties* and add the following line:
 
@@ -326,7 +311,7 @@ the file *Apps\Playground\Android\gradle.properties* and add the following line:
 JSEngine=jsc
 ```
 
-Once the npm packages are installed, with AndroidStudio, open the project located at 
+Using AndroidStudio, open the project located at 
 *Apps\Playground\Android*. Then in the menu, select Run->Run 'app'. If you don't have an 
 Android device plugged in or no Android image in the Android simulator, that option will 
 be greyed and inaccessible. Instructions and tips on how to install the simulator are

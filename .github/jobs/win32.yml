@@ -31,12 +31,6 @@ jobs:
           git submodule update --init --recursive
         displayName: 'Checkout dependencies'
     
-      - task: Npm@1
-        inputs:
-          command: 'install'
-          workingDir: 'Apps'
-        displayName: 'Install Babylon.js NPM packages'
-
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}

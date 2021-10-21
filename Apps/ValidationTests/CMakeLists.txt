@@ -5,14 +5,14 @@ endif()
 FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
 
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
-    "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js.map")
+    "../Dependencies/node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../Dependencies/node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
+    "../Dependencies/node_modules/babylonjs/babylon.max.js"
+    "../Dependencies/node_modules/babylonjs/babylon.max.js.map"
+    "../Dependencies/node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../Dependencies/node_modules/babylonjs-materials/babylonjs.materials.js.map"
+    "../Dependencies/node_modules/babylonjs-gui/babylon.gui.js"
+    "../Dependencies/node_modules/babylonjs-gui/babylon.gui.js.map")
 
 set(SCRIPTS
     "Scripts/validation_native.js"
@@ -189,6 +189,6 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Errors")
 
 set_property(TARGET ValidationTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages PREFIX ReferenceImages FILES ${REFERENCE_IMAGES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

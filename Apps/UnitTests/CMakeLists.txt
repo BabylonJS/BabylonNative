@@ -7,10 +7,10 @@ set(LOCAL_SCRIPTS
     "Scripts/tests.js")
 
 set(NPM_SCRIPTS
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map"
-    "../node_modules/chai/chai.js"
-    "../node_modules/mocha/mocha.js")
+    "../Dependencies/node_modules/babylonjs/babylon.max.js"
+    "../Dependencies/node_modules/babylonjs/babylon.max.js.map"
+    "../Dependencies/node_modules/chai/chai.js"
+    "../Dependencies/node_modules/mocha/mocha.js")
 
 set(TEST_APP "Shared/UnitTests.cpp")
 
@@ -47,4 +47,4 @@ endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${LOCAL_SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${NPM_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/node_modules PREFIX Scripts FILES ${NPM_SCRIPTS})

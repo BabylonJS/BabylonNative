@@ -7,4 +7,4 @@ app/.cxx/
 app/build/
 app/src/main/jniLibs
 app/src/main/assets
-node_modules/
+app/node_modules/

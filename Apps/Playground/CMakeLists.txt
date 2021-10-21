@@ -1,21 +1,21 @@
-set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
-    "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js.map")
-
-set(DEPENDENCIES
-    "../Dependencies/ammo.js"
-    "../Dependencies/meshwriter.min.js"
-    "../Dependencies/recast.js")
-
 set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js")
+
+set(BABYLON_SCRIPTS
+    "../Dependencies/node_modules/babylonjs-loaders/babylonjs.loaders.js"
+    "../Dependencies/node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
+    "../Dependencies/node_modules/babylonjs/babylon.max.js"
+    "../Dependencies/node_modules/babylonjs/babylon.max.js.map"
+    "../Dependencies/node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../Dependencies/node_modules/babylonjs-materials/babylonjs.materials.js.map"
+    "../Dependencies/node_modules/babylonjs-gui/babylon.gui.js"
+    "../Dependencies/node_modules/babylonjs-gui/babylon.gui.js.map")
+
+set(ADDITIONAL_SCRIPTS
+    "../Dependencies/Scripts/ammo.js"
+    "../Dependencies/Scripts/meshwriter.min.js"
+    "../Dependencies/Scripts/recast.js")
 
 set(SOURCES
     "Shared/InputManager.h")
@@ -36,7 +36,7 @@ if(APPLE)
             "iOS/ViewController.swift"
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm")
-        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -48,7 +48,7 @@ if(APPLE)
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
-        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
     endif()
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
         PRIVATE ${JSCORE_LIBRARY}
@@ -93,9 +93,9 @@ endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 else()
-    add_executable(Playground ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground ${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
 
 warnings_as_errors(Playground)
@@ -173,10 +173,10 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
 else()
-    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
+    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${ADDITIONAL_SCRIPTS})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         add_custom_command(
             OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -187,8 +187,8 @@ else()
 endif()
 
 set_property(TARGET Playground PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FILES ${DEPENDENCIES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/Scripts PREFIX Scripts FILES ${ADDITIONAL_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)

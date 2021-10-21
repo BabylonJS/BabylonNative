@@ -15,12 +15,6 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    - task: Npm@1
-      inputs:
-        command: 'install'
-        workingDir: 'Apps'
-      displayName: 'Install Babylon.js NPM packages'
-
     - template: cmake.yml
       parameters:
         vmImage: ${{ parameters.vmImage }}

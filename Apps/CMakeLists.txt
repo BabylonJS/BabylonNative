@@ -1,3 +1,15 @@
+if(WIN32)
+    set(NPM_CMD "npm.cmd")
+else()
+    set(NPM_CMD "npm")
+endif()
+
+message(STATUS "Installing npm dependencies from ${CMAKE_CURRENT_LIST_DIR}/Dependencies")
+execute_process(COMMAND ${NPM_CMD} ci --silent WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/Dependencies" RESULT_VARIABLE npm_result)
+if(NOT npm_result EQUAL 0)
+    message(FATAL_ERROR "npm failed with exit code ${npm_result}")
+endif()
+
 if(NOT ANDROID)
     add_subdirectory(Playground)
     add_subdirectory(ValidationTests)
