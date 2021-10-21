@@ -1256,8 +1256,9 @@ namespace Babylon
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        const TextureData* texture = info[0].As<Napi::Pointer<TextureData>>().Get();
+        TextureData* texture = info[0].As<Napi::Pointer<TextureData>>().Get();
         m_graphicsImpl.RemoveTexture(texture->Handle);
+        texture->Dispose();
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
