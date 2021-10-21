@@ -8,6 +8,8 @@ namespace Babylon
     {
         ~TextureData();
 
+        void Dispose();
+
         bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
         bool OwnsHandle{true};
         uint32_t Width{0};
