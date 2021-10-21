@@ -34,6 +34,7 @@ namespace Babylon::Plugins
         Napi::Value IsNative(const Napi::CallbackInfo&);
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
+        void UpdateVideoTexture(const Napi::CallbackInfo& info);
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
         uint32_t m_width{};

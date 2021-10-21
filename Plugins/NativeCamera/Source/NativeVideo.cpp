@@ -1,5 +1,6 @@
 #include "NativeVideo.h"
 #include "NativeCameraImpl.h"
+#include "Texture.h"
 
 namespace Babylon::Plugins
 {
@@ -16,6 +17,7 @@ namespace Babylon::Plugins
                 InstanceMethod("play", &NativeVideo::Play),
                 InstanceMethod("pause", &NativeVideo::Pause),
                 InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
+                InstanceMethod("updateVideoTexture", &NativeVideo::UpdateVideoTexture),
                 InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, &NativeVideo::SetVideoWidth),
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, &NativeVideo::SetVideoHeight),
                 InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
@@ -157,5 +159,11 @@ namespace Babylon::Plugins
     {
         m_IsPlaying = false;
         NativeCameraImpl->Close();
+    }
+
+    void NativeVideo::UpdateVideoTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+        UpdateTexture(texture->Handle);
     }
 }

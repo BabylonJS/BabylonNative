@@ -3,6 +3,7 @@
 #include <NativeCamera.h>
 #include "NativeVideo.h"
 #include "NativeCameraImpl.h"
+#include <Texture.h>
 #include <Babylon/JsRuntime.h>
 #include <GraphicsImpl.h>
 #include <vector>
@@ -12,24 +13,6 @@ namespace Babylon
 {
     namespace Plugins
     {
-        // Move this struct to Graphics
-        struct TextureData final
-        {
-            ~TextureData()
-            {
-                if (bgfx::isValid(Handle))
-                {
-                    bgfx::destroy(Handle);
-                }
-            }
-
-            bgfx::TextureHandle Handle{ bgfx::kInvalidHandle };
-            uint32_t Width{ 0 };
-            uint32_t Height{ 0 };
-            uint32_t Flags{ 0 };
-            uint8_t AnisotropicLevel{ 0 };
-        };
-
         class NativeCamera : public Napi::ObjectWrap<NativeCamera>
         {
             static constexpr auto JS_NAVIGATOR_NAME = "navigator";
