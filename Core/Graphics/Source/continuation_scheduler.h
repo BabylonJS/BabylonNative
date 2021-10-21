@@ -26,7 +26,7 @@ namespace Babylon
 
         void tick(const arcana::cancellation& cancellation)
         {
-            m_dispatcher.tick(cancellation);
+            continuation_scheduler<WorkSize>::m_dispatcher.tick(cancellation);
         }
     };
 }
