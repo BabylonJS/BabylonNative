@@ -91,7 +91,7 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::map<const NativeCanvasImage*, int> m_nvgImageIndices;
+        std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
 
         void FlushGraphicResources() override;
 

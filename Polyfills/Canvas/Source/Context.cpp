@@ -401,7 +401,7 @@ namespace Babylon::Polyfills::Internal
         if (nvgImageIter == m_nvgImageIndices.end())
         {
             imageIndex = canvasImage->CreateNVGImageForContext(m_nvg);
-            m_nvgImageIndices.insert(std::make_pair(canvasImage, imageIndex));
+            m_nvgImageIndices.try_emplace(canvasImage, imageIndex);
         }
         else
         {
@@ -459,12 +459,13 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            throw std::runtime_error{"Invalid number of parameters for DrawImage"};
+            throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
         }
     }
 
     Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
+        // TODO: support source x and y
         //const auto sx = info[0].As<Napi::Number>().Uint32Value();
         //const auto sy = info[1].As<Napi::Number>().Uint32Value();
         const auto sw = info[2].As<Napi::Number>().Uint32Value();
@@ -473,56 +474,56 @@ namespace Babylon::Polyfills::Internal
         return ImageData::CreateInstance(info.Env(), this, sw, sh);
     }
 
-    void Context::SetLineDash(const Napi::CallbackInfo&)
+    void Context::SetLineDash(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::StrokeText(const Napi::CallbackInfo&)
+    void Context::StrokeText(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo&)
+    Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetTransform(const Napi::CallbackInfo&)
+    void Context::SetTransform(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetLineJoin(const Napi::CallbackInfo&)
+    Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetLineJoin(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo&)
+    Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetMiterLimit(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetFont(const Napi::CallbackInfo&)
+    Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetFont(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         if (!value.IsString())
         {
-            throw std::runtime_error{ "invalid argument" };
+            throw Napi::Error::New(info.Env(), "invalid argument");
         }
 
         const std::string fontOptions = value.ToString();
@@ -556,58 +557,58 @@ namespace Babylon::Polyfills::Internal
         nvgFontSize(m_nvg, fontSize);
     }
 
-    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo&)
+    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowColor(const Napi::CallbackInfo&)
+    Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetShadowColor(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo&)
+    Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowBlur(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetShadowBlur(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo&)
+    Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetShadowOffsetX(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo&)
+    Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetCanvas(const Napi::CallbackInfo&)
+    Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 }

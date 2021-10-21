@@ -91,7 +91,7 @@ namespace Babylon::Polyfills::Internal
         request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                throw Napi::Error::New(env, result.error());
             }
 
             Dispose();

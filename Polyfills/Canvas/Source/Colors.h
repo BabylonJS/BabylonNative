@@ -12,7 +12,7 @@ namespace Babylon::Polyfills::Internal
         std::transform(str.begin(), str.end(), str.begin(),
             [](unsigned char c) { return std::tolower(c); });
 
-        static const std::map<std::string, uint32_t> webColors = {
+        static const std::unordered_map<std::string, uint32_t> webColors = {
             {"aliceblue", 0xf0f8ff},
             {"antiquewhite", 0xfaebd7},
             {"aqua", 0x00ffff},
