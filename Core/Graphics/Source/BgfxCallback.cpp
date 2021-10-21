@@ -5,7 +5,7 @@
 #include <bx/debug.h>
 #include <stdarg.h>
 #include <bgfx/bgfx.h>
-#include <assert.h>
+#include <cassert>
 
 namespace Babylon
 {

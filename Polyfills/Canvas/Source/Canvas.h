@@ -4,6 +4,8 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
+// HACK: for TextureData
+#include <Texture.h>
 
 namespace Babylon::Polyfills
 {
@@ -82,6 +84,7 @@ namespace Babylon::Polyfills::Internal
         Babylon::GraphicsImpl& m_graphicsImpl;
 
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
+        std::unique_ptr<TextureData> m_textureData{};
         bool m_dirty{};
 
         void FlushGraphicResources() override;

@@ -11,20 +11,31 @@ namespace Babylon
 
     IndexBuffer::~IndexBuffer()
     {
-        if (m_dynamic)
+        Dispose();
+    }
+
+    void IndexBuffer::Dispose()
+    {
+        if (m_disposed)
         {
-            if (bgfx::isValid(m_dynamicHandle))
+            return;
+        }
+
+        if (bgfx::isValid(m_handle))
+        {
+            if (m_dynamic)
             {
                 bgfx::destroy(m_dynamicHandle);
             }
-        }
-        else
-        {
-            if (bgfx::isValid(m_handle))
+            else
             {
                 bgfx::destroy(m_handle);
             }
         }
+
+        m_bytes.clear();
+
+        m_disposed = true;
     }
 
     void IndexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes, uint32_t startIndex)
@@ -46,7 +57,7 @@ namespace Babylon
         }
     }
 
-    void IndexBuffer::Create()
+    void IndexBuffer::CreateHandle()
     {
         if (bgfx::isValid(m_handle))
         {

@@ -1,4 +1,5 @@
 #include <napi/napi.h>
+#include <napi/napi_pointer.h>
 #include <NativeCamera.h>
 #include "NativeVideo.h"
 #include "NativeCameraImpl.h"
@@ -33,7 +34,7 @@ namespace Babylon
         {
             static constexpr auto JS_NAVIGATOR_NAME = "navigator";
             static constexpr auto JS_CLASS_NAME = "_NativeCamera";
-            static constexpr auto JS_NATIVECAMERA_CONSTRUCTOR_NAME = "NativeCamera";
+            static constexpr auto JS_CONSTRUCTOR_NAME = "Camera";
 
         public:
 
@@ -49,7 +50,7 @@ namespace Babylon
                         NativeCamera::InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
                     });
 
-                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_NATIVECAMERA_CONSTRUCTOR_NAME, func);
+                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
 
                 // create or get global navigator object
                 Napi::Object global = env.Global();
@@ -115,10 +116,10 @@ namespace Babylon
 
             void UpdateVideoTexture(const Napi::CallbackInfo& info)
             {
-                const auto texture = info[0].As<Napi::External<TextureData>>().Data();
+                const auto& texture = *info[0].As<Napi::Pointer<TextureData>>().Get();
                 auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
 
-                videoObject->UpdateTexture(texture->Handle);
+                videoObject->UpdateTexture(texture.Handle);
             }
         };
 

@@ -50,6 +50,8 @@ struct napi_env__ {
     , native_name{facebook::jsi::PropNameID::forAscii(rt, "__native__")}
     , array_buffer_ctor{rt.global().getPropertyAsFunction(rt, "ArrayBuffer")}
     , promise_ctor{rt.global().getPropertyAsFunction(rt, "Promise")}
+    , get_prototype_of_func(rt.global().getPropertyAsObject(rt, "Object").getPropertyAsFunction(rt, "getPrototypeOf"))
+    , set_prototype_of_func(rt.global().getPropertyAsObject(rt, "Object").getPropertyAsFunction(rt, "setPrototypeOf"))
     , typed_array_ctor{
         rt.global().getPropertyAsFunction(rt, "Int8Array"),
         rt.global().getPropertyAsFunction(rt, "Uint8Array"),
@@ -66,6 +68,8 @@ struct napi_env__ {
   facebook::jsi::PropNameID native_name;
   facebook::jsi::Function array_buffer_ctor;
   facebook::jsi::Function promise_ctor;
+  facebook::jsi::Function get_prototype_of_func;
+  facebook::jsi::Function set_prototype_of_func;
   facebook::jsi::Function typed_array_ctor[9];
 };
 
