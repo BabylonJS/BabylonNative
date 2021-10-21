@@ -184,14 +184,19 @@ namespace Babylon
         m_rendering = false;
     }
 
-    GraphicsImpl::Update& GraphicsImpl::GetUpdate(const char* updateName)
+    GraphicsImpl::Update GraphicsImpl::GetUpdate(const char* updateName)
+    {
+        return {GetSafeTimespanGuarantor(updateName), *this};
+    }
+
+    SafeTimespanGuarantor& GraphicsImpl::GetSafeTimespanGuarantor(const char* updateName)
     {
         std::scoped_lock lock{m_updateMutex};
         std::string updateNameStr{updateName};
         auto found = m_updates.find(updateNameStr);
         if (found == m_updates.end())
         {
-            m_updates.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(*this));
+            m_updates.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple());
             found = m_updates.find(updateNameStr);
         }
         return found->second;

@@ -58,14 +58,9 @@ namespace Babylon
         class Update
         {
         public:
-            continuation_scheduler<>& BeginScheduler()
+            continuation_scheduler<>& Scheduler()
             {
                 return m_safeTimespanGuarantor.BeginScheduler();
-            }
-
-            continuation_scheduler<>& EndScheduler()
-            {
-                return m_safeTimespanGuarantor.EndScheduler();
             }
 
             UpdateToken GetUpdateToken()
@@ -73,34 +68,16 @@ namespace Babylon
                 return {m_graphicsImpl, m_safeTimespanGuarantor};
             }
 
-            // TODO: This should be hidden.
-            Update(GraphicsImpl& graphicsImpl)
-                : m_graphicsImpl{graphicsImpl}
-            {
-            }
-
-            void Start()
-            {
-                m_safeTimespanGuarantor.BeginSafeTimespan();
-            }
-
-            void Stop()
-            {
-                m_safeTimespanGuarantor.NonblockingEndSafeTimespan();
-            }
-
-            void Lock()
-            {
-                m_safeTimespanGuarantor.Lock();
-            }
-
-            void Unlock()
-            {
-                m_safeTimespanGuarantor.Unlock();
-            }
-
         private:
-            SafeTimespanGuarantor m_safeTimespanGuarantor{};
+            friend class GraphicsImpl;
+
+            Update(SafeTimespanGuarantor& safeTimespanGuarantor, GraphicsImpl& graphicsImpl)
+                : m_safeTimespanGuarantor{safeTimespanGuarantor}
+                , m_graphicsImpl{graphicsImpl}
+            {
+            }
+
+            SafeTimespanGuarantor& m_safeTimespanGuarantor;
             GraphicsImpl& m_graphicsImpl;
         };
 
@@ -123,7 +100,10 @@ namespace Babylon
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        Update& GetUpdate(const char* updateName);
+        Update GetUpdate(const char* updateName);
+
+        // For the upward-facing contract.
+        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
 
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
@@ -208,7 +188,7 @@ namespace Babylon
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
 
-        std::map<std::string, Update> m_updates{};
+        std::map<std::string, SafeTimespanGuarantor> m_updates{};
         std::mutex m_updateMutex{};
     };
 }

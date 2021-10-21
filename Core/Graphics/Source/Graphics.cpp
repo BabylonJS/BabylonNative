@@ -59,16 +59,16 @@ namespace Babylon
 
     Graphics::Update Graphics::GetUpdate(const char* updateName)
     {
-        auto& update = m_impl->GetUpdate(updateName);
+        auto& guarantor = m_impl->GetSafeTimespanGuarantor(updateName);
         return {
-            [&update]
+            [&guarantor]
             { 
-                update.Start();
+                guarantor.BeginSafeTimespan();
             },
-            [&update](std::function<void()> callback)
+            [&guarantor](std::function<void()> callback)
             {
-                update.EndScheduler()(std::move(callback));
-                update.Stop();
+                guarantor.EndScheduler()(std::move(callback));
+                guarantor.NonblockingEndSafeTimespan();
             }
         };
     }

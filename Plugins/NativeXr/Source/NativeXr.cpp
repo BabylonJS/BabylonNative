@@ -570,7 +570,7 @@ namespace Babylon
             // reason requestAnimationFrame is being called twice when starting XR.
             m_sessionState->ScheduleFrameCallbacks.emplace_back(callback);
 
-            m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsImpl.GetUpdate("update").BeginScheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
+            m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsImpl.GetUpdate("update").Scheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
                 return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->GraphicsImpl.GetUpdate("update").GetUpdateToken()}, thisRef{shared_from_this()}]()

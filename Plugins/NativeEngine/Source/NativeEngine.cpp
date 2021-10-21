@@ -1058,7 +1058,7 @@ namespace Babylon
         CreateBlitTexture(textureDestination);
         const auto handleDestination{ textureDestination->Handle };
 
-        arcana::make_task(m_update.BeginScheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
         return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]()
             {
                 // JS Thread
@@ -1693,7 +1693,7 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_update.BeginScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 

@@ -59,7 +59,7 @@ namespace Babylon::Polyfills::Internal
         auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
         std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
-        arcana::make_task(graphicsImpl.GetUpdate("update").BeginScheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
+        arcana::make_task(graphicsImpl.GetUpdate("update").Scheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
             fontsInfos[fontName] = fontData;
         }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{ info.Env() }, deferred]() {
             deferred.Resolve(env.Undefined());

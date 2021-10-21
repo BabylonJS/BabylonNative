@@ -185,7 +185,7 @@ namespace Babylon
 
         JsRuntime& m_runtime;
         GraphicsImpl& m_graphicsImpl;
-        GraphicsImpl::Update& m_update;
+        GraphicsImpl::Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;
 
