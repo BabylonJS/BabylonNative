@@ -32,7 +32,6 @@ if(WINDOWS_STORE)
     set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
     set(SOURCES
-        "Shared/TestUtils.h"
         ${APPX_FILES}
         ${APPX_ASSETS}
         "UWP/App.cpp"
@@ -42,7 +41,6 @@ if(WINDOWS_STORE)
     add_executable(ValidationTests WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 elseif(WIN32)
     set(SOURCES
-        "Shared/TestUtils.h"
         "Win32/App.cpp"
         "Win32/App.h"
         "Win32/App.ico"
@@ -66,8 +64,7 @@ elseif(APPLE)
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
             "iOS/LibNativeBridge.h"
-            "iOS/LibNativeBridge.mm"
-            "Shared/TestUtils.h")
+            "iOS/LibNativeBridge.mm")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
     else()
@@ -79,8 +76,7 @@ elseif(APPLE)
             "macOS/AppDelegate.mm"
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
-            "macOS/ViewController.h"
-            "Shared/TestUtils.h")
+            "macOS/ViewController.h")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
      endif()
@@ -124,6 +120,7 @@ target_link_to_dependencies(ValidationTests
     PRIVATE Window
     PRIVATE ScriptLoader
     PRIVATE Canvas
+    PRIVATE TestUtils
     ${ADDITIONAL_LIBRARIES}
     PRIVATE XMLHttpRequest)
 

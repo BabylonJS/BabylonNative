@@ -290,7 +290,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        Babylon::Polyfills::Canvas::Initialize(env);
+        m_nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Plugins::NativeXr::Initialize(env);
 

@@ -5,6 +5,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/Canvas.h>
@@ -14,8 +15,6 @@
 #include <winrt/Windows.ApplicationModel.h>
 
 #include <winrt/windows.ui.core.h>
-
-#include <Shared/TestUtils.h>
 
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Core;
@@ -214,11 +213,11 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        Babylon::Polyfills::Canvas::Initialize(env);
+        m_nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        Babylon::TestUtils::CreateInstance(env, windowPtr);
+        Babylon::Plugins::TestUtils::Initialize(env, windowPtr);
     });
 
     Babylon::ScriptLoader loader{*m_runtime};

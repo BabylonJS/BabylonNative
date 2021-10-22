@@ -4,6 +4,8 @@
 #include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
+#include <napi/napi_pointer.h>
+
 #include <arcana/containers/ticketed_collection.h>
 
 #include <vector>
@@ -169,11 +171,7 @@ namespace Babylon::Plugins::Internal
             }
             else if (info.Length() > 0 && !info[0].IsNull() && !info[0].IsUndefined())
             {
-                if (!info[0].IsExternal())
-                {
-                    throw Napi::Error::New(info.Env(), "Argument passed to NativeCapture constructor must be a Napi::External containing a native FrameBuffer.");
-                }
-                auto& frameBuffer = *info[0].As<Napi::External<FrameBuffer>>().Data();
+                auto& frameBuffer = *info[0].As<Napi::Pointer<FrameBuffer>>().Get();
                 frameBufferHandle = frameBuffer.Handle();
             }
 
