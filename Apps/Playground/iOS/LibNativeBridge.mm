@@ -4,6 +4,7 @@
 #import <Babylon/Graphics.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
@@ -11,13 +12,12 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
-#import <Shared/InputManager.h>
 
 #import <optional>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
 std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool g_isXrActive{};
@@ -36,7 +36,7 @@ bool g_isXrActive{};
 
 - (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
-    inputBuffer.reset();
+    nativeInput = nullptr;
     runtime.reset();
     graphics.reset();
 
@@ -50,7 +50,7 @@ bool g_isXrActive{};
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();
-    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
+    nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
     runtime->Dispatch([xrView](Napi::Env env)
     {
@@ -111,11 +111,20 @@ bool g_isXrActive{};
 
 - (void)setInputs:(int)x y:(int)y tap:(bool)tap
 {
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerPosition(x, y);
-        inputBuffer->SetPointerDown(tap);
-    }
+    if (nativeInput != nullptr)
+     {
+         if (tap)
+         {
+             nativeInput->TouchDown(0, x, y);
+         }
+
+         nativeInput->TouchMove(0, x, y);
+
+         if (!tap)
+         {
+             nativeInput->TouchUp(0, x, y);
+         }
+     }
 }
 
 - (bool)isXRActive

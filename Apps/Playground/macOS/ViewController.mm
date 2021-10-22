@@ -3,6 +3,7 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -10,12 +11,11 @@
 #import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
-#import <Shared/InputManager.h>
 #import <MetalKit/MetalKit.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 @interface EngineView : MTKView <MTKViewDelegate>
@@ -53,7 +53,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         graphics->FinishRenderingCurrentFrame();
     }
 
-    inputBuffer.reset();
+    nativeInput = nullptr;
     runtime.reset();
     graphics.reset();
 }
@@ -87,7 +87,6 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
-    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([](Napi::Env env)
     {
@@ -108,7 +107,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -153,26 +152,28 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     // Update the view, if already loaded.
 }
 
-- (void)mouseDown:(NSEvent *)__unused theEvent {
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerDown(true);
-    }
-}
+- (void)mouseDown:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         nativeInput->MouseDown(theEvent.buttonNumber, eventLocation.x, -eventLocation.y);
+     }
+ }
 
-- (void)mouseDragged:(NSEvent *)theEvent {
-    if (inputBuffer)
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        inputBuffer->SetPointerPosition(eventLocation.x, eventLocation.y);
-    }
-}
+ - (void)mouseDragged:(NSEvent *)theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         nativeInput->MouseMove(eventLocation.x, -eventLocation.y);
+     }
+ }
 
-- (void)mouseUp:(NSEvent *)__unused theEvent {
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerDown(false);
-    }
+ - (void)mouseUp:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         nativeInput->MouseUp(theEvent.buttonNumber, eventLocation.x, -eventLocation.y);
+     }
 }
 
 - (IBAction)refresh:(id)__unused sender

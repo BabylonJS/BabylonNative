@@ -65,7 +65,7 @@ class ViewController: UIViewController, MTKViewDelegate {
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
         if appDelegate != nil {
             let translation = sender.translation(in:mtkView)
-            appDelegate!._bridge!.setInputs(Int32(translation.x), y:Int32(translation.y), tap:true)
+            appDelegate!._bridge!.setInputs(Int32(translation.x * UIScreen.main.scale), y:Int32(translation.y * UIScreen.main.scale), tap:true)
         }
     }
 }

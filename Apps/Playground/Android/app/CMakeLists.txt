@@ -58,6 +58,7 @@ target_link_libraries(BabylonNativeJNI
         -lz
         AppRuntime
         NativeEngine
+        NativeInput
         NativeXr
         NativeOptimizations
         Console
