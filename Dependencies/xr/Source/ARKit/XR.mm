@@ -240,18 +240,11 @@ namespace {
 */
 - (UIInterfaceOrientation)orientation {
     UIApplication* sharedApplication = [UIApplication sharedApplication];
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_15_0)
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
     UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
     return [(UIWindowScene*)scene interfaceOrientation];
-#elif (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
 #else
-    if (@available(iOS 13.0, *)) {
-        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
-    }
-    else {
-        return [sharedApplication statusBarOrientation];
-    }
+    return [sharedApplication statusBarOrientation];
 #endif
 }
 
