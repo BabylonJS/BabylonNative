@@ -33,13 +33,10 @@ JsErrorCode JsCopyString(_In_ JsValueRef value, _Out_opt_ char* buffer, _In_ siz
   size_t stringLength;
   CHECK_JSRT_ERROR_CODE(JsStringToPointer(value, &stringValue, &stringLength));
 
+  int result = ::WideCharToMultiByte(codePage, 0, stringValue, static_cast<int>(stringLength), buffer, static_cast<int>(bufferSize), nullptr, nullptr);
+  assert(result != 0);
   if (length != nullptr) {
-    *length = stringLength;
-  }
-
-  if (buffer != nullptr) {
-    int result = ::WideCharToMultiByte(codePage, 0, stringValue, static_cast<int>(stringLength), buffer, static_cast<int>(bufferSize), nullptr, nullptr);
-    assert(result != 0);
+    *length = result;
   }
 
   return JsErrorCode::JsNoError;

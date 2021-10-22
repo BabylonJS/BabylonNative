@@ -19,3 +19,6 @@ add_subdirectory(NativeCamera)
 
 # Add NativeOptimizations
 add_subdirectory(NativeOptimizations)
+
+# Add TestUtils
+add_subdirectory(TestUtils)

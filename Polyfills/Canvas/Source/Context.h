@@ -3,12 +3,13 @@
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <GraphicsImpl.h>
+#include "Image.h"
 
 struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
-    class Context final : public Napi::ObjectWrap<Context>
+    class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
         static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
@@ -72,8 +73,7 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         void SetDirty();
-        void BeginFrame();
-        void EndFrame();
+        void DeferredFlushFrame();
 
         NativeCanvas* m_canvas;
         NVGcontext* m_nvg;
@@ -86,11 +86,15 @@ namespace Babylon::Polyfills::Internal
         int m_currentFontId{ -1 };
 
         Babylon::GraphicsImpl& m_graphicsImpl;
+
         bool m_dirty{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
+        std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
+
+        void FlushGraphicResources() override;
+
         friend class Canvas;
     };
-
 }
