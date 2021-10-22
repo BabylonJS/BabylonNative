@@ -40,7 +40,7 @@ extern "C"
     {
         if (g_graphics)
         {
-            g_update->End();
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
         }
 
@@ -209,7 +209,7 @@ extern "C"
     {
         if (g_graphics)
         {
-            g_update->End();
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
             g_graphics->StartRenderingCurrentFrame();
             g_update->Start();

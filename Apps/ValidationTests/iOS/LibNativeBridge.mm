@@ -86,7 +86,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 {
     if (graphics)
     {
-        update->End();
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
         update->Start();

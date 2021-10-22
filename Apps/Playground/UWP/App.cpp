@@ -107,7 +107,7 @@ void App::Run()
     {
         if (m_graphics)
         {
-            m_update->End();
+            m_update->Finish();
             m_graphics->FinishRenderingCurrentFrame();
             m_graphics->StartRenderingCurrentFrame();
             m_update->Start();
@@ -124,7 +124,7 @@ void App::Uninitialize()
 {
     if (m_graphics)
     {
-        m_update->End();
+        m_update->Finish();
         m_graphics->FinishRenderingCurrentFrame();
     }
 
@@ -163,7 +163,7 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 
     if (m_graphics)
     {
-        m_update->End();
+        m_update->Finish();
         m_graphics->FinishRenderingCurrentFrame();
     }
 

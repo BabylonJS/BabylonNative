@@ -26,16 +26,16 @@ namespace Babylon
                 m_start();
             }
 
-            void RequestEnd(std::function<void()> onEndCallback)
+            void RequestFinish(std::function<void()> onFinishCallback)
             {
-                m_requestEnd(std::move(onEndCallback));
+                m_requestFinish(std::move(onFinishCallback));
             }
 
-            void End()
+            void Finish()
             {
                 std::promise<void> promise{};
                 auto future = promise.get_future();
-                RequestEnd([&promise] { promise.set_value(); });
+                RequestFinish([&promise] { promise.set_value(); });
                 future.wait();
             }
 
@@ -45,12 +45,12 @@ namespace Babylon
             template<typename StartCallableT, typename RequestEndCallableT>
             Update(StartCallableT&& start, RequestEndCallableT&& requestEnd)
                 : m_start{std::forward<StartCallableT>(start)}
-                , m_requestEnd{std::forward<RequestEndCallableT>(requestEnd)}
+                , m_requestFinish{std::forward<RequestEndCallableT>(requestEnd)}
             {
             }
 
             std::function<void()> m_start{};
-            std::function<void(std::function<void()>)> m_requestEnd{};
+            std::function<void(std::function<void()>)> m_requestFinish{};
         };
 
         ~Graphics();

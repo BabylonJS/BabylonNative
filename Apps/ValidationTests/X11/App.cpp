@@ -53,7 +53,7 @@ namespace
     {
         if (graphics)
         {
-            update->End();
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
         }
         runtime.reset();
@@ -190,7 +190,7 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
     {
         if (!XPending(display) && graphics)
         {
-            update->End();
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
             graphics->StartRenderingCurrentFrame();
             update->Start();

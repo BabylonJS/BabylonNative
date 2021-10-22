@@ -107,7 +107,7 @@ bool g_isXrActive{};
 {
     if (graphics)
     {
-        update->End();
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
         update->Start();

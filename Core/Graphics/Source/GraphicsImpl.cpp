@@ -85,12 +85,12 @@ namespace Babylon
 
     continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return m_beforeRenderScheduler;
+        return m_beforeRenderDispatcher.scheduler();
     }
 
     continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
     {
-        return m_afterRenderScheduler;
+        return m_afterRenderDispatcher.scheduler();
     }
 
     void GraphicsImpl::EnableRendering()
@@ -113,7 +113,7 @@ namespace Babylon
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
-            m_cancellationSource = std::make_unique<arcana::cancellation_source>();
+            m_cancellationSource.emplace();
         }
     }
 
@@ -154,13 +154,26 @@ namespace Babylon
 
         // Update bgfx state if necessary.
         UpdateBgfxState();
+
+        // Unlock the update safe timespans.
+        {
+            std::scoped_lock lock{m_updateSafeTimespansMutex};
+            for (auto& [key, value] : m_updateSafeTimespans)
+            {
+                value.Unlock();
+            }
+        }
     }
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
-        for (auto& [key, value] : m_updates)
+        // Lock the update safe timespans.
         {
-            value.Lock();
+            std::scoped_lock lock{m_updateSafeTimespansMutex};
+            for (auto& [key, value] : m_updateSafeTimespans)
+            {
+                value.Lock();
+            }
         }
 
         assert(m_renderThreadAffinity.check());
@@ -170,16 +183,11 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        m_beforeRenderScheduler.tick(*m_cancellationSource);
+        m_beforeRenderDispatcher.tick(*m_cancellationSource);
 
         Frame();
 
-        m_afterRenderScheduler.tick(*m_cancellationSource);
-
-        for (auto& [key, value] : m_updates)
-        {
-            value.Unlock();
-        }
+        m_afterRenderDispatcher.tick(*m_cancellationSource);
 
         m_rendering = false;
     }
@@ -191,13 +199,13 @@ namespace Babylon
 
     SafeTimespanGuarantor& GraphicsImpl::GetSafeTimespanGuarantor(const char* updateName)
     {
-        std::scoped_lock lock{m_updateMutex};
+        std::scoped_lock lock{m_updateSafeTimespansMutex};
         std::string updateNameStr{updateName};
-        auto found = m_updates.find(updateNameStr);
-        if (found == m_updates.end())
+        auto found = m_updateSafeTimespans.find(updateNameStr);
+        if (found == m_updateSafeTimespans.end())
         {
-            m_updates.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple());
-            found = m_updates.find(updateNameStr);
+            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
+            found = m_updateSafeTimespans.find(updateNameStr);
         }
         return found->second;
     }

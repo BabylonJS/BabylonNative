@@ -2,7 +2,12 @@
 
 namespace Babylon
 {
-    void SafeTimespanGuarantor::BeginSafeTimespan()
+    SafeTimespanGuarantor::SafeTimespanGuarantor(std::optional<arcana::cancellation_source>& cancellation)
+        : m_cancellation{cancellation}
+    {
+    }
+
+    void SafeTimespanGuarantor::Open()
     {
         {
             std::scoped_lock lock{m_mutex};
@@ -16,10 +21,10 @@ namespace Babylon
         m_condition_variable.notify_all();
         std::this_thread::yield();
 
-        m_beginScheduler.tick(arcana::cancellation::none());
+        m_openDispatcher.tick(*m_cancellation);
     }
 
-    void SafeTimespanGuarantor::NonblockingEndSafeTimespan()
+    void SafeTimespanGuarantor::RequestClose()
     {
         std::scoped_lock lock{m_mutex};
         if (m_state != State::Open)
@@ -29,19 +34,12 @@ namespace Babylon
         if (m_count == 0)
         {
             m_state = State::Closed;
-            m_endScheduler.tick(arcana::cancellation::none());
+            m_closeDispatcher.tick(*m_cancellation);
         }
         else
         {
             m_state = State::Closing;
         }
-    }
-
-    arcana::task<void, std::exception_ptr> SafeTimespanGuarantor::EndSafeTimespanAsync()
-    {
-        auto task = arcana::make_task(m_endScheduler, arcana::cancellation::none(), []() {});
-        NonblockingEndSafeTimespan();
-        return task;
     }
 
     void SafeTimespanGuarantor::Lock()
@@ -79,7 +77,7 @@ namespace Babylon
             if (--m_count == 0 && m_state == State::Closing)
             {
                 m_state = State::Closed;
-                m_endScheduler.tick(arcana::cancellation::none());
+                m_closeDispatcher.tick(*m_cancellation);
             }
         }});
     }

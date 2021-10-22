@@ -50,7 +50,7 @@ namespace
     {
         if (graphics)
         {
-            update->End();
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
         }
 
@@ -136,7 +136,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         if (graphics)
         {
-            update->End();
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
             graphics->StartRenderingCurrentFrame();
             update->Start();

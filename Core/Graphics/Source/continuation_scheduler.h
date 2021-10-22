@@ -8,6 +8,13 @@ namespace Babylon
     class continuation_scheduler
     {
     public:
+        continuation_scheduler(arcana::manual_dispatcher<WorkSize>& dispatcher)
+            : m_dispatcher{dispatcher}
+        {
+        }
+        continuation_scheduler(const continuation_scheduler&) = delete;
+        continuation_scheduler(continuation_scheduler&&) = delete;
+
         template<typename CallableT>
         void operator()(CallableT&& callable)
         {
@@ -15,18 +22,31 @@ namespace Babylon
         }
 
     protected:
-        arcana::manual_dispatcher<WorkSize> m_dispatcher;
+        arcana::manual_dispatcher<WorkSize>& m_dispatcher;
     };
 
-    template<typename T, size_t WorkSize = 128>
-    class tickable_continuation_scheduler : public continuation_scheduler<WorkSize>
+    template<size_t WorkSize = 128>
+    class continuation_dispatcher
     {
-    private:
-        friend T;
+    public:
+        continuation_dispatcher()
+            : m_dispatcher{}
+            , m_scheduler{m_dispatcher}
+        {
+        }
+
+        auto& scheduler()
+        {
+            return m_scheduler;
+        }
 
         void tick(const arcana::cancellation& cancellation)
         {
-            continuation_scheduler<WorkSize>::m_dispatcher.tick(cancellation);
+            m_dispatcher.tick(cancellation);
         }
+    
+    private:
+        arcana::manual_dispatcher<WorkSize> m_dispatcher{};
+        continuation_scheduler<WorkSize> m_scheduler{};
     };
 }

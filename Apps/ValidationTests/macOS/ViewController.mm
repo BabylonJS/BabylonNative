@@ -34,7 +34,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics) {
-        update->End();
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
         update->Start();
@@ -54,7 +54,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 - (void)uninitialize {
     if (graphics) {
-        update->End();
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
     }
 

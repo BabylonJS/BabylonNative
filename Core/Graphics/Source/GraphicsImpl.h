@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <map>
+#include <optional>
 #include <unordered_map>
 
 namespace Babylon
@@ -76,7 +77,7 @@ namespace Babylon
         public:
             continuation_scheduler<>& Scheduler()
             {
-                return m_safeTimespanGuarantor.BeginScheduler();
+                return m_safeTimespanGuarantor.OpenScheduler();
             }
 
             UpdateToken GetUpdateToken()
@@ -155,7 +156,7 @@ namespace Babylon
 
         std::atomic<bgfx::ViewId> m_nextViewId{0};
 
-        std::unique_ptr<arcana::cancellation_source> m_cancellationSource{};
+        std::optional<arcana::cancellation_source> m_cancellationSource{};
 
         struct
         {
@@ -179,8 +180,8 @@ namespace Babylon
 
         BgfxCallback m_bgfxCallback;
 
-        tickable_continuation_scheduler<GraphicsImpl> m_beforeRenderScheduler{};
-        tickable_continuation_scheduler<GraphicsImpl> m_afterRenderScheduler{};
+        continuation_dispatcher<> m_beforeRenderDispatcher{};
+        continuation_dispatcher<> m_afterRenderDispatcher{};
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
@@ -195,7 +196,7 @@ namespace Babylon
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
 
-        std::map<std::string, SafeTimespanGuarantor> m_updates{};
-        std::mutex m_updateMutex{};
+        std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
+        std::mutex m_updateSafeTimespansMutex{};
     };
 }

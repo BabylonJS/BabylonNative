@@ -2,47 +2,37 @@
 
 #include "continuation_scheduler.h"
 
+#include <arcana/threading/cancellation.h>
 #include <arcana/threading/task.h>
 
 #include <gsl/gsl>
 
 #include <condition_variable>
-#include <future>
 #include <mutex>
+#include <optional>
 
 namespace Babylon
 {
-    template<typename ReturnT, typename ErrorT>
-    void blocking_await(arcana::task<ReturnT, ErrorT>& task)
-    {
-        std::promise<void> promise{};
-        auto future = promise.get_future();
-        task.then(arcana::inline_scheduler, arcana::cancellation::none(), [&promise]()
-        { 
-            promise.set_value();
-        });
-        future.wait();
-    }
-
     class SafeTimespanGuarantor
     {
     public:
-        void BeginSafeTimespan();
-        void NonblockingEndSafeTimespan();
-        arcana::task<void, std::exception_ptr> EndSafeTimespanAsync();
+        SafeTimespanGuarantor(std::optional<arcana::cancellation_source>&);
 
-        continuation_scheduler<>& BeginScheduler()
+        continuation_scheduler<>& OpenScheduler()
         {
-            return m_beginScheduler;
+            return m_openDispatcher.scheduler();
         }
 
-        continuation_scheduler<>& EndScheduler()
+        continuation_scheduler<>& CloseScheduler()
         {
-            return m_endScheduler;
+            return m_closeDispatcher.scheduler();
         }
 
         using SafetyGuarantee = gsl::final_action<std::function<void()>>;
         SafetyGuarantee GetSafetyGuarantee();
+        
+        void Open();
+        void RequestClose();
         void Lock();
         void Unlock();
 
@@ -55,11 +45,12 @@ namespace Babylon
             Locked
         };
 
-        State m_state{State::Closed};
+        std::optional<arcana::cancellation_source>& m_cancellation;
+        State m_state{State::Locked};
         uint32_t m_count{};
         std::mutex m_mutex{};
         std::condition_variable m_condition_variable{};
-        tickable_continuation_scheduler<SafeTimespanGuarantor> m_beginScheduler{};
-        tickable_continuation_scheduler<SafeTimespanGuarantor> m_endScheduler{};
+        continuation_dispatcher<> m_openDispatcher{};
+        continuation_dispatcher<> m_closeDispatcher{};
     };
 }

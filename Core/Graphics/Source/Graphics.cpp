@@ -63,12 +63,12 @@ namespace Babylon
         return {
             [&guarantor]
             { 
-                guarantor.BeginSafeTimespan();
+                guarantor.Open();
             },
             [&guarantor](std::function<void()> callback)
             {
-                guarantor.EndScheduler()(std::move(callback));
-                guarantor.NonblockingEndSafeTimespan();
+                guarantor.CloseScheduler()(std::move(callback));
+                guarantor.RequestClose();
             }
         };
     }
