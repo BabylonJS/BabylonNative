@@ -74,6 +74,8 @@ namespace Babylon
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateContext(const ContextConfiguration& config);
         void Resize(size_t width, size_t height);
+        size_t GetWidth() const;
+        size_t GetHeight() const;
 
         void AddToJavaScript(Napi::Env);
         static GraphicsImpl& GetFromJavaScript(Napi::Env);
