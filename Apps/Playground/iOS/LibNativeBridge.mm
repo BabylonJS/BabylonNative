@@ -50,8 +50,6 @@ bool g_isXrActive{};
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
-    graphics->StartRenderingCurrentFrame();
-    update->Start();
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -107,10 +105,10 @@ bool g_isXrActive{};
 {
     if (graphics)
     {
-        update->Finish();
-        graphics->FinishRenderingCurrentFrame();
-        graphics->StartRenderingCurrentFrame();
         update->Start();
+        graphics->StartRenderingCurrentFrame();
+        graphics->FinishRenderingCurrentFrame();
+        update->Finish();
     }
 }
 

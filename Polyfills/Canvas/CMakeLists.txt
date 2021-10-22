@@ -2,8 +2,11 @@ set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"
     "Source/Canvas.h"
+    "Source/Colors.h"
     "Source/Image.cpp"
     "Source/Image.h"
+    "Source/ImageData.cpp"
+    "Source/ImageData.h"
     "Source/Context.cpp"
     "Source/Context.h"
     "Source/MeasureText.cpp"
@@ -31,6 +34,7 @@ target_link_to_dependencies(Canvas
     PRIVATE JsRuntime
     PRIVATE GraphicsInternal
     PRIVATE NativeEngineInternal
+    PRIVATE UrlLib
     PRIVATE napi_extensions)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)

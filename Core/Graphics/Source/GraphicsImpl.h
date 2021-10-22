@@ -126,6 +126,8 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        size_t GetWidth() const;
+        size_t GetHeight() const;
         float GetDevicePixelRatio();
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;

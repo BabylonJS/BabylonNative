@@ -69,6 +69,16 @@ namespace Babylon
         UpdateBgfxResolution();
     }
 
+    size_t GraphicsImpl::GetWidth() const
+    {
+        return m_state.Resolution.Width;
+    }
+
+    size_t GraphicsImpl::GetHeight() const
+    {
+        return m_state.Resolution.Height;
+    }
+
     void GraphicsImpl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -220,12 +230,14 @@ namespace Babylon
     void GraphicsImpl::RemoveTexture(bgfx::TextureHandle handle)
     {
         auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        assert(m_textureHandleToInfo.find(handle.idx) != m_textureHandleToInfo.end());
         m_textureHandleToInfo.erase(handle.idx);
     }
 
     GraphicsImpl::TextureInfo GraphicsImpl::GetTextureInfo(bgfx::TextureHandle handle)
     {
         auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
+        assert(m_textureHandleToInfo.find(handle.idx) != m_textureHandleToInfo.end());
         return m_textureHandleToInfo[handle.idx];
     }
 

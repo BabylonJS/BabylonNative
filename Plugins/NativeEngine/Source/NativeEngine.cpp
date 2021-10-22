@@ -1258,8 +1258,9 @@ namespace Babylon
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        const TextureData* texture = info[0].As<Napi::Pointer<TextureData>>().Get();
+        TextureData* texture = info[0].As<Napi::Pointer<TextureData>>().Get();
         m_graphicsImpl.RemoveTexture(texture->Handle);
+        texture->Dispose();
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
@@ -1306,6 +1307,8 @@ namespace Babylon
 
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
+
+        m_graphicsImpl.AddTexture(texture->Handle, width, height, generateMips, 1, format);
 
         FrameBuffer* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
@@ -1403,12 +1406,12 @@ namespace Babylon
             flags |= BGFX_CLEAR_COLOR;
         }
 
-        if (shouldClearDepth && m_boundFrameBuffer->HasDepth())
+        if (shouldClearDepth && (!m_boundFrameBuffer || m_boundFrameBuffer->HasDepth()))
         {
             flags |= BGFX_CLEAR_DEPTH;
         }
 
-        if (shouldClearStencil && m_boundFrameBuffer->HasStencil())
+        if (shouldClearStencil && (!m_boundFrameBuffer || m_boundFrameBuffer->HasStencil()))
         {
             flags |= BGFX_CLEAR_STENCIL;
         }
