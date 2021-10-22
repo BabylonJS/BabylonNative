@@ -1226,21 +1226,21 @@ namespace xr
         return "ARCore";
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* commandQueue, std::function<void*()> windowProvider)
     {
         // First perform the ARCore installation check, request install if not yet installed.
         return CheckAndInstallARCoreAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), []()
         {
             // Next check for camera permissions, and request if not already granted.
             return android::Permissions::CheckCameraPermissionAsync();
-        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, windowProvider{ std::move(windowProvider) }]()
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [&system, graphicsDevice, commandQueue, windowProvider{ std::move(windowProvider) }]()
         {
             // Finally if the previous two tasks succeed, start the AR session.
-            return std::make_shared<System::Session>(system, graphicsDevice, windowProvider);
+            return std::make_shared<System::Session>(system, graphicsDevice, commandQueue, windowProvider);
         });
     }
 
-    System::Session::Session(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+    System::Session::Session(System& system, void* graphicsDevice, void*, std::function<void*()> windowProvider)
         : m_impl{ std::make_unique<System::Session::Impl>(*system.m_impl, graphicsDevice, std::move(windowProvider)) }
     {}
 

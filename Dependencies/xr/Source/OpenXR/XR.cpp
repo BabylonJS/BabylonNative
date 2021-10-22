@@ -1213,12 +1213,12 @@ namespace xr
         return XrRegistry::GetNativeXrContextType();
     }
 
-    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, std::function<void*()> windowProvider)
+    arcana::task<std::shared_ptr<System::Session>, std::exception_ptr> System::Session::CreateAsync(System& system, void* graphicsDevice, void* commandQueue, std::function<void*()> windowProvider)
     {
-        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, windowProvider));
+        return arcana::task_from_result<std::exception_ptr>(std::make_shared<System::Session>(system, graphicsDevice, commandQueue, windowProvider));
     }
 
-    System::Session::Session(System& headMountedDisplay, void* graphicsDevice, std::function<void*()>)
+    System::Session::Session(System& headMountedDisplay, void* graphicsDevice, void*, std::function<void*()>)
         : m_impl{ std::make_unique<System::Session::Impl>(*headMountedDisplay.m_impl, graphicsDevice) }
     {}
 

@@ -60,15 +60,6 @@ namespace Babylon
         return m_defaultBackBuffer;
     }
 
-    void FrameBuffer::Dispose()
-    {
-        if (bgfx::isValid(m_handle))
-        {
-            bgfx::destroy(m_handle);
-        }
-        m_handle = BGFX_INVALID_HANDLE;
-    }
-
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
         m_viewId = m_impl.AcquireNewViewId(encoder);
@@ -139,6 +130,21 @@ namespace Babylon
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
     {
         encoder.setStencil(m_hasStencil ? stencilState : 0);
+    }
+
+    void FrameBuffer::Dispose()
+    {
+        if (m_disposed)
+        {
+            return;
+        }
+
+        if (bgfx::isValid(m_handle))
+        {
+            bgfx::destroy(m_handle);
+        }
+        m_handle = BGFX_INVALID_HANDLE;
+        m_disposed = true;
     }
 
     bool ViewPort::Equals(const ViewPort& other) const

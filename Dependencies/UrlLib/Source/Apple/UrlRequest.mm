@@ -1,3 +1,7 @@
+#if ! __has_feature(objc_arc)
+#error "ARC is off"
+#endif
+
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -12,10 +16,6 @@ namespace UrlLib
         ~Impl()
         {
             Abort();
-            if (m_responseBuffer)
-            {
-                [m_responseBuffer release];
-            }
         }
 
         void Abort()
@@ -26,22 +26,23 @@ namespace UrlLib
         void Open(UrlMethod method, std::string url)
         {
             m_method = method;
-            NSString* urlString = [[NSString stringWithUTF8String:url.data()] stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-            m_nsURL = {[NSURL URLWithString:urlString]};
-            if (!m_nsURL || !m_nsURL.scheme)
+            NSString* urlString = [NSString stringWithUTF8String:url.data()];
+            NSURL* nsURL{[NSURL URLWithString:urlString]};
+            if (!nsURL || !nsURL.scheme)
             {
                 throw std::runtime_error{"URL does not have a valid scheme"};
             }
-            NSString* scheme{m_nsURL.scheme};
+            NSString* scheme{nsURL.scheme};
             if ([scheme isEqual:@"app"])
             {
-                NSString* path{[[NSBundle mainBundle] pathForResource:m_nsURL.path ofType:nil]};
+                NSString* path{[[NSBundle mainBundle] pathForResource:nsURL.path ofType:nil]};
                 if (path == nil)
                 {
                     throw std::runtime_error{"No file exists at local path"};
                 }
-                m_nsURL = [NSURL fileURLWithPath:path];
+                nsURL = [NSURL fileURLWithPath:path];
             }
+            m_nsURL = nsURL; // Only store the URL if we didn't throw
         }
 
         UrlResponseType ResponseType() const
@@ -97,7 +98,6 @@ namespace UrlLib
                         }
                         case UrlResponseType::Buffer:
                         {
-                            [data retain];
                             m_responseBuffer = data;
                             break;
                         }

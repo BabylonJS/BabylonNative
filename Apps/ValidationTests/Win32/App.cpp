@@ -11,14 +11,13 @@
 #include <filesystem>
 #include <algorithm>
 
-#include <Shared/TestUtils.h>
-
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -33,6 +32,7 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
+std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 // 600, 400 mandatory size for CI tests
 static const int TEST_WIDTH = 600;
@@ -53,6 +53,7 @@ namespace
         }
 
         runtime.reset();
+        nativeCanvas.reset();
         graphics.reset();
     }
 
@@ -82,7 +83,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            Babylon::Polyfills::Canvas::Initialize(env);
+            nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -90,7 +91,7 @@ namespace
 
             Babylon::Plugins::NativeXr::Initialize(env);
 
-            Babylon::TestUtils::CreateInstance(env, hWnd);
+            Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
 
         Babylon::ScriptLoader loader{ *runtime };
@@ -228,7 +229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
-            PostQuitMessage(errorCode);
+            PostQuitMessage(Babylon::Plugins::TestUtils::errorCode);
             break;
         }
         default:

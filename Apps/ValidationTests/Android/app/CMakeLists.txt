@@ -44,10 +44,6 @@ add_subdirectory(${BABYLON_NATIVE_VALIDATIONTESTS_DIR}/../../ ${BABYLON_NATIVE_V
 add_library(BabylonNativeJNI SHARED
             src/main/cpp/BabylonNativeJNI.cpp)
 
-target_include_directories(BabylonNativeJNI
-        PRIVATE
-        ${BABYLON_NATIVE_VALIDATIONTESTS_DIR}/Shared)
-
 add_definitions(-DANDROID_STL=c++_shared)
 
 target_link_libraries(BabylonNativeJNI
@@ -65,7 +61,8 @@ target_link_libraries(BabylonNativeJNI
         Window
         ScriptLoader
         bgfx
-        XMLHttpRequest)
+        XMLHttpRequest
+        TestUtils)
 
 configure_file(
     "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libc++_shared.so"
