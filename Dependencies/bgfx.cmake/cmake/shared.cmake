@@ -21,13 +21,6 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/generated/shader.cpp.in
 target_sources( bgfx-shader INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated/shader.cpp )
 target_include_directories( bgfx-shader INTERFACE ${BGFX_DIR}/include )
 
-add_library( bgfx-bounds INTERFACE )
-configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/generated/bounds.cpp.in
-                ${CMAKE_CURRENT_BINARY_DIR}/generated/bounds.cpp )
-target_sources( bgfx-bounds INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated/bounds.cpp )
-target_include_directories( bgfx-bounds INTERFACE ${BGFX_DIR}/include )
-target_include_directories( bgfx-bounds INTERFACE ${BGFX_DIR}/examples/common )
-
 # Frameworks required on OS X
 if( ${CMAKE_SYSTEM_NAME} MATCHES Darwin )
 	find_library( COCOA_LIBRARY Cocoa )
