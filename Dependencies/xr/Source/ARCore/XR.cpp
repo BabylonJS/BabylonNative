@@ -466,7 +466,7 @@ namespace xr
 
                 // Clear the depth and stencil
                 glDepthMask(GL_TRUE);
-                GLTransactions::SetStencil(1);
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(1) };
                 glClearDepthf(1.0);
                 glClearStencil(0);
                 glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -533,7 +533,7 @@ namespace xr
 
                 // Only write colors to blit to the screen
                 glDepthMask(GL_FALSE);
-                GLTransactions::SetStencil(0);
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(0) };
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
                 // Use the custom shader
