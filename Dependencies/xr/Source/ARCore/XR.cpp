@@ -558,6 +558,9 @@ namespace xr
                 // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
                 //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
                 eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
+
+                // set back stencil write mask to 0xFF (bgfx default)
+                glStencilMask(0xFF);
             }
         }
 
