@@ -185,6 +185,15 @@ namespace Babylon::Polyfills::Internal
             }
             return nvgRGBA(components[0], components[1], components[2], components[3]);
         }
+        else if (str.substr(0, 4) == "rgb(" && str[str.length() - 1] == ')')
+        {
+            auto rEnd = str.find(",", 4);
+            auto gEnd = str.find(",", rEnd + 1);
+            auto r = str.substr(4, rEnd - 4);
+            auto g = str.substr(rEnd + 1, gEnd - rEnd - 1);
+            auto b = str.substr(gEnd + 1, str.length() - gEnd - 2);
+            return nvgRGB(std::stoi(r), std::stoi(g), std::stoi(b));
+        }
         else
         {
             if (str == "transparent" || !str.length())
