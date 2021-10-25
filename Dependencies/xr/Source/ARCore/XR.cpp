@@ -466,7 +466,7 @@ namespace xr
 
                 // Clear the depth and stencil
                 glDepthMask(GL_TRUE);
-                glStencilMask(1);
+                GLTransactions::SetStencil(1);
                 glClearDepthf(1.0);
                 glClearStencil(0);
                 glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -533,7 +533,7 @@ namespace xr
 
                 // Only write colors to blit to the screen
                 glDepthMask(GL_FALSE);
-                glStencilMask(0);
+                GLTransactions::SetStencil(0);
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
                 // Use the custom shader
@@ -558,9 +558,6 @@ namespace xr
                 // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the regular Android Babylon Native Playground playground app.
                 //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the regular playground app.
                 eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
-
-                // set back stencil write mask to 0xFF (bgfx default)
-                glStencilMask(0xFF);
             }
         }
 
