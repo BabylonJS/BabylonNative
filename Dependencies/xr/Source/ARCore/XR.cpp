@@ -451,6 +451,8 @@ namespace xr
             ArFrame_getTimestamp(xrContext->Session, xrContext->Frame, &frameTimestamp);
             if (frameTimestamp)
             {
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(1) };
+
                 // Bind the frame buffer
                 glBindFramebuffer(GL_FRAMEBUFFER, cameraFrameBufferId);
 
@@ -466,7 +468,7 @@ namespace xr
 
                 // Clear the depth and stencil
                 glDepthMask(GL_TRUE);
-                auto stencilMaskTransaction{ GLTransactions::SetStencil(1) };
+                glStencilMask(1);
                 glClearDepthf(1.0);
                 glClearStencil(0);
                 glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);

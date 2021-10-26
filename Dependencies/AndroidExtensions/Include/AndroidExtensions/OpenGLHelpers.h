@@ -32,7 +32,8 @@ namespace android::OpenGLHelpers
 
         inline auto SetStencil(uint8_t mask)
         {
-            auto previousStencilMask{ glGet( GL_STENCIL_WRITEMASK) };
+            GLint previousStencilMask{};
+            glGetIntegerv(GL_STENCIL_WRITEMASK, &previousStencilMask);
             glStencilMask(mask);
             return gsl::finally([previousStencilMask]() { glStencilMask(previousStencilMask); });
         }
