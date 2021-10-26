@@ -270,7 +270,7 @@ namespace xr
 
                 struct Plane
                 {
-                    using Identifier = size_t;
+                    using Identifier = uint32_t;
                     const Identifier ID{ NEXT_ID++ };
                     Pose Center{};
                     std::vector<float> Polygon{};

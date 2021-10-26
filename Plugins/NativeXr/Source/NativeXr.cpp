@@ -1672,9 +1672,10 @@ namespace Babylon
                 , m_planeSpace{std::make_unique<xr::Space>()}
                 , m_jsPlaneSpace{Napi::External<xr::Space>::New(info.Env(), m_planeSpace.get())}
             {
+                m_jsThis.Set("planeSpace", m_jsPlaneSpace);
             }
 
-            void UpdateNativePlane(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane, const Napi::Value& parentSceneObject)
+            void SetNativePlane(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane, const Napi::Value& parentSceneObject)
             {
                 m_jsThis.Set("parentSceneObject", parentSceneObject);
                 m_jsThis.Set("polygon", GetPolygon(env, plane));
@@ -1719,6 +1720,7 @@ namespace Babylon
             Napi::ObjectReference m_jsThis{};
             std::unique_ptr<xr::Space> m_planeSpace;
             Napi::External<xr::Space> m_jsPlaneSpace;
+            Napi::Array m_jsPolygonArray;
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
@@ -1946,6 +1948,7 @@ namespace Babylon
                         InstanceMethod("getPoseData", &XRFrame::GetPoseData),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                        InstanceMethod("createPlanes", &XRFrame::CreatePlanes),
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillJointPoseData", &XRFrame::FillJointPoseData),
                         InstanceMethod("fillJointPoseRadiiData", &XRFrame::FillJointPoseRadiiData),
@@ -1958,7 +1961,7 @@ namespace Babylon
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
                 auto newNativeXRFrame = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("NativeXRFrame").As<Napi::Function>().New({}).As<Napi::Object>();
-                newNativeXRFrame.Set("_nativeImpl", info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({}));
+                newNativeXRFrame.Set("_nativeImpl", info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({newNativeXRFrame}));
                 return newNativeXRFrame;
             }
 
@@ -1970,7 +1973,8 @@ namespace Babylon
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
-                , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))} 
+                , m_jsNativeXRFrame{Napi::Persistent(info[0].As<Napi::Object>())}
             {
                 m_jsPose.Set("transform", m_jsTransform.Value());
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
@@ -2078,6 +2082,8 @@ namespace Babylon
             XRRigidTransform& m_transform;
             Napi::ObjectReference m_jsPose{};
             Napi::ObjectReference m_jsJointPose{};
+
+            Napi::ObjectReference m_jsNativeXRFrame{};
 
             bool m_hasBegunTracking{false};
 
@@ -2283,46 +2289,49 @@ namespace Babylon
                 }
             }
 
-            void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
+            void CreatePlanes(const Napi::CallbackInfo& info)
             {
-                // First loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
-                for (auto planeID : m_frame->UpdatedPlanes)
+                const auto newPlaneIds = info[0].As<Napi::Array>();
+                const auto numNewPlaneIds = info[1].As<Napi::Number>().Uint32Value();
+                auto newPlanes = info[2].As<Napi::Array>();
+
+                for (uint32_t i = 0; i < numNewPlaneIds; i++)
                 {
-                    XRPlane* xrPlane{};
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
+                    const auto planeId = newPlaneIds[numNewPlaneIds].As<Napi::Number>().Uint32Value();
+                    auto napiPlane = XRPlane::New(info.Env());
+                    auto xrPlane = XRPlane::Unwrap(napiPlane);
+                    const auto& nativePlane = GetPlaneFromID(planeId);
+                    const auto& parentSceneObject = GetJSSceneObjectFromID(info.Env(), nativePlane.ParentSceneObjectID);
+                    xrPlane->SetNativePlane(info.Env(), nativePlane, parentSceneObject);
+                    newPlanes.Set(i, napiPlane);
+                }
+            }
 
-                    // Plane does not yet exist create the JS object and insert it into the map.
-                    if (trackedPlaneIterator == m_trackedPlanes.end())
-                    {
-                        auto napiPlane = Napi::Persistent(XRPlane::New(env));
-                        xrPlane = XRPlane::Unwrap(napiPlane.Value());
-                        const auto& nativePlane = GetPlaneFromID(planeID);
-                        const auto& parentSceneObject = GetJSSceneObjectFromID(env, nativePlane.ParentSceneObjectID);
-                        xrPlane->UpdateNativePlane(env, nativePlane, parentSceneObject);
-                        m_trackedPlanes.insert({planeID, std::move(napiPlane)});
-                    }
-                    else
-                    {
-                        xrPlane = XRPlane::Unwrap(trackedPlaneIterator->second.Value());
-                    }
-
-                    xrPlane->SetLastUpdatedTime(env, timestamp);
+            void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
+            {                
+                Napi::Value updatedArray = env.Undefined();
+                const auto numUpdatedPlanes = m_frame->UpdatedPlanes.size();
+                if (numUpdatedPlanes > 0)
+                {
+                    auto updatedArrayBuffer = Napi::ArrayBuffer::New(env, numUpdatedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
+                    memcpy(updatedArrayBuffer.Data(), m_frame->UpdatedPlanes.data(), numUpdatedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
+                    updatedArray = Napi::Uint32Array::New(env, m_frame->UpdatedPlanes.size(), updatedArrayBuffer, 0);
                 }
 
-                // Next go over removed planes and remove them from our mapping.
-                for (auto planeID : m_frame->RemovedPlanes)
+                Napi::Value removedArray = env.Undefined();
+                const auto numRemovedPlanes = m_frame->RemovedPlanes.size();
+                if (numRemovedPlanes > 0)
                 {
-                    auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
-                    assert(trackedPlaneIterator != m_trackedPlanes.end());
-                    m_trackedPlanes.erase(trackedPlaneIterator);
+                    auto removedArrayBuffer = Napi::ArrayBuffer::New(env, numRemovedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
+                    memcpy(removedArrayBuffer.Data(), m_frame->RemovedPlanes.data(), numRemovedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
+                    removedArray = Napi::Uint32Array::New(env, m_frame->RemovedPlanes.size(), removedArrayBuffer, 0);
                 }
 
-                m_jsPlaneSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
-                m_jsThis.Set("detectedPlanes", m_jsPlaneSet.Value());
-                const auto addFunc = m_jsPlaneSet.Value().Get("add").As<Napi::Function>();
-                for (const auto& [plane, planeNapiRef] : m_trackedPlanes)
+                if (numUpdatedPlanes > 0 || numRemovedPlanes > 0)
                 {
-                    addFunc.Call(m_jsPlaneSet.Value(), {planeNapiRef.Value()});
+                    const auto timestampValue = Napi::Value::From(env, timestamp);
+                    const auto updatePlanesFunc = m_jsNativeXRFrame.Get("updatePlanes").As<Napi::Function>();
+                    updatePlanesFunc.Call(m_jsNativeXRFrame.Value(), {timestampValue, updatedArray, removedArray});
                 }
             }
 
