@@ -73,6 +73,28 @@ though not yet fully supported, to develop on Linux.) This overview is intended
 for reasonably experienced developers familiar with common native development 
 principles.
 
+## Graphics API
+
+For Win32, Android and Linux, it's possible to build for different Graphics API.
+With CMake, add this parameter to the command line:
+```
+-DGRAPHICS_API=XXX
+```
+
+Where `XXX` can be D3D11 (default), D3D12 or Vulkan for Windows. `Vulkan` or OpenGL (default) for Linux.
+
+For Android, the switch to Vulkan instead of OpenGL (default) is done with Gradle by adding a command line parameter:
+```
+-PGRAPHICS_API=Vulkan
+```
+
+If no `GRAPHICS_API` is provided, the build use the default API. 
+
+**Note**
+
+- For Apple devices, Metal is the only possible choice.
+- Vulkan and D3D12 are under development and might not be stable enough for your production.
+
 ### **All Development Platforms, Common First Steps**
 
 **Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/), [node.js](https://nodejs.org/en/)
