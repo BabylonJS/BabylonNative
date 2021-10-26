@@ -18,11 +18,13 @@ if (project.hasProperty("JSEngine")) {
     }
 }
 
-def vulkan = 0
+def graphics_api = "OpenGL"
 def platformVersion = 21
-if (project.hasProperty("VULKAN")) {
-    platformVersion = 24 // minimal version to get Vulkan
-    vulkan = 1
+if (project.hasProperty("GRAPHICS_API")) {
+    graphics_api = project.property("GRAPHICS_API")
+    if ("${graphics_api}" == "Vulkan" ) {
+        platformVersion = 24 // minimal version to get Vulkan
+    }
 }
 
 def arcore_libpath = "${buildDir}/arcore-native"
@@ -43,7 +45,7 @@ android {
                         '-DENABLE_GLSLANG_BINARIES=OFF',
                         "-DENABLE_PCH=OFF",
                         '-DSPIRV_CROSS_CLI=OFF',
-                        "-DVULKAN=${vulkan}",
+                        "-DGRAPHICS_API=${graphics_api}",
                         "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                         "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
                         "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",

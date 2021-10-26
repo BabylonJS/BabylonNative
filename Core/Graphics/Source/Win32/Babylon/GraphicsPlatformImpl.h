@@ -8,7 +8,9 @@ namespace Babylon
 {
 #if APIVulkan
     constexpr auto inline BgfxDefaultRendererType{bgfx::RendererType::Vulkan};
-#else
+#elif APID3D11
     constexpr auto inline BgfxDefaultRendererType{bgfx::RendererType::Direct3D11};
+#elif APID3D12
+    constexpr auto inline BgfxDefaultRendererType{bgfx::RendererType::Direct3D12};
 #endif
 }
