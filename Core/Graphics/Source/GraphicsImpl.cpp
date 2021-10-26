@@ -203,14 +203,12 @@ namespace Babylon
     void GraphicsImpl::RemoveTexture(bgfx::TextureHandle handle)
     {
         auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        assert(m_textureHandleToInfo.find(handle.idx) != m_textureHandleToInfo.end());
         m_textureHandleToInfo.erase(handle.idx);
     }
 
     GraphicsImpl::TextureInfo GraphicsImpl::GetTextureInfo(bgfx::TextureHandle handle)
     {
         auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        assert(m_textureHandleToInfo.find(handle.idx) != m_textureHandleToInfo.end());
         return m_textureHandleToInfo[handle.idx];
     }
 
