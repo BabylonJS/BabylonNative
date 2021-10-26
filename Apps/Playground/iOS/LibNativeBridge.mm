@@ -48,7 +48,6 @@ bool g_isXrActive{};
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    graphics->StartRenderingCurrentFrame();
     runtime = std::make_unique<Babylon::AppRuntime>();
     nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
@@ -104,8 +103,8 @@ bool g_isXrActive{};
 {
     if (graphics)
     {
-        graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
+        graphics->FinishRenderingCurrentFrame();
     }
 }
 
