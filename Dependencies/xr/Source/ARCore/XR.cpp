@@ -45,6 +45,7 @@ namespace xr
         bool Initialized{false};
         ArSession* Session{nullptr};
         ArFrame* Frame{nullptr};
+        ArConfig* Config{nullptr};
 
         bool IsInitialized() const override
         {
@@ -274,6 +275,21 @@ namespace xr
                 {
                     std::ostringstream message;
                     message << "Failed to create ArSession with status: " << status;
+                    throw std::runtime_error{ message.str() };
+                }
+
+                // Create the AR Config
+                ArConfig_create(xrContext->Session, &xrContext->Config);
+
+                // Set Focus Mode Auto
+                ArConfig_setFocusMode(xrContext->Session, xrContext->Config, AR_FOCUS_MODE_AUTO);
+
+                // Configure the ArSession
+                ArStatus statusConfig { ArSession_configure(xrContext->Session, xrContext->Config) };
+                if (statusConfig != ArStatus::AR_SUCCESS)
+                {
+                    std::ostringstream message;
+                    message << "Failed to configure ArSession with status: " << status;
                     throw std::runtime_error{ message.str() };
                 }
             }
