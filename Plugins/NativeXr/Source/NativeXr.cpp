@@ -1949,6 +1949,7 @@ namespace Babylon
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceMethod("createPlanes", &XRFrame::CreatePlanes),
+                        InstanceMethod("createMeshes", &XRFrame::CreateMeshes),
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillJointPoseData", &XRFrame::FillJointPoseData),
                         InstanceMethod("fillJointPoseRadiiData", &XRFrame::FillJointPoseRadiiData),
@@ -2335,42 +2336,49 @@ namespace Babylon
                 }
             }
 
+            void CreateMeshes(const Napi::CallbackInfo& info)
+            {
+                const auto newMeshIds = info[0].As<Napi::Array>();
+                const auto numNewMeshIds = info[1].As<Napi::Number>().Uint32Value();
+                auto newMeshes = info[2].As<Napi::Array>();
+
+                for (uint32_t i = 0; i < numNewMeshIds; i++)
+                {
+                    const auto meshId = newMeshIds[i].As<Napi::Number>().Uint32Value();
+                    auto napiMesh = XRMesh::New(info.Env());
+                    auto xrMesh = XRMesh::Unwrap(napiMesh);
+                    const auto& nativeMesh = GetMeshFromID(meshId);
+                    const auto& parentSceneObject = GetJSSceneObjectFromID(info.Env(), nativeMesh.ParentSceneObjectID);
+                    xrMesh->UpdateNativeMesh(info.Env(), nativeMesh, parentSceneObject);
+                    newMeshes.Set(i, napiMesh);
+                }
+            }
+
             void UpdateMeshes(const Napi::Env& env, uint32_t timestamp)
             {
-                for (auto meshID : m_frame->UpdatedMeshes)
+                Napi::Value updatedArray = env.Undefined();
+                const auto numUpdatedMeshes = m_frame->UpdatedMeshes.size();
+                if (numUpdatedMeshes > 0)
                 {
-                    XRMesh* xrMesh{};
-                    auto trackedMeshIterator = m_trackedMeshes.find(meshID);
-
-                    if (trackedMeshIterator == m_trackedMeshes.end())
-                    {
-                        auto napiMesh = Napi::Persistent(XRMesh::New(env));
-                        xrMesh = XRMesh::Unwrap(napiMesh.Value());
-                        const auto& nativeMesh = GetMeshFromID(meshID);
-                        const auto& parentSceneObject = GetJSSceneObjectFromID(env, nativeMesh.ParentSceneObjectID);
-                        xrMesh->UpdateNativeMesh(env, nativeMesh, parentSceneObject);
-                        m_trackedMeshes.insert({meshID, std::move(napiMesh)});
-                    }
-                    else
-                    {
-                        xrMesh = XRMesh::Unwrap(trackedMeshIterator->second.Value());
-                    }
-
-                    xrMesh->SetLastUpdatedTime(env, timestamp);
+                    auto updatedArrayBuffer = Napi::ArrayBuffer::New(env, numUpdatedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
+                    memcpy(updatedArrayBuffer.Data(), m_frame->UpdatedMeshes.data(), numUpdatedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
+                    updatedArray = Napi::Uint32Array::New(env, m_frame->UpdatedMeshes.size(), updatedArrayBuffer, 0);
                 }
 
-                for (auto meshID : m_frame->RemovedMeshes)
+                Napi::Value removedArray = env.Undefined();
+                const auto numRemovedMeshes = m_frame->RemovedMeshes.size();
+                if (numRemovedMeshes > 0)
                 {
-                    m_trackedMeshes.erase(meshID);
+                    auto removedArrayBuffer = Napi::ArrayBuffer::New(env, numRemovedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
+                    memcpy(removedArrayBuffer.Data(), m_frame->RemovedMeshes.data(), numRemovedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
+                    removedArray = Napi::Uint32Array::New(env, m_frame->RemovedMeshes.size(), removedArrayBuffer, 0);
                 }
 
-                // Create a new mesh set every frame, detected meshes are assumed immutable
-                m_jsMeshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
-                m_jsThis.Set("detectedMeshes", m_jsMeshSet.Value());
-                const auto addFunc = m_jsMeshSet.Value().Get("add").As<Napi::Function>();
-                for (const auto& [meshID, meshNapiRef] : m_trackedMeshes)
+                if (numUpdatedMeshes > 0 || numRemovedMeshes > 0)
                 {
-                    addFunc.Call(m_jsMeshSet.Value(), {meshNapiRef.Value()});
+                    const auto timestampValue = Napi::Value::From(env, timestamp);
+                    const auto updateMeshesFunc = m_jsNativeXRFrame.Get("updateMeshes").As<Napi::Function>();
+                    updateMeshesFunc.Call(m_jsNativeXRFrame.Value(), {timestampValue, updatedArray, removedArray});
                 }
             }
         };

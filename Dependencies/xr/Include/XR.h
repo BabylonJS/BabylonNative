@@ -285,7 +285,7 @@ namespace xr
                 struct Mesh
                 {
                     using IndexType = uint32_t;
-                    using Identifier = size_t;
+                    using Identifier = uint32_t;
                     const Identifier ID{ NEXT_ID++ };
                     std::vector<xr::Vector3f> Positions{};
                     std::vector<IndexType> Indices{};
