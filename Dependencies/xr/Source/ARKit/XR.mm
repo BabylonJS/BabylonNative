@@ -244,6 +244,9 @@ namespace {
     UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
     return [(UIWindowScene*)scene interfaceOrientation];
 #else
+    if (@available(iOS 13.0, *)) {
+        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+    }
     return [sharedApplication statusBarOrientation];
 #endif
 }
