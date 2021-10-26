@@ -29,5 +29,13 @@ namespace android::OpenGLHelpers
             eglMakeCurrent(display, drawSurface, readSurface, context);
             return gsl::finally([previousDisplay, previousDrawSurface, previousReadSurface, previousContext]() { eglMakeCurrent(previousDisplay, previousDrawSurface, previousReadSurface, previousContext); });
         }
+
+        inline auto SetStencil(uint8_t mask)
+        {
+            GLint previousStencilMask{};
+            glGetIntegerv(GL_STENCIL_WRITEMASK, &previousStencilMask);
+            glStencilMask(mask);
+            return gsl::finally([previousStencilMask]() { glStencilMask(previousStencilMask); });
+        }
     }
 }
