@@ -2297,7 +2297,7 @@ namespace Babylon
 
                 for (uint32_t i = 0; i < numNewPlaneIds; i++)
                 {
-                    const auto planeId = newPlaneIds[numNewPlaneIds].As<Napi::Number>().Uint32Value();
+                    const auto planeId = newPlaneIds[i].As<Napi::Number>().Uint32Value();
                     auto napiPlane = XRPlane::New(info.Env());
                     auto xrPlane = XRPlane::Unwrap(napiPlane);
                     const auto& nativePlane = GetPlaneFromID(planeId);
