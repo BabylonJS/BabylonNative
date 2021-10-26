@@ -247,7 +247,9 @@ namespace {
     if (@available(iOS 13.0, *)) {
         return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
     }
-    return [sharedApplication statusBarOrientation];
+    else {
+        return [sharedApplication statusBarOrientation];
+    }
 #endif
 }
 
