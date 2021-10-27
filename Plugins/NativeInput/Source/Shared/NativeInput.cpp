@@ -16,6 +16,7 @@ namespace Babylon::Plugins
         constexpr uint32_t POINTER_X_INPUT_INDEX{0};
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
         constexpr uint32_t POINTER_BUTTON_BASE_INDEX{2};
+        constexpr uint32_t MOUSE_WHEEL_Y{8};
         constexpr uint32_t MOUSE_POINTER_ID{0};
 
         constexpr uint32_t GetPointerButtonInputIndex(uint32_t buttonIndex)
@@ -55,6 +56,10 @@ namespace Babylon::Plugins
     void NativeInput::MouseMove(uint32_t x, uint32_t y)
     {
         m_impl->MouseMove(x, y);
+    }
+
+void NativeInput::MouseWheel(uint32_t deltaY) {
+    m_impl->MouseWheel(deltaY);
     }
 
     void NativeInput::TouchDown(uint32_t pointerId, uint32_t x, uint32_t y)
@@ -98,6 +103,19 @@ namespace Babylon::Plugins
     void NativeInput::Impl::MouseMove(uint32_t x, uint32_t y)
     {
         PointerMove(MOUSE_POINTER_ID, x, y, DeviceType::Mouse);
+    }
+
+    void NativeInput::Impl::MouseWheel(uint32_t deltaY)
+    {
+        auto pointerId = MOUSE_POINTER_ID;
+        auto deviceType = DeviceType::Mouse;
+
+        m_runtimeScheduler([pointerId, deltaY, deviceType, this]() {
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { MOUSE_WHEEL_Y }) };
+            SetInputState(deviceType, pointerId, MOUSE_WHEEL_Y, deltaY, deviceInputs, true);
+
+            m_eventDispatcher.tick(arcana::cancellation::none());
+        });
     }
 
     void NativeInput::Impl::TouchDown(uint32_t pointerId, uint32_t x, uint32_t y)

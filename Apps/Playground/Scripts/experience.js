@@ -38,42 +38,6 @@ function CreateSpheresAsync() {
     return Promise.resolve();
 }
 
-// TODO: Remove this completely and just do scene.createDefaultCamera(true, true, true) once this bug is fixed: https://github.com/BabylonJS/BabylonNative/issues/605
-function CreateInputHandling(scene) {
-    const deviceSourceManager = new BABYLON.DeviceSourceManager(scene.getEngine());
-    let priorX = undefined;
-    let priorY = undefined;
-
-    scene.onBeforeRenderObservable.add(function () {
-        let x = undefined;
-        let y = undefined;
-
-        let pointer = deviceSourceManager.getDeviceSource(BABYLON.DeviceType.Touch);
-        if (pointer === null) {
-            pointer = deviceSourceManager.getDeviceSource(BABYLON.DeviceType.Mouse);
-            if (pointer !== null && pointer.getInput(BABYLON.PointerInput.LeftClick) === 0) {
-                pointer = null;
-            }
-        }
-
-        if (pointer !== null) {
-            x = pointer.getInput(BABYLON.PointerInput.Horizontal);
-            y = pointer.getInput(BABYLON.PointerInput.Vertical);
-
-            if (priorX !== undefined && priorY !== undefined) {
-                scene.activeCamera.alpha += 0.01 * (priorX - x);
-                scene.activeCamera.beta += 0.01 * (priorY - y);
-            }
-
-            priorX = x;
-            priorY = y;
-        } else {
-            priorX = undefined;
-            priorY = undefined;
-        }
-    });
-}
-
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
@@ -97,9 +61,8 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-    scene.createDefaultCamera(true, true, true);
+    scene.createDefaultCamera(false, true, true);
     scene.activeCamera.alpha += Math.PI;
-    //CreateInputHandling(scene);
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });

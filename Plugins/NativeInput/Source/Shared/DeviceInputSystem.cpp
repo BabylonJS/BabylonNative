@@ -98,6 +98,11 @@ namespace Babylon::Plugins
         uint32_t deviceType = info[0].As<Napi::Number>().Uint32Value();
         uint32_t deviceSlot = info[1].As<Napi::Number>().Uint32Value();
         uint32_t inputIndex = info[2].As<Napi::Number>().Uint32Value();
+        
+        // TODO: When MouseWheel Y is being used, 7 and 9 are being checked but not 8 (correct value), this is a temp fix for that.  This needs to be fixed and removed!
+        if (inputIndex == 9) {
+            inputIndex = 8;
+        }
         try
         {
             int32_t inputValue = m_nativeInput.PollInput(static_cast<DeviceType>(deviceType), deviceSlot, inputIndex);
