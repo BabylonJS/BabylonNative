@@ -1,4 +1,5 @@
 #pragma once
+#include <regex>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -185,17 +186,18 @@ namespace Babylon::Polyfills::Internal
             }
             return nvgRGBA(components[0], components[1], components[2], components[3]);
         }
-        else if (str.substr(0, 4) == "rgb(" && str[str.length() - 1] == ')')
-        {
-            auto rEnd = str.find(",", 4);
-            auto gEnd = str.find(",", rEnd + 1);
-            auto r = str.substr(4, rEnd - 4);
-            auto g = str.substr(rEnd + 1, gEnd - rEnd - 1);
-            auto b = str.substr(gEnd + 1, str.length() - gEnd - 2);
-            return nvgRGB(std::stoi(r), std::stoi(g), std::stoi(b));
-        }
         else
         {
+            // std::smatch pieces_match;
+            // const std::regex pieces_regex("/rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/");
+            // if (std::regex_match(str, pieces_match, pieces_regex))
+            // {
+            //     if (pieces_match.size() == 3)
+            //     {
+            //         return nvgRGB(std::stoi(pieces_match[0]), std::stoi(pieces_match[1]), std::stoi(pieces_match[2]));
+            //     }
+            // }
+
             if (str == "transparent" || !str.length())
             {
                 return nvgRGBA(0, 0, 0, 0);
