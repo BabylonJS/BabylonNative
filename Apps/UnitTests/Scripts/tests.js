@@ -165,12 +165,12 @@ describe("PostProcesses", function() {
             new BABYLON.ConvolutionPostProcess("Sepia", BABYLON.ConvolutionPostProcess.EmbossKernel, 1.0, camera);
         }, done);
     });
-    it("FxaaPostProcess", function(done) {
-        createSceneAndWait((engine, scene) => {
-            const camera = scene._activeCamera;
-            new BABYLON.FxaaPostProcess("fxaa", 1.0, camera);
-        }, done);
-    });
+    // it("FxaaPostProcess", function(done) {
+    //     createSceneAndWait((engine, scene) => {
+    //         const camera = scene._activeCamera;
+    //         new BABYLON.FxaaPostProcess("fxaa", 1.0, camera);
+    //     }, done);
+    // });
     it("HighlightsPostProcess", function(done) {
         createSceneAndWait((engine, scene) => {
             const camera = scene._activeCamera;
@@ -212,17 +212,17 @@ describe("PostProcesses", function() {
     //         );
     //     }, done);
     // });
-    it("LensRenderingPipeline", function(done) {
-        createSceneAndWait((engine, scene) => {
-            const camera = scene._activeCamera;
-            const parameters = {
-                edge_blur: 1.0,
-                chromatic_aberration: 1.0,
-                distortion: 1.0,
-            };              
-            new BABYLON.LensRenderingPipeline('lensEffects', parameters, scene, 1.0, camera);
-        }, done);
-    });
+    // it("LensRenderingPipeline", function(done) {
+    //     createSceneAndWait((engine, scene) => {
+    //         const camera = scene._activeCamera;
+    //         const parameters = {
+    //             edge_blur: 1.0,
+    //             chromatic_aberration: 1.0,
+    //             distortion: 1.0,
+    //         };              
+    //         new BABYLON.LensRenderingPipeline('lensEffects', parameters, scene, 1.0, camera);
+    //     }, done);
+    // });
     // it("MotionBlurPostProcess", function(done) {
     //     createSceneAndWait((engine, scene) => {
     //         const camera = scene._activeCamera;
@@ -234,12 +234,12 @@ describe("PostProcesses", function() {
     //         );
     //     }, done);
     // });
-    it("ScreenSpaceReflectionPostProcess", function(done) {
-        createSceneAndWait((engine, scene) => {
-            const camera = scene._activeCamera;
-            new BABYLON.ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera);
-        }, done);
-    });
+    // it("ScreenSpaceReflectionPostProcess", function(done) {
+    //     createSceneAndWait((engine, scene) => {
+    //         const camera = scene._activeCamera;
+    //         new BABYLON.ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera);
+    //     }, done);
+    // });
 })
 
 mocha.run(failures => {
