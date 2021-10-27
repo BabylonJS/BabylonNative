@@ -188,15 +188,15 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            // std::smatch pieces_match;
-            // const std::regex pieces_regex("/rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/");
-            // if (std::regex_match(str, pieces_match, pieces_regex))
-            // {
-            //     if (pieces_match.size() == 3)
-            //     {
-            //         return nvgRGB(std::stoi(pieces_match[0]), std::stoi(pieces_match[1]), std::stoi(pieces_match[2]));
-            //     }
-            // }
+            const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
+            std::smatch rgbMatch;
+            if (std::regex_match(str, rgbMatch, rgbRegex))
+            {
+                if (rgbMatch.size() == 4)
+                {
+                    return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
+                }
+            }
 
             if (str == "transparent" || !str.length())
             {
