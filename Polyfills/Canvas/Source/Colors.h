@@ -188,6 +188,7 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
+            // matches strings of the form rgb(#,#,#)
             static const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
