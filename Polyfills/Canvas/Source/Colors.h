@@ -1,6 +1,8 @@
 #pragma once
 #include <regex>
 
+const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
+
 namespace Babylon::Polyfills::Internal
 {
     namespace
@@ -188,7 +190,6 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
             {
