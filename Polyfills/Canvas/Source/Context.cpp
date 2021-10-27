@@ -18,9 +18,6 @@
 #include "ImageData.h"
 #include "Colors.h"
 
-// Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
-const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
-
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
 */
@@ -536,6 +533,8 @@ namespace Babylon::Polyfills::Internal
         m_currentFontId = -1;
         int fontSize = 16;
 
+        // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
+        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
         std::smatch fontStyleMatch;
 
         // Perform the actual regex_match.
