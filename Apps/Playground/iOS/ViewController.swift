@@ -27,7 +27,8 @@ class ViewController: UIViewController, MTKViewDelegate {
             mtkView.colorPixelFormat = .bgra8Unorm_srgb
             mtkView.depthStencilPixelFormat = .depth32Float
 
-            let gesture = UIPanGestureRecognizer(target: self, action:  #selector(self.panGesture))
+            let gesture = UILongPressGestureRecognizer(target: self, action: #selector(self.pressGesture))
+            gesture.minimumPressDuration = 0;
             mtkView.addGestureRecognizer(gesture)
 
             let scale = view.contentScaleFactor
@@ -60,12 +61,23 @@ class ViewController: UIViewController, MTKViewDelegate {
             appDelegate!._bridge!.resize(Int32(size.width), height: Int32(size.height))
         }
     }
-
-    @objc func panGesture(sender : UIPanGestureRecognizer) {
+    
+    @objc func pressGesture(sender: UILongPressGestureRecognizer) {
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
-        if appDelegate != nil {
-            let translation = sender.translation(in:mtkView)
-            appDelegate!._bridge!.setInputs(Int32(translation.x * UIScreen.main.scale), y:Int32(translation.y * UIScreen.main.scale), tap:true)
+        let loc = mtkView.superview?.convert(sender.location(in: mtkView), to: nil)
+        
+        if (appDelegate != nil && loc != nil) {
+            let state = sender.state;
+            
+            if (state == UIGestureRecognizerState.began) {
+                appDelegate!._bridge!.setTouchDown(Int32(loc!.x * UIScreen.main.scale), y:Int32(loc!.y * UIScreen.main.scale))
+            }
+            else if (state == UIGestureRecognizerState.changed) {
+                appDelegate!._bridge!.setTouchMove(Int32(loc!.x * UIScreen.main.scale), y:Int32(loc!.y * UIScreen.main.scale))
+            }
+            else if (state == UIGestureRecognizerState.ended) {
+                appDelegate!._bridge!.setTouchUp(Int32(loc!.x * UIScreen.main.scale), y:Int32(loc!.y * UIScreen.main.scale))
+            }
         }
     }
 }

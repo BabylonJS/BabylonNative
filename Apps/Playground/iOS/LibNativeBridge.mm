@@ -49,7 +49,6 @@ bool g_isXrActive{};
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
     runtime = std::make_unique<Babylon::AppRuntime>();
-    nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
     runtime->Dispatch([xrView](Napi::Env env)
     {
@@ -77,7 +76,7 @@ bool g_isXrActive{};
         // Initialize Camera 
         Babylon::Plugins::Camera::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -108,22 +107,25 @@ bool g_isXrActive{};
     }
 }
 
-- (void)setInputs:(int)x y:(int)y tap:(bool)tap
+- (void)setTouchDown:(int)x y:(int)y
 {
-    if (nativeInput != nullptr)
-     {
-         if (tap)
-         {
-             nativeInput->TouchDown(0, x, y);
-         }
+    if (nativeInput != nullptr) {
+        nativeInput->TouchDown(0, x, y);
+    }
+}
 
-         nativeInput->TouchMove(0, x, y);
+- (void)setTouchMove:(int)x y:(int)y
+{
+    if (nativeInput != nullptr) {
+        nativeInput->TouchMove(0, x, y);
+    }
+}
 
-         if (!tap)
-         {
-             nativeInput->TouchUp(0, x, y);
-         }
-     }
+- (void)setTouchUp:(int)x y:(int)y
+{
+    if (nativeInput != nullptr) {
+        nativeInput->TouchUp(0, x, y);
+    }
 }
 
 - (bool)isXRActive
