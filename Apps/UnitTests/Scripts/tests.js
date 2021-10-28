@@ -131,9 +131,6 @@ describe("Materials", function() {
         createSceneAndWait((engine, scene) => {
             const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
             const gradientMaterial = new BABYLON.GradientMaterial("grad", scene);
-            gradientMaterial.topColor = BABYLON.Color3.Red(); // Set the gradient top color
-            gradientMaterial.bottomColor = BABYLON.Color3.Blue(); // Set the gradient bottom color
-            gradientMaterial.offset = 0.25;
             sphere.material = gradientMaterial;
         }, done);
     });

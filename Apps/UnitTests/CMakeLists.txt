@@ -14,14 +14,18 @@ set(NPM_SCRIPTS
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 
-set(TEST_APP "Shared/UnitTests.cpp")
+set(TEST_APP "Win32/App.cpp")
 
 set(ADDITIONAL_LIBRARIES "")
 
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES ${JSCORE_LIBRARY})
-    set(TEST_APP "Apple/UnitTests.mm")
+    set(TEST_APP "Apple/App.mm")
+elseif(UNIX AND NOT ANDROID)
+    set(TEST_APP "X11/App.cpp")
+elseif(WIN32)
+    set(TEST_APP "Win32/App.cpp")
 endif()
 
 add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP})

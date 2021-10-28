@@ -30,11 +30,10 @@ void SetExitCode(const Napi::CallbackInfo& info)
     exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
 }
 
-int run()
-{
-    Babylon::ContextConfiguration graphicsConfig{};
-    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
 
+int run(std::unique_ptr<Babylon::Graphics> graphicsObject)
+{
+    graphics = std::move(graphicsObject);
     runtime = std::make_unique<Babylon::AppRuntime>();
     runtime->Dispatch([](Napi::Env env)
     {
@@ -63,7 +62,7 @@ int run()
     loader.LoadScript("app:///Scripts/tests.js");
     graphics->StartRenderingCurrentFrame();
     graphics->FinishRenderingCurrentFrame();
-    
+
     auto code{exitCode.get_future().get()};
     runtime.reset();
     graphics.reset();
