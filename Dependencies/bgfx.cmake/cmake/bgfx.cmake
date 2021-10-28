@@ -52,12 +52,6 @@ if(BGFX_CONFIG_RENDERER_WEBGPU)
     endif()
 endif()
 
-# Enable BGFX_CONFIG_DEBUG in Debug configuration
-target_compile_definitions( bgfx PRIVATE "$<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>" )
-if(BGFX_CONFIG_DEBUG)
-	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_DEBUG=1)
-endif()
-
 if( NOT ${BGFX_OPENGL_VERSION} STREQUAL "" )
 	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION=${BGFX_OPENGL_VERSION} )
 endif()
