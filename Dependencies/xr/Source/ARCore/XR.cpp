@@ -276,19 +276,19 @@ namespace xr
                     message << "Failed to create ArSession with status: " << status;
                     throw std::runtime_error{ message.str() };
                 }
-                
+
                 // Create the ArConfig
-                ArConfig* config{};
-                ArConfig_create(xrContext->Session, &config);
+                ArConfig* arConfig{};
+                ArConfig_create(xrContext->Session, &arConfig);
 
                 // Set Focus Mode Auto
-                ArConfig_setFocusMode(xrContext->Session, config, AR_FOCUS_MODE_AUTO);
+                ArConfig_setFocusMode(xrContext->Session, arConfig, AR_FOCUS_MODE_AUTO);
 
                 // Configure the ArSession
-                ArStatus statusConfig { ArSession_configure(xrContext->Session, config) };
+                ArStatus statusConfig { ArSession_configure(xrContext->Session, arConfig) };
 
                 // Clean up the ArConfig.
-                ArConfig_destroy(config);
+                ArConfig_destroy(arConfig);
 
                 if (statusConfig != ArStatus::AR_SUCCESS)
                 {
