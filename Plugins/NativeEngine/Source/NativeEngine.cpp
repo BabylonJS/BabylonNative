@@ -541,15 +541,12 @@ namespace Babylon
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
     {
         VertexArray* vertexArray = new VertexArray{};
-        // HACK: Temporary fix for crash
-        //return Napi::Pointer<VertexArray>::Create(info.Env(), vertexArray, Napi::NapiPointerDeleter(vertexArray));
-        return Napi::Pointer<VertexArray>::Create(info.Env(), vertexArray);
+        return Napi::Pointer<VertexArray>::Create(info.Env(), vertexArray, Napi::NapiPointerDeleter(vertexArray));
     }
 
     void NativeEngine::DeleteVertexArray(NativeDataStream::Reader& data)
     {
-        VertexArray* vertexArray = data.ReadPointer<VertexArray>();
-        vertexArray->Dispose();
+        data.ReadPointer<VertexArray>()->Dispose();
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
     }
