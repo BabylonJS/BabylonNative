@@ -337,7 +337,7 @@ be greyed and inaccessible. Instructions and tips on how to install the simulato
 **Required Tools:** 
 [Clang](https://clang.llvm.org/) or [GCC](https://gcc.gnu.org/)
 
-*See also: [**Building on Windows using WSL**](Documentation/WSL)*
+*See also: [**Building on Windows using WSL**](Documentation/WSL.md)*
 
 The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 9+ or GCC 9+ are required for building.
 
