@@ -65,6 +65,14 @@ if( MSVC )
 	target_compile_definitions( bgfx PRIVATE "_CRT_SECURE_NO_WARNINGS" )
 endif()
 
+# Add debug config required in bx headers since bx is private
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    target_compile_definitions( bgfx PUBLIC "BX_CONFIG_DEBUG=1" )
+else()
+    target_compile_definitions( bgfx PUBLIC "BX_CONFIG_DEBUG=0" )
+endif()
+
+
 # Includes
 target_include_directories( bgfx
 	PRIVATE
