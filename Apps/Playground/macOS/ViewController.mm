@@ -34,8 +34,8 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics) {
-        graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
+        graphics->FinishRenderingCurrentFrame();
     }
 }
 
@@ -48,11 +48,6 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 }
 
 - (void)uninitialize {
-    if (graphics)
-    {
-        graphics->FinishRenderingCurrentFrame();
-    }
-
     inputBuffer.reset();
     runtime.reset();
     graphics.reset();
@@ -84,7 +79,6 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    graphics->StartRenderingCurrentFrame();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);

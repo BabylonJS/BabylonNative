@@ -451,6 +451,8 @@ namespace xr
             ArFrame_getTimestamp(xrContext->Session, xrContext->Frame, &frameTimestamp);
             if (frameTimestamp)
             {
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(1) };
+
                 // Bind the frame buffer
                 glBindFramebuffer(GL_FRAMEBUFFER, cameraFrameBufferId);
 
@@ -533,7 +535,7 @@ namespace xr
 
                 // Only write colors to blit to the screen
                 glDepthMask(GL_FALSE);
-                glStencilMask(0);
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(0) };
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
                 // Use the custom shader
