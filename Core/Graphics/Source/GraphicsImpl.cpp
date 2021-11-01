@@ -2,6 +2,7 @@
 #include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsPlatformImpl.h>
 #include <JsRuntimeInternalState.h>
+#include <arcana/tracing/trace_region.h>
 
 namespace
 {
@@ -140,6 +141,8 @@ namespace Babylon
 
     void GraphicsImpl::StartRenderingCurrentFrame()
     {
+        arcana::trace_region startRenderingRegion{"GraphicsImpl::StartRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (m_rendering)
@@ -162,6 +165,8 @@ namespace Babylon
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
+        arcana::trace_region finishRenderingRegion{"GraphicsImpl::FinishRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (!m_rendering)
@@ -309,6 +314,8 @@ namespace Babylon
 
     void GraphicsImpl::Frame()
     {
+        arcana::trace_region frameRegion{"GraphicsImpl::Frame"};
+
         // Automatically end bgfx encoders.
         EndEncoders();
 

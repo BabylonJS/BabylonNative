@@ -5,6 +5,7 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
+#include <arcana/tracing/trace_region.h>
 
 #include <napi/env.h>
 #include <napi/napi_pointer.h>
@@ -1696,6 +1697,7 @@ namespace Babylon
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 
+                arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
                 auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
                 for (auto& callback : callbacks)
                 {
