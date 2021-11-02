@@ -88,7 +88,7 @@ For Android, the switch to Vulkan instead of OpenGL (default) is done with Gradl
 -PGRAPHICS_API=Vulkan
 ```
 
-If no `GRAPHICS_API` is provided, the build use the default API. 
+If no `GRAPHICS_API` is provided, the build will use the default.
 
 **Note**
 
