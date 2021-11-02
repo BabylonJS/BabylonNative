@@ -11,6 +11,9 @@ parameters:
   values:
   - direct
   - jsi
+- name: graphics_api
+  type: string
+  default: D3D11
   
 jobs:
   - job: ${{ parameters.name }}
@@ -40,7 +43,7 @@ jobs:
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
-          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..
+          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON -DGRAPHICS_API=${{ parameters.graphics_api }} ..
         displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1

@@ -48,22 +48,29 @@ jobs:
 # WIN32
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x86
+      name: Win32_x86_D3D11
       vmImage: 'windows-latest'
       platform: win32
   
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x64
+      name: Win32_x64_D3D11
       vmImage: 'windows-latest'
       platform: x64
 
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x64_JSI
+      name: Win32_x64_JSI_D3D11
       vmImage: 'windows-latest'
       platform: x64
       napiType: jsi
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_D3D12
+      vmImage: 'windows-latest'
+      platform: x64
+      graphics_api: D3D12
 
 # UWP
   - template: .github/jobs/uwp.yml

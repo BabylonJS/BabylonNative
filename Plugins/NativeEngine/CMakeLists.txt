@@ -22,6 +22,10 @@ set(SOURCES
     "Source/VertexBuffer.cpp"
     "Source/VertexBuffer.h")
 
+if(WIN32)
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.h")
+endif()
+
 add_library(NativeEngine ${SOURCES})
 
 target_include_directories(NativeEngine PUBLIC "Include"
