@@ -790,7 +790,7 @@ namespace Babylon
 
         if (culling)
         {
-            m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CCW : BGFX_STATE_CULL_CW;
+            m_engineState |= cullBackFaces ? BGFX_STATE_CULL_CW : BGFX_STATE_CULL_CCW;
         }
     }
 
