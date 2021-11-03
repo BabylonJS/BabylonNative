@@ -1663,7 +1663,9 @@ namespace Babylon
 
             static Napi::Object New(const Napi::Env& env)
             {
-                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                auto newNativeXRPlane = JsRuntime::NativeObject::GetFromJavaScript(env).Get("NativeXRPlane").As<Napi::Function>().New({}).As<Napi::Object>();
+                newNativeXRPlane.Set("_nativeImpl", env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({newNativeXRPlane}));
+                return newNativeXRPlane;
             }
 
             XRPlane(const Napi::CallbackInfo& info)
@@ -1675,55 +1677,51 @@ namespace Babylon
                 m_jsThis.Set("planeSpace", m_jsPlaneSpace);
             }
 
-            void SetNativePlane(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane, const Napi::Value& parentSceneObject)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane, const Napi::Value& parentSceneObject)
             {
                 m_jsThis.Set("parentSceneObject", parentSceneObject);
-                m_jsThis.Set("polygon", GetPolygon(env, plane));
+                UpdatePolygonData(env, plane);
                 m_planeSpace->Pose = plane.Center;
             }
 
-            void SetLastUpdatedTime(const Napi::Env& env, uint32_t timestamp)
-            {
-                m_lastUpdatedTimestamp = timestamp;
-                m_jsThis.Set("lastChangedTime", Napi::Value::From(env, m_lastUpdatedTimestamp));
-            }
-
         private:
-            Napi::Value GetPolygon(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane)
+            void UpdatePolygonData(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane)
             {
-                // Translate the polygon from a native array to a JS array.
-                auto polygonArray = Napi::Array::New(env, plane.PolygonSize);
+                if (m_polygonData.size() != plane.PolygonSize)
+                {
+                    m_polygonData.resize(plane.PolygonSize * 3);
+                    m_jsPolygonDataArrayBuffer = Napi::ArrayBuffer::New(env, m_polygonData.size() * 4);
+                    const auto jsPolygonDataArray = Napi::Float32Array::New(env, m_polygonData.size(), m_jsPolygonDataArrayBuffer, 0);
+                    m_jsThis.Set("polygonData", jsPolygonDataArray);
+                }
+
                 for (size_t i = 0; i < plane.PolygonSize; i++)
                 {
-                    auto polygonPoint = Napi::Object::New(env);
+                    size_t polygonDataIndex = 3 * i;
                     if (plane.PolygonFormat == xr::PolygonFormat::XZ)
                     {
                         size_t polygonIndex = 2 * i;
-                        polygonPoint.Set("x", plane.Polygon[polygonIndex]);
-                        polygonPoint.Set("y", 0);
-                        polygonPoint.Set("z", plane.Polygon[polygonIndex + 1]);
+                        m_polygonData[polygonDataIndex + 0] = plane.Polygon[polygonIndex + 0];
+                        m_polygonData[polygonDataIndex + 1] = 0;
+                        m_polygonData[polygonDataIndex + 2] = plane.Polygon[polygonIndex + 1];
                     }
                     else
                     {
                         size_t polygonIndex = 3 * i;
-                        polygonPoint.Set("x", plane.Polygon[polygonIndex]);
-                        polygonPoint.Set("y", plane.Polygon[polygonIndex + 1]);
-                        polygonPoint.Set("z", plane.Polygon[polygonIndex + 2]);
+                        m_polygonData[polygonDataIndex + 0] = plane.Polygon[polygonIndex + 0];
+                        m_polygonData[polygonDataIndex + 1] = plane.Polygon[polygonIndex + 1];
+                        m_polygonData[polygonDataIndex + 2] = plane.Polygon[polygonIndex + 2];
                     }
-
-                    polygonArray.Set((int)i, polygonPoint);
                 }
 
-                return std::move(polygonArray);
+                memcpy(m_jsPolygonDataArrayBuffer.Data(), m_polygonData.data(), m_polygonData.size() * 4);
             }
 
             Napi::ObjectReference m_jsThis{};
             std::unique_ptr<xr::Space> m_planeSpace;
             Napi::External<xr::Space> m_jsPlaneSpace;
-            Napi::Array m_jsPolygonArray;
-
-            // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
-            uint32_t m_lastUpdatedTimestamp{0};
+            std::vector<float> m_polygonData{};
+            Napi::ArrayBuffer m_jsPolygonDataArrayBuffer{};
         };
 
         class XRMesh : public Napi::ObjectWrap<XRMesh>
@@ -2290,6 +2288,13 @@ namespace Babylon
                 }
             }
 
+            void UpdatePlane(const Napi::Env& env, XRPlane& plane, const xr::System::Session::Frame::Plane::Identifier planeId)
+            {
+                const auto& nativePlane = GetPlaneFromID(planeId);
+                const auto& parentSceneObject = GetJSSceneObjectFromID(env, nativePlane.ParentSceneObjectID);
+                plane.Update(env, nativePlane, parentSceneObject);
+            }
+
             void CreatePlanes(const Napi::CallbackInfo& info)
             {
                 const auto newPlaneIds = info[0].As<Napi::Array>();
@@ -2300,16 +2305,16 @@ namespace Babylon
                 {
                     const auto planeId = newPlaneIds[i].As<Napi::Number>().Uint32Value();
                     auto napiPlane = XRPlane::New(info.Env());
-                    auto xrPlane = XRPlane::Unwrap(napiPlane);
-                    const auto& nativePlane = GetPlaneFromID(planeId);
-                    const auto& parentSceneObject = GetJSSceneObjectFromID(info.Env(), nativePlane.ParentSceneObjectID);
-                    xrPlane->SetNativePlane(info.Env(), nativePlane, parentSceneObject);
+                    const auto nativeImpl = napiPlane.Get("_nativeImpl").As<Napi::Object>();
+                    auto xrPlane = XRPlane::Unwrap(nativeImpl);
+                    UpdatePlane(info.Env(), *xrPlane, planeId);
                     newPlanes.Set(i, napiPlane);
+                    m_trackedPlanes[planeId] = Napi::Persistent(nativeImpl);
                 }
             }
 
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
-            {                
+            {
                 Napi::Value updatedArray = env.Undefined();
                 const auto numUpdatedPlanes = m_frame->UpdatedPlanes.size();
                 if (numUpdatedPlanes > 0)
@@ -2317,6 +2322,15 @@ namespace Babylon
                     auto updatedArrayBuffer = Napi::ArrayBuffer::New(env, numUpdatedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
                     memcpy(updatedArrayBuffer.Data(), m_frame->UpdatedPlanes.data(), numUpdatedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
                     updatedArray = Napi::Uint32Array::New(env, m_frame->UpdatedPlanes.size(), updatedArrayBuffer, 0);
+
+                    for (const auto& updatedPlaneId : m_frame->UpdatedPlanes)
+                    {
+                        const auto updatedPlaneItr = m_trackedPlanes.find(updatedPlaneId);
+                        if (updatedPlaneItr != m_trackedPlanes.end())
+                        {
+                            UpdatePlane(env, *XRPlane::Unwrap(updatedPlaneItr->second.Value()), updatedPlaneId);
+                        }
+                    }
                 }
 
                 Napi::Value removedArray = env.Undefined();
@@ -2326,6 +2340,11 @@ namespace Babylon
                     auto removedArrayBuffer = Napi::ArrayBuffer::New(env, numRemovedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
                     memcpy(removedArrayBuffer.Data(), m_frame->RemovedPlanes.data(), numRemovedPlanes * sizeof(xr::System::Session::Frame::Plane::Identifier));
                     removedArray = Napi::Uint32Array::New(env, m_frame->RemovedPlanes.size(), removedArrayBuffer, 0);
+
+                    for (const auto& removedPlaneId : m_frame->RemovedPlanes)
+                    {
+                        m_trackedPlanes.erase(removedPlaneId);
+                    }
                 }
 
                 if (numUpdatedPlanes > 0 || numRemovedPlanes > 0)
