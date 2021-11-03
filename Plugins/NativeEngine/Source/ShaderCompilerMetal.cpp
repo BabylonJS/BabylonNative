@@ -102,7 +102,7 @@ namespace Babylon
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryings(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsOpenGLMetal(program, ids, vertexAttributeRenaming);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
