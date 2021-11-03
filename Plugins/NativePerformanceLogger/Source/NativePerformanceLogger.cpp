@@ -8,7 +8,7 @@ namespace
     Napi::Value StartPerformanceCounter(const Napi::CallbackInfo& info)
     {
         const std::string name{info[0].As<Napi::String>().Utf8Value()};
-        auto* traceRegion = new std::optional<arcana::trace_region>(name.data());
+        auto* traceRegion = new std::optional<arcana::trace_region>(name.c_str());
         return Napi::Pointer<std::optional<arcana::trace_region>>::Create(info.Env(), traceRegion, Napi::NapiPointerDeleter(traceRegion));
     }
 
