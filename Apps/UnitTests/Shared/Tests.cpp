@@ -30,7 +30,6 @@ void SetExitCode(const Napi::CallbackInfo& info)
     exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
 }
 
-
 int run(std::unique_ptr<Babylon::Graphics> graphicsObject)
 {
     graphics = std::move(graphicsObject);
@@ -46,7 +45,7 @@ int run(std::unique_ptr<Babylon::Graphics> graphicsObject)
             fflush(stdout);
         });
         Babylon::Polyfills::Window::Initialize(env);
-        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+        nativeCanvas = std::make_unique<Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
         
         env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode, JS_FUNCTION_NAME));

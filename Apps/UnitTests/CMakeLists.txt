@@ -14,8 +14,6 @@ set(NPM_SCRIPTS
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 
-set(TEST_APP "Win32/App.cpp")
-
 set(ADDITIONAL_LIBRARIES "")
 
 if(APPLE)
