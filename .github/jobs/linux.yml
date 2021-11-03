@@ -66,6 +66,9 @@ jobs:
       condition: failed()
 
     - script: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1600x900x24 &
+        sleep 3
         cd build/Apps/UnitTests
         ./UnitTests
       displayName: 'Unit Tests'
