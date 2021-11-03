@@ -1,4 +1,4 @@
-#include <Babylon/Plugins/NativePerformanceLogger.h>
+#include <Babylon/Plugins/NativeTracing.h>
 #include <Babylon/JsRuntime.h>
 #include <napi/napi_pointer.h>
 #include <arcana/tracing/trace_region.h>
@@ -28,7 +28,7 @@ namespace
     }
 }
 
-namespace Babylon::Plugins::NativePerformanceLogger
+namespace Babylon::Plugins::NativeTracing
 {
     void Initialize(Napi::Env env)
     {

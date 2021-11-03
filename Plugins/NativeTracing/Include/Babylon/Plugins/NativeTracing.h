@@ -2,7 +2,7 @@
 
 #include <napi/env.h>
 
-namespace Babylon::Plugins::NativePerformanceLogger
+namespace Babylon::Plugins::NativeTracing
 {
     void Initialize(Napi::Env env);
 }
