@@ -435,7 +435,8 @@ namespace Babylon::ShaderCompilerTraversers
 
         /// This traverser modifies all vertex attributes (position, UV, etc.) to conform to
         /// bgfx's expectations regarding name and location. It is currently required for
-        /// DirectX, OpenGL, and Metal.
+        /// DirectX, OpenGL, and Metal. It is an abstract class which serves as the basis
+        /// for platform-specific implementations.
         class VertexVaryingInTraverser : protected TIntermTraverser
         {
         protected:
@@ -460,10 +461,8 @@ namespace Babylon::ShaderCompilerTraversers
                 }
             }
 
-            virtual std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
-            {
-                return {0, name};
-            }
+            // This function is platform-dependent so it's left unimplemented in the base class.
+            virtual std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name) = 0;
 
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
             {
@@ -513,6 +512,7 @@ namespace Babylon::ShaderCompilerTraversers
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
 
+        /// Implementation of VertexVaryingInTraverser for OpenGL and Metal
         class VertexVaryingInTraverserOpenGLMetal final : private VertexVaryingInTraverser
         {
         public:
@@ -531,28 +531,31 @@ namespace Babylon::ShaderCompilerTraversers
                 }
                 VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
             }
+
         private:
+            // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
+            // copied from renderer_gl.cpp.
             constexpr static const char* s_attribName[] =
-            {
-                "a_position",
-                "a_normal",
-                "a_tangent",
-                "a_bitangent",
-                "a_color0",
-                "a_color1",
-                "a_color2",
-                "a_color3",
-                "a_indices",
-                "a_weight",
-                "a_texcoord0",
-                "a_texcoord1",
-                "a_texcoord2",
-                "a_texcoord3",
-                "a_texcoord4",
-                "a_texcoord5",
-                "a_texcoord6",
-                "a_texcoord7",
-            };
+                {
+                    "a_position",
+                    "a_normal",
+                    "a_tangent",
+                    "a_bitangent",
+                    "a_color0",
+                    "a_color1",
+                    "a_color2",
+                    "a_color3",
+                    "a_indices",
+                    "a_weight",
+                    "a_texcoord0",
+                    "a_texcoord1",
+                    "a_texcoord2",
+                    "a_texcoord3",
+                    "a_texcoord4",
+                    "a_texcoord5",
+                    "a_texcoord6",
+                    "a_texcoord7",
+                };
             BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
@@ -565,10 +568,11 @@ namespace Babylon::ShaderCompilerTraversers
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
 
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount-1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount-1)]};
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
             }
         };
 
+        /// Implementation of VertexVaryingInTraverser for DirectX
         class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
         {
         public:
@@ -577,25 +581,26 @@ namespace Babylon::ShaderCompilerTraversers
                 VertexVaryingInTraverserD3D traverser{};
                 VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
             }
+
         private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
-                #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
-                    if (std::strcmp(name, varyingName) == 0)                 \
-                    {                                                        \
-                        return {static_cast<unsigned int>(attrib), newName}; \
-                    }
-                    IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
-                    IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
-                    IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
-                    IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0, "a_texcoord0")
-                    IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
-                    IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
-                    IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
-                    IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
-                    IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
-                    IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
-                #undef IF_NAME_RETURN_ATTRIB
+#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
+    if (std::strcmp(name, varyingName) == 0)                 \
+    {                                                        \
+        return {static_cast<unsigned int>(attrib), newName}; \
+    }
+                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
+                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
+                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
+                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0, "a_texcoord0")
+                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
+                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
+                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
+                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
+                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
+                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
+#undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
