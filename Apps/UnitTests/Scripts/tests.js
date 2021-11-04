@@ -104,7 +104,7 @@ describe("RequestFile", function () {
 function createSceneAndWait(callback, done) {
     const engine = new BABYLON.NativeEngine();
     const scene = new BABYLON.Scene(engine);
-    scene.createDefaultCameraOrLight();
+    scene.createDefaultCamera();
     callback(engine, scene);
     scene.executeWhenReady(() => {
         done();
@@ -162,12 +162,6 @@ describe("PostProcesses", function() {
             new BABYLON.ConvolutionPostProcess("Sepia", BABYLON.ConvolutionPostProcess.EmbossKernel, 1.0, camera);
         }, done);
     });
-    // it("FxaaPostProcess", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         new BABYLON.FxaaPostProcess("fxaa", 1.0, camera);
-    //     }, done);
-    // });
     it("HighlightsPostProcess", function(done) {
         createSceneAndWait((engine, scene) => {
             const camera = scene._activeCamera;
@@ -186,57 +180,65 @@ describe("PostProcesses", function() {
             new BABYLON.ImageProcessingPostProcess("processing", 1.0, camera);
         }, done);
     });
-    // it("RefractionPostProcess", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         new BABYLON.RefractionPostProcess("Refraction", "https://playground.babylonjs.com/textures/grass.jpg", new BABYLON.Color3(1.0, 1.0, 1.0), 0.5, 0.5, 1.0, camera);
-    //     }, done);
-    // });
-    // it("ColorCorrectionPostProcess", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         new BABYLON.ColorCorrectionPostProcess("color_correction", "https://doc.babylonjs.com/_next/image?url=%2Fimg%2Fhow_to%2Fpost-processes%2Flut-inverted.png&w=256&q=16", 1.0, camera);
-    //     }, done);
-    // });
-    // it("DefaultPipeline", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         new BABYLON.DefaultRenderingPipeline(
-    //             "defaultPipeline", // The name of the pipeline
-    //             true, // Do you want the pipeline to use HDR texture?
-    //             scene, // The scene instance
-    //             [camera] // The list of cameras to be attached to
-    //         );
-    //     }, done);
-    // });
-    // it("LensRenderingPipeline", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         const parameters = {
-    //             edge_blur: 1.0,
-    //             chromatic_aberration: 1.0,
-    //             distortion: 1.0,
-    //         };              
-    //         new BABYLON.LensRenderingPipeline('lensEffects', parameters, scene, 1.0, camera);
-    //     }, done);
-    // });
-    // it("MotionBlurPostProcess", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         new BABYLON.MotionBlurPostProcess(
-    //             "mb", // The name of the effect.
-    //             scene, // The scene containing the objects to blur according to their velocity.
-    //             1.0, // The required width/height ratio to downsize to before computing the render pass.
-    //             camera // The camera to apply the render pass to.
-    //         );
-    //     }, done);
-    // });
-    // it("ScreenSpaceReflectionPostProcess", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const camera = scene._activeCamera;
-    //         new BABYLON.ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera);
-    //     }, done);
-    // });
+    /*
+    TODO: Uncomment tests for post processes as we implement more features
+    it("FxaaPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.FxaaPostProcess("fxaa", 1.0, camera);
+        }, done);
+    });
+    it("RefractionPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.RefractionPostProcess("Refraction", "https://playground.babylonjs.com/textures/grass.jpg", new BABYLON.Color3(1.0, 1.0, 1.0), 0.5, 0.5, 1.0, camera);
+        }, done);
+    });
+    it("ColorCorrectionPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.ColorCorrectionPostProcess("color_correction", "https://doc.babylonjs.com/_next/image?url=%2Fimg%2Fhow_to%2Fpost-processes%2Flut-inverted.png&w=256&q=16", 1.0, camera);
+        }, done);
+    });
+    it("DefaultPipeline", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.DefaultRenderingPipeline(
+                "defaultPipeline", // The name of the pipeline
+                true, // Do you want the pipeline to use HDR texture?
+                scene, // The scene instance
+                [camera] // The list of cameras to be attached to
+            );
+        }, done);
+    });
+    it("LensRenderingPipeline", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            const parameters = {
+                edge_blur: 1.0,
+                chromatic_aberration: 1.0,
+                distortion: 1.0,
+            };              
+            new BABYLON.LensRenderingPipeline('lensEffects', parameters, scene, 1.0, camera);
+        }, done);
+    });
+    it("MotionBlurPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.MotionBlurPostProcess(
+                "mb", // The name of the effect.
+                scene, // The scene containing the objects to blur according to their velocity.
+                1.0, // The required width/height ratio to downsize to before computing the render pass.
+                camera // The camera to apply the render pass to.
+            );
+        }, done);
+    });
+    it("ScreenSpaceReflectionPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera);
+        }, done);
+    });*/
 })
 
 mocha.run(failures => {

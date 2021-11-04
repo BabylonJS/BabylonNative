@@ -13,10 +13,6 @@
 #include <thread>
 #include <napi/env.h>
 
-std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
-
 std::promise<int32_t> exitCode;
 
 static inline constexpr const char* JS_FUNCTION_NAME{ "SetExitCode" };
@@ -30,11 +26,11 @@ void SetExitCode(const Napi::CallbackInfo& info)
     exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
 }
 
-int run(std::unique_ptr<Babylon::Graphics> graphicsObject)
+int Run(std::unique_ptr<Babylon::Graphics> graphics)
 {
-    graphics = std::move(graphicsObject);
-    runtime = std::make_unique<Babylon::AppRuntime>();
-    runtime->Dispatch([](Napi::Env env)
+    std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
+    std::unique_ptr<Babylon::AppRuntime> runtime = std::make_unique<Babylon::AppRuntime>();
+    runtime->Dispatch([&graphics, &nativeCanvas](Napi::Env env)
     {
         graphics->AddToJavaScript(env);
 
