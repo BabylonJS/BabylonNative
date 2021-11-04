@@ -436,7 +436,7 @@ namespace Babylon::ShaderCompilerTraversers
         /// This traverser modifies all vertex attributes (position, UV, etc.) to conform to
         /// bgfx's expectations regarding name and location. It is currently required for
         /// DirectX, OpenGL, and Metal.
-        class VertexVaryingInTraverser : private TIntermTraverser
+        class VertexVaryingInTraverser : protected TIntermTraverser
         {
         protected:
             virtual void visitSymbol(TIntermSymbol* symbol) override
@@ -465,7 +465,7 @@ namespace Babylon::ShaderCompilerTraversers
                 return {0, name};
             }
 
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser traverser)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
             {
                 intermediate->getTreeRoot()->traverse(&traverser);
 
