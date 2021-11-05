@@ -5,11 +5,12 @@
 #undef None
 #include "../Shared/Tests.cpp"
 
-static const char* s_applicationName = "Babylon Native Unit Tests";
-static const int width = 640;
-static const int height = 480;
-static const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
-
+namespace {
+    constexpr char* s_applicationName = "Babylon Native Unit Tests";
+    constexpr int width = 640;
+    constexpr int height = 480;
+    constexpr char* wmDeleteWindowName = "WM_DELETE_WINDOW";
+}
 int main()
 {
     XInitThreads();

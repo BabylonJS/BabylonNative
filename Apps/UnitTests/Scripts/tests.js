@@ -127,13 +127,15 @@ describe("Materials", function() {
         }
         createEmptyShaderMat()
     })
-    // it("GradientMaterial should compile", function(done) {
-    //     createSceneAndWait((engine, scene) => {
-    //         const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
-    //         const gradientMaterial = new BABYLON.GradientMaterial("grad", scene);
-    //         sphere.material = gradientMaterial;
-    //     }, done);
-    // });
+    /*
+    TODO: Uncomment tests for materials as we implement more features
+    it("GradientMaterial should compile", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
+            const gradientMaterial = new BABYLON.GradientMaterial("grad", scene);
+            sphere.material = gradientMaterial;
+        }, done);
+    });*/
 })
 
 describe("PostProcesses", function() {
