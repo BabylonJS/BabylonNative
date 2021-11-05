@@ -144,6 +144,7 @@
         $(BabylonNativeBuildDir)\Plugins\NativeEngine\$(Configuration);
         $(BabylonNativeBuildDir)\Plugins\NativeInput\$(Configuration);
         $(BabylonNativeBuildDir)\Plugins\NativeOptimizations\$(Configuration);
+        $(BabylonNativeBuildDir)\Plugins\NativeTracing\$(Configuration);
         $(BabylonNativeBuildDir)\Plugins\NativeXr\$(Configuration);
         $(BabylonNativeBuildDir)\Polyfills\Window\$(Configuration);
         $(BabylonNativeBuildDir)\Polyfills\XMLHttpRequest\$(Configuration);
@@ -191,6 +192,7 @@
         NativeEngine.lib;
         NativeInput.lib;
         NativeOptimizations.lib;
+        NativeTracing.lib;
         NativeXr.lib;
         nvtt.lib;
         OGLCompilerd.lib;
@@ -249,6 +251,7 @@
         NativeEngine.lib;
         NativeInput.lib;
         NativeOptimizations.lib;
+        NativeTracing.lib;
         NativeXr.lib;
         nvtt.lib;
         OGLCompiler.lib;
