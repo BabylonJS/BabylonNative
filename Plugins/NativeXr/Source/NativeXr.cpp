@@ -1687,17 +1687,18 @@ namespace Babylon
         private:
             void UpdatePolygonData(const Napi::Env& env, const xr::System::Session::Frame::Plane& plane)
             {
-                if (m_polygonData.size() != plane.PolygonSize)
+                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
+                if (m_polygonData.size() != plane.PolygonSize * VECTOR3_NUM_FLOATS)
                 {
-                    m_polygonData.resize(plane.PolygonSize * 3);
-                    m_jsPolygonDataArrayBuffer = Napi::ArrayBuffer::New(env, m_polygonData.size() * 4);
+                    m_polygonData.resize(plane.PolygonSize * VECTOR3_NUM_FLOATS);
+                    m_jsPolygonDataArrayBuffer = Napi::ArrayBuffer::New(env, m_polygonData.size() * sizeof(float));
                     const auto jsPolygonDataArray = Napi::Float32Array::New(env, m_polygonData.size(), m_jsPolygonDataArrayBuffer, 0);
                     m_jsThis.Set("polygonData", jsPolygonDataArray);
                 }
 
                 for (size_t i = 0; i < plane.PolygonSize; i++)
                 {
-                    size_t polygonDataIndex = 3 * i;
+                    size_t polygonDataIndex = VECTOR3_NUM_FLOATS * i;
                     if (plane.PolygonFormat == xr::PolygonFormat::XZ)
                     {
                         size_t polygonIndex = 2 * i;
@@ -1757,128 +1758,86 @@ namespace Babylon
                 m_jsThis.Set("meshSpace", m_jsMeshSpace);
             }
 
-            ~XRMesh()
-            {
-                m_jsPositions.Reset();
-                m_jsIndices.Reset();
-                m_jsNormals.Reset();
-            }
-
-            void UpdateNativeMesh(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh, const Napi::Value& parentSceneObject)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh, const Napi::Value& parentSceneObject, uint32_t timestamp)
             {
                 m_jsThis.Set("parentSceneObject", parentSceneObject);
-                UpdatePositions(env, mesh);
-                UpdateIndices(env, mesh);
-                UpdateNormals(env, mesh);
-            }
 
-            void SetLastUpdatedTime(const Napi::Env& env, uint32_t timestamp)
-            {
-                m_lastUpdatedTimestamp = timestamp;
-                m_jsThis.Set("lastChangedTime", Napi::Value::From(env, m_lastUpdatedTimestamp));
+                // NOTE: WebXR reports indices in a counterclockwise winding order
+                if (m_indices.size() != mesh.Indices.size())
+                {
+                    m_indices.resize(mesh.Indices.size());
+                    m_jsIndexArrayBuffer = Napi::ArrayBuffer::New(env, m_indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
+                    m_jsThis.Set("indices", Napi::Uint32Array::New(env, m_indices.size(), m_jsIndexArrayBuffer, 0));
+
+                }
+
+                // NOTE: WebXR reports positions as right-handed coordinates
+                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
+                if (m_positionData.size() != mesh.Positions.size() * VECTOR3_NUM_FLOATS) 
+                {
+                    m_positionData.resize(mesh.Positions.size() * VECTOR3_NUM_FLOATS);
+                    m_jsPositionArrayBuffer = Napi::ArrayBuffer::New(env, m_positionData.size() * sizeof(float));
+                    m_jsThis.Set("positions", Napi::Float32Array::New(env, m_positionData.size(), m_jsPositionArrayBuffer, 0));
+
+                }
+
+                // NOTE: WebXR reports normals as right-handed vectors
+                if (m_normalData.size() != mesh.Normals.size() * VECTOR3_NUM_FLOATS)
+                {
+                    m_normalData.resize(mesh.Normals.size() * VECTOR3_NUM_FLOATS);
+                    if (mesh.Normals.size() > 0)
+                    {
+                        m_jsNormalArrayBuffer = Napi::ArrayBuffer::New(env, m_normalData.size() * sizeof(float));
+                        m_jsThis.Set("normals", Napi::Float32Array::New(env, m_normalData.size(), m_jsNormalArrayBuffer, 0));
+                    }
+                    else
+                    {
+                        m_jsThis.Set("normals", env.Undefined());
+                    }
+                }
+
+                if (m_lastChangedTime < timestamp)
+                {
+                    for (uint32_t i = 0; i < mesh.Indices.size(); i++)
+                    {
+                        m_indices[i] = mesh.Indices[i];
+                    }
+                    memcpy(m_jsIndexArrayBuffer.Data(), m_indices.data(), m_indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
+
+                    for (uint32_t i = 0; i < mesh.Positions.size(); i++)
+                    {
+                        m_positionData[i * VECTOR3_NUM_FLOATS + 0] = mesh.Positions[i].X;
+                        m_positionData[i * VECTOR3_NUM_FLOATS + 1] = mesh.Positions[i].Y;
+                        m_positionData[i * VECTOR3_NUM_FLOATS + 2] = mesh.Positions[i].Z;
+                    }
+                    memcpy(m_jsPositionArrayBuffer.Data(), m_positionData.data(), m_positionData.size() * sizeof(float));
+
+                    if (mesh.Normals.size() > 0)
+                    {
+                        for (uint32_t i = 0; i < mesh.Normals.size(); i++)
+                        {
+                            m_normalData[i * VECTOR3_NUM_FLOATS + 0] = mesh.Normals[i].X;
+                            m_normalData[i * VECTOR3_NUM_FLOATS + 1] = mesh.Normals[i].Y;
+                            m_normalData[i * VECTOR3_NUM_FLOATS + 2] = mesh.Normals[i].Z;
+                        }
+                        memcpy(m_jsNormalArrayBuffer.Data(), m_normalData.data(), m_normalData.size() * sizeof(float));
+                    }
+
+                    // The timestamp of the frame when this mesh was last updated (Pulled in from RequestAnimationFrame).
+                    m_lastChangedTime = timestamp;
+                    m_jsThis.Set("lastChangedTime", Napi::Value::From(env, m_lastChangedTime));
+                }
             }
 
         private:
-            void UpdatePositions(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh)
-            {
-                // NOTE: WebXR reports positions as right-handed coordinates
-                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
-                bool updateValues = false;
-                if (!m_jsPositions ||
-                    m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
-                {
-                    m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
-                    m_jsPositions.Reset();
-                    m_jsPositions = Napi::Persistent(Napi::Float32Array::New(env, m_numJsPositions));
-                    m_jsThis.Set("positions", m_jsPositions.Value());
-                    updateValues = true;
-                }
-                else if (m_lastPositionsUpdatedTimestamp != m_lastUpdatedTimestamp)
-                {
-                    m_lastPositionsUpdatedTimestamp = m_lastUpdatedTimestamp;
-                    updateValues = true;
-                }
+            uint32_t m_lastChangedTime{0};
 
-                if (updateValues)
-                {
-                    for (size_t n = 0; n < mesh.Positions.size(); n++)
-                    {
-                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Positions.at(n).X;
-                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Positions.at(n).Y;
-                        m_jsPositions.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Positions.at(n).Z;
-                    }
-                }
-            }
-
-            void UpdateIndices(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh)
-            {
-                // NOTE: WebXR reports indices in a counterclockwise winding order
-                assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
-                if (!m_jsIndices ||
-                    m_numJsIndices != mesh.Indices.size())
-                {
-                    m_numJsIndices = mesh.Indices.size();
-                    m_jsIndices.Reset();
-                    m_jsIndices = Napi::Persistent(Napi::Uint32Array::New(env, m_numJsIndices));
-                    m_jsThis.Set("indices", m_jsIndices.Value());
-                    memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
-                    m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-                else if (m_lastIndicesUpdatedTimestamp != m_lastUpdatedTimestamp)
-                {
-                    memcpy(m_jsIndices.Value().Data(), mesh.Indices.data(), mesh.Indices.size() * sizeof(xr::System::Session::Frame::Mesh::IndexType));
-                    m_lastIndicesUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-            }
-
-            void UpdateNormals(const Napi::Env& env, const xr::System::Session::Frame::Mesh& mesh)
-            {
-                // NOTE: WebXR reports normals as right-handed vectors
-                if (!mesh.HasNormals)
-                {
-                    return;
-                }
-
-                constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
-                if (!m_jsNormals ||
-                    m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
-                {
-                    m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
-                    m_jsNormals.Reset();
-                    m_jsNormals = Napi::Persistent(Napi::Float32Array::New(env, m_numJsNormals));
-                    m_jsThis.Set("normals", m_jsNormals.Value());
-                    for (size_t n = 0; n < mesh.Normals.size(); n++)
-                    {
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
-                    }
-                    m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-                else if (m_lastNormalsUpdatedTimestamp != m_lastUpdatedTimestamp)
-                {
-                    for (size_t n = 0; n < mesh.Normals.size(); n++)
-                    {
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n] = mesh.Normals.at(n).X;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 1] = mesh.Normals.at(n).Y;
-                        m_jsNormals.Value()[VECTOR3_NUM_FLOATS * n + 2] = mesh.Normals.at(n).Z;
-                    }
-                    m_lastNormalsUpdatedTimestamp = m_lastUpdatedTimestamp;
-                }
-            }
-
-            // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
-            uint32_t m_lastUpdatedTimestamp{0};
-            uint32_t m_lastPositionsUpdatedTimestamp{0};
-            uint32_t m_lastIndicesUpdatedTimestamp{0};
-            uint32_t m_lastNormalsUpdatedTimestamp{0};
-
-            size_t m_numJsPositions{0};
-            Napi::Reference<Napi::Float32Array> m_jsPositions{};
-            size_t m_numJsIndices{0};
-            Napi::Reference<Napi::Uint32Array> m_jsIndices{};
-            size_t m_numJsNormals{0};
-            Napi::Reference<Napi::Float32Array> m_jsNormals{};
+            std::vector<float> m_positionData{};
+            Napi::ArrayBuffer m_jsPositionArrayBuffer{};
+            std::vector<uint32_t> m_indices{};
+            Napi::ArrayBuffer m_jsIndexArrayBuffer{};
+            std::vector<float> m_normalData{};
+            Napi::ArrayBuffer m_jsNormalArrayBuffer{};
 
             Napi::ObjectReference m_jsThis{};
             std::unique_ptr<xr::Space> m_meshSpace;
@@ -2355,21 +2314,28 @@ namespace Babylon
                 }
             }
 
+            void UpdateMesh(const Napi::Env& env, XRMesh& mesh, const xr::System::Session::Frame::Mesh::Identifier meshId, uint32_t timestamp)
+            {
+                const auto& nativeMesh = GetMeshFromID(meshId);
+                const auto& parentSceneObject = GetJSSceneObjectFromID(env, nativeMesh.ParentSceneObjectID);
+                mesh.Update(env, nativeMesh, parentSceneObject, timestamp);
+            }
+
             void CreateMeshes(const Napi::CallbackInfo& info)
             {
                 const auto newMeshIds = info[0].As<Napi::Array>();
                 const auto numNewMeshIds = info[1].As<Napi::Number>().Uint32Value();
                 auto newMeshes = info[2].As<Napi::Array>();
+                const auto timestamp = info[3].As<Napi::Number>().Uint32Value();
 
                 for (uint32_t i = 0; i < numNewMeshIds; i++)
                 {
                     const auto meshId = newMeshIds[i].As<Napi::Number>().Uint32Value();
                     auto napiMesh = XRMesh::New(info.Env());
                     auto xrMesh = XRMesh::Unwrap(napiMesh);
-                    const auto& nativeMesh = GetMeshFromID(meshId);
-                    const auto& parentSceneObject = GetJSSceneObjectFromID(info.Env(), nativeMesh.ParentSceneObjectID);
-                    xrMesh->UpdateNativeMesh(info.Env(), nativeMesh, parentSceneObject);
+                    UpdateMesh(info.Env(), *xrMesh, meshId, timestamp);
                     newMeshes.Set(i, napiMesh);
+                    m_trackedMeshes[meshId] = Napi::Persistent(napiMesh);
                 }
             }
 
@@ -2382,6 +2348,15 @@ namespace Babylon
                     auto updatedArrayBuffer = Napi::ArrayBuffer::New(env, numUpdatedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
                     memcpy(updatedArrayBuffer.Data(), m_frame->UpdatedMeshes.data(), numUpdatedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
                     updatedArray = Napi::Uint32Array::New(env, m_frame->UpdatedMeshes.size(), updatedArrayBuffer, 0);
+
+                    for (const auto& updatedMeshId : m_frame->UpdatedMeshes)
+                    {
+                        const auto updatedMeshItr = m_trackedMeshes.find(updatedMeshId);
+                        if (updatedMeshItr != m_trackedMeshes.end())
+                        {
+                            UpdateMesh(env, *XRMesh::Unwrap(updatedMeshItr->second.Value()), updatedMeshId, timestamp);
+                        }
+                    }
                 }
 
                 Napi::Value removedArray = env.Undefined();
@@ -2391,6 +2366,11 @@ namespace Babylon
                     auto removedArrayBuffer = Napi::ArrayBuffer::New(env, numRemovedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
                     memcpy(removedArrayBuffer.Data(), m_frame->RemovedMeshes.data(), numRemovedMeshes * sizeof(xr::System::Session::Frame::Mesh::Identifier));
                     removedArray = Napi::Uint32Array::New(env, m_frame->RemovedMeshes.size(), removedArrayBuffer, 0);
+
+                    for (const auto& removedMeshId : m_frame->RemovedMeshes)
+                    {
+                        m_trackedMeshes.erase(removedMeshId);
+                    }
                 }
 
                 if (numUpdatedMeshes > 0 || numRemovedMeshes > 0)
