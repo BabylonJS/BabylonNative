@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@babylonjs/core": "5.0.0-alpha.60",
-    "@babylonjs/react-native": "^0.4.0-alpha.33",
-    "@babylonjs/react-native-windows": "0.4.0-alpha.33",
+    "@babylonjs/react-native": "^0.4.0-alpha.41",
+    "@babylonjs/react-native-windows": "^0.4.0-alpha.41",
     "react": "^17.0.1",
     "react-native": "^0.64.0",
     "react-native-permissions": "^3.0.0",
