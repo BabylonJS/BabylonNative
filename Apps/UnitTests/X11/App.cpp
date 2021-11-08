@@ -6,10 +6,10 @@
 #include "../Shared/Tests.cpp"
 
 namespace {
-    constexpr char* s_applicationName = "Babylon Native Unit Tests";
-    constexpr int width = 640;
-    constexpr int height = 480;
-    constexpr char* wmDeleteWindowName = "WM_DELETE_WINDOW";
+    constexpr const char* applicationName = "Babylon Native Unit Tests";
+    constexpr const  int width = 640;
+    constexpr const int height = 480;
+    constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
 }
 int main()
 {
@@ -38,7 +38,7 @@ int main()
     XSetWMProtocols(display, window, &wmDeleteWindow, 1);
 
     XMapWindow(display, window);
-    XStoreName(display, window, s_applicationName);
+    XStoreName(display, window, applicationName);
 
     Babylon::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = reinterpret_cast<Babylon::WindowType>(window);
