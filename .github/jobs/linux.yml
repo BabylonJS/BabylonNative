@@ -66,6 +66,9 @@ jobs:
       condition: failed()
 
     - script: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1600x900x24 &
+        while [ ! -e /tmp/.X11-unix/X99 ]; do sleep 0.1; done
         cd build/Apps/UnitTests
         ./UnitTests
       displayName: 'Unit Tests'
