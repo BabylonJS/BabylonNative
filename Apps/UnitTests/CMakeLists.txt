@@ -7,8 +7,6 @@ set(LOCAL_SCRIPTS
     "Scripts/tests.js")
 
 set(NPM_SCRIPTS
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs/babylon.max.js.map"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
