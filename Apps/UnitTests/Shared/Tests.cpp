@@ -57,9 +57,6 @@ int Run(std::unique_ptr<Babylon::Graphics> graphics)
     loader.LoadScript("app:///Scripts/tests.js");
     graphics->StartRenderingCurrentFrame();
     graphics->FinishRenderingCurrentFrame();
-
     auto code{exitCode.get_future().get()};
-    runtime.reset();
-    graphics.reset();
     return code;
 }
