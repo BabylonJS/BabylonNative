@@ -4,11 +4,11 @@
 
 namespace Napi
 {
-    template<typename ...Ts> Napi::Env Attach(Ts... args);
+  template<typename ...Ts> Napi::Env Attach(Ts... args);
 
-    void Detach(Napi::Env);
+  void Detach(Napi::Env);
 
-    Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl);
+  Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl);
 
-    template<typename T> T GetContext(Napi::Env env);
+  template<typename T> T GetContext(Napi::Env env);
 }

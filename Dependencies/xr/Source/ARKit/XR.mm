@@ -236,12 +236,13 @@ namespace {
 }
 
 /**
- Returns the orientation of the app based on the current status bar orientation.
+ Returns the orientation of the app
 */
 - (UIInterfaceOrientation)orientation {
     UIApplication* sharedApplication = [UIApplication sharedApplication];
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+    UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
+    return [(UIWindowScene*)scene interfaceOrientation];
 #else
     if (@available(iOS 13.0, *)) {
         return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
@@ -708,7 +709,6 @@ namespace xr {
 
             // Create a pipeline state for drawing the camera texture to the render target texture.
             {
-
                 MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
                 pipelineStateDescriptor.label = @"XR Camera Pipeline";
                 pipelineStateDescriptor.vertexFunction = vertexFunction;

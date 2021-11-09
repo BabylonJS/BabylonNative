@@ -2,6 +2,7 @@
 #include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsPlatformImpl.h>
 #include <JsRuntimeInternalState.h>
+#include <arcana/tracing/trace_region.h>
 
 namespace
 {
@@ -67,6 +68,16 @@ namespace Babylon
         m_state.Resolution.Width = width;
         m_state.Resolution.Height = height;
         UpdateBgfxResolution();
+    }
+
+    size_t GraphicsImpl::GetWidth() const
+    {
+        return m_state.Resolution.Width;
+    }
+
+    size_t GraphicsImpl::GetHeight() const
+    {
+        return m_state.Resolution.Height;
     }
 
     void GraphicsImpl::AddToJavaScript(Napi::Env env)
@@ -140,6 +151,8 @@ namespace Babylon
 
     void GraphicsImpl::StartRenderingCurrentFrame()
     {
+        arcana::trace_region startRenderingRegion{"GraphicsImpl::StartRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (m_rendering)
@@ -162,6 +175,8 @@ namespace Babylon
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
+        arcana::trace_region finishRenderingRegion{"GraphicsImpl::FinishRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (!m_rendering)
@@ -309,6 +324,8 @@ namespace Babylon
 
     void GraphicsImpl::Frame()
     {
+        arcana::trace_region frameRegion{"GraphicsImpl::Frame"};
+
         // Automatically end bgfx encoders.
         EndEncoders();
 

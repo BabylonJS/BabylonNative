@@ -11,6 +11,8 @@ namespace Babylon
     public:
         ~VertexArray();
 
+        void Dispose();
+
         void RecordIndexBuffer(IndexBuffer* indexBuffer);
         void RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized);
         void SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
@@ -22,7 +24,7 @@ namespace Babylon
             IndexBuffer* Buffer{};
         };
 
-        IndexBufferRecord m_indexBufferRecord;
+        IndexBufferRecord m_indexBufferRecord{};
 
         struct VertexBufferRecord
         {
@@ -31,6 +33,8 @@ namespace Babylon
             bgfx::VertexLayoutHandle LayoutHandle{};
         };
 
-        std::map<bgfx::Attrib::Enum, VertexBufferRecord> m_vertexBufferRecords;
+        std::map<bgfx::Attrib::Enum, VertexBufferRecord> m_vertexBufferRecords{};
+
+        bool m_disposed{};
     };
 }
