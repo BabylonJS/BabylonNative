@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
-import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4, RenderTargetTexture, ThinEngine } from '@babylonjs/core';
+import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4, Tools } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
 import './VersionValidation';
 import * as base64 from 'base-64';
@@ -96,6 +96,94 @@ if (Platform.OS === "android" || Platform.OS === "ios") {
 // So for now, provide a JavaScript based atob polyfill.
 declare const global: any;
 global.atob = base64.decode;
+
+// Polyfill console.time and console.timeEnd if needed (as of React Native 0.64 these are not implemented).
+if (!console.time) {
+    const consoleTimes = new Map<string, number>();
+
+    console.time = (label = "default"): void => {
+        consoleTimes.set(label, performance.now());
+    };
+
+    console.timeEnd = (label = "default"): void => {
+        const end = performance.now();
+        const start = consoleTimes.get(label);
+        if (!!start) {
+            consoleTimes.delete(label);
+            console.log(`${label}: ${end - start} ms`);
+        }
+    }
+}
+
+// Hook Tools performance counter functions to forward to NativeTracing.
+// Ideally this should be hooked more directly in Babylon.js so it works with Babylon Native as well, but we need to determine a pattern for augmenting Babylon.js with Babylon Native specific JS logic.
+declare var _native: {
+    enablePerformanceLogging(): void,
+    disablePerformanceLogging(): void,
+    startPerformanceCounter(counter: string): unknown,
+    endPerformanceCounter(counter: unknown): void,
+};
+
+{
+    const setPerformanceLogLevel: ((level: number) => void) | undefined = Object.getOwnPropertyDescriptor(Tools, "PerformanceLogLevel")?.set;
+    if (!setPerformanceLogLevel) {
+        console.warn(`NativeTracing was not hooked into Babylon.js performance logging because the Tools.PerformanceLogLevel property does not exist.`);
+    } else {
+        // Keep a map of trace region opaque pointers since Tools.EndPerformanceCounter just takes a counter name as an argument.
+        const traceRegions = new Map<string, unknown>();
+        let currentLevel = Tools.PerformanceNoneLogLevel;
+        Object.defineProperty(Tools, "PerformanceLogLevel", {
+            set: (level: number) => {
+                // No-op if the log level isn't changing, otherwise we can end up with multiple wrapper layers repeating the same work.
+                if (level !== currentLevel) {
+                    currentLevel = level;
+
+                    // Invoke the original PerformanceLevel setter.
+                    setPerformanceLogLevel(currentLevel);
+
+                    if (currentLevel === Tools.PerformanceNoneLogLevel) {
+                        _native.disablePerformanceLogging();
+                    } else {
+                        _native.enablePerformanceLogging();
+
+                        // When Tools.PerformanceLogLevel is set, it assigns the Tools.StartPerformanceCounter and Tools.EndPerformanceCounter functions, so we need to assign
+                        // these functions again in order to wrap them.
+
+                        const originalStartPerformanceCounter = Tools.StartPerformanceCounter;
+                        Tools.StartPerformanceCounter = (counterName: string, condition = true) => {
+                            // Call into native before so the time it takes is not captured in the JS perf counter interval.
+                            if (condition) {
+                                if (traceRegions.has(counterName)) {
+                                    console.warn(`Performance counter '${counterName}' already exists.`);
+                                } else {
+                                    traceRegions.set(counterName, _native.startPerformanceCounter(counterName));
+                                }
+                            }
+
+                            originalStartPerformanceCounter(counterName, condition);
+                        };
+
+                        const originalEndPerformanceCounter = Tools.EndPerformanceCounter;
+                        Tools.EndPerformanceCounter = (counterName: string, condition = true) => {
+                            originalEndPerformanceCounter(counterName, condition);
+
+                            // Call into native after so the time it takes is not captured in the JS perf counter interval.
+                            if (condition) {
+                                const traceRegion = traceRegions.get(counterName);
+                                if (traceRegion) {
+                                    _native.endPerformanceCounter(traceRegion);
+                                    traceRegions.delete(counterName);
+                                } else {
+                                    console.warn(`Performance counter '${counterName}' does not exist.`);
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    }
+}
 
 export function useEngine(): Engine | undefined {
     const [engine, setEngine] = useState<Engine>();
