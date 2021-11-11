@@ -19,6 +19,8 @@
 #include <arcana/threading/task.h>
 #include <arcana/tracing/trace_region.h>
 
+#include <bimg/bimg.h>
+
 namespace
 {
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
@@ -1684,6 +1686,179 @@ namespace Babylon
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
+        };
+
+        struct XRImageTrackingState
+        {
+            static constexpr auto TRACKED{"tracked"};
+            static constexpr auto EMULATED{"emulated"};
+        };
+
+        struct XRImageTrackingScore
+        {
+            static constexpr auto UNTRACKABLE{"untrackable"};
+            static constexpr auto TRACKABLE{"trackable"};
+        };
+
+        // Implementation of the XRTrackedImageInit: (TODO: Add link)
+        class XRTrackedImageInit : public Napi::ObjectWrap<XRTrackedImageInit>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRTrackedImageInit";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("image", &XRTrackedImageInit::GetImage, nullptr),
+                        InstanceAccessor("widthInMeters", &XRTrackedImageInit::GetWidthInMeters, nullptr)
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRTrackedImageInit(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRTrackedImageInit>{info}
+            {
+            }
+
+            void SetWidthInMeters(uint32_t width)
+            {
+                m_widthInMeters = width;
+            }
+
+            void SetXRFrame(XRFrame* frame)
+            {
+                m_frame = frame;
+            }
+
+        private:
+            // The width in meters
+            uint32_t m_widthInMeters{0};
+
+            // Pointer to the XRFrame object.
+            XRFrame* m_frame{};
+
+            Napi::Value GetImage(const Napi::CallbackInfo& info)
+            {
+                const auto imageBitmap = info[0].As<Napi::Object>();
+                const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
+                const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
+
+                const auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
+                const auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
+                const auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
+                const auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
+
+                const Napi::Env env{info.Env()};
+
+                bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+                if (image == nullptr)
+                {
+                    throw Napi::Error::New(env, "Unable to allocate image for GetImage.");
+                }
+
+                if (format != bimg::TextureFormat::RGBA8)
+                {
+                    if (format == bimg::TextureFormat::R8)
+                    {
+                        image->m_format = bimg::TextureFormat::A8;
+                    }
+                    bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
+                    if (rgba == nullptr)
+                    {
+                        throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for GetImage.");
+                    }
+                    bimg::imageFree(image);
+                    image = rgba;
+                }
+
+                auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
+                if (width != bufferWidth || height != bufferHeight)
+                {
+                    stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
+                        outputData.Data(), bufferWidth, bufferHeight, 0, 4);
+                }
+                else
+                {
+                    std::memcpy(outputData.Data(), image->m_data, image->m_size);
+                }
+                bimg::imageFree(image);
+                return Napi::Value::From(env, outputData);
+            }
+
+            Napi::Value GetWidthInMeters(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_widthInMeters);
+            }
+        };
+
+        // Implementation of the XRImageTrackingResult: (TODO: Add link)
+        class XRImageTrackingResult : public Napi::ObjectWrap<XRImageTrackingResult>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRImageTrackingResult";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("imageSpace", &XRImageTrackingResult::GetImageSpace, nullptr),
+                        InstanceAccessor("index", &XRImageTrackingResult::GetIndex, nullptr),
+                        InstanceAccessor("trackingState", &XRImageTrackingResult::GetTrackingState, nullptr),
+                        InstanceAccessor("measuredWidthInMeters", &XRImageTrackingResult::GetMeasuredWidthInMeters, nullptr)
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRImageTrackingResult(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRImageTrackingResult>{info}
+            {
+            }
+
+        private:
+
+            // TODO: How to get XRSpace?
+
+            Napi::Value GetIndex(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_index);
+            }
+
+            Napi::Value GetTrackingState(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_trackingState);
+            }
+
+            Napi::Value GetMeasuredWidthInMeters(const Napi::CallbackInfo& info)
+            {
+                return Napi::Value::From(info.Env(), m_measuredWidthInMeters);
+            }
+
+            uint32_t m_index{};
+
+            XRImageTrackingState m_trackingState{};
+
+            uint32_t m_measuredWidthInMeters{};
         };
 
         // Implementation of the XRPlane interface: https://github.com/immersive-web/real-world-geometry/blob/master/plane-detection-explainer.md
