@@ -336,7 +336,8 @@ namespace Babylon::ShaderCompilerTraversers
 
                     // Helper function to correctly insert the shape conversion into the AST.
                     // More about shape conversion below.
-                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion) {
+                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion)
+                    {
                         if (auto* aggregate = parent->getAsAggregate())
                         {
                             auto& sequence = aggregate->getSequence();
@@ -753,8 +754,8 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             static void Traverse(TProgram& program)
             {
-                auto intermediate{ program.getIntermediate(EShLangFragment) };
-                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{ intermediate };
+                auto intermediate{program.getIntermediate(EShLangFragment)};
+                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{intermediate};
                 intermediate->getTreeRoot()->traverse(&invertYDerivativeOperandsTraverser);
             }
 
@@ -776,7 +777,7 @@ namespace Babylon::ShaderCompilerTraversers
 
         private:
             InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-                : m_intermediate{ intermediate }
+                : m_intermediate{intermediate}
             {
             }
 
@@ -799,7 +800,7 @@ namespace Babylon::ShaderCompilerTraversers
         VertexVaryingInTraverserOpenGLMetal::Traverse(program, ids, replacementToOriginalName);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram & program, IdGenerator & ids, std::unordered_map<std::string, std::string> & replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName);
     }
