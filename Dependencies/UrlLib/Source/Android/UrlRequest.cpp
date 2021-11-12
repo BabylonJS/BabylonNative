@@ -46,6 +46,12 @@ namespace UrlLib
         {
             m_method = method;
             Uri uri{Uri::Parse(url.data())};
+            // If the URL string doesn't contain a scheme, the URI object's scheme will be null. We throw in this case
+            // The path is never null, even if it's empty it will be an empty string
+            if ((jstring)uri.getScheme() == nullptr)
+            {
+                throw std::runtime_error("Cannot parse a URI without a scheme");
+            }
             if ((std::string)uri.getScheme() == "app")
             {
                 m_schemeIsApp = true;
