@@ -126,7 +126,7 @@ void App::Uninitialize()
     }
 
     m_chromeDevTools.reset();
-    m_inputBuffer.reset();
+    nativeInput = nullptr;
     m_runtime.reset();
     m_graphics.reset();
 }
@@ -203,26 +203,28 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_inputBuffer != nullptr)
+    if (nativeInput)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        m_inputBuffer->SetPointerPosition(static_cast<int>(point.X), static_cast<int>(point.Y));
+        nativeInput->MouseMove(static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
-void App::OnPointerPressed(CoreWindow^, PointerEventArgs^)
+void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_inputBuffer != nullptr)
+    if (nativeInput)
     {
-        m_inputBuffer->SetPointerDown(true);
+        const auto& point = args->CurrentPoint->RawPosition;
+        nativeInput->MouseDown(0, static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
-void App::OnPointerReleased(CoreWindow^, PointerEventArgs^)
+void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_inputBuffer != nullptr)
+    if (nativeInput)
     {
-        m_inputBuffer->SetPointerDown(false);
+        const auto& point = args->CurrentPoint->RawPosition;
+        nativeInput->MouseUp(0, static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
@@ -273,7 +275,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_graphics->StartRenderingCurrentFrame();
 
     m_runtime = std::make_unique<Babylon::AppRuntime>();
-    m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
     m_runtime->Dispatch([this](Napi::Env env) {
         m_graphics->AddToJavaScript(env);
@@ -294,7 +295,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *m_inputBuffer);
+        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
         m_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
         if (m_chromeDevTools->SupportsInspector())

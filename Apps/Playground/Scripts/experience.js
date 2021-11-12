@@ -61,7 +61,7 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-    scene.createDefaultCamera(false, true, true);
+    scene.createDefaultCamera(true, true, true);
     scene.activeCamera.alpha += Math.PI;
 
     if (ibl) {
