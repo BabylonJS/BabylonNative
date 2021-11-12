@@ -9,17 +9,21 @@ set(LOCAL_SCRIPTS
 set(NPM_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs/babylon.max.js.map"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
-
-set(TEST_APP "Shared/UnitTests.cpp")
 
 set(ADDITIONAL_LIBRARIES "")
 
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES ${JSCORE_LIBRARY})
-    set(TEST_APP "Apple/UnitTests.mm")
+    set(TEST_APP "Apple/App.mm")
+elseif(UNIX AND NOT ANDROID)
+    set(TEST_APP "X11/App.cpp")
+elseif(WIN32)
+    set(TEST_APP "Win32/App.cpp")
 endif()
 
 add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP})
@@ -32,6 +36,7 @@ target_link_to_dependencies(UnitTests
     ScriptLoader
     Console
     Window
+    Canvas
     ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)
