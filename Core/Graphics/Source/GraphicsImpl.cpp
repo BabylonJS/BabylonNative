@@ -2,6 +2,7 @@
 #include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsPlatformImpl.h>
 #include <JsRuntimeInternalState.h>
+#include <arcana/tracing/trace_region.h>
 
 namespace
 {
@@ -150,6 +151,8 @@ namespace Babylon
 
     void GraphicsImpl::StartRenderingCurrentFrame()
     {
+        arcana::trace_region startRenderingRegion{"GraphicsImpl::StartRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (m_rendering)
@@ -185,6 +188,8 @@ namespace Babylon
                 value.Lock();
             }
         }
+        
+        arcana::trace_region finishRenderingRegion{"GraphicsImpl::FinishRenderingCurrentFrame"};
 
         assert(m_renderThreadAffinity.check());
 
@@ -230,14 +235,12 @@ namespace Babylon
     void GraphicsImpl::RemoveTexture(bgfx::TextureHandle handle)
     {
         auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        assert(m_textureHandleToInfo.find(handle.idx) != m_textureHandleToInfo.end());
         m_textureHandleToInfo.erase(handle.idx);
     }
 
     GraphicsImpl::TextureInfo GraphicsImpl::GetTextureInfo(bgfx::TextureHandle handle)
     {
         auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        assert(m_textureHandleToInfo.find(handle.idx) != m_textureHandleToInfo.end());
         return m_textureHandleToInfo[handle.idx];
     }
 
@@ -348,6 +351,8 @@ namespace Babylon
 
     void GraphicsImpl::Frame()
     {
+        arcana::trace_region frameRegion{"GraphicsImpl::Frame"};
+
         // Automatically end bgfx encoders.
         EndEncoders();
 

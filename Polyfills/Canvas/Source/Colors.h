@@ -1,4 +1,5 @@
 #pragma once
+#include <regex>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -187,6 +188,17 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
+            // matches strings of the form rgb(#,#,#)
+            static const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
+            std::smatch rgbMatch;
+            if (std::regex_match(str, rgbMatch, rgbRegex))
+            {
+                if (rgbMatch.size() == 4)
+                {
+                    return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
+                }
+            }
+
             if (str == "transparent" || !str.length())
             {
                 return nvgRGBA(0, 0, 0, 0);

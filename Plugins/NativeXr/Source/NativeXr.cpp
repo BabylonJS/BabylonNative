@@ -17,6 +17,7 @@
 #include <napi/napi.h>
 #include <napi/napi_pointer.h>
 #include <arcana/threading/task.h>
+#include <arcana/tracing/trace_region.h>
 
 namespace
 {
@@ -581,10 +582,13 @@ namespace Babylon
 
                     BeginUpdate();
 
-                    auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
-                    for (auto& callback : callbacks)
                     {
-                        callback(*m_sessionState->Frame);
+                        arcana::trace_region scheduleRegion{"NativeXR::ScheduleFrame invoke JS callbacks"};
+                        auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
+                        for (auto& callback : callbacks)
+                        {
+                            callback(*m_sessionState->Frame);
+                        }
                     }
 
                     EndUpdate();
@@ -604,6 +608,8 @@ namespace Babylon
             assert(m_sessionState != nullptr);
             assert(m_sessionState->Session != nullptr);
             assert(m_sessionState->Frame == nullptr);
+
+            arcana::trace_region beginFrameRegion{"NativeXR::BeginFrame"};
 
             bool shouldEndSession{};
             bool shouldRestartSession{};
@@ -632,6 +638,8 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
+            arcana::trace_region beginUpdateRegion{"NativeXR::BeginUpdate"};
+
             m_sessionState->ActiveViewConfigurations.resize(m_sessionState->Frame->Views.size());
             for (uint32_t viewIdx = 0; viewIdx < m_sessionState->Frame->Views.size(); viewIdx++)
             {
@@ -730,6 +738,7 @@ namespace Babylon
 
         void NativeXr::Impl::EndUpdate()
         {
+            arcana::trace_region endUpdateRegion{"NativeXR::EndUpdate"};
             m_sessionState->ActiveViewConfigurations.clear();
             m_sessionState->ViewConfigurationStartViewIdx.clear();
         }
@@ -739,6 +748,8 @@ namespace Babylon
             assert(m_sessionState != nullptr);
             assert(m_sessionState->Session != nullptr);
             assert(m_sessionState->Frame != nullptr);
+
+            arcana::trace_region endFrameRegion{"NativeXR::EndFrame"};
 
             m_sessionState->Frame.reset();
         }

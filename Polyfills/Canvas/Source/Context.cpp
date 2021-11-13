@@ -535,7 +535,7 @@ namespace Babylon::Polyfills::Internal
         int fontSize = 16;
 
         // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
-        const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
+        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
         std::smatch fontStyleMatch;
 
         // Perform the actual regex_match.
