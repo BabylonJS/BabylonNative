@@ -40,7 +40,11 @@ else()
 endif()
 
 # Create the bgfx target
-add_library( bgfx ${BGFX_LIBRARY_TYPE} ${BGFX_SOURCES} )
+if(BGFX_LIBRARY_TYPE STREQUAL STATIC)
+    add_library( bgfx STATIC ${BGFX_SOURCES} )
+else()
+    add_library( bgfx SHARED ${BGFX_SOURCES} )
+endif()
 
 if(BGFX_CONFIG_RENDERER_WEBGPU)
     include(cmake/3rdparty/webgpu.cmake)
