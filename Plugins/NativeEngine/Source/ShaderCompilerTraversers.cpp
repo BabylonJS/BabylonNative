@@ -462,15 +462,11 @@ namespace Babylon::ShaderCompilerTraversers
                 }
             }
 
-            virtual void PreProcess() = 0;
-
             // This function is platform-dependent so it's left unimplemented in the base class.
             virtual std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name) = 0;
 
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
             {
-                intermediate->getTreeRoot()->traverse(&traverser);
-
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};
 
                 // Precursor types needed to create subtree replacements.
@@ -478,8 +474,6 @@ namespace Babylon::ShaderCompilerTraversers
                 loc.init();
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
-
-                traverser.PreProcess();
 
                 // Create the new symbols with which to replace all of the original varying
                 // symbols. The primary purpose of these new symbols is to contain the required
@@ -524,10 +518,9 @@ namespace Babylon::ShaderCompilerTraversers
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 VertexVaryingInTraverserOpenGLMetal traverser{};
+                program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&traverser);
                 VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
             }
-
-            void PreProcess() {}
 
         private:
             // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
@@ -576,21 +569,18 @@ namespace Babylon::ShaderCompilerTraversers
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 VertexVaryingInTraverserD3D traverser{};
-                VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
-            }
-
-            void PreProcess()
-            {
+                program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&traverser);
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
-                for (const auto& [name, symbol] : m_varyingNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
                     if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
                     {
-                        m_genericAttributesRunningCount++;
+                        traverser.m_genericAttributesRunningCount++;
                     }
                 }
+                VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
             }
 
         private:
